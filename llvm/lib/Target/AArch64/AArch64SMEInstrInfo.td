@@ -985,8 +985,8 @@ def LUTI4_S_4ZZT2Z  : sme2_luti4_vector_vg4_strided<0b00, 0b00, "luti4">;
 } //[HasSME2p1, HasSME_LUTv2]
 
 let Predicates = [HasSMEF8F16] in {
-defm FVDOT_VG2_M2ZZI_BtoH : sme2p1_multi_vec_array_vg2_index_f8f16<"fvdot", 0b11, 0b110, ZZ_b_mul_r, ZPR4b8>;
-defm FDOT_VG2_M2ZZI_BtoH  : sme2_fp8_fdot_index_za16_vg1x2<"fdot", int_aarch64_sme_fp8_fdot_lane_za16_vg1x2>;
+defm FVDOT_VG2_M2ZZI_BtoH : sme2_fp8_fdot_index_za16_vg1x2<"fvdot", 0b110, int_aarch64_sme_fp8_fvdot_lane_za16_vg1x2>;
+defm FDOT_VG2_M2ZZI_BtoH  : sme2_fp8_fdot_index_za16_vg1x2<"fdot",  0b010, int_aarch64_sme_fp8_fdot_lane_za16_vg1x2>;
 defm FDOT_VG4_M4ZZI_BtoH  : sme2_fp8_fdot_index_za16_vg1x4<"fdot", int_aarch64_sme_fp8_fdot_lane_za16_vg1x4>;
 
 defm FDOT_VG2_M2ZZ_BtoH   : sme2_fp8_fdot_single_vg1x2<"fdot", 0b0010001, MatrixOp16, int_aarch64_sme_fp8_fdot_single_za16_vg1x2>;
@@ -1016,8 +1016,8 @@ defm FDOT_VG4_M4ZZ_BtoS  : sme2_fp8_fdot_single_vg1x4<"fdot", 0b0110011, MatrixO
 defm FDOT_VG2_M2Z2Z_BtoS : sme2_fp8_fdot_multi_vg1x2 <"fdot", 0b0100110, MatrixOp32, int_aarch64_sme_fp8_fdot_multi_za32_vg1x2>;
 defm FDOT_VG4_M4Z4Z_BtoS : sme2_fp8_fdot_multi_vg1x4 <"fdot", 0b0100110, MatrixOp32, int_aarch64_sme_fp8_fdot_multi_za32_vg1x4>;
 
-def FVDOTB_VG4_M2ZZI_BtoS : sme2_fp8_multi_vec_array_vg4_index<"fvdotb", 0b0>;
-def FVDOTT_VG4_M2ZZI_BtoS : sme2_fp8_multi_vec_array_vg4_index<"fvdott", 0b1>;
+defm FVDOTB_VG4_M2ZZI_BtoS : sme2_fp8_fdotv_index_za32_vg1x4<"fvdotb", 0b0, int_aarch64_sme_fp8_fvdotb_lane_za32_vg1x4>;
+defm FVDOTT_VG4_M2ZZI_BtoS : sme2_fp8_fdotv_index_za32_vg1x4<"fvdott", 0b1, int_aarch64_sme_fp8_fvdott_lane_za32_vg1x4>;
 
 defm FMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"fmlall",     0b01, 0b000, null_frag>;
 defm FMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"fmlall", 0b10, 0b100, null_frag>;

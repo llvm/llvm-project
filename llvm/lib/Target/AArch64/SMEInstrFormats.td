@@ -5797,9 +5797,9 @@ multiclass sme2_fmop4a_fp8_fp16_2way<string mnemonic> {
 
 // FP8 SME FDOT instructions
 
-multiclass sme2_fp8_fdot_index_za16_vg1x2<string mnemonic,
+multiclass sme2_fp8_fdot_index_za16_vg1x2<string mnemonic, bits<3> op,
                                           SDPatternOperator intrinsic> {
-  def NAME : sme2_multi_vec_array_vg2_index<0b11, {0b0,?,?,0b10,?}, MatrixOp16,
+  def NAME : sme2_multi_vec_array_vg2_index<0b11, {op{2},?,?,op{1-0},?}, MatrixOp16,
                                             ZZ_b_mul_r, ZPR4b8,
                                             VectorIndexH32b_timm, mnemonic>,
                                             SMEPseudo2Instr<NAME, 1>{
@@ -5881,6 +5881,15 @@ multiclass sme2_fp8_fdot_index_za32_vg1x4<string mnemonic,
   def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, ZZZZ_b_mul_r, ZPR4b8, VectorIndexS32b_timm, SMEMatrixArray>;
 
   def : SME2_ZA_TwoOp_VG4_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexS32b_timm, tileslice16>;
+}
+
+multiclass sme2_fp8_fdotv_index_za32_vg1x4<string mnemonic, bit T, SDPatternOperator intrinsic> {
+  def NAME : sme2_fp8_multi_vec_array_vg4_index<mnemonic, T>,
+                                            SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, ZZ_b_mul_r, ZPR4b8, VectorIndexS32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexS32b_timm, tileslice16>;
 }
 
 multiclass sme2_fp8_fdot_single_vg1x2<string mnemonic, bits<7> op,

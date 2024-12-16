@@ -74,7 +74,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
 #pragma acc loop auto attach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'loop' directive}}
 #pragma acc loop auto delete(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
@@ -208,7 +208,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
 #pragma acc loop attach(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'loop' directive}}
 #pragma acc loop delete(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
@@ -343,7 +343,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
 #pragma acc loop independent attach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'loop' directive}}
 #pragma acc loop independent delete(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
@@ -477,7 +477,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
 #pragma acc loop attach(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'loop' directive}}
 #pragma acc loop delete(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
@@ -620,7 +620,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
 #pragma acc loop seq attach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'loop' directive}}
 #pragma acc loop seq delete(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
@@ -760,7 +760,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
 #pragma acc loop attach(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'loop' directive}}
 #pragma acc loop delete(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
