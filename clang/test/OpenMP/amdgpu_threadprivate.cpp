@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-cpu x86-64 -disable-llvm-passes -fopenmp-targets=amdgcn-amd-amdhsa -x c++ -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -target-cpu gfx906 -fopenmp -nogpulib -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -x c++ -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -target-cpu gfx906 -fopenmp -nogpulib -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck %s
 
 // Don't crash with assertions build.
 
