@@ -1247,7 +1247,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
     return OrigTy;
 
   if (OrigTy.isVector() && TargetTy.isVector()) {
-    LLT OrigElt = LLT::scalar(OrigTy.getScalarSizeInBits());
+    LLT OrigElt = OrigTy.getElementType();
 
     // TODO: The docstring for this function says the intention is to use this
     // function to build MERGE/UNMERGE instructions. It won't be the case that
