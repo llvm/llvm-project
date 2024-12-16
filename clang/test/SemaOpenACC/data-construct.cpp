@@ -20,27 +20,23 @@ void HasStmt() {
 
 void AtLeastOneOf() {
   int Var;
+  int *VarPtr = &Var;
 // Data
 #pragma acc data copy(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc data copyin(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc data copyout(Var)
   ;
 #pragma acc data create(Var)
   ;
 #pragma acc data no_create(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc data present(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
-#pragma acc data deviceptr(Var)
+#pragma acc data deviceptr(VarPtr)
   ;
-  // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
-#pragma acc data attach(Var)
+#pragma acc data attach(VarPtr)
   ;
 #pragma acc data default(none)
   ;
@@ -63,11 +59,9 @@ void AtLeastOneOf() {
   ;
 
   // Enter Data
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc enter data copyin(Var)
 #pragma acc enter data create(Var)
-  // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
-#pragma acc enter data attach(Var)
+#pragma acc enter data attach(VarPtr)
 
   // OpenACC TODO: The following 'enter data' directives should diagnose, since
   // they don't have at least one of the above clauses.
@@ -78,7 +72,6 @@ void AtLeastOneOf() {
 #pragma acc enter data
 
   // Exit Data
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc exit data copyout(Var)
   // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
 #pragma acc exit data delete(Var)
@@ -91,7 +84,6 @@ void AtLeastOneOf() {
 #pragma acc exit data if(Var)
 #pragma acc exit data async
 #pragma acc exit data wait
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
 #pragma acc exit data finalize
 #pragma acc exit data
 
