@@ -120,7 +120,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     }
 
     void write(StringRef KeyName,
-               const std::map<std::string, std::string>& Value) override {
+               const std::map<std::string, std::string> &Value) override {
       json::Object Inner;
       for (auto kv : Value) {
         Inner.try_emplace(kv.first, kv.second);
