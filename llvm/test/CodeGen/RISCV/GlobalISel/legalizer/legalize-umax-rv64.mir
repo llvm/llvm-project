@@ -99,11 +99,12 @@ body:             |
     ; RV64ZBB-LABEL: name: umax_i32
     ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; RV64ZBB-NEXT: [[UMAX:%[0-9]+]]:_(s64) = G_UMAX [[SEXT_INREG]], [[SEXT_INREG1]]
     ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; RV64ZBB-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; RV64ZBB-NEXT: [[UMAX:%[0-9]+]]:_(s64) = G_UMAX [[AND]], [[AND1]]
-    ; RV64ZBB-NEXT: $x10 = COPY [[UMAX]](s64)
+    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[UMAX]], [[C]]
+    ; RV64ZBB-NEXT: $x10 = COPY [[AND]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11

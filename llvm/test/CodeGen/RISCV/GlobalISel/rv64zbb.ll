@@ -987,12 +987,7 @@ define signext i32 @minu_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBB-LABEL: minu_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a0, a0, 32
-; RV64ZBB-NEXT:    slli a1, a1, 32
-; RV64ZBB-NEXT:    srli a0, a0, 32
-; RV64ZBB-NEXT:    srli a1, a1, 32
 ; RV64ZBB-NEXT:    minu a0, a0, a1
-; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i32 %a, %b
   %cond = select i1 %cmp, i32 %a, i32 %b
@@ -1031,12 +1026,7 @@ define signext i32 @maxu_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBB-LABEL: maxu_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a0, a0, 32
-; RV64ZBB-NEXT:    slli a1, a1, 32
-; RV64ZBB-NEXT:    srli a0, a0, 32
-; RV64ZBB-NEXT:    srli a1, a1, 32
 ; RV64ZBB-NEXT:    maxu a0, a0, a1
-; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    ret
   %cmp = icmp ugt i32 %a, %b
   %cond = select i1 %cmp, i32 %a, i32 %b

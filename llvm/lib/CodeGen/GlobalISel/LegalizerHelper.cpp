@@ -2884,15 +2884,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
-  case TargetOpcode::G_UMIN:
-  case TargetOpcode::G_UMAX:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
     widenScalarDst(MI, WideTy);
     Observer.changedInstr(MI);
     return Legalized;
-
   case TargetOpcode::G_UDIVREM:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
@@ -2901,6 +2898,24 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+    auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+    unsigned ExtOpc =
+        TLI.isSExtCheaperThanZExt(getApproximateEVTForLLT(Ty, Ctx),
+                                  getApproximateEVTForLLT(WideTy, Ctx))
+            ? TargetOpcode::G_SEXT
+            : TargetOpcode::G_ZEXT;
+
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, ExtOpc);
+    widenScalarSrc(MI, WideTy, 2, ExtOpc);
+    widenScalarDst(MI, WideTy);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
 
   case TargetOpcode::G_SELECT:
     Observer.changingInstr(MI);
