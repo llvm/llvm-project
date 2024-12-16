@@ -45,7 +45,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    movl $.str, (%esp)
 ; CHECK-NEXT:    calll printf
 ; CHECK-NEXT:    # implicit-def: $eax
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
+; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %e{{a|d}}x # 1-byte Folded Reload
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB0_10
 ; CHECK-NEXT:    jmp .LBB0_6
