@@ -79,7 +79,7 @@ struct TelemetryInfo {
   //
   // Note: a tool could have multiple sessions running at once, in which
   // case, these shall be multiple sets of TelemetryInfo with multiple unique
-  // ids.
+  // IDs.
   //
   // Different usages can assign different types of IDs to this field.
   std::string SessionId;
