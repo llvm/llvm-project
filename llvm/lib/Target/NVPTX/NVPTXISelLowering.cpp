@@ -64,6 +64,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -162,14 +163,70 @@ static bool Is16bitsType(MVT VT) {
           VT.SimpleTy == MVT::i16);
 }
 
-static auto GetUpsizedNumEltsAndEltVT(unsigned OldNumElts, EVT OldEltVT) {
-  // Number of elements to pack in one word.
-  unsigned NPerWord = 32 / OldEltVT.getSizeInBits();
-  // Word-sized vector.
-  EVT NewEltVT = MVT::getVectorVT(OldEltVT.getSimpleVT(), NPerWord);
-  // Number of word-sized vectors.
-  unsigned NewNumElts = OldNumElts / NPerWord;
-  return std::pair(NewNumElts, NewEltVT);
+// When legalizing vector loads/stores, this function is called, which does two things:
+// 1. Determines Whether the vector is something we want to custom lower, std::nullopt is returned if we do not want to custom lower it.
+// 2. If we do want to handle it, returns three parameters:
+//    - unsigned int NumElts - The number of elements in the final vector
+//    - EVT EltVT - The type of the elements in the final vector
+//    - bool UpsizeElementTypes - Whether or not we are upsizing the elements of the vectors
+static std::optional<std::tuple<unsigned int, EVT, bool>> tryGetVectorLoweringParams(EVT ValVT) {
+  // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
+  // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
+  // vectorized loads/stores with the actual element type for i8/i16 as that
+  // would require v8/v16 variants that do not exist.
+  // In order to load/store such vectors efficiently, here in Type Legalization,
+  // we split the vector into word-sized chunks (v2x16/v4i8). Later, we will
+  // lower to PTX as vectors of b32.
+  bool UpsizeElementTypes = false;
+
+  if (!ValVT.isVector() || !ValVT.isSimple())
+    return std::nullopt;
+
+  EVT EltVT = ValVT.getVectorElementType();
+  unsigned NumElts = ValVT.getVectorNumElements();
+
+  // We only handle "native" vector sizes for now, e.g. <4 x double> is not
+  // legal.  We can (and should) split that into 2 stores of <2 x double> here
+  // but I'm leaving that as a TODO for now.
+  switch (ValVT.getSimpleVT().SimpleTy) {
+  default:
+    return std::nullopt;
+  case MVT::v2i8:
+  case MVT::v2i16:
+  case MVT::v2i32:
+  case MVT::v2i64:
+  case MVT::v2f16:
+  case MVT::v2bf16:
+  case MVT::v2f32:
+  case MVT::v2f64:
+  case MVT::v4i8:
+  case MVT::v4i16:
+  case MVT::v4i32:
+  case MVT::v4f16:
+  case MVT::v4bf16:
+  case MVT::v4f32:
+    // This is a "native" vector type
+    break;
+  case MVT::v8i8:   // <2 x i8x4>
+  case MVT::v8f16:  // <4 x f16x2>
+  case MVT::v8bf16: // <4 x bf16x2>
+  case MVT::v8i16:  // <4 x i16x2>
+  case MVT::v16i8:  // <4 x i8x4>
+    // This can be upsized into a "native" vector type
+    UpsizeElementTypes = true;
+    break;
+  }
+
+  if (UpsizeElementTypes) {
+    // Number of elements to pack in one word.
+    unsigned NPerWord = 32 / EltVT.getSizeInBits();
+    // Word-sized vector.
+    EltVT = MVT::getVectorVT(EltVT.getSimpleVT(), NPerWord);
+    // Number of word-sized vectors.
+    NumElts = NumElts / NPerWord;
+  }
+
+  return std::tuple(NumElts, EltVT, UpsizeElementTypes);
 };
 
 /// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
@@ -2819,130 +2876,81 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(N);
   EVT ValVT = Val.getValueType();
 
-  // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
-  // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
-  // vectorized loads/stores with the actual element type for i8/i16 as that
-  // would require v8/v16 variants that do not exist.
-  // In order to load/store such vectors efficiently, here in Type Legalization,
-  // we split the vector into word-sized chunks (v2x16/v4i8). Later, we will
-  // lower to PTX as vectors of b32.
-  bool UpsizeElementTypes = false;
+  auto VectorLoweringParams = tryGetVectorLoweringParams(ValVT);
+  if (!VectorLoweringParams)
+    return SDValue();
+  auto [NumElts, EltVT, UpsizeElementTypes] = VectorLoweringParams.value();
 
-  if (ValVT.isVector()) {
-    // We only handle "native" vector sizes for now, e.g. <4 x double> is not
-    // legal.  We can (and should) split that into 2 stores of <2 x double> here
-    // but I'm leaving that as a TODO for now.
-    if (!ValVT.isSimple())
-      return SDValue();
-    switch (ValVT.getSimpleVT().SimpleTy) {
-    default:
-      return SDValue();
-    case MVT::v2i8:
-    case MVT::v2i16:
-    case MVT::v2i32:
-    case MVT::v2i64:
-    case MVT::v2f16:
-    case MVT::v2bf16:
-    case MVT::v2f32:
-    case MVT::v2f64:
-    case MVT::v4i8:
-    case MVT::v4i16:
-    case MVT::v4i32:
-    case MVT::v4f16:
-    case MVT::v4bf16:
-    case MVT::v4f32:
-      // This is a "native" vector type
-      break;
-    case MVT::v8i8:   // <2 x i8x4>
-    case MVT::v8f16:  // <4 x f16x2>
-    case MVT::v8bf16: // <4 x bf16x2>
-    case MVT::v8i16:  // <4 x i16x2>
-    case MVT::v16i8:  // <4 x i8x4>
-      // This can be upsized into a "native" vector type
-      UpsizeElementTypes = true;
-      break;
-    }
+  MemSDNode *MemSD = cast<MemSDNode>(N);
+  const DataLayout &TD = DAG.getDataLayout();
 
-    MemSDNode *MemSD = cast<MemSDNode>(N);
-    const DataLayout &TD = DAG.getDataLayout();
-
-    Align Alignment = MemSD->getAlign();
-    Align PrefAlign =
-        TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
-    if (Alignment < PrefAlign) {
-      // This store is not sufficiently aligned, so bail out and let this vector
-      // store be scalarized.  Note that we may still be able to emit smaller
-      // vector stores.  For example, if we are storing a <4 x float> with an
-      // alignment of 8, this check will fail but the legalizer will try again
-      // with 2 x <2 x float>, which will succeed with an alignment of 8.
-      return SDValue();
-    }
-
-    unsigned Opcode = 0;
-    EVT EltVT = ValVT.getVectorElementType();
-    unsigned NumElts = ValVT.getVectorNumElements();
-
-    if (UpsizeElementTypes) {
-      std::tie(NumElts, EltVT) = GetUpsizedNumEltsAndEltVT(NumElts, EltVT);
-    }
-
-    // Since StoreV2 is a target node, we cannot rely on DAG type legalization.
-    // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
-    // stored type to i16 and propagate the "real" type as the memory type.
-    bool NeedExt = false;
-    if (EltVT.getSizeInBits() < 16)
-      NeedExt = true;
-
-    switch (NumElts) {
-    default:
-      return SDValue();
-    case 2:
-      Opcode = NVPTXISD::StoreV2;
-      break;
-    case 4:
-      Opcode = NVPTXISD::StoreV4;
-      break;
-    }
-
-    SmallVector<SDValue, 8> Ops;
-
-    // First is the chain
-    Ops.push_back(N->getOperand(0));
-
-    if (UpsizeElementTypes) {
-      // Combine individual elements into v2[i,f,bf]16/v4i8 subvectors to be
-      // stored as b32s
-      unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
-      for (unsigned i = 0; i < NumElts; ++i) {
-        SmallVector<SDValue, 4> SubVectorElts;
-        DAG.ExtractVectorElements(Val, SubVectorElts, i * NumEltsPerSubVector,
-                                  NumEltsPerSubVector);
-        SDValue SubVector = DAG.getBuildVector(EltVT, DL, SubVectorElts);
-        Ops.push_back(SubVector);
-      }
-    } else {
-      // Then the split values
-      for (unsigned i = 0; i < NumElts; ++i) {
-        SDValue ExtVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
-                                     DAG.getIntPtrConstant(i, DL));
-        if (NeedExt)
-          ExtVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i16, ExtVal);
-        Ops.push_back(ExtVal);
-      }
-    }
-
-    // Then any remaining arguments
-    Ops.append(N->op_begin() + 2, N->op_end());
-
-    SDValue NewSt =
-        DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
-                                MemSD->getMemoryVT(), MemSD->getMemOperand());
-
-    // return DCI.CombineTo(N, NewSt, true);
-    return NewSt;
+  Align Alignment = MemSD->getAlign();
+  Align PrefAlign =
+      TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
+  if (Alignment < PrefAlign) {
+    // This store is not sufficiently aligned, so bail out and let this vector
+    // store be scalarized.  Note that we may still be able to emit smaller
+    // vector stores.  For example, if we are storing a <4 x float> with an
+    // alignment of 8, this check will fail but the legalizer will try again
+    // with 2 x <2 x float>, which will succeed with an alignment of 8.
+    return SDValue();
   }
 
-  return SDValue();
+  // Since StoreV2 is a target node, we cannot rely on DAG type legalization.
+  // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
+  // stored type to i16 and propagate the "real" type as the memory type.
+  bool NeedExt = false;
+  if (EltVT.getSizeInBits() < 16)
+    NeedExt = true;
+
+  unsigned Opcode = 0;
+  switch (NumElts) {
+  default:
+    return SDValue();
+  case 2:
+    Opcode = NVPTXISD::StoreV2;
+    break;
+  case 4:
+    Opcode = NVPTXISD::StoreV4;
+    break;
+  }
+
+  SmallVector<SDValue, 8> Ops;
+
+  // First is the chain
+  Ops.push_back(N->getOperand(0));
+
+  // Then the split values
+  if (UpsizeElementTypes) {
+    // Combine individual elements into v2[i,f,bf]16/v4i8 subvectors to be
+    // stored as b32s
+    unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SmallVector<SDValue, 4> SubVectorElts;
+      DAG.ExtractVectorElements(Val, SubVectorElts, i * NumEltsPerSubVector,
+                                NumEltsPerSubVector);
+      SDValue SubVector = DAG.getBuildVector(EltVT, DL, SubVectorElts);
+      Ops.push_back(SubVector);
+    }
+  } else {
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue ExtVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                                    DAG.getIntPtrConstant(i, DL));
+      if (NeedExt)
+        ExtVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i16, ExtVal);
+      Ops.push_back(ExtVal);
+    }
+  }
+
+  // Then any remaining arguments
+  Ops.append(N->op_begin() + 2, N->op_end());
+
+  SDValue NewSt =
+      DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  // return DCI.CombineTo(N, NewSt, true);
+  return NewSt;
 }
 
 // st i1 v, addr
@@ -5225,46 +5233,10 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   assert(ResVT.isVector() && "Vector load must have vector type");
 
-  // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
-  // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
-  // vectorized loads/stores with the actual element type for i8/i16 as that
-  // would require v8/v16 variants that do not exist.
-  // In order to load/store such vectors efficiently, here in Type Legalization,
-  // we split the vector into word-sized chunks (v2x16/v4i8). Later, we will
-  // lower to PTX as vectors of b32.
-  bool UpsizeElementTypes = false;
-
-  // We only handle "native" vector sizes for now, e.g. <4 x double> is not
-  // legal.  We can (and should) split that into 2 loads of <2 x double> here
-  // but I'm leaving that as a TODO for now.
-  assert(ResVT.isSimple() && "Can only handle simple types");
-  switch (ResVT.getSimpleVT().SimpleTy) {
-  default:
+  auto VectorLoweringParams = tryGetVectorLoweringParams(ResVT);
+  if (!VectorLoweringParams)
     return;
-  case MVT::v2i8:
-  case MVT::v2i16:
-  case MVT::v2i32:
-  case MVT::v2i64:
-  case MVT::v2f16:
-  case MVT::v2f32:
-  case MVT::v2f64:
-  case MVT::v4i8:
-  case MVT::v4i16:
-  case MVT::v4i32:
-  case MVT::v4f16:
-  case MVT::v4bf16:
-  case MVT::v4f32:
-    // This is a "native" vector type
-    break;
-  case MVT::v8i8:   // <2 x i8x4>
-  case MVT::v8f16:  // <4 x f16x2>
-  case MVT::v8bf16: // <4 x bf16x2>
-  case MVT::v8i16:  // <4 x i16x2>
-  case MVT::v16i8:  // <4 x i8x4>
-    // This can be upsized into a "native" vector type
-    UpsizeElementTypes = true;
-    break;
-  }
+  auto [NumElts, EltVT, UpsizeElementTypes] = VectorLoweringParams.value();
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
 
@@ -5279,13 +5251,6 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
     // alignment of 8, this check will fail but the legalizer will try again
     // with 2 x <2 x float>, which will succeed with an alignment of 8.
     return;
-  }
-
-  EVT EltVT = ResVT.getVectorElementType();
-  unsigned NumElts = ResVT.getVectorNumElements();
-
-  if (UpsizeElementTypes) {
-    std::tie(NumElts, EltVT) = GetUpsizedNumEltsAndEltVT(NumElts, EltVT);
   }
 
   // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
