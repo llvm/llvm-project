@@ -163,13 +163,17 @@ static bool Is16bitsType(MVT VT) {
           VT.SimpleTy == MVT::i16);
 }
 
-// When legalizing vector loads/stores, this function is called, which does two things:
-// 1. Determines Whether the vector is something we want to custom lower, std::nullopt is returned if we do not want to custom lower it.
+// When legalizing vector loads/stores, this function is called, which does two
+// things:
+// 1. Determines Whether the vector is something we want to custom lower,
+// std::nullopt is returned if we do not want to custom lower it.
 // 2. If we do want to handle it, returns three parameters:
 //    - unsigned int NumElts - The number of elements in the final vector
 //    - EVT EltVT - The type of the elements in the final vector
-//    - bool UpsizeElementTypes - Whether or not we are upsizing the elements of the vectors
-static std::optional<std::tuple<unsigned int, EVT, bool>> tryGetVectorLoweringParams(EVT ValVT) {
+//    - bool UpsizeElementTypes - Whether or not we are upsizing the elements of
+//    the vector
+static std::optional<std::tuple<unsigned int, EVT, bool>>
+tryGetVectorLoweringParams(EVT ValVT) {
   // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
   // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
   // vectorized loads/stores with the actual element type for i8/i16 as that
@@ -2885,8 +2889,7 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   const DataLayout &TD = DAG.getDataLayout();
 
   Align Alignment = MemSD->getAlign();
-  Align PrefAlign =
-      TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
+  Align PrefAlign = TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
   if (Alignment < PrefAlign) {
     // This store is not sufficiently aligned, so bail out and let this vector
     // store be scalarized.  Note that we may still be able to emit smaller
@@ -2935,7 +2938,7 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   } else {
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue ExtVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
-                                    DAG.getIntPtrConstant(i, DL));
+                                   DAG.getIntPtrConstant(i, DL));
       if (NeedExt)
         ExtVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i16, ExtVal);
       Ops.push_back(ExtVal);
