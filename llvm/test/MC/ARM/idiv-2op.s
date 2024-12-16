@@ -11,7 +11,7 @@
 @ RUN: llvm-mc -triple=thumbv8 -show-encoding < %s 2>&1 | FileCheck -check-prefix THUMBV8 %s
 
 @ RUN: llvm-mc -triple=armv8 -mattr=-hwdiv -show-encoding < %s 2>&1 | FileCheck -check-prefix ARMV8-NOTHUMBHWDIV %s
-@ RUN: llvm-mc -triple=thumbv8 -mattr=-hwdiv-arm -show-encoding < %s 2>&1 | FileCheck -check-prefix THUMBV8-NOTHUMBHWDIV %s
+@ RUN: llvm-mc -triple=thumbv8 -mattr=-hwdiv-arm -show-encoding < %s 2>&1 | FileCheck -check-prefix THUMBV8-NOARMHWDIV %s
 
         sdiv  r1, r2
         udiv  r3, r4
@@ -38,5 +38,5 @@
 
 @ ARMV8-NOTHUMBHWDIV:   sdiv    r1, r1, r2              @ encoding: [0x11,0xf2,0x11,0xe7] 
 @ ARMV8-NOTHUMBHWDIV:   udiv    r3, r3, r4              @ encoding: [0x13,0xf4,0x33,0xe7]
-@ THUMBV8-NOTHUMBHWDIV: sdiv    r1, r1, r2              @ encoding: [0x91,0xfb,0xf2,0xf1]
-@ THUMBV8-NOTHUMBHWDIV: udiv    r3, r3, r4              @ encoding: [0xb3,0xfb,0xf4,0xf3]
+@ THUMBV8-NOARMHWDIV:   sdiv    r1, r1, r2              @ encoding: [0x91,0xfb,0xf2,0xf1]
+@ THUMBV8-NOARMHWDIV:   udiv    r3, r3, r4              @ encoding: [0xb3,0xfb,0xf4,0xf3]
