@@ -342,11 +342,7 @@ private:
   void notifyCreateInstr(Instruction *I);
   /// Called by the callbacks when instruction \p I is about to get
   /// deleted.
-  void notifyEraseInstr(Instruction *I) {
-    InstrToNodeMap.erase(I);
-    // TODO: Update the dependencies.
-    // TODO: Update the MemDGNode chain to remove the node if needed.
-  }
+  void notifyEraseInstr(Instruction *I);
 
 public:
   /// This constructor also registers callbacks.

@@ -393,7 +393,7 @@ IndexedMemProfRecord
 makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
              std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
              const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
-  llvm::memprof::IndexedMemProfRecord MR;
+  IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
   for (const auto &CSId : CallSiteFrames)
@@ -533,7 +533,7 @@ TEST_F(InstrProfTest, test_caller_callee_pairs) {
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
 
-  memprof::IndexedMemProfData MemProfData;
+  IndexedMemProfData MemProfData;
   MemProfData.Frames.try_emplace(0, 0x123, 1, 2, false);
   MemProfData.Frames.try_emplace(1, 0x234, 3, 4, true);
   MemProfData.Frames.try_emplace(2, 0x123, 5, 6, false);

@@ -350,13 +350,6 @@ void SymbolTable::scanVersionScript() {
         assignAsterisk(pat, &v, true);
   }
 
-  // Symbol themselves might know their versions because symbols
-  // can contain versions in the form of <name>@<version>.
-  // Let them parse and update their names to exclude version suffix.
-  for (Symbol *sym : symVector)
-    if (sym->hasVersionSuffix)
-      sym->parseSymbolVersion(ctx);
-
   // isPreemptible is false at this point. To correctly compute the binding of a
   // Defined (which is used by includeInDynsym(ctx)), we need to know if it is
   // VER_NDX_LOCAL or not. Compute symbol versions before handling

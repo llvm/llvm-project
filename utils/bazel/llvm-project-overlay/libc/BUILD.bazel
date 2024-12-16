@@ -3708,8 +3708,8 @@ libc_function(
 
 libc_function(
     name = "bcopy",
-    srcs = ["src/string/bcopy.cpp"],
-    hdrs = ["src/string/bcopy.h"],
+    srcs = ["src/strings/bcopy.cpp"],
+    hdrs = ["src/strings/bcopy.h"],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -3732,8 +3732,8 @@ libc_function(
 
 libc_function(
     name = "bcmp",
-    srcs = ["src/string/bcmp.cpp"],
-    hdrs = ["src/string/bcmp.h"],
+    srcs = ["src/strings/bcmp.cpp"],
+    hdrs = ["src/strings/bcmp.h"],
     features = no_sanitize_features,
     weak = True,
     deps = [
@@ -3744,8 +3744,8 @@ libc_function(
 
 libc_function(
     name = "bzero",
-    srcs = ["src/string/bzero.cpp"],
-    hdrs = ["src/string/bzero.h"],
+    srcs = ["src/strings/bzero.cpp"],
+    hdrs = ["src/strings/bzero.h"],
     features = no_sanitize_features,
     weak = True,
     deps = [

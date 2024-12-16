@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
-#define _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ENTRY_H
+#define _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ENTRY_H
 
 #include <__cxx03/__chrono/time_point.h>
 #include <__cxx03/__compare/ordering.h>
@@ -432,4 +432,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ENTRY_H

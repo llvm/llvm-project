@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_ANY
-#define _LIBCPP_ANY
+#ifndef _LIBCPP___CXX03_ANY
+#define _LIBCPP___CXX03_ANY
 
 /*
    any synopsis
@@ -611,4 +611,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/variant>
 #endif
 
-#endif // _LIBCPP_ANY
+#endif // _LIBCPP___CXX03_ANY

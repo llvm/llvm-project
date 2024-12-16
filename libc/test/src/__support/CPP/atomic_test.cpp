@@ -33,19 +33,20 @@ TEST(LlvmLibcAtomicTest, CompareExchangeStrong) {
   ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 100);
 }
 
-struct TrivialData {
-  int a;
-  int b;
+struct alignas(void *) TrivialData {
+  char a;
+  char b;
+  char padding[sizeof(void *) - 2];
 };
 
 TEST(LlvmLibcAtomicTest, TrivialCompositeData) {
-  LIBC_NAMESPACE::cpp::Atomic<TrivialData> data({1, 2});
-  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 1);
-  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 2);
+  LIBC_NAMESPACE::cpp::Atomic<TrivialData> data({'a', 'b', {}});
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 'a');
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 'b');
 
-  auto old = data.exchange({3, 4});
-  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 3);
-  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 4);
-  ASSERT_EQ(old.a, 1);
-  ASSERT_EQ(old.b, 2);
+  auto old = data.exchange({'c', 'd', {}});
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 'c');
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 'd');
+  ASSERT_EQ(old.a, 'a');
+  ASSERT_EQ(old.b, 'b');
 }

@@ -228,3 +228,12 @@ mlir::Type hlfir::getExprType(mlir::Type variableType) {
   return hlfir::ExprType::get(variableType.getContext(), typeShape, type,
                               isPolymorphic);
 }
+
+bool hlfir::isFortranIntegerScalarOrArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+
+  mlir::Type unwrappedType = fir::unwrapPassByRefType(fir::unwrapRefType(type));
+  mlir::Type elementType = getFortranElementType(unwrappedType);
+  return mlir::isa<mlir::IntegerType>(elementType);
+}

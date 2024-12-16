@@ -4085,7 +4085,7 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
           CGF.Builder.CreateConstGEP(DependenciesArray, *P), KmpDependInfoTy);
     } else {
       assert(E && "Expected a non-null expression");
-      LValue &PosLVal = *Pos.get<LValue *>();
+      LValue &PosLVal = *cast<LValue *>(Pos);
       llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
       Base = CGF.MakeAddrLValue(
           CGF.Builder.CreateGEP(CGF, DependenciesArray, Idx), KmpDependInfoTy);
@@ -4113,7 +4113,7 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
     if (unsigned *P = Pos.dyn_cast<unsigned *>()) {
       ++(*P);
     } else {
-      LValue &PosLVal = *Pos.get<LValue *>();
+      LValue &PosLVal = *cast<LValue *>(Pos);
       llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
       Idx = CGF.Builder.CreateNUWAdd(Idx,
                                      llvm::ConstantInt::get(Idx->getType(), 1));
