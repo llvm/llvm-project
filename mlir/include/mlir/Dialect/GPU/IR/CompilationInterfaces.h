@@ -27,6 +27,7 @@ class ModuleTranslation;
 }
 namespace gpu {
 enum class CompilationTarget : uint32_t;
+constexpr StringLiteral elfSectionName = "section";
 
 /// This class indicates that the attribute associated with this trait is a GPU
 /// offloading translation attribute. These kinds of attributes must implement
@@ -51,7 +52,7 @@ public:
   /// `Fatbin`.
   TargetOptions(
       StringRef toolkitPath = {}, ArrayRef<std::string> linkFiles = {},
-      StringRef cmdOptions = {},
+      StringRef cmdOptions = {}, StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
@@ -70,6 +71,9 @@ public:
 
   /// Returns the command line options.
   StringRef getCmdOptions() const;
+
+  /// Returns the ELF section.
+  StringRef getELFSection() const;
 
   /// Returns a tokenization of the command line options.
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
@@ -110,6 +114,7 @@ protected:
   TargetOptions(
       TypeID typeID, StringRef toolkitPath = {},
       ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
+      StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
@@ -126,6 +131,9 @@ protected:
   /// An optional set of command line options to be used by the compilation
   /// process.
   std::string cmdOptions;
+
+  /// ELF Section where the binary needs to be located
+  std::string elfSection;
 
   /// Compilation process target format.
   CompilationTarget compilationTarget;
