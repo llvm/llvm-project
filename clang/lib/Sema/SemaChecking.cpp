@@ -5179,12 +5179,12 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
           resType = Context.MFloat8x16Ty;
           break;
         default:
-          return ExprError(Diag(TheCall->getBeginLoc(),
-                                diag::err_shufflevector_unsupported_result_vector_type)
-                           << TheCall->getDirectCallee()
-                           << /*isMorethantwoArgs*/ false
-                           << SourceRange(TheCall->getArg(0)->getBeginLoc(),
-                                          TheCall->getArg(1)->getEndLoc()));
+          return ExprError(
+              Diag(TheCall->getBeginLoc(),
+                   diag::err_shufflevector_unsupported_result_vector_type)
+              << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
+              << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                             TheCall->getArg(1)->getEndLoc()));
         }
       }
       QualType eltType = LHSType->castAs<VectorType>()->getElementType();
