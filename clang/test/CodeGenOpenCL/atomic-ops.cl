@@ -88,7 +88,7 @@ void fi3(atomic_int *i, atomic_uint *ui) {
 
 bool fi4(atomic_int *i) {
   // CHECK-LABEL: @fi4(
-  // CHECK: [[PAIR:%[.0-9A-Z_a-z]+]] = cmpxchg ptr [[PTR:%[.0-9A-Z_a-z]+]], i32 [[EXPECTED:%[.0-9A-Z_a-z]+]], i32 [[DESIRED:%[.0-9A-Z_a-z]+]] syncscope("workgroup-one-as") acquire acquire, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: [[PAIR:%[.0-9A-Z_a-z]+]] = cmpxchg ptr [[PTR:%[.0-9A-Z_a-z]+]], i32 [[EXPECTED:%[.0-9A-Z_a-z]+]], i32 [[DESIRED:%[.0-9A-Z_a-z]+]] syncscope("workgroup") acquire acquire, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
   // CHECK: [[OLD:%[.0-9A-Z_a-z]+]] = extractvalue { i32, i1 } [[PAIR]], 0
   // CHECK: [[CMP:%[.0-9A-Z_a-z]+]] = extractvalue { i32, i1 } [[PAIR]], 1
   // CHECK: br i1 [[CMP]], label %[[STORE_EXPECTED:[.0-9A-Z_a-z]+]], label %[[CONTINUE:[.0-9A-Z_a-z]+]]
@@ -146,21 +146,21 @@ void fi6(atomic_int *i, int order, int scope) {
   // CHECK-NEXT: i32 4, label %[[SEQ_SUB:.*]]
   // CHECK-NEXT: ]
   // CHECK: [[MON_WG]]:
-  // CHECK: load atomic i32, ptr %{{.*}} syncscope("workgroup-one-as") monotonic, align 4{{$}}
+  // CHECK: load atomic i32, ptr %{{.*}} syncscope("workgroup") monotonic, align 4{{$}}
   // CHECK: [[MON_DEV]]:
-  // CHECK: load atomic i32, ptr %{{.*}} syncscope("agent-one-as") monotonic, align 4{{$}}
+  // CHECK: load atomic i32, ptr %{{.*}} syncscope("agent") monotonic, align 4{{$}}
   // CHECK: [[MON_ALL]]:
   // CHECK: load atomic i32, ptr %{{.*}} monotonic, align 4{{$}}
   // CHECK: [[MON_SUB]]:
-  // CHECK: load atomic i32, ptr %{{.*}} syncscope("wavefront-one-as") monotonic, align 4{{$}}
+  // CHECK: load atomic i32, ptr %{{.*}} syncscope("wavefront") monotonic, align 4{{$}}
   // CHECK: [[ACQ_WG]]:
-  // CHECK: load atomic i32, ptr %{{.*}} syncscope("workgroup-one-as") acquire, align 4{{$}}
+  // CHECK: load atomic i32, ptr %{{.*}} syncscope("workgroup") acquire, align 4{{$}}
   // CHECK: [[ACQ_DEV]]:
-  // CHECK: load atomic i32, ptr %{{.*}} syncscope("agent-one-as") acquire, align 4{{$}}
+  // CHECK: load atomic i32, ptr %{{.*}} syncscope("agent") acquire, align 4{{$}}
   // CHECK: [[ACQ_ALL]]:
   // CHECK: load atomic i32, ptr %{{.*}} acquire, align 4{{$}}
   // CHECK: [[ACQ_SUB]]:
-  // CHECK: load atomic i32, ptr %{{.*}} syncscope("wavefront-one-as") acquire, align 4{{$}}
+  // CHECK: load atomic i32, ptr %{{.*}} syncscope("wavefront") acquire, align 4{{$}}
   // CHECK: [[SEQ_WG]]:
   // CHECK: load atomic i32, ptr %{{.*}} syncscope("workgroup") seq_cst, align 4{{$}}
   // CHECK: [[SEQ_DEV]]:
@@ -174,13 +174,13 @@ void fi6(atomic_int *i, int order, int scope) {
 
 float ff1(global atomic_float *d) {
   // CHECK-LABEL: @ff1
-  // CHECK: load atomic i32, ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 4{{$}}
+  // CHECK: load atomic i32, ptr addrspace(1) {{.*}} syncscope("workgroup") monotonic, align 4{{$}}
   return __opencl_atomic_load(d, memory_order_relaxed, memory_scope_work_group);
 }
 
 void ff2(atomic_float *d) {
   // CHECK-LABEL: @ff2
-  // CHECK: store atomic i32 {{.*}} syncscope("workgroup-one-as") release, align 4
+  // CHECK: store atomic i32 {{.*}} syncscope("workgroup") release, align 4
   __opencl_atomic_store(d, 1, memory_order_release, memory_scope_work_group);
 }
 
@@ -192,25 +192,25 @@ float ff3(atomic_float *d) {
 
 float ff4(global atomic_float *d, float a) {
   // CHECK-LABEL: @ff4
-  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 4{{$}}
+  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup") monotonic, align 4{{$}}
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 float ff5(global atomic_double *d, double a) {
   // CHECK-LABEL: @ff5
-  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 8{{$}}
+  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup") monotonic, align 8{{$}}
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 float ff4_generic(atomic_float *d, float a) {
   // CHECK-LABEL: @ff4_generic
-  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 float ff5_generic(atomic_double *d, double a) {
   // CHECK-LABEL: @ff5_generic
-  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace [[$NOPRIVATE]]{{$}}
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
@@ -227,7 +227,7 @@ void atomic_init_foo()
 
 // CHECK-LABEL: @failureOrder
 void failureOrder(atomic_int *ptr, int *ptr2) {
-  // CHECK: cmpxchg ptr {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z_.]+}} syncscope("workgroup-one-as") acquire monotonic, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: cmpxchg ptr {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z_.]+}} syncscope("workgroup") acquire monotonic, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
   __opencl_atomic_compare_exchange_strong(ptr, ptr2, 43, memory_order_acquire, memory_order_relaxed, memory_scope_work_group);
 
   // CHECK: cmpxchg weak ptr {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z_.]+}} syncscope("workgroup") seq_cst acquire, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}

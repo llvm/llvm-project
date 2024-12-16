@@ -26,16 +26,16 @@ typedef enum memory_scope {
 #endif
 } memory_scope;
 
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at wavefront-one-as memory scope [-Rpass=atomic-expand]
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at one-as memory scope [-Rpass=atomic-expand]
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at agent-one-as memory scope [-Rpass=atomic-expand]
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at workgroup-one-as memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at wavefront memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at system memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at agent memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at workgroup memory scope [-Rpass=atomic-expand]
 
 // GFX90A-CAS-LABEL: @atomic_cas
-// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic
-// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("agent-one-as") monotonic
-// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("one-as") monotonic
-// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("wavefront-one-as") monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup") monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("agent") monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("wavefront") monotonic
 float atomic_cas(__global atomic_float *d, float a) {
   float ret1 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
   float ret2 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_device);

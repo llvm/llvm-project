@@ -537,13 +537,6 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     break;
   }
 
-  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
-    if (!Name.empty())
-      Name = Twine(Twine(Name) + Twine("-")).str();
-
-    Name = Twine(Twine(Name) + Twine("one-as")).str();
-  }
-
   return Ctx.getOrInsertSyncScopeID(Name);
 }
 
