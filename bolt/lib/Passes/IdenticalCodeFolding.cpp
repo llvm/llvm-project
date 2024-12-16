@@ -385,9 +385,9 @@ void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
     }
     // For dynamic relocations there are two cases:
     // 1: No symbol and only addend.
-    // 2: There is symbol, but it references undefined symbol, or things like
-    // type information. As the result only using addend to lookup BF is a valid
-    // case.
+    // 2: There is symbol, but it references undefined symbol,
+    // type information, etc. As the result only using addend to lookup BF is a
+    // valid case.
     for (const auto &Rel : Sec.dynamicRelocations()) {
       const uint64_t RelAddr = Rel.Offset + Sec.getAddress();
       if (isAddressInVTable(RelAddr))

@@ -824,7 +824,7 @@ public:
   bool hasAddressTaken() const { return HasAddressTaken; }
 
   /// Set whether function is referenced in non-control flow instructions.
-  void setHasAddressTaken(bool Hat) { HasAddressTaken = Hat; }
+  void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;

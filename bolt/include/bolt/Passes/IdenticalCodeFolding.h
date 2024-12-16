@@ -59,21 +59,21 @@ private:
     VTableBitVector.set(Address / 8);
   }
 
-  /// Scans symbol table and creates a bit vector of memory addresses of
+  /// Scan symbol table and mark memory addresses of
   /// vtables.
   void initVTableReferences(const BinaryContext &BC);
 
-  /// Analyze .text section and relocations and mark functions that are not
+  /// Analyze code section and relocations and mark functions that are not
   /// safe to fold.
   void markFunctionsUnsafeToFold(BinaryContext &BC);
 
   /// Process static and dynamic relocations in the data sections to identify
-  /// function references, and marks them as unsafe to fold. It filters out
+  /// function references, and mark them as unsafe to fold. It filters out
   /// symbol references that are in vtables.
   void analyzeDataRelocations(BinaryContext &BC);
 
-  /// Process functions that have CFG created and mark functions unsafe to fold
-  /// that are used in non-control flow instructions.
+  /// Process functions that have been disassembled and mark functions unsafe to
+  /// fold that are used in non-control flow instructions.
   void analyzeFunctions(BinaryContext &BC);
 };
 
