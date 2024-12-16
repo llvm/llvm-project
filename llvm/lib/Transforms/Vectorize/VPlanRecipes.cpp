@@ -132,8 +132,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
     case VPInstruction::PtrAdd:
       return false;
     default:
-      // TODO: for calls, we can use attributes of the called function to rule
-      // out memory reads.
       return true;
     }
   case VPWidenLoadEVLSC:
