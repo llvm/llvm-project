@@ -628,8 +628,8 @@ static Decomposition decompose(Value *V,
       return MergeResults(Op0, Op1, IsSigned);
 
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
-      auto ResA = decompose(Op0, Preconditions, IsSigned, DL);
-      auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
+      auto ResA = decompose(Op0, Preconditions, IsSigned, State);
+      auto ResB = decompose(Op1, Preconditions, IsSigned, State);
       ResA.sub(ResB);
       return ResA;
     }
