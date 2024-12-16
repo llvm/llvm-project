@@ -8466,7 +8466,8 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
             [&](ElementCount VF) {
               return CM.isScalarAfterVectorization(Phi, VF);
             },
-            Range));
+            Range),
+        Phi->getDebugLoc());
   }
   return nullptr;
 }
