@@ -258,14 +258,17 @@ ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     : ClangTidyCheck(Name, Context),
       AllowIntegerConditions(Options.get("AllowIntegerConditions", false)),
       AllowPointerConditions(Options.get("AllowPointerConditions", false)),
-      UseUpperCaseLiteralSuffix(
-          Options.get("UseUpperCaseLiteralSuffix", false)) {}
+      UseUpperCaseLiteralSuffix(Options.get("UseUpperCaseLiteralSuffix", false)),
+      CheckConversionsToBool(Options.get("CheckConversionsToBool",true)),
+      CheckConversionsFromBool(Options.get("CheckConversionsFromBool",true)) {}
 
 void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
   Options.store(Opts, "UseUpperCaseLiteralSuffix", UseUpperCaseLiteralSuffix);
+  Options.store(Opts,"CheckConversionsToBool",CheckConversionsToBool);
+  Options.store(Opts,"CheckConversionsFromBool",CheckConversionsFromBool);
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
@@ -358,14 +361,14 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
 void ImplicitBoolConversionCheck::check(
     const MatchFinder::MatchResult &Result) {
 
-  if (const auto *CastToBool =
-          Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
+  if (CheckConversionsToBool && (const auto *CastToBool =
+          Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool"))) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
     return handleCastToBool(CastToBool, Parent, *Result.Context);
   }
 
-  if (const auto *CastFromBool =
-          Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool")) {
+  if (CheckConversionsFromBool && (const auto *CastFromBool =
+          Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool"))) {
     const auto *NextImplicitCast =
         Result.Nodes.getNodeAs<ImplicitCastExpr>("furtherImplicitCast");
     return handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
