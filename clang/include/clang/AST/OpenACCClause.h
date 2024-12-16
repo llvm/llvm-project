@@ -788,6 +788,27 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
+class OpenACCUseDeviceClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCUseDeviceClause, Expr *> {
+
+  OpenACCUseDeviceClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::UseDevice, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::UseDevice;
+  }
+  static OpenACCUseDeviceClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
 
 class OpenACCNoCreateClause final
     : public OpenACCClauseWithVarList,

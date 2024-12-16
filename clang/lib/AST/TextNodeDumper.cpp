@@ -425,6 +425,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Seq:
     case OpenACCClauseKind::Tile:
     case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::UseDevice:
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',

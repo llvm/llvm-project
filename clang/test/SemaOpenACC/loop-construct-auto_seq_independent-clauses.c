@@ -68,7 +68,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop auto present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop auto use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -202,7 +202,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop use_device(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -337,7 +337,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop independent present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop independent use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -471,7 +471,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop use_device(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -614,7 +614,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop seq present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop seq use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -754,7 +754,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop use_device(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}

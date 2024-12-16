@@ -12682,6 +12682,9 @@ def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element,%select{| member of a composite variable,}0 or composite "
             "variable member">;
+def err_acc_not_a_var_ref_use_device
+    : Error<"OpenACC variable in 'use_device' clause is not a valid variable "
+            "name or array name">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -12801,6 +12804,8 @@ def err_acc_loop_terminating_condition
 def err_acc_loop_not_monotonic
     : Error<"OpenACC '%0' variable must monotonically increase or decrease "
             "('++', '--', or compound assignment)">;
+def err_acc_construct_one_clause_of
+    : Error<"OpenACC '%0' construct must have at least one %1 clause">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
