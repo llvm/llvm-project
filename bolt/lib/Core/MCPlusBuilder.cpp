@@ -147,6 +147,92 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
   return false;
 }
 
+void MCPlusBuilder::setNegateRAState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kNegateState));
+  setAnnotationOpValue(Inst, MCAnnotation::kNegateState, true);
+}
+
+bool MCPlusBuilder::hasNegateRAState(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kNegateState))
+    return true;
+  return false;
+}
+
+void MCPlusBuilder::setRememberState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRememberState));
+  setAnnotationOpValue(Inst, MCAnnotation::kRememberState, true);
+}
+
+bool MCPlusBuilder::hasRememberState(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kRememberState))
+    return true;
+  return false;
+}
+
+void MCPlusBuilder::setRestoreState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRestoreState));
+  setAnnotationOpValue(Inst, MCAnnotation::kRestoreState, true);
+}
+
+bool MCPlusBuilder::hasRestoreState(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kRestoreState))
+    return true;
+  return false;
+}
+
+void MCPlusBuilder::setRASigned(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kSigned));
+  setAnnotationOpValue(Inst, MCAnnotation::kSigned, true);
+}
+
+bool MCPlusBuilder::isRASigned(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kSigned))
+    return true;
+  return false;
+}
+
+void MCPlusBuilder::setRASigning(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kSigning));
+  setAnnotationOpValue(Inst, MCAnnotation::kSigning, true);
+}
+
+bool MCPlusBuilder::isRASigning(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kSigning))
+    return true;
+  return false;
+}
+
+void MCPlusBuilder::setAuthenticating(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kAuthenticating));
+  setAnnotationOpValue(Inst, MCAnnotation::kAuthenticating, true);
+}
+
+bool MCPlusBuilder::isAuthenticating(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kAuthenticating))
+    return true;
+  return false;
+}
+
+void MCPlusBuilder::setRAUnsigned(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kUnsigned));
+  setAnnotationOpValue(Inst, MCAnnotation::kUnsigned, true);
+}
+
+bool MCPlusBuilder::isRAUnsigned(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kUnsigned))
+    return true;
+  return false;
+}
+
+bool MCPlusBuilder::isRAStateUnknown(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kUnsigned) ||
+      hasAnnotation(Inst, MCAnnotation::kSigned) ||
+      hasAnnotation(Inst, MCAnnotation::kSigning) ||
+      hasAnnotation(Inst, MCAnnotation::kAuthenticating))
+    return false;
+  return true;
+}
+
 std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
   if (!isCall(Inst))
     return std::nullopt;
