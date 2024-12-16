@@ -1752,8 +1752,17 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (isa<UndefValue>(Mask) || isa<ConstantAggregateZero>(Mask))
     return true;
 
+  // NOTE: Through vector ConstantInt we have the potential to support more
+  // than just zero splat masks but that requires a LangRef change.
+  if (isa<ScalableVectorType>(MaskTy))
+    return false;
+
+  unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
+
+  if (const auto *CI = dyn_cast<ConstantInt>(Mask))
+    return !CI->uge(V1Size * 2);
+
   if (const auto *MV = dyn_cast<ConstantVector>(Mask)) {
-    unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (Value *Op : MV->operands()) {
       if (auto *CI = dyn_cast<ConstantInt>(Op)) {
         if (CI->uge(V1Size*2))
@@ -1766,7 +1775,6 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
-    unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (unsigned i = 0, e = cast<FixedVectorType>(MaskTy)->getNumElements();
          i != e; ++i)
       if (CDS->getElementAsInteger(i) >= V1Size*2)
@@ -3834,9 +3842,8 @@ std::optional<bool> ICmpInst::compare(const KnownBits &LHS,
 }
 
 CmpInst::Predicate ICmpInst::getFlippedSignednessPredicate(Predicate pred) {
-  assert(CmpInst::isRelational(pred) &&
-         "Call only with non-equality predicates!");
-
+  if (CmpInst::isEquality(pred))
+    return pred;
   if (isSigned(pred))
     return getUnsignedPredicate(pred);
   if (isUnsigned(pred))
@@ -3906,6 +3913,37 @@ bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
 
 bool CmpInst::isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
   return isImpliedTrueByMatchingCmp(Pred1, getInversePredicate(Pred2));
+}
+
+//===----------------------------------------------------------------------===//
+//                       CmpPredicate Implementation
+//===----------------------------------------------------------------------===//
+
+std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
+                                                      CmpPredicate B) {
+  if (A.Pred == B.Pred)
+    return A.HasSameSign == B.HasSameSign ? A : CmpPredicate(A.Pred);
+  if (A.HasSameSign &&
+      A.Pred == ICmpInst::getFlippedSignednessPredicate(B.Pred))
+    return B.Pred;
+  if (B.HasSameSign &&
+      B.Pred == ICmpInst::getFlippedSignednessPredicate(A.Pred))
+    return A.Pred;
+  return {};
+}
+
+CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
+  if (auto *ICI = dyn_cast<ICmpInst>(Cmp))
+    return ICI->getCmpPredicate();
+  return Cmp->getPredicate();
+}
+
+CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
+  return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
+}
+
+CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {
+  return getSwapped(get(Cmp));
 }
 
 //===----------------------------------------------------------------------===//

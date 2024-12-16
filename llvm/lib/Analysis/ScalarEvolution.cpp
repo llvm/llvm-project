@@ -79,6 +79,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
@@ -133,6 +134,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "scalar-evolution"
 
@@ -443,23 +445,11 @@ ArrayRef<const SCEV *> SCEV::operands() const {
   llvm_unreachable("Unknown SCEV kind!");
 }
 
-bool SCEV::isZero() const {
-  if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(this))
-    return SC->getValue()->isZero();
-  return false;
-}
+bool SCEV::isZero() const { return match(this, m_scev_Zero()); }
 
-bool SCEV::isOne() const {
-  if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(this))
-    return SC->getValue()->isOne();
-  return false;
-}
+bool SCEV::isOne() const { return match(this, m_scev_One()); }
 
-bool SCEV::isAllOnesValue() const {
-  if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(this))
-    return SC->getValue()->isMinusOne();
-  return false;
-}
+bool SCEV::isAllOnesValue() const { return match(this, m_scev_AllOnes()); }
 
 bool SCEV::isNonConstantNegative() const {
   const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(this);
@@ -3423,9 +3413,8 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
     return S;
 
   // 0 udiv Y == 0
-  if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS))
-    if (LHSC->getValue()->isZero())
-      return LHS;
+  if (match(LHS, m_scev_Zero()))
+    return LHS;
 
   if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS)) {
     if (RHSC->getValue()->isOne())
@@ -4307,15 +4296,7 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   }
 
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
-    bool MayBeUB = SCEVExprContains(Ops[i], [this](const SCEV *S) {
-      auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
-      // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
-      // is a non-zero constant, we have to assume the UDiv may be UB.
-      return UDiv && (!isKnownNonZero(UDiv->getOperand(1)) ||
-                      !isGuaranteedNotToBePoison(UDiv->getOperand(1)));
-    });
-
-    if (MayBeUB)
+    if (!isGuaranteedNotToCauseUB(Ops[i]))
       continue;
     // We can replace %x umin_seq %y with %x umin %y if either:
     //  * %y being poison implies %x is also poison.
@@ -5725,8 +5706,9 @@ bool PredicatedScalarEvolution::areAddRecsEqualWithPreds(
     return true;
 
   auto areExprsEqual = [&](const SCEV *Expr1, const SCEV *Expr2) -> bool {
-    if (Expr1 != Expr2 && !Preds->implies(SE.getEqualPredicate(Expr1, Expr2)) &&
-        !Preds->implies(SE.getEqualPredicate(Expr2, Expr1)))
+    if (Expr1 != Expr2 &&
+        !Preds->implies(SE.getEqualPredicate(Expr1, Expr2), SE) &&
+        !Preds->implies(SE.getEqualPredicate(Expr2, Expr1), SE))
       return false;
     return true;
   };
@@ -5933,18 +5915,22 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     // We can generalize this saying that i is the shifted value of BEValue
     // by one iteration:
     //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
-    const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
-    const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
-    if (Shifted != getCouldNotCompute() &&
-        Start != getCouldNotCompute()) {
-      const SCEV *StartVal = getSCEV(StartValueV);
-      if (Start == StartVal) {
-        // Okay, for the entire analysis of this edge we assumed the PHI
-        // to be symbolic.  We now need to go back and purge all of the
-        // entries for the scalars that use the symbolic expression.
-        forgetMemoizedResults(SymbolicName);
-        insertValueToMap(PN, Shifted);
-        return Shifted;
+
+    // Do not allow refinement in rewriting of BEValue.
+    if (isGuaranteedNotToCauseUB(BEValue)) {
+      const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
+      const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
+      if (Shifted != getCouldNotCompute() && Start != getCouldNotCompute() &&
+          ::impliesPoison(BEValue, Start)) {
+        const SCEV *StartVal = getSCEV(StartValueV);
+        if (Start == StartVal) {
+          // Okay, for the entire analysis of this edge we assumed the PHI
+          // to be symbolic.  We now need to go back and purge all of the
+          // entries for the scalars that use the symbolic expression.
+          forgetMemoizedResults(SymbolicName);
+          insertValueToMap(PN, Shifted);
+          return Shifted;
+        }
       }
     }
   }
@@ -6023,6 +6009,42 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
   return nullptr;
 }
 
+/// Returns SCEV for the first operand of a phi if all phi operands have
+/// identical opcodes and operands
+/// eg.
+/// a: %add = %a + %b
+///    br %c
+/// b: %add1 = %a + %b
+///    br %c
+/// c: %phi = phi [%add, a], [%add1, b]
+/// scev(%phi) => scev(%add)
+const SCEV *
+ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
+  BinaryOperator *CommonInst = nullptr;
+  // Check if instructions are identical.
+  for (Value *Incoming : PN->incoming_values()) {
+    auto *IncomingInst = dyn_cast<BinaryOperator>(Incoming);
+    if (!IncomingInst)
+      return nullptr;
+    if (CommonInst) {
+      if (!CommonInst->isIdenticalToWhenDefined(IncomingInst))
+        return nullptr; // Not identical, give up
+    } else {
+      // Remember binary operator
+      CommonInst = IncomingInst;
+    }
+  }
+  if (!CommonInst)
+    return nullptr;
+
+  // Check if SCEV exprs for instructions are identical.
+  const SCEV *CommonSCEV = getSCEV(CommonInst);
+  bool SCEVExprsIdentical =
+      all_of(drop_begin(PN->incoming_values()),
+             [this, CommonSCEV](Value *V) { return CommonSCEV == getSCEV(V); });
+  return SCEVExprsIdentical ? CommonSCEV : nullptr;
+}
+
 const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   if (const SCEV *S = createAddRecFromPHI(PN))
     return S;
@@ -6033,6 +6055,9 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
           PN, {getDataLayout(), &TLI, &DT, &AC, /*CtxI=*/nullptr,
                /*UseInstrInfo=*/true, /*CanUseUndef=*/false}))
     return getSCEV(V);
+
+  if (const SCEV *S = createNodeForPHIWithIdenticalOperands(PN))
+    return S;
 
   if (const SCEV *S = createNodeFromSelectLikePHI(PN))
     return S;
@@ -7322,6 +7347,16 @@ bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
   SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(Op, PC);
   return PC.MaybePoison.empty();
+}
+
+bool ScalarEvolution::isGuaranteedNotToCauseUB(const SCEV *Op) {
+  return !SCEVExprContains(Op, [this](const SCEV *S) {
+    auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
+    // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
+    // is a non-zero constant, we have to assume the UDiv may be UB.
+    return UDiv && (!isKnownNonZero(UDiv->getOperand(1)) ||
+                    !isGuaranteedNotToBePoison(UDiv->getOperand(1)));
+  });
 }
 
 bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
@@ -10548,7 +10583,6 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // Get the initial value for the loop.
   const SCEV *Start = getSCEVAtScope(AddRec->getStart(), L->getParentLoop());
   const SCEV *Step = getSCEVAtScope(AddRec->getOperand(1), L->getParentLoop());
-  const SCEVConstant *StepC = dyn_cast<SCEVConstant>(Step);
 
   if (!isLoopInvariant(Step, L))
     return getCouldNotCompute();
@@ -10570,8 +10604,8 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // Handle unitary steps, which cannot wraparound.
   // 1*N = -Start; -1*N = Start (mod 2^BW), so:
   //   N = Distance (as unsigned)
-  if (StepC &&
-      (StepC->getValue()->isOne() || StepC->getValue()->isMinusOne())) {
+
+  if (match(Step, m_CombineOr(m_scev_One(), m_scev_AllOnes()))) {
     APInt MaxBECount = getUnsignedRangeMax(applyLoopGuards(Distance, Guards));
     MaxBECount = APIntOps::umin(MaxBECount, getUnsignedRangeMax(Distance));
 
@@ -10623,6 +10657,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   }
 
   // Solve the general equation.
+  const SCEVConstant *StepC = dyn_cast<SCEVConstant>(Step);
   if (!StepC || StepC->getValue()->isZero())
     return getCouldNotCompute();
   const SCEV *E = SolveLinEquationWithOverflow(
@@ -14823,7 +14858,7 @@ private:
   bool addOverflowAssumption(const SCEVPredicate *P) {
     if (!NewPreds) {
       // Check if we've already made this assumption.
-      return Pred && Pred->implies(P);
+      return Pred && Pred->implies(P, SE);
     }
     NewPreds->push_back(P);
     return true;
@@ -14904,7 +14939,8 @@ SCEVComparePredicate::SCEVComparePredicate(const FoldingSetNodeIDRef ID,
   assert(LHS != RHS && "LHS and RHS are the same SCEV");
 }
 
-bool SCEVComparePredicate::implies(const SCEVPredicate *N) const {
+bool SCEVComparePredicate::implies(const SCEVPredicate *N,
+                                   ScalarEvolution &SE) const {
   const auto *Op = dyn_cast<SCEVComparePredicate>(N);
 
   if (!Op)
@@ -14934,10 +14970,40 @@ SCEVWrapPredicate::SCEVWrapPredicate(const FoldingSetNodeIDRef ID,
 
 const SCEVAddRecExpr *SCEVWrapPredicate::getExpr() const { return AR; }
 
-bool SCEVWrapPredicate::implies(const SCEVPredicate *N) const {
+bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
+                                ScalarEvolution &SE) const {
   const auto *Op = dyn_cast<SCEVWrapPredicate>(N);
+  if (!Op || setFlags(Flags, Op->Flags) != Flags)
+    return false;
 
-  return Op && Op->AR == AR && setFlags(Flags, Op->Flags) == Flags;
+  if (Op->AR == AR)
+    return true;
+
+  if (Flags != SCEVWrapPredicate::IncrementNSSW &&
+      Flags != SCEVWrapPredicate::IncrementNUSW)
+    return false;
+
+  const SCEV *Step = AR->getStepRecurrence(SE);
+  const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
+  if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))
+    return false;
+
+  // If both steps are positive, this implies N, if N's start and step are
+  // ULE/SLE (for NSUW/NSSW) than this'.
+  Type *WiderTy = SE.getWiderType(Step->getType(), OpStep->getType());
+  Step = SE.getNoopOrZeroExtend(Step, WiderTy);
+  OpStep = SE.getNoopOrZeroExtend(OpStep, WiderTy);
+
+  bool IsNUW = Flags == SCEVWrapPredicate::IncrementNUSW;
+  const SCEV *OpStart = Op->AR->getStart();
+  const SCEV *Start = AR->getStart();
+  OpStart = IsNUW ? SE.getNoopOrZeroExtend(OpStart, WiderTy)
+                  : SE.getNoopOrSignExtend(OpStart, WiderTy);
+  Start = IsNUW ? SE.getNoopOrZeroExtend(Start, WiderTy)
+                : SE.getNoopOrSignExtend(Start, WiderTy);
+  CmpInst::Predicate Pred = IsNUW ? CmpInst::ICMP_ULE : CmpInst::ICMP_SLE;
+  return SE.isKnownPredicate(Pred, OpStep, Step) &&
+         SE.isKnownPredicate(Pred, OpStart, Start);
 }
 
 bool SCEVWrapPredicate::isAlwaysTrue() const {
@@ -14981,10 +15047,11 @@ SCEVWrapPredicate::getImpliedFlags(const SCEVAddRecExpr *AR,
 }
 
 /// Union predicates don't get cached so create a dummy set ID for it.
-SCEVUnionPredicate::SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds)
-  : SCEVPredicate(FoldingSetNodeIDRef(nullptr, 0), P_Union) {
+SCEVUnionPredicate::SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds,
+                                       ScalarEvolution &SE)
+    : SCEVPredicate(FoldingSetNodeIDRef(nullptr, 0), P_Union) {
   for (const auto *P : Preds)
-    add(P);
+    add(P, SE);
 }
 
 bool SCEVUnionPredicate::isAlwaysTrue() const {
@@ -14992,13 +15059,15 @@ bool SCEVUnionPredicate::isAlwaysTrue() const {
                 [](const SCEVPredicate *I) { return I->isAlwaysTrue(); });
 }
 
-bool SCEVUnionPredicate::implies(const SCEVPredicate *N) const {
+bool SCEVUnionPredicate::implies(const SCEVPredicate *N,
+                                 ScalarEvolution &SE) const {
   if (const auto *Set = dyn_cast<SCEVUnionPredicate>(N))
-    return all_of(Set->Preds,
-                  [this](const SCEVPredicate *I) { return this->implies(I); });
+    return all_of(Set->Preds, [this, &SE](const SCEVPredicate *I) {
+      return this->implies(I, SE);
+    });
 
   return any_of(Preds,
-                [N](const SCEVPredicate *I) { return I->implies(N); });
+                [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); });
 }
 
 void SCEVUnionPredicate::print(raw_ostream &OS, unsigned Depth) const {
@@ -15006,15 +15075,15 @@ void SCEVUnionPredicate::print(raw_ostream &OS, unsigned Depth) const {
     Pred->print(OS, Depth);
 }
 
-void SCEVUnionPredicate::add(const SCEVPredicate *N) {
+void SCEVUnionPredicate::add(const SCEVPredicate *N, ScalarEvolution &SE) {
   if (const auto *Set = dyn_cast<SCEVUnionPredicate>(N)) {
     for (const auto *Pred : Set->Preds)
-      add(Pred);
+      add(Pred, SE);
     return;
   }
 
   // Only add predicate if it is not already implied by this union predicate.
-  if (!implies(N))
+  if (!implies(N, SE))
     Preds.push_back(N);
 }
 
@@ -15022,7 +15091,7 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
                                                      Loop &L)
     : SE(SE), L(L) {
   SmallVector<const SCEVPredicate*, 4> Empty;
-  Preds = std::make_unique<SCEVUnionPredicate>(Empty);
+  Preds = std::make_unique<SCEVUnionPredicate>(Empty, SE);
 }
 
 void ScalarEvolution::registerUser(const SCEV *User,
@@ -15086,12 +15155,12 @@ unsigned PredicatedScalarEvolution::getSmallConstantMaxTripCount() {
 }
 
 void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
-  if (Preds->implies(&Pred))
+  if (Preds->implies(&Pred, SE))
     return;
 
   SmallVector<const SCEVPredicate *, 4> NewPreds(Preds->getPredicates());
   NewPreds.push_back(&Pred);
-  Preds = std::make_unique<SCEVUnionPredicate>(NewPreds);
+  Preds = std::make_unique<SCEVUnionPredicate>(NewPreds, SE);
   updateGeneration();
 }
 
@@ -15158,9 +15227,10 @@ const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(Value *V) {
 
 PredicatedScalarEvolution::PredicatedScalarEvolution(
     const PredicatedScalarEvolution &Init)
-  : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L),
-    Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates())),
-    Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {
+    : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L),
+      Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates(),
+                                                 SE)),
+      Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {
   for (auto I : Init.FlagsMap)
     FlagsMap.insert(I);
 }
@@ -15465,9 +15535,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
     // If we have LHS == 0, check if LHS is computing a property of some unknown
     // SCEV %v which we can rewrite %v to express explicitly.
-    const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
-    if (Predicate == CmpInst::ICMP_EQ && RHSC &&
-        RHSC->getValue()->isNullValue()) {
+    if (Predicate == CmpInst::ICMP_EQ && match(RHS, m_scev_Zero())) {
       // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
       // explicitly express that.
       const SCEV *URemLHS = nullptr;
@@ -15648,8 +15716,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           To = RHS;
         break;
       case CmpInst::ICMP_NE:
-        if (isa<SCEVConstant>(RHS) &&
-            cast<SCEVConstant>(RHS)->getValue()->isNullValue()) {
+        if (match(RHS, m_scev_Zero())) {
           const SCEV *OneAlignedUp =
               DividesBy ? GetNextSCEVDividesByDivisor(One, DividesBy) : One;
           To = SE.getUMaxExpr(FromRewritten, OneAlignedUp);

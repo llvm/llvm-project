@@ -3,7 +3,7 @@
 ;signed 15 bit immediate (+- 16383).
 ;Our example uses the positive value 16384.
 ;
-; RUN: not llc -march=mipsel < %s  2> %t
+; RUN: not llc -mtriple=mipsel < %s  2> %t
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 define i32 @main() nounwind {

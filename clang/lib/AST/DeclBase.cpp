@@ -1500,7 +1500,8 @@ DeclContext *DeclContext::getPrimaryContext() {
 }
 
 template <typename T>
-void collectAllContextsImpl(T *Self, SmallVectorImpl<DeclContext *> &Contexts) {
+static void collectAllContextsImpl(T *Self,
+                                   SmallVectorImpl<DeclContext *> &Contexts) {
   for (T *D = Self->getMostRecentDecl(); D; D = D->getPreviousDecl())
     Contexts.push_back(D);
 

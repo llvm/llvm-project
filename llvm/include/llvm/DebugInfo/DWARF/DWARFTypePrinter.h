@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Error.h"
@@ -70,6 +71,7 @@ private:
     case dwarf::DW_TAG_union_type:
     case dwarf::DW_TAG_namespace:
     case dwarf::DW_TAG_enumeration_type:
+    case dwarf::DW_TAG_typedef:
       return true;
     default:
       break;

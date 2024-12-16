@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
-#define _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ALIASING_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_ALIASING_ITERATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -124,4 +124,4 @@ using __aliasing_iterator = typename __aliasing_iterator_wrapper<_BaseT, _Alias>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_ALIASING_ITERATOR_H

@@ -647,6 +647,10 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
+The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
+``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
+``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
 ============================================== ====================================================================== =========================================
@@ -731,6 +735,10 @@ power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
+
+The integer reduction intrinsics, including ``__builtin_reduce_add``,
+``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
+and ``__builtin_reduce_xor``, can be called in a ``constexpr`` context.
 
 Example:
 
@@ -1982,7 +1990,7 @@ Enumerations with a fixed underlying type
 -----------------------------------------
 
 Clang provides support for C++11 enumerations with a fixed underlying type
-within Objective-C.  For example, one can write an enumeration type as:
+within Objective-C and C `prior to C23 <https://open-std.org/JTC1/SC22/WG14/www/docs/n3030.htm>`_.  For example, one can write an enumeration type as:
 
 .. code-block:: c++
 
@@ -1993,6 +2001,14 @@ value, is ``unsigned char``.
 
 Use ``__has_feature(objc_fixed_enum)`` to determine whether support for fixed
 underlying types is available in Objective-C.
+
+Use ``__has_extension(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C prior to C23. This will also report ``true`` in C23
+and later modes as the functionality is available even if it's not an extension in
+those modes.
+
+Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C23 and later.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -4510,8 +4526,12 @@ default member initializer, the invocation point is the location of the
 constructor or aggregate initialization used to create the object. Otherwise
 the invocation point is the same as the location of the builtin.
 
-When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
+When the invocation point of ``__builtin_FUNCTION`` is not a function scope, the
 empty string is returned.
+
+The builtin ``__builtin_COLUMN`` returns the offset from the start of the line,
+beginning from column 1. `This may differ from other implementations.
+<https://eel.is/c++draft/support.srcloc#tab:support.srcloc.current-row-3-column-2-sentence-2>`_
 
 The builtin ``__builtin_source_location`` returns a pointer to constant static
 data of type ``std::source_location::__impl``. This type must have already been
@@ -5535,7 +5555,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 * Global variables that are initialized to zero will be placed in the named
   bss section, if one is present.
 
-* The ``#pragma clang section`` directive does not does try to infer section-kind
+* The ``#pragma clang section`` directive does not try to infer section-kind
   from the name. For example, naming a section "``.bss.mySec``" does NOT mean
   it will be a bss section name.
 

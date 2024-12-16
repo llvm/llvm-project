@@ -11,8 +11,9 @@ define i16 @test(i16 %call37) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i16> [[SHUFFLE]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <8 x i16> [[SHUFFLE]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i1> [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP7:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP8]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP7]] to i16
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = add i16 [[TMP6]], 0
 ; CHECK-NEXT:    ret i16 [[OP_RDX]]
 ;

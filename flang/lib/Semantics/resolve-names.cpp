@@ -31,6 +31,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/program-tree.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
@@ -1642,27 +1643,27 @@ bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
 }
 
 bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
-  const auto &mid{std::get<parser::OmpMapperIdentifier>(x.t)};
-  if (const auto &mapperName{mid.v}) {
-    if (const auto symbol = FindSymbol(currScope(), *mapperName)) {
+  auto &mods{OmpGetModifiers(x)};
+  if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
+    if (auto *symbol{FindSymbol(currScope(), mapper->v)}) {
       // TODO: Do we need a specific flag or type here, to distinghuish against
       // other ConstructName things? Leaving this for the full implementation
       // of mapper lowering.
       auto *misc{symbol->detailsIf<MiscDetails>()};
       if (!misc || misc->kind() != MiscDetails::Kind::ConstructName)
-        context().Say(mapperName->source,
-            "Name '%s' should be a mapper name"_err_en_US, mapperName->source);
+        context().Say(mapper->v.source,
+            "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
       else
-        mapperName->symbol = symbol;
+        mapper->v.symbol = symbol;
     } else {
-      mapperName->symbol = &MakeSymbol(
-          *mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
+      mapper->v.symbol =
+          &MakeSymbol(mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
       // TODO: When completing the implementation, we probably want to error if
       // the symbol is not declared, but right now, testing that the TODO for
-      // OmpMapclause happens is obscured by the TODO for declare mapper, so
+      // OmpMapClause happens is obscured by the TODO for declare mapper, so
       // leaving this out. Remove the above line once the declare mapper is
-      // implemented. context().Say(mapperName->source, "'%s' not
-      // declared"_err_en_US, mapperName->source);
+      // implemented. context().Say(mapper->v.source, "'%s' not
+      // declared"_err_en_US, mapper->v.source);
     }
   }
   return true;
@@ -8952,6 +8953,18 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
+  bool inDeviceSubprogram = false;
+  if (auto *subp{currScope().symbol()
+              ? currScope().symbol()->detailsIf<SubprogramDetails>()
+              : nullptr}) {
+    if (auto attrs{subp->cudaSubprogramAttrs()}) {
+      if (*attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::Global ||
+          *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+        inDeviceSubprogram = true;
+      }
+    }
+  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -8959,6 +8972,14 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
     if (NeedsExplicitType(symbol)) {
       ApplyImplicitRules(symbol);
+    }
+    if (inDeviceSubprogram && IsDummy(symbol) &&
+        symbol.has<ObjectEntityDetails>()) {
+      auto *dummy{symbol.detailsIf<ObjectEntityDetails>()};
+      if (!dummy->cudaDataAttr() && !IsValue(symbol)) {
+        // Implicitly set device attribute if none is set in device context.
+        dummy->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
     }
     if (IsDummy(symbol) && isImplicitNoneType() &&
         symbol.test(Symbol::Flag::Implicit) && !context().HasError(symbol)) {

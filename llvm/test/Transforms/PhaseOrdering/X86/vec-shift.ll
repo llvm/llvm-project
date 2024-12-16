@@ -37,17 +37,17 @@ define void @bar(ptr noundef %0) {
 ; SSE-NEXT:    [[TMP3:%.*]] = xor <2 x i64> [[TMP2]], splat (i64 -1)
 ; SSE-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[TMP3]], splat (i64 44)
 ; SSE-NEXT:    store <2 x i64> [[TMP4]], ptr [[TMP0]], align 8
-; SSE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
+; SSE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; SSE-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; SSE-NEXT:    [[TMP7:%.*]] = xor <2 x i64> [[TMP6]], splat (i64 -1)
 ; SSE-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], splat (i64 44)
 ; SSE-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP5]], align 8
-; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
+; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
 ; SSE-NEXT:    [[TMP10:%.*]] = load <2 x i64>, ptr [[TMP9]], align 8
 ; SSE-NEXT:    [[TMP11:%.*]] = xor <2 x i64> [[TMP10]], splat (i64 -1)
 ; SSE-NEXT:    [[TMP12:%.*]] = shl <2 x i64> [[TMP11]], splat (i64 44)
 ; SSE-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP9]], align 8
-; SSE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 48
+; SSE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
 ; SSE-NEXT:    [[TMP14:%.*]] = load <2 x i64>, ptr [[TMP13]], align 8
 ; SSE-NEXT:    [[TMP15:%.*]] = xor <2 x i64> [[TMP14]], splat (i64 -1)
 ; SSE-NEXT:    [[TMP16:%.*]] = shl <2 x i64> [[TMP15]], splat (i64 44)
@@ -59,7 +59,7 @@ define void @bar(ptr noundef %0) {
 ; AVX-NEXT:    [[TMP3:%.*]] = xor <4 x i64> [[TMP2]], splat (i64 -1)
 ; AVX-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[TMP3]], splat (i64 44)
 ; AVX-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP0]], align 8
-; AVX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
+; AVX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
 ; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; AVX-NEXT:    [[TMP7:%.*]] = xor <4 x i64> [[TMP6]], splat (i64 -1)
 ; AVX-NEXT:    [[TMP8:%.*]] = shl <4 x i64> [[TMP7]], splat (i64 44)

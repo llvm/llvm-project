@@ -105,40 +105,42 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 */
 
-#  include <__config>
-#  include <stddef.h>
+#  if 0
+#  else // 0
+#    include <__config>
+#    include <stddef.h>
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
 
 // We define this here to support older versions of glibc <wchar.h> that do
 // not define this for clang.
-#  ifdef __cplusplus
-#    define __CORRECT_ISO_CPP_WCHAR_H_PROTO
-#  endif
+#    ifdef __cplusplus
+#      define __CORRECT_ISO_CPP_WCHAR_H_PROTO
+#    endif
 
-#  if __has_include_next(<wchar.h>)
-#    include_next <wchar.h>
-#  else
-#    include <__mbstate_t.h> // make sure we have mbstate_t regardless of the existence of <wchar.h>
-#  endif
+#    if __has_include_next(<wchar.h>)
+#      include_next <wchar.h>
+#    else
+#      include <__mbstate_t.h> // make sure we have mbstate_t regardless of the existence of <wchar.h>
+#    endif
 
 // Determine whether we have const-correct overloads for wcschr and friends.
-#  if defined(_WCHAR_H_CPLUSPLUS_98_CONFORMANCE_)
-#    define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
-#  elif defined(__GLIBC_PREREQ)
-#    if __GLIBC_PREREQ(2, 10)
+#    if defined(_WCHAR_H_CPLUSPLUS_98_CONFORMANCE_)
 #      define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
+#    elif defined(__GLIBC_PREREQ)
+#      if __GLIBC_PREREQ(2, 10)
+#        define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
+#      endif
+#    elif defined(_LIBCPP_MSVCRT)
+#      if defined(_CRT_CONST_CORRECT_OVERLOADS)
+#        define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
+#      endif
 #    endif
-#  elif defined(_LIBCPP_MSVCRT)
-#    if defined(_CRT_CONST_CORRECT_OVERLOADS)
-#      define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
-#    endif
-#  endif
 
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-#    if defined(__cplusplus) && !defined(_LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS) && defined(_LIBCPP_PREFERRED_OVERLOAD)
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
+#      if defined(__cplusplus) && !defined(_LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS) && defined(_LIBCPP_PREFERRED_OVERLOAD)
 extern "C++" {
 inline _LIBCPP_HIDE_FROM_ABI wchar_t* __libcpp_wcschr(const wchar_t* __s, wchar_t __c) {
   return (wchar_t*)wcschr(__s, __c);
@@ -193,16 +195,17 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD wchar_t* wmemchr(wchar_t
   return __libcpp_wmemchr(__s, __c, __n);
 }
 }
-#    endif
+#      endif
 
-#    if defined(__cplusplus) && (defined(_LIBCPP_MSVCRT_LIKE) || defined(__MVS__))
+#      if defined(__cplusplus) && (defined(_LIBCPP_MSVCRT_LIKE) || defined(__MVS__))
 extern "C" {
 size_t mbsnrtowcs(
     wchar_t* __restrict __dst, const char** __restrict __src, size_t __nmc, size_t __len, mbstate_t* __restrict __ps);
 size_t wcsnrtombs(
     char* __restrict __dst, const wchar_t** __restrict __src, size_t __nwc, size_t __len, mbstate_t* __restrict __ps);
 } // extern "C"
-#    endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
-#  endif   // _LIBCPP_HAS_WIDE_CHARACTERS
+#      endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
+#    endif   // _LIBCPP_HAS_WIDE_CHARACTERS
+#  endif     // 0
 
 #endif // _LIBCPP_WCHAR_H

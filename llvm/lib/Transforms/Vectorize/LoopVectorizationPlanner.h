@@ -234,9 +234,9 @@ public:
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPCanonicalIVPHIRecipe *CanonicalIV,
-                                     VPValue *Step) {
+                                     VPValue *Step, const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step, Name));
   }
 
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,

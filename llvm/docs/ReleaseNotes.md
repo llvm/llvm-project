@@ -105,11 +105,15 @@ Changes to the LLVM IR
 
 * Operand bundle values can now be metadata strings.
 
+* Fast math flags are now permitted on `fptrunc` and `fpext`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
 Changes to building LLVM
 ------------------------
+
+* Raised the minimum MSVC version to Visual Studio 2019 16.8.
 
 Changes to TableGen
 -------------------
@@ -191,6 +195,7 @@ Changes to the RISC-V Backend
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * `-mcpu=tt-ascalon-d8` was added.
+* `-mcpu=mips-p8700` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
@@ -211,7 +216,16 @@ Changes to the RISC-V Backend
 * `f` and `cf` inline assembly constraints, when using F-/D-/H-in-X extensions,
   will use the relevant GPR rather than FPR. This makes inline assembly portable
   between e.g. F and Zfinx code.
-
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicsr` (CSR)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisls` (Scaled Load Store)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcics` (Conditonal Select)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
+  extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -221,9 +235,15 @@ and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
 and [Non-trapping float-to-int Conversions] language features, which are
 [widely implemented in engines].
 
+A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
+the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
+-mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
+and -mextended-const.
+
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
 [widely implemented in engines]: https://webassembly.org/features/
+[here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
 Changes to the Windows Target
 -----------------------------
@@ -253,6 +273,13 @@ Changes to the X86 Backend
 * Supported ISA of `MSR_IMM`.
 
 * Supported ``-mcpu=diamondrapids``
+
+* Supported emitting relocation types for x86-64 target:
+  * `R_X86_64_CODE_4_GOTPCRELX`
+  * `R_X86_64_CODE_4_GOTTPOFF`
+  * `R_X86_64_CODE_4_GOTPC32_TLSDESC`
+  * `R_X86_64_CODE_6_GOTTPOFF`
+
 
 Changes to the OCaml bindings
 -----------------------------
@@ -357,6 +384,34 @@ Changes to LLDB
 * A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
 
 * LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
+
+* On the command line, LLDB now limits tab completions to your terminal width to avoid wrapping.
+
+  Old:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorthand
+  formats.
+          _regexp-bt        -- Show backtrace of the current thread's call sta
+  ck. Any numeric argument displays at most that many frames. The argument 'al
+  l' displays all threads. Use 'settings set frame-format' to customize the pr
+  inting of individual frames and 'settings set thread-format' to customize th
+  e thread header. Frame recognizers may filter thelist. Use 'thread backtrace
+  -u (--unfiltered)' to see them all.
+          _regexp-display   -- Evaluate an expression at every stop (see 'help
+  target stop-hook'.)
+
+  ```
+
+  New:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorth...
+          _regexp-bt        -- Show backtrace of the current thread's call ...
+          _regexp-display   -- Evaluate an expression at every stop (see 'h...
+  ```
 
 Changes to BOLT
 ---------------------------------

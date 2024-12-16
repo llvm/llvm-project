@@ -22,9 +22,11 @@ define i8 @f(i1 %arg0, i1 %arg1, i1 %arg2) {
 ; CHECK-NEXT:    call void @use(i64 undef)
 ; CHECK-NEXT:    br label %[[BB9:.*]]
 ; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[LOAD8:%.*]] = load i8, ptr [[CALL]], align 4
 ; CHECK-NEXT:    br label %[[BB9]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    ret i8 4
+; CHECK-NEXT:    [[PHI10:%.*]] = phi i8 [ [[LOAD8]], %[[BB7]] ], [ 4, %[[BB6]] ]
+; CHECK-NEXT:    ret i8 [[PHI10]]
 ;
 bb:
   br i1 %arg2, label %bb2, label %bb11

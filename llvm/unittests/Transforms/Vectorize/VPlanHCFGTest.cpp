@@ -107,8 +107,9 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "ir-bb\<entry\>:\l" +
-    "No successors\l"
+    "Successor(s): vector.ph\l"
   ]
+  N0 -> N1 [ label=""]
   N1 [label =
     "vector.ph:\l" +
     "Successor(s): vector loop\l"

@@ -429,16 +429,14 @@ defm : ICXWriteResPair<WriteVarVecShiftY, [ICXPort01], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarVecShiftZ, [ICXPort0], 1, [1], 1, 7>;
 
 // Vector insert/extract operations.
-def : WriteRes<WriteVecInsert, [ICXPort5]> {
+def : WriteRes<WriteVecInsert, [ICXPort15,ICXPort5]> {
   let Latency = 2;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
 }
-def : WriteRes<WriteVecInsertLd, [ICXPort5,ICXPort23]> {
+def : WriteRes<WriteVecInsertLd, [ICXPort15,ICXPort23]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
-def: InstRW<[WriteVecInsertLd], (instregex "(V?)MOV(H|L)(PD|PS)rm")>;
 
 def : WriteRes<WriteVecExtract, [ICXPort0,ICXPort15]> {
   let Latency = 3;
@@ -607,7 +605,7 @@ defm : ICXWriteResPair<WriteVarShuffle256, [ICXPort5], 3, [1], 1, 7>;  // 256-bi
 def : WriteRes<WriteMicrocoded, [ICXPort0156]> { let Latency = 100; } // def WriteMicrocoded : SchedWrite;
 
 // Fence instructions.
-def : WriteRes<WriteFence,  [ICXPort78, ICXPort49]>;
+def : WriteRes<WriteFence,  [ICXPort78, ICXPort49]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 
 // Load/store MXCSR.
 def : WriteRes<WriteLDMXCSR, [ICXPort0,ICXPort23,ICXPort0156]> { let Latency = 7; let NumMicroOps = 3; let ReleaseAtCycles = [1,1,1]; }
@@ -771,13 +769,6 @@ def ICXWriteResGroup20 : SchedWriteRes<[ICXPort6,ICXPort0156]> {
 }
 def: InstRW<[ICXWriteResGroup20], (instregex "CLFLUSH")>;
 
-def ICXWriteResGroup21 : SchedWriteRes<[ICXPort49,ICXPort78]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[ICXWriteResGroup21], (instrs SFENCE)>;
-
 def ICXWriteResGroup23 : SchedWriteRes<[ICXPort06,ICXPort0156]> {
   let Latency = 2;
   let NumMicroOps = 2;
@@ -915,13 +906,6 @@ def ICXWriteResGroup42 : SchedWriteRes<[ICXPort6,ICXPort0156]> {
   let ReleaseAtCycles = [1,2];
 }
 def: InstRW<[ICXWriteResGroup42], (instregex "CLD")>;
-
-def ICXWriteResGroup43 : SchedWriteRes<[ICXPort49,ICXPort78]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [1,2];
-}
-def: InstRW<[ICXWriteResGroup43], (instrs MFENCE)>;
 
 def ICXWriteResGroup44 : SchedWriteRes<[ICXPort06,ICXPort0156]> {
   let Latency = 2;
@@ -1311,7 +1295,8 @@ def ICXWriteResGroup92 : SchedWriteRes<[ICXPort5,ICXPort23]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[ICXWriteResGroup92], (instregex "VMOV(SD|SS)Zrm(b?)",
-                                              "VPBROADCAST(B|W)(Z128)?rm",
+                                             "VPBROADCAST(B|W)(Z128)?rm",
+                                             "(V?)MOV(H|L)(PD|PS)rm",
                                              "(V?)INSERTPS(Z?)rm",
                                              "(V?)PALIGNR(Z128)?rmi",
                                              "(V?)PERMIL(PD|PS)(Z128)?m(b?)i",
