@@ -283,7 +283,7 @@ static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
   }
 
   if (!IsLittleEndian) {
-    llvm_unreachable("Big-endian mode currently is not supported!");
+    report_fatal_error("Big-endian mode currently is not supported!");
   } else {
     Insn = (Bytes[1] << 8) | Bytes[0];
   }
