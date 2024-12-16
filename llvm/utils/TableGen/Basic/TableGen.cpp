@@ -1,4 +1,4 @@
-//===- TableGenStatics.cpp ------------------------------------------------===//
+//===- TableGen.cpp - Top-Level TableGen implementation for LLVM ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TableGenStatics.h"
+#include "TableGen.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"

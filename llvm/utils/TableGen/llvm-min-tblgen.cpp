@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Basic/TableGenStatics.h"
+#include "Basic/TableGen.h"
 
 /// Command line parameters are shared between llvm-tblgen and llvm-min-tblgen.
 /// The indirection to tblgen_main exists to ensure that the static variables
