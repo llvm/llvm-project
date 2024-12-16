@@ -3671,7 +3671,7 @@ private:
 
     if (UserTreeIdx.UserTE)
       Last->UserTreeIndices.push_back(UserTreeIdx);
-    Last->dump();
+    LLVM_DEBUG(Last->dump());
     return Last;
   }
 
