@@ -630,8 +630,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   }
 
   // Verify that children don't intersect.
-  const auto IntersectingChild =
-      ParentRI.insert(RI);
+  const auto IntersectingChild = ParentRI.insert(RI);
   if (IntersectingChild != ParentRI.Children.end()) {
     ++NumErrors;
     ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {
