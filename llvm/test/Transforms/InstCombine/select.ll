@@ -4801,6 +4801,18 @@ define i32 @replace_and_cond(i1 %cond1, i1 %cond2) {
   ret i32 %mux
 }
 
+define <2 x i32> @replace_and_cond_vec(<2 x i1> %cond1, <2 x i1> %cond2) {
+; CHECK-LABEL: @replace_and_cond_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND2:%.*]], <2 x i32> splat (i32 3), <2 x i32> splat (i32 2)
+; CHECK-NEXT:    [[MUX:%.*]] = select <2 x i1> [[COND1:%.*]], <2 x i32> [[SEL]], <2 x i32> splat (i32 1)
+; CHECK-NEXT:    ret <2 x i32> [[MUX]]
+;
+  %and = and <2 x i1> %cond1, %cond2
+  %sel = select <2 x i1> %and, <2 x i32> splat(i32 3), <2 x i32> splat(i32 2)
+  %mux = select <2 x i1> %cond1, <2 x i32> %sel, <2 x i32> splat(i32 1)
+  ret <2 x i32> %mux
+}
+
 ; TODO: We can still replace the use of %and with %cond2
 define i32 @replace_and_cond_multiuse1(i1 %cond1, i1 %cond2) {
 ; CHECK-LABEL: @replace_and_cond_multiuse1(
