@@ -40,6 +40,36 @@ void BM_CopyConstruct(benchmark::State& st, Container) {
 }
 
 template <class Container>
+void BM_MoveConstruct(benchmark::State& st, Container) {
+  auto size = st.range(0);
+  Container c(size);
+  for (auto _ : st) {
+    auto v = std::move(c);
+    DoNotOptimizeData(v);
+  }
+}
+
+template <class Container, class Allocator>
+void BM_CopyConstruct_Alloc(benchmark::State& st, Container, Allocator a) {
+  auto size = st.range(0);
+  Container c(size);
+  for (auto _ : st) {
+    Container v(c, a);
+    DoNotOptimizeData(v);
+  }
+}
+
+template <class Container, class Allocator>
+void BM_MoveConstruct_Alloc(benchmark::State& st, Container, Allocator a) {
+  auto size = st.range(0);
+  Container c(size);
+  for (auto _ : st) {
+    Container v(std::move(c), a);
+    DoNotOptimizeData(v);
+  }
+}
+
+template <class Container>
 void BM_Assignment(benchmark::State& st, Container) {
   auto size = st.range(0);
   Container c1;
