@@ -127,6 +127,11 @@ static cl::opt<bool> PrintJTFootprintReduction(
     cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
+    PrintAdrRelaxation("print-adr-relaxation",
+                       cl::desc("print functions after ADR Relaxation pass"),
+                       cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool>
     PrintLongJmp("print-longjmp",
                  cl::desc("print functions after longjmp pass"), cl::Hidden,
                  cl::cat(BoltOptCategory));
@@ -493,7 +498,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<ReorderData>());
 
   if (BC.isAArch64()) {
-    Manager.registerPass(std::make_unique<ADRRelaxationPass>());
+    Manager.registerPass(
+        std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
 
     // Tighten branches according to offset differences between branch and
     // targets. No extra instructions after this pass, otherwise we may have
