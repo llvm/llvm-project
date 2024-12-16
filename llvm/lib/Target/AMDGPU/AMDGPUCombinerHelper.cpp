@@ -445,3 +445,75 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
   Builder.buildFMinNumIEEE(MI.getOperand(0), B1, C1);
   MI.eraseFromParent();
 }
+
+bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToLdexp(
+    MachineInstr &MI, MachineInstr &Sel,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FMUL);
+  assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DestTy = MRI.getType(Dst);
+  LLT ScalarDestTy = DestTy.getScalarType();
+
+  if ((ScalarDestTy == LLT::float64() || ScalarDestTy == LLT::float32() ||
+       ScalarDestTy == LLT::float16()) &&
+      (MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))) {
+    Register SelectCond = Sel.getOperand(1).getReg();
+    Register SelectTrue = Sel.getOperand(2).getReg();
+    Register SelectFalse = Sel.getOperand(3).getReg();
+
+    const auto SelectTrueCst =
+        DestTy.isVector()
+            ? getFConstantSplat(SelectTrue, MRI, /* allowUndef */ true)
+            : getFConstantVRegValWithLookThrough(SelectTrue, MRI);
+    if (!SelectTrueCst)
+      return false;
+    const auto SelectFalseCst =
+        DestTy.isVector()
+            ? getFConstantSplat(SelectFalse, MRI, /* allowUndef */ true)
+            : getFConstantVRegValWithLookThrough(SelectFalse, MRI);
+    if (!SelectFalseCst)
+      return false;
+
+    if (SelectTrueCst->Value.isNegative() != SelectFalseCst->Value.isNegative())
+      return false;
+
+    // For f32, only non-inline constants should be transformed.
+    const SIInstrInfo *TII =
+        (MI.getMF()->getSubtarget<GCNSubtarget>()).getInstrInfo();
+    if (ScalarDestTy == LLT::float32() &&
+        TII->isInlineConstant(SelectTrueCst->Value) &&
+        TII->isInlineConstant(SelectFalseCst->Value))
+      return false;
+
+    int SelectTrueVal = SelectTrueCst->Value.getExactLog2Abs();
+    if (SelectTrueVal == INT_MIN)
+      return false;
+    int SelectFalseVal = SelectFalseCst->Value.getExactLog2Abs();
+    if (SelectFalseVal == INT_MIN)
+      return false;
+
+    MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
+      LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+      auto NewSel =
+          Builder.buildSelect(IntDestTy, SelectCond,
+                              Builder.buildConstant(IntDestTy, SelectTrueVal),
+                              Builder.buildConstant(IntDestTy, SelectFalseVal));
+
+      if (SelectTrueCst->Value.isNegative()) {
+        auto NegX = Builder.buildFNeg(
+            DestTy, MI.getOperand(1).getReg(),
+            MRI.getVRegDef(MI.getOperand(1).getReg())->getFlags());
+        Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
+      } else {
+        Builder.buildFLdexp(Dst, MI.getOperand(1).getReg(), NewSel,
+                            MI.getFlags());
+      }
+    };
+
+    return true;
+  }
+
+  return false;
+}

@@ -30,6 +30,10 @@ public:
                                    Register Src1, Register Src2);
   void applyExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
                                    Register Src1, Register Src2);
+
+  bool matchCombineFmulWithSelectToLdexp(
+      MachineInstr &MI, MachineInstr &Sel,
+      std::function<void(MachineIRBuilder &)> &MatchInfo);
 };
 
 } // namespace llvm

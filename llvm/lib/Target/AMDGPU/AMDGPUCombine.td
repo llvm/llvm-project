@@ -124,6 +124,16 @@ def sign_extension_in_reg : GICombineRule<
          [{ return matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
   (apply [{ applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
 
+// Do the following combines :
+// fmul x, select(y, A, B)   -> ldexp (x, select i32 (y, a, b))
+// fmul x, select(y, -A, -B) -> ldexp ((fneg x), select i32 (y, a, b))
+def combine_fmul_with_select_to_ldexp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match  (G_FMUL $dst, $x, $select):$root,
+          (G_SELECT $select, $y, $A, $B):$sel,
+          [{ return Helper.matchCombineFmulWithSelectToLdexp(*${root}, *${sel}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
