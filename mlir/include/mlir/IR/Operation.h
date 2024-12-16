@@ -322,6 +322,9 @@ public:
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
+  /// Pretty print for ease of debugging readabilty with unverified IR.
+  void dumpPrettyPrinted();
+
   //===--------------------------------------------------------------------===//
   // Operands
   //===--------------------------------------------------------------------===//
