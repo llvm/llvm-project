@@ -416,6 +416,23 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::IfPresent: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::HostData:
+    case OpenACCDirectiveKind::Update:
+      return true;
+    default:
+      return false;
+    }
+  }
+  case OpenACCClauseKind::Detach: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::ExitData:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -1034,6 +1051,21 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAttachClause(
                                      Clause.getEndLoc());
 }
 
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDetachClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // ActOnVar ensured that everything is a valid variable reference, but we
+  // still have to make sure it is a pointer type.
+  llvm::SmallVector<Expr *> VarList{Clause.getVarList()};
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return SemaRef.CheckVarIsPointerType(OpenACCClauseKind::Detach, E);
+  });
+  Clause.setVarListDetails(VarList,
+                           /*IsReadOnly=*/false, /*IsZero=*/false);
+  return OpenACCDetachClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), Clause.getVarList(),
+                                     Clause.getEndLoc());
+}
+
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
   // Restrictions only properly implemented on 'compute'/'combined'/'data'
@@ -1618,6 +1650,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFinalizeClause(
   // has no associated rules.
   return OpenACCFinalizeClause::Create(Ctx, Clause.getBeginLoc(),
                                        Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::HostData)
+    return isNotImplemented();
+  // There isn't anything to do here, this is only valid on one construct, and
+  // has no associated rules.
+  return OpenACCIfPresentClause::Create(Ctx, Clause.getBeginLoc(),
+                                        Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(

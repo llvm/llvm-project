@@ -74,8 +74,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
