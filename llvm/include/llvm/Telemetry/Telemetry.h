@@ -34,7 +34,7 @@ public:
   virtual void write(StringRef KeyName, StringRef Value) = 0;
   virtual void write(StringRef KeyName,
                      const std::map<std::string, std::string> &Value) = 0;
-  virtual llvm::Error finalize() = 0;
+  virtual Error finalize() = 0;
 };
 
 /// Configuration for the Manager class.
