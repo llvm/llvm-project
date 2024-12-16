@@ -73,7 +73,8 @@ public:
     /// This is used for finding overlapping ranges in the DW_AT_ranges
     /// attribute of a DIE. It is also used as a set of address ranges that
     /// children address ranges must all be contained in.
-    std::optional<DWARFAddressRange> insert(const DWARFAddressRange &R);
+    std::optional<DWARFAddressRange> insert(const DWARFAddressRange &R,
+                                            bool AllowDuplicates = false);
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an

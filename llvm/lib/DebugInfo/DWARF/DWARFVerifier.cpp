@@ -48,10 +48,16 @@ class DWARFDebugInfoEntry;
 }
 
 std::optional<DWARFAddressRange>
-DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
+DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R,
+                                    bool AllowDuplicates) {
   auto Begin = Ranges.begin();
   auto End = Ranges.end();
   auto Pos = std::lower_bound(Begin, End, R);
+
+  // Check for exact duplicates if duplicates are not allowed
+  if (AllowDuplicates && Pos != End && *Pos == R) {
+    return std::nullopt;
+  }
 
   if (Pos != End) {
     DWARFAddressRange Range(*Pos);
@@ -613,7 +619,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
       // to have. Compile units often have DW_AT_ranges that can contain one or
       // more dead stripped address ranges which tend to all be at the same
       // address: 0 or -1.
-      if (auto PrevRange = RI.insert(Range)) {
+      if (auto PrevRange = RI.insert(Range, /*AllowDuplicates = */ true)) {
         ++NumErrors;
         ErrorCategory.Report("DIE has overlapping DW_AT_ranges", [&]() {
           error() << "DIE has overlapping ranges in DW_AT_ranges attribute: "
@@ -627,8 +633,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   }
 
   // Verify that children don't intersect.
-  bool AllowDuplicates = Die.getTag() == DW_TAG_subprogram;
-  const auto IntersectingChild = ParentRI.insert(RI, AllowDuplicates);
+  const auto IntersectingChild =
+      ParentRI.insert(RI, /*AllowDuplicates = */ true);
   if (IntersectingChild != ParentRI.Children.end()) {
     ++NumErrors;
     ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {

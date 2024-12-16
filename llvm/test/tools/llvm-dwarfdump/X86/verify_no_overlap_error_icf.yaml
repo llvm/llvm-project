@@ -1,4 +1,4 @@
-//--- comments.txt
+#--- comments.txt
 
 # This test verifies several scenarios with DW_TAG_subprogram address ranges:
 # 1. Two subprograms can have identical ranges (shown with foo2 and foo3 having same low_pc/high_pc)
@@ -24,7 +24,10 @@
 # RUN: sed '0,/Value:  0x77/{s/Value:  0x77/Value:  0x66/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-HIGH-PC
 # CHECK-HIGH-PC: error: DIEs have overlapping address ranges
 
-//--- test.yaml
+# RUN: sed '0,/LowOffset:  0x880111/{s//LowOffset:  0x880112/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-LEX-BLOCK
+# CHECK-LEX-BLOCK: DIE has overlapping ranges in DW_AT_ranges attribute
+
+#--- test.yaml
 --- !ELF
 FileHeader:
   Class:    ELFCLASS64
@@ -68,6 +71,11 @@ DWARF:
         Attributes:
           - Attribute: DW_AT_name
             Form:      DW_FORM_string
+      - Tag:      DW_TAG_lexical_block
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
   debug_ranges:
     - Offset:    0x0
       AddrSize:  0x8
@@ -90,6 +98,17 @@ DWARF:
         - LowOffset:  0x7000
           HighOffset: 0x8000
         - LowOffset:  0x0
+          HighOffset: 0x0
+    - Offset: 0xA0   # Added Range List #3 for lexical block
+      AddrSize: 0x8
+      Entries:
+        - LowOffset:  0x880111
+          HighOffset: 0x881222
+        - LowOffset:  0x882333
+          HighOffset: 0x883444
+        - LowOffset:  0x880111  # Overlaps with 1st range in the same list
+          HighOffset: 0x881222
+        - LowOffset:  0x0   # End of list
           HighOffset: 0x0
   debug_info:
     - Version: 4
@@ -127,5 +146,8 @@ DWARF:
           Values:
             - CStr: func2_with_ranges
             - Value:  0x50
+        - AbbrCode: 5   # Added lexical block using ranges
+          Values:
+            - Value: 0xA0 # Range list index in debug_ranges
         - AbbrCode: 0
 ...
