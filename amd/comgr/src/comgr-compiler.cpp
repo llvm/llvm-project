@@ -1889,6 +1889,12 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
 
   for (auto *Input : InSet->DataObjects) {
 
+    if (env::shouldSaveTemps()) {
+      if (auto Status = outputToFile(Input, getFilePath(Input, InputDir))) {
+        return Status;
+      }
+    }
+
     if (Input->DataKind != AMD_COMGR_DATA_KIND_SPIRV) {
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
     }
@@ -1932,9 +1938,15 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
       return Status;
     }
 
-    LogS << "  SPIR-V Translation: amd-llvm-spirv -r "
-      << "--spirv-target-env=CL2.0 " << Input->Name << " -o " << Output->Name
-      << " (command line equivalent)\n";
+    LogS << "SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 "
+      << getFilePath(Input, InputDir) << " "
+      << getFilePath(Output, OutputDir) << " (command line equivalent)\n";
+
+    if (env::shouldSaveTemps()) {
+      if (auto Status = outputToFile(Output, getFilePath(Output, OutputDir))) {
+        return Status;
+      }
+    }
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
