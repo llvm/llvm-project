@@ -15,6 +15,7 @@
 #include "GISel/RISCVLegalizerInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
@@ -96,7 +97,15 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {}
+      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<RISCVSelectionDAGInfo>();
+}
+
+RISCVSubtarget::~RISCVSubtarget() = default;
+
+const SelectionDAGTargetInfo *RISCVSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
 
 const CallLowering *RISCVSubtarget::getCallLowering() const {
   if (!CallLoweringInfo)

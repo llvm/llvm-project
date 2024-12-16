@@ -3874,11 +3874,47 @@ class SME2_FP8_FDOT_LANE_VG1x4 :
                                llvm_i32_ty],
                           [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<6>>]>;
 
+class SME2_FP8_FDOT_SINGLE_VG1x2 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+class SME2_FP8_FDOT_SINGLE_VG1x4 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+class SME2_FP8_FDOT_MULTI_VG1x2 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+class SME2_FP8_FDOT_MULTI_VG1x4 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
   def int_aarch64_sme_fp8_fdot_lane_za16_vg1x2 : SME2_FP8_FDOT_LANE_VG1x2;
   def int_aarch64_sme_fp8_fdot_lane_za16_vg1x4 : SME2_FP8_FDOT_LANE_VG1x4;
 
   def int_aarch64_sme_fp8_fdot_lane_za32_vg1x2 : SME2_FP8_FDOT_LANE_VG1x2;
   def int_aarch64_sme_fp8_fdot_lane_za32_vg1x4 : SME2_FP8_FDOT_LANE_VG1x4;
+
+  def int_aarch64_sme_fp8_fdot_single_za16_vg1x2 : SME2_FP8_FDOT_SINGLE_VG1x2;
+  def int_aarch64_sme_fp8_fdot_single_za16_vg1x4 : SME2_FP8_FDOT_SINGLE_VG1x4;
+
+  def int_aarch64_sme_fp8_fdot_single_za32_vg1x2 : SME2_FP8_FDOT_SINGLE_VG1x2;
+  def int_aarch64_sme_fp8_fdot_single_za32_vg1x4 : SME2_FP8_FDOT_SINGLE_VG1x4;
+
+  def int_aarch64_sme_fp8_fdot_multi_za16_vg1x2 : SME2_FP8_FDOT_MULTI_VG1x2;
+  def int_aarch64_sme_fp8_fdot_multi_za16_vg1x4 : SME2_FP8_FDOT_MULTI_VG1x4;
+
+  def int_aarch64_sme_fp8_fdot_multi_za32_vg1x2 : SME2_FP8_FDOT_MULTI_VG1x2;
+  def int_aarch64_sme_fp8_fdot_multi_za32_vg1x4 : SME2_FP8_FDOT_MULTI_VG1x4;
 }
 
 //
