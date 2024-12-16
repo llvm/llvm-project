@@ -568,10 +568,21 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     case DW_CFA_remember_state:
       Function.addCFIInstruction(
           Offset, MCCFIInstruction::createRememberState(nullptr));
+
+      if (Function.getBinaryContext().isAArch64())
+        // Support for pointer authentication:
+        // We need to annotate instructions that modify the RA State, to work
+        // out the state of each instruction in MarkRAStates Pass.
+        Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
       break;
     case DW_CFA_restore_state:
       Function.addCFIInstruction(Offset,
                                  MCCFIInstruction::createRestoreState(nullptr));
+      if (Function.getBinaryContext().isAArch64())
+        // Support for pointer authentication:
+        // We need to annotate instructions that modify the RA State, to work
+        // out the state of each instruction in MarkRAStates Pass.
+        Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
       break;
     case DW_CFA_def_cfa:
       Function.addCFIInstruction(
@@ -632,8 +643,13 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
       // id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
-        Function.addCFIInstruction(
-            Offset, MCCFIInstruction::createNegateRAState(nullptr));
+        // Not adding OpNegateRAState since the location they are needed
+        // depends on the order of BasicBlocks, which changes during
+        // optimizations. Instead, an annotation is added to the instruction, to
+        // mark that the instruction modifies the RA State. The actual state for
+        // instructions are worked out in MarkRAStates based on these
+        // annotations.
+        Function.setInstModifiesRAState(DW_CFA_GNU_window_save, Offset);
         break;
       }
       if (opts::Verbosity >= 1)
