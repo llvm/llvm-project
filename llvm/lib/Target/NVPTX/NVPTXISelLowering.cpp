@@ -173,16 +173,7 @@ static bool Is16bitsType(MVT VT) {
 //    - bool UpsizeElementTypes - Whether or not we are upsizing the elements of
 //    the vector
 static std::optional<std::tuple<unsigned int, EVT, bool>>
-tryGetVectorLoweringParams(EVT ValVT) {
-  // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
-  // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
-  // vectorized loads/stores with the actual element type for i8/i16 as that
-  // would require v8/v16 variants that do not exist.
-  // In order to load/store such vectors efficiently, here in Type Legalization,
-  // we split the vector into word-sized chunks (v2x16/v4i8). Later, we will
-  // lower to PTX as vectors of b32.
-  bool UpsizeElementTypes = false;
-
+getVectorLoweringShape(EVT ValVT) {
   if (!ValVT.isVector() || !ValVT.isSimple())
     return std::nullopt;
 
@@ -210,27 +201,29 @@ tryGetVectorLoweringParams(EVT ValVT) {
   case MVT::v4bf16:
   case MVT::v4f32:
     // This is a "native" vector type
-    break;
+    return std::tuple(NumElts, EltVT, /* UpsizeElementTypes = */ false);
   case MVT::v8i8:   // <2 x i8x4>
   case MVT::v8f16:  // <4 x f16x2>
   case MVT::v8bf16: // <4 x bf16x2>
   case MVT::v8i16:  // <4 x i16x2>
   case MVT::v16i8:  // <4 x i8x4>
-    // This can be upsized into a "native" vector type
-    UpsizeElementTypes = true;
-    break;
-  }
+    // This can be upsized into a "native" vector type.
+    // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
+    // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
+    // vectorized loads/stores with the actual element type for i8/i16 as that
+    // would require v8/v16 variants that do not exist.
+    // In order to load/store such vectors efficiently, here in Type
+    // Legalization, we split the vector into word-sized chunks (v2x16/v4i8).
+    // Later, we will lower to PTX as vectors of b32.
 
-  if (UpsizeElementTypes) {
     // Number of elements to pack in one word.
     unsigned NPerWord = 32 / EltVT.getSizeInBits();
-    // Word-sized vector.
-    EltVT = MVT::getVectorVT(EltVT.getSimpleVT(), NPerWord);
-    // Number of word-sized vectors.
-    NumElts = NumElts / NPerWord;
+    return std::tuple(NumElts / NPerWord,
+                      MVT::getVectorVT(EltVT.getSimpleVT(), NPerWord),
+                      /* UpsizeElementTypes = */ true);
   }
 
-  return std::tuple(NumElts, EltVT, UpsizeElementTypes);
+  llvm_unreachable("All cases should return.");
 };
 
 /// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
@@ -2880,7 +2873,7 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(N);
   EVT ValVT = Val.getValueType();
 
-  auto VectorLoweringParams = tryGetVectorLoweringParams(ValVT);
+  auto VectorLoweringParams = getVectorLoweringShape(ValVT);
   if (!VectorLoweringParams)
     return SDValue();
   auto [NumElts, EltVT, UpsizeElementTypes] = VectorLoweringParams.value();
@@ -5236,7 +5229,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   assert(ResVT.isVector() && "Vector load must have vector type");
 
-  auto VectorLoweringParams = tryGetVectorLoweringParams(ResVT);
+  auto VectorLoweringParams = getVectorLoweringShape(ResVT);
   if (!VectorLoweringParams)
     return;
   auto [NumElts, EltVT, UpsizeElementTypes] = VectorLoweringParams.value();
