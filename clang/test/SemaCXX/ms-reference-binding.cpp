@@ -222,4 +222,27 @@ void test7() {
   A& ARef = E();
 }
 
+void testFunction() {}
+
+void refFuncPtrArg(void (* &)()) {} // expected-note{{}}
+void cRefFuncPtrArg(void (* const &)()) {}
+
+void test8() {
+  refFuncPtrArg(&testFunction); // expected-error{{no matching function for call to 'refFuncPtrArg'}}
+  cRefFuncPtrArg(&testFunction);
+
+  void (* & refFuncPtr1)() = &testFunction; // expected-error{{non-const lvalue reference to type 'void (*)()' cannot bind to a temporary of type 'void (*)()'}}
+  void (* const & cRefFuncPtr1)() = &testFunction;
+
+  void (&refFunc1)() = testFunction;
+
+  int i;
+
+  int * & refIntPtr1 = &i; // expected-error{{non-const lvalue reference to type 'int *' cannot bind to a temporary of type 'int *'}}
+  int * const & cRefIntPtr1 = &i;
+
+  decltype(nullptr) & nullptrRef = nullptr; // expected-error{{non-const lvalue reference to type 'decltype(nullptr)' (aka 'std::nullptr_t') cannot bind to a temporary of type 'std::nullptr_t'}}
+  const decltype(nullptr) & nullptrCRef = nullptr;
+}
+
 #endif

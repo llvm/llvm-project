@@ -5035,7 +5035,8 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
 
 bool Sema::AllowMSLValueReferenceBinding(Qualifiers Quals, QualType QT) {
   return getLangOpts().MSVCReferenceBinding &&
-         !(Quals.hasVolatile() || QT->isBuiltinType() || QT->isArrayType());
+         !(Quals.hasVolatile() || QT->isBuiltinType() || QT->isPointerType() ||
+           QT->isArrayType());
 }
 
 /// Look for a user-defined conversion to a value reference-compatible
