@@ -224,7 +224,8 @@ void test7() {
 
 void testFunction() {}
 
-void refFuncPtrArg(void (* &)()) {} // expected-note{{}}
+// expected-note@+1 {{candidate function not viable: expects an lvalue for 1st argument}}
+void refFuncPtrArg(void (* &)()) {}
 void cRefFuncPtrArg(void (* const &)()) {}
 
 void test8() {
