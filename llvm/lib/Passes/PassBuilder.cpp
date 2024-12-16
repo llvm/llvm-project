@@ -493,6 +493,9 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
+                                          PARAMS)                              \
+  PIC->addClassToPassName(CLASS, NAME);
 #include "llvm/Passes/MachinePassRegistry.def"
     });
   }
