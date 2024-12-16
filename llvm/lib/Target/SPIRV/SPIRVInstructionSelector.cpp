@@ -3191,27 +3191,26 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
   // (ie i64x4 -> i64x2, i64x2)
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *OpType = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
-  SPIRVType *LeftVecOpType;
-  SPIRVType *LeftVecResType;
+  SPIRVType *LeftOpType;
+  SPIRVType *LeftResType;
   if (LeftIsVector) {
-    LeftVecOpType =
+    LeftOpType =
         GR.getOrCreateSPIRVVectorType(OpType, LeftComponentCount, MIRBuilder);
-    LeftVecResType =
+    LeftResType =
         GR.getOrCreateSPIRVVectorType(BaseType, LeftComponentCount, MIRBuilder);
   } else {
-    LeftVecOpType = OpType;
-    LeftVecResType = BaseType;
+    LeftOpType = OpType;
+    LeftResType = BaseType;
   }
 
-  SPIRVType *RightVecOpType =
+  SPIRVType *RightOpType =
       GR.getOrCreateSPIRVVectorType(OpType, RightComponentCount, MIRBuilder);
-  SPIRVType *RightVecResType =
+  SPIRVType *RightResType =
       GR.getOrCreateSPIRVVectorType(BaseType, RightComponentCount, MIRBuilder);
 
-  Register LeftSideIn =
-      MRI->createVirtualRegister(GR.getRegClass(LeftVecOpType));
+  Register LeftSideIn = MRI->createVirtualRegister(GR.getRegClass(LeftOpType));
   Register RightSideIn =
-      MRI->createVirtualRegister(GR.getRegClass(RightVecOpType));
+      MRI->createVirtualRegister(GR.getRegClass(RightOpType));
 
   bool Result;
 
@@ -3221,7 +3220,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpVectorShuffle))
                    .addDef(LeftSideIn)
-                   .addUse(GR.getSPIRVTypeID(LeftVecOpType))
+                   .addUse(GR.getSPIRVTypeID(LeftOpType))
                    .addUse(SrcReg)
                    // Per the spec, repeat the vector if only one vec is needed
                    .addUse(SrcReg);
@@ -3232,9 +3231,8 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
 
     Result = MIB.constrainAllUses(TII, TRI, RBI);
   } else {
-    Result =
-        selectOpWithSrcs(LeftSideIn, LeftVecOpType, I, {SrcReg, ConstIntZero},
-                         SPIRV::OpVectorExtractDynamic);
+    Result = selectOpWithSrcs(LeftSideIn, LeftOpType, I, {SrcReg, ConstIntZero},
+                              SPIRV::OpVectorExtractDynamic);
   }
 
   // Extract the right half from the SrcReg into RightSideIn.
@@ -3243,7 +3241,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(SPIRV::OpVectorShuffle))
                  .addDef(RightSideIn)
-                 .addUse(GR.getSPIRVTypeID(RightVecOpType))
+                 .addUse(GR.getSPIRVTypeID(RightOpType))
                  .addUse(SrcReg)
                  // Per the spec, repeat the vector if only one vec is needed
                  .addUse(SrcReg);
@@ -3256,15 +3254,15 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
 
   // Recursively call selectFirstBitSet64 on the 2 halves
   Register LeftSideOut =
-      MRI->createVirtualRegister(GR.getRegClass(LeftVecResType));
+      MRI->createVirtualRegister(GR.getRegClass(LeftResType));
   Register RightSideOut =
-      MRI->createVirtualRegister(GR.getRegClass(RightVecResType));
+      MRI->createVirtualRegister(GR.getRegClass(RightResType));
   Result =
-      Result && selectFirstBitSet64(LeftSideOut, LeftVecResType, I, LeftSideIn,
+      Result && selectFirstBitSet64(LeftSideOut, LeftResType, I, LeftSideIn,
                                     BitSetOpcode, SwapPrimarySide);
   Result =
-      Result && selectFirstBitSet64(RightSideOut, RightVecResType, I,
-                                    RightSideIn, BitSetOpcode, SwapPrimarySide);
+      Result && selectFirstBitSet64(RightSideOut, RightResType, I, RightSideIn,
+                                    BitSetOpcode, SwapPrimarySide);
 
   // Join the two resulting registers back into the return type
   // (ie i32x2, i32x2 -> i32x4)
