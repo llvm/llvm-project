@@ -12,7 +12,7 @@
 ; CHECK:   d                                - 'D' (Double-Precision Floating-Point).
 ; CHECK:   disable-latency-sched-heuristic  - Disable latency scheduling heuristic.
 ; CHECK:   dlen-factor-2                    - Vector unit DLEN(data path width) is half of VLEN.
-; CHECK:   e                                - Implements RV{32,64}E (provides 16 rather than 32 GPRs).
+; CHECK:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
 ; CHECK:   experimental                     - Experimental intrinsics.
 ; CHECK:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK:   experimental-smctr               - 'Smctr' (Control Transfer Records Machine Level).
@@ -95,11 +95,11 @@
 ; CHECK:   save-restore                     - Enable save/restore..
 ; CHECK:   sha                              - 'Sha' (Augmented Hypervisor).
 ; CHECK:   shcounterenw                     - 'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero).
-; CHECK:   shgatpa                          - 'Sgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
+; CHECK:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
 ; CHECK:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK:   short-forward-branch-opt         - Enable short forward branch optimization.
 ; CHECK:   shtvala                          - 'Shtvala' (htval provides all needed values).
-; CHECK:   shvsatpa                         - 'Svsatpa' (vsatp supports all modes supported by satp).
+; CHECK:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
 ; CHECK:   shvstvala                        - 'Shvstvala' (vstval provides all needed values).
 ; CHECK:   shvstvecd                        - 'Shvstvecd' (vstvec supports Direct mode).
 ; CHECK:   sifive7                          - SiFive 7-Series processors.
@@ -131,11 +131,11 @@
 ; CHECK:   supm                             - 'Supm' (Indicates User-mode Pointer Masking).
 ; CHECK:   svade                            - 'Svade' (Raise exceptions on improper A/D bits).
 ; CHECK:   svadu                            - 'Svadu' (Hardware A/D updates).
-; CHECK:   svbare                           - 'Svbare' $(satp mode Bare supported).
+; CHECK:   svbare                           - 'Svbare' (satp mode Bare supported).
 ; CHECK:   svinval                          - 'Svinval' (Fine-Grained Address-Translation Cache Invalidation).
 ; CHECK:   svnapot                          - 'Svnapot' (NAPOT Translation Contiguity).
 ; CHECK:   svpbmt                           - 'Svpbmt' (Page-Based Memory Types).
-; CHECK:   svvptc                           - 'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid).
+; CHECK:   svvptc                           - 'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid).
 ; CHECK:   tagged-globals                   - Use an instruction sequence for taking the address of a global that allows a memory tag in the upper address bits.
 ; CHECK:   unaligned-scalar-mem             - Has reasonably performant unaligned scalar loads and stores.
 ; CHECK:   unaligned-vector-mem             - Has reasonably performant unaligned vector loads and stores.
@@ -214,7 +214,7 @@
 ; CHECK:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).
 ; CHECK:   zicntr                           - 'Zicntr' (Base Counters and Timers).
 ; CHECK:   zicond                           - 'Zicond' (Integer Conditional Operations).
-; CHECK:   zicsr                            - 'zicsr' (CSRs).
+; CHECK:   zicsr                            - 'Zicsr' (CSRs).
 ; CHECK:   zifencei                         - 'Zifencei' (fence.i).
 ; CHECK:   zihintntl                        - 'Zihintntl' (Non-Temporal Locality Hints).
 ; CHECK:   zihintpause                      - 'Zihintpause' (Pause Hint).
@@ -239,7 +239,7 @@
 ; CHECK:   zve64d                           - 'Zve64d' (Vector Extensions for Embedded Processors with maximal 64 EEW, F and D extension).
 ; CHECK:   zve64f                           - 'Zve64f' (Vector Extensions for Embedded Processors with maximal 64 EEW and F extension).
 ; CHECK:   zve64x                           - 'Zve64x' (Vector Extensions for Embedded Processors with maximal 64 EEW).
-; CHECK:   zvfbfmin                         - 'Zvbfmin' (Vector BF16 Converts).
+; CHECK:   zvfbfmin                         - 'Zvfbfmin' (Vector BF16 Converts).
 ; CHECK:   zvfbfwma                         - 'Zvfbfwma' (Vector BF16 widening mul-add).
 ; CHECK:   zvfh                             - 'Zvfh' (Vector Half-Precision Floating-Point).
 ; CHECK:   zvfhmin                          - 'Zvfhmin' (Vector Half-Precision Floating-Point Minimal).
@@ -248,7 +248,7 @@
 ; CHECK:   zvkn                             - 'Zvkn' (shorthand for 'Zvkned', 'Zvknhb', 'Zvkb', and 'Zvkt').
 ; CHECK:   zvknc                            - 'Zvknc' (shorthand for 'Zvknc' and 'Zvbc').
 ; CHECK:   zvkned                           - 'Zvkned' (Vector AES Encryption & Decryption (Single Round)).
-; CHECK:   zvkng                            - 'zvkng' (shorthand for 'Zvkn' and 'Zvkg').
+; CHECK:   zvkng                            - 'Zvkng' (shorthand for 'Zvkn' and 'Zvkg').
 ; CHECK:   zvknha                           - 'Zvknha' (Vector SHA-2 (SHA-256 only)).
 ; CHECK:   zvknhb                           - 'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512)).
 ; CHECK:   zvks                             - 'Zvks' (shorthand for 'Zvksed', 'Zvksh', 'Zvkb', and 'Zvkt').
@@ -257,15 +257,15 @@
 ; CHECK:   zvksg                            - 'Zvksg' (shorthand for 'Zvks' and 'Zvkg').
 ; CHECK:   zvksh                            - 'Zvksh' (SM3 Hash Function Instructions).
 ; CHECK:   zvkt                             - 'Zvkt' (Vector Data-Independent Execution Latency).
-; CHECK:   zvl1024b                         - 'Zvl' (Minimum Vector Length) 1024.
-; CHECK:   zvl128b                          - 'Zvl' (Minimum Vector Length) 128.
-; CHECK:   zvl16384b                        - 'Zvl' (Minimum Vector Length) 16384.
-; CHECK:   zvl2048b                         - 'Zvl' (Minimum Vector Length) 2048.
-; CHECK:   zvl256b                          - 'Zvl' (Minimum Vector Length) 256.
-; CHECK:   zvl32768b                        - 'Zvl' (Minimum Vector Length) 32768.
-; CHECK:   zvl32b                           - 'Zvl' (Minimum Vector Length) 32.
-; CHECK:   zvl4096b                         - 'Zvl' (Minimum Vector Length) 4096.
-; CHECK:   zvl512b                          - 'Zvl' (Minimum Vector Length) 512.
-; CHECK:   zvl64b                           - 'Zvl' (Minimum Vector Length) 64.
-; CHECK:   zvl65536b                        - 'Zvl' (Minimum Vector Length) 65536.
-; CHECK:   zvl8192b                         - 'Zvl' (Minimum Vector Length) 8192.
+; CHECK:   zvl1024b                         - 'Zvl1024b' (Minimum Vector Length 1024).
+; CHECK:   zvl128b                          - 'Zvl128b' (Minimum Vector Length 128).
+; CHECK:   zvl16384b                        - 'Zvl16384b' (Minimum Vector Length 16384).
+; CHECK:   zvl2048b                         - 'Zvl2048b' (Minimum Vector Length 2048).
+; CHECK:   zvl256b                          - 'Zvl256b' (Minimum Vector Length 256).
+; CHECK:   zvl32768b                        - 'Zvl32768b' (Minimum Vector Length 32768).
+; CHECK:   zvl32b                           - 'Zvl32b' (Minimum Vector Length 32).
+; CHECK:   zvl4096b                         - 'Zvl4096b' (Minimum Vector Length 4096).
+; CHECK:   zvl512b                          - 'Zvl512b' (Minimum Vector Length 512).
+; CHECK:   zvl64b                           - 'Zvl64b' (Minimum Vector Length 64).
+; CHECK:   zvl65536b                        - 'Zvl65536b' (Minimum Vector Length 65536).
+; CHECK:   zvl8192b                         - 'Zvl8192b' (Minimum Vector Length 8192).
