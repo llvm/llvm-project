@@ -1311,14 +1311,12 @@ public:
 
   template <__variant_visit_barrier_tag = __variant_visit_barrier_tag{}, class _Self, class _Visitor>
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) visit(this _Self&& __self, _Visitor&& __visitor) {
-    using _VariantT = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
-    return std::visit(std::forward<_Visitor>(__visitor), (_VariantT)__self);
+    return std::visit(std::forward<_Visitor>(__visitor), std::__forward_as<_Self, variant>(__self));
   }
 
   template <class _Rp, class _Self, class _Visitor>
   _LIBCPP_HIDE_FROM_ABI constexpr _Rp visit(this _Self&& __self, _Visitor&& __visitor) {
-    using _VariantT = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
-    return std::visit<_Rp>(std::forward<_Visitor>(__visitor), (_VariantT)__self);
+    return std::visit<_Rp>(std::forward<_Visitor>(__visitor), std::__forward_as<_Self, variant>(__self));
   }
 #    endif
 

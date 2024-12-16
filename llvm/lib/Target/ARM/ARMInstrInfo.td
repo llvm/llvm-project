@@ -4765,6 +4765,7 @@ def : ARMV6Pat<(int_arm_smusdx GPRnopc:$Rn, GPRnopc:$Rm),
 //===----------------------------------------------------------------------===//
 //  Division Instructions (ARMv7-A with virtualization extension)
 //
+let TwoOperandAliasConstraint = "$Rn = $Rd" in {
 def SDIV : ADivA1I<0b001, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), IIC_iDIV,
                    "sdiv", "\t$Rd, $Rn, $Rm",
                    [(set GPR:$Rd, (sdiv GPR:$Rn, GPR:$Rm))]>,
@@ -4776,6 +4777,7 @@ def UDIV : ADivA1I<0b011, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), IIC_iDIV,
                    [(set GPR:$Rd, (udiv GPR:$Rn, GPR:$Rm))]>,
            Requires<[IsARM, HasDivideInARM]>,
            Sched<[WriteDIV]>;
+}
 
 //===----------------------------------------------------------------------===//
 //  Misc. Arithmetic Instructions.

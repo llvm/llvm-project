@@ -44,9 +44,9 @@ namespace rpc {
 
 /// Generic codes that can be used whem implementing the server.
 enum Status {
-  SUCCESS = 0x0,
-  ERROR = 0x1000,
-  UNHANDLED_OPCODE = 0x1001,
+  RPC_SUCCESS = 0x0,
+  RPC_ERROR = 0x1000,
+  RPC_UNHANDLED_OPCODE = 0x1001,
 };
 
 /// A fixed size channel used to communicate between the RPC client and server.
