@@ -191,6 +191,7 @@ private:
   SDValue ExpandExtractFromVectorThroughStack(SDValue Op);
   SDValue ExpandInsertToVectorThroughStack(SDValue Op);
   SDValue ExpandVectorBuildThroughStack(SDNode* Node);
+  SDValue ExpandConcatVectors(SDNode* Node);
 
   SDValue ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP);
   SDValue ExpandConstant(ConstantSDNode *CP);
@@ -1525,10 +1526,27 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
                      BaseVecAlignment);
 }
 
+SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
+  assert(Node->getOpcode() == ISD::CONCAT_VECTORS && "Unexpected opcode!");
+  SDLoc Dl(Node);
+  SmallVector<SDValue, 0> Ops;
+  unsigned NumOperands = Node->getNumOperands();
+  for (unsigned I = 0; I < NumOperands; ++I) {
+    SDValue SubOp = Node->getOperand(I);
+    EVT VectorValueType =
+        SubOp->getValueType(0);
+    EVT ElementValueType = VectorValueType.getVectorElementType();
+    unsigned NumSubElem = VectorValueType.getVectorNumElements();
+    for (unsigned J = 0; J < NumSubElem; ++J) {
+      Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, Dl, ElementValueType,
+                                SubOp, DAG.getIntPtrConstant(J, Dl)));
+    }
+  }
+  return DAG.getBuildVector(Node->getValueType(0), Dl, Ops);
+}
+
 SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
-  assert((Node->getOpcode() == ISD::BUILD_VECTOR ||
-          Node->getOpcode() == ISD::CONCAT_VECTORS) &&
-         "Unexpected opcode!");
+  assert(Node->getOpcode() == ISD::BUILD_VECTOR && "Unexpected opcode!");
 
   // We can't handle this case efficiently.  Allocate a sufficiently
   // aligned object on the stack, store each operand into it, then load
@@ -3383,7 +3401,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandInsertToVectorThroughStack(SDValue(Node, 0)));
     break;
   case ISD::CONCAT_VECTORS:
-    Results.push_back(ExpandVectorBuildThroughStack(Node));
+    Results.push_back(ExpandConcatVectors(Node));
     break;
   case ISD::SCALAR_TO_VECTOR:
     Results.push_back(ExpandSCALAR_TO_VECTOR(Node));
