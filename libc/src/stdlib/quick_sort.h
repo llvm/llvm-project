@@ -20,9 +20,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // A simple quicksort implementation using the Hoare partition scheme.
-template <typename F>
-size_t partition_hoare(const Array &array, const void *pivot,
-                       const F &is_less) {
+template <typename A, typename F>
+size_t partition_hoare(const A &array, const void *pivot, const F &is_less) {
   const size_t array_len = array.len();
 
   size_t left = 0;
@@ -49,12 +48,12 @@ size_t partition_hoare(const Array &array, const void *pivot,
   return left;
 }
 
-template <typename F>
-size_t partition(const Array &array, size_t pivot_index, const F &is_less) {
+template <typename A, typename F>
+size_t partition(const A &array, size_t pivot_index, const F &is_less) {
   // Place the pivot at the beginning of the array.
   array.swap(0, pivot_index);
 
-  const Array array_without_pivot = array.make_array(1, array.len() - 1);
+  const A array_without_pivot = array.make_array(1, array.len() - 1);
   const void *pivot = array.get(0);
   const size_t num_lt = partition_hoare(array_without_pivot, pivot, is_less);
 
@@ -64,8 +63,8 @@ size_t partition(const Array &array, size_t pivot_index, const F &is_less) {
   return num_lt;
 }
 
-template <typename F>
-void quick_sort_impl(Array &array, const void *ancestor_pivot, size_t limit,
+template <typename A, typename F>
+void quick_sort_impl(A &array, const void *ancestor_pivot, size_t limit,
                      const F &is_less) {
   while (true) {
     const size_t array_len = array.len();
@@ -110,10 +109,10 @@ void quick_sort_impl(Array &array, const void *ancestor_pivot, size_t limit,
       return;
 
     // Split the array into `left`, `pivot`, and `right`.
-    Array left = array.make_array(0, split_index);
+    A left = array.make_array(0, split_index);
     const void *pivot = array.get(split_index);
     const size_t right_start = split_index + 1;
-    Array right = array.make_array(right_start, array.len() - right_start);
+    A right = array.make_array(right_start, array.len() - right_start);
 
     // Recurse into the left side. We have a fixed recursion limit,
     // testing shows no real benefit for recursing into the shorter
@@ -128,7 +127,7 @@ void quick_sort_impl(Array &array, const void *ancestor_pivot, size_t limit,
 
 constexpr size_t ilog2(size_t n) { return cpp::bit_width(n) - 1; }
 
-template <typename F> void quick_sort(Array &array, const F &is_less) {
+template <typename A, typename F> void quick_sort(A &array, const F &is_less) {
   const void *ancestor_pivot = nullptr;
   // Limit the number of imbalanced partitions to `2 * floor(log2(len))`.
   // The binary OR by one is used to eliminate the zero-check in the logarithm.

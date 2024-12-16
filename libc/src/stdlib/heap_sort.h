@@ -18,7 +18,8 @@ namespace internal {
 // A simple in-place heapsort implementation.
 // Follow the implementation in https://en.wikipedia.org/wiki/Heapsort.
 
-template <typename F> void heap_sort(const Array &array, const F &is_less) {
+template <typename A, typename F>
+void heap_sort(const A &array, const F &is_less) {
   size_t end = array.len();
   size_t start = end / 2;
 
