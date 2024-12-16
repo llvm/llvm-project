@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass if-converter -o - %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass if-converter -o - %s -verify-machineinstrs | FileCheck %s
 
 # The register r23 is live on the path bb.0->bb.2->bb.3. Make sure we add
 # an implicit use of r23 to the predicated redefinition:
