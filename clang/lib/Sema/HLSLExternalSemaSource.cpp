@@ -191,6 +191,19 @@ public:
     return *this;
   }
 
+  BuiltinTypeDeclBuilder &addLoadMethods() {
+    if (Record->isCompleteDefinition())
+      return *this;
+
+    ASTContext &AST = Record->getASTContext();
+    IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
+    DeclarationName Load(&II);
+    // TODO: We also need versions with status for CheckAccessFullyMapped.
+    addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+
+    return *this;
+  }
+
   FieldDecl *getResourceHandleField() {
     auto I = Fields.find("__handle");
     assert(I != Fields.end() &&
@@ -921,6 +934,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     ResourceKind::TypedBuffer, /*IsROV=*/false,
                     /*RawBuffer=*/false)
         .addArraySubscriptOperators()
+        .addLoadMethods()
         .completeDefinition();
   });
 
@@ -933,6 +947,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     ResourceKind::TypedBuffer, /*IsROV=*/true,
                     /*RawBuffer=*/false)
         .addArraySubscriptOperators()
+        .addLoadMethods()
         .completeDefinition();
   });
 
