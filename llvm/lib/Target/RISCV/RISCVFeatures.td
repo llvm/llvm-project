@@ -22,13 +22,16 @@
 //             uses the record name by replacing Feature with Has.
 // value     - Value to assign to the field in RISCVSubtarget when this
 //             extension is enabled. Usually "true", but can be changed.
+// IsExperimental
+//           - Indicates whether the extension is experimental
 class RISCVExtension<int major, int minor, string desc,
                      list<SubtargetFeature> implies = [],
                      string fieldname = !subst("Feature", "Has", NAME),
-                     string value = "true", string prefix = "">
+                     string value = "true", bit IsExperimental = false>
     : SubtargetFeature<
-        prefix # !tolower(!subst("FeatureVendor", "",
-                                 !subst("FeatureStdExt", "", NAME))),
+        !if(IsExperimental, "experimental-", "")
+            # !tolower(!subst("FeatureVendor", "",
+                              !subst("FeatureStdExt", "", NAME))),
         fieldname, value,
         "'" # !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME))
             # "' (" # desc # ")",
@@ -58,8 +61,7 @@ class RISCVExperimentalExtension<int major, int minor, string desc,
                                  list<RISCVExtension> implies = [],
                                  string fieldname = !subst("Feature", "Has", NAME),
                                  string value = "true">
-    : RISCVExtension<major, minor, desc, implies, fieldname, value,
-                     "experimental-"> {
+    : RISCVExtension<major, minor, desc, implies, fieldname, value, true> {
   let Experimental = true;
 }
 
