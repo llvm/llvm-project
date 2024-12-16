@@ -205,7 +205,7 @@ static bool isMaskOperand(const MachineInstr &MI, const MachineOperand &MO,
   return Desc.operands()[MO.getOperandNo()].RegClass == RISCV::VMV0RegClassID;
 }
 
-/// Return the OperandInfo for MO, which is an operand of MI.
+/// Return the OperandInfo for MO.
 static OperandInfo getOperandInfo(const MachineOperand &MO,
                                   const MachineRegisterInfo *MRI) {
   const MachineInstr &MI = *MO.getParent();
