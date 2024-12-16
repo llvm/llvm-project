@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 
 #include "src/__support/CPP/cstddef.h"
+#include "src/__support/big_int.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_pivot.h"
 
@@ -64,12 +65,21 @@ size_t partition(const Array &array, size_t pivot_index, const F &is_less) {
 }
 
 template <typename F>
-void quick_sort_impl(Array &array, const void *ancestor_pivot,
+void quick_sort_impl(Array &array, const void *ancestor_pivot, size_t limit,
                      const F &is_less) {
   while (true) {
     const size_t array_len = array.len();
     if (array_len <= 1)
       return;
+
+    // If too many bad pivot choices were made, simply fall back to
+    // heapsort in order to guarantee `O(N x log(N))` worst-case.
+    if (limit == 0) {
+      heap_sort(array, is_less);
+      return;
+    }
+
+    limit -= 1;
 
     const size_t pivot_index = choose_pivot(array, is_less);
 
@@ -105,24 +115,25 @@ void quick_sort_impl(Array &array, const void *ancestor_pivot,
     const size_t right_start = split_index + 1;
     Array right = array.make_array(right_start, array.len() - right_start);
 
-    // Recurse to sort the smaller of the two, and then loop round within this
-    // function to sort the larger. This way, recursive call depth is bounded
-    // by log2 of the total array size, because every recursive call is sorting
-    // a list at most half the length of the one in its caller.
-    if (left.len() < right.len()) {
-      quick_sort_impl(left, ancestor_pivot, is_less);
-      array.reset_bounds(right_start, right.len());
-      ancestor_pivot = pivot;
-    } else {
-      quick_sort_impl(right, pivot, is_less);
-      array.reset_bounds(0, left.len());
-    }
+    // Recurse into the left side. We have a fixed recursion limit,
+    // testing shows no real benefit for recursing into the shorter
+    // side.
+    quick_sort_impl(left, ancestor_pivot, limit, is_less);
+
+    // Continue with the right side.
+    array = right;
+    ancestor_pivot = pivot;
   }
 }
 
+constexpr size_t ilog2(size_t n) { return cpp::bit_width(n) - 1; }
+
 template <typename F> void quick_sort(Array &array, const F &is_less) {
   const void *ancestor_pivot = nullptr;
-  quick_sort_impl(array, ancestor_pivot, is_less);
+  // Limit the number of imbalanced partitions to `2 * floor(log2(len))`.
+  // The binary OR by one is used to eliminate the zero-check in the logarithm.
+  const size_t limit = 2 * ilog2((array.len() | 1));
+  quick_sort_impl(array, ancestor_pivot, limit, is_less);
 }
 
 } // namespace internal
