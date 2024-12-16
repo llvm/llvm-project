@@ -39,10 +39,8 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   }
 
   // If none is inserted, the function doesn't need more work.
-  if (!addNegateRAStateAfterPacOrAuth(BF)) {
-    BC.outs() << "BOLT-INFO: no pacret found.\n";
+  if (!addNegateRAStateAfterPacOrAuth(BF))
     return;
-  }
 
   fixUnknownStates(BF);
 
