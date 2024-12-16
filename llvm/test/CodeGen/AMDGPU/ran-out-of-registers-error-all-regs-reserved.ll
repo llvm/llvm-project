@@ -24,10 +24,10 @@ define <32 x i32> @no_registers_from_class_available_to_allocate_asm_def() #0 {
   ret <32 x i32> %ret
 }
 
-; FIXME: Special case in fast RA, asserts. Also asserts in greedy
-; define void @no_registers_from_class_available_to_allocate_undef_asm() #0 {
-;   call void asm sideeffect "; use $0", "v"(<32 x i32> poison)
-;   ret void
-; }
+; CHECK: error: <unknown>:0:0: no registers from class available to allocate in function 'no_registers_from_class_available_to_allocate_undef_asm'
+define void @no_registers_from_class_available_to_allocate_undef_asm() #0 {
+  call void asm sideeffect "; use $0", "v"(<32 x i32> poison)
+  ret void
+}
 
 attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
