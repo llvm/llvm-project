@@ -387,9 +387,8 @@ private:
               Check(x.value());
             },
             [&](const common::Indirection<parser::AssignmentStmt> &x) {
-              const evaluate::Assignment *assign{
-                  semantics::GetAssignment(x.value())};
-              if (assign) {
+              if (const evaluate::Assignment *
+                  assign{semantics::GetAssignment(x.value())}) {
                 ErrorIfHostSymbol(assign->lhs, source);
                 ErrorIfHostSymbol(assign->rhs, source);
               }
