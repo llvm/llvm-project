@@ -15,6 +15,7 @@
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <vector>
 
@@ -63,6 +64,30 @@ struct TestInIters {
         Test<InIter>());
   }
 };
+
+template <std::size_t N>
+struct TestFwdIterInBitIterOut {
+  std::array<bool, N> in = {};
+  template <class FwdIter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    for (std::size_t i = 0; i < in.size(); i += 2)
+      in[i] = true;
+
+    { // Test with full bytes
+      std::vector<bool> out(N);
+      std::copy(FwdIter(in.data()), FwdIter(in.data() + N), out.begin());
+      for (std::size_t i = 0; i < N; ++i)
+        assert(out[i] == static_cast<bool>(in[i]));
+    }
+    { // Test with partial bytes in both front and back
+      std::vector<bool> out(N + 8);
+      std::copy(FwdIter(in.data()), FwdIter(in.data() + N), out.begin() + 4);
+      for (std::size_t i = 0; i < N; ++i)
+        assert(out[i + 4] == static_cast<bool>(in[i]));
+    }
+  }
+};
+
 
 TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
   std::vector<bool> in(N, false);
@@ -257,6 +282,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
       for (std::size_t i = in.size() + 4; i < out.size(); ++i)
         assert(out[i] == false);
     }
+  }
+
+  { // Test std::copy() with forward_iterator-pair inputs and vector<bool>::iterator output
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<8>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<19>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<32>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<64>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<299>());
   }
 
   return true;
