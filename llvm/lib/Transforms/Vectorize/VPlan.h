@@ -4048,12 +4048,6 @@ public:
     SCEVToExpansion[S] = V;
   }
 
-  /// \return The block corresponding to the original preheader.
-  /// FIXME: There's no separate preheader any longer and Entry now serves the
-  /// same purpose as the original preheader. Remove after transition.
-  VPBasicBlock *getPreheader() { return Entry; }
-  const VPBasicBlock *getPreheader() const { return Entry; }
-
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
