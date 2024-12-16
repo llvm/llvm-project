@@ -3270,8 +3270,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sincos:
     case Builtin::BI__builtin_sincosf:
     case Builtin::BI__builtin_sincosl:
-    case Builtin::BI__builtin_sincosf128:
-    case Builtin::BI__builtin_sincosf16:
+      if (!getTarget().getTriple().isAArch64())
+        break;
       emitSincosBuiltin(*this, E, Intrinsic::sincos);
       return RValue::get(nullptr);
 
