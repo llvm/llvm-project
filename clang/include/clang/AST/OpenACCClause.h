@@ -98,6 +98,28 @@ public:
   }
 };
 
+// Represents the 'if_present' clause.
+class OpenACCIfPresentClause : public OpenACCClause {
+protected:
+  OpenACCIfPresentClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::IfPresent, BeginLoc, EndLoc) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::IfPresent;
+  }
+
+  static OpenACCIfPresentClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 // Represents the 'independent' clause.
 class OpenACCIndependentClause : public OpenACCClause {
 protected:
@@ -721,6 +743,51 @@ public:
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
+
+class OpenACCDetachClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCDetachClause, Expr *> {
+
+  OpenACCDetachClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Detach, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Detach;
+  }
+  static OpenACCDetachClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCDeleteClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCDeleteClause, Expr *> {
+
+  OpenACCDeleteClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Delete, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Delete;
+  }
+  static OpenACCDeleteClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
 
 class OpenACCNoCreateClause final
     : public OpenACCClauseWithVarList,

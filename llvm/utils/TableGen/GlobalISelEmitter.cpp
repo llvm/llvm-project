@@ -437,27 +437,26 @@ private:
   /// Infer a CodeGenRegisterClass for the type of \p SuperRegNode. The returned
   /// CodeGenRegisterClass will support the CodeGenRegisterClass of
   /// \p SubRegNode, and the subregister index defined by \p SubRegIdxNode.
-  /// If no register class is found, return std::nullopt.
-  std::optional<const CodeGenRegisterClass *>
+  /// If no register class is found, return nullptr.
+  const CodeGenRegisterClass *
   inferSuperRegisterClassForNode(const TypeSetByHwMode &Ty,
                                  const TreePatternNode &SuperRegNode,
                                  const TreePatternNode &SubRegIdxNode);
-  std::optional<CodeGenSubRegIndex *>
+  const CodeGenSubRegIndex *
   inferSubRegIndexForNode(const TreePatternNode &SubRegIdxNode);
 
   /// Infer a CodeGenRegisterClass which suppoorts \p Ty and \p SubRegIdxNode.
-  /// Return std::nullopt if no such class exists.
-  std::optional<const CodeGenRegisterClass *>
+  /// Return nullptr if no such class exists.
+  const CodeGenRegisterClass *
   inferSuperRegisterClass(const TypeSetByHwMode &Ty,
                           const TreePatternNode &SubRegIdxNode);
 
   /// Return the CodeGenRegisterClass associated with \p Leaf if it has one.
-  std::optional<const CodeGenRegisterClass *>
-  getRegClassFromLeaf(const TreePatternNode &Leaf);
+  const CodeGenRegisterClass *getRegClassFromLeaf(const TreePatternNode &Leaf);
 
   /// Return a CodeGenRegisterClass for \p N if one can be found. Return
-  /// std::nullopt otherwise.
-  std::optional<const CodeGenRegisterClass *>
+  /// nullptr otherwise.
+  const CodeGenRegisterClass *
   inferRegClassFromPattern(const TreePatternNode &N);
 
   Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
@@ -1733,12 +1732,13 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     M.insertAction<ConstrainOperandToRegClassAction>(
         InsertPt, InsnID, 0, Target.getRegisterClass(DstIOpRec));
   } else if (DstIName == "EXTRACT_SUBREG") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
+    const CodeGenRegisterClass *SuperClass =
+        inferRegClassFromPattern(Dst.getChild(0));
     if (!SuperClass)
       return failedImport(
           "Cannot infer register class from EXTRACT_SUBREG operand #0");
 
-    auto SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
+    const CodeGenSubRegIndex *SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
     if (!SubIdx)
       return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
 
@@ -1749,7 +1749,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     // FIXME: This may introduce an extra copy if the chosen class doesn't
     //        actually contain the subregisters.
     const auto SrcRCDstRCPair =
-        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+        SuperClass->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
     if (!SrcRCDstRCPair) {
       return failedImport("subreg index is incompatible "
                           "with inferred reg class");
@@ -1763,56 +1763,59 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
   } else if (DstIName == "INSERT_SUBREG") {
     // We need to constrain the destination, a super regsister source, and a
     // subregister source.
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
+    const CodeGenRegisterClass *SubClass =
+        inferRegClassFromPattern(Dst.getChild(1));
     if (!SubClass)
       return failedImport(
           "Cannot infer register class from INSERT_SUBREG operand #1");
-    auto SuperClass = inferSuperRegisterClassForNode(
+    const CodeGenRegisterClass *SuperClass = inferSuperRegisterClassForNode(
         Dst.getExtType(0), Dst.getChild(0), Dst.getChild(2));
     if (!SuperClass)
       return failedImport(
           "Cannot infer register class for INSERT_SUBREG operand #0");
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
-                                                     **SuperClass);
+                                                     *SuperClass);
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
-                                                     **SuperClass);
+                                                     *SuperClass);
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
-                                                     **SubClass);
+                                                     *SubClass);
   } else if (DstIName == "SUBREG_TO_REG") {
     // We need to constrain the destination and subregister source.
     // Attempt to infer the subregister source from the first child. If it has
     // an explicitly given register class, we'll use that. Otherwise, we will
     // fail.
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
+    const CodeGenRegisterClass *SubClass =
+        inferRegClassFromPattern(Dst.getChild(1));
     if (!SubClass)
       return failedImport(
           "Cannot infer register class from SUBREG_TO_REG child #1");
     // We don't have a child to look at that might have a super register node.
-    auto SuperClass =
+    const CodeGenRegisterClass *SuperClass =
         inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(2));
     if (!SuperClass)
       return failedImport(
           "Cannot infer register class for SUBREG_TO_REG operand #0");
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
-                                                     **SuperClass);
+                                                     *SuperClass);
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
-                                                     **SubClass);
+                                                     *SubClass);
   } else if (DstIName == "REG_SEQUENCE") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
+    const CodeGenRegisterClass *SuperClass =
+        inferRegClassFromPattern(Dst.getChild(0));
 
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
-                                                     **SuperClass);
+                                                     *SuperClass);
 
     unsigned Num = Dst.getNumChildren();
     for (unsigned I = 1; I != Num; I += 2) {
       const TreePatternNode &SubRegChild = Dst.getChild(I + 1);
 
-      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
+      const CodeGenSubRegIndex *SubIdx = inferSubRegIndexForNode(SubRegChild);
       if (!SubIdx)
         return failedImport("REG_SEQUENCE child is not a subreg index");
 
       const auto SrcRCDstRCPair =
-          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+          SuperClass->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
 
       M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, I,
                                                        *SrcRCDstRCPair->second);
@@ -1824,19 +1827,16 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
   return Error::success();
 }
 
-std::optional<const CodeGenRegisterClass *>
+const CodeGenRegisterClass *
 GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) {
   assert(Leaf.isLeaf() && "Expected leaf?");
   const Record *RCRec = getInitValueAsRegClass(Leaf.getLeafValue());
   if (!RCRec)
-    return std::nullopt;
-  const CodeGenRegisterClass *RC = CGRegs.getRegClass(RCRec);
-  if (!RC)
-    return std::nullopt;
-  return RC;
+    return nullptr;
+  return CGRegs.getRegClass(RCRec);
 }
 
-std::optional<const CodeGenRegisterClass *>
+const CodeGenRegisterClass *
 GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   if (N.isLeaf())
     return getRegClassFromLeaf(N);
@@ -1847,12 +1847,12 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   // Only handle things that produce at least one value (if multiple values,
   // just take the first one).
   if (N.getNumTypes() < 1)
-    return std::nullopt;
+    return nullptr;
   const Record *OpRec = N.getOperator();
 
   // We only want instructions.
   if (!OpRec->isSubClassOf("Instruction"))
-    return std::nullopt;
+    return nullptr;
 
   // Don't want to try and infer things when there could potentially be more
   // than one candidate register class.
@@ -1867,7 +1867,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
     // has the desired register class as the first child.
     const TreePatternNode &RCChild = N.getChild(IsRegSequence ? 0 : 1);
     if (!RCChild.isLeaf())
-      return std::nullopt;
+      return nullptr;
     return getRegClassFromLeaf(RCChild);
   }
   if (InstName == "INSERT_SUBREG") {
@@ -1897,34 +1897,28 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
     return &RC;
   }
 
-  return std::nullopt;
+  return nullptr;
 }
 
-std::optional<const CodeGenRegisterClass *>
-GlobalISelEmitter::inferSuperRegisterClass(
+const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
     const TypeSetByHwMode &Ty, const TreePatternNode &SubRegIdxNode) {
   // We need a ValueTypeByHwMode for getSuperRegForSubReg.
   if (!Ty.isValueTypeByHwMode(false))
-    return std::nullopt;
+    return nullptr;
   if (!SubRegIdxNode.isLeaf())
-    return std::nullopt;
+    return nullptr;
   const DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode.getLeafValue());
   if (!SubRegInit)
-    return std::nullopt;
+    return nullptr;
   const CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
 
   // Use the information we found above to find a minimal register class which
   // supports the subregister and type we want.
-  auto RC =
-      Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx,
-                                  /* MustBeAllocatable */ true);
-  if (!RC)
-    return std::nullopt;
-  return *RC;
+  return Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx,
+                                     /*MustBeAllocatable=*/true);
 }
 
-std::optional<const CodeGenRegisterClass *>
-GlobalISelEmitter::inferSuperRegisterClassForNode(
+const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClassForNode(
     const TypeSetByHwMode &Ty, const TreePatternNode &SuperRegNode,
     const TreePatternNode &SubRegIdxNode) {
   // Check if we already have a defined register class for the super register
@@ -1932,20 +1926,20 @@ GlobalISelEmitter::inferSuperRegisterClassForNode(
   // from the subregister index node. We can assume that whoever wrote the
   // pattern in the first place made sure that the super register and
   // subregister are compatible.
-  if (std::optional<const CodeGenRegisterClass *> SuperRegisterClass =
+  if (const CodeGenRegisterClass *SuperRegisterClass =
           inferRegClassFromPattern(SuperRegNode))
-    return *SuperRegisterClass;
+    return SuperRegisterClass;
   return inferSuperRegisterClass(Ty, SubRegIdxNode);
 }
 
-std::optional<CodeGenSubRegIndex *> GlobalISelEmitter::inferSubRegIndexForNode(
+const CodeGenSubRegIndex *GlobalISelEmitter::inferSubRegIndexForNode(
     const TreePatternNode &SubRegIdxNode) {
   if (!SubRegIdxNode.isLeaf())
-    return std::nullopt;
+    return nullptr;
 
   const DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode.getLeafValue());
   if (!SubRegInit)
-    return std::nullopt;
+    return nullptr;
   return CGRegs.getSubRegIdx(SubRegInit->getDef());
 }
 
@@ -2095,16 +2089,17 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       if (MatchedRC.isNull())
         return failedImport("REG_SEQUENCE operand #0 isn't a register class");
     } else if (DstIName == "EXTRACT_SUBREG") {
-      auto InferredClass = inferRegClassFromPattern(Dst.getChild(0));
+      const CodeGenRegisterClass *InferredClass =
+          inferRegClassFromPattern(Dst.getChild(0));
       if (!InferredClass)
         return failedImport(
             "Could not infer class for EXTRACT_SUBREG operand #0");
 
       // We can assume that a subregister is in the same bank as it's super
       // register.
-      MatchedRC = (*InferredClass)->getDef();
+      MatchedRC = InferredClass->getDef();
     } else if (DstIName == "INSERT_SUBREG") {
-      auto MaybeSuperClass =
+      const CodeGenRegisterClass *MaybeSuperClass =
           inferSuperRegisterClassForNode(VTy, Dst.getChild(0), Dst.getChild(2));
       if (!MaybeSuperClass)
         return failedImport(
@@ -2112,13 +2107,14 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       // Move to the next pattern here, because the register class we found
       // doesn't necessarily have a record associated with it. So, we can't
       // set DstIOpRec using this.
-      MatchedRC = *MaybeSuperClass;
+      MatchedRC = MaybeSuperClass;
     } else if (DstIName == "SUBREG_TO_REG") {
-      auto MaybeRegClass = inferSuperRegisterClass(VTy, Dst.getChild(2));
+      const CodeGenRegisterClass *MaybeRegClass =
+          inferSuperRegisterClass(VTy, Dst.getChild(2));
       if (!MaybeRegClass)
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
-      MatchedRC = *MaybeRegClass;
+      MatchedRC = MaybeRegClass;
     } else if (cast<const Record *>(MatchedRC)->isSubClassOf("RegisterOperand"))
       MatchedRC = cast<const Record *>(MatchedRC)->getValueAsDef("RegClass");
     else if (!cast<const Record *>(MatchedRC)->isSubClassOf("RegisterClass"))

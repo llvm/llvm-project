@@ -200,10 +200,8 @@ define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = xor <4 x i1> [[TMP13]], splat (i1 true)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[TMP14]], splat (i1 true)
-; CHECK-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_SPLIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

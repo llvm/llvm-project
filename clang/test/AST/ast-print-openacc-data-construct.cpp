@@ -113,4 +113,17 @@ void foo() {
 
 // CHECK: #pragma acc exit data copyout(i) finalize
 #pragma acc exit data copyout(i) finalize
+
+// CHECK: #pragma acc host_data if_present
+#pragma acc host_data use_device(i) if_present
+  ;
+// CHECK: #pragma acc exit data copyout(i) detach(iPtr, arrayPtr[0])
+#pragma acc exit data copyout(i) detach(iPtr, arrayPtr[0])
+
+// CHECK: #pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
+#pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
+  ;
+
+// CHECK: #pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
+#pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
 }

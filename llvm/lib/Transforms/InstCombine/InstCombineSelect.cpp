@@ -3800,6 +3800,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                           ConstantInt::getFalse(CondType), SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(SI, 2, S);
+
+    if (replaceInInstruction(TrueVal, CondVal,
+                             ConstantInt::getTrue(CondType)) ||
+        replaceInInstruction(FalseVal, CondVal,
+                             ConstantInt::getFalse(CondType)))
+      return &SI;
   }
 
   if (Instruction *R = foldSelectOfBools(SI))

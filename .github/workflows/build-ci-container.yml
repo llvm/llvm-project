@@ -80,8 +80,8 @@ jobs:
 
       - name: Push Container
         run: |
-          podman load -i ${{ needs.build-ci-container.outptus.container-filename }}
-          podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
+          podman load -i ${{ needs.build-ci-container.outputs.container-filename }}
+          podman tag ${{ needs.build-ci-container.outputs.container-name-tag }} ${{ needs.build-ci-container.outputs.container-name }}:latest
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
           podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
           podman push ${{ needs.build-ci-container.outputs.container-name }}:latest
