@@ -4,20 +4,27 @@
 
 void func() {
 
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
 #pragma acc exit data finalize
 
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
 #pragma acc exit data finalize finalize
 
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc exit data finalize invalid
 
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc exit data finalize invalid invalid finalize
 
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
 #pragma acc exit data wait finalize
 
+  // expected-error@+1{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
 #pragma acc host_data if_present
 
+  // expected-error@+1{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
 #pragma acc host_data if_present, if_present
 
   // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
