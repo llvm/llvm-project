@@ -1667,14 +1667,14 @@ class InfoAsmOnlyTable <string Class>: GenericTable {
 
 def VOPMAsmOnlyInfoTable : InfoAsmOnlyTable <"VOPM">;
 
-class InfoPsuedoTable <string Class>: GenericTable {
+class InfoPseudoTable <string Class>: GenericTable {
   let FilterClass = Class;
   let CppTypeName = "VOPMPseudoInfo";
   let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "isVOPMPsuedoOpcodeHelper";
+  let PrimaryKeyName = "isVOPMPseudoOpcodeHelper";
 }
 
 // TODO-GFX13: Currently this table contains opcodes that support indexing.
-def VOPMPseudoInfoTable : InfoPsuedoTable <"VOPM_Pseudo_Indexing">;
+def VOPMPseudoInfoTable : InfoPseudoTable <"VOPM_Pseudo_Indexing">;
