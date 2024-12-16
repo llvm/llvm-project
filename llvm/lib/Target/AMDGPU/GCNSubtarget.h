@@ -466,6 +466,8 @@ public:
 
   bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
 
+  bool hasScalarSubwordBufferLoads() const;
+
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
   }

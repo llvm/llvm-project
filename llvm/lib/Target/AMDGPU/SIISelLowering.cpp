@@ -6462,7 +6462,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
               MachineMemOperand::MOInvariant,
           VT.getStoreSize(), Alignment);
       SDValue LoadVal;
-      if (!Offset->isDivergent()) {
+      if (!Offset->isDivergent() && Subtarget->hasScalarSubwordBufferLoads()) {
         SDValue Ops[] = {Rsrc, // source register
                          Offset, CachePolicy};
         SDValue BufferLoad =
@@ -8391,40 +8391,9 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
           MachineMemOperand::MOInvariant,
       VT.getStoreSize(), Alignment);
 
-  if (!Offset->isDivergent()) {
-    SDValue Ops[] = {Rsrc, Offset, CachePolicy};
-
-    // Lower llvm.amdgcn.s.buffer.load.{i16, u16} intrinsics. Initially, the
-    // s_buffer_load_u16 instruction is emitted for both signed and unsigned
-    // loads. Later, DAG combiner tries to combine s_buffer_load_u16 with sext
-    // and generates s_buffer_load_i16 (performSignExtendInRegCombine).
-    if (VT == MVT::i16 && Subtarget->hasScalarSubwordLoads()) {
-      SDValue BufferLoad =
-          DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD_USHORT, DL,
-                                  DAG.getVTList(MVT::i32), Ops, VT, MMO);
-      return DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
-    }
-
-    // Widen vec3 load to vec4.
-    if (VT.isVector() && VT.getVectorNumElements() == 3 &&
-        !Subtarget->hasScalarDwordx3Loads()) {
-      EVT WidenedVT =
-          EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);
-      auto WidenedOp = DAG.getMemIntrinsicNode(
-          AMDGPUISD::SBUFFER_LOAD, DL, DAG.getVTList(WidenedVT), Ops, WidenedVT,
-          MF.getMachineMemOperand(MMO, 0, WidenedVT.getStoreSize()));
-      auto Subvector = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, WidenedOp,
-                                   DAG.getVectorIdxConstant(0, DL));
-      return Subvector;
-    }
-
-    return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
-                                   DAG.getVTList(VT), Ops, VT, MMO);
-  }
-
   // We have a divergent offset. Emit a MUBUF buffer load instead. We can
   // assume that the buffer is unswizzled.
-  SDValue Ops[] = {
+  SDValue BufferLoadOps[] = {
       DAG.getEntryNode(),                    // Chain
       Rsrc,                                  // rsrc
       DAG.getConstant(0, DL, MVT::i32),      // vindex
@@ -8434,9 +8403,45 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
       CachePolicy,                           // cachepolicy
       DAG.getTargetConstant(0, DL, MVT::i1), // idxen
   };
+
   if (VT == MVT::i16 && Subtarget->hasScalarSubwordLoads()) {
-    setBufferOffsets(Offset, DAG, &Ops[3], Align(4));
-    return handleByteShortBufferLoads(DAG, VT, DL, Ops, MMO);
+    if (!Offset->isDivergent() && Subtarget->hasScalarSubwordBufferLoads()) {
+      // Lower llvm.amdgcn.s.buffer.load.{i16, u16} intrinsics. Initially, the
+      // s_buffer_load_u16 instruction is emitted for both signed and unsigned
+      // loads. Later, DAG combiner tries to combine s_buffer_load_u16 with sext
+      // and generates s_buffer_load_i16 (performSignExtendInRegCombine).
+      SDValue SBufferLoadOps[] = {Rsrc, Offset, CachePolicy};
+      SDValue BufferLoad = DAG.getMemIntrinsicNode(
+          AMDGPUISD::SBUFFER_LOAD_USHORT, DL, DAG.getVTList(MVT::i32),
+          SBufferLoadOps, VT, MMO);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
+    }
+
+    // If s_buffer_load_u16/u8 is not supported by the platform (gfx12 when we
+    // cannot ensure the buffer's num-records/stride is not properly aligned)
+    // lower to a buffer_load_u8/u16
+    setBufferOffsets(Offset, DAG, &BufferLoadOps[3], Align(4));
+    return handleByteShortBufferLoads(DAG, VT, DL, BufferLoadOps, MMO);
+  }
+
+  if (!Offset->isDivergent()) {
+    SDValue SBufferLoadOps[] = {Rsrc, Offset, CachePolicy};
+
+    // Widen vec3 load to vec4.
+    if (VT.isVector() && VT.getVectorNumElements() == 3 &&
+        !Subtarget->hasScalarDwordx3Loads()) {
+      EVT WidenedVT =
+          EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);
+      auto WidenedOp = DAG.getMemIntrinsicNode(
+          AMDGPUISD::SBUFFER_LOAD, DL, DAG.getVTList(WidenedVT), SBufferLoadOps,
+          WidenedVT, MF.getMachineMemOperand(MMO, 0, WidenedVT.getStoreSize()));
+      auto Subvector = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, WidenedOp,
+                                   DAG.getVectorIdxConstant(0, DL));
+      return Subvector;
+    }
+
+    return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
+                                   DAG.getVTList(VT), SBufferLoadOps, VT, MMO);
   }
 
   SmallVector<SDValue, 4> Loads;
@@ -8455,14 +8460,14 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
 
   // Use the alignment to ensure that the required offsets will fit into the
   // immediate offsets.
-  setBufferOffsets(Offset, DAG, &Ops[3],
+  setBufferOffsets(Offset, DAG, &BufferLoadOps[3],
                    NumLoads > 1 ? Align(16 * NumLoads) : Align(4));
 
-  uint64_t InstOffset = Ops[5]->getAsZExtVal();
+  uint64_t InstOffset = BufferLoadOps[5]->getAsZExtVal();
   for (unsigned i = 0; i < NumLoads; ++i) {
-    Ops[5] = DAG.getTargetConstant(InstOffset + 16 * i, DL, MVT::i32);
-    Loads.push_back(getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList, Ops,
-                                        LoadVT, MMO, DAG));
+    BufferLoadOps[5] = DAG.getTargetConstant(InstOffset + 16 * i, DL, MVT::i32);
+    Loads.push_back(getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList,
+                                        BufferLoadOps, LoadVT, MMO, DAG));
   }
 
   if (NumElts == 8 || NumElts == 16)
@@ -12712,7 +12717,7 @@ SITargetLowering::performSignExtendInRegCombine(SDNode *N,
         VTSign->getVT() == MVT::i8) ||
        (Src.getOpcode() == AMDGPUISD::SBUFFER_LOAD_USHORT &&
         VTSign->getVT() == MVT::i16))) {
-    assert(Subtarget->hasScalarSubwordLoads() &&
+    assert(Subtarget->hasScalarSubwordBufferLoads() &&
            "s_buffer_load_{u8, i8} are supported "
            "in GFX12 (or newer) architectures.");
     EVT VT = Src.getValueType();

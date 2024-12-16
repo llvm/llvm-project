@@ -6806,13 +6806,38 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
   unsigned Opc = 0;
+
+  const unsigned MemSize = (Size + 7) / 8;
+  const Align MemAlign = B.getDataLayout().getABITypeAlign(
+      getTypeForLLT(Ty, MF.getFunction().getContext()));
+
+  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      MemSize, MemAlign);
+
   if (Size < 32 && ST.hasScalarSubwordLoads()) {
     assert(Size == 8 || Size == 16);
+    if (!ST.hasScalarSubwordBufferLoads()) {
+      // fallback to S_BUFFER_LOAD_UBYTE/USHORT
+      MI.getOperand(1).setIntrinsicID(Intrinsic::amdgcn_raw_buffer_load);
+
+      Register Zero = B.buildConstant(S32, 0).getReg(0);
+      MI.insert(MI.operands_begin() + 4,
+                MachineOperand::CreateReg(Zero, false));
+
+      MI.addMemOperand(MF, MMO);
+      Observer.changedInstr(MI);
+      return true;
+    }
+
     Opc = Size == 8 ? AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE
                     : AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT;
     // The 8-bit and 16-bit scalar buffer load instructions have 32-bit
     // destination register.
-    Dst = B.getMRI()->createGenericVirtualRegister(LLT::scalar(32));
+    Dst = B.getMRI()->createGenericVirtualRegister(S32);
   } else {
     Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD;
     Dst = OrigDst;
@@ -6837,15 +6862,6 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   MI.setDesc(B.getTII().get(Opc));
   MI.removeOperand(1); // Remove intrinsic ID
 
-  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
-  const unsigned MemSize = (Size + 7) / 8;
-  const Align MemAlign = B.getDataLayout().getABITypeAlign(
-      getTypeForLLT(Ty, MF.getFunction().getContext()));
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-          MachineMemOperand::MOInvariant,
-      MemSize, MemAlign);
   MI.addMemOperand(MF, MMO);
   if (Dst != OrigDst) {
     MI.getOperand(0).setReg(Dst);

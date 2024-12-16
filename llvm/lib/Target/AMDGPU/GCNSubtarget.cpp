@@ -51,6 +51,11 @@ static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
                            cl::desc("Enable the use of AA during codegen."),
                            cl::init(true));
 
+static cl::opt<bool> UseGFX12SubwordSBufferLoad(
+    "amdgpu-use-gfx12-subword-sbuffer-load",
+    cl::desc("Enable the use of s_buffer_load_(i/u)(8/16) instructions."),
+    cl::init(false));
+
 static cl::opt<unsigned>
     NSAThreshold("amdgpu-nsa-threshold",
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
@@ -346,6 +351,19 @@ void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
         InstrInfo.fixImplicitOperands(MI);
     }
   }
+}
+
+bool GCNSubtarget::hasScalarSubwordBufferLoads() const {
+  Generation Gen = getGeneration();
+
+  // On gfx12, s_buffer_load_(i/u)(8/16) have a hw-bug that is triggered when:
+  // * the stride is not a multiple of 4, or
+  // * the stride is 0 and the num-records is not a multiple of 4
+  // Avoid these instructions unless the frontend explicitly specifies that the
+  // input buffers are known to not trigger the bug.
+  if (Gen == GFX12)
+    return UseGFX12SubwordSBufferLoad;
+  return hasScalarSubwordLoads();
 }
 
 bool GCNSubtarget::hasMadF16() const {
