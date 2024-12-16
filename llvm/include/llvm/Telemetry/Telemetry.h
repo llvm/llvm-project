@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file provides the basic framework for Telemetry
+/// This file provides the basic framework for Telemetry.
 /// Refer to its documentation at llvm/docs/Telemetry.rst for more details.
 //===---------------------------------------------------------------------===//
 
