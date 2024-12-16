@@ -115,6 +115,27 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
+  case VPInstructionSC:
+    if (Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode()))
+      return false;
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    case Instruction::Or:
+    case Instruction::ICmp:
+    case Instruction::Select:
+    case VPInstruction::AnyOf:
+    case VPInstruction::Not:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
+    case VPInstruction::LogicalAnd:
+    case VPInstruction::PtrAdd:
+      return false;
+    default:
+      // TODO: for calls, we can use attributes of the called function to rule
+      // out memory reads.
+      return true;
+    }
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
