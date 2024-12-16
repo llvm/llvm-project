@@ -17,6 +17,3 @@ entry:
   %call = call %struct.vfloat3 @_Z3mix7vfloat3S_f(float %x.coerce0, float %x.coerce1, float %x.coerce2, float %y.coerce0, float %y.coerce1, float %y.coerce2, float  %t)
   ret %struct.vfloat3 %call
 }
-
-
-
