@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -66,6 +67,9 @@ struct RISCVTuneInfo {
 
   unsigned MaxLoadsPerMemcmpOptSize;
   unsigned MaxLoadsPerMemcmp;
+
+  // The direction of PostRA scheduling.
+  MISched::Direction PostRASchedDirection;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -365,8 +369,15 @@ public:
                    : TuneInfo->MaxLoadsPerMemcmp;
   }
 
+  MISched::Direction getPostRASchedDirection() const {
+    return TuneInfo->PostRASchedDirection;
+  }
+
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
+
+  void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                 unsigned NumRegionInstrs) const override;
 };
 } // End llvm namespace
 
