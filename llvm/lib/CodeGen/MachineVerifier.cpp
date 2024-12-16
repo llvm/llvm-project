@@ -1627,7 +1627,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     if (DstTy.getScalarSizeInBits() < 2) {
-      report("result type must be at least 2 bits wide", MI);
+      report("Result type must be at least 2 bits wide", MI);
       break;
     }
 
