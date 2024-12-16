@@ -1047,10 +1047,10 @@ void Editline::DisplayCompletions(
 
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
-    cur_pos += PrintCompletion(
-        editline.m_output_file, results.slice(cur_pos), max_len,
-        editline.GetTerminalWidth(),
-        all ? std::nullopt : std::optional<size_t>(page_size));
+    cur_pos +=
+        PrintCompletion(editline.m_output_file, results.slice(cur_pos), max_len,
+                        editline.GetTerminalWidth(),
+                        all ? std::nullopt : std::optional<size_t>(page_size));
 
     if (cur_pos >= results.size())
       break;
