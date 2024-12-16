@@ -164,6 +164,7 @@ public:
   CBufferExtType &operator=(const CBufferExtType &) = delete;
 
   Type *getResourceType() const { return getTypeParameter(0); }
+  uint32_t getCBufferSize() const { return getIntParameter(0); }
 
   static bool classof(const TargetExtType *T) {
     return T->getName() == "dx.CBuffer";

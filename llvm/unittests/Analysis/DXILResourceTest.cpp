@@ -380,7 +380,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // cbuffer cb0 { float4 g_X; float4 g_Y; }
   StructType *CBufType0 =
       StructType::create(Context, {Floatx4Ty, Floatx4Ty}, "cb0");
-  HandleTy = llvm::TargetExtType::get(Context, "dx.CBuffer", CBufType0, {});
+  HandleTy =
+      llvm::TargetExtType::get(Context, "dx.CBuffer", CBufType0, {/*Size=*/32});
   RI = ResourceInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1, HandleTy);
 

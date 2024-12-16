@@ -296,8 +296,7 @@ ResourceInfo::UAVInfo ResourceInfo::getUAV() const {
 
 uint32_t ResourceInfo::getCBufferSize(const DataLayout &DL) const {
   assert(isCBuffer() && "Not a CBuffer");
-  Type *Ty = cast<CBufferExtType>(HandleTy)->getResourceType();
-  return DL.getTypeSizeInBits(Ty) / 8;
+  return cast<CBufferExtType>(HandleTy)->getCBufferSize();
 }
 
 dxil::SamplerType ResourceInfo::getSamplerType() const {
