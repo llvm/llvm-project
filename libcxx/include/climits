@@ -37,12 +37,16 @@ Macros:
 
 */
 
-#include <__config>
+#if 0
+#else // 0
+#  include <__config>
 
-#include <limits.h>
+#  include <limits.h>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+#endif // 0
 
 #endif // _LIBCPP_CLIMITS

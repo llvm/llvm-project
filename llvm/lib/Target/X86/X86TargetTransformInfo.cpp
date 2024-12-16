@@ -1584,7 +1584,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector()) {
     int NumElts = LT.second.getVectorNumElements();
     if ((Index % NumElts) == 0)
-      return 0;
+      return TTI::TCC_Free;
     std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
@@ -1630,14 +1630,19 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   // Subvector insertions are cheap if the subvectors are aligned.
   // Note that in general, the insertion starting at the beginning of a vector
-  // isn't free, because we need to preserve the rest of the wide vector.
+  // isn't free, because we need to preserve the rest of the wide vector,
+  // but if the destination vector legalizes to the same width as the subvector
+  // then the insertion will simplify to a (free) register copy.
   if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
     int NumElts = LT.second.getVectorNumElements();
     std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
+      bool MatchingTypes =
+          NumElts == NumSubElts &&
+          (SubTp->getElementCount().getKnownMinValue() % NumSubElts) == 0;
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
-        return SubLT.first;
+        return MatchingTypes ? TTI::TCC_Free : SubLT.first;
     }
 
     // If the insertion isn't aligned, treat it like a 2-op shuffle.
@@ -4763,7 +4768,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
     // This type is legalized to a scalar type.
     if (!LT.second.isVector())
-      return 0;
+      return TTI::TCC_Free;
 
     // The type may be split. Normalize the index to the new type.
     unsigned SizeInBits = LT.second.getSizeInBits();
@@ -6030,9 +6035,9 @@ InstructionCost X86TTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
                                            const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
-    return Opcode == Instruction::PHI ? 0 : 1;
+    return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
   // Branches are assumed to be predicted.
-  return 0;
+  return TTI::TCC_Free;
 }
 
 int X86TTIImpl::getGatherOverhead() const {
