@@ -1057,18 +1057,22 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
+    auto NVT = LT.second;
     if (ST->hasVInstructions() && LT.second.isVector()) {
       SmallVector<unsigned, 3> Opcodes;
       // f16 with zvfhmin and bf16 with zvfbfmin
-      if (LT.second.getVectorElementType() == MVT::bf16)
+      if (LT.second.getVectorElementType() == MVT::bf16) {
         Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
                    RISCV::VFNCVTBF16_F_F_W};
-      else if (LT.second.getVectorElementType() == MVT::f16 &&
-               !ST->hasVInstructionsF16())
+        NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+      } else if (LT.second.getVectorElementType() == MVT::f16 &&
+                 !ST->hasVInstructionsF16()) {
         Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
-      else
+        NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+      } else {
         Opcodes = {RISCV::VFSQRT_V};
-      return LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+      }
+      return LT.first * getRISCVInstructionCost(Opcodes, NVT, CostKind);
     }
     break;
   }
