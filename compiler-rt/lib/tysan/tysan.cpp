@@ -22,6 +22,8 @@
 
 #include "tysan/tysan.h"
 
+#include <string.h>
+
 using namespace __sanitizer;
 using namespace __tysan;
 
@@ -43,11 +45,12 @@ static const char *getDisplayName(const char *Name) {
 
   // Clang generates tags for C++ types that demangle as typeinfo. Remove the
   // prefix from the generated string.
-  const char TIPrefix[] = "typeinfo name for ";
+  const char *TIPrefix = "typeinfo name for ";
+  size_t TIPrefixLen = strlen(TIPrefix);
 
   const char *DName = Symbolizer::GetOrInit()->Demangle(Name);
-  if (!internal_strncmp(DName, TIPrefix, sizeof(TIPrefix) - 1))
-    DName += sizeof(TIPrefix) - 1;
+  if (!internal_strncmp(DName, TIPrefix, TIPrefixLen))
+    DName += TIPrefixLen;
 
   return DName;
 }
@@ -91,7 +94,7 @@ static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
     } else if (TD->Tag == TYSAN_MEMBER_TD) {
       TD = TD->Member.Access;
     } else {
-      DCHECK(0);
+      CHECK(false && "invalid enum value");
       break;
     }
   } while (TD);
