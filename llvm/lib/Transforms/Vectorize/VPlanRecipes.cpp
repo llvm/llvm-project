@@ -1655,12 +1655,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   const InductionDescriptor &ID = getInductionDescriptor();
   TruncInst *Trunc = getTruncInst();
   IRBuilderBase &Builder = State.Builder;
-  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
+  assert(getPHINode()->getType() == ID.getStartValue()->getType() &&
+         "Types must match");
   assert(State.VF.isVector() && "must have vector VF");
 
   // The value from the original loop to which we are mapping the new induction
   // variable.
-  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
+  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : getPHINode();
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
@@ -3144,7 +3145,8 @@ bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
 }
 
 void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
-  assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
+  assert(getInductionDescriptor().getKind() ==
+             InductionDescriptor::IK_PtrInduction &&
          "Not a pointer induction according to InductionDescriptor!");
   assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
          "Unexpected type.");
@@ -3180,8 +3182,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
   // A pointer induction, performed by using a gep
   BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
-  Value *ScalarStepValue = State.get(getOperand(1), VPLane(0));
-  Type *PhiType = State.TypeAnalysis.inferScalarType(getOperand(1));
+  Value *ScalarStepValue = State.get(getStepValue(), VPLane(0));
+  Type *PhiType = State.TypeAnalysis.inferScalarType(getStepValue());
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
@@ -3234,7 +3236,7 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = WIDEN-POINTER-INDUCTION ";
   getStartValue()->printAsOperand(O, SlotTracker);
   O << ", ";
-  getOperand(1)->printAsOperand(O, SlotTracker);
+  getStepValue()->printAsOperand(O, SlotTracker);
   if (getNumOperands() == 4) {
     O << ", ";
     getOperand(2)->printAsOperand(O, SlotTracker);

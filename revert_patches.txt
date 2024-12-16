@@ -21,9 +21,3 @@ revert: breaks smoke/xteamr
 f4ee5a673f6e [OpenMP] Replace AMDGPU fences with generic scoped fences (#119619) 
 Ron , Dhruva, Joseph 
 ---
-revert : breaks in SPIRv
-4a0d53a0b0a5 PatternMatch: migrate to CmpPredicate (#118534)
-5528388e3664 EarlyCSE: fix CmpPredicate duplicate-hashing (#119902)
-a22578d38c77 ConstraintElim: teach fact-transfer about samesign (#115893)  
-Mark, Ron, Alex
---

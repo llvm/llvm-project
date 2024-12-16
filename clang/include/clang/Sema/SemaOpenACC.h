@@ -399,6 +399,7 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
@@ -536,6 +537,7 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -573,6 +575,7 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&

@@ -2569,6 +2569,19 @@ MVT AArch64TargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
 bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
+
+  // Allow SVE loads/stores where the alignment >= the size of the element type,
+  // even with +strict-align. Predicated SVE loads/stores (e.g. ld1/st1), used
+  // for stores that come from IR, only require element-size alignment (even if
+  // unaligned accesses are disabled). Without this, these will be forced to
+  // have 16-byte alignment with +strict-align (and fail to lower as we don't
+  // yet support TLI.expandUnalignedLoad() and TLI.expandUnalignedStore()).
+  if (VT.isScalableVector()) {
+    unsigned ElementSizeBits = VT.getScalarSizeInBits();
+    if (ElementSizeBits % 8 == 0 && Alignment >= Align(ElementSizeBits / 8))
+      return true;
+  }
+
   if (Subtarget->requiresStrictAlign())
     return false;
 
@@ -12810,9 +12823,10 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   }
 
   // Final check before we try to actually produce a shuffle.
-  LLVM_DEBUG(for (auto Src
-                  : Sources)
-                 assert(Src.ShuffleVec.getValueType() == ShuffleVT););
+  LLVM_DEBUG({
+    for (auto Src : Sources)
+      assert(Src.ShuffleVec.getValueType() == ShuffleVT);
+  });
 
   // The stars all align, our next step is to produce the mask for the shuffle.
   SmallVector<int, 8> Mask(ShuffleVT.getVectorNumElements(), -1);
@@ -15066,8 +15080,10 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op0);
       ++i;
     }
-    LLVM_DEBUG(if (i < NumElts) dbgs()
-                   << "Creating nodes for the other vector elements:\n";);
+    LLVM_DEBUG({
+      if (i < NumElts)
+        dbgs() << "Creating nodes for the other vector elements:\n";
+    });
     for (; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
       if (V.isUndef())
