@@ -27,17 +27,17 @@ typedef enum memory_scope {
 #endif
 } memory_scope;
 
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope wavefront due to an unsafe request. [-Rpass=si-lower]
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope agent due to an unsafe request. [-Rpass=si-lower]
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope workgroup due to an unsafe request. [-Rpass=si-lower]
+// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope wavefront-one-as due to an unsafe request. [-Rpass=si-lower]
+// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope agent-one-as due to an unsafe request. [-Rpass=si-lower]
+// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope workgroup-one-as due to an unsafe request. [-Rpass=si-lower]
 
 // GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc
 // GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc
 // GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc
 // GFX90A-HW-LABEL: @atomic_unsafe_hw
-// GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("workgroup") monotonic, align 4
-// GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("agent") monotonic, align 4
-// GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("wavefront") monotonic, align 4
+// GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("workgroup-one-as") monotonic, align 4
+// GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("agent-one-as") monotonic, align 4
+// GFX90A-HW:   atomicrmw fadd ptr addrspace(1) %{{.*}}, float %{{.*}} syncscope("wavefront-one-as") monotonic, align 4
 void atomic_unsafe_hw(__global atomic_float *d, float a) {
   float ret1 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
   float ret2 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_device);
