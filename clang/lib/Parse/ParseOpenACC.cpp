@@ -998,7 +998,6 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
       [[fallthrough]];
-    case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Host:
@@ -1007,6 +1006,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       ParseOpenACCVarList(ClauseKind);
       break;
     case OpenACCClauseKind::Attach:
+    case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
       ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),

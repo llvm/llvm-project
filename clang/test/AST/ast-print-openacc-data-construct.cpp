@@ -120,4 +120,10 @@ void foo() {
 // CHECK: #pragma acc exit data copyout(i) detach(iPtr, arrayPtr[0])
 #pragma acc exit data copyout(i) detach(iPtr, arrayPtr[0])
 
+// CHECK: #pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
+#pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
+  ;
+
+// CHECK: #pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
+#pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
 }
