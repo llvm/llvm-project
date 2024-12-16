@@ -31,13 +31,13 @@ class RISCVExtension<int major, int minor, string desc,
                      string fieldname = !subst("Feature", "Has", NAME),
                      string value = "true", bit IsExperimental = false>
     : SubtargetFeature<"", fieldname, value, "", implies> {
-  defvar ExtName = !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME));
+  defvar extName = !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME));
 
   // Name - Name of the extension in lower case.
-  let Name = !if(IsExperimental, "experimental-", "") # !tolower(ExtName);
+  let Name = !if(IsExperimental, "experimental-", "") # !tolower(extName);
 
   // Desc - Description of extension with its name.
-  let Desc = "'" # ExtName # "' (" # desc # ")";
+  let Desc = "'" # extName # "' (" # desc # ")";
 
   // MajorVersion - The major version for this extension.
   int MajorVersion = major;
