@@ -57,6 +57,10 @@ RUN apt-get update && \
     nodejs \
     perl-modules \
     python3-psutil \
+
+    # These are needed by the premerge pipeline. Pip is used to install
+    # dependent python packages and ccache is used for build caching. File and
+    # tzdata are used for tests.
     python3-pip \
     ccache \
     file \
