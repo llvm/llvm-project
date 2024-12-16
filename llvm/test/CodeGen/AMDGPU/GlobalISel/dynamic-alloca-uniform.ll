@@ -418,3 +418,88 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
   store i32 0, ptr addrspace(5) %alloca
   ret void
 }
+
+define amdgpu_kernel void @kernel_non_entry_block_static_alloca(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
+; GFX9-LABEL: kernel_non_entry_block_static_alloca:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_load_dword s4, s[8:9], 0x8
+; GFX9-NEXT:    s_add_u32 s0, s0, s17
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    s_mov_b32 s33, 0
+; GFX9-NEXT:    s_movk_i32 s32, 0x1000
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX9-NEXT:    s_cbranch_scc0 .LBB6_2
+; GFX9-NEXT:  ; %bb.1: ; %bb.1
+; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:  .LBB6_2: ; %bb.0
+; GFX9-NEXT:    s_add_u32 s4, s32, 0x400
+; GFX9-NEXT:    s_and_b32 s4, s4, 0xfffff000
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 1
+; GFX9-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: kernel_non_entry_block_static_alloca:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_load_dword s4, s[8:9], 0x8
+; GFX10-NEXT:    s_add_u32 s0, s0, s17
+; GFX10-NEXT:    s_addc_u32 s1, s1, 0
+; GFX10-NEXT:    s_mov_b32 s33, 0
+; GFX10-NEXT:    s_movk_i32 s32, 0x800
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX10-NEXT:    s_cbranch_scc0 .LBB6_2
+; GFX10-NEXT:  ; %bb.1: ; %bb.1
+; GFX10-NEXT:    s_endpgm
+; GFX10-NEXT:  .LBB6_2: ; %bb.0
+; GFX10-NEXT:    s_add_u32 s4, s32, 0x200
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_and_b32 s4, s4, 0xfffff800
+; GFX10-NEXT:    v_mov_b32_e32 v2, 1
+; GFX10-NEXT:    v_mov_b32_e32 v1, s4
+; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: kernel_non_entry_block_static_alloca:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x8
+; GFX11-NEXT:    s_mov_b32 s33, 0
+; GFX11-NEXT:    s_mov_b32 s32, 64
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB6_2
+; GFX11-NEXT:  ; %bb.1: ; %bb.1
+; GFX11-NEXT:    s_endpgm
+; GFX11-NEXT:  .LBB6_2: ; %bb.0
+; GFX11-NEXT:    s_add_u32 s0, s32, 0x200
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 1
+; GFX11-NEXT:    s_and_b32 s0, s0, 0xfffff800
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s1, s0, 4
+; GFX11-NEXT:    scratch_store_b32 off, v0, s0 dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    scratch_store_b32 off, v1, s1 dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_endpgm
+    entry:
+    %cond = icmp eq i32 %arg.cond, 0
+    br i1 %cond, label %bb.0, label %bb.1
+
+    bb.0:
+    %alloca = alloca i32, i32 4, align 64, addrspace(5)
+    %gep1 = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+    store volatile i32 0, ptr addrspace(5) %alloca
+    store volatile i32 1, ptr addrspace(5) %gep1
+    br label %bb.1
+
+    bb.1:
+    ret void
+}

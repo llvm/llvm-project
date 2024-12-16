@@ -8,6 +8,10 @@
 ; ERR-NEXT: warning: Instruction selection used fallback path for func_dynamic_stackalloc_vgpr_align4
 ; ERR-NEXT: error: <unknown>:0:0: in function func_dynamic_stackalloc_vgpr_align4 void (i32): unsupported dynamic alloca
 
+; ERR: remark: <unknown>:0:0: cannot select: %{{[0-9]+}}:sreg_32(p5) = G_DYN_STACKALLOC %{{[0-9]+}}:vgpr(s32), 32 (in function: func_dynamic_stackalloc_vgpr_align32)
+; ERR-NEXT: warning: Instruction selection used fallback path for func_dynamic_stackalloc_vgpr_align32
+; ERR-NEXT: error: <unknown>:0:0: in function func_dynamic_stackalloc_vgpr_align32 void (i32): unsupported dynamic alloca
+
 define amdgpu_kernel void @kernel_dynamic_stackalloc_vgpr_align4(ptr addrspace(1) %ptr) {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %id
@@ -19,6 +23,12 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_vgpr_align4(ptr addrspace(1
 
 define void @func_dynamic_stackalloc_vgpr_align4(i32 %n) {
   %alloca = alloca i32, i32 %n, align 4, addrspace(5)
+  store volatile ptr addrspace(5) %alloca, ptr addrspace(1) undef
+  ret void
+}
+
+define void @func_dynamic_stackalloc_vgpr_align32(i32 %n) {
+  %alloca = alloca i32, i32 %n, align 32, addrspace(5)
   store volatile ptr addrspace(5) %alloca, ptr addrspace(1) undef
   ret void
 }
