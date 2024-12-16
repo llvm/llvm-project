@@ -352,7 +352,8 @@ Error BinaryFunctionPassManager::runPasses() {
 Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
-  Manager.registerPass(std::make_unique<MarkRAStates>());
+  if (BC.isAArch64())
+    Manager.registerPass(std::make_unique<MarkRAStates>());
 
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
