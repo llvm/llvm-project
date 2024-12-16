@@ -27,7 +27,7 @@ namespace telemetry {
 
 class Serializer {
 public:
-  virtual llvm::Error init() = 0;
+  virtual Error init() = 0;
   virtual void write(StringRef KeyName, bool Value) = 0;
   virtual void write(StringRef KeyName, int Value) = 0;
   virtual void write(StringRef KeyName, size_t Value) = 0;
