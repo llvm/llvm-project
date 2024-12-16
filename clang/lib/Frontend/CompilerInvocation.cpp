@@ -3436,11 +3436,14 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   // Add the internal paths from a driver that detects standard include paths.
   for (const auto *A :
-       Args.filtered(OPT_internal_isystem, OPT_internal_externc_isystem)) {
+       Args.filtered(OPT_internal_isystem, OPT_internal_externc_isystem, OPT_internal_iframework)) {
     frontend::IncludeDirGroup Group = frontend::System;
+    bool IsFramework = false;
     if (A->getOption().matches(OPT_internal_externc_isystem))
       Group = frontend::ExternCSystem;
-    Opts.AddPath(A->getValue(), Group, false, true);
+    if (A->getOption().matches(OPT_internal_iframework))
+      IsFramework = true;
+    Opts.AddPath(A->getValue(), Group, IsFramework, true);
   }
 
   // Add the path prefixes which are implicitly treated as being system headers.

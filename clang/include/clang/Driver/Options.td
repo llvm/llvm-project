@@ -8298,6 +8298,11 @@ def internal_externc_isystem : Separate<["-"], "internal-externc-isystem">,
            "implicit extern \"C\" semantics; these are assumed to not be "
            "user-provided and are used to model system and standard headers' "
            "paths.">;
+def internal_iframework : Separate<["-"], "internal-iframework">,
+  MetaVarName<"<directory>">,
+  HelpText<"Add directory to the internal system framework include search path; these "
+           "are assumed to not be user-provided and are used to model system "
+           "and standard frameworks' paths.">;
 
 } // let Visibility = [CC1Option]
 
