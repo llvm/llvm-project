@@ -52,10 +52,10 @@ define i32 @large(ptr nocapture noundef readonly %p1, i32 noundef %st1, ptr noca
 ; CHECK-NEXT:    sxtw x9, w3
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x2]
+; CHECK-NEXT:    ldr d2, [x0, x8]
+; CHECK-NEXT:    ldr d3, [x2, x9]
 ; CHECK-NEXT:    add x10, x0, x8
 ; CHECK-NEXT:    add x11, x2, x9
-; CHECK-NEXT:    ldr d2, [x10]
-; CHECK-NEXT:    ldr d3, [x11]
 ; CHECK-NEXT:    usubl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    add x10, x10, x8
 ; CHECK-NEXT:    add x11, x11, x9
@@ -69,22 +69,22 @@ define i32 @large(ptr nocapture noundef readonly %p1, i32 noundef %st1, ptr noca
 ; CHECK-NEXT:    usubl v3.8h, v4.8b, v5.8b
 ; CHECK-NEXT:    shll2 v4.4s, v1.8h, #16
 ; CHECK-NEXT:    saddw v0.4s, v6.4s, v0.4h
-; CHECK-NEXT:    shll2 v6.4s, v2.8h, #16
 ; CHECK-NEXT:    shll2 v5.4s, v3.8h, #16
 ; CHECK-NEXT:    saddw v1.4s, v4.4s, v1.4h
+; CHECK-NEXT:    shll2 v6.4s, v2.8h, #16
 ; CHECK-NEXT:    rev64 v4.4s, v0.4s
-; CHECK-NEXT:    saddw v2.4s, v6.4s, v2.4h
 ; CHECK-NEXT:    saddw v3.4s, v5.4s, v3.4h
 ; CHECK-NEXT:    rev64 v5.4s, v1.4s
+; CHECK-NEXT:    saddw v2.4s, v6.4s, v2.4h
 ; CHECK-NEXT:    rev64 v6.4s, v2.4s
-; CHECK-NEXT:    sub v4.4s, v0.4s, v4.4s
-; CHECK-NEXT:    addp v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    rev64 v7.4s, v3.4s
+; CHECK-NEXT:    sub v4.4s, v0.4s, v4.4s
 ; CHECK-NEXT:    sub v5.4s, v1.4s, v5.4s
-; CHECK-NEXT:    sub v6.4s, v2.4s, v6.4s
-; CHECK-NEXT:    addp v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    addp v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    zip1 v16.4s, v5.4s, v4.4s
 ; CHECK-NEXT:    sub v7.4s, v3.4s, v7.4s
+; CHECK-NEXT:    sub v6.4s, v2.4s, v6.4s
+; CHECK-NEXT:    addp v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    zip2 v3.4s, v6.4s, v7.4s
 ; CHECK-NEXT:    mov v6.s[1], v7.s[0]
 ; CHECK-NEXT:    ext v7.16b, v5.16b, v16.16b, #8
