@@ -318,18 +318,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
 
-  // Make sure returned pointers are live. We might be trying to return a
-  // pointer or reference to a local variable.
-  // Just return false, since a diagnostic has already been emitted in Sema.
-  if constexpr (std::is_same_v<T, Pointer>) {
-    // FIXME: We could be calling isLive() here, but the emitted diagnostics
-    // seem a little weird, at least if the returned expression is of
-    // pointer type.
-    // Null pointers are considered live here.
-    if (!Ret.isZero() && !Ret.isLive())
-      return false;
-  }
-
   assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)

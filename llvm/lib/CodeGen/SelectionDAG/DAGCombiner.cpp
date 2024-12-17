@@ -153,12 +153,6 @@ static cl::opt<bool> EnableVectorFCopySignExtendRound(
     "combiner-vector-fcopysign-extend-round", cl::Hidden, cl::init(false),
     cl::desc(
         "Enable merging extends and rounds into FCOPYSIGN on vector types"));
-
-static cl::opt<unsigned int>
-    MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
-             cl::desc("DAG combiner limit number of steps when searching DAG "
-                      "for predecessor nodes"));
-
 namespace {
 
   class DAGCombiner {
@@ -18929,6 +18923,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
     for (SDNode::use_iterator UI = BasePtr->use_begin(),
                               UE = BasePtr->use_end();
@@ -19093,6 +19088,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
     return false;
 
   SmallPtrSet<const SDNode *, 32> Visited;
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   for (SDNode *Use : BasePtr->uses()) {
     if (Use == Ptr.getNode())
       continue;
@@ -19139,6 +19135,7 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   // 2) Op must be independent of N, i.e. Op is neither a predecessor
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   for (SDNode *Op : Ptr->uses()) {
     // Check for #1.
     if (!shouldCombineToPostInc(N, Ptr, Op, BasePtr, Offset, AM, DAG, TLI))
