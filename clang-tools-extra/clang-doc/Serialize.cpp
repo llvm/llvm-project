@@ -242,9 +242,9 @@ TypeInfo getTypeInfoForType(const QualType &T) {
     return TypeInfo(Reference(SymbolID(), T.getAsString()));
 
   InfoType IT;
-  if (dyn_cast<EnumDecl>(TD)) {
+  if (isa<EnumDecl>(TD)) {
     IT = InfoType::IT_enum;
-  } else if (dyn_cast<RecordDecl>(TD)) {
+  } else if (isa<RecordDecl>(TD)) {
     IT = InfoType::IT_record;
   } else {
     IT = InfoType::IT_default;
