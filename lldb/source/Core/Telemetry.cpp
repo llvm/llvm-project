@@ -142,10 +142,8 @@ TelemetryManager::TelemetryManager(
 std::unique_ptr<TelemetryManager> TelemetryManager::CreateInstance(
     std::unique_ptr<llvm::telemetry::Config> config,
     lldb_private::Debugger *debugger) {
-
-  TelemetryManager *ins = new TelemetryManager(std::move(config), debugger);
-
-  return std::unique_ptr<TelemetryManager>(ins);
+  return std::unique_ptr<TelemetryManager>(
+      new TelemetryManager(std::move(config), debugger));
 }
 
 llvm::Error TelemetryManager::dispatch(TelemetryInfo *entry) {
