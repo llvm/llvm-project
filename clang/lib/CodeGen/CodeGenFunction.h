@@ -4689,6 +4689,11 @@ public:
                                   llvm::Type *Ty1, bool Extract,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   const CallExpr *E, const char *name);
+  llvm::Value *EmitFP8NeonFDOTCall(unsigned IID, bool ExtendLane,
+                                   llvm::Type *RetTy,
+                                   SmallVectorImpl<llvm::Value *> &Ops,
+                                   unsigned ICEArguments, const CallExpr *E,
+                                   const char *name);
   llvm::Value *EmitNeonSplat(llvm::Value *V, llvm::Constant *Idx,
                              const llvm::ElementCount &Count);
   llvm::Value *EmitNeonSplat(llvm::Value *V, llvm::Constant *Idx);

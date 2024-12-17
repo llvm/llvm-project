@@ -302,7 +302,7 @@ class Inst <string n, string p, string t, Operation o, list<ImmCheck> ch = []>{
 class SInst<string n, string p, string t, list<ImmCheck> ch = []> : Inst<n, p, t, OP_NONE, ch> {}
 class IInst<string n, string p, string t, list<ImmCheck> ch = []> : Inst<n, p, t, OP_NONE, ch> {}
 class WInst<string n, string p, string t, list<ImmCheck> ch = []> : Inst<n, p, t, OP_NONE, ch> {}
-class VInst<string n, string p, string t> : Inst<n, p, t, OP_NONE> {}
+class VInst<string n, string p, string t, list<ImmCheck> ch = []> : Inst<n, p, t, OP_NONE, ch> {}
 
 // The following instruction classes are implemented via operators
 // instead of builtins. As such these declarations are only used for
