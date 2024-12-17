@@ -7778,12 +7778,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 #endif
 
-  // 0. Generate SCEV-dependent code into the preheader, including TripCount,
-  // before making any changes to the CFG.
-  if (!BestVPlan.getPreheader()->empty()) {
+  // 0. Generate SCEV-dependent code in the entry, including TripCount, before
+  // making any changes to the CFG.
+  if (!BestVPlan.getEntry()->empty()) {
     State.CFG.PrevBB = OrigLoop->getLoopPreheader();
     State.Builder.SetInsertPoint(OrigLoop->getLoopPreheader()->getTerminator());
-    BestVPlan.getPreheader()->execute(&State);
+    BestVPlan.getEntry()->execute(&State);
   }
   if (!ILV.getTripCount())
     ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
@@ -10049,7 +10049,7 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
   // TODO: This is a workaround needed for epilogue vectorization and it
   // should be removed once induction resume value creation is done
   // directly in VPlan.
-  for (auto &R : make_early_inc_range(*Plan.getPreheader())) {
+  for (auto &R : make_early_inc_range(*Plan.getEntry())) {
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
