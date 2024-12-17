@@ -559,6 +559,10 @@ private:
 public:
   ~BuiltinTypeMethodBuilder() { finalizeMethod(); }
 
+  BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
+  BuiltinTypeMethodBuilder &
+  operator=(const BuiltinTypeMethodBuilder &Other) = delete;
+
   Expr *getResourceHandleExpr() {
     // The first statement added to a method or access to 'this' creates the
     // declaration.
