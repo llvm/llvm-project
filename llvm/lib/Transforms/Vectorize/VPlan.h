@@ -952,11 +952,6 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
-  struct GEPFlagsTy {
-    char IsInBounds : 1;
-    GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
-  };
-
 private:
   struct ExactFlagsTy {
     char IsExact : 1;
@@ -983,7 +978,7 @@ private:
     WrapFlagsTy WrapFlags;
     DisjointFlagsTy DisjointFlags;
     ExactFlagsTy ExactFlags;
-    GEPFlagsTy GEPFlags;
+    GEPNoWrapFlags GEPFlags;
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     unsigned AllFlags;
@@ -1020,7 +1015,7 @@ public:
       ExactFlags.IsExact = Op->isExact();
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
       OpType = OperationType::GEPOp;
-      GEPFlags.IsInBounds = GEP->isInBounds();
+      GEPFlags = GEP->getNoWrapFlags();
     } else if (auto *PNNI = dyn_cast<PossiblyNonNegInst>(&I)) {
       OpType = OperationType::NonNegOp;
       NonNegFlags.NonNeg = PNNI->hasNonNeg();
@@ -1060,7 +1055,7 @@ public:
 protected:
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      GEPFlagsTy GEPFlags, DebugLoc DL = {})
+                      GEPNoWrapFlags GEPFlags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::GEPOp),
         GEPFlags(GEPFlags) {}
 
@@ -1097,7 +1092,7 @@ public:
       ExactFlags.IsExact = false;
       break;
     case OperationType::GEPOp:
-      GEPFlags.IsInBounds = false;
+      GEPFlags = GEPNoWrapFlags::none();
       break;
     case OperationType::FPMathOp:
       FMFs.NoNaNs = false;
@@ -1126,10 +1121,7 @@ public:
       I->setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      // TODO(gep_nowrap): Track the full GEPNoWrapFlags in VPlan.
-      cast<GetElementPtrInst>(I)->setNoWrapFlags(
-          GEPFlags.IsInBounds ? GEPNoWrapFlags::inBounds()
-                              : GEPNoWrapFlags::none());
+      cast<GetElementPtrInst>(I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
       I->setHasAllowReassoc(FMFs.AllowReassoc);
@@ -1155,11 +1147,7 @@ public:
     return CmpPredicate;
   }
 
-  bool isInBounds() const {
-    assert(OpType == OperationType::GEPOp &&
-           "recipe doesn't have inbounds flag");
-    return GEPFlags.IsInBounds;
-  }
+  GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
   /// Returns true if the recipe has fast-math flags.
   bool hasFastMathFlags() const { return OpType == OperationType::FPMathOp; }
@@ -1306,7 +1294,7 @@ public:
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
-  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
+  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPNoWrapFlags Flags,
                 DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
                             ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
@@ -1914,10 +1902,9 @@ class VPReverseVectorPointerRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPReverseVectorPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
-                               bool IsInBounds, DebugLoc DL)
+                               GEPNoWrapFlags GEPFlags, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPReverseVectorPointerSC,
-                            ArrayRef<VPValue *>({Ptr, VF}),
-                            GEPFlagsTy(IsInBounds), DL),
+                            ArrayRef<VPValue *>({Ptr, VF}), GEPFlags, DL),
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPReverseVectorPointerSC)
@@ -1949,8 +1936,9 @@ public:
   }
 
   VPReverseVectorPointerRecipe *clone() override {
-    return new VPReverseVectorPointerRecipe(
-        getOperand(0), getVFValue(), IndexedTy, isInBounds(), getDebugLoc());
+    return new VPReverseVectorPointerRecipe(getOperand(0), getVFValue(),
+                                            IndexedTy, getGEPNoWrapFlags(),
+                                            getDebugLoc());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1966,10 +1954,10 @@ class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
   Type *IndexedTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsInBounds,
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, GEPNoWrapFlags GEPFlags,
                         DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlagsTy(IsInBounds), DL),
+                            GEPFlags, DL),
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
@@ -1991,8 +1979,8 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, isInBounds(),
-                                     getDebugLoc());
+    return new VPVectorPointerRecipe(getOperand(0), IndexedTy,
+                                     getGEPNoWrapFlags(), getDebugLoc());
   }
 
   /// Return the cost of this VPHeaderPHIRecipe.
