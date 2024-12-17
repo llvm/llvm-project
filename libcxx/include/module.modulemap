@@ -2286,15 +2286,15 @@ module std_stdbool_h [system] {
   textual header "stdbool.h"
 }
 module std_stddef_h [system] {
-  // <stddef.h>'s __need_* macros require textual inclusion.
+  // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
 }
 module std_stdio_h [system] {
-  // <stdio.h>'s __need_* macros require textual inclusion.
+  // <stdio.h> supports being included multiple times with different pre-defined macros
   textual header "stdio.h"
 }
 module std_stdlib_h [system] {
-  // <stdlib.h>'s __need_* macros require textual inclusion.
+  // <stdlib.h> supports being included multiple times with different pre-defined macros
   textual header "stdlib.h"
 }
 module std_string_h [system] {
@@ -2310,7 +2310,7 @@ module std_uchar_h [system] {
   export *
 }
 module std_wchar_h [system] {
-  // <wchar.h>'s __need_* macros require textual inclusion.
+  // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
 }
 module std_wctype_h [system] {

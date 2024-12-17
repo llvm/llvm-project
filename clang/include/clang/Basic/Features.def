@@ -102,6 +102,7 @@ FEATURE(numerical_stability_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Nume
 FEATURE(memory_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Memory |
                                    SanitizerKind::KernelMemory))
+FEATURE(type_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Type))
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
