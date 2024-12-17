@@ -79,13 +79,13 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILBindingMap &DBM,
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
   for (const ResourceBindingInfo &RI : DBM.srvs())
-    SRVs.push_back(RI.getAsMetadata(M, DRTM));
+    SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceBindingInfo &RI : DBM.uavs())
-    UAVs.push_back(RI.getAsMetadata(M, DRTM));
+    UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceBindingInfo &RI : DBM.cbuffers())
-    CBufs.push_back(RI.getAsMetadata(M, DRTM));
+    CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceBindingInfo &RI : DBM.samplers())
-    Smps.push_back(RI.getAsMetadata(M, DRTM));
+    Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
 
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);

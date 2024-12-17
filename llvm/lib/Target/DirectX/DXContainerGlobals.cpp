@@ -158,7 +158,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
     BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
     BindInfo.Space = Binding.Space;
 
-    dxil::ResourceTypeInfo TypeInfo = DRTM[RBI.getHandleTy()];
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
     dxbc::PSV::ResourceType ResType = dxbc::PSV::ResourceType::Invalid;
     bool IsUAV = TypeInfo.getResourceClass() == dxil::ResourceClass::UAV;
     switch (TypeInfo.getResourceKind()) {

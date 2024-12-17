@@ -450,12 +450,7 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
 }
 
 MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
-                                            DXILResourceTypeMap &DRTM) const {
-  return getAsMetadata(M, DRTM[getHandleTy()]);
-}
-
-MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
-                                            dxil::ResourceTypeInfo RTI) const {
+                                            dxil::ResourceTypeInfo &RTI) const {
   LLVMContext &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
 
@@ -529,13 +524,7 @@ MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
 
 std::pair<uint32_t, uint32_t>
 ResourceBindingInfo::getAnnotateProps(Module &M,
-                                      DXILResourceTypeMap &DRTM) const {
-  return getAnnotateProps(M, DRTM[getHandleTy()]);
-}
-
-std::pair<uint32_t, uint32_t>
-ResourceBindingInfo::getAnnotateProps(Module &M,
-                                      dxil::ResourceTypeInfo RTI) const {
+                                      dxil::ResourceTypeInfo &RTI) const {
   const DataLayout &DL = M.getDataLayout();
 
   uint32_t ResourceKind = llvm::to_underlying(RTI.getResourceKind());
@@ -582,12 +571,7 @@ ResourceBindingInfo::getAnnotateProps(Module &M,
   return {Word0, Word1};
 }
 
-void ResourceBindingInfo::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
-                                const DataLayout &DL) const {
-  print(OS, DRTM[getHandleTy()], DL);
-}
-
-void ResourceBindingInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo RTI,
+void ResourceBindingInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
                                 const DataLayout &DL) const {
   OS << "  Binding:\n"
      << "    Record ID: " << Binding.RecordID << "\n"
@@ -623,7 +607,7 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
       continue;
     case Intrinsic::dx_handle_fromBinding: {
       auto *HandleTy = cast<TargetExtType>(F.getReturnType());
-      ResourceTypeInfo RTI = DRTM[HandleTy];
+      ResourceTypeInfo &RTI = DRTM[HandleTy];
 
       for (User *U : F.users())
         if (CallInst *CI = dyn_cast<CallInst>(U)) {
@@ -667,7 +651,7 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   uint32_t NextID = 0;
   for (unsigned I = 0, E = Size; I != E; ++I) {
     ResourceBindingInfo &RBI = Infos[I];
-    ResourceTypeInfo RTI = DRTM[RBI.getHandleTy()];
+    ResourceTypeInfo &RTI = DRTM[RBI.getHandleTy()];
     if (RTI.isUAV() && FirstUAV == Size) {
       FirstUAV = I;
       NextID = 0;
@@ -688,7 +672,8 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
                            const DataLayout &DL) const {
   for (unsigned I = 0, E = Infos.size(); I != E; ++I) {
     OS << "Binding " << I << ":\n";
-    Infos[I].print(OS, DRTM, DL);
+    const dxil::ResourceBindingInfo &RBI = Infos[I];
+    RBI.print(OS, DRTM[RBI.getHandleTy()], DL);
     OS << "\n";
   }
 

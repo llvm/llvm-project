@@ -302,7 +302,8 @@ public:
       dxil::ResourceBindingInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
-      dxil::ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+      dxil::ResourceClass RC = RTI.getResourceClass();
 
       Value *IndexOp = CI->getArgOperand(3);
       if (Binding.LowerBound != 0)
@@ -310,7 +311,7 @@ public:
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
       std::pair<uint32_t, uint32_t> Props =
-          RI.getAnnotateProps(*F.getParent(), DRTM);
+          RI.getAnnotateProps(*F.getParent(), RTI);
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".

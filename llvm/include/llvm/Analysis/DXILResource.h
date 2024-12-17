@@ -293,6 +293,9 @@ public:
   dxil::ResourceClass getResourceClass() const { return RC; }
   dxil::ResourceKind getResourceKind() const { return Kind; }
 
+  void setGloballyCoherent(bool V) { GloballyCoherent = V; }
+  void setHasCounter(bool V) { HasCounter = V; }
+
   bool operator==(const ResourceTypeInfo &RHS) const;
   bool operator!=(const ResourceTypeInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceTypeInfo &RHS) const;
@@ -341,13 +344,10 @@ public:
     return "";
   }
 
-  MDTuple *getAsMetadata(Module &M, DXILResourceTypeMap &DRTM) const;
-  MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo RTI) const;
+  MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   std::pair<uint32_t, uint32_t>
-  getAnnotateProps(Module &M, DXILResourceTypeMap &DRTM) const;
-  std::pair<uint32_t, uint32_t>
-  getAnnotateProps(Module &M, dxil::ResourceTypeInfo RTI) const;
+  getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceBindingInfo &RHS) const {
     return std::tie(Binding, HandleTy) == std::tie(RHS.Binding, RHS.HandleTy);
@@ -359,9 +359,7 @@ public:
     return Binding < RHS.Binding;
   }
 
-  void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
-             const DataLayout &DL) const;
-  void print(raw_ostream &OS, dxil::ResourceTypeInfo RTI,
+  void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
              const DataLayout &DL) const;
 };
 
@@ -370,30 +368,18 @@ public:
 //===----------------------------------------------------------------------===//
 
 class DXILResourceTypeMap {
-  struct Info {
-    dxil::ResourceClass RC;
-    dxil::ResourceKind Kind;
-    bool GloballyCoherent;
-    bool HasCounter;
-  };
-  DenseMap<TargetExtType *, Info> Infos;
+  DenseMap<TargetExtType *, dxil::ResourceTypeInfo> Infos;
 
 public:
   bool invalidate(Module &M, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &Inv);
 
-  dxil::ResourceTypeInfo operator[](TargetExtType *Ty) {
-    Info I = Infos[Ty];
-    return dxil::ResourceTypeInfo(Ty, I.RC, I.Kind, I.GloballyCoherent,
-                                  I.HasCounter);
-  }
-
-  void setGloballyCoherent(TargetExtType *Ty, bool GloballyCoherent) {
-    Infos[Ty].GloballyCoherent = GloballyCoherent;
-  }
-
-  void setHasCounter(TargetExtType *Ty, bool HasCounter) {
-    Infos[Ty].HasCounter = HasCounter;
+  dxil::ResourceTypeInfo &operator[](TargetExtType *Ty) {
+    auto It = Infos.find(Ty);
+    if (It != Infos.end())
+      return It->second;
+    auto [NewIt, Inserted] = Infos.try_emplace(Ty, Ty);
+    return NewIt->second;
   }
 };
 
