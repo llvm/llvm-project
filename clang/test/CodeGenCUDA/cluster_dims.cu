@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1210 -fcuda-is-device -emit-llvm -x hip -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 -fcuda-is-device -emit-llvm -x hip -o - %s | FileCheck %s
 
 #include "Inputs/cuda.h"
 

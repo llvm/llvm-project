@@ -2,7 +2,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,FMA_F64 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx90a -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,FMAC_F64 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,FMA_F64 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1210 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,FMAC_F64 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1250 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,FMAC_F64 %s
 
 declare double @llvm.fma.f64(double, double, double) nounwind readnone
 declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>) nounwind readnone

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1210 --amdhsa-code-object-version=6 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1250 --amdhsa-code-object-version=6 -show-encoding %s | FileCheck %s
 
 // CHECK: .amdgpu_metadata
 // CHECK: amdhsa.kernels:

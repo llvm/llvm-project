@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1200 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1210 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1210 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1250 %s
 
 ; GFX9-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.wave.id
 ; GFX9-GISEL-ERR: LLVM ERROR: unable to legalize instruction: {{.*}} = G_INTRINSIC intrinsic(@llvm.amdgcn.wave.id)
@@ -27,13 +27,13 @@ define amdgpu_cs void @test_wave_id(ptr addrspace(1) %out) {
 ; GFX1200-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1200-NEXT:    s_endpgm
 ;
-; GFX1210-LABEL: test_wave_id:
-; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1210-NEXT:    v_mov_b32_e32 v2, s0
-; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX1210-NEXT:    s_endpgm
+; GFX1250-LABEL: test_wave_id:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
   %waveid = call i32 @llvm.amdgcn.wave.id()
   store i32 %waveid, ptr addrspace(1) %out
   ret void
@@ -62,15 +62,15 @@ define amdgpu_gfx void @test_wave_id_callable(ptr addrspace(1) %out) {
 ; GFX1200-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1210-LABEL: test_wave_id_callable:
-; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
-; GFX1210-NEXT:    s_wait_alu 0xfffe
-; GFX1210-NEXT:    v_mov_b32_e32 v2, s0
-; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: test_wave_id_callable:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX12-LABEL: test_wave_id_callable:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0

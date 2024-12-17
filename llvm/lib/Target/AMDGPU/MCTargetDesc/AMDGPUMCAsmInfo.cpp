@@ -61,7 +61,7 @@ unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
 
   // VOP3PX/VOP3PX2 encoding.
   if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
-      STI->hasFeature(AMDGPU::FeatureGFX1210Insts))
+      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
     return 16;
 
   // 64-bit instruction with 32-bit literal.

@@ -153,7 +153,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
-  bool AllowSameVGPR = ST.hasGFX1210Insts();
+  bool AllowSameVGPR = ST.hasGFX1250Insts();
 
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
                                  IsVOPD3))

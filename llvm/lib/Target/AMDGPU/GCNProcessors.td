@@ -349,16 +349,16 @@ def : ProcessorModel<"gfx120F", GFX12SpeedModel,
   FeatureISAVersion12.Features
 >;
 
-def : ProcessorModel<"gfx1210", GFX1210SpeedModel,
+def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
   FeatureISAVersion12_10.Features
 >;
 
-def : ProcessorModel<"gfx1211", GFX1211SpeedModel,
+def : ProcessorModel<"gfx1251", GFX1251SpeedModel,
   FeatureISAVersion12_11.Features
 >;
 
-// [gfx1210, gfx1211]
-def : ProcessorModel<"gfx12-1-generic", GFX1210SpeedModel,
+// [gfx1250, gfx1251]
+def : ProcessorModel<"gfx12-5-generic", GFX1250SpeedModel,
   FeatureISAVersion12_1_Generic.Features
 >;
 

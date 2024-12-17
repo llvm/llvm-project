@@ -9591,7 +9591,7 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
-    return ST.hasGFX1210Insts() ? SIEncodingFamily::GFX1210
+    return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
   case AMDGPUSubtarget::GFX13:
     return SIEncodingFamily::GFX13;
@@ -9686,10 +9686,10 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
-  if (MCOp == (uint16_t)-1 && ST.hasGFX1210Insts())
+  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())
     MCOp =
         AMDGPU::getMCOpcode(Opcode, ST.getGeneration() == AMDGPUSubtarget::GFX13
-                                        ? SIEncodingFamily::GFX1210
+                                        ? SIEncodingFamily::GFX1250
                                         : SIEncodingFamily::GFX12);
 
   // -1 means that Opcode is already a native instruction.

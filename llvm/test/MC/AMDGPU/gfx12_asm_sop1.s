@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
-// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1210 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1250 %s | FileCheck --check-prefix=GFX12 %s
 
 s_alloc_vgpr 0x1235
 // GFX12: encoding: [0xff,0x53,0x80,0xbe,0x35,0x12,0x00,0x00]

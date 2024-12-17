@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1211 -verify-machineinstrs -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -verify-machineinstrs -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
 
 ---
 name: wmma_xdl_twoaddr_trans

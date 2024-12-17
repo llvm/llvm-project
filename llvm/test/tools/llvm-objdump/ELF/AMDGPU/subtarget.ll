@@ -48,18 +48,18 @@ define amdgpu_kernel void @test_kernel() {
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
 ; RUN: diff %t-specify.txt %t-detect.txt
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx12-1-generic -filetype=obj -O0 -o %t.o %s
-; RUN: llvm-objdump -D --arch-name=amdgcn -mllvm --amdhsa-code-object-version=6 --mcpu=gfx12-1-generic %t.o > %t-specify.txt
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx12-5-generic -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn -mllvm --amdhsa-code-object-version=6 --mcpu=gfx12-5-generic %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D -mllvm --amdhsa-code-object-version=6 %t.o > %t-detect.txt
 ; RUN: diff %t-specify.txt %t-detect.txt
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1210 -filetype=obj -O0 -o %t.o %s
-; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1210 %t.o > %t-specify.txt
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1250 %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
 ; RUN: diff %t-specify.txt %t-detect.txt
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1211 -filetype=obj -O0 -o %t.o %s
-; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1211 %t.o > %t-specify.txt
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1251 %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
 ; RUN: diff %t-specify.txt %t-detect.txt
 

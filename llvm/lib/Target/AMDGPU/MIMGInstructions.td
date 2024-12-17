@@ -2256,12 +2256,12 @@ class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
   string AsmOperands = " $vaddr0, $vaddr1"#!if(UpTo2D, "", ", $vaddr2, $vaddr3")#"$r128$cpol";
 }
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 def TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds">;
 def TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds">;
 def TENSOR_LOAD_TO_LDS_D2    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds", 1>;
 def TENSOR_STORE_FROM_LDS_D2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
-} // End SubtargetPredicate = isGFX1210Plus.
+} // End SubtargetPredicate = isGFX1250Plus.
 
 class TensorPat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
   (node v4i32:$vaddr0, v8i32:$vaddr1, v4i32:$vaddr2, v4i32:$vaddr3, (i32 timm:$cpol)),
@@ -2273,7 +2273,7 @@ class TensorD2Pat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
   (inst $vaddr0, $vaddr1, 1, $cpol)
 >;
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 def : TensorPat   <TENSOR_LOAD_TO_LDS, int_amdgcn_tensor_load_to_lds>;
 def : TensorPat   <TENSOR_STORE_FROM_LDS, int_amdgcn_tensor_store_from_lds>;
 def : TensorD2Pat <TENSOR_LOAD_TO_LDS_D2, int_amdgcn_tensor_load_to_lds_d2>;
@@ -2307,15 +2307,15 @@ class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = p
   let dim = 1;   // sp3
 }
 
-multiclass VIMAGE_TENSOR_Real_gfx1210<bits<8> op> {
-  let AssemblerPredicate = isGFX1210Plus, DecoderNamespace = "GFX1210" in {
+multiclass VIMAGE_TENSOR_Real_gfx1250<bits<8> op> {
+  let AssemblerPredicate = isGFX1250Plus, DecoderNamespace = "GFX1250" in {
     foreach DSuffix = ["_D2", ""] in {
       defvar ps = !cast<VIMAGE_TENSOR_Pseudo>(NAME # DSuffix);
-      def DSuffix # _gfx1210 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
-                SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1210>;
+      def DSuffix # _gfx1250 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
+                SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250>;
     }
   }
 }
 
-defm TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Real_gfx1210<0xc4>;
-defm TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Real_gfx1210<0xc5>;
+defm TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Real_gfx1250<0xc4>;
+defm TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Real_gfx1250<0xc5>;

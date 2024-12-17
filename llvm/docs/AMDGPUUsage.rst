@@ -549,7 +549,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1210``                 ``amdgcn``   APU                     - Architected                   *TBA*
+     ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -559,7 +559,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         Accessible
                                                                         Scratch
 
-     ``gfx1211``                 ``amdgcn``   APU                     - Architected                   *TBA*
+     ``gfx1251``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -698,8 +698,8 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                 work-item
                                                                                 IDs
 
-     ``gfx12-1-generic``  ``amdgcn``     - ``gfx1210``                        - Architected     Functionally equivalent to
-                                         - ``gfx1211``                          flat scratch    gfx1210.
+     ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
+                                         - ``gfx1251``                          flat scratch    gfx1250.
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
@@ -1024,7 +1024,7 @@ supported for the ``amdgcn`` target.
   access is not supported except by flat and scratch instructions in
   GFX9-GFX11.
 
-  On targets without "Globally Accessible Scratch" (introduced in GFX121x), code that
+  On targets without "Globally Accessible Scratch" (introduced in GFX125x), code that
   manipulates the stack values in other lanes of a wavefront, such as by
   ``addrspacecast``-ing stack pointers to generic ones and taking offsets that reach other
   lanes or by explicitly constructing the scratch buffer descriptor, triggers undefined
@@ -1493,10 +1493,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return
                                                    corresponds to the swapped element of the first argument.
 
-  :ref:`llvm.prefetch`                             Implemented on gfx121x, ignored on earlier targets.
+  :ref:`llvm.prefetch`                             Implemented on gfx125x, ignored on earlier targets.
                                                    First argument is flat, global, or constant address space pointer.
                                                    Any other address space is not supported.
-                                                   On gfx121x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
+                                                   On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
                                                    Second argument is rw and currently ignored. Can be 0 or 1.
                                                    Third argument is locality, 0-3. Translates to memory scope:
                                                      0 - SCOPE_SYS
@@ -2300,7 +2300,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``          0x046      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``          0x047      ``gfx1102``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1200``          0x048      ``gfx1200``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1210``          0x049      ``gfx1210``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1250``          0x049      ``gfx1250``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``          0x04a      ``gfx1151``
      ``EF_AMDGPU_MACH_AMDGCN_GFX941``           0x04b      ``gfx941``
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
@@ -2320,8 +2320,8 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1211``          0x05a      ``gfx1211``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX12_1_GENERIC``  0x05b      ``gfx12-1-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
      ========================================== ========== =============================
 
 Sections
@@ -5477,7 +5477,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC1.FP16_OVFL``.
      27      1 bit    RESERVED                       GFX6-GFX120*
                                                        Reserved, must be 0.
-                      FLAT_SCRATCH_IS_NV             GFX121*
+                      FLAT_SCRATCH_IS_NV             GFX125*
                                                        0 - Use the NV ISA as indication
                                                        that scratch is NV. 1 - Force
                                                        scratch to NV = 1, even if
@@ -5598,7 +5598,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC2.DYNAMIC_VGPR``.
-     6:1     6 bits  USER_SGPR_COUNT                 GFX121*-GFX13
+     6:1     6 bits  USER_SGPR_COUNT                 GFX125*-GFX13
                                                        The total number of SGPR
                                                        user data
                                                        registers requested. This
@@ -5704,7 +5704,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (128 * 4))
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
-                                                     GFX121*-GFX13
+                                                     GFX125*-GFX13
                                                        roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
@@ -5846,12 +5846,12 @@ The fields used by CP for code objects before V3 also match those specified in
      13      1 bit   GLG_EN                          If 1, group launch guarantee will be enabled for this dispatch
      16:14   3 bits  RESERVED                        GFX120*
                                                        Reserved, must be 0.
-                     NAMED_BAR_CNT                   GFX121*-GFX13
+                     NAMED_BAR_CNT                   GFX125*-GFX13
                                                        Number of named barriers to alloc for each workgroup, in granularity of
                                                        4. Range is from 0-4 allocating 0, 4, 8, 12, 16.
      17      1 bit   RESERVED                        GFX120*, GFX13
                                                        Reserved, must be 0.
-                     ENABLE_DYNAMIC_VGPR             GFX121*
+                     ENABLE_DYNAMIC_VGPR             GFX125*
                                                        Enables dynamic VGPR mode, where each wave allocates one VGPR chunk
                                                        at launch and can request for additional space to use during
                                                        execution in SQ.
@@ -5859,13 +5859,13 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        Used by CP to set up ``COMPUTE_PGM_RSRC3.DYNAMIC_VGPR``.
      20:18   3 bits  RESERVED                        GFX120*, GFX13 (TODO-GFX13: Verify)
                                                        Reserved, must be 0.
-                     TCP_SPLIT                       GFX121*
+                     TCP_SPLIT                       GFX125*
                                                        Desired LDS/VC split of TCP. 0: no preference 1: LDS=0, VC=448kB
                                                        2: LDS=64kB, VC=384kB 3: LDS=128kB, VC=320kB 4: LDS=192kB, VC=256kB
                                                        5: LDS=256kB, VC=192kB 6: LDS=320kB, VC=128kB 7: LDS=384kB, VC=64kB
      21      1 bit   RESERVED                        GFX120*
                                                        Reserved, must be 0.
-                     ENABLE_DIDT_THROTTLE            GFX121*-GFX13
+                     ENABLE_DIDT_THROTTLE            GFX125*-GFX13
                                                        Enable DIDT throttling for all ACE pipes
      30:22   9 bits  RESERVED                        Reserved, must be 0.
      31      1 bit   IMAGE_OP                        If 1, the kernel execution contains image instructions. If executed as
@@ -6504,7 +6504,7 @@ following sections:
 * :ref:`amdgpu-amdhsa-memory-model-gfx942`
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
 * :ref:`amdgpu-amdhsa-memory-model-gfx12`
-* :ref:`amdgpu-amdhsa-memory-model-gfx121x`
+* :ref:`amdgpu-amdhsa-memory-model-gfx125x`
 
 .. _amdgpu-fence-as:
 
@@ -16643,12 +16643,12 @@ the instruction in the code sequence that references the table.
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
 
-.. _amdgpu-amdhsa-memory-model-gfx121x:
+.. _amdgpu-amdhsa-memory-model-gfx125x:
 
-Memory Model GFX121x
+Memory Model GFX125x
 ++++++++++++++++++++++++
 
-For GFX121x:
+For GFX125x:
 
 * Each agent has multiple Active Interposer Dies (AID).
 * Each AID has a GL2 cache, and supports multiple Accelerator Compute Die (XCD).
@@ -16713,18 +16713,18 @@ For GFX121x:
   This section is currently incomplete and has inaccuracies. It is WIP that will
   be updated as information is determined.
 
-The code sequences used to implement the memory model for GFX121x are defined in
-table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx121x-table`.
+The code sequences used to implement the memory model for GFX125x are defined in
+table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.
 
-The mapping of LLVM IR syncscope to GFX121x instruction ``scope`` operands is
-defined in :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx121x-scopes-table`.
+The mapping of LLVM IR syncscope to GFX125x instruction ``scope`` operands is
+defined in :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
 The table only applies if and only if it is directly referenced by an entry in
-:ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx121x-table`, and it only applies to
+:ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`, and it only applies to
 the instruction in the code sequence that references the table.
 
-  .. table:: AMDHSA Memory Model Code Sequences GFX121x - Instruction Scopes
-     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx121x-scopes-table
+  .. table:: AMDHSA Memory Model Code Sequences GFX125x - Instruction Scopes
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table
 
      ================================= =======================
      LLVM syncscope                    ISA
@@ -16742,8 +16742,8 @@ the instruction in the code sequence that references the table.
   .. [1] ``SCOPE_CU`` is the default ``scope:`` emitted by the compiler.
      It will be omitted when instructions are emitted in textual form by the compiler.
 
-  .. table:: AMDHSA Memory Model Code Sequences GFX121x
-     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx121x-table
+  .. table:: AMDHSA Memory Model Code Sequences GFX125x
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table
 
      ============ ============ ============== ========== ================================
      LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
