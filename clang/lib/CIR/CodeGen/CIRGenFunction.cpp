@@ -1279,7 +1279,24 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       MD->getParent()->getCaptureFields(LambdaCaptureFields,
                                         LambdaThisCaptureField);
       if (LambdaThisCaptureField) {
-        llvm_unreachable("NYI");
+        // If the lambda captures the object referred to by '*this' - either by
+        // value or by reference, make sure CXXThisValue points to the correct
+        // object.
+
+        // Get the lvalue for the field (which is a copy of the enclosing object
+        // or contains the address of the enclosing object).
+        LValue thisFieldLValue =
+            emitLValueForLambdaField(LambdaThisCaptureField);
+        if (!LambdaThisCaptureField->getType()->isPointerType()) {
+          // If the enclosing object was captured by value, just use its
+          // address. Sign this pointer.
+          CXXThisValue = thisFieldLValue.getPointer();
+        } else {
+          // Load the lvalue pointed to by the field, since '*this' was captured
+          // by reference.
+          CXXThisValue = emitLoadOfLValue(thisFieldLValue, SourceLocation())
+                             .getScalarVal();
+        }
       }
       for (auto *FD : MD->getParent()->fields()) {
         if (FD->hasCapturedVLAType()) {

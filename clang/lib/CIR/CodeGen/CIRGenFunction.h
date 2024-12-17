@@ -1679,8 +1679,11 @@ public:
   void initializeVTablePointer(mlir::Location loc, const VPtr &Vptr);
 
   AggValueSlot::Overlap_t getOverlapForFieldInit(const FieldDecl *FD);
-  LValue emitLValueForField(LValue Base, const clang::FieldDecl *Field);
+  LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
+  LValue emitLValueForLambdaField(const FieldDecl *field);
+  LValue emitLValueForLambdaField(const FieldDecl *field,
+                                  mlir::Value thisValue);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value

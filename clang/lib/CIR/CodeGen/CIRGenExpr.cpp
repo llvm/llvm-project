@@ -945,11 +945,35 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
   return LV;
 }
 
-static LValue emitCapturedFieldLValue(CIRGenFunction &CGF, const FieldDecl *FD,
-                                      mlir::Value ThisValue) {
-  QualType TagType = CGF.getContext().getTagDeclType(FD->getParent());
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(ThisValue, TagType);
-  return CGF.emitLValueForField(LV, FD);
+static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
+                                      mlir::Value thisValue) {
+  return cgf.emitLValueForLambdaField(fd, thisValue);
+}
+
+/// Given that we are currently emitting a lambda, emit an l-value for
+/// one of its members.
+///
+LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field,
+                                                mlir::Value thisValue) {
+  bool hasExplicitObjectParameter = false;
+  const auto *methD = dyn_cast_if_present<CXXMethodDecl>(CurCodeDecl);
+  LValue lambdaLV;
+  if (methD) {
+    hasExplicitObjectParameter = methD->isExplicitObjectMemberFunction();
+    assert(methD->getParent()->isLambda());
+    assert(methD->getParent() == field->getParent());
+  }
+  if (hasExplicitObjectParameter) {
+    llvm_unreachable("ExplicitObjectMemberFunction NYI");
+  } else {
+    QualType lambdaTagType = getContext().getTagDeclType(field->getParent());
+    lambdaLV = MakeNaturalAlignAddrLValue(thisValue, lambdaTagType);
+  }
+  return emitLValueForField(lambdaLV, field);
+}
+
+LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field) {
+  return emitLValueForLambdaField(field, CXXABIThisValue);
 }
 
 static LValue emitFunctionDeclLValue(CIRGenFunction &CGF, const Expr *E,
