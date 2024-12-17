@@ -1,4 +1,4 @@
-//===-- Implementation header for conjf16 -----------------------*- C++ -*-===//
+//===-- Implementation header for cproj -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/properties/complex_types.h"
-
-#if defined(LIBC_TYPES_HAS_CFLOAT16)
-
-#ifndef LLVM_LIBC_SRC_COMPLEX_CONJF16_H
-#define LLVM_LIBC_SRC_COMPLEX_CONJF16_H
+#ifndef LLVM_LIBC_SRC_COMPLEX_CPROJ_H
+#define LLVM_LIBC_SRC_COMPLEX_CPROJ_H
 
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-cfloat16 conjf16(cfloat16 x);
+_Complex double cproj(_Complex double x);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_COMPLEX_CONJF16_H
-
-#endif // LIBC_TYPES_HAS_CFLOAT16
+#endif // LLVM_LIBC_SRC_COMPLEX_CPROJ_H
