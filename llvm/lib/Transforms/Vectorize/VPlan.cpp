@@ -1022,8 +1022,7 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
-  if (auto *LoopRegion =
-          dyn_cast<VPRegionBlock>(getEntry()->getSingleSuccessor())) {
+  if (auto *LoopRegion = getVectorLoopRegion()) {
     VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
     BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
@@ -1047,6 +1046,19 @@ void VPlan::execute(VPTransformState *State) {
         Phi = cast<PHINode>(GEP->getPointerOperand());
       }
 
+      Phi->setIncomingBlock(1, VectorLatchBB);
+
+      // Move the last step to the end of the latch block. This ensures
+      // consistent placement of all induction updates.
+      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+
+      // Use the steps for the last part as backedge value for the induction.
+      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
+      continue;
+    }
+
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
       bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
                          (isa<VPReductionPHIRecipe>(PhiR) &&
@@ -1056,6 +1068,7 @@ void VPlan::execute(VPTransformState *State) {
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
+
   State->CFG.DTU.flush();
 }
 

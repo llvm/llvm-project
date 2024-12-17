@@ -2471,6 +2471,8 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 /// scalar preheader.
 static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
+  // FIXME: Cannot get the vector preheader at the moment if the vector loop
+  // region has been removed.
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
   if (PreVectorPH->getNumSuccessors() != 1) {
@@ -7862,8 +7864,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupVectorized});
 
-  if (auto *R =
-          dyn_cast<VPRegionBlock>(BestVPlan.getEntry()->getSingleSuccessor())) {
+  if (auto *R = BestVPlan.getVectorLoopRegion()) {
     VPBasicBlock *HeaderVPBB = R->getEntryBasicBlock();
     Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
     if (VectorizedLoopID) {
@@ -7890,8 +7891,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.printDebugTracesAtEnd();
 
   // 4. Adjust branch weight of the branch in the middle block.
-  if (auto *R =
-          dyn_cast<VPRegionBlock>(BestVPlan.getEntry()->getSingleSuccessor())) {
+  if (auto *R = BestVPlan.getVectorLoopRegion()) {
     auto *ExitVPBB = cast<VPBasicBlock>(R->getSingleSuccessor());
 
     auto *MiddleTerm =
