@@ -257,6 +257,31 @@ def : ReadAdvance<ReadFSqrt16, 0>;
 } // Unsupported = true
 }
 
+multiclass UnsupportedSchedZfhExceptForZfhmin {
+let Unsupported = true in {
+def : WriteRes<WriteFAdd16, []>;
+def : WriteRes<WriteFClass16, []>;
+def : WriteRes<WriteFDiv16, []>;
+def : WriteRes<WriteFCmp16, []>;
+def : WriteRes<WriteFMA16, []>;
+def : WriteRes<WriteFMinMax16, []>;
+def : WriteRes<WriteFMul16, []>;
+def : WriteRes<WriteFSGNJ16, []>;
+def : WriteRes<WriteFST16, []>;
+def : WriteRes<WriteFSqrt16, []>;
+
+def : ReadAdvance<ReadFAdd16, 0>;
+def : ReadAdvance<ReadFClass16, 0>;
+def : ReadAdvance<ReadFDiv16, 0>;
+def : ReadAdvance<ReadFCmp16, 0>;
+def : ReadAdvance<ReadFMA16, 0>;
+def : ReadAdvance<ReadFMinMax16, 0>;
+def : ReadAdvance<ReadFMul16, 0>;
+def : ReadAdvance<ReadFSGNJ16, 0>;
+def : ReadAdvance<ReadFSqrt16, 0>;
+} // Unsupported = true
+}
+
 multiclass UnsupportedSchedF {
 let Unsupported = true in {
 def : WriteRes<WriteFST32, []>;
