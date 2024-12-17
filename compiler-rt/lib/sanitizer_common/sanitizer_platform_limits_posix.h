@@ -601,6 +601,10 @@ struct __sanitizer_siginfo_pad {
 #if SANITIZER_LINUX
 # define SANITIZER_HAS_SIGINFO 1
 union __sanitizer_siginfo {
+# ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+# endif
   struct {
     int si_signo;
 # if SANITIZER_MIPS
@@ -611,6 +615,9 @@ union __sanitizer_siginfo {
     int si_code;
 # endif
   };
+# ifdef __clang__
+#  pragma clang diagnostic pop
+# endif
   __sanitizer_siginfo_pad pad;
 };
 #else
