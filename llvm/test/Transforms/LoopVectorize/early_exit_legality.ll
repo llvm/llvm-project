@@ -49,7 +49,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
 ; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK-NOT:   LV: Not vectorizing
+; CHECK:       LV: Not vectorizing
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
