@@ -167,20 +167,6 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   return std::nullopt;
 }
 
-static std::optional<llvm::Triple>
-getSPIRVOffloadTargetTriple(const Driver &D, const ArgList &Args) {
-  if (!Args.hasArg(options::OPT_offload_EQ))
-    return llvm::Triple(
-        "spirv64-intel"); // Only vendor "intel" is currently supported.
-  auto TT = getOffloadTargetTriple(D, Args);
-  if (!TT)
-    return std::nullopt;
-  if ((*TT).isSPIRV() && (*TT).getVendor() == llvm::Triple::Intel)
-    return TT;
-  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
-  return std::nullopt;
-}
-
 // static
 std::string Driver::GetResourcesPath(StringRef BinaryPath) {
   // Since the resource directory is embedded in the module hash, it's important
