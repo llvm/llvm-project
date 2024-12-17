@@ -173,59 +173,113 @@ v_ldexp_f16_e32 v5.l, v1.l, v255.l
 v_ldexp_f16_e32 v5.l, v255.l, v2.l
 // GFX11: :[[@LINE-1]]:23: error: invalid operand for instruction
 
-v_max_f16_dpp v255, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v255.h, v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
 
-v_max_f16_dpp v255, v1, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v255.h, v1.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
 
-v_max_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v255.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
 
-v_max_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v255.l, v1.l, v2.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
 
-v_max_f16_dpp v5, v255, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.h, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_max_f16_dpp v5, v255, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.h, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_max_f16_e32 v255, v1, v2
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.h, v255.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
 
-v_max_f16_e32 v5, v1, v255
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.h, v255.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
 
-v_max_f16_e32 v5, v255, v2
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.l, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_min_f16_dpp v255, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.l, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_min_f16_dpp v255, v1, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.l, v255.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
 
-v_min_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_dpp v5.l, v255.l, v2.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
 
-v_min_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_e32 v255.h, v1.h, v2.h
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
 
-v_min_f16_dpp v5, v255, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_e32 v255.l, v1.l, v2.l
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
 
-v_min_f16_dpp v5, v255, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_e32 v5.h, v1.h, v255.h
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_min_f16_e32 v255, v1, v2
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_e32 v5.h, v255.h, v2.h
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
 
-v_min_f16_e32 v5, v1, v255
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_e32 v5.l, v1.l, v255.l
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_min_f16_e32 v5, v255, v2
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_max_f16_e32 v5.l, v255.l, v2.l
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_min_f16_dpp v255.h, v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_min_f16_dpp v255.h, v1.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_min_f16_dpp v255.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_min_f16_dpp v255.l, v1.l, v2.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_min_f16_dpp v5.h, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_min_f16_dpp v5.h, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_min_f16_dpp v5.h, v255.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_min_f16_dpp v5.h, v255.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_min_f16_dpp v5.l, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_min_f16_dpp v5.l, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_min_f16_dpp v5.l, v255.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_min_f16_dpp v5.l, v255.l, v2.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_min_f16_e32 v255.h, v1.h, v2.h
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_min_f16_e32 v255.l, v1.l, v2.l
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_min_f16_e32 v5.h, v1.h, v255.h
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_min_f16_e32 v5.h, v255.h, v2.h
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_min_f16_e32 v5.l, v1.l, v255.l
+// GFX11: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_min_f16_e32 v5.l, v255.l, v2.l
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 v_mul_f16_dpp v255, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
