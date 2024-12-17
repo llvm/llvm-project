@@ -2560,6 +2560,11 @@ public:
     }
   }
 
+  void VisitClauseWithVarList(const OpenACCClauseWithVarList &Clause) {
+    for (auto *E : Clause.getVarList())
+      Profiler.VisitStmt(E);
+  }
+
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
 
@@ -2577,25 +2582,21 @@ void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
 }
 
 void OpenACCClauseProfiler::VisitCopyClause(const OpenACCCopyClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 void OpenACCClauseProfiler::VisitCopyInClause(
     const OpenACCCopyInClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitCopyOutClause(
     const OpenACCCopyOutClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitCreateClause(
     const OpenACCCreateClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
@@ -2634,50 +2635,47 @@ void OpenACCClauseProfiler::VisitCollapseClause(
 
 void OpenACCClauseProfiler::VisitPrivateClause(
     const OpenACCPrivateClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitAttachClause(
     const OpenACCAttachClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitDetachClause(
     const OpenACCDetachClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitDeleteClause(
     const OpenACCDeleteClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitNoCreateClause(
     const OpenACCNoCreateClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitPresentClause(
     const OpenACCPresentClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitUseDeviceClause(
+    const OpenACCUseDeviceClause &Clause) {
+  VisitClauseWithVarList(Clause);
 }
 
 void OpenACCClauseProfiler::VisitVectorLengthClause(
@@ -2729,8 +2727,7 @@ void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
 
 void OpenACCClauseProfiler::VisitReductionClause(
     const OpenACCReductionClause &Clause) {
-  for (auto *E : Clause.getVarList())
-    Profiler.VisitStmt(E);
+  VisitClauseWithVarList(Clause);
 }
 } // namespace
 
