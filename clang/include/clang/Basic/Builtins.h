@@ -64,9 +64,10 @@ struct HeaderDesc {
 
 namespace Builtin {
 enum ID {
-  NotBuiltin  = 0,      // This is not a builtin function.
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+  NotBuiltin = 0, // This is not a builtin function.
+#define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_ENUMERATORS
   FirstTSBuiltin
 };
 
@@ -77,9 +78,9 @@ struct Info {
   // Rather than store pointers to the string literals describing these four
   // aspects of builtins, we store offsets into a common string table.
   struct StrOffsets {
-    llvm::StringTable::Offset Name;
-    llvm::StringTable::Offset Type;
-    llvm::StringTable::Offset Attributes;
+    llvm::StringTable::Offset Name = {};
+    llvm::StringTable::Offset Type = {};
+    llvm::StringTable::Offset Attributes = {};
 
     // Defaults to the empty string offset.
     llvm::StringTable::Offset Features = {};
