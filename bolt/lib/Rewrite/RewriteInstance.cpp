@@ -2439,6 +2439,14 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
+    const uint64_t SymAddress = SymbolAddress + Addend;
+    BinaryFunction *Func = BC->getBinaryFunctionContainingAddress(SymAddress);
+    if(Func){
+      const uint64_t FunctionOffset = SymAddress - Func->getAddress();
+      if(FunctionOffset)
+        Func->addEntryPointAtOffset(FunctionOffset);
+    }
+
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }
 }
@@ -5599,7 +5607,7 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
         for (const BinaryBasicBlock &BB : *BF)
           if (BB.isEntryPoint() &&
               (BF->getAddress() + BB.getOffset()) == OldAddress)
-            return BF->getOutputAddress() + BB.getOffset();
+            return BB.getOutputStartAddress();
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
