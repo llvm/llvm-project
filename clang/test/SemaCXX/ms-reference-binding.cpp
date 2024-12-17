@@ -222,7 +222,10 @@ void test7() {
   A& ARef = E();
 }
 
+struct F { void test(); int i; };
+
 void testFunction() {}
+void __vectorcall testVCallFunction() {};
 
 // expected-note@+1 {{candidate function not viable: expects an lvalue for 1st argument}}
 void refFuncPtrArg(void (* &)()) {}
@@ -235,7 +238,18 @@ void test8() {
   void (* & refFuncPtr1)() = &testFunction; // expected-error{{non-const lvalue reference to type 'void (*)()' cannot bind to a temporary of type 'void (*)()'}}
   void (* const & cRefFuncPtr1)() = &testFunction;
 
+  void (__vectorcall * & refFuncPtr2)() = &testVCallFunction; // expected-error{{non-const lvalue reference to type 'void (*)() __attribute__((vectorcall))' cannot bind to a temporary of type 'void (*)() __attribute__((vectorcall))'}}
+  void (__vectorcall * const & cRefFuncPtr2)() = &testVCallFunction;
+
   void (&refFunc1)() = testFunction;
+
+  void (__vectorcall &refFunc2)() = testVCallFunction;
+
+  void (F::* & refFuncPtr3)() = &F::test; // expected-error{{non-const lvalue reference to type 'void (F::*)()' cannot bind to a temporary of type 'void (F::*)()'}}
+  void (F::* const & cRefFuncPtr3)() = &F::test;
+
+  int F::* & refPtr1 = &F::i; // expected-error{{non-const lvalue reference to type 'int F::*' cannot bind to a temporary of type 'int F::*'}}
+  int F::* const & cRefPtr1 = &F::i;
 
   int i;
 
