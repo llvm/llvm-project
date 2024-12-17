@@ -14,9 +14,6 @@ def TTAscalonD8Model : SchedMachineModel {
   let LoadLatency       =   4; // Optimistic load latency
   let MispredictPenalty =  14; // Fetch + Decode/Rename/Dispatch + Branch
 
-  // Enable partial & runtime unrolling.
-  let LoopMicroOpBufferSize = 16;
-
   let CompleteModel = 0;
 
   // TODO supported, but haven't added scheduling info yet
@@ -38,7 +35,7 @@ let BufferSize = 16 in {
   def AscalonFXC : ProcResource<2>; // ALU, BR
   def AscalonFXD : ProcResource<2>; // ALU
   def AscalonFP : ProcResource<2>;
-  def AscalonV : ProcResource<2>;
+  // TODO two vector units with vector scheduling model
 }
 
 def AscalonFX : ProcResGroup<[AscalonFXA, AscalonFXB, AscalonFXC, AscalonFXD]>;

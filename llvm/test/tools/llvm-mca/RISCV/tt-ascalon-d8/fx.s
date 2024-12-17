@@ -58,24 +58,22 @@ fcvt.w.s t5, f3
 # CHECK-NEXT: [5.0] - AscalonLS
 # CHECK-NEXT: [5.1] - AscalonLS
 # CHECK-NEXT: [5.2] - AscalonLS
-# CHECK-NEXT: [6.0] - AscalonV
-# CHECK-NEXT: [6.1] - AscalonV
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [6.0]  [6.1]
-# CHECK-NEXT:  -      -     17.00  1.00   2.00   2.00   1.00   1.00    -      -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]
+# CHECK-NEXT:  -      -     17.00  1.00   2.00   2.00   1.00   1.00    -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  Instructions:
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     mul	t0, a0, t0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     sub	s2, a2, a3
-# CHECK-NEXT:  -      -     7.00    -      -      -      -      -      -      -      -      -      -     div	t1, t2, t3
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     add	t1, a4, gp
-# CHECK-NEXT:  -      -     7.00    -      -      -      -      -      -      -      -      -      -     div	a1, a2, a3
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     add	t1, a0, t0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     mul	s0, s0, a5
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     add	t2, t2, t2
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     sub	s1, s0, s1
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -     fcvt.s.w	ft1, t3
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -     add	s2, s2, s2
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     fcvt.w.s	t5, ft3
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  Instructions:
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -     mul	t0, a0, t0
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     sub	s2, a2, a3
+# CHECK-NEXT:  -      -     7.00    -      -      -      -      -      -      -      -     div	t1, t2, t3
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -     add	t1, a4, gp
+# CHECK-NEXT:  -      -     7.00    -      -      -      -      -      -      -      -     div	a1, a2, a3
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     add	t1, a0, t0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -     mul	s0, s0, a5
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     add	t2, t2, t2
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -     sub	s1, s0, s1
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -     fcvt.s.w	ft1, t3
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -     add	s2, s2, s2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -     fcvt.w.s	t5, ft3
