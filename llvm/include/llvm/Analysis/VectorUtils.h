@@ -144,7 +144,19 @@ inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
 /// isVectorIntrinsicWithScalarOpAtArg) for the vector form of the intrinsic.
+///
+/// Note: isTriviallyVectorizable implies isTriviallyScalarizable.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
+
+/// Identify if the intrinsic is trivially scalarizable.
+/// This method returns true following the same predicates of
+/// isTriviallyVectorizable.
+
+/// Note: There are intrinsics where implementing vectorization for the
+/// intrinsic is redundant, but we want to implement scalarization of the
+/// vector. To prevent the requirement that an intrinsic also implements
+/// vectorization we provide this seperate function.
+bool isTriviallyScalarizable(Intrinsic::ID ID, const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 /// \p TTI is used to consider target specific intrinsics, if no target specific

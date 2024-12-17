@@ -113,6 +113,23 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   }
 }
 
+bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
+                                   const TargetTransformInfo *TTI) {
+  if (isTriviallyVectorizable(ID))
+    return true;
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
+
+  // TODO: Move frexp to isTriviallyVectorizable.
+  // https://github.com/llvm/llvm-project/issues/112408
+  switch (ID) {
+  case Intrinsic::frexp:
+    return true;
+  }
+  return false;
+}
+
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                               unsigned ScalarOpdIdx,

@@ -279,8 +279,6 @@ public:
 
   bool visit(Function &F);
 
-  bool isTriviallyScalarizable(Intrinsic::ID ID);
-
   // InstVisitor methods.  They return true if the instruction was scalarized,
   // false if nothing changed.
   bool visitInstruction(Instruction &I) { return false; }
@@ -683,19 +681,6 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
   return true;
 }
 
-bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
-  if (isTriviallyVectorizable(ID))
-    return true;
-  // TODO: Move frexp to isTriviallyVectorizable.
-  // https://github.com/llvm/llvm-project/issues/112408
-  switch (ID) {
-  case Intrinsic::frexp:
-    return true;
-  }
-  return Intrinsic::isTargetIntrinsic(ID) &&
-         TTI->isTargetIntrinsicTriviallyScalarizable(ID);
-}
-
 /// If a call to a vector typed intrinsic function, split into a scalar call per
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
@@ -715,7 +700,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -1088,7 +1073,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!F)
       return false;
     Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
       return false;
     // Note: Fall through means Operand is a`CallInst` and it is defined in
     // `isTriviallyScalarizable`.
