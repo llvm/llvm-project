@@ -3465,7 +3465,7 @@ defm diagnostics_show_line_numbers : BoolFOption<"diagnostics-show-line-numbers"
   PosFlag<SetTrue>>;
 def fno_realloc_lhs : Flag<["-"], "fno-realloc-lhs">, Group<f_Group>,
   HelpText<"An allocatable left-hand side of an intrinsic assignment is assumed to be allocated and match the shape/type of the right-hand side">,
-  Visibility<[FlangOption, FC1Option]>;
+  Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>;
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
   HelpText<"Disable the use of stack protectors">;
 def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
@@ -4300,7 +4300,7 @@ defm stack_size_section : BoolFOption<"stack-size-section",
           "Emit section containing metadata on function stack sizes">,
   NegFlag<SetFalse>>;
 def frealloc_lhs : Flag<["-"], "frealloc-lhs">, Group<f_Group>,
-  Visibility<[FlangOption, FC1Option]>,
+  Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
   HelpText<"If an allocatable left-hand side of an intrinsic assignment is unallocated or its shape/type does not match the right-hand side, then it is automatically (re)allocated">;
 def fstack_usage : Flag<["-"], "fstack-usage">, Group<f_Group>,
   HelpText<"Emit .su file containing information on function stack sizes">;
