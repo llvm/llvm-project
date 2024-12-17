@@ -91,7 +91,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   public:
     json::Object *getOutputObject() { return Out.get(); }
 
-    llvm::Error init() override {
+    Error init() override {
       if (Started)
         return createStringError("Serializer already in use");
       started = true;
