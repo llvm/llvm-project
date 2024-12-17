@@ -1177,8 +1177,7 @@ static void **InterestingDLLsAvailable() {
     "libc++.dll",     // libc++
     "libunwind.dll",  // libunwind
 #  endif
-    // NTDLL should go last as it exports some functions that we should
-    // override in the CRT [presumably only used internally].
+    // NTDLL must go last as it gets special treatment in OverrideFunction.
     "ntdll.dll",
     NULL
   };
@@ -1281,9 +1280,22 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
 
 bool OverrideFunction(
     const char *func_name, uptr new_func, uptr *orig_old_func) {
+  static const char *kNtDllIgnore[] = {
+    "memcmp", "memcpy", "memmove", "memset"
+  };
+
   bool hooked = false;
   void **DLLs = InterestingDLLsAvailable();
   for (size_t i = 0; DLLs[i]; ++i) {
+    if (DLLs[i + 1] == nullptr) {
+      // This is the last DLL, i.e. NTDLL. It exports some functions that
+      // we only want to override in the CRT.
+      for (const char *ignored : kNtDllIgnore) {
+        if (strcmp(func_name, ignored) == 0)
+          return hooked;
+      }
+    }
+
     uptr func_addr = InternalGetProcAddress(DLLs[i], func_name);
     if (func_addr &&
         OverrideFunction(func_addr, new_func, orig_old_func)) {
