@@ -37,7 +37,7 @@ Important notes
   what they care about (what/where/when to instrument data). Hence, it might not
   be practical to have a single implementation.
   However, in the future, if we see enough common pattern, we can extract them
-  into a shared place. This is TBD - contributions are welcomed.
+  into a shared place. This is TBD - contributions are welcome.
 
 * No implementation of Telemetry in upstream LLVM shall store any of the
   collected data due to privacy and security reasons:
