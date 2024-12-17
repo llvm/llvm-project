@@ -172,10 +172,6 @@ public:
 
   bool LinkToSkeletonUnit(DWARFUnit &skeleton_unit);
 
-  bool Supports_DW_AT_APPLE_objc_complete_type();
-
-  bool DW_AT_decl_file_attributes_are_invalid();
-
   bool Supports_unnamed_objc_bitfields();
 
   SymbolFileDWARF &GetSymbolFileDWARF() const { return m_dwarf; }
