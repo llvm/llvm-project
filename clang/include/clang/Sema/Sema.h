@@ -10659,10 +10659,10 @@ public:
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
 
-  /// DiagnoseDiscardedNodiscard - Given an expression that is semantically
+  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is semantically
   /// a discarded-value expression, diagnose if any [[nodiscard]] value
   /// has been discarded
-  void DiagnoseDiscardedNodiscard(const Expr *E);
+  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
 
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.

@@ -1133,7 +1133,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (Converted.isInvalid())
       return true;
     BaseExpr = Converted.get();
-    DiagnoseDiscardedNodiscard(BaseExpr);
+    DiagnoseDiscardedExprMarkedNodiscard(BaseExpr);
     return false;
   };
   auto MakeGLValue = [&] {

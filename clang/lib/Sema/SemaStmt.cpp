@@ -227,6 +227,11 @@ static bool DiagnoseNoDiscard(Sema &S, const NamedDecl *OffendingDecl,
 }
 
 namespace {
+
+// Diagnoses unused expressions that call functions marked [[nodiscard]],
+// [[gnu::warn_unused_result]] and similar.
+// Additionally, a DiagID can be provided to emit a warning in additional contexts
+// (such as for an unused LHS of a comma expression)
 void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
   bool NoDiscardOnly = !DiagID.has_value();
 
@@ -412,7 +417,7 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
 }
 } // namespace
 
-void Sema::DiagnoseDiscardedNodiscard(const Expr *E) {
+void Sema::DiagnoseDiscardedExprMarkedNodiscard(const Expr *E) {
   DiagnoseUnused(*this, E, std::nullopt);
 }
 
