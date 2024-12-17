@@ -903,10 +903,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       auto AMDTriple = getHIPOffloadTargetTriple(*this, C.getInputArgs());
       auto NVPTXTriple = getNVIDIAOffloadTargetTriple(*this, C.getInputArgs(),
                                                       HostTC->getTriple());
-      auto SPIRVTriple = getSPIRVOffloadTargetTriple(*this, C.getInputArgs());
 
       // Attempt to deduce the offloading triple from the set of architectures.
-      // We can only correctly deduce NVPTX / AMDGPU / SPIR-V triples currently.
+      // We can only correctly deduce NVPTX / AMDGPU triples currently.
       // We need to temporarily create these toolchains so that we can access
       // tools for inferring architectures.
       llvm::DenseSet<StringRef> Archs;
@@ -925,15 +924,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           Archs.insert(Arch);
       }
 
-      if (SPIRVTriple) {
-        auto TempTC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(
-            *this, *SPIRVTriple, *HostTC, C.getInputArgs());
-        for (StringRef Arch : getOffloadArchs(
-                 C, C.getArgs(), Action::OFK_OpenMP, &*TempTC, true))
-          Archs.insert(Arch);
-      }
-
-      if (!AMDTriple && !NVPTXTriple && !SPIRVTriple) {
+      if (!AMDTriple && !NVPTXTriple) {
         for (StringRef Arch :
              getOffloadArchs(C, C.getArgs(), Action::OFK_OpenMP, nullptr, true))
           Archs.insert(Arch);
@@ -947,8 +938,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                    IsAMDOffloadArch(StringToOffloadArch(
                        getProcessorFromTargetID(*AMDTriple, Arch)))) {
           DerivedArchs[AMDTriple->getTriple()].insert(Arch);
-        } else if (SPIRVTriple && Arch == (*SPIRVTriple).str()) {
-          DerivedArchs[Arch].insert(Arch);
         } else {
           Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch) << Arch;
           return;

@@ -1,9 +1,6 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=spirv64-intel \
 // RUN:        --libomptarget-spirv-bc-path=%t/ -nogpulib %s 2>&1 \
 // RUN: | FileCheck %s
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=spirv64-intel \
-// RUN:        --libomptarget-spirv-bc-path=%t/ -nogpulib %s 2>&1 \
-// RUN: | FileCheck %s
 
 // verify the tools invocations
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
@@ -69,3 +66,8 @@
 
 // RUN: not %clang -target x86_64-pc-linux-gnu -fopenmp --offload-arch=spirv64-intel -nogpulib --offload=spir64  %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID-ERROR-3
 // CHECK-TARGET-ID-ERROR-3: error: invalid or unsupported offload target: 'spir64'
+
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=spirv64-intel \
+// RUN:        --libomptarget-spirv-bc-path=%t/ -nogpulib %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=CHECK-OFFLOAD-ARCH-ERROR
+// CHECK-OFFLOAD-ARCH-ERROR: error: failed to deduce triple for target architecture 'spirv64-intel'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead
