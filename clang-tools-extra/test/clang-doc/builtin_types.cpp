@@ -1,11 +1,11 @@
 // RUN: rm -rf %t
-// RUN: mkdir %t
+// RUN: mkdir -p %t/yaml %t/md
 
-// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs
-// RUN: cat %t/docs/index.yaml | FileCheck %s --check-prefix=YAML
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/yaml
+// RUN: FileCheck %s < %t/yaml/index.yaml --check-prefix=YAML
 
-// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=md
-// RUN: cat %t/docs/GlobalNamespace/index.md | FileCheck %s --check-prefix=MD
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/md --format=md
+// RUN: FileCheck %s < %t/md/GlobalNamespace/index.md  --check-prefix=MD
 
 //      YAML: ---
 // YAML-NEXT: USR:             '0000000000000000000000000000000000000000'
