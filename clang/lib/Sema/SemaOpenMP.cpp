@@ -15634,8 +15634,6 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
 void SemaOpenMP::ActOnOpenMPDeviceNum(Expr *DeviceNumExpr) {
   llvm::APSInt Result;
   Expr::EvalResult EvalResult;
-  // Strip implicit casts from the expression
-  DeviceNumExpr = DeviceNumExpr->IgnoreImpCasts();
   // Evaluate the expression to an integer value
   if (!DeviceNumExpr->isValueDependent() &&
       DeviceNumExpr->EvaluateAsInt(EvalResult, SemaRef.Context)) {
