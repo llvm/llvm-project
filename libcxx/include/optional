@@ -228,7 +228,6 @@ namespace std {
 #  include <__utility/swap.h>
 #  include <__verbose_abort>
 #  include <initializer_list>
-#  include <new>
 #  include <version>
 
 // standard-mandated includes

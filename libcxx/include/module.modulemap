@@ -1607,7 +1607,11 @@ module std [system] {
     module allocate             { header "__new/allocate.h" }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
-    module global_new_delete    { header "__new/global_new_delete.h" }
+    module global_new_delete    {
+      header "__new/global_new_delete.h"
+
+      export std.new.nothrow_t
+    }
     module interference_size    { header "__new/interference_size.h" }
     module launder              { header "__new/launder.h" }
     module new_handler          { header "__new/new_handler.h" }
