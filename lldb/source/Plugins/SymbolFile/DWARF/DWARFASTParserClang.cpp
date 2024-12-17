@@ -1712,8 +1712,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   if ((attrs.class_language == eLanguageTypeObjC ||
        attrs.class_language == eLanguageTypeObjC_plus_plus) &&
-      !attrs.is_complete_objc_class &&
-      die.Supports_DW_AT_APPLE_objc_complete_type()) {
+      !attrs.is_complete_objc_class) {
     // We have a valid eSymbolTypeObjCClass class symbol whose name
     // matches the current objective C class that we are trying to find
     // and this DIE isn't the complete definition (we checked

@@ -223,8 +223,6 @@ public:
   virtual void GetObjCMethods(ConstString class_name,
                               llvm::function_ref<bool(DWARFDIE die)> callback);
 
-  bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
-
   DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
   static DWARFDIE GetParentSymbolContextDIE(const DWARFDIE &die);
@@ -524,7 +522,6 @@ protected:
   ExternalTypeModuleMap m_external_type_modules;
   std::unique_ptr<DWARFIndex> m_index;
   bool m_fetched_external_modules : 1;
-  LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
 
   typedef std::set<DIERef> DIERefSet;
   typedef llvm::StringMap<DIERefSet> NameToOffsetMap;
