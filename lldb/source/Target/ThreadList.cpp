@@ -540,20 +540,6 @@ bool ThreadList::WillResume() {
     }
   }
 
-  if (wants_solo_run) {
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Turning on notification of new threads while single "
-                     "stepping a thread.");
-    m_process.StartNoticingNewThreads();
-  } else {
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Turning off notification of new threads while single "
-                     "stepping a thread.");
-    m_process.StopNoticingNewThreads();
-  }
-
   // Give all the threads that are likely to run a last chance to set up their
   // state before we negotiate who is actually going to get a chance to run...
   // Don't set to resume suspended threads, and if any thread wanted to stop
@@ -605,6 +591,20 @@ bool ThreadList::WillResume() {
         break;
       }
     }
+  }
+
+  if (run_me_only_list.GetSize(false) > 0) {
+    Log *log = GetLog(LLDBLog::Step);
+    if (log && log->GetVerbose())
+      LLDB_LOGF(log, "Turning on notification of new threads while single "
+                     "stepping a thread.");
+    m_process.StartNoticingNewThreads();
+  } else {
+    Log *log = GetLog(LLDBLog::Step);
+    if (log && log->GetVerbose())
+      LLDB_LOGF(log, "Turning off notification of new threads while single "
+                     "stepping a thread.");
+    m_process.StopNoticingNewThreads();
   }
 
   bool need_to_resume = true;
