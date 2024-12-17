@@ -99,7 +99,6 @@ public:
               toTargetAddressSpace(A) ==
                   llvm::NVPTXAS::ADDRESS_SPACE_GENERIC)) &&
             isTargetAddressSpace(B) &&
-            toTargetAddressSpace(B) >= llvm::NVPTXAS::ADDRESS_SPACE_GENERIC &&
             toTargetAddressSpace(B) <= llvm::NVPTXAS::ADDRESS_SPACE_LOCAL &&
             toTargetAddressSpace(B) != 2);
   }
