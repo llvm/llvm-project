@@ -92,7 +92,7 @@ public:
 
   lldb::SBDebugger &GetDebugger() { return m_debugger; }
 
-  void ResizeWindow(unsigned short col, unsigned short row);
+  void UpdateWindowSize();
 
 private:
   lldb::SBDebugger m_debugger;
