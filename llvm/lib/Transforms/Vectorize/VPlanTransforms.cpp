@@ -1515,8 +1515,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(
-                        ConstantInt::getTrue(IntegerType::getInt1Ty(Ctx)));
+                    VPValue *Mask =
+                        Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
                     Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(

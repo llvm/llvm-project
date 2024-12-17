@@ -1107,10 +1107,6 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr noalias %dst, p
 ; IF-EVL:       [[SCALAR_PH]]:
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY13_PREHEADER]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY13:.*]]
-; IF-EVL:       [[FOR_COND_CLEANUP12_LOOPEXIT]]:
-; IF-EVL-NEXT:    br label %[[FOR_COND_CLEANUP12]]
-; IF-EVL:       [[FOR_COND_CLEANUP12]]:
-; IF-EVL-NEXT:    ret void
 ; IF-EVL:       [[FOR_BODY13]]:
 ; IF-EVL-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY13]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDVARS_IV]]
@@ -1123,6 +1119,10 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr noalias %dst, p
 ; IF-EVL-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP12_LOOPEXIT]], label %[[FOR_BODY13]], !llvm.loop [[LOOP48:![0-9]+]]
+; IF-EVL:       [[FOR_COND_CLEANUP12_LOOPEXIT]]:
+; IF-EVL-NEXT:    br label %[[FOR_COND_CLEANUP12]]
+; IF-EVL:       [[FOR_COND_CLEANUP12]]:
+; IF-EVL-NEXT:    ret void
 ;
 ; NO-VP-LABEL: define void @truncate_to_minimal_bitwidths_widen_cast_recipe(
 ; NO-VP-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i32 [[MVX:%.*]]) #[[ATTR0]] {
@@ -1132,10 +1132,6 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr noalias %dst, p
 ; NO-VP:       [[FOR_BODY13_PREHEADER]]:
 ; NO-VP-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[MVX]] to i64
 ; NO-VP-NEXT:    br label %[[FOR_BODY13:.*]]
-; NO-VP:       [[FOR_COND_CLEANUP12_LOOPEXIT:.*]]:
-; NO-VP-NEXT:    br label %[[FOR_COND_CLEANUP12]]
-; NO-VP:       [[FOR_COND_CLEANUP12]]:
-; NO-VP-NEXT:    ret void
 ; NO-VP:       [[FOR_BODY13]]:
 ; NO-VP-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY13_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY13]] ]
 ; NO-VP-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDVARS_IV]]
@@ -1147,7 +1143,11 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr noalias %dst, p
 ; NO-VP-NEXT:    store i8 [[CONV36]], ptr [[DST]], align 1
 ; NO-VP-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP12_LOOPEXIT]], label %[[FOR_BODY13]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP12_LOOPEXIT:.*]], label %[[FOR_BODY13]]
+; NO-VP:       [[FOR_COND_CLEANUP12_LOOPEXIT]]:
+; NO-VP-NEXT:    br label %[[FOR_COND_CLEANUP12]]
+; NO-VP:       [[FOR_COND_CLEANUP12]]:
+; NO-VP-NEXT:    ret void
 ;
 entry:
   %cmp111 = icmp sgt i32 %mvx, 0
@@ -1156,12 +1156,6 @@ entry:
 for.body13.preheader:                             ; preds = %entry
   %wide.trip.count = zext nneg i32 %mvx to i64
   br label %for.body13
-
-for.cond.cleanup12.loopexit:                      ; preds = %for.body13
-  br label %for.cond.cleanup12
-
-for.cond.cleanup12:                               ; preds = %for.cond.cleanup12.loopexit, %entry
-  ret void
 
 for.body13:                                       ; preds = %for.body13.preheader, %for.body13
   %indvars.iv = phi i64 [ 0, %for.body13.preheader ], [ %indvars.iv.next, %for.body13 ]
@@ -1174,7 +1168,10 @@ for.body13:                                       ; preds = %for.body13.preheade
   store i8 %conv36, ptr %dst, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup12.loopexit, label %for.body13
+  br i1 %exitcond.not, label %for.cond.cleanup12, label %for.body13
+
+for.cond.cleanup12:                               ; preds = %for.body13, %entry
+  ret void
 }
 
 ;.
