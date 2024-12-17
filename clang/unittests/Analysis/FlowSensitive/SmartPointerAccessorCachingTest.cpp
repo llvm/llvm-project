@@ -192,4 +192,3 @@ TEST(SmartPointerAccessorCachingTest, MatchesWithValueAndNonConstOverloads) {
 
 } // namespace
 } // namespace clang::dataflow
-
