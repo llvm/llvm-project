@@ -1446,7 +1446,6 @@ void VPlanTransforms::addActiveLaneMask(
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   using namespace llvm::VPlanPatternMatch;
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
 
@@ -1462,6 +1461,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         assert(OrigMask && "Unmasked recipe when folding tail");
         return HeaderMask == OrigMask ? nullptr : OrigMask;
       };
+
+      // Don't preseve the type info cache across loop iterations since
+      // CurRecipe will be erased and invalidate it.
+      VPTypeAnalysis TypeInfo(CanonicalIVType);
 
       VPRecipeBase *NewRecipe =
           TypeSwitch<VPRecipeBase *, VPRecipeBase *>(CurRecipe)
