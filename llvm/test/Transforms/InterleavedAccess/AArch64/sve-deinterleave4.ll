@@ -136,4 +136,3 @@ define void @negative_deinterleave4_test(ptr %src) {
 
   ret void
 }
-

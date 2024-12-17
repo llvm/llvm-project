@@ -2779,6 +2779,8 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
+    assert(isPowerOf2_32(Factor) && "Unsupported interleave factor for "
+                                    "scalable vectors, must be power of 2");
     SmallVector<Value *> InterleavingValues(Vals);
     // When interleaving, the number of values will be shrunk until we have the
     // single final interleaved value.
@@ -2926,7 +2928,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 
       // Scalable vectors cannot use arbitrary shufflevectors (only splats),
       // so must use intrinsics to deinterleave.
-
       SmallVector<Value *> DeinterleavedValues(InterleaveFactor);
       DeinterleavedValues[0] = NewLoad;
       // For the case of InterleaveFactor > 2, we will have to do recursive
