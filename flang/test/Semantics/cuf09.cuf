@@ -35,6 +35,13 @@ module m
     i = threadIdx%x
     a(i) = i
   end subroutine
+
+  attributes(global) subroutine sharedarray(a)
+    integer, device :: a(10)
+    integer, shared :: s(10)
+    i = threadIdx%x
+    a(i) = s(10) ! ok, a is device and s is shared
+  end subroutine
 end
 
 program main
