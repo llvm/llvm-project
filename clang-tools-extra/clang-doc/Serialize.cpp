@@ -236,7 +236,7 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
   return nullptr;
 }
 
-TypeInfo getTypeInfoForType(const QualType &T, const PrintingPolicy& Policy) {
+TypeInfo getTypeInfoForType(const QualType &T, const PrintingPolicy &Policy) {
   const TagDecl *TD = getTagDeclForType(T);
   if (!TD)
     return TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
@@ -413,7 +413,7 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
 }
 
 static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
-    auto &LO = D->getLangOpts();
+  auto &LO = D->getLangOpts();
   for (const ParmVarDecl *P : D->parameters()) {
     FieldTypeInfo &FieldInfo = I.Params.emplace_back(
         getTypeInfoForType(P->getOriginalType(), LO), P->getNameAsString());
@@ -543,7 +543,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
                                  bool &IsInAnonymousNamespace) {
   populateSymbolInfo(I, D, FC, LineNumber, Filename, IsFileInRootDir,
                      IsInAnonymousNamespace);
-    auto &LO = D->getLangOpts();
+  auto &LO = D->getLangOpts();
   I.ReturnType = getTypeInfoForType(D->getReturnType(), LO);
   parseParameters(I, D);
 
