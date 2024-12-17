@@ -212,8 +212,8 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const {
     using _Self = __default_alloc_func;
-    unique_ptr<_Self, __deallocating_deleter<_Self>> __hold =
-        std::__libcpp_allocate<_Self>(sizeof(_Self), _LIBCPP_ALIGNOF(_Self));
+    unique_ptr<_Self, __deallocating_deleter<_Self>> __hold(
+        static_cast<_Self*>(std::__libcpp_allocate<_Self>(sizeof(_Self), _LIBCPP_ALIGNOF(_Self))));
     _Self* __res = ::new ((void*)__hold.get()) _Self(__f_);
     (void)__hold.release();
     return __res;
@@ -669,8 +669,8 @@ public:
       if (__use_small_storage<_Fun>()) {
         ::new ((void*)&__buf_.__small) _Fun(std::move(__f));
       } else {
-        unique_ptr<_Fun, __deallocating_deleter<_Fun>> __hold =
-            std::__libcpp_allocate<_Fun>(sizeof(_Fun), _LIBCPP_ALIGNOF(_Fun));
+        unique_ptr<_Fun, __deallocating_deleter<_Fun>> __hold(
+            static_cast<_Fun*>(std::__libcpp_allocate<_Fun>(sizeof(_Fun), _LIBCPP_ALIGNOF(_Fun))));
         __buf_.__large = ::new ((void*)__hold.get()) _Fun(std::move(__f));
         (void)__hold.release();
       }
