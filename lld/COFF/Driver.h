@@ -197,7 +197,6 @@ private:
   bool run();
 
   std::list<std::function<void()>> taskQueue;
-  std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 
   llvm::DenseSet<StringRef> directivesExports;
