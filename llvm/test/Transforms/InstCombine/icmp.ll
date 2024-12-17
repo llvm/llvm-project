@@ -88,6 +88,13 @@ define <2 x i1> @test5_ne(<2 x i64> %x) {
   %V = icmp ne <2 x i64> %x, undef
   ret <2 x i1> %V
 }
+define <2 x i1> @test5_ugt(<2 x i64> %x) {
+; CHECK-LABEL: @test5_ugt(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %V = icmp ugt <2 x i64> %x, undef
+  ret <2 x i1> %V
+}
 define <2 x i1> @test5_zero() {
 ; CHECK-LABEL: @test5_zero(
 ; CHECK-NEXT:    ret <2 x i1> undef
@@ -258,6 +265,22 @@ define i1 @test12(i1 %A) {
 }
 
 ; PR6481
+define i1 @test13(i8 %X) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp slt i8 undef, %X
+  ret i1 %cmp
+}
+
+define i1 @test14(i8 %X) {
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp slt i8 undef, -128
+  ret i1 %cmp
+}
+
 define i1 @test15() {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:    ret i1 undef

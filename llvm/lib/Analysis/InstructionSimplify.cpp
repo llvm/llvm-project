@@ -3744,7 +3744,8 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     return UndefValue::get(ITy);
 
   // icmp X, X -> true/false
-  if (LHS == RHS)
+  // icmp X, undef -> true/false because undef could be X.
+  if (LHS == RHS || Q.isUndefValue(RHS))
     return ConstantInt::get(ITy, CmpInst::isTrueWhenEqual(Pred));
 
   if (Value *V = simplifyICmpOfBools(Pred, LHS, RHS, Q))
