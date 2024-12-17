@@ -371,8 +371,8 @@ let SubtargetPredicate = isGFX9Only, FPDPRounding = 1 in {
 } // End SubtargetPredicate = isGFX9Only, FPDPRounding = 1
 
 let SubtargetPredicate = isGFX9Plus in {
-defm V_MAD_U16_gfx9   : VOP3Inst <"v_mad_u16_gfx9", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>>;
-defm V_MAD_I16_gfx9   : VOP3Inst <"v_mad_i16_gfx9", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>>;
+defm V_MAD_U16_gfx9   : VOP3Inst_t16 <"v_mad_u16_gfx9", VOP_I16_I16_I16_I16>;
+defm V_MAD_I16_gfx9   : VOP3Inst_t16 <"v_mad_i16_gfx9", VOP_I16_I16_I16_I16>;
 let OtherPredicates = [isNotGFX90APlus] in
 def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f16, f32, i32, f32]>>;
 } // End SubtargetPredicate = isGFX9Plus
@@ -437,16 +437,20 @@ defm: Ternary_i16_Pats<imad, V_MAD_U16_e64>;
 
 } // End Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9]
 
+multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
+                                 Instruction inst> {
+  def : GCNPat <
+    (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
+    (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+  >;
+}
 
-class Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
-                                 Instruction inst> : GCNPat <
-  (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
-  (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
->;
-
-let Predicates = [Has16BitInsts, isGFX10Plus] in {
-def: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
-} // End Predicates = [Has16BitInsts, isGFX10Plus]
+let True16Predicate = UseFakeTrue16Insts in {
+  defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_fake16_e64>;
+} // End True16Predicates = UseFakeTrue16Insts
+let OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
+  defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
+} // End OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
 
 class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
   (ops node:$x, node:$y, node:$z),
@@ -616,17 +620,17 @@ let isCommutable = 1, isReMaterializable = 1 in {
 } // End isCommutable = 1, isReMaterializable = 1
 // TODO src0 contains the opsel bit for dst, so if we commute, need to mask and swap this
 // to the new src0.
-defm V_MED3_F16 : VOP3Inst <"v_med3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfmed3>;
-defm V_MED3_I16 : VOP3Inst <"v_med3_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUsmed3>;
-defm V_MED3_U16 : VOP3Inst <"v_med3_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUumed3>;
+defm V_MED3_F16 : VOP3Inst_t16 <"v_med3_f16", VOP_F16_F16_F16_F16, AMDGPUfmed3>;
+defm V_MED3_I16 : VOP3Inst_t16 <"v_med3_i16", VOP_I16_I16_I16_I16, AMDGPUsmed3>;
+defm V_MED3_U16 : VOP3Inst_t16 <"v_med3_u16", VOP_I16_I16_I16_I16, AMDGPUumed3>;
 
-defm V_MIN3_F16 : VOP3Inst <"v_min3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfmin3>;
-defm V_MIN3_I16 : VOP3Inst <"v_min3_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUsmin3>;
-defm V_MIN3_U16 : VOP3Inst <"v_min3_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUumin3>;
+defm V_MIN3_F16 : VOP3Inst_t16 <"v_min3_f16", VOP_F16_F16_F16_F16, AMDGPUfmin3>;
+defm V_MIN3_I16 : VOP3Inst_t16 <"v_min3_i16", VOP_I16_I16_I16_I16, AMDGPUsmin3>;
+defm V_MIN3_U16 : VOP3Inst_t16 <"v_min3_u16", VOP_I16_I16_I16_I16, AMDGPUumin3>;
 
-defm V_MAX3_F16 : VOP3Inst <"v_max3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfmax3>;
-defm V_MAX3_I16 : VOP3Inst <"v_max3_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUsmax3>;
-defm V_MAX3_U16 : VOP3Inst <"v_max3_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUumax3>;
+defm V_MAX3_F16 : VOP3Inst_t16 <"v_max3_f16", VOP_F16_F16_F16_F16, AMDGPUfmax3>;
+defm V_MAX3_I16 : VOP3Inst_t16 <"v_max3_i16", VOP_I16_I16_I16_I16, AMDGPUsmax3>;
+defm V_MAX3_U16 : VOP3Inst_t16 <"v_max3_u16", VOP_I16_I16_I16_I16, AMDGPUumax3>;
 
 let SubtargetPredicate = HasMinimum3Maximum3F16, ReadsModeReg = 0 in {
   defm V_MINIMUM3_F16 : VOP3Inst <"v_minimum3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfminimum3>;
@@ -1582,7 +1586,7 @@ defm V_MAXIMUM3_F32       : VOP3Only_Realtriple_gfx12<0x22e>;
 defm V_MINIMUM3_F16       : VOP3Only_Realtriple_t16_gfx12<0x22f>;
 defm V_MAXIMUM3_F16       : VOP3Only_Realtriple_t16_gfx12<0x230>;
 defm V_MED3_NUM_F32       : VOP3_Realtriple_with_name_gfx12<0x231, "V_MED3_F32", "v_med3_num_f32">;
-defm V_MED3_NUM_F16       : VOP3_Realtriple_with_name_gfx12<0x232, "V_MED3_F16", "v_med3_num_f16">;
+defm V_MED3_NUM_F16       : VOP3_Realtriple_t16_and_fake16_gfx12<0x232, "v_med3_num_f16", "V_MED3_F16", "v_med3_f16">;
 defm V_MINMAX_NUM_F32     : VOP3_Realtriple_with_name_gfx12<0x268, "V_MINMAX_F32", "v_minmax_num_f32">;
 defm V_MAXMIN_NUM_F32     : VOP3_Realtriple_with_name_gfx12<0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
 defm V_MINMAX_NUM_F16     : VOP3_Realtriple_with_name_gfx12<0x26a, "V_MINMAX_F16", "v_minmax_num_f16">;
@@ -1700,22 +1704,22 @@ defm V_QSAD_PK_U16_U8      : VOP3_Real_Base_gfx11_gfx12<0x23a>;
 defm V_MQSAD_PK_U16_U8     : VOP3_Real_Base_gfx11_gfx12<0x23b>;
 defm V_MQSAD_U32_U8        : VOP3_Real_Base_gfx11_gfx12<0x23d>;
 defm V_XOR3_B32            : VOP3_Realtriple_gfx11_gfx12<0x240>;
-defm V_MAD_U16             : VOP3_Realtriple_with_name_gfx11_gfx12<0x241, "V_MAD_U16_gfx9", "v_mad_u16">;
+defm V_MAD_U16             : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x241, "v_mad_u16", "V_MAD_U16_gfx9">;
 defm V_PERM_B32            : VOP3_Realtriple_gfx11_gfx12<0x244>;
 defm V_XAD_U32             : VOP3_Realtriple_gfx11_gfx12<0x245>;
 defm V_LSHL_ADD_U32        : VOP3_Realtriple_gfx11_gfx12<0x246>;
 defm V_ADD_LSHL_U32        : VOP3_Realtriple_gfx11_gfx12<0x247>;
 defm V_FMA_F16             : VOP3_Realtriple_with_name_gfx11_gfx12<0x248, "V_FMA_F16_gfx9", "v_fma_f16">;
-defm V_MIN3_F16            : VOP3_Realtriple_gfx11<0x249>;
-defm V_MIN3_I16            : VOP3_Realtriple_gfx11_gfx12<0x24a>;
-defm V_MIN3_U16            : VOP3_Realtriple_gfx11_gfx12<0x24b>;
-defm V_MAX3_F16            : VOP3_Realtriple_gfx11<0x24c>;
-defm V_MAX3_I16            : VOP3_Realtriple_gfx11_gfx12<0x24d>;
-defm V_MAX3_U16            : VOP3_Realtriple_gfx11_gfx12<0x24e>;
-defm V_MED3_F16            : VOP3_Realtriple_gfx11<0x24f>;
-defm V_MED3_I16            : VOP3_Realtriple_gfx11_gfx12<0x250>;
-defm V_MED3_U16            : VOP3_Realtriple_gfx11_gfx12<0x251>;
-defm V_MAD_I16             : VOP3_Realtriple_with_name_gfx11_gfx12<0x253, "V_MAD_I16_gfx9", "v_mad_i16">;
+defm V_MIN3_F16            : VOP3Only_Realtriple_t16_and_fake16_gfx11<0x249, "v_min3_f16">;
+defm V_MIN3_I16            : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x24a, "v_min3_i16">;
+defm V_MIN3_U16            : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x24b, "v_min3_u16">;
+defm V_MAX3_F16            : VOP3Only_Realtriple_t16_and_fake16_gfx11<0x24c, "v_max3_f16">;
+defm V_MAX3_I16            : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x24d, "v_max3_i16">;
+defm V_MAX3_U16            : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x24e, "v_max3_u16">;
+defm V_MED3_F16            : VOP3Only_Realtriple_t16_and_fake16_gfx11<0x24f, "v_med3_f16">;
+defm V_MED3_I16            : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x250, "v_med3_i16">;
+defm V_MED3_U16            : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x251, "v_med3_u16">;
+defm V_MAD_I16             : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x253, "v_mad_i16", "V_MAD_I16_gfx9">;
 defm V_DIV_FIXUP_F16       : VOP3_Realtriple_with_name_gfx11_gfx12<0x254, "V_DIV_FIXUP_F16_gfx9", "v_div_fixup_f16">;
 defm V_ADD3_U32            : VOP3_Realtriple_gfx11_gfx12<0x255>;
 defm V_LSHL_OR_B32         : VOP3_Realtriple_gfx11_gfx12<0x256>;
