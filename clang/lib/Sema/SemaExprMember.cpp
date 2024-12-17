@@ -1194,8 +1194,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (MemberFn->isInstance()) {
       valueKind = VK_PRValue;
       type = Context.BoundMemberTy;
-      if(MemberFn->isImplicitObjectMemberFunction() && MakeGLValue())
-          return ExprError();
+      if (MemberFn->isImplicitObjectMemberFunction() && MakeGLValue())
+        return ExprError();
     } else {
       // Static member function
       if (MakeDiscardedValue())
