@@ -27,7 +27,9 @@ inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
 }
 
 /// A helper for converting structs of scalar types to structs of vector types.
-/// Note: Only unpacked literal struct types are supported.
+/// Note:
+///   - If \p EC is scalar, \p StructTy is returned unchanged
+///   - Only unpacked literal struct types are supported
 Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC);
 
 /// A helper for converting structs of vector types to structs of scalar types.
@@ -40,8 +42,11 @@ bool isVectorizedStructTy(StructType *StructTy);
 
 /// A helper for converting to vectorized types. For scalar types, this is
 /// equivalent to calling `ToVectorTy`. For struct types, this returns a new
-/// struct where each element type has been widened to a vector type. Note: Only
-/// unpacked literal struct types are supported.
+/// struct where each element type has been widened to a vector type.
+/// Note:
+///   - If the he incoming type is void, we return void
+///   - If \p EC is scalar, \p Ty is returned unchanged
+///   - Only unpacked literal struct types are supported
 inline Type *toVectorizedTy(Type *Ty, ElementCount EC) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
     return toVectorizedStructTy(StructTy, EC);
