@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_COMPLEX_TYPE_H
 #define LLVM_LIBC_SRC___SUPPORT_COMPLEX_TYPE_H
 
+#include "src/__support/CPP/bit.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/complex_types.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/FPBits.h"
 
 namespace LIBC_NAMESPACE_DECL {
 template <typename T> struct Complex {
@@ -83,9 +83,9 @@ template <typename T> LIBC_INLINE constexpr T project(T c) {
   Complex<make_real_t<T>> c_c = cpp::bit_cast<Complex<make_real_t<T>>>(c);
   if (fputil::FPBits<make_real_t<T>>(c_c.real).is_inf() ||
       fputil::FPBits<make_real_t<T>>(c_c.imag).is_inf()) {
-    return cpp::bit_cast<T>(
-        Complex<make_real_t<T>>{(fputil::FPBits<make_real_t<T>>::inf(Sign::POS).get_val()),
-                        static_cast<make_real_t<T>>(c_c.imag > 0 ? 0.0 : -0.0)});
+    return cpp::bit_cast<T>(Complex<make_real_t<T>>{
+        (fputil::FPBits<make_real_t<T>>::inf(Sign::POS).get_val()),
+        static_cast<make_real_t<T>>(c_c.imag > 0 ? 0.0 : -0.0)});
   } else {
     return c;
   }
