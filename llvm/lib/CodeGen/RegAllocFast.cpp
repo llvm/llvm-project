@@ -1206,10 +1206,9 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
           "inline assembly requires more registers than available");
     } else {
       const Function &Fn = MBB->getParent()->getFunction();
-      DiagnosticInfoRegAllocFailure DI(
+      Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
           "ran out of registers during register allocation", Fn,
-          MI.getDebugLoc());
-      Fn.getContext().diagnose(DI);
+          MI.getDebugLoc()));
     }
   }
 
