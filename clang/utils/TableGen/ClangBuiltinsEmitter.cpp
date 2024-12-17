@@ -15,7 +15,9 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <sstream>
 
 using namespace llvm;
 
@@ -29,6 +31,119 @@ enum class BuiltinType {
   TargetLibBuiltin,
 };
 
+class HeaderNameParser {
+public:
+  HeaderNameParser(const Record *Builtin) {
+    for (char c : Builtin->getValueAsString("Header")) {
+      if (std::islower(c))
+        HeaderName += static_cast<char>(std::toupper(c));
+      else if (c == '.' || c == '_' || c == '/' || c == '-')
+        HeaderName += '_';
+      else
+        PrintFatalError(Builtin->getLoc(), "Unexpected header name");
+    }
+  }
+
+  void Print(raw_ostream &OS) const { OS << HeaderName; }
+
+private:
+  std::string HeaderName;
+};
+
+struct Builtin {
+  BuiltinType BT;
+  std::string Name;
+  std::string Type;
+  std::string Attributes;
+
+  const Record *BuiltinRecord;
+
+  void EmitEnumerator(llvm::raw_ostream &OS) const {
+    OS << "    BI" << Name << ",\n";
+  }
+
+  void EmitInfo(llvm::raw_ostream &OS, const StringToOffsetTable &Table) const {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Name) << " /* " << Name << " */, "
+       << Table.GetStringOffset(Type) << " /* " << Type << " */, "
+       << Table.GetStringOffset(Attributes) << " /* " << Attributes << " */, ";
+    if (BT == BuiltinType::TargetBuiltin) {
+      const auto &Features = BuiltinRecord->getValueAsString("Features");
+      OS << Table.GetStringOffset(Features) << " /* " << Features << " */";
+    } else {
+      OS << "0";
+    }
+    OS << "}, ";
+    if (BT == BuiltinType::LibBuiltin || BT == BuiltinType::TargetLibBuiltin) {
+      OS << "HeaderDesc::";
+      HeaderNameParser{BuiltinRecord}.Print(OS);
+    } else {
+      OS << "HeaderDesc::NO_HEADER";
+    }
+    OS << ", ";
+    if (BT == BuiltinType::LibBuiltin || BT == BuiltinType::LangBuiltin ||
+        BT == BuiltinType::TargetLibBuiltin) {
+      OS << BuiltinRecord->getValueAsString("Languages");
+    } else {
+      OS << "ALL_LANGUAGES";
+    }
+    OS << "},\n";
+  }
+
+  void EmitXMacro(llvm::raw_ostream &OS) const {
+    if (BuiltinRecord->getValueAsBit("RequiresUndef"))
+      OS << "#undef " << Name << '\n';
+    switch (BT) {
+    case BuiltinType::LibBuiltin:
+      OS << "LIBBUILTIN";
+      break;
+    case BuiltinType::LangBuiltin:
+      OS << "LANGBUILTIN";
+      break;
+    case BuiltinType::Builtin:
+      OS << "BUILTIN";
+      break;
+    case BuiltinType::AtomicBuiltin:
+      OS << "ATOMIC_BUILTIN";
+      break;
+    case BuiltinType::TargetBuiltin:
+      OS << "TARGET_BUILTIN";
+      break;
+    case BuiltinType::TargetLibBuiltin:
+      OS << "TARGET_HEADER_BUILTIN";
+      break;
+    }
+
+    OS << "(" << Name << ", \"" << Type << "\", \"" << Attributes << "\"";
+
+    switch (BT) {
+    case BuiltinType::LibBuiltin: {
+      OS << ", ";
+      HeaderNameParser{BuiltinRecord}.Print(OS);
+      [[fallthrough]];
+    }
+    case BuiltinType::LangBuiltin: {
+      OS << ", " << BuiltinRecord->getValueAsString("Languages");
+      break;
+    }
+    case BuiltinType::TargetLibBuiltin: {
+      OS << ", ";
+      HeaderNameParser{BuiltinRecord}.Print(OS);
+      OS << ", " << BuiltinRecord->getValueAsString("Languages");
+      [[fallthrough]];
+    }
+    case BuiltinType::TargetBuiltin: {
+      OS << ", \"" << BuiltinRecord->getValueAsString("Features") << "\"";
+      break;
+    }
+    case BuiltinType::AtomicBuiltin:
+    case BuiltinType::Builtin:
+      break;
+    }
+    OS << ")\n";
+  }
+};
+
 class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
@@ -36,6 +151,8 @@ public:
         EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")) {
     ParsePrototype(Builtin->getValueAsString("Prototype"));
   }
+
+  std::string takeTypeString() && { return std::move(Type); }
 
 private:
   void ParsePrototype(StringRef Prototype) {
@@ -243,37 +360,15 @@ private:
     }
   }
 
-public:
-  void Print(raw_ostream &OS) const { OS << ", \"" << Type << '\"'; }
-
-private:
   SMLoc Loc;
   StringRef Substitution;
   bool EnableOpenCLLong;
   std::string Type;
 };
 
-class HeaderNameParser {
-public:
-  HeaderNameParser(const Record *Builtin) {
-    for (char c : Builtin->getValueAsString("Header")) {
-      if (std::islower(c))
-        HeaderName += static_cast<char>(std::toupper(c));
-      else if (c == '.' || c == '_' || c == '/' || c == '-')
-        HeaderName += '_';
-      else
-        PrintFatalError(Builtin->getLoc(), "Unexpected header name");
-    }
-  }
-
-  void Print(raw_ostream &OS) const { OS << HeaderName; }
-
-private:
-  std::string HeaderName;
-};
-
-void PrintAttributes(const Record *Builtin, BuiltinType BT, raw_ostream &OS) {
-  OS << '\"';
+std::string renderAttributes(const Record *Builtin, BuiltinType BT) {
+  std::string Attributes;
+  raw_string_ostream OS(Attributes);
   if (Builtin->isSubClassOf("LibBuiltin")) {
     if (BT == BuiltinType::LibBuiltin) {
       OS << 'f';
@@ -302,63 +397,18 @@ void PrintAttributes(const Record *Builtin, BuiltinType BT, raw_ostream &OS) {
       OS << '>';
     }
   }
-  OS << '\"';
+  return Attributes;
 }
 
-void EmitBuiltinDef(raw_ostream &OS, StringRef Substitution,
-                    const Record *Builtin, Twine Spelling, BuiltinType BT) {
-  if (Builtin->getValueAsBit("RequiresUndef"))
-    OS << "#undef " << Spelling << '\n';
-  switch (BT) {
-  case BuiltinType::LibBuiltin:
-    OS << "LIBBUILTIN";
-    break;
-  case BuiltinType::LangBuiltin:
-    OS << "LANGBUILTIN";
-    break;
-  case BuiltinType::Builtin:
-    OS << "BUILTIN";
-    break;
-  case BuiltinType::AtomicBuiltin:
-    OS << "ATOMIC_BUILTIN";
-    break;
-  case BuiltinType::TargetBuiltin:
-    OS << "TARGET_BUILTIN";
-    break;
-  case BuiltinType::TargetLibBuiltin:
-    OS << "TARGET_HEADER_BUILTIN";
-    break;
-  }
-
-  OS << "(" << Spelling;
-  PrototypeParser{Substitution, Builtin}.Print(OS);
-  OS << ", ";
-  PrintAttributes(Builtin, BT, OS);
-
-  switch (BT) {
-  case BuiltinType::LibBuiltin: {
-    OS << ", ";
-    HeaderNameParser{Builtin}.Print(OS);
-    [[fallthrough]];
-  }
-  case BuiltinType::LangBuiltin: {
-    OS << ", " << Builtin->getValueAsString("Languages");
-    break;
-  }
-  case BuiltinType::TargetLibBuiltin: {
-    OS << ", ";
-    HeaderNameParser{Builtin}.Print(OS);
-    OS << ", " << Builtin->getValueAsString("Languages");
-    [[fallthrough]];
-  }
-  case BuiltinType::TargetBuiltin:
-    OS << ", \"" << Builtin->getValueAsString("Features") << "\"";
-    break;
-  case BuiltinType::AtomicBuiltin:
-  case BuiltinType::Builtin:
-    break;
-  }
-  OS << ")\n";
+Builtin buildBuiltin(StringRef Substitution, const Record *BuiltinRecord,
+                     Twine Spelling, BuiltinType BT) {
+  Builtin B;
+  B.BT = BT;
+  B.Name = Spelling.str();
+  B.Type = PrototypeParser(Substitution, BuiltinRecord).takeTypeString();
+  B.Attributes = renderAttributes(BuiltinRecord, BT);
+  B.BuiltinRecord = BuiltinRecord;
+  return B;
 }
 
 struct TemplateInsts {
@@ -384,10 +434,11 @@ TemplateInsts getTemplateInsts(const Record *R) {
   return temp;
 }
 
-void EmitBuiltin(raw_ostream &OS, const Record *Builtin) {
+void collectBuiltins(const Record *BuiltinRecord,
+                     SmallVectorImpl<Builtin> &Builtins) {
   TemplateInsts Templates = {};
-  if (Builtin->isSubClassOf("Template")) {
-    Templates = getTemplateInsts(Builtin);
+  if (BuiltinRecord->isSubClassOf("Template")) {
+    Templates = getTemplateInsts(BuiltinRecord);
   } else {
     Templates.Affix.emplace_back();
     Templates.Substitution.emplace_back();
@@ -395,26 +446,28 @@ void EmitBuiltin(raw_ostream &OS, const Record *Builtin) {
 
   for (auto [Substitution, Affix] :
        zip(Templates.Substitution, Templates.Affix)) {
-    for (StringRef Spelling : Builtin->getValueAsListOfStrings("Spellings")) {
+    for (StringRef Spelling :
+         BuiltinRecord->getValueAsListOfStrings("Spellings")) {
       auto FullSpelling =
           (Templates.IsPrefix ? Affix + Spelling : Spelling + Affix).str();
       BuiltinType BT = BuiltinType::Builtin;
-      if (Builtin->isSubClassOf("AtomicBuiltin")) {
+      if (BuiltinRecord->isSubClassOf("AtomicBuiltin")) {
         BT = BuiltinType::AtomicBuiltin;
-      } else if (Builtin->isSubClassOf("LangBuiltin")) {
+      } else if (BuiltinRecord->isSubClassOf("LangBuiltin")) {
         BT = BuiltinType::LangBuiltin;
-      } else if (Builtin->isSubClassOf("TargetLibBuiltin")) {
+      } else if (BuiltinRecord->isSubClassOf("TargetLibBuiltin")) {
         BT = BuiltinType::TargetLibBuiltin;
-      } else if (Builtin->isSubClassOf("TargetBuiltin")) {
+      } else if (BuiltinRecord->isSubClassOf("TargetBuiltin")) {
         BT = BuiltinType::TargetBuiltin;
-      } else if (Builtin->isSubClassOf("LibBuiltin")) {
+      } else if (BuiltinRecord->isSubClassOf("LibBuiltin")) {
         BT = BuiltinType::LibBuiltin;
-        if (Builtin->getValueAsBit("AddBuiltinPrefixedAlias"))
-          EmitBuiltinDef(OS, Substitution, Builtin,
-                         std::string("__builtin_") + FullSpelling,
-                         BuiltinType::Builtin);
+        if (BuiltinRecord->getValueAsBit("AddBuiltinPrefixedAlias"))
+          Builtins.push_back(buildBuiltin(
+              Substitution, BuiltinRecord,
+              std::string("__builtin_") + FullSpelling, BuiltinType::Builtin));
       }
-      EmitBuiltinDef(OS, Substitution, Builtin, FullSpelling, BT);
+      Builtins.push_back(
+          buildBuiltin(Substitution, BuiltinRecord, FullSpelling, BT));
     }
   }
 }
@@ -423,47 +476,77 @@ void EmitBuiltin(raw_ostream &OS, const Record *Builtin) {
 void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("List of builtins that Clang recognizes", OS);
 
-  OS << R"c++(
-#if defined(BUILTIN) && !defined(LIBBUILTIN)
-#  define LIBBUILTIN(ID, TYPE, ATTRS, HEADER, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
-#endif
+  SmallVector<Builtin> Builtins;
+  // AtomicBuiltins are order dependent. Emit them first to make manual checking
+  // easier and so we can build a special atomic builtin X-macro.
+  for (const auto *BuiltinRecord :
+       Records.getAllDerivedDefinitions("AtomicBuiltin"))
+    collectBuiltins(BuiltinRecord, Builtins);
 
-#if defined(BUILTIN) && !defined(LANGBUILTIN)
-#  define LANGBUILTIN(ID, TYPE, ATTRS, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
-#endif
+  unsigned NumAtomicBuiltins = Builtins.size();
 
-// Some of our atomics builtins are handled by AtomicExpr rather than
-// as normal builtin CallExprs. This macro is used for such builtins.
-#ifndef ATOMIC_BUILTIN
-#  define ATOMIC_BUILTIN(ID, TYPE, ATTRS) BUILTIN(ID, TYPE, ATTRS)
-#endif
-
-#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
-#  define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
-#endif
-
-#if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
-#  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
-#endif
-)c++";
-
-  // AtomicBuiltins are order dependent
-  // emit them first to make manual checking easier
-  for (const auto *Builtin : Records.getAllDerivedDefinitions("AtomicBuiltin"))
-    EmitBuiltin(OS, Builtin);
-
-  for (const auto *Builtin : Records.getAllDerivedDefinitions("Builtin")) {
-    if (Builtin->isSubClassOf("AtomicBuiltin"))
+  for (const auto *BuiltinRecord :
+       Records.getAllDerivedDefinitions("Builtin")) {
+    if (BuiltinRecord->isSubClassOf("AtomicBuiltin"))
       continue;
-    EmitBuiltin(OS, Builtin);
+    collectBuiltins(BuiltinRecord, Builtins);
   }
 
+  auto AtomicBuiltins = ArrayRef(Builtins).slice(0, NumAtomicBuiltins);
+
+  // Collect strings into a table.
+  StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("");
+  for (const auto &B : Builtins) {
+    Table.GetOrAddStringOffset(B.Name);
+    Table.GetOrAddStringOffset(B.Type);
+    Table.GetOrAddStringOffset(B.Attributes);
+    if (B.BT == BuiltinType::TargetBuiltin)
+      Table.GetOrAddStringOffset(B.BuiltinRecord->getValueAsString("Features"));
+  }
+
+  // Emit enumerators.
   OS << R"c++(
+#ifdef GET_BUILTIN_ENUMERATORS
+)c++";
+  for (const auto &B : Builtins)
+    B.EmitEnumerator(OS);
+  OS << R"c++(
+#endif // GET_BUILTIN_ENUMERATORS
+)c++";
+
+  // Emit a string table that can be referenced for these builtins.
+  OS << R"c++(
+#ifdef GET_BUILTIN_STR_TABLE
+)c++";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << R"c++(
+#endif // GET_BUILTIN_STR_TABLE
+)c++";
+
+  // Emit a direct set of `Builtin::Info` initializers.
+  OS << R"c++(
+#ifdef GET_BUILTIN_INFOS
+)c++";
+  for (const auto &B : Builtins)
+    B.EmitInfo(OS, Table);
+  OS << R"c++(
+#endif // GET_BUILTIN_INFOS
+)c++";
+
+  // Emit X-macros for the atomic builtins to support various custome patterns
+  // used exclusively with those builtins.
+  //
+  // FIXME: We should eventually move this to a separate file so that users
+  // don't need to include the full set of builtins.
+  OS << R"c++(
+#ifdef ATOMIC_BUILTIN
+)c++";
+  for (const auto &Builtin : AtomicBuiltins) {
+    Builtin.EmitXMacro(OS);
+  }
+  OS << R"c++(
+#endif // ATOMIC_BUILTIN
 #undef ATOMIC_BUILTIN
-#undef BUILTIN
-#undef LIBBUILTIN
-#undef LANGBUILTIN
-#undef TARGET_BUILTIN
-#undef TARGET_HEADER_BUILTIN
 )c++";
 }

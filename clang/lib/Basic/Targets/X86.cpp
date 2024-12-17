@@ -31,36 +31,31 @@ static constexpr int NumX86_64Builtins =
 static constexpr int NumBuiltins = X86::LastTSBuiltin - Builtin::FirstTSBuiltin;
 static_assert(NumBuiltins == (NumX86Builtins + NumX86_64Builtins));
 
-static constexpr llvm::StringTable BuiltinX86Strings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
+namespace X86 {
+#define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsX86.inc"
-    ;
+#undef GET_BUILTIN_STR_TABLE
 
-static constexpr llvm::StringTable BuiltinX86_64Strings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsX86_64.inc"
-    ;
-
-static constexpr auto BuiltinX86Infos = Builtin::MakeInfos<NumX86Builtins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
 #include "clang/Basic/BuiltinsX86.inc"
-});
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumX86Builtins);
+} // namespace X86
 
-static constexpr auto BuiltinX86_64Infos =
-    Builtin::MakeInfos<NumX86_64Builtins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+namespace X86_64 {
+#define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsX86_64.inc"
-    });
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumX86_64Builtins);
+} // namespace X86_64
 
 static const char *const GCCRegNames[] = {
     "ax",    "dx",    "cx",    "bx",    "si",      "di",    "bp",    "sp",
@@ -1879,13 +1874,13 @@ ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
 
 llvm::SmallVector<Builtin::InfosShard>
 X86_32TargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinX86Strings, BuiltinX86Infos}};
+  return {{&X86::BuiltinStrings, X86::BuiltinInfos}};
 }
 
 llvm::SmallVector<Builtin::InfosShard>
 X86_64TargetInfo::getTargetBuiltins() const {
   return {
-      {&BuiltinX86Strings, BuiltinX86Infos},
-      {&BuiltinX86_64Strings, BuiltinX86_64Infos},
+      {&X86::BuiltinStrings, X86::BuiltinInfos},
+      {&X86_64::BuiltinStrings, X86_64::BuiltinInfos},
   };
 }
