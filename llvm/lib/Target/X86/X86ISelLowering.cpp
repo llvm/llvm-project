@@ -30248,6 +30248,11 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       }
     }
 
+    // If the shuffle is identity, do not insert it. It also prevents this
+    // transformation from being applied recursively.
+    if (llvm::equal(Permutation, llvm::seq(Permutation.size())))
+      Profitable = false;
+
     // Found a permutation P that can rearrange the shift amouts into adjacent
     // pair or quad of same values. Rewrite the shift S1(x) into P^-1(S2(P(x))).
     if (Profitable) {
