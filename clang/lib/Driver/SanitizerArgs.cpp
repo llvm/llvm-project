@@ -248,8 +248,10 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
 }
 
 // Computes the sanitizer mask as:
-//     Default + AlwaysIn + Arguments - AlwaysOut
+//     Default + Arguments (in or out) + AlwaysIn - AlwaysOut
 // with arguments parsed from left to right.
+//
+// AlwaysOut is not enforced if AlwaysOutAdvisoryOnly is enabled.
 //
 // Error messages are optionally printed if the AlwaysIn or AlwaysOut
 // invariants are violated.
@@ -257,7 +259,7 @@ static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
                   SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
-                  int OptOutID) {
+                  int OptOutID, bool AlwaysOutAdvisoryOnly) {
   assert(!(AlwaysIn & AlwaysOut) &&
          "parseSanitizeArgs called with contradictory in/out requirements");
 
@@ -303,7 +305,8 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
   }
 
   Output |= AlwaysIn;
-  Output &= ~AlwaysOut;
+  if (!AlwaysOutAdvisoryOnly)
+      Output &= ~AlwaysOut;
 
   return Output;
 }
@@ -314,9 +317,13 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   SanitizerMask AlwaysTrap; // Empty
   SanitizerMask NeverTrap = ~(setGroupBits(TrappingSupported));
 
+  // AlwaysOutAdvisoryOnly = true is needed to maintain the behavior of
+  // '-fsanitize=undefined -fsanitize-trap=undefined'
+  // (clang/test/Driver/fsanitize.c ), which is that vptr is not enabled at all
+  // (not even in recover mode) in order to avoid the need for a ubsan runtime.
   return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
                            NeverTrap, options::OPT_fsanitize_trap_EQ,
-                           options::OPT_fno_sanitize_trap_EQ);
+                           options::OPT_fno_sanitize_trap_EQ, true);
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
@@ -682,7 +689,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask RecoverableKinds = parseSanitizeArgs(
       D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
       Unrecoverable, options::OPT_fsanitize_recover_EQ,
-      options::OPT_fno_sanitize_recover_EQ);
+      options::OPT_fno_sanitize_recover_EQ, false);
 
   RecoverableKinds &= Kinds;
 
