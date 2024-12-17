@@ -115,6 +115,20 @@ endif ()
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 
 
+option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
+if (WIN32)
+  # Windows DLL currently not implemented.
+  set(FLANG_RT_ENABLE_SHARED OFF)
+else ()
+  option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." ON)
+endif ()
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  message(FATAL_ERROR "Must build at least one type of library
+      (FLANG_RT_ENABLE_STATIC=ON, FLANG_RT_ENABLE_SHARED=ON, or both)
+    ")
+endif ()
+
+
 set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile Flang-RT with GPU support (CUDA or OpenMP)")
 set_property(CACHE FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT PROPERTY STRINGS
     ""

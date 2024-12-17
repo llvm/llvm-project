@@ -38,42 +38,124 @@ function (add_flangrt_library name)
     ${ARGN})
 
   if (ARG_INSTALL_WITH_TOOLCHAIN AND ARG_EXCLUDE_FROM_ALL)
-     message(SEND_ERROR "add_flangrt_library(${name} ...):
+    message(SEND_ERROR "add_flangrt_library(${name} ...):
        INSTALL_WITH_TOOLCHAIN and EXCLUDE_FROM_ALL are in conflict. When
        installing an artifact it must have been built first in the 'all' target.
-     ")
+      ")
+    return ()
+  endif ()
+
+  #if (ARG_CMAKE_CONFIGURABLE AND (ARG_STATIC OR ARG_SHARED))
+  #  message(SEND_ERROR "add_flangrt_library(${name} ...):
+  #     CMAKE_CONFIGURABLE cannot be used together with STATIC or SHARED.
+  #    ")
+  #  return ()
+  #endif ()
+
+  #if (NOT ARG_STATIC AND NOT ARG_SHARED AND NOT ARG_CMAKE_CONFIGURABLE AND NOT ARG_OBJECT)
+  #  message(SEND_ERROR "add_flangrt_library(${name} ...):
+  #     Must specifiy library type.
+  #    ")
+  #  return ()
+  #endif () 
+
+  set(build_static OFF)
+  set(build_shared OFF)
+  if (ARG_STATIC AND FLANG_RT_ENABLE_STATIC)
+    set(build_static ON)
+  endif ()
+  if (ARG_SHARED AND FLANG_RT_ENABLE_SHARED)
+    set(build_shared ON)
+  endif ()
+  if (NOT ARG_STATIC AND NOT ARG_SHARED AND NOT ARG_OBJECT)
+    if (BUILD_SHARED_LIBS)
+      set(build_shared ON)
+    else ()
+      set(build_static ON)
+    endif ()
+  endif ()
+
+  # Name of targets must only depend on function arguments to be predictable for callers.
+  if (ARG_STATIC AND ARG_SHARED)
+    set(name_static "${name}.static")
+    set(name_shared "${name}.shared")
+  else ()
+    set(name_static "${name}")
+    set(name_shared "${name}")
+  endif ()
+  if (ARG_OBJECT AND NOT ARG_STATIC AND NOT ARG_SHARED)
+    set(name_object "${name}")
+  else ()
+    set(name_object "obj.${name}")
+  endif ()
+
+
+  if (ARG_OBJECT AND NOT build_static AND NOT build_shared)
+    set(build_only_objectlib ON)
+  else ()
+    set(build_only_objectlib OFF)
+  endif ()
+  if (build_only_objectlib OR (build_static AND build_shared))
+    set(need_objectlib ON)
+  else ()
+    set(need_objectlib OFF)
+  endif ()
+
+  if (NOT build_static AND NOT build_shared AND NOT need_objectlib)
+    # Nothing to build
+    return ()
   endif ()
 
   # Also add header files to IDEs to list as part of the library
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
-  # Forward libtype to add_library
   set(extra_args "")
-  if (ARG_SHARED)
-    list(APPEND extra_args SHARED)
-  endif ()
-  if (ARG_STATIC)
-    list(APPEND extra_args STATIC)
-  endif ()
-  if (ARG_OBJECT)
-    list(APPEND extra_args OBJECT)
-  endif ()
   if (ARG_EXCLUDE_FROM_ALL)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
-  add_library(${name} ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
 
-  if (ARG_INSTALL_WITH_TOOLCHAIN)
-    set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Toolchain Libraries")
-  elseif (ARG_OBJECT)
-    set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Object Libraries")
+  if (need_objectlib)
+    add_library(${name_object} OBJECT ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    set_target_properties(${name_object} PROPERTIES FOLDER "Flang-RT/Object Libraries")
+
+    # Replace arguments for the libraries we are going to create
+    set(ARG_ADDITIONAL_HEADERS "")
+    set(ARG_UNPARSED_ARGUMENTS $<TARGET_OBJECTS:${objectlib_name}>)
+    set(srctargets ${name_object})
+    set(liblist nostargets)
+    set(alltargets ${name_object})
   else ()
-    set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Libraries")
+    set(liblist srctargets)
+    set(alltargets)
   endif ()
 
-  # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
-  target_compile_features(${name} PRIVATE cxx_std_17)
+  set(libtargets "")
+  if (build_static)
+    add_library(${name_static} STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    list(APPEND alltargets ${name_static})
+    list(APPEND libtargets ${name_static})
+    list(APPEND ${liblist} ${name_static})
+  endif ()
+  if (build_shared)
+    add_library(${name_shared} SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    list(APPEND alltargets ${name_shared})
+    list(APPEND libtargets ${name_shared})
+    list(APPEND ${liblist} ${name_shared})
+  endif ()
+
+  foreach (name IN LISTS libtargets)
+    if (ARG_INSTALL_WITH_TOOLCHAIN)
+      set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Toolchain Libraries")
+    else ()
+      set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Libraries")
+    endif ()
+  endforeach ()
+
+  foreach (name IN LISTS alltargets)
+    # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
+    target_compile_features(${name} PRIVATE cxx_std_17)
+
 
   # Use compiler-specific options to disable exceptions and RTTI.
   if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
@@ -163,4 +245,5 @@ function (add_flangrt_library name)
   if (NOT ARG_EXCLUDE_FROM_ALL)
     add_dependencies(flang-rt ${name})
   endif ()
+  endforeach ()
 endfunction (add_flangrt_library)
