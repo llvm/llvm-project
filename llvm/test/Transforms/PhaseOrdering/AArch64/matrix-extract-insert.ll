@@ -123,7 +123,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP15]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP12]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP16]])
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[A]], i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP17]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP17]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD21:%.*]] = load <2 x double>, ptr [[TMP18]], align 8, !alias.scope [[META0]]
@@ -132,7 +132,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[BROADCAST_SPLAT23:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT22]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[WIDE_LOAD]], [[BROADCAST_SPLAT23]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <2 x double> [[WIDE_LOAD21]], [[BROADCAST_SPLAT23]]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds <225 x double>, ptr [[B]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[B]], i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP22]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24:%.*]] = load <2 x double>, ptr [[TMP22]], align 8, !alias.scope [[META5:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25:%.*]] = load <2 x double>, ptr [[TMP23]], align 8, !alias.scope [[META5]], !noalias [[META0]]
@@ -199,7 +199,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP45]])
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <2 x i1> [[TMP42]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP46]])
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[A]], i64 0, i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP47]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <2 x double>, ptr [[TMP47]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD21_1:%.*]] = load <2 x double>, ptr [[TMP48]], align 8, !alias.scope [[META0]]
@@ -208,7 +208,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[BROADCAST_SPLAT23_1:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT22_1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP50:%.*]] = fmul <2 x double> [[WIDE_LOAD_1]], [[BROADCAST_SPLAT23_1]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = fmul <2 x double> [[WIDE_LOAD21_1]], [[BROADCAST_SPLAT23_1]]
-; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds <225 x double>, ptr [[B]], i64 0, i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[B]], i64 0, i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP52]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24_1:%.*]] = load <2 x double>, ptr [[TMP52]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25_1:%.*]] = load <2 x double>, ptr [[TMP53]], align 8, !alias.scope [[META5]], !noalias [[META0]]
@@ -276,7 +276,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP76]])
 ; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <2 x i1> [[TMP73]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP77]])
-; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[TMP64]]
+; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[A]], i64 0, i64 [[TMP64]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP78]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <2 x double>, ptr [[TMP78]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD21_2:%.*]] = load <2 x double>, ptr [[TMP79]], align 8, !alias.scope [[META0]]
@@ -285,7 +285,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[BROADCAST_SPLAT23_2:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT22_2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP81:%.*]] = fmul <2 x double> [[WIDE_LOAD_2]], [[BROADCAST_SPLAT23_2]]
 ; CHECK-NEXT:    [[TMP82:%.*]] = fmul <2 x double> [[WIDE_LOAD21_2]], [[BROADCAST_SPLAT23_2]]
-; CHECK-NEXT:    [[TMP83:%.*]] = getelementptr inbounds <225 x double>, ptr [[B]], i64 0, i64 [[TMP64]]
+; CHECK-NEXT:    [[TMP83:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[B]], i64 0, i64 [[TMP64]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP83]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24_2:%.*]] = load <2 x double>, ptr [[TMP83]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25_2:%.*]] = load <2 x double>, ptr [[TMP84]], align 8, !alias.scope [[META5]], !noalias [[META0]]
@@ -353,7 +353,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP107]])
 ; CHECK-NEXT:    [[TMP108:%.*]] = extractelement <2 x i1> [[TMP104]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP108]])
-; CHECK-NEXT:    [[TMP109:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[TMP95]]
+; CHECK-NEXT:    [[TMP109:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[A]], i64 0, i64 [[TMP95]]
 ; CHECK-NEXT:    [[TMP110:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP109]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <2 x double>, ptr [[TMP109]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD21_3:%.*]] = load <2 x double>, ptr [[TMP110]], align 8, !alias.scope [[META0]]
@@ -362,7 +362,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[BROADCAST_SPLAT23_3:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT22_3]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP112:%.*]] = fmul <2 x double> [[WIDE_LOAD_3]], [[BROADCAST_SPLAT23_3]]
 ; CHECK-NEXT:    [[TMP113:%.*]] = fmul <2 x double> [[WIDE_LOAD21_3]], [[BROADCAST_SPLAT23_3]]
-; CHECK-NEXT:    [[TMP114:%.*]] = getelementptr inbounds <225 x double>, ptr [[B]], i64 0, i64 [[TMP95]]
+; CHECK-NEXT:    [[TMP114:%.*]] = getelementptr inbounds nuw <225 x double>, ptr [[B]], i64 0, i64 [[TMP95]]
 ; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP114]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24_3:%.*]] = load <2 x double>, ptr [[TMP114]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25_3:%.*]] = load <2 x double>, ptr [[TMP115]], align 8, !alias.scope [[META5]], !noalias [[META0]]

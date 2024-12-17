@@ -3030,43 +3030,51 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
-                    uint32_t ResultBitWidth, const llvm::fltSemantics *Sem) {
+inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
+                        uint32_t ResultBitWidth,
+                        const llvm::fltSemantics *Sem) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
   if (!CheckLoad(S, OpPC, FromPtr))
     return false;
 
-  size_t BuffSize = ResultBitWidth / 8;
-  llvm::SmallVector<std::byte> Buff(BuffSize);
-  bool HasIndeterminateBits = false;
-
-  Bits FullBitWidth(ResultBitWidth);
-  Bits BitWidth = FullBitWidth;
-
-  if constexpr (std::is_same_v<T, Floating>) {
-    assert(Sem);
-    BitWidth = Bits(llvm::APFloatBase::getSizeInBits(*Sem));
-  }
-
-  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BitWidth, FullBitWidth,
-                 HasIndeterminateBits))
-    return false;
-
-  if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
-    return false;
-
-  if constexpr (std::is_same_v<T, Floating>) {
-    assert(Sem);
-    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+  if constexpr (std::is_same_v<T, Pointer>) {
+    // The only pointer type we can validly bitcast to is nullptr_t.
+    S.Stk.push<Pointer>();
+    return true;
   } else {
-    assert(!Sem);
-    S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
+
+    size_t BuffSize = ResultBitWidth / 8;
+    llvm::SmallVector<std::byte> Buff(BuffSize);
+    bool HasIndeterminateBits = false;
+
+    Bits FullBitWidth(ResultBitWidth);
+    Bits BitWidth = FullBitWidth;
+
+    if constexpr (std::is_same_v<T, Floating>) {
+      assert(Sem);
+      BitWidth = Bits(llvm::APFloatBase::getSizeInBits(*Sem));
+    }
+
+    if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BitWidth, FullBitWidth,
+                   HasIndeterminateBits))
+      return false;
+
+    if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
+      return false;
+
+    if constexpr (std::is_same_v<T, Floating>) {
+      assert(Sem);
+      S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+    } else {
+      assert(!Sem);
+      S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
+    }
+    return true;
   }
-  return true;
 }
 
-inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
+inline bool BitCast(InterpState &S, CodePtr OpPC) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
   Pointer &ToPtr = S.Stk.peek<Pointer>();
 

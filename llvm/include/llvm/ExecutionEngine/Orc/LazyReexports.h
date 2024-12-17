@@ -230,7 +230,7 @@ private:
   EmitTrampolinesFn EmitTrampolines;
   RedirectableSymbolManager &RSMgr;
 
-  DenseMap<ResourceKey, ExecutorAddr> KeyToReentryAddr;
+  DenseMap<ResourceKey, std::vector<ExecutorAddr>> KeyToReentryAddr;
   DenseMap<ExecutorAddr, CallThroughInfo> CallThroughs;
 };
 
