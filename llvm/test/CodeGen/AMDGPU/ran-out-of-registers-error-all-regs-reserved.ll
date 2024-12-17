@@ -1,4 +1,3 @@
-; UNSUPPORTED: target={{.*}}
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=greedy -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=basic -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -vgpr-regalloc=fast -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
