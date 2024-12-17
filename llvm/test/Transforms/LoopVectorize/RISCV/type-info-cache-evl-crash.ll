@@ -6,7 +6,7 @@
 ; with a new one.
 
 define void @type_info_cache_clobber(ptr %dstv, ptr %src, i64 %wide.trip.count) {
-; CHECK-LABEL: define void @type_info_invalid_cache(
+; CHECK-LABEL: define void @type_info_cache_clobber(
 ; CHECK-SAME: ptr [[DSTV:%.*]], ptr [[SRC:%.*]], i64 [[WIDE_TRIP_COUNT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[WIDE_TRIP_COUNT]], 1
