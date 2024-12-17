@@ -195,10 +195,10 @@ enum Format {
                          ///< character arrays that can contain non printable
                          ///< characters
   eFormatAddressInfo,    ///< Describe what an address points to (func + offset
-                      ///< with file/line, symbol + offset, data, etc)
-  eFormatHexFloat,    ///< ISO C99 hex float string
-  eFormatInstruction, ///< Disassemble an opcode
-  eFormatVoid,        ///< Do not print this
+                         ///< with file/line, symbol + offset, data, etc)
+  eFormatHexFloat,       ///< ISO C99 hex float string
+  eFormatInstruction,    ///< Disassemble an opcode
+  eFormatVoid,           ///< Do not print this
   eFormatUnicode8,
   kNumFormats
 };
@@ -302,7 +302,7 @@ enum ConnectionStatus {
   eConnectionStatusNoConnection,   ///< No connection
   eConnectionStatusLostConnection, ///< Lost connection while connected to a
                                    ///< valid connection
-  eConnectionStatusInterrupted ///< Interrupted read
+  eConnectionStatusInterrupted     ///< Interrupted read
 };
 
 enum ErrorType {
@@ -1094,7 +1094,7 @@ enum PathType {
   ePathTypeGlobalLLDBTempSystemDir, ///< The LLDB temp directory for this
                                     ///< system, NOT cleaned up on a process
                                     ///< exit.
-  ePathTypeClangDir ///< Find path to Clang builtin headers
+  ePathTypeClangDir                 ///< Find path to Clang builtin headers
 };
 
 /// Kind of member function.
@@ -1357,6 +1357,7 @@ enum DebuggerBroadcastBit {
   eBroadcastBitError = (1 << 2),
   eBroadcastSymbolChange = (1 << 3),
   eBroadcastBitProgressCategory = (1 << 4),
+  eBroadcastBitExternalProgressCategory = (1 << 5),
 };
 
 /// Used for expressing severity in logs and diagnostics.

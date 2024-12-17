@@ -28,7 +28,8 @@ static llvm::ManagedStatic<llvm::SignpostEmitter> g_progress_signposts;
 Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
                    lldb_private::Debugger *debugger,
-                   Timeout<std::nano> minimum_report_time)
+                   Timeout<std::nano> minimum_report_time,
+                   ProgressOrigin origin)
     : m_total(total.value_or(Progress::kNonDeterministicTotal)),
       m_minimum_report_time(minimum_report_time),
       m_progress_data{title, ++g_id,
@@ -38,7 +39,7 @@ Progress::Progress(std::string title, std::string details,
           std::chrono::nanoseconds(
               std::chrono::steady_clock::now().time_since_epoch())
               .count()),
-      m_details(std::move(details)) {
+      m_details(std::move(details)), m_origin(origin) {
   std::lock_guard<std::mutex> guard(m_mutex);
   ReportProgress();
 
@@ -106,9 +107,15 @@ void Progress::ReportProgress() {
   if (completed < m_prev_completed)
     return; // An overflow in the m_completed counter. Just ignore these events.
 
+  // Change the category bit if we're an internal or external progress.
+  uint32_t progress_category_bit =
+      m_origin == ProgressOrigin::eExternal
+          ? lldb::eBroadcastBitExternalProgressCategory
+          : lldb::eBroadcastBitProgressCategory;
+
   Debugger::ReportProgress(m_progress_data.progress_id, m_progress_data.title,
                            m_details, completed, m_total,
-                           m_progress_data.debugger_id);
+                           m_progress_data.debugger_id, progress_category_bit);
   m_prev_completed = completed;
 }
 

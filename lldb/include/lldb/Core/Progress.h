@@ -21,6 +21,12 @@
 
 namespace lldb_private {
 
+/// Enum to indicate the origin of a progress event, internal or external.
+enum class ProgressOrigin : uint8_t {
+  eLLDBInternal = 0,
+  eExternal = 1,
+};
+
 /// A Progress indicator helper class.
 ///
 /// Any potentially long running sections of code in LLDB should report
@@ -83,7 +89,8 @@ public:
   Progress(std::string title, std::string details = {},
            std::optional<uint64_t> total = std::nullopt,
            lldb_private::Debugger *debugger = nullptr,
-           Timeout<std::nano> minimum_report_time = std::nullopt);
+           Timeout<std::nano> minimum_report_time = std::nullopt,
+           ProgressOrigin origin = ProgressOrigin::eLLDBInternal);
 
   /// Destroy the progress object.
   ///
@@ -149,6 +156,9 @@ private:
 
   /// The "completed" value of the last reported event.
   std::optional<uint64_t> m_prev_completed;
+
+  /// The origin of this progress event.
+  ProgressOrigin m_origin;
 };
 
 /// A class used to group progress reports by category. This is done by using a
