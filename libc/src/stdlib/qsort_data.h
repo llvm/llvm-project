@@ -55,47 +55,58 @@ public:
 
   static constexpr bool has_fixed_size() { return false; }
 
-  inline void *get(size_t i) const noexcept {
+  void *get(size_t i) const noexcept {
     return reinterpret_cast<void *>(get_internal(i));
   }
 
   void swap(size_t i, size_t j) const noexcept {
-    // For sizes below this doing the extra function call is not
-    // worth it.
-    constexpr size_t MIN_MEMCPY_SIZE = 32;
-
-    constexpr size_t STACK_ARRAY_SIZE = max_stack_array_size();
-    alignas(32) uint8_t tmp[STACK_ARRAY_SIZE];
+    // It's possible to use 8 byte blocks with `uint64_t`, but that
+    // generates more machine code as the remainder loop gets
+    // unrolled, plus 4 byte operations are more likely to be
+    // efficient on a wider variety of hardware. On x86 LLVM tends
+    // to unroll the block loop again into 2 16 byte swaps per
+    // iteration which is another reason that 4 byte blocks yields
+    // good performance even for big types.
+    using block_t = uint32_t;
+    constexpr size_t BLOCK_SIZE = sizeof(block_t);
 
     uint8_t *elem_i = get_internal(i);
     uint8_t *elem_j = get_internal(j);
 
-    if (elem_size >= MIN_MEMCPY_SIZE && elem_size <= STACK_ARRAY_SIZE) {
-      // Block copies are much more efficient, even if `elem_size`
-      // is unknown once `elem_size` passes a certain CPU specific
-      // threshold.
-      inline_memcpy(tmp, elem_i, elem_size);
-      inline_memmove(elem_i, elem_j, elem_size);
-      inline_memcpy(elem_j, tmp, elem_size);
-    } else {
-      for (size_t b = 0; b < elem_size; ++b) {
-        uint8_t temp = elem_i[b];
-        elem_i[b] = elem_j[b];
-        elem_j[b] = temp;
-      }
+    const size_t elem_size_rem = elem_size % BLOCK_SIZE;
+    const block_t *elem_i_block_end =
+        reinterpret_cast<block_t *>(elem_i + (elem_size - elem_size_rem));
+
+    block_t *elem_i_block = reinterpret_cast<block_t *>(elem_i);
+    block_t *elem_j_block = reinterpret_cast<block_t *>(elem_j);
+
+    while (elem_i_block != elem_i_block_end) {
+      block_t tmp = *elem_i_block;
+      *elem_i_block = *elem_j_block;
+      *elem_j_block = tmp;
+      elem_i_block += 1;
+      elem_j_block += 1;
+    }
+
+    elem_i = reinterpret_cast<uint8_t *>(elem_i_block);
+    elem_j = reinterpret_cast<uint8_t *>(elem_j_block);
+    for (size_t n = 0; n < elem_size_rem; ++n) {
+      uint8_t tmp = elem_i[n];
+      elem_i[n] = elem_j[n];
+      elem_j[n] = tmp;
     }
   }
 
   size_t len() const noexcept { return array_len; }
 
   // Make an Array starting at index |i| and length |s|.
-  inline ArrayGenericSize make_array(size_t i, size_t s) const noexcept {
+  ArrayGenericSize make_array(size_t i, size_t s) const noexcept {
     return ArrayGenericSize(get_internal(i), s, elem_size);
   }
 
   // Reset this Array to point at a different interval of the same
   // items starting at index |i|.
-  inline void reset_bounds(size_t i, size_t s) noexcept {
+  void reset_bounds(size_t i, size_t s) noexcept {
     array_base = get_internal(i);
     array_len = s;
   }
@@ -120,7 +131,7 @@ public:
   // idea perf wise.
   static constexpr bool has_fixed_size() { return true; }
 
-  inline void *get(size_t i) const noexcept {
+  void *get(size_t i) const noexcept {
     return reinterpret_cast<void *>(get_internal(i));
   }
 
@@ -138,14 +149,13 @@ public:
   size_t len() const noexcept { return array_len; }
 
   // Make an Array starting at index |i| and length |s|.
-  inline ArrayFixedSize<ELEM_SIZE> make_array(size_t i,
-                                              size_t s) const noexcept {
+  ArrayFixedSize<ELEM_SIZE> make_array(size_t i, size_t s) const noexcept {
     return ArrayFixedSize<ELEM_SIZE>(get_internal(i), s);
   }
 
   // Reset this Array to point at a different interval of the same
   // items starting at index |i|.
-  inline void reset_bounds(size_t i, size_t s) noexcept {
+  void reset_bounds(size_t i, size_t s) noexcept {
     array_base = get_internal(i);
     array_len = s;
   }
