@@ -736,15 +736,11 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 }
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMP(SmallVectorImpl<OffloadingImage> &Images) {
+bundleOpenMP(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
-  for (OffloadingImage &Image : Images) {
-    llvm::Triple Triple(Image.StringData.lookup("triple"));
-    if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::Intel)
-      offloading::intel::containerizeOpenMPSPIRVImage(Image);
+  for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
         MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image)));
-  }
 
   return std::move(Buffers);
 }
@@ -798,8 +794,8 @@ bundleHIP(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
 /// Transforms the input \p Images into the binary format the runtime expects
 /// for the given \p Kind.
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleLinkedOutput(SmallVectorImpl<OffloadingImage> &Images,
-                   const ArgList &Args, OffloadKind Kind) {
+bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
+                   OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
