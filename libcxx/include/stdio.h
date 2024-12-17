@@ -7,17 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__need_FILE) || defined(__need___FILE)
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-#  include_next <stdio.h>
-
-#elif !defined(_LIBCPP_STDIO_H)
-#  define _LIBCPP_STDIO_H
-
 /*
     stdio.h synopsis
 
@@ -98,13 +87,23 @@ int ferror(FILE* stream);
 void perror(const char* s);
 */
 
-#  if 0
-#  else // 0
-#    include <__config>
+#if 0
+#else // 0
+#  include <__config>
 
-#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#      pragma GCC system_header
-#    endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+// The inclusion of the system's <stdio.h> is intentionally done once outside of any include
+// guards because some code expects to be able to include the underlying system header multiple
+// times to get different definitions based on the macros that are set before inclusion.
+#  if __has_include_next(<stdio.h>)
+#    include_next <stdio.h>
+#  endif
+
+#  ifndef _LIBCPP_STDIO_H
+#    define _LIBCPP_STDIO_H
 
 #    if __has_include_next(<stdio.h>)
 #      include_next <stdio.h>
