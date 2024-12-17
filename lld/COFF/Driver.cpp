@@ -229,7 +229,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
-    ctx.symtab.addFile(make<ObjFile>(ctx, mbref, lazy));
+    ctx.symtab.addFile(ObjFile::create(ctx, mbref, lazy));
     break;
   case file_magic::pdb:
     ctx.symtab.addFile(make<PDBInputFile>(ctx, mbref));
@@ -312,7 +312,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = make<ObjFile>(ctx, mb);
+    obj = ObjFile::create(ctx, mb);
   } else if (magic == file_magic::bitcode) {
     obj =
         make<BitcodeFile>(ctx, mb, parentName, offsetInArchive, /*lazy=*/false);
@@ -1389,7 +1389,7 @@ void LinkerDriver::convertResources() {
     return;
   }
   ObjFile *f =
-      make<ObjFile>(ctx, convertResToCOFF(resources, resourceObjFiles));
+      ObjFile::create(ctx, convertResToCOFF(resources, resourceObjFiles));
   ctx.symtab.addFile(f);
   f->includeResourceChunks();
 }
