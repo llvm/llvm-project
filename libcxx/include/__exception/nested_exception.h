@@ -22,7 +22,6 @@
 #include <__type_traits/is_final.h>
 #include <__type_traits/is_polymorphic.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -49,7 +48,7 @@ struct __nested : public _Tp, public nested_exception {
   _LIBCPP_HIDE_FROM_ABI explicit __nested(const _Tp& __t) : _Tp(__t) {}
 };
 
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
 template <class _Tp, class _Up, bool>
 struct __throw_with_nested;
 
@@ -68,7 +67,7 @@ struct __throw_with_nested<_Tp, _Up, false> {
 
 template <class _Tp>
 [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void throw_with_nested(_Tp&& __t) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   using _Up = __decay_t<_Tp>;
   static_assert(is_copy_constructible<_Up>::value, "type thrown must be CopyConstructible");
   __throw_with_nested<_Tp,

@@ -22,7 +22,6 @@ subroutine simple_loop
     print*, i
   end do
   ! CHECK:             omp.yield
-  ! CHECK:           omp.terminator
   !$OMP END DO
   ! CHECK:         omp.terminator
   !$OMP END PARALLEL

@@ -60,7 +60,7 @@ define <3 x i32> @t2_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t2_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr exact <3 x i32> [[T0]], [[NBITS]]
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[NBITS]], <i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[NBITS]], splat (i32 1)
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])

@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 -ext-tsp-chain-split-threshold=128 -debug-only=block-placement < %s 2>&1 | FileCheck %s
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 -ext-tsp-chain-split-threshold=1 -debug-only=block-placement < %s 2>&1 | FileCheck %s -check-prefix=CHECK2
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=0 -debug-only=block-placement < %s 2>&1 | FileCheck %s -check-prefix=CHECK3
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 -ext-tsp-block-placement-max-blocks=8 -debug-only=block-placement < %s 2>&1 | FileCheck %s -check-prefix=CHECK4
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -enable-ext-tsp-block-placement -ext-tsp-chain-split-threshold=128 -debug-only=block-placement < %s 2>&1 | FileCheck %s
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -enable-ext-tsp-block-placement -ext-tsp-chain-split-threshold=1 -debug-only=block-placement < %s 2>&1 | FileCheck %s -check-prefix=CHECK2
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -debug-only=block-placement < %s 2>&1 | FileCheck %s -check-prefix=CHECK3
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -enable-ext-tsp-block-placement -ext-tsp-block-placement-max-blocks=8 -debug-only=block-placement < %s 2>&1 | FileCheck %s -check-prefix=CHECK4
 
 @yydebug = dso_local global i32 0, align 4
 

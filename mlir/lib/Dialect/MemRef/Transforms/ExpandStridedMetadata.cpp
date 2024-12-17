@@ -383,7 +383,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
     AffineExpr s1 = builder.getAffineSymbolExpr(1);
     for (; doneStrideIdx < *dynSizeIdx; ++doneStrideIdx) {
       int64_t baseExpandedStride =
-          cast<IntegerAttr>(expandedStrides[doneStrideIdx].get<Attribute>())
+          cast<IntegerAttr>(cast<Attribute>(expandedStrides[doneStrideIdx]))
               .getInt();
       expandedStrides[doneStrideIdx] = makeComposedFoldedAffineApply(
           builder, expandShape.getLoc(),
@@ -396,7 +396,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   AffineExpr s0 = builder.getAffineSymbolExpr(0);
   for (; doneStrideIdx < groupSize; ++doneStrideIdx) {
     int64_t baseExpandedStride =
-        cast<IntegerAttr>(expandedStrides[doneStrideIdx].get<Attribute>())
+        cast<IntegerAttr>(cast<Attribute>(expandedStrides[doneStrideIdx]))
             .getInt();
     expandedStrides[doneStrideIdx] = makeComposedFoldedAffineApply(
         builder, expandShape.getLoc(), s0 * baseExpandedStride, {origStride});
@@ -507,6 +507,8 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
 
   SmallVector<OpFoldResult> groupStrides;
   ArrayRef<int64_t> srcShape = sourceType.getShape();
+
+  OpFoldResult lastValidStride = nullptr;
   for (int64_t currentDim : reassocGroup) {
     // Skip size-of-1 dimensions, since right now their strides may be
     // meaningless.
@@ -517,11 +519,11 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
       continue;
 
     int64_t currentStride = strides[currentDim];
-    groupStrides.push_back(ShapedType::isDynamic(currentStride)
-                               ? origStrides[currentDim]
-                               : builder.getIndexAttr(currentStride));
+    lastValidStride = ShapedType::isDynamic(currentStride)
+                          ? origStrides[currentDim]
+                          : builder.getIndexAttr(currentStride);
   }
-  if (groupStrides.empty()) {
+  if (!lastValidStride) {
     // We're dealing with a 1x1x...x1 shape. The stride is meaningless,
     // but we still have to make the type system happy.
     MemRefType collapsedType = collapseShape.getResultType();
@@ -543,12 +545,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
     return {builder.getIndexAttr(finalStride)};
   }
 
-  // For the general case, we just want the minimum stride
-  // since the collapsed dimensions are contiguous.
-  auto minMap = AffineMap::getMultiDimIdentityMap(groupStrides.size(),
-                                                  builder.getContext());
-  return {makeComposedFoldedAffineMin(builder, collapseShape.getLoc(), minMap,
-                                      groupStrides)};
+  return {lastValidStride};
 }
 
 /// From `reshape_like(memref, subSizes, subStrides))` compute

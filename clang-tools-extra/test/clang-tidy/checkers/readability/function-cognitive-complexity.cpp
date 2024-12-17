@@ -69,10 +69,10 @@ end:
 //----------------------------------------------------------------------------//
 
 // break does not increase cognitive complexity.
-// only  break LABEL  does, but it is unavaliable in C or C++
+// only  break LABEL  does, but it is unavailable in C or C++
 
 // continue does not increase cognitive complexity.
-// only  continue LABEL  does, but it is unavaliable in C or C++
+// only  continue LABEL  does, but it is unavailable in C or C++
 
 void unittest_b1_00() {
 // CHECK-NOTES: :[[@LINE-1]]:6: warning: function 'unittest_b1_00' has cognitive complexity of 33 (threshold 0) [readability-function-cognitive-complexity]

@@ -316,6 +316,56 @@ exit:
   ret i1 %cmp
 }
 
+define i1 @known_non_equal_phis_max_recursion_limit(i1 %cond, i32 %switch.cond) {
+; CHECK-LABEL: @known_non_equal_phis_max_recursion_limit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB0:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    [[PHIA_0:%.*]] = phi i32 [ [[PHIA_1:%.*]], [[BB1:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHIB_0:%.*]] = phi i32 [ [[PHIB_1:%.*]], [[BB1]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_BLOCK:%.*]], label [[EXIT:%.*]]
+; CHECK:       switch.block:
+; CHECK-NEXT:    switch i32 [[SWITCH_COND:%.*]], label [[BB1]] [
+; CHECK-NEXT:      i32 0, label [[EPILOGUE:%.*]]
+; CHECK-NEXT:      i32 1, label [[EPILOGUE]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PHIA_1]] = phi i32 [ [[PHIA_0]], [[SWITCH_BLOCK]] ], [ 0, [[EPILOGUE]] ]
+; CHECK-NEXT:    [[PHIB_1]] = phi i32 [ [[PHIB_0]], [[SWITCH_BLOCK]] ], [ 0, [[EPILOGUE]] ]
+; CHECK-NEXT:    br label [[BB0]]
+; CHECK:       epilogue:
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i32 [[PHIA_0]], [[PHIB_0]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  br label %bb0
+
+bb0:
+  %phiA.0 = phi i32 [ %phiA.1, %bb1 ], [ 0, %entry ]
+  %phiB.0 = phi i32 [ %phiB.1, %bb1 ], [ 0, %entry ]
+  br i1 %cond, label %switch.block, label %exit
+
+switch.block:
+  switch i32 %switch.cond, label %bb1 [
+  i32 0, label %epilogue
+  i32 1, label %epilogue
+  ]
+
+bb1:
+  %phiA.1 = phi i32 [ %phiA.0, %switch.block ], [ 0, %epilogue ]
+  %phiB.1 = phi i32 [ %phiB.0, %switch.block ], [ 0, %epilogue ]
+  br label %bb0
+
+epilogue:
+  br label %bb1
+
+exit:
+  %ret = icmp eq i32 %phiA.0, %phiB.0
+  ret i1 %ret
+}
+
 define i1 @known_non_equal_phis_fail(i8 %p, ptr %pq, i8 %n, i8 %r) {
 ; CHECK-LABEL: @known_non_equal_phis_fail(
 ; CHECK-NEXT:  entry:

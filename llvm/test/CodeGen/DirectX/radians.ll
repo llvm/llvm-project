@@ -44,9 +44,9 @@ define noundef <4 x half> @radians_half_vector(<4 x half> noundef %a) {
 ; CHECK: [[ee3:%.*]] = extractelement <4 x half> [[A]], i64 3
 ; CHECK: [[ie3:%.*]] = fmul half [[ee3]], 0xH2478
 ; CHECK: [[TMP0:%.*]] = insertelement <4 x half> poison, half [[ie0]], i64 0
-; CHECK: [[TMP1:%.*]] = insertelement <4 x half> %[[TMP0]], half [[ie1]], i64 1
-; CHECK: [[TMP2:%.*]] = insertelement <4 x half> %[[TMP1]], half [[ie2]], i64 2
-; CHECK: [[TMP3:%.*]] = insertelement <4 x half> %[[TMP2]], half [[ie3]], i64 3
+; CHECK: [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half [[ie1]], i64 1
+; CHECK: [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[ie2]], i64 2
+; CHECK: [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[ie3]], i64 3
 ; CHECK: ret <4 x half> [[TMP3]]
 ;
 entry:
@@ -67,13 +67,12 @@ define noundef <4 x float> @radians_float_vector(<4 x float> noundef %a) {
 ; CHECK: [[ee3:%.*]] = extractelement <4 x float> [[A]], i64 3
 ; CHECK: [[ie3:%.*]] = fmul float [[ee3]], 0x3F91DF46A0000000
 ; CHECK: [[TMP0:%.*]] = insertelement <4 x float> poison, float [[ie0]], i64 0
-; CHECK: [[TMP1:%.*]] = insertelement <4 x float> %[[TMP0]], float [[ie1]], i64 1
-; CHECK: [[TMP2:%.*]] = insertelement <4 x float> %[[TMP1]], float [[ie2]], i64 2
-; CHECK: [[TMP3:%.*]] = insertelement <4 x float> %[[TMP2]], float [[ie3]], i64 3
+; CHECK: [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[ie1]], i64 1
+; CHECK: [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[ie2]], i64 2
+; CHECK: [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[ie3]], i64 3
 ; CHECK: ret <4 x float> [[TMP3]]
 ;
 entry:
   %elt.radians = call <4 x float> @llvm.dx.radians.v4f32(<4 x float> %a)
   ret <4 x float> %elt.radians
 }
-

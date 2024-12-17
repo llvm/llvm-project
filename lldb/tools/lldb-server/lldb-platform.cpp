@@ -181,8 +181,7 @@ static Status ListenGdbConnectionsIfNeeded(
   if (protocol != Socket::ProtocolTcp)
     return Status();
 
-  gdb_sock = std::make_unique<TCPSocket>(
-      /*should_close=*/true, /*child_processes_inherit=*/false);
+  gdb_sock = std::make_unique<TCPSocket>(/*should_close=*/true);
   Status error = gdb_sock->Listen(gdb_address, backlog);
   if (error.Fail())
     return error;
@@ -260,8 +259,7 @@ static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
 static Status spawn_process(const char *progname, const Socket *conn_socket,
                             uint16_t gdb_port, const lldb_private::Args &args,
                             const std::string &log_file,
-                            const StringRef log_channels, MainLoop &main_loop,
-                            std::promise<void> &child_exited) {
+                            const StringRef log_channels, MainLoop &main_loop) {
   Status error;
   SharedSocket shared_socket(conn_socket, error);
   if (error.Fail())
@@ -301,12 +299,10 @@ static Status spawn_process(const char *progname, const Socket *conn_socket,
   if (g_server)
     launch_info.SetMonitorProcessCallback([](lldb::pid_t, int, int) {});
   else
-    launch_info.SetMonitorProcessCallback(
-        [&child_exited, &main_loop](lldb::pid_t, int, int) {
-          main_loop.AddPendingCallback(
-              [](MainLoopBase &loop) { loop.RequestTermination(); });
-          child_exited.set_value();
-        });
+    launch_info.SetMonitorProcessCallback([&main_loop](lldb::pid_t, int, int) {
+      main_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); });
+    });
 
   // Copy the current environment.
   launch_info.GetEnvironment() = Host::GetEnvironment();
@@ -477,12 +473,10 @@ int main_platform(int argc, char *argv[]) {
     GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
     Socket *socket;
     if (protocol == Socket::ProtocolTcp)
-      socket = new TCPSocket(sockfd, /*should_close=*/true,
-                             /*child_processes_inherit=*/false);
+      socket = new TCPSocket(sockfd, /*should_close=*/true);
     else {
 #if LLDB_ENABLE_POSIX
-      socket = new DomainSocket(sockfd, /*should_close=*/true,
-                                /*child_processes_inherit=*/false);
+      socket = new DomainSocket(sockfd, /*should_close=*/true);
 #else
       WithColor::error() << "lldb-platform child: Unix domain sockets are not "
                             "supported on this platform.";
@@ -513,8 +507,7 @@ int main_platform(int argc, char *argv[]) {
     return socket_error;
   }
 
-  std::unique_ptr<Socket> platform_sock =
-      Socket::Create(protocol, /*child_processes_inherit=*/false, error);
+  std::unique_ptr<Socket> platform_sock = Socket::Create(protocol, error);
   if (error.Fail()) {
     printf("Failed to create platform socket: %s\n", error.AsCString());
     return socket_error;
@@ -550,27 +543,24 @@ int main_platform(int argc, char *argv[]) {
     return socket_error;
   }
 
-  std::promise<void> child_exited;
   MainLoop main_loop;
   {
     llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> platform_handles =
         platform_sock->Accept(
             main_loop, [progname, gdbserver_port, &inferior_arguments, log_file,
-                        log_channels, &main_loop, &child_exited,
+                        log_channels, &main_loop,
                         &platform_handles](std::unique_ptr<Socket> sock_up) {
               printf("Connection established.\n");
-              Status error = spawn_process(
-                  progname, sock_up.get(), gdbserver_port, inferior_arguments,
-                  log_file, log_channels, main_loop, child_exited);
+              Status error = spawn_process(progname, sock_up.get(),
+                                           gdbserver_port, inferior_arguments,
+                                           log_file, log_channels, main_loop);
               if (error.Fail()) {
                 Log *log = GetLog(LLDBLog::Platform);
                 LLDB_LOGF(log, "spawn_process failed: %s", error.AsCString());
                 WithColor::error()
                     << "spawn_process failed: " << error.AsCString() << "\n";
-                if (!g_server) {
+                if (!g_server)
                   main_loop.RequestTermination();
-                  child_exited.set_value();
-                }
               }
               if (!g_server)
                 platform_handles->clear();
@@ -592,7 +582,6 @@ int main_platform(int argc, char *argv[]) {
 
     main_loop.Run();
   }
-  child_exited.get_future().get();
 
   fprintf(stderr, "lldb-server exiting...\n");
 

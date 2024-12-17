@@ -334,7 +334,7 @@ private:
 };
 
 #ifdef _LIBCPP_VERSION
-void std::__libcpp_verbose_abort(char const* format, ...) {
+void std::__libcpp_verbose_abort(char const* format, ...) noexcept {
   va_list args;
   va_start(args, format);
 

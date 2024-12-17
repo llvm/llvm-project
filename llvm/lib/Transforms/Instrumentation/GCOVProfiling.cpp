@@ -29,6 +29,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -121,7 +122,10 @@ private:
 
   Function *createInternalFunction(FunctionType *FTy, StringRef Name,
                                    StringRef MangledType = "");
+
   void emitGlobalConstructor(
+      SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
+  void emitModuleInitFunctionPtrs(
       SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
 
   bool isFunctionInstrumented(const Function &F);
@@ -816,7 +820,8 @@ bool GCOVProfiler::emitProfileNotes(
       SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI,
                                    BFI);
 
-      CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
+      CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry=*/false,
+                               /*InstrumentLoopEntries=*/false, BPI, BFI);
 
       // getInstrBB can split basic blocks and push elements to AllEdges.
       for (size_t I : llvm::seq<size_t>(0, MST.numEdges())) {
@@ -913,6 +918,9 @@ bool GCOVProfiler::emitProfileNotes(
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
             Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
+        const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+        if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
+          Counters->setSection("__llvm_gcov_ctr_section");
         CountersBySP.emplace_back(Counters, SP);
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
@@ -979,7 +987,11 @@ bool GCOVProfiler::emitProfileNotes(
     }
 
     if (EmitGCDA) {
-      emitGlobalConstructor(CountersBySP);
+      const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+      if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
+        emitModuleInitFunctionPtrs(CountersBySP);
+      else
+        emitGlobalConstructor(CountersBySP);
       EmitGCDA = false;
     }
   }
@@ -1026,6 +1038,40 @@ void GCOVProfiler::emitGlobalConstructor(
   Builder.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);
+}
+
+void GCOVProfiler::emitModuleInitFunctionPtrs(
+    SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
+  Function *WriteoutF = insertCounterWriteout(CountersBySP);
+  Function *ResetF = insertReset(CountersBySP);
+
+  // Instead of creating a function call and add it to the constructors list,
+  // create a global variable in the __llvm_covinit section so the functions
+  // can be registered by a constructor in the runtime.
+
+  auto &Ctx = M->getContext();
+
+  Type *InitFuncDataTy[] = {
+#define COVINIT_FUNC(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+
+  auto STy = StructType::get(Ctx, ArrayRef(InitFuncDataTy));
+
+  Constant *InitFuncPtrs[] = {
+#define COVINIT_FUNC(Type, LLVMType, Name, Init) Init,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+
+  auto *CovInitGV =
+      new GlobalVariable(*M, STy, false, GlobalValue::PrivateLinkage, nullptr,
+                         "__llvm_covinit_functions");
+  CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs));
+  CovInitGV->setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+  CovInitGV->setSection(getInstrProfSectionName(
+      IPSK_covinit, Triple(M->getTargetTriple()).getObjectFormat()));
+  CovInitGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+  CovInitGV->setConstant(true);
 }
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {

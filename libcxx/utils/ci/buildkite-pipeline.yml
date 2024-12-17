@@ -17,13 +17,6 @@
 # goal being to reduce the load on testers when a commit is known to fail.
 #
 
-env:
-    # LLVM POST-BRANCH bump version
-    # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
-    # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-    LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
-    GCC_STABLE_VERSION: "13"
-
 definitions:
   _common: &common
     timeout_in_minutes: 120
@@ -35,6 +28,9 @@ definitions:
       - "**/test-results.xml"
       - "**/*.abilist"
       - "**/crash_diagnostics/*"
+      - "**/CMakeConfigureLog.yaml"
+      - "**/CMakeError.log"
+      - "**/CMakeOutput.log"
 
 steps:
 - group: ARM
@@ -119,17 +115,19 @@ steps:
       os: aix
     <<: *common
 
-- group: ':freebsd: FreeBSD'
-  steps:
-  - label: FreeBSD 13 amd64
-    command: libcxx/utils/ci/run-buildbot generic-cxx26
-    env:
-      CC: clang17
-      CXX: clang++17
-    agents:
-      queue: libcxx-builders
-      os: freebsd
-    <<: *common
+# TODO: Re-enable this when the FreeBSD runners are back online
+#       https://github.com/llvm/llvm-project/issues/117780
+# - group: ':freebsd: FreeBSD'
+#   steps:
+#   - label: FreeBSD 13 amd64
+#     command: libcxx/utils/ci/run-buildbot generic-cxx26
+#     env:
+#       CC: clang17
+#       CXX: clang++17
+#     agents:
+#       queue: libcxx-builders
+#       os: freebsd
+#     <<: *common
 
 - group: ':android: Android'
   steps:

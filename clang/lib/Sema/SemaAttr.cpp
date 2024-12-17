@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/SemaInternal.h"
 #include <optional>
 using namespace clang;
 
@@ -267,6 +267,51 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
       }
     }
   }
+}
+
+void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
+  auto *MD = dyn_cast_if_present<CXXMethodDecl>(FD);
+  if (!MD || !MD->getParent()->isInStdNamespace())
+    return;
+  auto Annotate = [this](const FunctionDecl *MD) {
+    // Do not infer if any parameter is explicitly annotated.
+    for (ParmVarDecl *PVD : MD->parameters())
+      if (PVD->hasAttr<LifetimeCaptureByAttr>())
+        return;
+    for (ParmVarDecl *PVD : MD->parameters()) {
+      // Methods in standard containers that capture values typically accept
+      // reference-type parameters, e.g., `void push_back(const T& value)`.
+      // We only apply the lifetime_capture_by attribute to parameters of
+      // pointer-like reference types (`const T&`, `T&&`).
+      if (PVD->getType()->isReferenceType() &&
+          sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
+        int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
+        PVD->addAttr(
+            LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
+      }
+    }
+  };
+
+  if (!MD->getIdentifier()) {
+    static const llvm::StringSet<> MapLikeContainer{
+        "map",
+        "multimap",
+        "unordered_map",
+        "unordered_multimap",
+    };
+    // Infer for the map's operator []:
+    //    std::map<string_view, ...> m;
+    //    m[ReturnString(..)] = ...; // !dangling references in m.
+    if (MD->getOverloadedOperator() == OO_Subscript &&
+        MapLikeContainer.contains(MD->getParent()->getName()))
+      Annotate(MD);
+    return;
+  }
+  static const llvm::StringSet<> CapturingMethods{"insert", "push",
+                                                  "push_front", "push_back"};
+  if (!CapturingMethods.contains(MD->getName()))
+    return;
+  Annotate(MD);
 }
 
 void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
@@ -750,12 +795,10 @@ bool Sema::UnifySection(StringRef SectionName, int SectionFlags,
   if (auto A = Decl->getAttr<SectionAttr>())
     if (A->isImplicit())
       PragmaLocation = A->getLocation();
-  auto SectionIt = Context.SectionInfos.find(SectionName);
-  if (SectionIt == Context.SectionInfos.end()) {
-    Context.SectionInfos[SectionName] =
-        ASTContext::SectionInfo(Decl, PragmaLocation, SectionFlags);
+  auto [SectionIt, Inserted] = Context.SectionInfos.try_emplace(
+      SectionName, Decl, PragmaLocation, SectionFlags);
+  if (Inserted)
     return false;
-  }
   // A pre-declared section takes precedence w/o diagnostic.
   const auto &Section = SectionIt->second;
   if (Section.SectionFlags == SectionFlags ||
@@ -1267,6 +1310,8 @@ void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,
 }
 
 void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
+  if (FD->isDeleted() || FD->isDefaulted())
+    return;
   SmallVector<StringRef> V(MSFunctionNoBuiltins.begin(),
                            MSFunctionNoBuiltins.end());
   if (!MSFunctionNoBuiltins.empty())

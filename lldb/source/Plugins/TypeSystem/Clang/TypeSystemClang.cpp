@@ -1403,26 +1403,6 @@ static TemplateParameterList *CreateTemplateParameterList(
   return template_param_list;
 }
 
-std::string TypeSystemClang::PrintTemplateParams(
-    const TemplateParameterInfos &template_param_infos) {
-  llvm::SmallVector<NamedDecl *, 8> ignore;
-  clang::TemplateParameterList *template_param_list =
-      CreateTemplateParameterList(getASTContext(), template_param_infos,
-                                  ignore);
-  llvm::SmallVector<clang::TemplateArgument, 2> args(
-      template_param_infos.GetArgs());
-  if (template_param_infos.hasParameterPack()) {
-    llvm::ArrayRef<TemplateArgument> pack_args =
-        template_param_infos.GetParameterPackArgs();
-    args.append(pack_args.begin(), pack_args.end());
-  }
-  std::string str;
-  llvm::raw_string_ostream os(str);
-  clang::printTemplateArgumentList(os, args, GetTypePrintingPolicy(),
-                                   template_param_list);
-  return str;
-}
-
 clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     clang::FunctionDecl *func_decl,
@@ -2770,6 +2750,19 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     return GetCompleteQualType(
         ast, llvm::cast<clang::AttributedType>(qual_type)->getModifiedType(),
         allow_completion);
+
+  case clang::Type::MemberPointer:
+    // MS C++ ABI requires type of the class to be complete of which the pointee
+    // is a member.
+    if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
+      auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
+      if (MPT->getClass()->isRecordType())
+        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
+                              allow_completion);
+
+      return !qual_type.getTypePtr()->isIncompleteType();
+    }
+    break;
 
   default:
     break;
@@ -5029,58 +5022,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       break;
 
     // ARM -- Scalable Vector Extension
-    case clang::BuiltinType::SveBool:
-    case clang::BuiltinType::SveBoolx2:
-    case clang::BuiltinType::SveBoolx4:
-    case clang::BuiltinType::SveCount:
-    case clang::BuiltinType::SveInt8:
-    case clang::BuiltinType::SveInt8x2:
-    case clang::BuiltinType::SveInt8x3:
-    case clang::BuiltinType::SveInt8x4:
-    case clang::BuiltinType::SveInt16:
-    case clang::BuiltinType::SveInt16x2:
-    case clang::BuiltinType::SveInt16x3:
-    case clang::BuiltinType::SveInt16x4:
-    case clang::BuiltinType::SveInt32:
-    case clang::BuiltinType::SveInt32x2:
-    case clang::BuiltinType::SveInt32x3:
-    case clang::BuiltinType::SveInt32x4:
-    case clang::BuiltinType::SveInt64:
-    case clang::BuiltinType::SveInt64x2:
-    case clang::BuiltinType::SveInt64x3:
-    case clang::BuiltinType::SveInt64x4:
-    case clang::BuiltinType::SveUint8:
-    case clang::BuiltinType::SveUint8x2:
-    case clang::BuiltinType::SveUint8x3:
-    case clang::BuiltinType::SveUint8x4:
-    case clang::BuiltinType::SveUint16:
-    case clang::BuiltinType::SveUint16x2:
-    case clang::BuiltinType::SveUint16x3:
-    case clang::BuiltinType::SveUint16x4:
-    case clang::BuiltinType::SveUint32:
-    case clang::BuiltinType::SveUint32x2:
-    case clang::BuiltinType::SveUint32x3:
-    case clang::BuiltinType::SveUint32x4:
-    case clang::BuiltinType::SveUint64:
-    case clang::BuiltinType::SveUint64x2:
-    case clang::BuiltinType::SveUint64x3:
-    case clang::BuiltinType::SveUint64x4:
-    case clang::BuiltinType::SveFloat16:
-    case clang::BuiltinType::SveBFloat16:
-    case clang::BuiltinType::SveBFloat16x2:
-    case clang::BuiltinType::SveBFloat16x3:
-    case clang::BuiltinType::SveBFloat16x4:
-    case clang::BuiltinType::SveFloat16x2:
-    case clang::BuiltinType::SveFloat16x3:
-    case clang::BuiltinType::SveFloat16x4:
-    case clang::BuiltinType::SveFloat32:
-    case clang::BuiltinType::SveFloat32x2:
-    case clang::BuiltinType::SveFloat32x3:
-    case clang::BuiltinType::SveFloat32x4:
-    case clang::BuiltinType::SveFloat64:
-    case clang::BuiltinType::SveFloat64x2:
-    case clang::BuiltinType::SveFloat64x3:
-    case clang::BuiltinType::SveFloat64x4:
+#define SVE_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
       break;
 
     // RISC-V V builtin types.
@@ -6791,12 +6734,12 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           llvm::StringRef field_name = field->getName();
           if (field_name.empty()) {
             CompilerType field_type = GetType(field->getType());
+            std::vector<uint32_t> save_indices = child_indexes;
             child_indexes.push_back(child_idx);
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
-            child_indexes.pop_back();
-
+            child_indexes = std::move(save_indices);
           } else if (field_name == name) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
@@ -9163,7 +9106,7 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
     clang::NamedDecl *nd =
         llvm::dyn_cast<NamedDecl>((clang::Decl *)opaque_decl);
     if (nd != nullptr)
-      return ConstString(nd->getDeclName().getAsString());
+      return ConstString(GetTypeNameForDecl(nd, /*qualified=*/false));
   }
   return ConstString();
 }

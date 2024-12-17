@@ -185,11 +185,15 @@ public:
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];
   }
+  ArrayRef<CodeGenIntrinsic> operator[](const TargetSet &Set) const {
+    return ArrayRef(&Intrinsics[Set.Offset], Set.Count);
+  }
   ArrayRef<TargetSet> getTargets() const { return Targets; }
 
 private:
   void CheckDuplicateIntrinsics() const;
   void CheckTargetIndependentIntrinsics() const;
+  void CheckOverloadSuffixConflicts() const;
 
   std::vector<CodeGenIntrinsic> Intrinsics;
   std::vector<TargetSet> Targets;

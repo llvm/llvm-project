@@ -3,18 +3,6 @@
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 --implicit-check-not=define %s
 
-; We have 4 kernels:
-;   - Each kernel has an internal helper
-;   - @A and @B's helpers does an indirect call.
-;
-; We default to putting A/B in P0, alongside a copy
-; of all helpers who have their address taken.
-; The other kernels can still go into separate partitions.
-;
-; Note that dependency discovery shouldn't stop upon finding an
-; indirect call. HelperC/D should also end up in P0 as they
-; are dependencies of HelperB.
-
 ; CHECK0: define internal void @HelperD
 ; CHECK0: define amdgpu_kernel void @D
 

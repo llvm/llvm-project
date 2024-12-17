@@ -309,31 +309,38 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
     renderLinePrefix(OS, ViewDepth);
     OS << "  Branch (" << R.LineStart << ":" << R.ColumnStart << "): [";
 
-    if (R.Folded) {
+    if (R.TrueFolded && R.FalseFolded) {
       OS << "Folded - Ignored]\n";
       continue;
     }
 
-    colored_ostream(OS, raw_ostream::RED,
-                    getOptions().Colors && !R.ExecutionCount,
-                    /*Bold=*/false, /*BG=*/true)
-        << "True";
+    if (R.TrueFolded)
+      OS << "Folded, ";
+    else {
+      colored_ostream(OS, raw_ostream::RED,
+                      getOptions().Colors && !R.ExecutionCount,
+                      /*Bold=*/false, /*BG=*/true)
+          << "True";
 
-    if (getOptions().ShowBranchCounts)
-      OS << ": " << formatCount(R.ExecutionCount) << ", ";
-    else
-      OS << ": " << format("%0.2f", TruePercent) << "%, ";
+      if (getOptions().ShowBranchCounts)
+        OS << ": " << formatCount(R.ExecutionCount) << ", ";
+      else
+        OS << ": " << format("%0.2f", TruePercent) << "%, ";
+    }
 
-    colored_ostream(OS, raw_ostream::RED,
-                    getOptions().Colors && !R.FalseExecutionCount,
-                    /*Bold=*/false, /*BG=*/true)
-        << "False";
+    if (R.FalseFolded)
+      OS << "Folded]\n";
+    else {
+      colored_ostream(OS, raw_ostream::RED,
+                      getOptions().Colors && !R.FalseExecutionCount,
+                      /*Bold=*/false, /*BG=*/true)
+          << "False";
 
-    if (getOptions().ShowBranchCounts)
-      OS << ": " << formatCount(R.FalseExecutionCount);
-    else
-      OS << ": " << format("%0.2f", FalsePercent) << "%";
-    OS << "]\n";
+      if (getOptions().ShowBranchCounts)
+        OS << ": " << formatCount(R.FalseExecutionCount) << "]\n";
+      else
+        OS << ": " << format("%0.2f", FalsePercent) << "%]\n";
+    }
   }
 }
 

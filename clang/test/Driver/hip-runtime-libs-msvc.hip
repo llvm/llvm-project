@@ -1,5 +1,3 @@
-// REQUIRES: system-windows
-
 // RUN:  touch %t.o
 
 // Test HIP runtime lib args specified by --rocm-path.

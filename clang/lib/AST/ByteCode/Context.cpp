@@ -34,8 +34,7 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   if (!Func)
     return false;
 
-  APValue DummyResult;
-  if (!Run(Parent, Func, DummyResult))
+  if (!Run(Parent, Func))
     return false;
 
   return Func->isConstexpr();
@@ -78,8 +77,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
-                             /*DestroyToplevelScope=*/Kind ==
-                                 ConstantExprKind::ClassTemplateArgument);
+                             /*DestroyToplevelScope=*/true);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
@@ -214,13 +212,13 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
   return Ctx.getFloatTypeSemantics(T);
 }
 
-bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
+bool Context::Run(State &Parent, const Function *Func) {
 
   {
     InterpState State(Parent, *P, Stk, *this);
     State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
                                     Func->getArgSize());
-    if (Interpret(State, Result)) {
+    if (Interpret(State)) {
       assert(Stk.empty());
       return true;
     }

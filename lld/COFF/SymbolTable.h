@@ -91,7 +91,7 @@ public:
   Symbol *addSynthetic(StringRef n, Chunk *c);
   Symbol *addAbsolute(StringRef n, uint64_t va);
 
-  Symbol *addUndefined(StringRef name, InputFile *f, bool isWeakAlias);
+  Symbol *addUndefined(StringRef name, InputFile *f, bool overrideLazy);
   void addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym);
   void addLazyObject(InputFile *f, StringRef n);
   void addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym, StringRef n);
@@ -118,6 +118,11 @@ public:
   void reportDuplicate(Symbol *existing, InputFile *newFile,
                        SectionChunk *newSc = nullptr,
                        uint32_t newSectionOffset = 0);
+
+  COFFLinkerContext &ctx;
+  llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+
+  bool isEC() const { return machine == ARM64EC; }
 
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
@@ -147,8 +152,6 @@ private:
   bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
-
-  COFFLinkerContext &ctx;
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

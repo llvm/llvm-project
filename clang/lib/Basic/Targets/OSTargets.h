@@ -231,6 +231,9 @@ public:
     case llvm::Triple::riscv32:
     case llvm::Triple::riscv64:
       break;
+    case llvm::Triple::loongarch32:
+    case llvm::Triple::loongarch64:
+      break;
     }
   }
 };
@@ -337,6 +340,10 @@ protected:
       Builder.defineMacro("_GNU_SOURCE");
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+    if (Triple.isTime64ABI()) {
+      Builder.defineMacro("_FILE_OFFSET_BITS", "64");
+      Builder.defineMacro("_TIME_BITS", "64");
+    }
   }
 
 public:
@@ -469,7 +476,7 @@ public:
     this->IntMaxType = TargetInfo::SignedLongLong;
     this->Int64Type = TargetInfo::SignedLongLong;
     this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-n32:64");
+    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64");
   }
 };
 

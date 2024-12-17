@@ -4,7 +4,7 @@
 
 ; Crash Test case reported on D134605
 
-define i16 @D134605() {
+define void @D134605() {
 ; CHECK-LABEL: @D134605(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX81:%.*]] = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
@@ -16,7 +16,7 @@ define i16 @D134605() {
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = add i16 [[TMP3]], poison
 ; CHECK-NEXT:    [[REASS_MUL24:%.*]] = shl i16 [[OP_RDX]], 2
 ; CHECK-NEXT:    [[CALL:%.*]] = call i16 @check_i16(i16 noundef 1, i16 noundef [[REASS_MUL24]], i16 noundef 5120)
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
 entry:
   %arrayidx81 = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
@@ -38,7 +38,7 @@ entry:
   %add15935 = add i16 %add15534, poison
   %reass.mul24 = shl i16 %add15935, 2
   %call = call i16 @check_i16(i16 noundef 1, i16 noundef %reass.mul24, i16 noundef 5120)
-  unreachable
+  ret void
 }
 declare i16 @check_i16(i16, i16, i16)
 
@@ -53,7 +53,7 @@ define void @PR58054() {
 ; CHECK-NEXT:    [[VAL7:%.*]] = add i64 [[VAL]], [[VAL5]]
 ; CHECK-NEXT:    [[VAL8:%.*]] = sitofp i64 [[VAL7]] to double
 ; CHECK-NEXT:    call void @wibble(i32 poison, double [[VAL8]], i64 poison)
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
   %val = add i64 poison, poison
   %val2 = add i64 poison, poison
@@ -63,6 +63,6 @@ define void @PR58054() {
   %val7 = add i64 %val, %val5
   %val8 = sitofp i64 %val7 to double
   call void @wibble(i32 poison, double %val8, i64 poison)
-  unreachable
+  ret void
 }
 declare void @wibble(i32, double, i64)

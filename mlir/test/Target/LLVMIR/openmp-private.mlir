@@ -104,6 +104,9 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // CHECK: omp.par.entry:
 // CHECK:  %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // CHECK:  %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
+// CHECK:  br label %omp.private.latealloc
+
+// CHECK: omp.private.latealloc:
 // CHECK:   br label %[[PRIV_BB1:.*]]
 
 // Check contents of the first block in the `alloc` region.
@@ -151,8 +154,7 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
 // CHECK:         omp.par.region:
 // CHECK:           br label %[[PAR_REG_BEG:.*]]
 // CHECK:         [[PAR_REG_BEG]]:
-// CHECK:           %[[PRIVATIZER_GEP:.*]] = getelementptr double, ptr @_QQfoo, i64 111
-// CHECK:           call void @bar(ptr %[[PRIVATIZER_GEP]])
+// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 111))
 // CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 222))
 llvm.func @lower_region_with_addressof() {
   %0 = llvm.mlir.constant(1 : i64) : i64

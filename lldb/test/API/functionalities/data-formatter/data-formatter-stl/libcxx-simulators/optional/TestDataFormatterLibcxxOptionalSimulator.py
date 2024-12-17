@@ -46,7 +46,15 @@ class LibcxxOptionalDataFormatterSimulatorTestCase(TestBase):
 for r in range(2):
     name = f"test_r{r}"
     defines = [f"REVISION={r}"]
-    f = functools.partialmethod(
-        LibcxxOptionalDataFormatterSimulatorTestCase._run_test, defines
-    )
-    setattr(LibcxxOptionalDataFormatterSimulatorTestCase, name, f)
+
+    # LLDB's FormatterCache caches on DW_AT_name. A change introduced in
+    # clang-17 (commit bee886052) changed the contents of DW_AT_name for
+    # template specializations, which broke FormatterCache assumptions
+    # causing this test to fail. This was reverted in newer version of clang
+    # with commit 52a9ba7ca.
+    @skipIf(compiler="clang", compiler_version=["=", "17"])
+    @functools.wraps(LibcxxOptionalDataFormatterSimulatorTestCase._run_test)
+    def test_method(self, defines=defines):
+        LibcxxOptionalDataFormatterSimulatorTestCase._run_test(self, defines)
+
+    setattr(LibcxxOptionalDataFormatterSimulatorTestCase, name, test_method)

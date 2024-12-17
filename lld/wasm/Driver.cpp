@@ -44,7 +44,7 @@ using namespace llvm::sys;
 using namespace llvm::wasm;
 
 namespace lld::wasm {
-Configuration *config;
+ConfigWrapper config;
 Ctx ctx;
 
 void errorOrWarn(const llvm::Twine &msg) {
@@ -54,11 +54,16 @@ void errorOrWarn(const llvm::Twine &msg) {
     error(msg);
 }
 
+Ctx::Ctx() : arg(config.c) {}
+
 void Ctx::reset() {
+  arg.~Config();
+  new (&arg) Config();
   objectFiles.clear();
   stubFiles.clear();
   sharedFiles.clear();
   bitcodeFiles.clear();
+  lazyBitcodeFiles.clear();
   syntheticFunctions.clear();
   syntheticGlobals.clear();
   syntheticTables.clear();
@@ -91,12 +96,15 @@ static void initLLVM() {
 
 class LinkerDriver {
 public:
+  LinkerDriver(Ctx &);
   void linkerMain(ArrayRef<const char *> argsArr);
 
 private:
   void createFiles(opt::InputArgList &args);
   void addFile(StringRef path);
   void addLibrary(StringRef name);
+
+  Ctx &ctx;
 
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
@@ -121,30 +129,30 @@ static bool hasZOption(opt::InputArgList &args, StringRef key) {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *ctx = new CommonLinkerContext;
+  auto *context = new CommonLinkerContext;
 
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.cleanupCallback = []() { wasm::ctx.reset(); };
-  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
-  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
-                                 "-error-limit=0 to see all errors)";
+  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  context->e.cleanupCallback = []() { ctx.reset(); };
+  context->e.logName = args::getFilenameWithoutExe(args[0]);
+  context->e.errorLimitExceededMsg =
+      "too many errors emitted, stopping now (use "
+      "-error-limit=0 to see all errors)";
 
-  config = make<Configuration>();
   symtab = make<SymbolTable>();
 
   initLLVM();
-  LinkerDriver().linkerMain(args);
+  LinkerDriver(ctx).linkerMain(args);
 
   return errorCount() == 0;
 }
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
@@ -172,7 +180,8 @@ static constexpr opt::OptTable::Info optInfo[] = {
 namespace {
 class WasmOptTable : public opt::GenericOptTable {
 public:
-  WasmOptTable() : opt::GenericOptTable(optInfo) {}
+  WasmOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
@@ -184,16 +193,17 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
+  auto &errs = errorHandler().errs();
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    errs.enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    errs.enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      errs.enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      errs.enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -425,6 +435,33 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     error("no input files");
 }
 
+static StringRef getAliasSpelling(opt::Arg *arg) {
+  if (const opt::Arg *alias = arg->getAlias())
+    return alias->getSpelling();
+  return arg->getSpelling();
+}
+
+static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
+                                                        unsigned id) {
+  auto *arg = args.getLastArg(id);
+  if (!arg)
+    return {"", ""};
+
+  StringRef s = arg->getValue();
+  std::pair<StringRef, StringRef> ret = s.split(';');
+  if (ret.second.empty())
+    error(getAliasSpelling(arg) + " expects 'old;new' format, but got " + s);
+  return ret;
+}
+
+// Parse options of the form "old;new[;extra]".
+static std::tuple<StringRef, StringRef, StringRef>
+getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
+  auto [oldDir, second] = getOldNewOptions(args, id);
+  auto [newDir, extraDir] = second.split(';');
+  return {oldDir, newDir, extraDir};
+}
+
 static StringRef getEntry(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_entry, OPT_no_entry);
   if (!arg) {
@@ -542,6 +579,7 @@ static void readConfigs(opt::InputArgList &args) {
   else
     error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 1);
@@ -569,6 +607,31 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
+  config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
+  config->thinLTOEmitIndexFiles = args.hasArg(OPT_thinlto_emit_index_files) ||
+                                  args.hasArg(OPT_thinlto_index_only) ||
+                                  args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
+                             args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
+  config->thinLTOObjectSuffixReplace =
+      getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
+  std::tie(config->thinLTOPrefixReplaceOld, config->thinLTOPrefixReplaceNew,
+           config->thinLTOPrefixReplaceNativeObject) =
+      getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace_eq);
+  if (config->thinLTOEmitIndexFiles && !config->thinLTOIndexOnly) {
+    if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
+      error("--thinlto-object-suffix-replace is not supported with "
+            "--thinlto-emit-index-files");
+    else if (args.hasArg(OPT_thinlto_prefix_replace_eq))
+      error("--thinlto-prefix-replace is not supported with "
+            "--thinlto-emit-index-files");
+  }
+  if (!config->thinLTOPrefixReplaceNativeObject.empty() &&
+      config->thinLTOIndexOnlyArg.empty()) {
+    error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
+          "--thinlto-index-only=");
+  }
   config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   errorHandler().verbose = args.hasArg(OPT_verbose);
@@ -713,7 +776,7 @@ static void checkOptions(opt::InputArgList &args) {
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
 
-  if (config->outputFile.empty())
+  if (config->outputFile.empty() && !config->thinLTOIndexOnly)
     error("no output file specified");
 
   if (config->importTable && config->exportTable)
@@ -1200,29 +1263,30 @@ static void checkZOptions(opt::InputArgList &args) {
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
+LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
   // Interpret these flags early because error()/warn() depend on them.
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
-  errorHandler().fatalWarnings =
+  auto &errHandler = errorHandler();
+  errHandler.errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errHandler.fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   checkZOptions(args);
 
   // Handle --help
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(lld::outs(),
+    parser.printHelp(errHandler.outs(),
                      (std::string(argsArr[0]) + " [options] file...").c_str(),
                      "LLVM Linker", false);
     return;
   }
 
-  // Handle --version
-  if (args.hasArg(OPT_version) || args.hasArg(OPT_v)) {
-    lld::outs() << getLLDVersion() << "\n";
-    return;
-  }
+  // Handle -v or -version.
+  if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
+    errHandler.outs() << getLLDVersion() << "\n";
 
   // Handle --reproduce
   if (const char *path = getReproduceOption(args)) {
@@ -1248,6 +1312,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   readConfigs(args);
   setConfigs();
 
+  // The behavior of -v or --version is a bit strange, but this is
+  // needed for compatibility with GNU linkers.
+  if (args.hasArg(OPT_v) && !args.hasArg(OPT_INPUT))
+    return;
+  if (args.hasArg(OPT_version))
+    return;
+
   createFiles(args);
   if (errorCount())
     return;
@@ -1262,10 +1333,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Fail early if the output file or map file is not writable. If a user has a
   // long link, e.g. due to a large LTO link, they do not wish to run it and
   // find that it failed because there was a mistake in their command-line.
-  if (auto e = tryCreateFile(config->outputFile))
-    error("cannot open output file " + config->outputFile + ": " + e.message());
-  if (auto e = tryCreateFile(config->mapFile))
-    error("cannot open map file " + config->mapFile + ": " + e.message());
+  if (auto e = tryCreateFile(ctx.arg.outputFile))
+    error("cannot open output file " + ctx.arg.outputFile + ": " + e.message());
+  if (auto e = tryCreateFile(ctx.arg.mapFile))
+    error("cannot open map file " + ctx.arg.mapFile + ": " + e.message());
   if (errorCount())
     return;
 
@@ -1274,11 +1345,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     symtab->trace(arg->getValue());
 
   for (auto *arg : args.filtered(OPT_export_if_defined))
-    config->exportedSymbols.insert(arg->getValue());
+    ctx.arg.exportedSymbols.insert(arg->getValue());
 
   for (auto *arg : args.filtered(OPT_export)) {
-    config->exportedSymbols.insert(arg->getValue());
-    config->requiredExports.push_back(arg->getValue());
+    ctx.arg.exportedSymbols.insert(arg->getValue());
+    ctx.arg.requiredExports.push_back(arg->getValue());
   }
 
   createSyntheticSymbols();
@@ -1296,17 +1367,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle the `--export <sym>` options
   // This works like --undefined but also exports the symbol if its found
-  for (auto &iter : config->exportedSymbols)
+  for (auto &iter : ctx.arg.exportedSymbols)
     handleUndefined(iter.first(), "--export");
 
   Symbol *entrySym = nullptr;
-  if (!config->relocatable && !config->entry.empty()) {
-    entrySym = handleUndefined(config->entry, "--entry");
+  if (!ctx.arg.relocatable && !ctx.arg.entry.empty()) {
+    entrySym = handleUndefined(ctx.arg.entry, "--entry");
     if (entrySym && entrySym->isDefined())
       entrySym->forceExport = true;
     else
       error("entry symbol not defined (pass --no-entry to suppress): " +
-            config->entry);
+            ctx.arg.entry);
   }
 
   // If the user code defines a `__wasm_call_dtors` function, remember it so
@@ -1314,10 +1385,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // `__wasm_call_ctors` which we synthesize, `__wasm_call_dtors` is defined
   // by libc/etc., because destructors are registered dynamically with
   // `__cxa_atexit` and friends.
-  if (!config->relocatable && !config->shared &&
+  if (!ctx.arg.relocatable && !ctx.arg.shared &&
       !WasmSym::callCtors->isUsedInRegularObj &&
-      WasmSym::callCtors->getName() != config->entry &&
-      !config->exportedSymbols.count(WasmSym::callCtors->getName())) {
+      WasmSym::callCtors->getName() != ctx.arg.entry &&
+      !ctx.arg.exportedSymbols.count(WasmSym::callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
@@ -1374,6 +1445,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   writeWhyExtract();
 
+  // Bail out if normal linked output is skipped due to LTO.
+  if (ctx.arg.thinLTOIndexOnly)
+    return;
+
   createOptionalSymbols();
 
   // Resolve any variant symbols that were created due to signature
@@ -1386,13 +1461,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!wrapped.empty())
     wrapSymbols(wrapped);
 
-  for (auto &iter : config->exportedSymbols) {
+  for (auto &iter : ctx.arg.exportedSymbols) {
     Symbol *sym = symtab->find(iter.first());
     if (sym && sym->isDefined())
       sym->forceExport = true;
   }
 
-  if (!config->relocatable && !ctx.isPic) {
+  if (!ctx.arg.relocatable && !ctx.isPic) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();

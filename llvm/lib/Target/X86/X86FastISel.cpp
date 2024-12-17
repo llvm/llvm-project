@@ -30,7 +30,6 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -3544,7 +3543,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(CallOpc));
     if (NeedLoad)
-      MIB.addReg(Is64Bit ? X86::RIP : 0).addImm(1).addReg(0);
+      MIB.addReg(Is64Bit ? X86::RIP : X86::NoRegister).addImm(1).addReg(0);
     if (Symbol)
       MIB.addSym(Symbol, OpFlags);
     else

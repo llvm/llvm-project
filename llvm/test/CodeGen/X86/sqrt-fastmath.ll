@@ -549,11 +549,10 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; SSE-LABEL: v16f32_estimate:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtps %xmm0, %xmm5
+; SSE-NEXT:    rsqrtps %xmm0, %xmm6
 ; SSE-NEXT:    movaps {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; SSE-NEXT:    mulps %xmm5, %xmm0
-; SSE-NEXT:    mulps %xmm5, %xmm0
-; SSE-NEXT:    movaps %xmm5, %xmm6
+; SSE-NEXT:    mulps %xmm6, %xmm0
+; SSE-NEXT:    mulps %xmm6, %xmm0
 ; SSE-NEXT:    mulps %xmm4, %xmm6
 ; SSE-NEXT:    movaps {{.*#+}} xmm5 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
 ; SSE-NEXT:    addps %xmm5, %xmm0

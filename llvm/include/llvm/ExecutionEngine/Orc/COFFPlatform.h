@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
 #include <future>
+#include <list>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -40,18 +41,16 @@ public:
   /// Try to create a COFFPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
   static Expected<std::unique_ptr<COFFPlatform>>
-  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-         JITDylib &PlatformJD,
+  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
          std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
          LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime = false,
          const char *VCRuntimePath = nullptr,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   static Expected<std::unique_ptr<COFFPlatform>>
-  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-         JITDylib &PlatformJD, const char *OrcRuntimePath,
-         LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime = false,
-         const char *VCRuntimePath = nullptr,
+  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+         const char *OrcRuntimePath, LoadDynamicLibrary LoadDynLibrary,
+         bool StaticVCRuntime = false, const char *VCRuntimePath = nullptr,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
@@ -138,8 +137,7 @@ private:
   static bool supportedTarget(const Triple &TT);
 
   COFFPlatform(
-      ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-      JITDylib &PlatformJD,
+      ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
       std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
       std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
       std::unique_ptr<object::Archive> OrcRuntimeArchive,

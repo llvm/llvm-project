@@ -441,7 +441,7 @@ define half @test_pow_fast_f16__y_13(half %x) {
 ; GCN-LABEL: define <2 x half> @test_pow_fast_v2f16__y_13(<2 x half> %x)
 ; GCN: %__fabs = tail call fast <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
 ; GCN: %__log2 = tail call fast <2 x half> @llvm.log2.v2f16(<2 x half> %__fabs)
-; GCN: %__ylogx = fmul fast <2 x half> %__log2, <half 0xH4A80, half 0xH4A80>
+; GCN: %__ylogx = fmul fast <2 x half> %__log2, splat (half 0xH4A80)
 ; GCN: %__exp2 = tail call fast <2 x half> @llvm.exp2.v2f16(<2 x half> %__ylogx)
 ; GCN: %1 = tail call <2 x half> @llvm.copysign.v2f16(<2 x half> %__exp2, <2 x half> %x)
 define <2 x half> @test_pow_fast_v2f16__y_13(<2 x half> %x) {
@@ -826,5 +826,5 @@ entry:
 ; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "uniform-work-group-size"="false" }
 attributes #0 = { nounwind }

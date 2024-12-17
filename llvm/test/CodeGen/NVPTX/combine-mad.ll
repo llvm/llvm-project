@@ -14,7 +14,7 @@ define i32 @test1(i32 %n, i32 %m) {
 ; CHECK-NEXT:    ld.param.u32 %r1, [test1_param_0];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test1_param_1];
 ; CHECK-NEXT:    mad.lo.s32 %r3, %r2, %r1, %r2;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %add = add i32 %n, 1
   %mul = mul i32 %add, %m
@@ -31,7 +31,7 @@ define i32 @test1_rev(i32 %n, i32 %m) {
 ; CHECK-NEXT:    ld.param.u32 %r1, [test1_rev_param_0];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test1_rev_param_1];
 ; CHECK-NEXT:    mad.lo.s32 %r3, %r2, %r1, %r2;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %add = add i32 %n, 1
   %mul = mul i32 %m, %add
@@ -53,7 +53,7 @@ define i32 @test2(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r3, 1;
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r2, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r5, %r2, %r4, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %add = add i32 %n, 1
   %cond = icmp slt i32 %s, 1
@@ -77,7 +77,7 @@ define i32 @test2_rev1(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r3, 1;
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r2, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r5, %r4, %r2, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %add = add i32 %n, 1
   %cond = icmp slt i32 %s, 1
@@ -101,7 +101,7 @@ define i32 @test2_rev2(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r3, 1;
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r2, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r5, %r4, %r2, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %add = add i32 %n, 1
   %cond = icmp slt i32 %s, 1
@@ -126,7 +126,7 @@ define i32 @test3(i32 %n, i32 %m, i32 %s) {
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r4, 1;
 ; CHECK-NEXT:    selp.b32 %r5, 1, %r2, %p1;
 ; CHECK-NEXT:    mul.lo.s32 %r6, %r5, %r3;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r6;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %add = add i32 %n, 3
   %cond = icmp slt i32 %s, 1
@@ -152,7 +152,7 @@ define i32 @test4(i32 %a, i32 %b, i32 %c, i1 %p) {
 ; CHECK-NEXT:    ld.param.u32 %r3, [test4_param_2];
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    selp.b32 %r5, %r4, %r3, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %mul = mul i32 %a, %b
   %sel = select i1 %p, i32 %mul, i32 0
@@ -176,7 +176,7 @@ define i32 @test4_rev(i32 %a, i32 %b, i32 %c, i1 %p) {
 ; CHECK-NEXT:    ld.param.u32 %r3, [test4_rev_param_2];
 ; CHECK-NEXT:    mad.lo.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    selp.b32 %r5, %r3, %r4, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %mul = mul i32 %a, %b
   %sel = select i1 %p, i32 0, i32 %mul

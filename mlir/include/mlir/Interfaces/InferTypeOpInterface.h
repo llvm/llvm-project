@@ -244,6 +244,10 @@ inferReturnTensorTypes(ArrayRef<ShapedTypeComponents> retComponents,
 /// Verifies that the inferred result types match the actual result types for
 /// the op. Precondition: op implements InferTypeOpInterface.
 LogicalResult verifyInferredResultTypes(Operation *op);
+
+/// Report a fatal error indicating that the result types could not be
+/// inferred.
+void reportFatalInferReturnTypesError(OperationState &state);
 } // namespace detail
 
 namespace OpTrait {

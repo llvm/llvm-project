@@ -64,12 +64,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -80,7 +81,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DsymutilOptTable : public opt::GenericOptTable {
 public:
-  DsymutilOptTable() : opt::GenericOptTable(InfoTable) {}
+  DsymutilOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -108,6 +110,7 @@ struct DsymutilOptions {
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
   bool ForceKeepFunctionForStatic = false;
+  bool NoObjectTimestamp = false;
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
@@ -178,17 +181,6 @@ static Error verifyOptions(const DsymutilOptions &Options) {
   if (Options.InputFiles.empty()) {
     return make_error<StringError>("no input files specified",
                                    errc::invalid_argument);
-  }
-
-  if (Options.LinkOpts.Update && llvm::is_contained(Options.InputFiles, "-")) {
-    // FIXME: We cannot use stdin for an update because stdin will be
-    // consumed by the BinaryHolder during the debugmap parsing, and
-    // then we will want to consume it again in DwarfLinker. If we
-    // used a unique BinaryHolder object that could cache multiple
-    // binaries this restriction would go away.
-    return make_error<StringError>(
-        "standard input cannot be used as input for a dSYM update.",
-        errc::invalid_argument);
   }
 
   if (!Options.Flat && Options.OutputFile == "-")
@@ -303,6 +295,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.DumpStab = Args.hasArg(OPT_symtab);
   Options.Flat = Args.hasArg(OPT_flat);
   Options.InputIsYAMLDebugMap = Args.hasArg(OPT_yaml_input);
+  Options.NoObjectTimestamp = Args.hasArg(OPT_no_object_timestamp);
 
   if (Expected<DWARFVerify> Verify = getVerifyKind(Args)) {
     Options.Verify = *Verify;
@@ -674,9 +667,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
   for (auto &InputFile : Options.InputFiles) {
+    // Shared a single binary holder for all the link steps.
+    BinaryHolder::Options BinOpts;
+    BinOpts.Verbose = Options.LinkOpts.Verbose;
+    BinOpts.Warn = !Options.NoObjectTimestamp;
+    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts);
+
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
-      if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
+      if (!dumpStab(BinHolder, InputFile, Options.Archs,
                     Options.LinkOpts.DSYMSearchPaths,
                     Options.LinkOpts.PrependPath,
                     Options.LinkOpts.BuildVariantSuffix))
@@ -685,10 +684,9 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     auto DebugMapPtrsOrErr = parseDebugMap(
-        Options.LinkOpts.VFS, InputFile, Options.Archs,
-        Options.LinkOpts.DSYMSearchPaths, Options.LinkOpts.PrependPath,
-        Options.LinkOpts.BuildVariantSuffix, Options.LinkOpts.Verbose,
-        Options.InputIsYAMLDebugMap);
+        BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
+        Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
@@ -714,14 +712,11 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
     }
 
-    // Shared a single binary holder for all the link steps.
-    BinaryHolder BinHolder(Options.LinkOpts.VFS);
-
     // Compute the output location and update the resource directory.
     Expected<OutputLocation> OutputLocationOrErr =
         getOutputFileName(InputFile, Options);
     if (!OutputLocationOrErr) {
-      WithColor::error() << toString(OutputLocationOrErr.takeError());
+      WithColor::error() << toString(OutputLocationOrErr.takeError()) << "\n";
       return EXIT_FAILURE;
     }
     Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
@@ -799,7 +794,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
               Options.LinkOpts.NoOutput ? "-" : OutputFile, EC,
               sys::fs::OF_None);
           if (EC) {
-            WithColor::error() << OutputFile << ": " << EC.message();
+            WithColor::error() << OutputFile << ": " << EC.message() << "\n";
             AllOK.fetch_and(false);
             return;
           }
@@ -839,15 +834,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
-      const bool Fat64 = Options.LinkOpts.Fat64;
+      bool Fat64 = Options.LinkOpts.Fat64;
       if (!Fat64) {
         // Universal Mach-O files can't have an archicture slice that starts
         // beyond the 4GB boundary. "lipo" can create a 64 bit universal
-        // header, but not all tools can parse these files so we want to return
-        // an error if the file can't be encoded as a file with a 32 bit
+        // header, but older tools may not support these files so we want to
+        // emit a warning if the file can't be encoded as a file with a 32 bit
         // universal header. To detect this, we check the size of each
         // architecture's skinny Mach-O file and add up the offsets. If they
-        // exceed 4GB, then we return an error.
+        // exceed 4GB, we emit a warning.
 
         // First we compute the right offset where the first architecture will
         // fit followin the 32 bit universal header. The 32 bit universal header
@@ -866,13 +861,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           if (!stat)
             break;
           if (FileOffset > UINT32_MAX) {
-            WithColor::error()
-                << formatv("the universal binary has a slice with a starting "
-                           "offset ({0:x}) that exceeds 4GB and will produce "
-                           "an invalid Mach-O file. Use the -fat64 flag to "
-                           "generate a universal binary with a 64-bit header "
-                           "but note that not all tools support this format.",
-                           FileOffset);
+            Fat64 = true;
+            WithColor::warning() << formatv(
+                "the universal binary has a slice with a starting offset "
+                "({0:x}) that exceeds 4GB. To avoid producing an invalid "
+                "Mach-O file, a universal binary with a 64-bit header will be "
+                "generated, which may not be supported by older tools. Use the "
+                "-fat64 flag to force a 64-bit header and silence this "
+                "warning.",
+                FileOffset);
             return EXIT_FAILURE;
           }
           FileOffset += stat->getSize();

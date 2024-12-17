@@ -10,7 +10,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <array>
 #include <cassert>
 #include <map>
 using namespace llvm;
@@ -29,7 +28,7 @@ public:
 
 } // End anonymous namespace.
 
-static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
+static void vTtoGetLlvmTyString(raw_ostream &OS, const Record *VT) {
   bool IsVector = VT->getValueAsBit("isVector");
   bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
 
@@ -208,7 +207,7 @@ void VTEmitter::run(raw_ostream &OS) {
       continue;
 
     OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", ";
-    VTtoGetLLVMTyString(OS, VT);
+    vTtoGetLlvmTyString(OS, VT);
     OS << ")\n";
   }
   OS << "#endif\n\n";

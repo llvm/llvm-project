@@ -7,8 +7,9 @@
   .section .text.test_annotation,"",@
   .type    test_annotation,@function
 test_annotation:
-  .functype   test_annotation () -> ()
+  .functype   test_annotation (exnref) -> ()
   .tagtype  __cpp_exception i32
+  .tagtype  __c_longjmp i32
   try
     br        0
   catch     __cpp_exception
@@ -53,8 +54,18 @@ test_annotation:
     return
   end_block
   drop
-  end_function
 
+  i32.const 0
+  loop (i32) -> ()
+    local.get 0
+    loop (exnref) -> ()
+      try_table (catch __cpp_exception 1) (catch_all_ref 0)
+      end_try_table
+      drop
+    end_loop
+    drop
+  end_loop
+  end_function
 
 # CHECK:      test_annotation:
 # CHECK:        try
@@ -104,5 +115,16 @@ test_annotation:
 # CHECK-NEXT:   return
 # CHECK-NEXT:   end_block                               # label7:
 # CHECK-NEXT:   drop
-# CHECK-NEXT:   end_function
 
+# CHECK:        i32.const       0
+# CHECK-NEXT:   loop            (i32) -> ()                     # label12:
+# CHECK-NEXT:   local.get       0
+# CHECK-NEXT:   loop            (exnref) -> ()                  # label13:
+# CHECK-NEXT:   try_table        (catch __cpp_exception 1) (catch_all_ref 0) # 1: up to label12
+# CHECK-NEXT:                                 # 0: up to label13
+# CHECK-NEXT:   end_try_table                           # label14:
+# CHECK-NEXT:   drop
+# CHECK-NEXT:   end_loop
+# CHECK-NEXT:   drop
+# CHECK-NEXT:   end_loop
+# CHECK-NEXT:   end_function

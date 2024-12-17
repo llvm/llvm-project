@@ -110,6 +110,7 @@ define i8 @stack_fold_fpclassph(<8 x half> %a0) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vfpclassphx $4, {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 16-byte Folded Reload
+; CHECK-NEXT:    # k0 = isNegativeZero(mem)
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -148,6 +149,7 @@ define i16 @stack_fold_fpclassph_ymm(<16 x half> %a0) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vfpclassphy $4, {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 32-byte Folded Reload
+; CHECK-NEXT:    # k0 = isNegativeZero(mem)
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper

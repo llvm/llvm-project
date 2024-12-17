@@ -710,12 +710,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::dxil:
     return std::make_unique<DirectXTargetInfo>(Triple, Opts);
-  case llvm::Triple::renderscript32:
-    return std::make_unique<LinuxTargetInfo<RenderScript32TargetInfo>>(Triple,
-                                                                       Opts);
-  case llvm::Triple::renderscript64:
-    return std::make_unique<LinuxTargetInfo<RenderScript64TargetInfo>>(Triple,
-                                                                       Opts);
 
   case llvm::Triple::ve:
     return std::make_unique<LinuxTargetInfo<VETargetInfo>>(Triple, Opts);
@@ -732,6 +726,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Linux:
         return std::make_unique<LinuxTargetInfo<LoongArch32TargetInfo>>(Triple,
                                                                         Opts);
+    case llvm::Triple::FreeBSD:
+      return std::make_unique<FreeBSDTargetInfo<LoongArch32TargetInfo>>(Triple,
+                                                                        Opts);
     default:
         return std::make_unique<LoongArch32TargetInfo>(Triple, Opts);
     }
@@ -739,6 +736,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     switch (os) {
     case llvm::Triple::Linux:
         return std::make_unique<LinuxTargetInfo<LoongArch64TargetInfo>>(Triple,
+                                                                        Opts);
+    case llvm::Triple::FreeBSD:
+      return std::make_unique<FreeBSDTargetInfo<LoongArch64TargetInfo>>(Triple,
                                                                         Opts);
     default:
         return std::make_unique<LoongArch64TargetInfo>(Triple, Opts);

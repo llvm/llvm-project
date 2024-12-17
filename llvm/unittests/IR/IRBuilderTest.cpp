@@ -413,8 +413,9 @@ TEST_F(IRBuilderTest, ConstrainedFPIntrinsics) {
 
   Builder.setDefaultConstrainedExcept(fp::ebStrict);
   Builder.setDefaultConstrainedRounding(RoundingMode::TowardZero);
-  Function *Fn = Intrinsic::getDeclaration(M.get(),
-      Intrinsic::experimental_constrained_roundeven, { Type::getDoubleTy(Ctx) });
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M.get(), Intrinsic::experimental_constrained_roundeven,
+      {Type::getDoubleTy(Ctx)});
   V = Builder.CreateConstrainedFPCall(Fn, { VDouble });
   CII = cast<ConstrainedFPIntrinsic>(V);
   EXPECT_EQ(Intrinsic::experimental_constrained_roundeven, CII->getIntrinsicID());
@@ -880,12 +881,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
   auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
     if (M->IsNewDbgInfoFormat) {
-      EXPECT_TRUE(First.is<DbgRecord *>());
+      EXPECT_TRUE(isa<DbgRecord *>(First));
       EXPECT_FALSE(Second->getDbgRecordRange().empty());
-      EXPECT_EQ(GetLastDbgRecord(&*Second), First.get<DbgRecord *>());
+      EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
     } else {
-      EXPECT_TRUE(First.is<Instruction *>());
-      EXPECT_EQ(&*std::prev(Second), First.get<Instruction *>());
+      EXPECT_TRUE(isa<Instruction *>(First));
+      EXPECT_EQ(&*std::prev(Second), cast<Instruction *>(First));
     }
   };
 

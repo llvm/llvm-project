@@ -1,6 +1,3 @@
-include(AddFileDependencies)
-include(CMakeParseArguments)
-
 function(llvm_replace_compiler_option var old new)
   # Replaces a compiler option or switch `old' in `var' by `new'.
   # If `old' is not in `var', appends `new' to `var'.

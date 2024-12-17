@@ -335,7 +335,7 @@ def warn_atomic_op_misaligned : Warning<
 def warn_atomic_op_oversized : Warning<
   "large atomic operation may incur "
   "significant performance penalty"
-  "; the access size (%0 bytes) exceeds the max lock-free size (%1  bytes)">,
+  "; the access size (%0 bytes) exceeds the max lock-free size (%1 bytes)">,
 InGroup<AtomicAlignment>;
 
 def warn_sync_op_misaligned : Warning<

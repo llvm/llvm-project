@@ -411,7 +411,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
           OperandRecords.push_back(Op.Rec);
           ++CurrentOffset;
         } else {
-          for (Init *Arg : MIOI->getArgs()) {
+          for (const Init *Arg : MIOI->getArgs()) {
             OperandRecords.push_back(cast<DefInit>(Arg)->getDef());
             ++CurrentOffset;
           }
@@ -1296,7 +1296,7 @@ void InstrInfoEmitter::emitRecord(
     OS << "|(1ULL<<MCID::Authenticated)";
 
   // Emit all of the target-specific flags...
-  BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
+  const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
   if (!TSF)
     PrintFatalError(Inst.TheDef->getLoc(), "no TSFlags?");
   uint64_t Value = 0;

@@ -115,6 +115,7 @@ set(MLIR_TEST_DEPENDS
   mlir-opt
   mlir-query
   mlir-reduce
+  mlir-rewrite
   mlir-tblgen
   mlir-translate
   tblgen-lsp-server
@@ -196,10 +197,8 @@ if(LLVM_BUILD_EXAMPLES)
 endif()
 
 if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
-  add_subdirectory(mlir-spirv-cpu-runner)
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-spirv-cpu-runner
-    mlir_test_spirv_cpu_runner_c_wrappers
+    mlir_spirv_cpu_runtime
   )
 endif()
 

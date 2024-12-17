@@ -95,8 +95,8 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
       default:
         llvm_unreachable("Unsupported call!");
       case Intrinsic::vscale: {
-        Function *Fn =
-            Intrinsic::getDeclaration(I->getModule(), Intrinsic::vscale, {Ty});
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), Intrinsic::vscale, {Ty});
         Res = CallInst::Create(Fn->getFunctionType(), Fn);
         break;
       }
@@ -600,7 +600,8 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   if (ShVal0 != ShVal1)
     Y = Builder.CreateTrunc(ShVal1, DestTy);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
-  Function *F = Intrinsic::getDeclaration(Trunc.getModule(), IID, DestTy);
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(Trunc.getModule(), IID, DestTy);
   return CallInst::Create(F, {X, Y, NarrowShAmt});
 }
 
@@ -785,15 +786,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
-  // Test if the trunc is the user of a select which is part of a
-  // minimum or maximum operation. If so, don't do any more simplification.
-  // Even simplifying demanded bits can break the canonical form of a
-  // min/max.
-  Value *LHS, *RHS;
-  if (SelectInst *Sel = dyn_cast<SelectInst>(Src))
-    if (matchSelectPattern(Sel, LHS, RHS).Flavor != SPF_UNKNOWN)
-      return nullptr;
-
   // See if we can simplify any instructions used by the input whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(Trunc))
@@ -941,6 +933,11 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       }
     }
   }
+
+  if (DestWidth == 1 &&
+      (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
+      isKnownNonZero(Src, SQ.getWithInstruction(&Trunc)))
+    return replaceInstUsesWith(Trunc, ConstantInt::getTrue(DestTy));
 
   bool Changed = false;
   if (!Trunc.hasNoSignedWrap() &&
@@ -1855,15 +1852,16 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Value *X;
   Instruction *Op = dyn_cast<Instruction>(FPT.getOperand(0));
   if (Op && Op->hasOneUse()) {
-    // FIXME: The FMF should propagate from the fptrunc, not the source op.
     IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-    if (isa<FPMathOperator>(Op))
-      Builder.setFastMathFlags(Op->getFastMathFlags());
+    FastMathFlags FMF = FPT.getFastMathFlags();
+    if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
+      FMF &= FPMO->getFastMathFlags();
+    Builder.setFastMathFlags(FMF);
 
     if (match(Op, m_FNeg(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
-
-      return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
+      Value *Neg = Builder.CreateFNeg(InnerTrunc);
+      return replaceInstUsesWith(FPT, Neg);
     }
 
     // If we are truncating a select that has an extended operand, we can
@@ -1912,8 +1910,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       // Do unary FP operation on smaller type.
       // (fptrunc (fabs x)) -> (fabs (fptrunc x))
       Value *InnerTrunc = Builder.CreateFPTrunc(Src, Ty);
-      Function *Overload = Intrinsic::getDeclaration(FPT.getModule(),
-                                                     II->getIntrinsicID(), Ty);
+      Function *Overload = Intrinsic::getOrInsertDeclaration(
+          FPT.getModule(), II->getIntrinsicID(), Ty);
       SmallVector<OperandBundleDef, 1> OpBundles;
       II->getOperandBundlesAsDefs(OpBundles);
       CallInst *NewCI =
@@ -2114,10 +2112,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
         Base->getType() == Ty) {
       Value *Offset = EmitGEPOffset(GEP);
       auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
-      if (GEP->hasNoUnsignedWrap() ||
-          (GEP->hasNoUnsignedSignedWrap() &&
-           isKnownNonNegative(Offset, SQ.getWithInstruction(&CI))))
-        NewOp->setHasNoUnsignedWrap(true);
+      NewOp->setHasNoUnsignedWrap(GEP->hasNoUnsignedWrap());
       return NewOp;
     }
   }
@@ -2855,8 +2850,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       if (IntrinsicNum != 0) {
         assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
         assert(match(ShufOp1, m_Undef()) && "Unexpected shuffle op");
-        Function *BswapOrBitreverse =
-            Intrinsic::getDeclaration(CI.getModule(), IntrinsicNum, DestTy);
+        Function *BswapOrBitreverse = Intrinsic::getOrInsertDeclaration(
+            CI.getModule(), IntrinsicNum, DestTy);
         Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);
         return CallInst::Create(BswapOrBitreverse, {ScalarX});
       }

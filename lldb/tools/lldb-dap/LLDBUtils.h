@@ -10,11 +10,13 @@
 #define LLDB_TOOLS_LLDB_DAP_LLDBUTILS_H
 
 #include "DAPForward.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBEnvironment.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
-#include <vector>
 
 namespace lldb_dap {
 
@@ -28,6 +30,9 @@ namespace lldb_dap {
 /// only emitted if it fails, and if \b ! is provided, then the output is
 /// emitted regardless, and \b false is returned without executing the
 /// remaining commands.
+///
+/// \param[in] debugger
+///     The debugger that will execute the lldb commands.
 ///
 /// \param[in] prefix
 ///     A string that will be printed into \a strm prior to emitting
@@ -47,7 +52,7 @@ namespace lldb_dap {
 /// \return
 ///     \b true, unless a command prefixed with \b ! fails and parsing of
 ///     command directives is enabled.
-bool RunLLDBCommands(llvm::StringRef prefix,
+bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
                      llvm::raw_ostream &strm, bool parse_command_directives);
 
@@ -55,6 +60,9 @@ bool RunLLDBCommands(llvm::StringRef prefix,
 ///
 /// All output from every command, including the prompt + the command
 /// is returned in the std::string return value.
+///
+/// \param[in] debugger
+///     The debugger that will execute the lldb commands.
 ///
 /// \param[in] prefix
 ///     A string that will be printed into \a strm prior to emitting
@@ -74,14 +82,14 @@ bool RunLLDBCommands(llvm::StringRef prefix,
 /// \return
 ///     A std::string that contains the prefix and all commands and
 ///     command output.
-std::string RunLLDBCommands(llvm::StringRef prefix,
+std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives = true);
 
 /// Similar to the method above, but without parsing command directives.
 std::string
-RunLLDBCommandsVerbatim(llvm::StringRef prefix,
+RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                         const llvm::ArrayRef<std::string> &commands);
 
 /// Check if a thread has a stop reason.
@@ -134,6 +142,17 @@ uint32_t GetLLDBThreadIndexID(uint64_t dap_frame_id);
 /// \return
 ///     The LLDB frame index ID.
 uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
+
+/// Gets all the environment variables from the json object depending on if the
+/// kind is an object or an array.
+///
+/// \param[in] arguments
+///     The json object with the launch options
+///
+/// \return
+///     The environment variables stored in the env key
+lldb::SBEnvironment
+GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
 } // namespace lldb_dap
 

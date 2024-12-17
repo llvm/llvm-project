@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, issignalingl, (long double x)) {
-  return fputil::issignaling(x);
+  return fputil::issignaling_impl(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

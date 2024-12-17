@@ -435,6 +435,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
   EXPECT_EQ(SomePos.getSignBit(), false);
   EXPECT_EQ(SomeNeg.getSignBit(), true);
 
+#if defined(EXPENSIVE_CHECKS)
   EnumerateConstantFPRanges(
       [](const ConstantFPRange &CR) {
         unsigned Mask = fcNone;
@@ -458,6 +459,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
         EXPECT_EQ(Mask, CR.classify()) << CR;
       },
       /*Exhaustive=*/true);
+#endif
 }
 
 TEST_F(ConstantFPRangeTest, Print) {
@@ -500,6 +502,36 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
 #endif
 
 TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OLE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat(2.0)));
+  EXPECT_EQ(
+      ConstantFPRange::makeAllowedFCmpRegion(
+          FCmpInst::FCMP_OLT,
+          ConstantFPRange::getNonNaN(APFloat(1.0),
+                                     APFloat::getInf(Sem, /*Negative=*/false))),
+      ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                 APFloat::getLargest(Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::makeAllowedFCmpRegion(
+          FCmpInst::FCMP_OGT,
+          ConstantFPRange::getNonNaN(APFloat::getZero(Sem, /*Negative=*/true),
+                                     APFloat(2.0))),
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/false),
+                                 APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OGE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(
+                APFloat(1.0), APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OEQ,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0)));
+
+#if defined(EXPENSIVE_CHECKS)
   for (auto Pred : FCmpInst::predicates()) {
     EnumerateConstantFPRanges(
         [Pred](const ConstantFPRange &CR) {
@@ -528,6 +560,210 @@ TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
               << CR << ")";
         },
         /*Exhaustive=*/false);
+  }
+#endif
+}
+
+TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OLE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat(1.0)));
+  EXPECT_EQ(
+      ConstantFPRange::makeSatisfyingFCmpRegion(
+          FCmpInst::FCMP_OLT, ConstantFPRange::getNonNaN(
+                                  APFloat::getSmallest(Sem, /*Negative=*/false),
+                                  APFloat::getInf(Sem, /*Negative=*/false))),
+      ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                 APFloat::getZero(Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::makeSatisfyingFCmpRegion(
+          FCmpInst::FCMP_OGT, ConstantFPRange::getNonNaN(
+                                  APFloat::getZero(Sem, /*Negative=*/true),
+                                  APFloat::getZero(Sem, /*Negative=*/false))),
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/false),
+                                 APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OGE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(
+                APFloat(2.0), APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OEQ,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getEmpty(Sem));
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OEQ,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(1.0))),
+            ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(1.0)));
+
+#if defined(EXPENSIVE_CHECKS)
+  for (auto Pred : FCmpInst::predicates()) {
+    EnumerateConstantFPRanges(
+        [Pred](const ConstantFPRange &CR) {
+          ConstantFPRange Res =
+              ConstantFPRange::makeSatisfyingFCmpRegion(Pred, CR);
+          // Super set of the optimal set excluding NaNs
+          ConstantFPRange SuperSet(CR.getSemantics());
+          bool ContainsSNaN = false;
+          bool ContainsQNaN = false;
+          unsigned NonNaNValsInOptimalSet = 0;
+          EnumerateValuesInConstantFPRange(
+              ConstantFPRange::getFull(CR.getSemantics()),
+              [&](const APFloat &V) {
+                if (AnyOfValueInConstantFPRange(
+                        CR,
+                        [&](const APFloat &U) {
+                          return !FCmpInst::compare(V, U, Pred);
+                        },
+                        /*IgnoreNaNPayload=*/true)) {
+                  EXPECT_FALSE(Res.contains(V))
+                      << "Wrong result for makeSatisfyingFCmpRegion(" << Pred
+                      << ", " << CR << "). The result " << Res
+                      << " should not contain " << V;
+                } else {
+                  if (V.isNaN()) {
+                    if (V.isSignaling())
+                      ContainsSNaN = true;
+                    else
+                      ContainsQNaN = true;
+                  } else {
+                    SuperSet = SuperSet.unionWith(ConstantFPRange(V));
+                    ++NonNaNValsInOptimalSet;
+                  }
+                }
+              },
+              /*IgnoreNaNPayload=*/true);
+
+          // Check optimality
+
+          // The usefullness of making the result optimal for one/une is
+          // questionable.
+          if (Pred == FCmpInst::FCMP_ONE || Pred == FCmpInst::FCMP_UNE)
+            return;
+
+          EXPECT_FALSE(ContainsSNaN && !Res.containsSNaN())
+              << "Suboptimal result for makeSatisfyingFCmpRegion(" << Pred
+              << ", " << CR << "), should contain SNaN, but got " << Res;
+          EXPECT_FALSE(ContainsQNaN && !Res.containsQNaN())
+              << "Suboptimal result for makeSatisfyingFCmpRegion(" << Pred
+              << ", " << CR << "), should contain QNaN, but got " << Res;
+
+          // We only care about the cases where the result is representable by
+          // ConstantFPRange.
+          unsigned NonNaNValsInSuperSet = 0;
+          EnumerateValuesInConstantFPRange(
+              SuperSet,
+              [&](const APFloat &V) {
+                if (!V.isNaN())
+                  ++NonNaNValsInSuperSet;
+              },
+              /*IgnoreNaNPayload=*/true);
+
+          if (NonNaNValsInSuperSet == NonNaNValsInOptimalSet) {
+            ConstantFPRange Optimal =
+                ConstantFPRange(SuperSet.getLower(), SuperSet.getUpper(),
+                                ContainsQNaN, ContainsSNaN);
+            EXPECT_EQ(Res, Optimal)
+                << "Suboptimal result for makeSatisfyingFCmpRegion(" << Pred
+                << ", " << CR << ")";
+          }
+        },
+        /*Exhaustive=*/false);
+  }
+#endif
+}
+
+TEST_F(ConstantFPRangeTest, fcmp) {
+  std::vector<ConstantFPRange> InterestingRanges;
+  const fltSemantics &Sem = APFloat::Float8E4M3();
+  auto FpImm = [&](double V) {
+    bool ignored;
+    APFloat APF(V);
+    APF.convert(Sem, APFloat::rmNearestTiesToEven, &ignored);
+    return APF;
+  };
+
+  InterestingRanges.push_back(ConstantFPRange::getEmpty(Sem));
+  InterestingRanges.push_back(ConstantFPRange::getFull(Sem));
+  InterestingRanges.push_back(ConstantFPRange::getFinite(Sem));
+  InterestingRanges.push_back(ConstantFPRange(FpImm(1.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getZero(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getZero(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getSmallest(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getSmallest(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getLargest(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getLargest(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNaNOnly(Sem, /*MayBeQNaN=*/true, /*MayBeSNaN=*/true));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(0.0), FpImm(1.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(2.0), FpImm(3.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(-1.0), FpImm(1.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(-1.0), FpImm(-0.0)));
+  InterestingRanges.push_back(ConstantFPRange::getNonNaN(
+      APFloat::getInf(Sem, /*Negative=*/true), FpImm(-1.0)));
+  InterestingRanges.push_back(ConstantFPRange::getNonNaN(
+      FpImm(1.0), APFloat::getInf(Sem, /*Negative=*/false)));
+
+  for (auto &LHS : InterestingRanges) {
+    for (auto &RHS : InterestingRanges) {
+      for (auto Pred : FCmpInst::predicates()) {
+        if (LHS.fcmp(Pred, RHS)) {
+          EnumerateValuesInConstantFPRange(
+              LHS,
+              [&](const APFloat &LHSC) {
+                EnumerateValuesInConstantFPRange(
+                    RHS,
+                    [&](const APFloat &RHSC) {
+                      EXPECT_TRUE(FCmpInst::compare(LHSC, RHSC, Pred))
+                          << LHS << " " << Pred << " " << RHS
+                          << " doesn't hold";
+                    },
+                    /*IgnoreNaNPayload=*/true);
+              },
+              /*IgnoreNaNPayload=*/true);
+        }
+      }
+    }
+  }
+}
+
+TEST_F(ConstantFPRangeTest, makeExactFCmpRegion) {
+  for (auto Pred : FCmpInst::predicates()) {
+    EnumerateValuesInConstantFPRange(
+        ConstantFPRange::getFull(APFloat::Float8E4M3()),
+        [Pred](const APFloat &V) {
+          std::optional<ConstantFPRange> Res =
+              ConstantFPRange::makeExactFCmpRegion(Pred, V);
+          ConstantFPRange Allowed =
+              ConstantFPRange::makeAllowedFCmpRegion(Pred, ConstantFPRange(V));
+          ConstantFPRange Satisfying =
+              ConstantFPRange::makeSatisfyingFCmpRegion(Pred,
+                                                        ConstantFPRange(V));
+          if (Allowed == Satisfying)
+            EXPECT_EQ(Res, Allowed) << "Wrong result for makeExactFCmpRegion("
+                                    << Pred << ", " << V << ").";
+          else
+            EXPECT_FALSE(Res.has_value())
+                << "Wrong result for makeExactFCmpRegion(" << Pred << ", " << V
+                << ").";
+        },
+        /*IgnoreNaNPayload=*/true);
   }
 }
 

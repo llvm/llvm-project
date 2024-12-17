@@ -16,7 +16,7 @@ set(RTSAN_UNITTEST_CFLAGS
 
 set(RTSAN_INST_TEST_SOURCES
     rtsan_test_functional.cpp
-    rtsan_test_interceptors.cpp
+    rtsan_test_interceptors_posix.cpp
     rtsan_test_main.cpp)
 
 set(RTSAN_NOINST_TEST_SOURCES

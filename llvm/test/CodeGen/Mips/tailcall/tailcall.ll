@@ -25,7 +25,7 @@
 ; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=STATIC64
 
 ; RUN: llc -mtriple=mipsel -relocation-model=pic -mcpu=mips32r6 -mattr=+micromips -verify-machineinstrs \
-; RUN:      -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,PIC32MM
+; RUN:      -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,PIC32MMR6
 ; RUN: llc -mtriple=mipsel -relocation-model=static -mcpu=mips32r6 -verify-machineinstrs \
 ; RUN:     -mattr=+micromips -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,STATIC32MMR6
 
@@ -44,7 +44,8 @@ define i32 @caller1(i32 %a0) nounwind {
 entry:
 ; ALL-LABEL: caller1:
 ; PIC32: jalr $25
-; PIC32MM: jalr $25
+; PIC32MM: jalrs16 $25
+; PIC32MMR6: jalr $25
 ; PIC32R6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
@@ -63,6 +64,7 @@ entry:
 ; ALL-LABEL: caller2
 ; PIC32: jalr $25
 ; PIC32MM: jalr $25
+; PIC32MMR6: jalr $25
 ; PIC32R6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
@@ -82,6 +84,7 @@ entry:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
 ; N64: jalr $25
@@ -100,6 +103,7 @@ entry:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; SATATIC32MMR6: jal
 ; PIC64: jalr $25
@@ -119,6 +123,7 @@ entry:
 ; PIC32: jr $25
 ; PIC32R6: jr $25
 ; PIC32MM: jr
+; PIC32MMR6: jr
 ; STATIC32: j
 ; STATIC32MMR6: bc
 ; PIC64: jr $25
@@ -161,6 +166,7 @@ entry:
 ; PIC32: jr $25
 ; PIC32R6: jrc $25
 ; PIC32MM: jrc
+; PIC32MMR6: jrc
 ; STATIC32: j
 ; STATIC32MMR6: bc
 ; PIC64: jr $25
@@ -177,7 +183,8 @@ entry:
 ; ALL-LABEL: caller8_1:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
-; PIC32MM: jalr $25
+; PIC32MM: jalrs16 $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
 ; PIC64: jalr $25
@@ -200,6 +207,7 @@ entry:
 ; PIC32: jr $25
 ; PIC32R6: jrc $25
 ; PIC32MM: jrc
+; PIC32MMR6: jrc
 ; STATIC32: j
 ; STATIC32MMR6: bc
 ; PIC64: jr $25
@@ -216,6 +224,7 @@ entry:
 ; PIC32: jalr $25
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
 ; STATIC64: jal
@@ -235,6 +244,7 @@ entry:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
 ; STATIC64: jal
@@ -254,6 +264,7 @@ entry:
 ; PIC32: jalr $25
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
 ; STATIC64: jal
@@ -275,6 +286,7 @@ entry:
 ; PIC32: jalr $25
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
 ; STATIC64: jal
@@ -294,7 +306,8 @@ entry:
 ; ALL-LABEL: caller13:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
-; PIC32MM: jalr $25
+; PIC32MM: jalrs16 $25
+; PIC32MMR6: jalr $25
 ; STATIC32: jal
 ; STATIC32MMR6: balc
 ; STATIC64: jal

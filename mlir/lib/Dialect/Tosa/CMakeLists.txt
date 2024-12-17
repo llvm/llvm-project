@@ -19,7 +19,6 @@ add_mlir_dialect_library(MLIRTosaDialect
   MLIRDialect
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
-  MLIRQuantDialect
   MLIRQuantUtils
   MLIRSideEffectInterfaces
   MLIRTensorDialect

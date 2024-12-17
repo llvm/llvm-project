@@ -832,7 +832,9 @@ TEST(APFloatTest, IsSmallestNormalized) {
     EXPECT_FALSE(APFloat::getZero(Semantics, false).isSmallestNormalized());
     EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
 
-    if (APFloat::hasNanOrInf(Semantics)) {
+    if (APFloat::semanticsHasNaN(Semantics)) {
+      // Types that do not support Inf will return NaN when asked for Inf.
+      // (But only if they support NaN.)
       EXPECT_FALSE(APFloat::getInf(Semantics, false).isSmallestNormalized());
       EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
 
@@ -890,6 +892,13 @@ TEST(APFloatTest, Zero) {
 
   EXPECT_EQ(fcPosZero, APFloat(0.0).classify());
   EXPECT_EQ(fcNegZero, APFloat(-0.0).classify());
+}
+
+TEST(APFloatTest, getOne) {
+  EXPECT_EQ(APFloat::getOne(APFloat::IEEEsingle(), false).convertToFloat(),
+            1.0f);
+  EXPECT_EQ(APFloat::getOne(APFloat::IEEEsingle(), true).convertToFloat(),
+            -1.0f);
 }
 
 TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
@@ -2549,6 +2558,14 @@ TEST(APFloatTest, isInfinity) {
   EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isInfinity());
   EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isInfinity());
   EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isInfinity());
+
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    const fltSemantics &Semantics =
+        APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(I));
+    if (APFloat::semanticsHasInf(Semantics)) {
+      EXPECT_TRUE(APFloat::getInf(Semantics).isInfinity());
+    }
+  }
 }
 
 TEST(APFloatTest, isNaN) {
@@ -2559,6 +2576,14 @@ TEST(APFloatTest, isNaN) {
   EXPECT_TRUE(APFloat::getNaN(APFloat::IEEEsingle(), false).isNaN());
   EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isNaN());
   EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isNaN());
+
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    const fltSemantics &Semantics =
+        APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(I));
+    if (APFloat::semanticsHasNaN(Semantics)) {
+      EXPECT_TRUE(APFloat::getNaN(Semantics).isNaN());
+    }
+  }
 }
 
 TEST(APFloatTest, isFiniteNonZero) {
@@ -5978,6 +6003,9 @@ TEST(APFloatTest, Float8E8M0FNUExhaustive) {
     APFloat test(APFloat::Float8E8M0FNU(), APInt(8, i));
     SCOPED_TRACE("i=" + std::to_string(i));
 
+    // bitcastToAPInt
+    EXPECT_EQ(i, test.bitcastToAPInt());
+
     // isLargest
     if (i == 254) {
       EXPECT_TRUE(test.isLargest());
@@ -7334,7 +7362,9 @@ TEST(APFloatTest, getExactLog2) {
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
 
-    if (APFloat::hasNanOrInf(Semantics)) {
+    if (APFloat::semanticsHasNaN(Semantics)) {
+      // Types that do not support Inf will return NaN when asked for Inf.
+      // (But only if they support NaN.)
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());

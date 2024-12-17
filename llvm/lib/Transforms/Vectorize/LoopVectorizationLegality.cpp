@@ -460,11 +460,8 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides =
     LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
-  Function *F = TheLoop->getHeader()->getParent();
-  bool OptForSize = F->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(TheLoop->getHeader(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
-  bool CanAddPredicate = !OptForSize;
+  bool CanAddPredicate = !llvm::shouldOptimizeForSize(
+      TheLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides,
                             CanAddPredicate, false).value_or(0);
   if (Stride == 1 || Stride == -1)
@@ -1378,6 +1375,16 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
+  // When vectorizing early exits, create predicates for the latch block only.
+  // The early exiting block must be a direct predecessor of the latch at the
+  // moment.
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+  if (hasUncountableEarlyExit()) {
+    assert(
+        is_contained(predecessors(Latch), getUncountableEarlyExitingBlock()) &&
+        "Uncountable exiting block must be a direct predecessor of latch");
+    return BB == Latch;
+  }
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 }
 
@@ -1791,13 +1798,15 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
+    HasUncountableEarlyExit = true;
     if (!isVectorizableEarlyExitLoop()) {
+      UncountableExitingBlocks.clear();
+      HasUncountableEarlyExit = false;
       if (DoExtraAnalysis)
         Result = false;
       else
         return false;
-    } else
-      HasUncountableEarlyExit = true;
+    }
   }
 
   // Go over each instruction and look at memory deps.

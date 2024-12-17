@@ -19,17 +19,14 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/math/generic/range_reduction_double_common.h"
 #include "src/math/generic/sincos_eval.h"
 
-// TODO: We might be able to improve the performance of large range reduction of
-// non-FMA targets further by operating directly on 25-bit chunks of 128/pi and
-// pre-split SIN_K_PI_OVER_128, but that might double the memory footprint of
-// those lookup table.
-#include "range_reduction_double_common.h"
-
-#if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
-#define LIBC_MATH_SINCOS_SKIP_ACCURATE_PASS
-#endif
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+#include "range_reduction_double_fma.h"
+#else
+#include "range_reduction_double_nofma.h"
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -44,40 +41,47 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
 
   DoubleDouble y;
   unsigned k;
-  generic::LargeRangeReduction<NO_FMA> range_reduction_large{};
+  LargeRangeReduction range_reduction_large{};
 
-  // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
+  // |x| < 2^16
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
-    // |x| < 2^-27
-    if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 27)) {
-      // Signed zeros.
-      if (LIBC_UNLIKELY(x == 0.0)) {
-        *sin_x = x;
-        *cos_x = 1.0;
+    // |x| < 2^-7
+    if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 7)) {
+      // |x| < 2^-27
+      if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 27)) {
+        // Signed zeros.
+        if (LIBC_UNLIKELY(x == 0.0)) {
+          *sin_x = x;
+          *cos_x = 1.0;
+          return;
+        }
+
+        // For |x| < 2^-27, max(|sin(x) - x|, |cos(x) - 1|) < ulp(x)/2.
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+        *sin_x = fputil::multiply_add(x, -0x1.0p-54, x);
+        *cos_x = fputil::multiply_add(x, -x, 1.0);
+#else
+        *cos_x = fputil::round_result_slightly_down(1.0);
+
+        if (LIBC_UNLIKELY(x_e < 4)) {
+          int rounding_mode = fputil::quick_get_round();
+          if (rounding_mode == FE_TOWARDZERO ||
+              (xbits.sign() == Sign::POS && rounding_mode == FE_DOWNWARD) ||
+              (xbits.sign() == Sign::NEG && rounding_mode == FE_UPWARD))
+            *sin_x = FPBits(xbits.uintval() - 1).get_val();
+        }
+        *sin_x = fputil::multiply_add(x, -0x1.0p-54, x);
+#endif // LIBC_TARGET_CPU_HAS_FMA
         return;
       }
-
-      // For |x| < 2^-27, max(|sin(x) - x|, |cos(x) - 1|) < ulp(x)/2.
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-      *sin_x = fputil::multiply_add(x, -0x1.0p-54, x);
-      *cos_x = fputil::multiply_add(x, -x, 1.0);
-#else
-      *cos_x = fputil::round_result_slightly_down(1.0);
-
-      if (LIBC_UNLIKELY(x_e < 4)) {
-        int rounding_mode = fputil::quick_get_round();
-        if (rounding_mode == FE_TOWARDZERO ||
-            (xbits.sign() == Sign::POS && rounding_mode == FE_DOWNWARD) ||
-            (xbits.sign() == Sign::NEG && rounding_mode == FE_UPWARD))
-          *sin_x = FPBits(xbits.uintval() - 1).get_val();
-      }
-      *sin_x = fputil::multiply_add(x, -0x1.0p-54, x);
-#endif // LIBC_TARGET_CPU_HAS_FMA
-      return;
+      // No range reduction needed.
+      k = 0;
+      y.lo = 0.0;
+      y.hi = x;
+    } else {
+      // Small range reduction.
+      k = range_reduction_small(x, y);
     }
-
-    // // Small range reduction.
-    k = range_reduction_small(x, y);
   } else {
     // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
@@ -91,56 +95,46 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
     }
 
     // Large range reduction.
-    k = range_reduction_large.compute_high_part(x);
-    y = range_reduction_large.fast();
+    k = range_reduction_large.fast(x, y);
   }
 
   DoubleDouble sin_y, cos_y;
 
-  generic::sincos_eval(y, sin_y, cos_y);
+  [[maybe_unused]] double err = generic::sincos_eval(y, sin_y, cos_y);
 
   // Look up sin(k * pi/128) and cos(k * pi/128)
-  // Memory saving versions:
-
-  // Use 128-entry table instead:
-  // DoubleDouble sin_k = SIN_K_PI_OVER_128[k & 127];
-  // uint64_t sin_s = static_cast<uint64_t>(k & 128) << (63 - 7);
-  // sin_k.hi = FPBits(FPBits(sin_k.hi).uintval() ^ sin_s).get_val();
-  // sin_k.lo = FPBits(FPBits(sin_k.hi).uintval() ^ sin_s).get_val();
-  // DoubleDouble cos_k = SIN_K_PI_OVER_128[(k + 64) & 127];
-  // uint64_t cos_s = static_cast<uint64_t>((k + 64) & 128) << (63 - 7);
-  // cos_k.hi = FPBits(FPBits(cos_k.hi).uintval() ^ cos_s).get_val();
-  // cos_k.lo = FPBits(FPBits(cos_k.hi).uintval() ^ cos_s).get_val();
-
-  // Use 64-entry table instead:
-  // auto get_idx_dd = [](unsigned kk) -> DoubleDouble {
-  //   unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
-  //   DoubleDouble ans = SIN_K_PI_OVER_128[idx];
-  //   if (kk & 128) {
-  //     ans.hi = -ans.hi;
-  //     ans.lo = -ans.lo;
-  //   }
-  //   return ans;
-  // };
-  // DoubleDouble sin_k = get_idx_dd(k);
-  // DoubleDouble cos_k = get_idx_dd(k + 64);
-
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+  // Memory saving versions.  Use 65-entry table.
+  auto get_idx_dd = [](unsigned kk) -> DoubleDouble {
+    unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
+    DoubleDouble ans = SIN_K_PI_OVER_128[idx];
+    if (kk & 128) {
+      ans.hi = -ans.hi;
+      ans.lo = -ans.lo;
+    }
+    return ans;
+  };
+  DoubleDouble sin_k = get_idx_dd(k);
+  DoubleDouble cos_k = get_idx_dd(k + 64);
+#else
   // Fast look up version, but needs 256-entry table.
   // cos(k * pi/128) = sin(k * pi/128 + pi/2) = sin((k + 64) * pi/128).
   DoubleDouble sin_k = SIN_K_PI_OVER_128[k & 255];
   DoubleDouble cos_k = SIN_K_PI_OVER_128[(k + 64) & 255];
+#endif // LIBC_MATH_HAS_SMALL_TABLES
+
   DoubleDouble msin_k{-sin_k.lo, -sin_k.hi};
 
   // After range reduction, k = round(x * 128 / pi) and y = x - k * (pi / 128).
   // So k is an integer and -pi / 256 <= y <= pi / 256.
   // Then sin(x) = sin((k * pi/128 + y)
   //             = sin(y) * cos(k*pi/128) + cos(y) * sin(k*pi/128)
-  DoubleDouble sin_k_cos_y = fputil::quick_mult<NO_FMA>(cos_y, sin_k);
-  DoubleDouble cos_k_sin_y = fputil::quick_mult<NO_FMA>(sin_y, cos_k);
+  DoubleDouble sin_k_cos_y = fputil::quick_mult(cos_y, sin_k);
+  DoubleDouble cos_k_sin_y = fputil::quick_mult(sin_y, cos_k);
   //      cos(x) = cos((k * pi/128 + y)
   //             = cos(y) * cos(k*pi/128) - sin(y) * sin(k*pi/128)
-  DoubleDouble cos_k_cos_y = fputil::quick_mult<NO_FMA>(cos_y, cos_k);
-  DoubleDouble msin_k_sin_y = fputil::quick_mult<NO_FMA>(sin_y, msin_k);
+  DoubleDouble cos_k_cos_y = fputil::quick_mult(cos_y, cos_k);
+  DoubleDouble msin_k_sin_y = fputil::quick_mult(sin_y, msin_k);
 
   DoubleDouble sin_dd =
       fputil::exact_add<false>(sin_k_cos_y.hi, cos_k_sin_y.hi);
@@ -149,24 +143,17 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
   sin_dd.lo += sin_k_cos_y.lo + cos_k_sin_y.lo;
   cos_dd.lo += msin_k_sin_y.lo + cos_k_cos_y.lo;
 
-#ifdef LIBC_MATH_SINCOS_SKIP_ACCURATE_PASS
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   *sin_x = sin_dd.hi + sin_dd.lo;
   *cos_x = cos_dd.hi + cos_dd.lo;
   return;
 #else
   // Accurate test and pass for correctly rounded implementation.
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-  constexpr double ERR = 0x1.0p-70;
-#else
-  // TODO: Improve non-FMA fast pass accuracy.
-  constexpr double ERR = 0x1.0p-66;
-#endif // LIBC_TARGET_CPU_HAS_FMA
-
-  double sin_lp = sin_dd.lo + ERR;
-  double sin_lm = sin_dd.lo - ERR;
-  double cos_lp = cos_dd.lo + ERR;
-  double cos_lm = cos_dd.lo - ERR;
+  double sin_lp = sin_dd.lo + err;
+  double sin_lm = sin_dd.lo - err;
+  double cos_lp = cos_dd.lo + err;
+  double cos_lm = cos_dd.lo - err;
 
   double sin_upper = sin_dd.hi + sin_lp;
   double sin_lower = sin_dd.hi + sin_lm;
@@ -182,7 +169,7 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
 
   Float128 u_f128, sin_u, cos_u;
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT))
-    u_f128 = generic::range_reduction_small_f128(x);
+    u_f128 = range_reduction_small_f128(x);
   else
     u_f128 = range_reduction_large.accurate();
 
@@ -190,7 +177,7 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
 
   auto get_sin_k = [](unsigned kk) -> Float128 {
     unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
-    Float128 ans = generic::SIN_K_PI_OVER_128_F128[idx];
+    Float128 ans = SIN_K_PI_OVER_128_F128[idx];
     if (kk & 128)
       ans.sign = Sign::NEG;
     return ans;
@@ -222,7 +209,7 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
         fputil::quick_add(fputil::quick_mul(cos_k_f128, cos_u),
                           fputil::quick_mul(msin_k_f128, sin_u)));
 
-#endif // !LIBC_MATH_SINCOS_SKIP_ACCURATE_PASS
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
 } // namespace LIBC_NAMESPACE_DECL

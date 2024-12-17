@@ -108,7 +108,7 @@ WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
     for (WrittenTo *operand : operands) {
       meet(operand, *r);
     }
-    addDependency(const_cast<WrittenTo *>(r), op);
+    addDependency(const_cast<WrittenTo *>(r), getProgramPointAfter(op));
   }
   return success();
 }

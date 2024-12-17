@@ -60,7 +60,6 @@ define i128 @bswap_i16_to_i128_anyext(i16 %a) {
 ; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    bfi x8, x8, #32, #32
 ; CHECK-GI-NEXT:    and x8, x8, #0xffff
 ; CHECK-GI-NEXT:    lsl x1, x8, #48
 ; CHECK-GI-NEXT:    ret

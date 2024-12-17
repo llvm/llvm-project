@@ -40,10 +40,10 @@ define i32 @caller(<16 x i32> %A) nounwind {
 ; RV32-NEXT:    lw t2, 52(a0)
 ; RV32-NEXT:    lw s0, 56(a0)
 ; RV32-NEXT:    lw a0, 60(a0)
-; RV32-NEXT:    sw a0, 12(sp)
-; RV32-NEXT:    sw s0, 8(sp)
-; RV32-NEXT:    sw t2, 4(sp)
 ; RV32-NEXT:    sw t1, 0(sp)
+; RV32-NEXT:    sw t2, 4(sp)
+; RV32-NEXT:    sw s0, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    mv a0, t0
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -72,10 +72,10 @@ define i32 @caller(<16 x i32> %A) nounwind {
 ; RV64-NEXT:    ld t2, 104(a0)
 ; RV64-NEXT:    ld s0, 112(a0)
 ; RV64-NEXT:    ld a0, 120(a0)
-; RV64-NEXT:    sd a0, 24(sp)
-; RV64-NEXT:    sd s0, 16(sp)
-; RV64-NEXT:    sd t2, 8(sp)
 ; RV64-NEXT:    sd t1, 0(sp)
+; RV64-NEXT:    sd t2, 8(sp)
+; RV64-NEXT:    sd s0, 16(sp)
+; RV64-NEXT:    sd a0, 24(sp)
 ; RV64-NEXT:    mv a0, t0
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload

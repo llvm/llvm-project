@@ -37,5 +37,10 @@ int main(int argc, char *argv[]) {
   uint64_t new_fpmr = get_fpmr(); // Set break point at this line.
   uint64_t expected_fpmr = ((uint64_t)0b010101 << 32) | (uint64_t)0b010;
 
-  return new_fpmr == expected_fpmr ? 0 : 1;
+  // If the debugger failed to update the value, exit uncleanly.
+  // This also allows you to run this program standalone to create a core file.
+  if (new_fpmr != expected_fpmr)
+    __builtin_trap();
+
+  return 0;
 }

@@ -31,7 +31,9 @@ define i64 @i64(<vscale x 1 x i64> %v, i1 %c) {
 ; RV32-NEXT:  .LBB0_3: # %falsebb
 ; RV32-NEXT:    csrr a2, vlenb
 ; RV32-NEXT:    add sp, sp, a2
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: i64:
@@ -52,7 +54,9 @@ define i64 @i64(<vscale x 1 x i64> %v, i1 %c) {
 ; RV64-NEXT:  .LBB0_2: # %falsebb
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    add sp, sp, a1
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb
@@ -82,7 +86,9 @@ define i32 @i32(<vscale x 2 x i32> %v, i1 %c) {
 ; CHECK-NEXT:  .LBB1_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb
@@ -112,7 +118,9 @@ define i16 @i16(<vscale x 4 x i16> %v, i1 %c) {
 ; CHECK-NEXT:  .LBB2_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb
@@ -142,7 +150,9 @@ define i8 @i8(<vscale x 8 x i8> %v, i1 %c) {
 ; CHECK-NEXT:  .LBB3_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb
@@ -175,7 +185,9 @@ define double @f64(<vscale x 1 x double> %v, i1 %c) {
 ; RV32-NEXT:  .LBB4_3: # %falsebb
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: f64:
@@ -199,7 +211,9 @@ define double @f64(<vscale x 1 x double> %v, i1 %c) {
 ; RV64-NEXT:  .LBB4_3: # %falsebb
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb
@@ -232,7 +246,9 @@ define float @f32(<vscale x 2 x float> %v, i1 %c) {
 ; CHECK-NEXT:  .LBB5_3: # %falsebb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb
@@ -265,7 +281,9 @@ define half @f16(<vscale x 1 x half> %v, i1 %c) {
 ; ZFMIN-NEXT:  .LBB6_3: # %falsebb
 ; ZFMIN-NEXT:    csrr a0, vlenb
 ; ZFMIN-NEXT:    add sp, sp, a0
+; ZFMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZFMIN-NEXT:    addi sp, sp, 16
+; ZFMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZFMIN-NEXT:    ret
 ;
 ; NOZFMIN-LABEL: f16:
@@ -292,7 +310,9 @@ define half @f16(<vscale x 1 x half> %v, i1 %c) {
 ; NOZFMIN-NEXT:    fmv.w.x fa0, a0
 ; NOZFMIN-NEXT:    csrr a0, vlenb
 ; NOZFMIN-NEXT:    add sp, sp, a0
+; NOZFMIN-NEXT:    .cfi_def_cfa sp, 16
 ; NOZFMIN-NEXT:    addi sp, sp, 16
+; NOZFMIN-NEXT:    .cfi_def_cfa_offset 0
 ; NOZFMIN-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb
@@ -326,7 +346,9 @@ define bfloat @bf16(<vscale x 2 x bfloat> %v, i1 %c) {
 ; ZFMIN-NEXT:  .LBB7_3: # %falsebb
 ; ZFMIN-NEXT:    csrr a0, vlenb
 ; ZFMIN-NEXT:    add sp, sp, a0
+; ZFMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZFMIN-NEXT:    addi sp, sp, 16
+; ZFMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZFMIN-NEXT:    ret
 ;
 ; NOZFMIN-LABEL: bf16:
@@ -353,7 +375,9 @@ define bfloat @bf16(<vscale x 2 x bfloat> %v, i1 %c) {
 ; NOZFMIN-NEXT:    fmv.w.x fa0, a0
 ; NOZFMIN-NEXT:    csrr a0, vlenb
 ; NOZFMIN-NEXT:    add sp, sp, a0
+; NOZFMIN-NEXT:    .cfi_def_cfa sp, 16
 ; NOZFMIN-NEXT:    addi sp, sp, 16
+; NOZFMIN-NEXT:    .cfi_def_cfa_offset 0
 ; NOZFMIN-NEXT:    ret
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
   br i1 %c, label %truebb, label %falsebb

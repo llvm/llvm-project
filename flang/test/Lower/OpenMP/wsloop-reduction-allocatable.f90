@@ -90,7 +90,6 @@ end program
 ! CHECK:                 hlfir.assign %[[VAL_17]] to %[[VAL_16]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

@@ -110,8 +110,8 @@ public:
     if (Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()) {
       llvm::Module &M = CGM.getModule();
       auto &Ctx = M.getContext();
-      llvm::Function *TDCFunc =
-          llvm::Intrinsic::getDeclaration(&M, llvm::Intrinsic::s390_tdc, Ty);
+      llvm::Function *TDCFunc = llvm::Intrinsic::getOrInsertDeclaration(
+          &M, llvm::Intrinsic::s390_tdc, Ty);
       unsigned TDCBits = 0;
       switch (BuiltinID) {
       case Builtin::BI__builtin_isnan:

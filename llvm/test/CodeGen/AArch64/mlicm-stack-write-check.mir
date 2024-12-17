@@ -3,9 +3,6 @@
 ---
 name: test
 tracksRegLiveness: true
-isSSA: false
-registers:
-  - { id: 0, class: gpr64 }
 stack:
   - { id: 0, size: 8, type: spill-slot }
 body: |
@@ -30,14 +27,11 @@ body: |
 
   bb.2:
     liveins: $x0
-    %0 = COPY $x0
 ...
+
 ---
 name: test2
 tracksRegLiveness: true
-isSSA: false
-registers:
-  - { id: 0, class: gpr64 }
 stack:
   - { id: 0, size: 8, type: spill-slot }
 body: |
@@ -62,5 +56,4 @@ body: |
 
   bb.2:
     liveins: $x0
-    %0 = COPY $x0
 ...

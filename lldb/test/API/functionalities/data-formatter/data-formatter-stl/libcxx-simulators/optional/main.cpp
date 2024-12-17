@@ -99,6 +99,5 @@ public:
 int main() {
   std::__lldb::optional<char const *> maybe_string{"Hello"};
   std::__lldb::optional<int> maybe_int{42};
-  __builtin_printf("Break here\n");
-  return 0;
+  return 0; // Break here
 }

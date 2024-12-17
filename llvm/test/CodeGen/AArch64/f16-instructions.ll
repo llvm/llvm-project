@@ -1114,6 +1114,7 @@ declare half @llvm.tan.f16(half %a) #0
 declare half @llvm.asin.f16(half %a) #0
 declare half @llvm.acos.f16(half %a) #0
 declare half @llvm.atan.f16(half %a) #0
+declare half @llvm.atan2.f16(half %a, half %b) #0
 declare half @llvm.sinh.f16(half %a) #0
 declare half @llvm.cosh.f16(half %a) #0
 declare half @llvm.tanh.f16(half %a) #0
@@ -1243,6 +1244,11 @@ define half @test_atan(half %a) #0 {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %r = call half @llvm.atan.f16(half %a)
+  ret half %r
+}
+
+define half @test_atan2(half %a, half %b) #0 {
+  %r = call half @llvm.atan2.f16(half %a, half %b)
   ret half %r
 }
 

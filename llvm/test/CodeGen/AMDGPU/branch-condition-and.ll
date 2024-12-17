@@ -17,13 +17,12 @@ define amdgpu_ps void @ham(float %arg, float %arg1) #0 {
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v1
 ; GCN-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GCN-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
-; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 4
 ; GCN-NEXT:    s_mov_b32 m0, -1
 ; GCN-NEXT:    ds_write_b32 v0, v0
 ; GCN-NEXT:    ; divergent unreachable
-; GCN-NEXT:  .LBB0_2: ; %UnifiedReturnBlock
+; GCN-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
 ; GCN-NEXT:    s_endpgm
 bb:
   %tmp = fcmp ogt float %arg, 0.000000e+00

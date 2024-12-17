@@ -24,22 +24,22 @@
 #  error The _LIBCPP_WEAK macro should be already defined by libc++
 #endif
 
-#if defined(_LIBCXXABI_NO_EXCEPTIONS) != defined(_LIBCPP_HAS_NO_EXCEPTIONS)
+#if defined(_LIBCXXABI_NO_EXCEPTIONS) != !_LIBCPP_HAS_EXCEPTIONS
 #  error libc++ and libc++abi seem to disagree on whether exceptions are enabled
 #endif
 
 inline void __throw_bad_alloc_shim() {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   throw std::bad_alloc();
 #else
-  abort_message("bad_alloc was thrown in -fno-exceptions mode");
+  __abort_message("bad_alloc was thrown in -fno-exceptions mode");
 #endif
 }
 
 #define _LIBCPP_ASSERT_SHIM(expr, str)                                                                                 \
   do {                                                                                                                 \
     if (!expr)                                                                                                         \
-      abort_message(str);                                                                                              \
+      __abort_message(str);                                                                                            \
   } while (false)
 
 // ------------------ BEGIN COPY ------------------
@@ -63,7 +63,7 @@ static void* operator_new_impl(std::size_t size) {
   return p;
 }
 
-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE _LIBCPP_WEAK void* operator new(std::size_t size) _THROW_BAD_ALLOC {
+_LIBCPP_OVERRIDABLE_FUNCTION(_Znwm, void*, operator new, (std::size_t size)) _THROW_BAD_ALLOC {
   void* p = operator_new_impl(size);
   if (p == nullptr)
     __throw_bad_alloc_shim();
@@ -71,10 +71,10 @@ _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE _LIBCPP_WEAK void* operator new(std
 }
 
 _LIBCPP_WEAK void* operator new(size_t size, const std::nothrow_t&) noexcept {
-#ifdef _LIBCPP_HAS_NO_EXCEPTIONS
+#if !_LIBCPP_HAS_EXCEPTIONS
 #  if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
-      !std::__is_function_overridden(static_cast<void* (*)(std::size_t)>(&operator new)),
+      !std::__is_function_overridden<static_cast<void* (*)(std::size_t)>(&operator new)>(),
       "libc++ was configured with exceptions disabled and `operator new(size_t)` has been overridden, "
       "but `operator new(size_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new(size_t, nothrow_t)` must call `operator new(size_t)`, which will terminate in case "
@@ -94,15 +94,15 @@ _LIBCPP_WEAK void* operator new(size_t size, const std::nothrow_t&) noexcept {
 #endif
 }
 
-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE _LIBCPP_WEAK void* operator new[](size_t size) _THROW_BAD_ALLOC {
+_LIBCPP_OVERRIDABLE_FUNCTION(_Znam, void*, operator new[], (size_t size)) _THROW_BAD_ALLOC {
   return ::operator new(size);
 }
 
 _LIBCPP_WEAK void* operator new[](size_t size, const std::nothrow_t&) noexcept {
-#ifdef _LIBCPP_HAS_NO_EXCEPTIONS
+#if !_LIBCPP_HAS_EXCEPTIONS
 #  if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
-      !std::__is_function_overridden(static_cast<void* (*)(std::size_t)>(&operator new[])),
+      !std::__is_function_overridden<static_cast<void* (*)(std::size_t)>(&operator new[])>(),
       "libc++ was configured with exceptions disabled and `operator new[](size_t)` has been overridden, "
       "but `operator new[](size_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new[](size_t, nothrow_t)` must call `operator new[](size_t)`, which will terminate in case "
@@ -134,7 +134,7 @@ _LIBCPP_WEAK void operator delete[](void* ptr, const std::nothrow_t&) noexcept {
 
 _LIBCPP_WEAK void operator delete[](void* ptr, size_t) noexcept { ::operator delete[](ptr); }
 
-#if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
+#if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
 
 static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignment) {
   if (size == 0)
@@ -156,8 +156,8 @@ static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignm
   return p;
 }
 
-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE _LIBCPP_WEAK void*
-operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
+_LIBCPP_OVERRIDABLE_FUNCTION(_ZnwmSt11align_val_t, void*, operator new, (std::size_t size, std::align_val_t alignment))
+_THROW_BAD_ALLOC {
   void* p = operator_new_aligned_impl(size, alignment);
   if (p == nullptr)
     __throw_bad_alloc_shim();
@@ -165,10 +165,10 @@ operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
 }
 
 _LIBCPP_WEAK void* operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
-#  ifdef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if !_LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
-      !std::__is_function_overridden(static_cast<void* (*)(std::size_t, std::align_val_t)>(&operator new)),
+      !std::__is_function_overridden<static_cast<void* (*)(std::size_t, std::align_val_t)>(&operator new)>(),
       "libc++ was configured with exceptions disabled and `operator new(size_t, align_val_t)` has been overridden, "
       "but `operator new(size_t, align_val_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new(size_t, align_val_t, nothrow_t)` must call `operator new(size_t, align_val_t)`, which will "
@@ -188,16 +188,14 @@ _LIBCPP_WEAK void* operator new(size_t size, std::align_val_t alignment, const s
 #  endif
 }
 
-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE _LIBCPP_WEAK void*
-operator new[](size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
-  return ::operator new(size, alignment);
-}
+_LIBCPP_OVERRIDABLE_FUNCTION(_ZnamSt11align_val_t, void*, operator new[], (size_t size, std::align_val_t alignment))
+_THROW_BAD_ALLOC { return ::operator new(size, alignment); }
 
 _LIBCPP_WEAK void* operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
-#  ifdef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if !_LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
-      !std::__is_function_overridden(static_cast<void* (*)(std::size_t, std::align_val_t)>(&operator new[])),
+      !std::__is_function_overridden<static_cast<void* (*)(std::size_t, std::align_val_t)>(&operator new[])>(),
       "libc++ was configured with exceptions disabled and `operator new[](size_t, align_val_t)` has been overridden, "
       "but `operator new[](size_t, align_val_t, nothrow_t)` has not been overridden. This is problematic because "
       "`operator new[](size_t, align_val_t, nothrow_t)` must call `operator new[](size_t, align_val_t)`, which will "
@@ -240,5 +238,5 @@ _LIBCPP_WEAK void operator delete[](void* ptr, size_t, std::align_val_t alignmen
   ::operator delete[](ptr, alignment);
 }
 
-#endif // !_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+#endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
 // ------------------ END COPY ------------------

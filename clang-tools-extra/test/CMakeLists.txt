@@ -50,8 +50,6 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
-  # Clang-tidy tests need clang for building modules.
-  clang
 )
 
 # Add lit test dependencies.

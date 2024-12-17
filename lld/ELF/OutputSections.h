@@ -35,15 +35,16 @@ struct CompressedData {
 // non-overlapping file offsets and VAs.
 class OutputSection final : public SectionBase {
 public:
-  OutputSection(StringRef name, uint32_t type, uint64_t flags);
+  OutputSection(Ctx &, StringRef name, uint32_t type, uint64_t flags);
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Output;
   }
 
-  uint64_t getLMA() const { return ptLoad ? addr + ptLoad->lmaOffset : addr; }
+  uint64_t getLMA() const;
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *sHdr);
 
+  Ctx &ctx;
   uint32_t sectionIndex = UINT32_MAX;
   unsigned sortRank;
 
@@ -74,8 +75,8 @@ public:
   uint32_t shName = 0;
 
   void recordSection(InputSectionBase *isec);
-  void commitSection(Ctx &ctx, InputSection *isec);
-  void finalizeInputSections(Ctx &ctx);
+  void commitSection(InputSection *isec);
+  void finalizeInputSections();
 
   // The following members are normally only used in linker scripts.
   MemoryRegion *memRegion = nullptr;
@@ -123,20 +124,20 @@ public:
   void sortInitFini();
   void sortCtorsDtors();
 
+  std::array<uint8_t, 4> getFiller(Ctx &);
+
   // Used for implementation of --compress-debug-sections and
   // --compress-sections.
   CompressedData compressed;
 
 private:
   SmallVector<InputSection *, 0> storage;
-
-  std::array<uint8_t, 4> getFiller(Ctx &);
 };
 
 struct OutputDesc final : SectionCommand {
   OutputSection osec;
-  OutputDesc(StringRef name, uint32_t type, uint64_t flags)
-      : SectionCommand(OutputSectionKind), osec(name, type, flags) {}
+  OutputDesc(Ctx &ctx, StringRef name, uint32_t type, uint64_t flags)
+      : SectionCommand(OutputSectionKind), osec(ctx, name, type, flags) {}
 
   static bool classof(const SectionCommand *c) {
     return c->kind == OutputSectionKind;
@@ -150,7 +151,8 @@ struct SectionClass final : public SectionBase {
   SmallVector<InputSectionDescription *, 0> commands;
   bool assigned = false;
 
-  SectionClass(StringRef name) : SectionBase(Class, name, 0, 0, 0, 0, 0, 0) {}
+  SectionClass(StringRef name)
+      : SectionBase(Class, nullptr, name, 0, 0, 0, 0, 0, 0) {}
   static bool classof(const SectionBase *s) { return s->kind() == Class; }
 };
 

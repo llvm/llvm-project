@@ -10,7 +10,6 @@
 #include "CommandObjectMemoryTag.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -36,6 +35,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 #include "llvm/Support/MathExtras.h"
 #include <cinttypes>
 #include <memory>

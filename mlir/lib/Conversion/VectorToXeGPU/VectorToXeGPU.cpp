@@ -82,6 +82,10 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
   unsigned vecRank = vecTy.getRank();
+  if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
+    return rewriter.notifyMatchFailure(
+        xferOp, "Boundary check is available only for block instructions.");
+
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
     return rewriter.notifyMatchFailure(xferOp, "Unsupported permutation map");
@@ -218,18 +222,15 @@ struct TransferWriteLowering
     if (failed(transferPreconditions(rewriter, writeOp)))
       return failure();
 
-    if (writeOp.hasOutOfBoundsDim())
-      return rewriter.notifyMatchFailure(writeOp,
-                                         "Unsupported out-of-bounds write");
     AffineMap map = writeOp.getPermutationMap();
     if (!map.isMinorIdentity())
       return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
 
     VectorType vecTy = writeOp.getVectorType();
-    auto descType =
-        xegpu::TensorDescType::get(vecTy.getShape(), vecTy.getElementType(),
-                                   /*array_length=*/1, /*boundary_check=*/false,
-                                   xegpu::MemorySpace::Global);
+    auto descType = xegpu::TensorDescType::get(
+        vecTy.getShape(), vecTy.getElementType(),
+        /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
+        xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType,
         dyn_cast<TypedValue<MemRefType>>(writeOp.getSource()),
@@ -258,9 +259,12 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
     if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy)))
       return failure();
 
+    // Boundary check is available only for block instructions.
+    bool boundaryCheck = vecTy.getRank() > 1;
+
     auto descType = xegpu::TensorDescType::get(
         vecTy.getShape(), vecTy.getElementType(), /*array_length=*/1,
-        /*boundary_check=*/true, xegpu::MemorySpace::Global);
+        boundaryCheck, xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType, loadOp.getBase(), loadOp.getIndices());
 
@@ -288,10 +292,12 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy)))
       return failure();
 
-    auto descType =
-        xegpu::TensorDescType::get(vecTy.getShape(), vecTy.getElementType(),
-                                   /*array_length=*/1, /*boundary_check=*/true,
-                                   xegpu::MemorySpace::Global);
+    // Boundary check is available only for block instructions.
+    bool boundaryCheck = vecTy.getRank() > 1;
+
+    auto descType = xegpu::TensorDescType::get(
+        vecTy.getShape(), vecTy.getElementType(),
+        /*array_length=*/1, boundaryCheck, xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType, storeOp.getBase(), storeOp.getIndices());
 

@@ -38,7 +38,7 @@ define i1 @t0_const_after_fold_lshr_shl_ne(i32 %x, i64 %y, i32 %len) {
 
 define <2 x i1> @t1_vec_splat(<2 x i32> %x, <2 x i64> %y, <2 x i32> %len) {
 ; CHECK-LABEL: @t1_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
@@ -363,7 +363,7 @@ define i1 @t10_constants(i32 %x, i64 %y) {
 define <2 x i1> @t11_constants_vec_splat(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @t11_constants_vec_splat(
 ; CHECK-NEXT:    [[Y_TR:%.*]] = trunc <2 x i64> [[Y:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 26, i32 26>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 26)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[Y_TR]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[T3]]
@@ -378,7 +378,7 @@ define <2 x i1> @t11_constants_vec_splat(<2 x i32> %x, <2 x i64> %y) {
 define <2 x i1> @t12_constants_vec_nonsplat(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @t12_constants_vec_nonsplat(
 ; CHECK-NEXT:    [[Y_TR:%.*]] = trunc <2 x i64> [[Y:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 28, i32 28>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 28)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[Y_TR]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[T3]]

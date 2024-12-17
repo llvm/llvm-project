@@ -398,6 +398,13 @@ def FeatureAvoidPartialCPSR : SubtargetFeature<"avoid-partial-cpsr",
                                                "AvoidCPSRPartialUpdate", "true",
                                  "Avoid CPSR partial update for OOO execution">;
 
+/// FeatureAvoidMULS - If true, codegen would avoid using the MULS instruction,
+/// prefering the thumb2 MUL which doesn't set flags.
+def FeatureAvoidMULS : SubtargetFeature<"avoid-muls",
+                                        "AvoidMULS", "true",
+                                 "Avoid MULS instructions for M class cores">;
+
+
 /// Disable +1 predication cost for instructions updating CPSR.
 /// Enabled for Cortex-A57.
 /// True if disable +1 predication cost for instructions updating CPSR. Enabled for Cortex-A57.
