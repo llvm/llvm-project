@@ -8406,10 +8406,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     if (Reverse)
       VectorPtr = new VPReverseVectorPointerRecipe(
           Ptr, &Plan.getVF(), getLoadStoreType(I),
-          GEP ? GEP->isInBounds() : false, I->getDebugLoc());
+          GEP && GEP->isInBounds() ? GEPNoWrapFlags::inBounds()
+                                   : GEPNoWrapFlags::none(),
+          I->getDebugLoc());
     else
       VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
-                                            GEP ? GEP->isInBounds() : false,
+                                            GEP ? GEP->getNoWrapFlags()
+                                                : GEPNoWrapFlags::none(),
                                             I->getDebugLoc());
     Builder.getInsertBlock()->appendRecipe(VectorPtr);
     Ptr = VectorPtr;
@@ -9703,6 +9706,15 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // Convert the reduction phi to operate on bools.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(ConstantInt::getFalse(
                               OrigLoop->getHeader()->getContext())));
+      continue;
+    }
+
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      // Adjust the start value for FindLastIV recurrences to use the sentinel
+      // value after generating the ResumePhi recipe, which uses the original
+      // start value.
+      PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
   }
 

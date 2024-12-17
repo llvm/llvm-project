@@ -33,6 +33,8 @@ add_llvm_component_library(LLVMOrcJIT
   LazyObjectLinkingLayer.cpp
   LazyReexports.cpp
   Layer.cpp
+  LinkGraphLayer.cpp
+  LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
   LookupAndRecordAddrs.cpp
   LLJIT.cpp
