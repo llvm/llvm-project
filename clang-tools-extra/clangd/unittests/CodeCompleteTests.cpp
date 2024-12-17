@@ -1101,6 +1101,43 @@ int x = foo^
       Contains(AllOf(named("foo"), doc("This comment should be retained!"))));
 }
 
+TEST(CompletionTest, CommentsOnMembers) {
+  MockFS FS;
+  MockCompilationDatabase CDB;
+
+  auto Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+
+  ClangdServer Server(CDB, FS, Opts);
+
+  FS.Files[testPath("foo.h")] = R"cpp(
+    struct alpha {
+      /// This is a member field.
+      int gamma;
+
+      /// This is a member function.
+      int delta();
+    };
+  )cpp";
+
+  auto File = testPath("foo.cpp");
+  Annotations Test(R"cpp(
+#include "foo.h"
+alpha a;
+int x = a.^
+     )cpp");
+  runAddDocument(Server, File, Test.code());
+  auto CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, Test.point(), {}));
+
+  EXPECT_THAT(
+      CompletionList.Completions,
+      Contains(AllOf(named("gamma"), doc("This is a member field."))));
+  EXPECT_THAT(
+      CompletionList.Completions,
+      Contains(AllOf(named("delta"), doc("This is a member function."))));
+}
+
 TEST(CompletionTest, GlobalCompletionFiltering) {
 
   Symbol Class = cls("XYZ");
