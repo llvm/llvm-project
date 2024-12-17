@@ -168,9 +168,6 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
     return -1;
   }
 
-  // Set up initial section manually here
-  Streamer.switchSectionNoPrint(Ctx.getObjectFileInfo()->getTextSection());
-
   bool ErrorOccurred = false;
 
   // Convert the input to a vector for disassembly.
