@@ -160,8 +160,7 @@ public:
   }
 
 private:
-  template <typename T>
-  void writeHelper(StringRef Name, T Value) {
+  template <typename T> void writeHelper(StringRef Name, T Value) {
     assert(Started && "serializer not started");
     if (Children.empty())
       Buffer.append((Name + ":" + llvm::Twine(Value) + "\n").str());
