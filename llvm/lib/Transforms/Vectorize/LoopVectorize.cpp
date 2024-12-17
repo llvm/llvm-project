@@ -9703,6 +9703,15 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // Convert the reduction phi to operate on bools.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(ConstantInt::getFalse(
                               OrigLoop->getHeader()->getContext())));
+      continue;
+    }
+
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      // Adjust the start value for FindLastIV recurrences to use the sentinel
+      // value after generating the ResumePhi recipe, which uses the original
+      // start value.
+      PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
   }
 
