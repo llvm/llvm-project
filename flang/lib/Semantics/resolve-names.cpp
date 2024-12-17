@@ -8973,12 +8973,12 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     if (NeedsExplicitType(symbol)) {
       ApplyImplicitRules(symbol);
     }
-    if (inDeviceSubprogram && IsDummy(symbol) &&
-        symbol.has<ObjectEntityDetails>()) {
-      auto *dummy{symbol.detailsIf<ObjectEntityDetails>()};
-      if (!dummy->cudaDataAttr() && !IsValue(symbol)) {
+    if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
+      auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+      if (!object->cudaDataAttr() && !IsValue(symbol) &&
+          (IsDummy(symbol) || object->IsArray())) {
         // Implicitly set device attribute if none is set in device context.
-        dummy->set_cudaDataAttr(common::CUDADataAttr::Device);
+        object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
     }
     if (IsDummy(symbol) && isImplicitNoneType() &&

@@ -709,47 +709,33 @@ HeapProfileRecords:
   YAMLReader.parse(YAMLData);
   IndexedMemProfData MemProfData = YAMLReader.takeMemProfData();
 
-  Frame F1(0x100, 11, 10, true);
-  Frame F2(0x200, 22, 20, false);
-  Frame F3(0x300, 33, 30, false);
-  Frame F4(0x400, 44, 40, true);
-  Frame F5(0x500, 55, 50, true);
-  Frame F6(0x600, 66, 60, false);
-  Frame F7(0x700, 77, 70, true);
-  Frame F8(0x800, 88, 80, false);
-
-  llvm::SmallVector<FrameId> CS1 = {F1.hash(), F2.hash()};
-  llvm::SmallVector<FrameId> CS2 = {F3.hash(), F4.hash()};
-  llvm::SmallVector<FrameId> CS3 = {F5.hash(), F6.hash()};
-  llvm::SmallVector<FrameId> CS4 = {F7.hash(), F8.hash()};
-
-  // Verify the entire contents of MemProfData.Frames.
-  EXPECT_THAT(MemProfData.Frames,
-              UnorderedElementsAre(Pair(F1.hash(), F1), Pair(F2.hash(), F2),
-                                   Pair(F3.hash(), F3), Pair(F4.hash(), F4),
-                                   Pair(F5.hash(), F5), Pair(F6.hash(), F6),
-                                   Pair(F7.hash(), F7), Pair(F8.hash(), F8)));
-
-  // Verify the entire contents of MemProfData.Frames.
-  EXPECT_THAT(MemProfData.CallStacks,
-              UnorderedElementsAre(Pair(hashCallStack(CS1), CS1),
-                                   Pair(hashCallStack(CS2), CS2),
-                                   Pair(hashCallStack(CS3), CS3),
-                                   Pair(hashCallStack(CS4), CS4)));
-
   // Verify the entire contents of MemProfData.Records.
   ASSERT_THAT(MemProfData.Records, SizeIs(1));
-  const auto &[GUID, Record] = MemProfData.Records.front();
+  const auto &[GUID, IndexedRecord] = MemProfData.Records.front();
   EXPECT_EQ(GUID, 0xdeadbeef12345678ULL);
+
+  FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
+      MemProfData.CallStacks, FrameIdConv);
+  MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
+
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
-  EXPECT_EQ(Record.AllocSites[0].CSId, hashCallStack(CS1));
+  EXPECT_THAT(
+      Record.AllocSites[0].CallStack,
+      ElementsAre(Frame(0x100, 11, 10, true), Frame(0x200, 22, 20, false)));
   EXPECT_EQ(Record.AllocSites[0].Info.getAllocCount(), 777U);
   EXPECT_EQ(Record.AllocSites[0].Info.getTotalSize(), 888U);
-  EXPECT_EQ(Record.AllocSites[1].CSId, hashCallStack(CS2));
+  EXPECT_THAT(
+      Record.AllocSites[1].CallStack,
+      ElementsAre(Frame(0x300, 33, 30, false), Frame(0x400, 44, 40, true)));
   EXPECT_EQ(Record.AllocSites[1].Info.getAllocCount(), 666U);
   EXPECT_EQ(Record.AllocSites[1].Info.getTotalSize(), 555U);
-  EXPECT_THAT(Record.CallSiteIds,
-              ElementsAre(hashCallStack(CS3), hashCallStack(CS4)));
+  EXPECT_THAT(Record.CallSites,
+              ElementsAre(ElementsAre(Frame(0x500, 55, 50, true),
+                                      Frame(0x600, 66, 60, false)),
+                          ElementsAre(Frame(0x700, 77, 70, true),
+                                      Frame(0x800, 88, 80, false))));
 }
 
 // Verify that the YAML parser accepts a GUID expressed as a function name.
@@ -769,24 +755,21 @@ HeapProfileRecords:
   YAMLReader.parse(YAMLData);
   IndexedMemProfData MemProfData = YAMLReader.takeMemProfData();
 
-  Frame F1(0x100, 11, 10, true);
-
-  llvm::SmallVector<FrameId> CS1 = {F1.hash()};
-
-  // Verify the entire contents of MemProfData.Frames.
-  EXPECT_THAT(MemProfData.Frames, UnorderedElementsAre(Pair(F1.hash(), F1)));
-
-  // Verify the entire contents of MemProfData.Frames.
-  EXPECT_THAT(MemProfData.CallStacks,
-              UnorderedElementsAre(Pair(hashCallStack(CS1), CS1)));
-
   // Verify the entire contents of MemProfData.Records.
   ASSERT_THAT(MemProfData.Records, SizeIs(1));
-  const auto &[GUID, Record] = MemProfData.Records.front();
+  const auto &[GUID, IndexedRecord] = MemProfData.Records.front();
   EXPECT_EQ(GUID, IndexedMemProfRecord::getGUID("_Z3fooi"));
+
+  FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
+      MemProfData.CallStacks, FrameIdConv);
+  MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
+
   ASSERT_THAT(Record.AllocSites, SizeIs(1));
-  EXPECT_EQ(Record.AllocSites[0].CSId, hashCallStack(CS1));
-  EXPECT_THAT(Record.CallSiteIds, IsEmpty());
+  EXPECT_THAT(Record.AllocSites[0].CallStack,
+              ElementsAre(Frame(0x100, 11, 10, true)));
+  EXPECT_THAT(Record.CallSites, IsEmpty());
 }
 
 template <typename T> std::string serializeInYAML(T &Val) {
