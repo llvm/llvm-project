@@ -306,6 +306,13 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
+bool mlir::hasOnlyReadEffect(Operation *op) {
+  if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
+    return memEffects.onlyHasEffect<MemoryEffects::Read>();
+  }
+  return false;
+}
+
 bool mlir::isMemoryEffectFree(Operation *op) {
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     if (!memInterface.hasNoEffect())

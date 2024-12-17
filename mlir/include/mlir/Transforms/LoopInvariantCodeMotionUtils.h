@@ -48,15 +48,19 @@ class Value;
 /// }
 /// ```
 ///
-/// Users must supply three callbacks.
+/// Users must supply five callbacks.
 ///
 /// - `isDefinedOutsideRegion` returns true if the given value is invariant with
 ///   respect to the given region. A common implementation might be:
 ///   `value.getParentRegion()->isProperAncestor(region)`.
 /// - `shouldMoveOutOfRegion` returns true if the provided operation can be
-///   moved of the given region, e.g. if it is side-effect free.
+///   moved of the given region, e.g. if it is side-effect free or has only read
+///   side effects.
+/// - `wrapInGuard` wraps the given operation in a trip-count check guard.
 /// - `moveOutOfRegion` moves the operation out of the given region. A common
 ///   implementation might be: `op->moveBefore(region->getParentOp())`.
+/// - `unwrapGuard` unwraps the trip-count check if there is no op guarded by
+///   this check.
 ///
 /// An operation is moved if all of its operands satisfy
 /// `isDefinedOutsideRegion` and it satisfies `shouldMoveOutOfRegion`.
@@ -66,7 +70,9 @@ size_t moveLoopInvariantCode(
     ArrayRef<Region *> regions,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
-    function_ref<void(Operation *, Region *)> moveOutOfRegion);
+    function_ref<FailureOr<std::pair<Operation *, Region *>>()> wrapInGuard,
+    function_ref<void(Operation *, Region *)> moveOutOfRegion,
+    function_ref<LogicalResult()> unwrapGuard);
 
 /// Move side-effect free loop invariant code out of a loop-like op using
 /// methods provided by the interface.

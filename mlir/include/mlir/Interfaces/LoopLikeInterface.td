@@ -80,6 +80,26 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/"op->moveBefore($_op);"
     >,
     InterfaceMethod<[{
+        Wraps the loop into a trip-count check.
+      }],
+      /*retTy=*/"FailureOr<std::pair<::mlir::Operation *, ::mlir::Region *>>",
+      /*methodName=*/"wrapInTripCountCheck",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return ::mlir::failure();"
+    >,
+    InterfaceMethod<[{
+        Unwraps the trip-count check.
+      }],
+      /*retTy=*/"::llvm::LogicalResult",
+      /*methodName=*/"unwrapTripCountCheck",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
         Promotes the loop body to its containing block if the loop is known to
         have a single iteration. Returns "success" if the promotion was
         successful.
