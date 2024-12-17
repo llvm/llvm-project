@@ -23,4 +23,3 @@ define void @stride_is_2s(i32 %b, i32 %s) {
 }
 
 declare void @foo(i32)
-
