@@ -226,12 +226,8 @@ static bool DiagnoseNoDiscard(Sema &S, const NamedDecl *OffendingDecl,
   return S.Diag(Loc, diag::warn_unused_result) << A << true << Msg << R1 << R2;
 }
 
-static void DiagnoseUnused(Sema &S, const Expr *E,
-                           std::optional<unsigned> DiagID) {
-  // When called from Sema::DiagnoseUnusedExprResult, DiagID is a diagnostic for
-  // where this expression is not used. When called from
-  // Sema::DiagnoseDiscardedNodiscard, DiagID is std::nullopt and this function
-  // will only diagnose [[nodiscard]], [[gnu::warn_unused_result]] and similar
+namespace {
+void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
   bool NoDiscardOnly = !DiagID.has_value();
 
   // If we are in an unevaluated expression context, then there can be no unused
@@ -294,17 +290,10 @@ static void DiagnoseUnused(Sema &S, const Expr *E,
     if (E->getType()->isVoidType())
       return;
 
-<<<<<<< HEAD
-    if (DiagnoseNoDiscard(S,
-                          cast_if_present<WarnUnusedResultAttr>(
-                              CE->getUnusedResultAttr(S.Context)),
-                          Loc, R1, R2, /*isCtor=*/false))
-=======
-    auto [OffendingDecl, A] = CE->getUnusedResultAttr(Context);
-    if (DiagnoseNoDiscard(*this, OffendingDecl,
+    auto [OffendingDecl, A] = CE->getUnusedResultAttr(S.Context);
+    if (DiagnoseNoDiscard(S, OffendingDecl,
                           cast_or_null<WarnUnusedResultAttr>(A), Loc, R1, R2,
                           /*isCtor=*/false))
->>>>>>> llvm_be_very_careful/main
       return;
 
     // If the callee has attribute pure, const, or warn_unused_result, warn with
@@ -327,29 +316,19 @@ static void DiagnoseUnused(Sema &S, const Expr *E,
     if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
       const NamedDecl *OffendingDecl = nullptr;
       const auto *A = Ctor->getAttr<WarnUnusedResultAttr>();
-<<<<<<< HEAD
-      A = A ? A : Ctor->getParent()->getAttr<WarnUnusedResultAttr>();
-      if (DiagnoseNoDiscard(S, A, Loc, R1, R2, /*isCtor=*/true))
-=======
       if (!A) {
         OffendingDecl = Ctor->getParent();
         A = OffendingDecl->getAttr<WarnUnusedResultAttr>();
       }
-      if (DiagnoseNoDiscard(*this, OffendingDecl, A, Loc, R1, R2,
+      if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
                             /*isCtor=*/true))
->>>>>>> llvm_be_very_careful/main
         return;
     }
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     if (const TagDecl *TD = ILE->getType()->getAsTagDecl()) {
 
-<<<<<<< HEAD
-      if (DiagnoseNoDiscard(S, TD->getAttr<WarnUnusedResultAttr>(), Loc, R1, R2,
-                            /*isCtor=*/false))
-=======
-      if (DiagnoseNoDiscard(*this, TD, TD->getAttr<WarnUnusedResultAttr>(), Loc,
+      if (DiagnoseNoDiscard(S, TD, TD->getAttr<WarnUnusedResultAttr>(), Loc,
                             R1, R2, /*isCtor=*/false))
->>>>>>> llvm_be_very_careful/main
         return;
     }
   } else if (ShouldSuppress)
@@ -363,13 +342,8 @@ static void DiagnoseUnused(Sema &S, const Expr *E,
     }
     const ObjCMethodDecl *MD = ME->getMethodDecl();
     if (MD) {
-<<<<<<< HEAD
-      if (DiagnoseNoDiscard(S, MD->getAttr<WarnUnusedResultAttr>(), Loc, R1, R2,
+      if (DiagnoseNoDiscard(S, nullptr, MD->getAttr<WarnUnusedResultAttr>(), Loc, R1, R2,
                             /*isCtor=*/false))
-=======
-      if (DiagnoseNoDiscard(*this, nullptr, MD->getAttr<WarnUnusedResultAttr>(),
-                            Loc, R1, R2, /*isCtor=*/false))
->>>>>>> llvm_be_very_careful/main
         return;
     }
   } else if (const PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(E)) {
@@ -422,16 +396,21 @@ static void DiagnoseUnused(Sema &S, const Expr *E,
     return;
   }
 
+  // Don't diagnose discarded left of dot in static class member access
+  // because its type is "used" to determine the class to access
+  //if (DiagID == diag::warn_discarded_class_member_access)
+  //  return;
+
   // Do not diagnose use of a comma operator in a SFINAE context because the
   // type of the left operand could be used for SFINAE, so technically it is
   // *used*.
-<<<<<<< HEAD
   if (DiagID == diag::warn_unused_comma_left_operand && S.isSFINAEContext())
     return;
 
   S.DiagIfReachable(Loc, llvm::ArrayRef<const Stmt *>(E),
                     S.PDiag(*DiagID) << R1 << R2);
 }
+} // namespace
 
 void Sema::DiagnoseDiscardedNodiscard(const Expr *E) {
   DiagnoseUnused(*this, E, std::nullopt);
@@ -446,11 +425,6 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
     return;
 
   DiagnoseUnused(*this, E, DiagID);
-=======
-  if (DiagID != diag::warn_unused_comma_left_operand || !isSFINAEContext())
-    DiagIfReachable(Loc, S ? llvm::ArrayRef(S) : llvm::ArrayRef<Stmt *>(),
-                    PDiag(DiagID) << R1 << R2);
->>>>>>> llvm_be_very_careful/main
 }
 
 void Sema::ActOnStartOfCompoundStmt(bool IsStmtExpr) {
