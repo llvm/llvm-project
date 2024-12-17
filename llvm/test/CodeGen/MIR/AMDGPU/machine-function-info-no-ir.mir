@@ -597,3 +597,15 @@ body: |
     %2:sgpr_64 = COPY %1
     %1:sgpr_64 = COPY %0
 ...
+
+---
+# ALL-LABEL: name: max_memory_cluster_dwords
+# ALL: maxMemoryClusterDWords: 16
+name: max_memory_cluster_dwords
+machineFunctionInfo:
+  maxMemoryClusterDWords: 16
+body:             |
+  bb.0:
+    SI_RETURN
+
+...

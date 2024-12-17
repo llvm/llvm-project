@@ -492,7 +492,7 @@ private:
 
   // Maximum number of dwords that can be clusterred during instruction
   // scheduler stage.
-  unsigned MaxMemoryClusterDWords = 0;
+  unsigned MaxMemoryClusterDWords;
 
   mutable std::optional<bool> UsesAGPRs;
 
