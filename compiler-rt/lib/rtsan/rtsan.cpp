@@ -83,6 +83,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
 
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
+
+  InitializePlatformEarly();
+
   InitializeInterceptors();
 
   InitializeSuppressions();

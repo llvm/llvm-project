@@ -55,6 +55,8 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
 
   bool HasAtomics = false;
   bool HasBulkMemory = false;
+  bool HasBulkMemoryOpt = false;
+  bool HasCallIndirectOverlong = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
@@ -180,11 +182,12 @@ public:
                                    const TargetOptions &Opts)
       : WebAssemblyTargetInfo(T, Opts) {
     if (T.isOSEmscripten())
-      resetDataLayout("e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-f128:64-n32:64-"
-                      "S128-ni:1:10:20");
-    else
       resetDataLayout(
-          "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20");
+          "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
+          "S128-ni:1:10:20");
+    else
+      resetDataLayout("e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
+                      "S128-ni:1:10:20");
   }
 
 protected:
@@ -204,11 +207,12 @@ public:
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
     if (T.isOSEmscripten())
-      resetDataLayout("e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-f128:64-n32:64-"
-                      "S128-ni:1:10:20");
-    else
       resetDataLayout(
-          "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20");
+          "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
+          "S128-ni:1:10:20");
+    else
+      resetDataLayout("e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
+                      "S128-ni:1:10:20");
   }
 
 protected:

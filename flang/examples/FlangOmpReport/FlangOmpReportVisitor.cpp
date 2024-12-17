@@ -8,6 +8,7 @@
 
 #include "FlangOmpReportVisitor.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 namespace Fortran {
 namespace parser {
@@ -142,6 +143,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
                 },
                 c.u);
           },
+          [&](const OpenMPErrorConstruct &c) -> std::string {
+            const CharBlock &source{std::get<0>(c.t).source};
+            return normalize_construct_name(source.ToString());
+          },
           [&](const OpenMPSectionConstruct &c) -> std::string {
             return "section";
           },
@@ -238,9 +243,9 @@ void OpenMPCounterVisitor::Post(const OmpScheduleClause::Kind &c) {
   clauseDetails +=
       "type=" + std::string{OmpScheduleClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpIfClause::DirectiveNameModifier &c) {
+void OpenMPCounterVisitor::Post(const OmpDirectiveNameModifier &c) {
   clauseDetails +=
-      "name_modifier=" + std::string{OmpIfClause::EnumToString(c)} + ";";
+      "name_modifier=" + llvm::omp::getOpenMPDirectiveName(c.v).str() + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpCancelType::Type &c) {
   clauseDetails += "type=" + std::string{OmpCancelType::EnumToString(c)} + ";";

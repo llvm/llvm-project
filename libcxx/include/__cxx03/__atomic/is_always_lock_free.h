@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_IS_ALWAYS_LOCK_FREE_H
-#define _LIBCPP___ATOMIC_IS_ALWAYS_LOCK_FREE_H
+#ifndef _LIBCPP___CXX03___ATOMIC_IS_ALWAYS_LOCK_FREE_H
+#define _LIBCPP___CXX03___ATOMIC_IS_ALWAYS_LOCK_FREE_H
 
 #include <__cxx03/__config>
 
@@ -25,4 +25,4 @@ struct __libcpp_is_always_lock_free {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_IS_ALWAYS_LOCK_FREE_H
+#endif // _LIBCPP___CXX03___ATOMIC_IS_ALWAYS_LOCK_FREE_H

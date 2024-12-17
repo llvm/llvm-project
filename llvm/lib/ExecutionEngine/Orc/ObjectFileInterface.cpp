@@ -129,7 +129,7 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     if (Sym.getBinding() == ELF::STB_GNU_UNIQUE)
       *SymFlags |= JITSymbolFlags::Weak;
 
-    I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
+    I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
   }
 
   SymbolStringPtr InitSymbol;

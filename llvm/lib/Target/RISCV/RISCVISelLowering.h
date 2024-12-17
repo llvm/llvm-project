@@ -369,10 +369,6 @@ enum NodeType : unsigned {
   VWMACCU_VL,
   VWMACCSU_VL,
 
-  // Narrowing logical shift right.
-  // Operands are (source, shift, passthru, mask, vl)
-  VNSRL_VL,
-
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.
   SETCC_VL,
@@ -707,9 +703,8 @@ public:
   // Note that one specific case requires fence insertion for an
   // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
   // than this hook due to limitations in the interface here.
-  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
-    return isa<LoadInst>(I) || isa<StoreInst>(I);
-  }
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override;
+
   Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                 AtomicOrdering Ord) const override;
   Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
@@ -750,7 +745,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
-  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
   /// Returns the register with the specified architectural or ABI name. This
   /// method is necessary to lower the llvm.read_register.* and
@@ -922,6 +917,11 @@ public:
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
+
+  /// True if stack clash protection is enabled for this functions.
+  bool hasInlineStackProbe(const MachineFunction &MF) const override;
+
+  unsigned getStackProbeSize(const MachineFunction &MF, Align StackAlign) const;
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,

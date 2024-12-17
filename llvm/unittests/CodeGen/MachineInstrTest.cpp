@@ -584,7 +584,7 @@ TEST(MachineInstrTest, SpliceOperands) {
   // test tied operands
   MCRegisterClass MRC{
       0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
-  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0};
+  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.
   assert(RC.isAllocatable() && "unusable TargetRegisterClass");

@@ -34,7 +34,7 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ANYEXT),
 // CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s16,
-// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::A0RegClassID),
+// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::A0wRegClassID),
 // CHECK-NEXT: // MIs[0] src
 // CHECK-NEXT: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s8,
 // CHECK-NEXT: // (anyext:{ *:[i16] } i8:{ *:[i8] }:$src)  =>  (EXTRACT_SUBREG:{ *:[i16] } (INSERT_SUBREG:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), A0b:{ *:[i8] }:$src, lo8:{ *:[i32] }), lo16:{ *:[i32] })

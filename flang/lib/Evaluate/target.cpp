@@ -17,7 +17,7 @@ Rounding TargetCharacteristics::defaultRounding;
 
 TargetCharacteristics::TargetCharacteristics() {
   auto enableCategoryKinds{[this](TypeCategory category) {
-    for (int kind{0}; kind < maxKind; ++kind) {
+    for (int kind{1}; kind <= maxKind; ++kind) {
       if (CanSupportType(category, kind)) {
         auto byteSize{static_cast<std::size_t>(kind)};
         if (category == TypeCategory::Real ||
@@ -70,14 +70,14 @@ bool TargetCharacteristics::EnableType(common::TypeCategory category,
 
 void TargetCharacteristics::DisableType(
     common::TypeCategory category, std::int64_t kind) {
-  if (kind >= 0 && kind < maxKind) {
+  if (kind > 0 && kind <= maxKind) {
     align_[static_cast<int>(category)][kind] = 0;
   }
 }
 
 std::size_t TargetCharacteristics::GetByteSize(
     common::TypeCategory category, std::int64_t kind) const {
-  if (kind >= 0 && kind < maxKind) {
+  if (kind > 0 && kind <= maxKind) {
     return byteSize_[static_cast<int>(category)][kind];
   } else {
     return 0;
@@ -86,7 +86,7 @@ std::size_t TargetCharacteristics::GetByteSize(
 
 std::size_t TargetCharacteristics::GetAlignment(
     common::TypeCategory category, std::int64_t kind) const {
-  if (kind >= 0 && kind < maxKind) {
+  if (kind > 0 && kind <= maxKind) {
     return align_[static_cast<int>(category)][kind];
   } else {
     return 0;
@@ -106,6 +106,30 @@ void TargetCharacteristics::set_isPPC(bool isPowerPC) { isPPC_ = isPowerPC; }
 
 void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
   areSubnormalsFlushedToZero_ = yes;
+}
+
+// Check if a given real kind has flushing control.
+bool TargetCharacteristics::hasSubnormalFlushingControl(int kind) const {
+  CHECK(kind > 0 && kind <= maxKind);
+  CHECK(CanSupportType(TypeCategory::Real, kind));
+  return hasSubnormalFlushingControl_[kind];
+}
+
+// Check if any or all real kinds have flushing control.
+bool TargetCharacteristics::hasSubnormalFlushingControl(bool any) const {
+  for (int kind{1}; kind <= maxKind; ++kind) {
+    if (CanSupportType(TypeCategory::Real, kind) &&
+        hasSubnormalFlushingControl_[kind] == any) {
+      return any;
+    }
+  }
+  return !any;
+}
+
+void TargetCharacteristics::set_hasSubnormalFlushingControl(
+    int kind, bool yes) {
+  CHECK(kind > 0 && kind <= maxKind);
+  hasSubnormalFlushingControl_[kind] = yes;
 }
 
 void TargetCharacteristics::set_roundingMode(Rounding rounding) {

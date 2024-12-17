@@ -6,10 +6,10 @@
 
 RWBuffer<float> Buf : register(u5, space3);
 
-// CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", float, 1, 0, 0), float }
+// CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", float, 1, 0, 0) }
 // CHECK: @Buf = global %"class.hlsl::RWBuffer" zeroinitializer, align 4
 
-// CHECK: define linkonce_odr void @_ZN4hlsl8RWBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(8) %this)
+// CHECK: define linkonce_odr void @_ZN4hlsl8RWBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK-NEXT: entry:
 
 // CHECK: define internal void @_GLOBAL__sub_I_RWBuffer_constructor.hlsl()

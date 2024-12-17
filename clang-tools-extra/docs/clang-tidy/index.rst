@@ -9,7 +9,7 @@ See also:
 .. toctree::
    :maxdepth: 1
 
-   The list of clang-tidy checks <checks/list>
+   List of Clang-Tidy Checks <checks/list>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
    External Clang-Tidy Examples <ExternalClang-TidyExamples>
@@ -21,7 +21,7 @@ static analysis. :program:`clang-tidy` is modular and provides a convenient
 interface for writing new checks.
 
 
-Using clang-tidy
+Using Clang-Tidy
 ================
 
 :program:`clang-tidy` is a `LibTooling`_-based tool, and it's easier to work

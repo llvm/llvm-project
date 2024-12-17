@@ -18,7 +18,7 @@ namespace internal {
 
 [[noreturn]] void exit(int status) {
   // We want to first make sure the server is listening before we exit.
-  rpc::Client::Port port = rpc::client.open<RPC_EXIT>();
+  rpc::Client::Port port = rpc::client.open<LIBC_EXIT>();
   port.send_and_recv([](rpc::Buffer *, uint32_t) {},
                      [](rpc::Buffer *, uint32_t) {});
   port.send([&](rpc::Buffer *buffer, uint32_t) {

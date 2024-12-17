@@ -64,6 +64,9 @@ if (OPENMP_STANDALONE_BUILD)
   # Do not use OPENMP_LIBDIR_SUFFIX directly, use OPENMP_INSTALL_LIBDIR.
   set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
 
+  # Used by llvm_add_tool() and tests.
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
+
   # Group test settings.
   set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
     "C compiler to use for testing OpenMP runtime libraries.")
@@ -129,6 +132,7 @@ include(LibomptargetGetDependencies)
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
+include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag(-Werror=global-constructors OFFLOAD_HAVE_WERROR_CTOR)
 
 # LLVM source tree is required at build time for libomptarget
@@ -203,6 +207,8 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} loongarch64-unknown-linux-gnu")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} loongarch64-unknown-linux-gnu-LTO")
 
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.
@@ -286,6 +292,26 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
+
+  find_path (
+    LIBOMP_INCLUDE_DIR
+    NAMES
+      omp.h
+    HINTS
+    ${COMPILER_RESOURCE_DIR}/include
+    ${CMAKE_INSTALL_PREFIX}/include
+  )
+
+  get_filename_component(LIBOMP_LIBRARY_DIR ${LIBOMP_STANDALONE} DIRECTORY)
+
+  set(OPENMP_TEST_FLAGS "" CACHE STRING
+    "Extra compiler flags to send to the test compiler.")
+  set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
+    "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
+  set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
+    "Path to folder containing omp.h")
+  set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
+    "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 endif()
 
 macro(pythonize_bool var)
@@ -352,6 +378,9 @@ add_subdirectory(tools)
 
 # Build target agnostic offloading library.
 add_subdirectory(src)
+
+add_subdirectory(tools/offload-tblgen)
+add_subdirectory(liboffload)
 
 # Add tests.
 add_subdirectory(test)
