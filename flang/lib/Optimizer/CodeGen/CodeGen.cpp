@@ -64,8 +64,6 @@ namespace fir {
 
 #define DEBUG_TYPE "flang-codegen"
 
-using namespace Fortran::runtime::cuda;
-
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
 
