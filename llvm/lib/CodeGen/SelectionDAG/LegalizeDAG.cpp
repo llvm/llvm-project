@@ -1531,15 +1531,16 @@ SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
   SDLoc Dl(Node);
   SmallVector<SDValue, 0> Ops;
   unsigned NumOperands = Node->getNumOperands();
+  MVT VectorIdxType = TLI.getVectorIdxTy(DAG.getDataLayout());
   for (unsigned I = 0; I < NumOperands; ++I) {
     SDValue SubOp = Node->getOperand(I);
     EVT VectorValueType =
         SubOp->getValueType(0);
     EVT ElementValueType = VectorValueType.getVectorElementType();
     unsigned NumSubElem = VectorValueType.getVectorNumElements();
-    for (unsigned J = 0; J < NumSubElem; ++J) {
+    for (unsigned Idx = 0; Idx < NumSubElem; ++Idx) {
       Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, Dl, ElementValueType,
-                                SubOp, DAG.getIntPtrConstant(J, Dl)));
+                                SubOp, DAG.getConstant(Idx, Dl, VectorIdxType)));
     }
   }
   return DAG.getBuildVector(Node->getValueType(0), Dl, Ops);
