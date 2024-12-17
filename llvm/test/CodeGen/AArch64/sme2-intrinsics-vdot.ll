@@ -94,8 +94,8 @@ entry:
   %4 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
   %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 0
   %6 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 1
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> undef, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> poison, i32 0)
   ret void
 }
 
@@ -129,8 +129,8 @@ entry:
   %4 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
   %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 0
   %6 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 1
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> undef, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> poison, i32 0)
   ret void
 }
 
@@ -177,10 +177,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
@@ -249,10 +249,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.svdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
@@ -317,8 +317,8 @@ entry:
   %4 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
   %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 0
   %6 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 1
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> undef, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> poison, i32 0)
   ret void
 }
 
@@ -352,8 +352,8 @@ entry:
   %4 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
   %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 0
   %6 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 1
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> undef, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> poison, i32 0)
   ret void
 }
 
@@ -400,10 +400,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
@@ -472,10 +472,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.uvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
@@ -537,10 +537,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
@@ -609,10 +609,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.suvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
@@ -674,10 +674,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
@@ -746,10 +746,10 @@ entry:
   %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
   %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
   %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> undef, i32 0)
-  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> undef, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> poison, i32 0)
+  tail call void @llvm.aarch64.sme.usvdot.lane.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> poison, i32 0)
   ret void
 }
 
