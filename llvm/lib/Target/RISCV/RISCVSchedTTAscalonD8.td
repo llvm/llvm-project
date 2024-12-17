@@ -1,4 +1,4 @@
-//=- RISCVSchedTTAscalonD8.td - Tenstorrent Ascalon Scheduling Defs -----*- tablegen -*-=//
+//=- RISCVSchedTTAscalonD8.td - TT Ascalon D8 Sched Defs -----*- tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
