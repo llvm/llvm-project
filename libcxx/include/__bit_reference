@@ -964,9 +964,9 @@ private:
   template <class _Dp>
   friend struct __bit_array;
 
-  template <bool _FillVal, class _Dp>
+  template <class _Dp>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend void
-  __fill_n_bool(__bit_iterator<_Dp, false> __first, typename _Dp::size_type __n);
+  __fill_n_bool(__bit_iterator<_Dp, false> __first, typename _Dp::size_type __n, bool __to_fill);
 
   template <class _Dp, bool _IC>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, false> __copy_aligned(
@@ -1007,12 +1007,12 @@ private:
   template <class _Dp, bool _IC1, bool _IC2>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
       equal(__bit_iterator<_Dp, _IC1>, __bit_iterator<_Dp, _IC1>, __bit_iterator<_Dp, _IC2>);
-  template <bool _ToFind, class _Dp, bool _IC>
+  template <class _Dp, bool _IC>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, _IC>
-      __find_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
-  template <bool _ToCount, class _Dp, bool _IC>
-  friend typename __bit_iterator<_Dp, _IC>::difference_type _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 __count_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
+  __find_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type, bool __to_find);
+  template <class _Dp, bool _IC>
+  friend typename __bit_iterator<_Dp, _IC>::difference_type _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+  __count_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type, bool __to_count);
 };
 
 _LIBCPP_END_NAMESPACE_STD

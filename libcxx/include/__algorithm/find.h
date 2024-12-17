@@ -95,9 +95,9 @@ __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
 }
 
 // __bit_iterator implementation
-template <bool _ToFind, class _Cp, bool _IsConst>
+template <class _Cp, bool _IsConst>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
-__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) {
+__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n, bool __to_find) {
   using _It            = __bit_iterator<_Cp, _IsConst>;
   using __storage_type = typename _It::__storage_type;
 
@@ -107,7 +107,7 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) 
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
     __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-    __storage_type __b     = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
+    __storage_type __b     = std::__invert_if(*__first.__seg_, !__to_find) & __m;
     if (__b)
       return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
     if (__n == __dn)
@@ -117,14 +117,14 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) 
   }
   // do middle whole words
   for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word) {
-    __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_);
+    __storage_type __b = std::__invert_if(*__first.__seg_, !__to_find);
     if (__b)
       return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
   }
   // do last partial word
   if (__n > 0) {
     __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
+    __storage_type __b = std::__invert_if(*__first.__seg_, !__to_find) & __m;
     if (__b)
       return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
   }
@@ -134,9 +134,7 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) 
 template <class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, _IsConst>
 __find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
-  if (static_cast<bool>(__value))
-    return std::__find_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
-  return std::__find_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+  return std::__find_bool(__first, static_cast<typename _Cp::size_type>(__last - __first), static_cast<bool>(__value));
 }
 
 // segmented iterator implementation

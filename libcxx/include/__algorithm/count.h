@@ -42,9 +42,9 @@ __count(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
 }
 
 // __bit_iterator implementation
-template <bool _ToCount, class _Cp, bool _IsConst>
+template <class _Cp, bool _IsConst>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __bit_iterator<_Cp, _IsConst>::difference_type
-__count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) {
+__count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n, bool __to_count) {
   using _It             = __bit_iterator<_Cp, _IsConst>;
   using __storage_type  = typename _It::__storage_type;
   using difference_type = typename _It::difference_type;
@@ -56,17 +56,17 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
     __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-    __r                    = std::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
+    __r                    = std::__libcpp_popcount(std::__invert_if(*__first.__seg_, !__to_count) & __m);
     __n -= __dn;
     ++__first.__seg_;
   }
   // do middle whole words
   for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-    __r += std::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_));
+    __r += std::__libcpp_popcount(std::__invert_if(*__first.__seg_, !__to_count));
   // do last partial word
   if (__n > 0) {
     __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __r += std::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
+    __r += std::__libcpp_popcount(std::__invert_if(*__first.__seg_, !__to_count) & __m);
   }
   return __r;
 }
@@ -74,9 +74,7 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 template <class, class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_diff_t<__bit_iterator<_Cp, _IsConst> >
 __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
-  if (__value)
-    return std::__count_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
-  return std::__count_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+  return std::__count_bool(__first, static_cast<typename _Cp::size_type>(__last - __first), static_cast<bool>(__value));
 }
 
 template <class _InputIterator, class _Tp>

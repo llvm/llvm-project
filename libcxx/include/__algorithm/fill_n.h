@@ -30,9 +30,9 @@ template <class _OutputIterator, class _Size, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value);
 
-template <bool _FillVal, class _Cp>
+template <class _Cp>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-__fill_n_bool(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n) {
+__fill_n_bool(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n, bool __to_fill) {
   using _It            = __bit_iterator<_Cp, false>;
   using __storage_type = typename _It::__storage_type;
 
@@ -42,7 +42,7 @@ __fill_n_bool(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
     __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-    if (_FillVal)
+    if (__to_fill)
       *__first.__seg_ |= __m;
     else
       *__first.__seg_ &= ~__m;
@@ -51,13 +51,13 @@ __fill_n_bool(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n) {
   }
   // do middle whole words
   __storage_type __nw = __n / __bits_per_word;
-  std::__fill_n(std::__to_address(__first.__seg_), __nw, _FillVal ? static_cast<__storage_type>(-1) : 0);
+  std::__fill_n(std::__to_address(__first.__seg_), __nw, __to_fill ? static_cast<__storage_type>(-1) : 0);
   __n -= __nw * __bits_per_word;
   // do last partial word
   if (__n > 0) {
     __first.__seg_ += __nw;
     __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    if (_FillVal)
+    if (__to_fill)
       *__first.__seg_ |= __m;
     else
       *__first.__seg_ &= ~__m;
@@ -67,12 +67,8 @@ __fill_n_bool(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n) {
 template <class _Cp, class _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, false>
 __fill_n(__bit_iterator<_Cp, false> __first, _Size __n, const bool& __value) {
-  if (__n > 0) {
-    if (__value)
-      std::__fill_n_bool<true>(__first, __n);
-    else
-      std::__fill_n_bool<false>(__first, __n);
-  }
+  if (__n > 0)
+    std::__fill_n_bool(__first, __n, __value);
   return __first + __n;
 }
 
