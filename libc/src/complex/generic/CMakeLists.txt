@@ -7,9 +7,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -21,9 +19,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -35,9 +31,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -49,11 +43,9 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -65,11 +57,9 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -81,7 +71,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
 )
 
@@ -94,7 +83,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
 )
 
@@ -107,7 +95,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
 )
 
@@ -120,7 +107,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
@@ -135,7 +121,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types

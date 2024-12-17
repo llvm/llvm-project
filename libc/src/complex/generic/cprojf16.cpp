@@ -9,23 +9,13 @@
 #include "src/complex/cprojf16.h"
 #if defined(LIBC_TYPES_HAS_CFLOAT16)
 
-#include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(cfloat16, cprojf16, (cfloat16 x)) {
-  Complex<float16> x_c = cpp::bit_cast<Complex<float16>>(x);
-  if (fputil::FPBits<float16>(x_c.real).is_inf() ||
-      fputil::FPBits<float16>(x_c.imag).is_inf()) {
-    return cpp::bit_cast<cfloat16>(
-        Complex<float16>{(fputil::FPBits<float16>::inf(Sign::POS).get_val()),
-                         (float16)(x_c.imag > 0 ? 0.0 : -0.0)});
-  } else {
-    return x;
-  }
+  return project<cfloat16>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

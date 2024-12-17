@@ -7,23 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/complex/cprojf.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(_Complex float, cprojf, (_Complex float x)) {
-  Complex<float> x_c = cpp::bit_cast<Complex<float>>(x);
-  if (fputil::FPBits<float>(x_c.real).is_inf() ||
-      fputil::FPBits<float>(x_c.imag).is_inf()) {
-    return cpp::bit_cast<_Complex float>(
-        Complex<float>{(fputil::FPBits<float>::inf(Sign::POS).get_val()),
-                       (float)(x_c.imag > 0 ? 0.0 : -0.0)});
-  } else {
-    return x;
-  }
+  return project<_Complex float>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
