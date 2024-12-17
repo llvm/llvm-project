@@ -2115,7 +2115,7 @@ LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 namespace {
 ParseResult parseObject(AsmParser &odsParser, CompilationTarget &format,
-                          StringAttr &object) {
+                        StringAttr &object) {
   std::optional<CompilationTarget> formatResult;
   StringRef enumKeyword;
   auto loc = odsParser.getCurrentLocation();

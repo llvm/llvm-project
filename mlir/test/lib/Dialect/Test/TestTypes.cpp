@@ -97,7 +97,7 @@ static ParseResult parseCustomTypeA(AsmParser &parser, int &aResult) {
 static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
 
 static ParseResult parseCustomTypeB(AsmParser &parser, int a,
-                                      std::optional<int> &bResult) {
+                                    std::optional<int> &bResult) {
   if (a < 0)
     return success();
   for (int i : llvm::seq(0, a))
