@@ -148,11 +148,10 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr0_sgpr1 = COPY $sgpr8_sgpr9
     ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM renamable $sgpr0_sgpr1, 128, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
-    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 32, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)
-    ; GCN-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = COPY killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11
+    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM renamable $sgpr0_sgpr1, 128, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
-    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)
+    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11
     ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $sgpr0_sgpr1
     %0:sreg_64_xexec = COPY $sgpr8_sgpr9
@@ -182,7 +181,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = KILL killed renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19, implicit renamable $sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM renamable $sgpr0_sgpr1, 128, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
-    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)
+    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = S_LOAD_DWORDX16_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
     ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = KILL killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, implicit renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11
     ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $sgpr0_sgpr1
@@ -233,11 +232,10 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr0_sgpr1 = COPY $sgpr8_sgpr9
     ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 128, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)
-    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 16, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
-    ; GCN-NEXT: renamable $sgpr8_sgpr9_sgpr10_sgpr11 = COPY killed renamable $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr8_sgpr9_sgpr10_sgpr11
     ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 128, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)
-    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
+    ; GCN-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $sgpr0_sgpr1
     %0:sreg_64_xexec = COPY $sgpr8_sgpr9

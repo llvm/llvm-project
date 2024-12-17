@@ -1350,41 +1350,13 @@ static unsigned getNumAllocatableRegsForConstraints(
   return RCI.getNumAllocatableRegs(ConstrainedRC);
 }
 
-static LaneBitmask getInstReadLaneMask(const MachineRegisterInfo &MRI,
-                                       const TargetRegisterInfo &TRI,
-                                       const MachineInstr &FirstMI,
-                                       Register Reg) {
-  LaneBitmask Mask;
-  SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
-  (void)AnalyzeVirtRegInBundle(const_cast<MachineInstr &>(FirstMI), Reg, &Ops);
-
-  for (auto [MI, OpIdx] : Ops) {
-    const MachineOperand &MO = MI->getOperand(OpIdx);
-    assert(MO.isReg() && MO.getReg() == Reg);
-    unsigned SubReg = MO.getSubReg();
-    if (SubReg == 0 && MO.isUse()) {
-      if (MO.isUndef())
-        continue;
-      return MRI.getMaxLaneMaskForVReg(Reg);
-    }
-
-    LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(SubReg);
-    if (MO.isDef()) {
-      if (!MO.isUndef())
-        Mask |= ~SubRegMask;
-    } else
-      Mask |= SubRegMask;
-  }
-
-  return Mask;
-}
-
-/// Return true if \p MI at \P Use reads a subset of the lanes live in \p
-/// VirtReg.
-static bool readsLaneSubset(const MachineRegisterInfo &MRI,
-                            const MachineInstr *MI, const LiveInterval &VirtReg,
-                            const TargetRegisterInfo *TRI, SlotIndex Use,
-                            const TargetInstrInfo *TII) {
+/// Return true if \p MI at \P Use reads a strict subset of the lanes of \p
+/// VirtReg (not the whole register).
+static bool readsLaneStrictSubset(const MachineRegisterInfo &MRI,
+                                  const MachineInstr *MI,
+                                  const LiveInterval &VirtReg,
+                                  const TargetRegisterInfo *TRI,
+                                  const TargetInstrInfo *TII) {
   // Early check the common case. Beware of the semi-formed bundles SplitKit
   // creates by setting the bundle flag on copies without a matching BUNDLE.
 
@@ -1393,18 +1365,34 @@ static bool readsLaneSubset(const MachineRegisterInfo &MRI,
       DestSrc->Destination->getSubReg() == DestSrc->Source->getSubReg())
     return false;
 
-  // FIXME: We're only considering uses, but should be consider defs too?
-  LaneBitmask ReadMask = getInstReadLaneMask(MRI, *TRI, *MI, VirtReg.reg());
+  Register Reg = VirtReg.reg();
 
-  LaneBitmask LiveAtMask;
-  for (const LiveInterval::SubRange &S : VirtReg.subranges()) {
-    if (S.liveAt(Use))
-      LiveAtMask |= S.LaneMask;
+  // FIXME: We're only considering uses, but should be consider defs too?
+  LaneBitmask UseMask;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
+  (void)AnalyzeVirtRegInBundle(const_cast<MachineInstr &>(*MI), Reg, &Ops);
+
+  for (auto [MI, OpIdx] : Ops) {
+    const MachineOperand &MO = MI->getOperand(OpIdx);
+    assert(MO.isReg() && MO.getReg() == Reg);
+    unsigned SubReg = MO.getSubReg();
+    if (SubReg == 0 && MO.isUse()) {
+      if (MO.isUndef())
+        continue;
+      return false;
+    }
+
+    LaneBitmask SubRegMask = TRI->getSubRegIndexLaneMask(SubReg);
+    if (MO.isDef()) {
+      if (!MO.isUndef())
+        UseMask |= ~SubRegMask;
+    } else
+      UseMask |= SubRegMask;
   }
 
   // If the live lanes aren't different from the lanes used by the instruction,
   // this doesn't help.
-  return (ReadMask & ~(LiveAtMask & TRI->getCoveringLanes())).any();
+  return UseMask != MRI.getMaxLaneMaskForVReg(VirtReg.reg());
 }
 
 /// tryInstructionSplit - Split a live range around individual instructions.
@@ -1456,7 +1444,7 @@ unsigned RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
                                                    TII, TRI, RegClassInfo)) ||
           // TODO: Handle split for subranges with subclass constraints?
           (!SplitSubClass && VirtReg.hasSubRanges() &&
-           !readsLaneSubset(*MRI, MI, VirtReg, TRI, Use, TII))) {
+           !readsLaneStrictSubset(*MRI, MI, VirtReg, TRI, TII))) {
         LLVM_DEBUG(dbgs() << "    skip:\t" << Use << '\t' << *MI);
         continue;
       }
