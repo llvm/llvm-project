@@ -2135,6 +2135,20 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
+
+    // Move VPWidenPointerInductionRecipes to the back of the phis
+    // since it may insert non-phi instructions in place, which will
+    // interfere with other header phis if they come after.
+    //
+    // TODO: Expand out VPWidenPointerInductionRecipe into multiple
+    // recipes here and remove this
+    SmallVector<VPRecipeBase *> PointerIVs;
+    for (VPRecipeBase &R : VPBB->phis())
+      if (isa<VPWidenPointerInductionRecipe>(R))
+        PointerIVs.push_back(&R);
+    for (VPRecipeBase *R : PointerIVs)
+      R->moveBefore(*VPBB, VPBB->getFirstNonPhi());
+
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR, TypeInfo);
