@@ -41,4 +41,16 @@ void test_svmla(uint32_t slice, svmfloat8_t zn, svmfloat8x2_t znx2, svmfloat8x4_
 
     // expected-error@+1 {{'svmla_single_za32_mf8_vg4x4_fpm' needs target feature sme,sme-f8f32}}
     svmla_single_za32_mf8_vg4x4_fpm(slice, znx4, zn, fpmr);
+
+    // expected-error@+1 {{'svmla_za16_mf8_vg2x2_fpm' needs target feature sme,sme-f8f16}}
+    svmla_za16_mf8_vg2x2_fpm(slice, znx2, znx2, fpmr);
+
+    // expected-error@+1 {{'svmla_za16_mf8_vg2x4_fpm' needs target feature sme,sme-f8f16}}
+    svmla_za16_mf8_vg2x4_fpm(slice, znx4, znx4, fpmr);
+
+    // expected-error@+1 {{'svmla_za32_mf8_vg4x2_fpm' needs target feature sme,sme-f8f32}}
+    svmla_za32_mf8_vg4x2_fpm(slice, znx2, znx2, fpmr);
+
+    // expected-error@+1 {{'svmla_za32_mf8_vg4x4_fpm' needs target feature sme,sme-f8f32}}
+    svmla_za32_mf8_vg4x4_fpm(slice, znx4, znx4, fpmr);
 }
