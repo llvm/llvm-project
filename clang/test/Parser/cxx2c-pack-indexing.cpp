@@ -12,8 +12,7 @@ struct S {
             // expected-note {{to match this '['}} \
            // expected-warning{{declaration does not declare anything}}
 
-    T...[]; // expected-error{{expected expression}} \
-           // expected-warning{{declaration does not declare anything}}
+    T...[]; // expected-error{{expected member name or ';' after declaration specifiers}}
 
     void f(auto... v) {
         decltype(v...[1]) a = v...[1];
@@ -65,7 +64,7 @@ int main() {
 }
 
 
-namespace GH11460 {
+namespace GH111460 {
 template <typename... T>
 requires( ); // expected-error {{expected expression}}
 struct SS {

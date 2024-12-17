@@ -94,14 +94,14 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
     transform::TransformState &state, TransformOpInterface transformOp,
     SmallVector<OpFoldResult> &result, ArrayRef<OpFoldResult> ofrs) {
   for (OpFoldResult ofr : ofrs) {
-    if (ofr.is<Attribute>()) {
-      if (!isa<IntegerAttr>(ofr.get<Attribute>()))
+    if (auto attr = dyn_cast<Attribute>(ofr)) {
+      if (!isa<IntegerAttr>(attr))
         return transformOp.emitDefiniteFailure() << "expected IntegerAttr";
       result.push_back(ofr);
       continue;
     }
 
-    Value transformValue = ofr.get<Value>();
+    Value transformValue = cast<Value>(ofr);
     if (isa<TransformParamTypeInterface>(transformValue.getType())) {
       ArrayRef<Attribute> params = state.getParams(transformValue);
       if (params.size() != 1)
@@ -180,12 +180,11 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     TransformState &state, TransformOpInterface &transformOp,
     ArrayRef<OpFoldResult> mixedResults, SmallVectorImpl<int64_t> &reified) {
   for (OpFoldResult paramOrHandle : mixedResults) {
-    if (isa<Attribute>(paramOrHandle)) {
-      reified.push_back(
-          cast<IntegerAttr>(paramOrHandle.get<Attribute>()).getInt());
+    if (auto attr = dyn_cast<Attribute>(paramOrHandle)) {
+      reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
-    } else if (isa<ParamType>(paramOrHandle.get<Value>().getType())) {
-      ArrayRef<Attribute> params = state.getParams(paramOrHandle.get<Value>());
+    } else if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+      ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
       reified.push_back(
@@ -193,7 +192,7 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
       continue;
     }
 
-    Value handle = paramOrHandle.get<Value>();
+    Value handle = cast<Value>(paramOrHandle);
     if (!isa<TransformHandleTypeInterface>(handle.getType()))
       return transformOp.emitSilenceableError() << "unexpected value handle";
     auto payload = state.getPayloadOps(handle);
@@ -1176,7 +1175,9 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerPackResult> res = lowerPack(rewriter, target);
+  bool lowerPadLikeWithInsertSlice = getLowerPadLikeWithInsertSlice();
+  FailureOr<LowerPackResult> res =
+      lowerPack(rewriter, target, lowerPadLikeWithInsertSlice);
   if (failed(res)) {
     return mlir::emitSilenceableFailure(target->getLoc())
            << "cannot lower to pad + expand + transpose";
@@ -1196,7 +1197,9 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
+  bool lowerUnpadLikeWithExtractSlice = getLowerUnpadLikeWithExtractSlice();
+  FailureOr<LowerUnPackOpResult> res =
+      lowerUnPack(rewriter, target, lowerUnpadLikeWithExtractSlice);
   if (failed(res)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()

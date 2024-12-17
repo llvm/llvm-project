@@ -50,6 +50,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXProxyRegErasure.cpp",
     "NVPTXRegisterInfo.cpp",
     "NVPTXReplaceImageHandles.cpp",
+    "NVPTXSelectionDAGInfo.cpp",
     "NVPTXSubtarget.cpp",
     "NVPTXTargetMachine.cpp",
     "NVPTXTargetTransformInfo.cpp",

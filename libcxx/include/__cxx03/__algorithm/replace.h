@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REPLACE_H
-#define _LIBCPP___ALGORITHM_REPLACE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_REPLACE_H
+#define _LIBCPP___CXX03___ALGORITHM_REPLACE_H
 
 #include <__cxx03/__config>
 
@@ -27,4 +27,4 @@ replace(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __old_valu
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_REPLACE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_REPLACE_H
