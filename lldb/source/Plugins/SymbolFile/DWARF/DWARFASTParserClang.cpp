@@ -1657,20 +1657,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   ConstString unique_typename(attrs.name);
   Declaration unique_decl(attrs.decl);
   uint64_t byte_size = attrs.byte_size.value_or(0);
-  if (attrs.byte_size && *attrs.byte_size == 0 && attrs.name &&
-      !die.HasChildren() && cu_language == eLanguageTypeObjC) {
-    // Work around an issue with clang at the moment where forward
-    // declarations for objective C classes are emitted as:
-    //  DW_TAG_structure_type [2]
-    //  DW_AT_name( "ForwardObjcClass" )
-    //  DW_AT_byte_size( 0x00 )
-    //  DW_AT_decl_file( "..." )
-    //  DW_AT_decl_line( 1 )
-    //
-    // Note that there is no DW_AT_declaration and there are no children,
-    // and the byte size is zero.
-    attrs.is_forward_declaration = true;
-  }
 
   if (attrs.name) {
     GetUniqueTypeNameAndDeclaration(die, cu_language, unique_typename,
