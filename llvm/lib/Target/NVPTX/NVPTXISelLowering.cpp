@@ -2914,10 +2914,13 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   Ops.push_back(N->getOperand(0));
 
   // Then the split values
-  if (ValVT.getVectorNumElements() > NumElts) {
-    // If the number of elements has changed, getVectorLoweringShape has upsized
-    // the element types
-    assert((Isv2x16VT(EltVT) || EltVT == MVT::v4i8) && "Unexpected upsized type.");
+  assert(NumElts <= ValVT.getVectorNumElements() &&
+         "NumElts should not increase, only decrease or stay the same.");
+  if (NumElts < ValVT.getVectorNumElements()) {
+    // If the number of elements has decreased, getVectorLoweringShape has
+    // upsized the element types
+    assert(EltVT.isVector() && EltVT.getSizeInBits() == 32 &&
+           EltVT.getVectorNumElements() <= 4 && "Unexpected upsized type.");
     // Combine individual elements into v2[i,f,bf]16/v4i8 subvectors to be
     // stored as b32s
     unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
@@ -5288,11 +5291,13 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                                           LD->getMemOperand());
 
   SmallVector<SDValue> ScalarRes;
-  if (ResVT.getVectorNumElements() > NumElts) {
-    // If the number of elements has changed, getVectorLoweringShape has upsized
-    // the element types
-    assert((Isv2x16VT(EltVT) || EltVT == MVT::v4i8) &&
-           "Unexpected upsized type.");
+  assert(NumElts <= ResVT.getVectorNumElements() &&
+         "NumElts should not increase, only decrease or stay the same.");
+  if (NumElts < ResVT.getVectorNumElements()) {
+    // If the number of elements has decreased, getVectorLoweringShape has
+    // upsized the element types
+    assert(EltVT.isVector() && EltVT.getSizeInBits() == 32 &&
+           EltVT.getVectorNumElements() <= 4 && "Unexpected upsized type.");
     // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
     // into individual elements.
     for (unsigned i = 0; i < NumElts; ++i) {
