@@ -431,9 +431,6 @@ def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
 //===----------------------------------------------------------------------===//
 
 def NVVM_Barrier0Op : NVVM_IntrOp<"barrier0"> {
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
-  }];
   let assemblyFormat = "attr-dict";
 }
 
