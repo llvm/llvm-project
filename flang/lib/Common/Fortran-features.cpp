@@ -17,6 +17,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::OldDebugLines);
   disable_.set(LanguageFeature::OpenACC);
   disable_.set(LanguageFeature::OpenMP);
+  disable_.set(LanguageFeature::OpenMPDefaultNone);
   disable_.set(LanguageFeature::CUDA); // !@cuf
   disable_.set(LanguageFeature::CudaManaged);
   disable_.set(LanguageFeature::CudaUnified);

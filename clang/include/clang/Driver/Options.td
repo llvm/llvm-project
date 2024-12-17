@@ -3596,6 +3596,9 @@ def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>,
   Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
+def fopenmp_default_none : Flag<["-"], "fopenmp-default-none">, Group<f_Group>,
+  Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Add DEFAULT(NONE) to all OpenMP directives that allow data-sharing clauses.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Flags<[NoArgumentUnused]>;

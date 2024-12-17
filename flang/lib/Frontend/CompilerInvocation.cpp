@@ -1023,6 +1023,10 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
           res.getLangOpts().OpenMPVersion, diags)) {
     res.getLangOpts().OpenMPVersion = Version;
   }
+  if (args.hasArg(clang::driver::options::OPT_fopenmp_default_none)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::OpenMPDefaultNone);
+  }
   if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
     res.getLangOpts().OpenMPForceUSM = 1;
   }

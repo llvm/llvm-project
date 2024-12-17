@@ -2268,6 +2268,11 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
 
+  // if -fopenmp-default-none was given on the command line, act as if
+  // DEFAULT(NONE) was present at the directive.
+  bool HaveOpenMPDefaultNone = context_.languageFeatures().IsEnabled(
+      common::LanguageFeature::OpenMPDefaultNone);
+
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
     if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol)) {
       // TODO: create a separate function to go through the rules for
@@ -2276,7 +2281,8 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
-        } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
+        } else if ((HaveOpenMPDefaultNone ||
+                       GetContext().defaultDSA == Symbol::Flag::OmpNone) &&
             !symbol->test(Symbol::Flag::OmpThreadprivate) &&
             // Exclude indices of sequential loops that are privatised in
             // the scope of the parallel region, and not in this scope.
