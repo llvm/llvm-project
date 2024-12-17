@@ -27,7 +27,7 @@ using namespace mlir::LLVM;
 /// Parses DWARF expression arguments with respect to the DWARF operation
 /// opcode. Some DWARF expression operations have a specific number of operands
 /// and may appear in a textual form.
-static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+static ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
                                         SmallVector<uint64_t> &args);
 
 /// Prints DWARF expression arguments with respect to the specific DWARF
@@ -144,7 +144,7 @@ DIExpressionAttr DIExpressionAttr::get(MLIRContext *context) {
   return get(context, ArrayRef<DIExpressionElemAttr>({}));
 }
 
-LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
                                  SmallVector<uint64_t> &args) {
   auto operandParser = [&]() -> LogicalResult {
     uint64_t operand = 0;
