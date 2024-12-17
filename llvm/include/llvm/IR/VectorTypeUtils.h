@@ -81,7 +81,7 @@ inline ArrayRef<Type *> getContainedTypes(Type *const &Ty) {
 
 /// Returns the number of vector elements for a vectorized type.
 inline ElementCount getVectorizedTypeVF(Type *Ty) {
-  assert(isVectorizedTy(Ty) && "expected widened type");
+  assert(isVectorizedTy(Ty) && "expected vectorized type");
   return cast<VectorType>(getContainedTypes(Ty).front())->getElementCount();
 }
 
