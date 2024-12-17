@@ -6907,8 +6907,7 @@ Value *CodeGenFunction::EmitFP8NeonCall(Function *F,
 
 llvm::Value *CodeGenFunction::EmitFP8NeonFDOTCall(
     unsigned IID, bool ExtendLane, llvm::Type *RetTy,
-    SmallVectorImpl<llvm::Value *> &Ops, unsigned ICEArguments,
-    const CallExpr *E, const char *name) {
+    SmallVectorImpl<llvm::Value *> &Ops, const CallExpr *E, const char *name) {
 
   const unsigned ElemCount = Ops[0]->getType()->getPrimitiveSizeInBits() /
                              RetTy->getPrimitiveSizeInBits();
@@ -6920,7 +6919,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFDOTCall(
                                         Builder.getInt64(0));
   }
   llvm::Value *FPM =
-      EmitScalarOrConstFoldImmArg(ICEArguments, E->getNumArgs() - 1, E);
+      EmitScalarOrConstFoldImmArg(/* ICEArguments */ 0, E->getNumArgs() - 1, E);
   return EmitFP8NeonCall(CGM.getIntrinsic(IID, Tys), Ops, FPM, name);
 }
 
@@ -14156,7 +14155,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vdot_f16_mf8_fpm:
   case NEON::BI__builtin_neon_vdotq_f16_mf8_fpm:
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot2, false, HalfTy,
-                               Ops, ICEArguments, E, "fdot2");
+                               Ops, E, "fdot2");
   case NEON::BI__builtin_neon_vdot_lane_f16_mf8_fpm:
   case NEON::BI__builtin_neon_vdotq_lane_f16_mf8_fpm:
     ExtendLane = true;
@@ -14164,12 +14163,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vdot_laneq_f16_mf8_fpm:
   case NEON::BI__builtin_neon_vdotq_laneq_f16_mf8_fpm:
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot2_lane,
-                               ExtendLane, HalfTy, Ops, ICEArguments, E,
-                               "fdot2_lane");
+                               ExtendLane, HalfTy, Ops, E, "fdot2_lane");
   case NEON::BI__builtin_neon_vdot_f32_mf8_fpm:
   case NEON::BI__builtin_neon_vdotq_f32_mf8_fpm:
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot4, false,
-                               FloatTy, Ops, ICEArguments, E, "fdot4");
+                               FloatTy, Ops, E, "fdot4");
   case NEON::BI__builtin_neon_vdot_lane_f32_mf8_fpm:
   case NEON::BI__builtin_neon_vdotq_lane_f32_mf8_fpm:
     ExtendLane = true;
@@ -14177,8 +14175,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vdot_laneq_f32_mf8_fpm:
   case NEON::BI__builtin_neon_vdotq_laneq_f32_mf8_fpm:
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot4_lane,
-                               ExtendLane, FloatTy, Ops, ICEArguments, E,
-                               "fdot4_lane");
+                               ExtendLane, FloatTy, Ops, E, "fdot4_lane");
   case NEON::BI__builtin_neon_vamin_f16:
   case NEON::BI__builtin_neon_vaminq_f16:
   case NEON::BI__builtin_neon_vamin_f32:
