@@ -207,6 +207,7 @@ template <class charT> class messages_byname;
 #    include <__locale>
 #    include <__locale_dir/pad_and_output.h>
 #    include <__memory/unique_ptr.h>
+#    include <__new/exceptions.h>
 #    include <__type_traits/make_unsigned.h>
 #    include <cerrno>
 #    include <cstdio>
@@ -214,7 +215,6 @@ template <class charT> class messages_byname;
 #    include <ctime>
 #    include <ios>
 #    include <limits>
-#    include <new>
 #    include <streambuf>
 #    include <version>
 
