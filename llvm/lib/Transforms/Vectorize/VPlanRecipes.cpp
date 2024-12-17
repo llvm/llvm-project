@@ -634,10 +634,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    // TODO: Predecessors are temporarily reversed to reduce test changes.
-    // Remove it and update remaining tests after functional change landed.
-    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
-    for (auto *OtherPred : reverse(Predecessors)) {
+    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
       if (OtherPred == VPlanPred)
         continue;
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
