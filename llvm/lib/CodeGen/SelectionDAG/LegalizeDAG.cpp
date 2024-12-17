@@ -1529,7 +1529,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
 SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
   assert(Node->getOpcode() == ISD::CONCAT_VECTORS && "Unexpected opcode!");
   SDLoc Dl(Node);
-  SmallVector<SDValue, 0> Ops;
+  SmallVector<SDValue, 16> Ops;
   unsigned NumOperands = Node->getNumOperands();
   MVT VectorIdxType = TLI.getVectorIdxTy(DAG.getDataLayout());
   for (unsigned I = 0; I < NumOperands; ++I) {
