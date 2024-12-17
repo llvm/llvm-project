@@ -3,13 +3,17 @@
 // expected-no-diagnostics
 
 // Check AST and unparsing
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print %s | FileCheck %s --check-prefix=PRINT
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s \
+// RUN: | FileCheck %s --check-prefix=DUMP
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print %s \
+// RUN: | FileCheck %s --check-prefix=PRINT
 
 // Check same results after serialization round-trip
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print    %s | FileCheck %s --check-prefix=PRINT
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump-all %s \
+// RUN: | FileCheck %s --check-prefix=DUMP
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print    %s \
+// RUN: | FileCheck %s --check-prefix=PRINT
 
 // placeholder for loop body code.
 extern "C" void body(...);
