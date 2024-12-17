@@ -29,6 +29,12 @@ module m
     i = threadIdx%x
     if (i .le. N) a(i) = p(i) ! ok. p is parameter
   end subroutine
+
+  attributes(global) subroutine localarray()
+    integer :: a(10)
+    i = threadIdx%x
+    a(i) = i
+  end subroutine
 end
 
 program main

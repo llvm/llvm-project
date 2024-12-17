@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_COMPLEX_TYPE_H
 #define LLVM_LIBC_SRC___SUPPORT_COMPLEX_TYPE_H
 
+#include "src/__support/CPP/bit.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/complex_types.h"
 #include "src/__support/macros/properties/types.h"
@@ -73,6 +75,19 @@ template <typename T> LIBC_INLINE constexpr T conjugate(T c) {
   Complex<make_real_t<T>> c_c = cpp::bit_cast<Complex<make_real_t<T>>>(c);
   c_c.imag = -c_c.imag;
   return cpp::bit_cast<T>(c_c);
+}
+
+template <typename T> LIBC_INLINE constexpr T project(T c) {
+  using real_t = make_real_t<T>;
+  Complex<real_t> c_c = cpp::bit_cast<Complex<real_t>>(c);
+  if (fputil::FPBits<real_t>(c_c.real).is_inf() ||
+      fputil::FPBits<real_t>(c_c.imag).is_inf()) {
+    return cpp::bit_cast<T>(
+        Complex<real_t>{(fputil::FPBits<real_t>::inf(Sign::POS).get_val()),
+                        static_cast<real_t>(c_c.imag > 0 ? 0.0 : -0.0)});
+  } else {
+    return c;
+  }
 }
 
 } // namespace LIBC_NAMESPACE_DECL

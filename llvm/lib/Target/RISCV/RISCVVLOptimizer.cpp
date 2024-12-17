@@ -887,13 +887,10 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     // Instructions like reductions may use a vector register as a scalar
     // register. In this case, we should treat it like a scalar register which
     // does not impact the decision on whether to optimize VL.
+    // TODO: Treat it like a scalar register instead of bailing out.
     if (isVectorOpUsedAsScalarOp(UserOp)) {
-      [[maybe_unused]] Register R = UserOp.getReg();
-      [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-      assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-             "Expect LMUL 1 register class for vector as scalar operands!");
-      LLVM_DEBUG(dbgs() << "    Use this operand as a scalar operand\n");
-      continue;
+      CanReduceVL = false;
+      break;
     }
 
     if (mayReadPastVL(UserMI)) {

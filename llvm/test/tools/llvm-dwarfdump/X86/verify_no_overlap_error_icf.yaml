@@ -1,0 +1,153 @@
+#--- comments.txt
+
+# This test verifies several scenarios with DW_TAG_subprogram address ranges:
+# 1. Two subprograms can have identical ranges (shown with foo2 and foo3 having same low_pc/high_pc)
+#    This is valid and can happen when ICF (Identical Code Folding) merges functions.
+# 2. Two subprograms can have overlapping ranges when using DW_AT_ranges
+#    (shown with func1_with_ranges and func2_with_ranges sharing range 0x5000-0x6000)
+#    This is also valid and can occur with -fbasic-block-sections=all
+# 3. The test also verifies that non-identical overlapping ranges are correctly flagged as errors:
+#    - When modifying just the first range's high offset from 0x6000 to 0x5999, it creates an invalid subrange overlap
+#    - When modifying just the first instance of DW_AT_high_pc 0x77 to 0x66, it creates an invalid function overlap
+# The test ensures llvm-dwarfdump --verify correctly validates these cases by:
+#  a) Accepting valid identical overlapping ranges
+#  b) Rejecting invalid non-identical overlapping ranges
+
+# Need to use split-file in order for `sed` calls below to work correctly
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/test.yaml | llvm-dwarfdump --error-display=details --verify - | FileCheck %s
+# CHECK: No errors.
+
+# RUN: sed '0,/HighOffset: 0x6000/{s//HighOffset: 0x5999/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-RANGES
+# CHECK-RANGES: error: DIEs have overlapping address ranges
+
+# RUN: sed '0,/Value:  0x77/{s/Value:  0x77/Value:  0x66/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-HIGH-PC
+# CHECK-HIGH-PC: error: DIEs have overlapping address ranges
+
+# RUN: sed '0,/LowOffset:  0x880111/{s//LowOffset:  0x880112/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-LEX-BLOCK
+# CHECK-LEX-BLOCK: DIE has overlapping ranges in DW_AT_ranges attribute
+
+#--- test.yaml
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_lexical_block
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
+  debug_ranges:
+    - Offset:    0x0
+      AddrSize:  0x8
+      Entries:
+        - LowOffset:  0x1000
+          HighOffset: 0x2000
+        - LowOffset:  0x3000
+          HighOffset: 0x4000
+        - LowOffset:  0x5000  # Overlaps with 2nd range below
+          HighOffset: 0x6000
+        - LowOffset:  0x0
+          HighOffset: 0x0
+    - Offset:    0x50
+      AddrSize:  0x8
+      Entries:
+        - LowOffset:  0x2500
+          HighOffset: 0x2800
+        - LowOffset:  0x5000  # Overlaps with 3rd range above
+          HighOffset: 0x6000
+        - LowOffset:  0x7000
+          HighOffset: 0x8000
+        - LowOffset:  0x0
+          HighOffset: 0x0
+    - Offset: 0xA0   # Added Range List #3 for lexical block
+      AddrSize: 0x8
+      Entries:
+        - LowOffset:  0x880111
+          HighOffset: 0x881222
+        - LowOffset:  0x882333
+          HighOffset: 0x883444
+        - LowOffset:  0x880111  # Overlaps with 1st range in the same list
+          HighOffset: 0x881222
+        - LowOffset:  0x0   # End of list
+          HighOffset: 0x0
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x1000
+            - Value:  0x100
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value:  0x1000
+            - Value:  0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value:  0x0    # Overlaps with 'foo3' below
+            - Value:  0x77
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value:  0x0    # Overlaps with 'foo2' above
+            - Value:  0x77
+        - AbbrCode: 3
+          Values:
+            - CStr: func1_with_ranges
+            - Value:  0x0
+        - AbbrCode: 3
+          Values:
+            - CStr: func2_with_ranges
+            - Value:  0x50
+        - AbbrCode: 5   # Added lexical block using ranges
+          Values:
+            - Value: 0xA0 # Range list index in debug_ranges
+        - AbbrCode: 0
+...
