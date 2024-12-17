@@ -1926,15 +1926,13 @@ void VPlanTransforms::handleUncountableEarlyExit(
 }
 
 static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
-  if (auto *W = dyn_cast_or_null<VPWidenLoadRecipe>(V->getDefiningRecipe())) {
+  if (auto *W = dyn_cast_or_null<VPWidenLoadRecipe>(V->getDefiningRecipe()))
     return !W->getMask() && (R0->getOperand(0) == V || R0->getOperand(1) == V);
-  }
 
-  if (auto *IR = dyn_cast_or_null<VPInterleaveRecipe>(V->getDefiningRecipe())) {
+  if (auto *IR = dyn_cast_or_null<VPInterleaveRecipe>(V->getDefiningRecipe()))
     return IR->getInterleaveGroup()->getFactor() ==
                IR->getInterleaveGroup()->getNumMembers() &&
            IR->getVPValue(Idx) == V;
-  }
   return false;
 }
 

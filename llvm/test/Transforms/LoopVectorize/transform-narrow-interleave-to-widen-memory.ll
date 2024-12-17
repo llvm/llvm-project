@@ -22,7 +22,7 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) 
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], splat (i64 1)
 ; VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
@@ -36,7 +36,7 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) 
 ; VF2-NEXT:    store i64 [[TMP13]], ptr [[TMP5]], align 8
 ; VF2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP12]], i32 1
 ; VF2-NEXT:    store i64 [[TMP14]], ptr [[TMP7]], align 8
-; VF2-NEXT:    [[TMP15:%.*]] = or disjoint <2 x i64> [[TMP3]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP15:%.*]] = or disjoint <2 x i64> [[TMP3]], splat (i64 1)
 ; VF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i64> [[TMP15]], i32 0
 ; VF2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP16]]
 ; VF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP15]], i32 1
@@ -51,7 +51,7 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) 
 ; VF2-NEXT:    [[TMP26:%.*]] = extractelement <2 x i64> [[TMP24]], i32 1
 ; VF2-NEXT:    store i64 [[TMP26]], ptr [[TMP19]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
@@ -96,7 +96,7 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) 
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], splat (i64 1)
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
 ; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
@@ -122,7 +122,7 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) 
 ; VF4-NEXT:    store i64 [[TMP23]], ptr [[TMP9]], align 8
 ; VF4-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP20]], i32 3
 ; VF4-NEXT:    store i64 [[TMP24]], ptr [[TMP11]], align 8
-; VF4-NEXT:    [[TMP25:%.*]] = or disjoint <4 x i64> [[TMP3]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP25:%.*]] = or disjoint <4 x i64> [[TMP3]], splat (i64 1)
 ; VF4-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP25]], i32 0
 ; VF4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP26]]
 ; VF4-NEXT:    [[TMP28:%.*]] = extractelement <4 x i64> [[TMP25]], i32 1
@@ -149,7 +149,7 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) 
 ; VF4-NEXT:    [[TMP46:%.*]] = extractelement <4 x i64> [[TMP42]], i32 3
 ; VF4-NEXT:    store i64 [[TMP46]], ptr [[TMP33]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; VF4-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
@@ -220,7 +220,7 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], splat (i64 1)
 ; VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
@@ -229,7 +229,7 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF2-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
 ; VF2-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
-; VF2-NEXT:    [[TMP12:%.*]] = or disjoint <2 x i64> [[TMP3]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP12:%.*]] = or disjoint <2 x i64> [[TMP3]], splat (i64 1)
 ; VF2-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[TMP12]], i32 0
 ; VF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP13]]
 ; VF2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i64> [[TMP12]], i32 1
@@ -249,7 +249,7 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF2-NEXT:    [[TMP26:%.*]] = extractelement <2 x i64> [[TMP24]], i32 1
 ; VF2-NEXT:    store i64 [[TMP26]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
@@ -294,7 +294,7 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], splat (i64 1)
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
 ; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
@@ -311,7 +311,7 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF4-NEXT:    [[TMP17:%.*]] = insertelement <4 x i64> [[TMP16]], i64 [[TMP13]], i32 1
 ; VF4-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP14]], i32 2
 ; VF4-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i32 3
-; VF4-NEXT:    [[TMP20:%.*]] = or disjoint <4 x i64> [[TMP3]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP20:%.*]] = or disjoint <4 x i64> [[TMP3]], splat (i64 1)
 ; VF4-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP20]], i32 0
 ; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP21]]
 ; VF4-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP20]], i32 1
@@ -347,7 +347,7 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF4-NEXT:    [[TMP46:%.*]] = extractelement <4 x i64> [[TMP42]], i32 3
 ; VF4-NEXT:    store i64 [[TMP46]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; VF4-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
@@ -418,7 +418,7 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], splat (i64 1)
 ; VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
@@ -428,7 +428,7 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
 ; VF2-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
 ; VF2-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
-; VF2-NEXT:    [[TMP13:%.*]] = or disjoint <2 x i64> [[TMP3]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP13:%.*]] = or disjoint <2 x i64> [[TMP3]], splat (i64 1)
 ; VF2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP13]], i32 0
 ; VF2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP14]]
 ; VF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
@@ -447,7 +447,7 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP26:%.*]] = extractelement <2 x i64> [[TMP12]], i32 1
 ; VF2-NEXT:    store i64 [[TMP26]], ptr [[TMP17]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
@@ -492,7 +492,7 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], splat (i64 1)
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
 ; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
@@ -510,7 +510,7 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP14]], i32 2
 ; VF4-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i32 3
 ; VF4-NEXT:    [[TMP20:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP19]]
-; VF4-NEXT:    [[TMP21:%.*]] = or disjoint <4 x i64> [[TMP3]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP21:%.*]] = or disjoint <4 x i64> [[TMP3]], splat (i64 1)
 ; VF4-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP21]], i32 0
 ; VF4-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP22]]
 ; VF4-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP21]], i32 1
@@ -545,7 +545,7 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP46:%.*]] = extractelement <4 x i64> [[TMP20]], i32 3
 ; VF4-NEXT:    store i64 [[TMP46]], ptr [[TMP29]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; VF4-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
@@ -616,7 +616,7 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], splat (i64 1)
 ; VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
@@ -626,7 +626,7 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
 ; VF2-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
 ; VF2-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
-; VF2-NEXT:    [[TMP13:%.*]] = or disjoint <2 x i64> [[TMP3]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP13:%.*]] = or disjoint <2 x i64> [[TMP3]], splat (i64 1)
 ; VF2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP13]], i32 0
 ; VF2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP14]]
 ; VF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i64> [[TMP13]], i32 1
@@ -645,7 +645,7 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP26:%.*]] = extractelement <2 x i64> [[TMP22]], i32 1
 ; VF2-NEXT:    store i64 [[TMP26]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
@@ -690,7 +690,7 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], splat (i64 1)
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
 ; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
@@ -708,7 +708,7 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP14]], i32 2
 ; VF4-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i32 3
 ; VF4-NEXT:    [[TMP20:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP19]]
-; VF4-NEXT:    [[TMP21:%.*]] = or disjoint <4 x i64> [[TMP3]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP21:%.*]] = or disjoint <4 x i64> [[TMP3]], splat (i64 1)
 ; VF4-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP21]], i32 0
 ; VF4-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP22]]
 ; VF4-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP21]], i32 1
@@ -743,7 +743,7 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP46:%.*]] = extractelement <4 x i64> [[TMP38]], i32 3
 ; VF4-NEXT:    store i64 [[TMP46]], ptr [[TMP11]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; VF4-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
@@ -814,7 +814,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC_0]], i64 [[TMP0]]
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i64> [[VEC_IND]], splat (i64 1)
 ; VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
@@ -825,7 +825,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF2-NEXT:    store i64 [[TMP9]], ptr [[TMP5]], align 8
 ; VF2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP8]], i32 1
 ; VF2-NEXT:    store i64 [[TMP10]], ptr [[TMP7]], align 8
-; VF2-NEXT:    [[TMP11:%.*]] = or disjoint <2 x i64> [[TMP3]], <i64 1, i64 1>
+; VF2-NEXT:    [[TMP11:%.*]] = or disjoint <2 x i64> [[TMP3]], splat (i64 1)
 ; VF2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP11]], i32 0
 ; VF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP12]]
 ; VF2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP11]], i32 1
@@ -843,7 +843,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF2-NEXT:    [[TMP24:%.*]] = extractelement <2 x i64> [[TMP22]], i32 1
 ; VF2-NEXT:    store i64 [[TMP24]], ptr [[TMP15]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
@@ -890,7 +890,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC_0]], i64 [[TMP0]]
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], splat (i64 1)
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
 ; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
@@ -909,7 +909,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF4-NEXT:    store i64 [[TMP15]], ptr [[TMP9]], align 8
 ; VF4-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP12]], i32 3
 ; VF4-NEXT:    store i64 [[TMP16]], ptr [[TMP11]], align 8
-; VF4-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[TMP3]], <i64 1, i64 1, i64 1, i64 1>
+; VF4-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[TMP3]], splat (i64 1)
 ; VF4-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i32 0
 ; VF4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP18]]
 ; VF4-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
@@ -939,7 +939,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF4-NEXT:    [[TMP40:%.*]] = extractelement <4 x i64> [[TMP36]], i32 3
 ; VF4-NEXT:    store i64 [[TMP40]], ptr [[TMP25]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; VF4-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:

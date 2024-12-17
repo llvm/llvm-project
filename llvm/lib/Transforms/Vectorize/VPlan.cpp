@@ -940,6 +940,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
+
+  if (VFxUF.getNumUsers() == 0) {
+    assert(VF.getNumUsers() == 0 && "expected no users of VF");
+    return;
+  }
+
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
     VF.setUnderlyingValue(RuntimeVF);
