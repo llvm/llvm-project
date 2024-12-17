@@ -3230,26 +3230,3 @@ func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, 
     }
   }
 #-}
-
-// -----
-
-// CHECK-LABEL: @test_fold_denorm
-// CHECK-SAME: %[[ARG0:.+]]: f32
-func.func @test_fold_denorm(%arg0: f32) -> f32 {
-  // CHECK-NOT: arith.subf
-  // CHECK: return %[[ARG0]] : f32
-  %c_denorm = arith.constant 1.4e-45 : f32
-  %sub = arith.subf %arg0, %c_denorm denormal<positive_zero> : f32
-  return %sub : f32
-}
-
-// -----
-
-// CHECK-LABEL: @test_expect_not_to_fold_denorm
-func.func @test_expect_not_to_fold_denorm(%arg0: f32, %arg1 : f32) -> (f32, f32) {
-  // CHECK-COUNT-2: arith.subf
-  %c_denorm = arith.constant 1.4e-45 : f32
-  %sub = arith.subf %arg0, %c_denorm denormal<ieee> : f32
-  %sub_1 = arith.subf %arg1, %c_denorm denormal<preserve_sign> : f32
-  return %sub, %sub_1 : f32, f32
-}

@@ -4,12 +4,14 @@ Implementation Status
 .. toctree::
    :maxdepth: 1
 
+   arpa/inet
    assert
    complex
    ctype
    errno
    fenv
    float
+   inttypes
    locale
    math/index.rst
    search
@@ -17,7 +19,10 @@ Implementation Status
    signal
    stdbit
    stdio
+   stdlib
+   string
    strings
+   sys/mman
    threads
    time
    uchar

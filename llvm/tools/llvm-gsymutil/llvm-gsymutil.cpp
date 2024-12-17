@@ -64,12 +64,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
-  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 const opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -79,7 +80,8 @@ const opt::OptTable::Info InfoTable[] = {
 
 class GSYMUtilOptTable : public llvm::opt::GenericOptTable {
 public:
-  GSYMUtilOptTable() : GenericOptTable(InfoTable) {
+  GSYMUtilOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -97,6 +99,7 @@ static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
 static bool StoreMergedFunctionInfo = false;
+static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 
 static void parseArgs(int argc, char **argv) {
@@ -189,6 +192,8 @@ static void parseArgs(int argc, char **argv) {
       std::exit(1);
     }
   }
+
+  LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
 }
 
 /// @}
@@ -363,7 +368,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym, LoadDwarfCallSites);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 

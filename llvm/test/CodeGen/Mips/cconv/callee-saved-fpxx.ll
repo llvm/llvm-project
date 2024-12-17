@@ -1,12 +1,12 @@
-; RUN: llc -march=mips -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
-; RUN: llc -march=mipsel -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
-; RUN: llc -march=mips -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV %s
-; RUN: llc -march=mipsel -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV %s
+; RUN: llc -mtriple=mips -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
+; RUN: llc -mtriple=mipsel -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
+; RUN: llc -mtriple=mips -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV %s
+; RUN: llc -mtriple=mipsel -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV %s
 
-; RUN-TODO: llc -march=mips64 -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
-; RUN-TODO: llc -march=mips64el -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
-; RUN-TODO: llc -march=mips64 -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV,O32-FPXX-INV %s
-; RUN-TODO: llc -march=mips64el -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV,O32-FPXX-INV %s
+; RUN-TODO: llc -mtriple=mips64 -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
+; RUN-TODO: llc -mtriple=mips64el -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX %s
+; RUN-TODO: llc -mtriple=mips64 -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV,O32-FPXX-INV %s
+; RUN-TODO: llc -mtriple=mips64el -mattr=+o32,+fpxx < %s | FileCheck --check-prefixes=O32-FPXX-INV,O32-FPXX-INV %s
 
 define void @fpu_clobber() nounwind {
 entry:

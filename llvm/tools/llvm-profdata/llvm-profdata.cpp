@@ -21,6 +21,7 @@
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
@@ -3306,7 +3307,9 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   auto Reader = std::move(ReaderOrErr.get());
   memprof::AllMemProfData Data = Reader->getAllMemProfData();
-  yaml::Output Yout(OS);
+  // Construct yaml::Output with the maximum column width of 80 so that each
+  // Frame fits in one line.
+  yaml::Output Yout(OS, nullptr, 80);
   Yout << Data;
 
   return 0;
