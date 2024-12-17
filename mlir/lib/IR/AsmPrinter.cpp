@@ -3990,7 +3990,6 @@ void Operation::dumpPretty() {
   llvm::errs() << "\n";
 }
 
-
 void Block::print(raw_ostream &os) {
   Operation *parentOp = getParentOp();
   if (!parentOp) {
