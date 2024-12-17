@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -121,7 +122,8 @@ static LogicalResult updateReturnOps(func::FuncOp func,
     OpBuilder builder(op);
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
       if (hoistStaticAllocs &&
-          isa_and_nonnull<memref::AllocOp>(orig.getDefiningOp()) &&
+          isa_and_nonnull<bufferization::AllocationOpInterface>(
+              orig.getDefiningOp()) &&
           mlir::cast<MemRefType>(orig.getType()).hasStaticShape()) {
         orig.replaceAllUsesWith(arg);
         orig.getDefiningOp()->erase();
