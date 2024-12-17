@@ -503,12 +503,12 @@ set(files
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
-  __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
   __locale_dir/pad_and_output.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
+  __locale_dir/support/windows.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
