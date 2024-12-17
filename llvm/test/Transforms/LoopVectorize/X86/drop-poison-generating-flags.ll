@@ -57,6 +57,86 @@ loop.exit:
   ret void
 }
 
+; Variant with getelementptr nusw.
+define void @drop_scalar_gep_nusw(ptr noalias nocapture readonly %input,
+                                  ptr %output) local_unnamed_addr #0 {
+; CHECK-LABEL: @drop_scalar_gep_nusw(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, {{.*}} ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, {{.*}} ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK:         [[TMP4:%.*]] = icmp eq <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[INPUT:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP8]], i32 4, <4 x i1> [[TMP7]], <4 x float> poison), !invariant.load !0
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.inc, %if.end ]
+  %i23 = icmp eq i64 %iv, 0
+  br i1 %i23, label %if.end, label %if.then
+
+if.then:
+  %i27 = sub nuw nsw i64 %iv, 1
+  %i29 = getelementptr nusw float, ptr %input, i64 %i27
+  %i30 = load float, ptr %i29, align 4, !invariant.load !0
+  br label %if.end
+
+if.end:
+  %i34 = phi float [ 0.000000e+00, %loop.header ], [ %i30, %if.then ]
+  %i35 = getelementptr nusw float, ptr %output, i64 %iv
+  store float %i34, ptr %i35, align 4
+  %iv.inc = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.inc, 4
+  br i1 %exitcond, label %loop.exit, label %loop.header
+
+loop.exit:
+  ret void
+}
+
+; Variant with getelementptr nuw.
+define void @drop_scalar_gep_nuw(ptr noalias nocapture readonly %input,
+                                 ptr %output) local_unnamed_addr #0 {
+; CHECK-LABEL: @drop_scalar_gep_nuw(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, {{.*}} ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, {{.*}} ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK:         [[TMP4:%.*]] = icmp eq <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[INPUT:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP8]], i32 4, <4 x i1> [[TMP7]], <4 x float> poison), !invariant.load !0
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.inc, %if.end ]
+  %i23 = icmp eq i64 %iv, 0
+  br i1 %i23, label %if.end, label %if.then
+
+if.then:
+  %i27 = sub nuw nsw i64 %iv, 1
+  %i29 = getelementptr nuw float, ptr %input, i64 %i27
+  %i30 = load float, ptr %i29, align 4, !invariant.load !0
+  br label %if.end
+
+if.end:
+  %i34 = phi float [ 0.000000e+00, %loop.header ], [ %i30, %if.then ]
+  %i35 = getelementptr nuw float, ptr %output, i64 %iv
+  store float %i34, ptr %i35, align 4
+  %iv.inc = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.inc, 4
+  br i1 %exitcond, label %loop.exit, label %loop.header
+
+loop.exit:
+  ret void
+}
+
 ; Drop poison-generating flags from 'sub' and 'getelementptr' feeding a masked load.
 ; In this case, 'sub' and 'getelementptr' are not guarded by the predicate.
 define void @drop_nonpred_scalar_nuw_nsw(ptr noalias nocapture readonly %input,

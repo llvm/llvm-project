@@ -222,13 +222,13 @@ public:
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                               const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name));
   }
   VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                                 const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
   }
 
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
