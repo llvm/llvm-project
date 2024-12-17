@@ -32,6 +32,10 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 struct Header {
   static constexpr uint32_t MagicSignature = 0x504d444d; // PMDM
   static constexpr uint16_t MagicVersion = 0xa793;
+  // We set all the high bits flag to indicate this is from LLDB.
+  // We don't want to conflict with anything Microsoft is using the flags for
+  // and the highest bits are not currently being used.
+  static const uint32_t LLDB_HEADER_FLAG = 0xF0000000;
 
   support::ulittle32_t Signature;
   // The high 16 bits of version field are implementation specific. The low 16

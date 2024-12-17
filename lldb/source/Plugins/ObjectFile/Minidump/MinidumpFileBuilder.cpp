@@ -918,8 +918,8 @@ Status MinidumpFileBuilder::DumpHeader() const {
       0u), // not used in most of the writers
       header.TimeDateStamp =
           static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
-  header.Flags =
-      static_cast<llvm::support::ulittle64_t>(0u); // minidump normal flag
+  header.Flags = static_cast<llvm::support::ulittle64_t>(
+      llvm::minidump::Header::LLDB_HEADER_FLAG);
 
   Status error;
   size_t bytes_written;
