@@ -118,12 +118,11 @@ def : WriteRes<WriteIMul32, [p8700GpMul]>;
 let Latency = 7, ReleaseAtCycles = [7] in {
 def : WriteRes<WriteIDiv, [p8700GpDiv]>;
 def : WriteRes<WriteIDiv32,  [p8700GpDiv]>;
+def : WriteRes<WriteIRem, [p8700GpDiv]>;
+def : WriteRes<WriteIRem32, [p8700GpDiv]>;
 }
 
 def : WriteRes<WriteCSR, [p8700ALQ]>;
-
-def : WriteRes<WriteIRem, []>;
-def : WriteRes<WriteIRem32, []>;
 
 // Handle CTI Pipeline.
 def : WriteRes<WriteJmp, [p8700IssueCTI]>;
