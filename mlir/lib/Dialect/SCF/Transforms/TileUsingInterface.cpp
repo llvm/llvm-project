@@ -570,23 +570,24 @@ static LogicalResult generateLoopNest(
   return rewriter.notifyMatchFailure(loc, "unhandled loop type");
 }
 
-static LogicalResult
+static FailureOr<SmallVector<Value>>
 createInitialTensorsForTiling(RewriterBase &rewriter, TilingInterface op,
                               ArrayRef<OpFoldResult> tileSizes,
-                              SmallVector<Value> &initTensors,
                               const scf::SCFTilingOptions &options) {
+  SmallVector<Value> initTensors;
   Location loc = op->getLoc();
   switch (options.reductionStrategy) {
   case scf::SCFTilingOptions::ReductionTilingStrategy::FullReduction:
-    return tensor::getOrCreateDestinations(rewriter, loc, op, initTensors);
+    if (failed(tensor::getOrCreateDestinations(rewriter, loc, op, initTensors)))
+      return failure();
+    return initTensors;
   case scf::SCFTilingOptions::ReductionTilingStrategy::
       PartialReductionOuterReduction: {
     auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
     if (!redOp) {
       return rewriter.notifyMatchFailure(
-          op, "PartialReductionOuterReduction tiling strategy is only "
-              "supported for operations "
-              "implementing PartialReductionOpInterface");
+          op, "PartialReductionOuterReduction tiling strategy is only supported"
+              "for operations implementing PartialReductionOpInterface");
     }
     // Get reduction dimensions.
     // TODO: PartialReductionOpInterface should really query TilingInterface
@@ -597,14 +598,8 @@ createInitialTensorsForTiling(RewriterBase &rewriter, TilingInterface op,
       if (iteratorType == utils::IteratorType::reduction)
         reductionDims.push_back(idx);
     }
-    FailureOr<SmallVector<Value>> maybeInitTensors =
-        redOp.generateInitialTensorForPartialReduction(rewriter, loc, tileSizes,
-                                                       reductionDims);
-    if (failed(maybeInitTensors)) {
-      return failure();
-    }
-    initTensors = maybeInitTensors.value();
-    return success();
+    return redOp.generateInitialTensorForPartialReduction(
+        rewriter, loc, tileSizes, reductionDims);
   }
   default:
     return rewriter.notifyMatchFailure(op,
@@ -1037,12 +1032,13 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   };
 
   // 6. Find the destination tensors to use for the operation.
-  SmallVector<Value> initTensors;
-  if (failed(createInitialTensorsForTiling(rewriter, op, tileSizes, initTensors,
-                                           options))) {
+  FailureOr<SmallVector<Value>> maybeInits =
+      createInitialTensorsForTiling(rewriter, op, tileSizes, options);
+  if (failed(maybeInits)) {
     return rewriter.notifyMatchFailure(
         op, "unable to create initial tensors for tiling");
   }
+  SmallVector<Value> &initTensors = maybeInits.value();
 
   // 7. Generate the tiled loops nest using the callback defined above.
   SmallVector<LoopLikeOpInterface> loops;
