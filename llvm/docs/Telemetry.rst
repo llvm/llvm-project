@@ -144,7 +144,8 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   public:
   static std::unique_ptr<MyManager> createInstatnce(telemetry::Config *config) {
     // If Telemetry is not enabled, then just return null;
-    if (!config->EnableTelemetry) return nullptr;
+    if (!config->EnableTelemetry)
+      return nullptr;
 
     return std::make_unique<MyManager>();
   }
