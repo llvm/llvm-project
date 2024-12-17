@@ -49,6 +49,10 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
   return curDim < 0;
 }
 
+bool isEmpty(BaseMemRefType type) {
+  return type.hasRank() && llvm::is_contained(type.getShape(), 0);
+}
+
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
     OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
