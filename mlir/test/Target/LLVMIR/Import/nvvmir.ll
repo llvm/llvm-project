@@ -71,7 +71,9 @@ define float @nvvm_rcp(float %0) {
   ret float %2
 }
 
+; CHECK-LABEL: @llvm_nvvm_barrier0()
 define void @llvm_nvvm_barrier0() {
+  ; CHECK: nvvm.barrier0
   call void @llvm.nvvm.barrier0()
   ret void
 }
