@@ -696,6 +696,16 @@ llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
   nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
   llvm.return
 }
+// -----
+
+// CHECK-LABEL: @nvvm_exit
+llvm.func @nvvm_exit() {
+  // CHECK: call void @llvm.nvvm.exit()
+  nvvm.exit
+  llvm.return
+}
+
+
 
 // -----
 // CHECK-LABEL: @nvvm_breakpoint
