@@ -3980,13 +3980,16 @@ void Operation::print(raw_ostream &os, AsmState &state) {
   }
 }
 
-void Operation::dump(bool assumeVerified) {
-  OpPrintingFlags flags;
-  if (assumeVerified)
-    flags.assumeVerified();
-  print(llvm::errs(), flags.useLocalScope());
+void Operation::dump() {
+  print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+
+void Operation::dumpPretty() {
+  print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
+  llvm::errs() << "\n";
+}
+
 
 void Block::print(raw_ostream &os) {
   Operation *parentOp = getParentOp();
