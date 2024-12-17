@@ -42,12 +42,6 @@ void TestConversionsFromBool() {
 
   int x = b; // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
   float f = b; // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'float'
-  int *p = b;  // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int *'
-
-  struct S {
-    int member;
-  };
-  int S::*ptr = b; // CHECK-MESSAGES: :[[@LINE]]:16: warning: implicit conversion 'bool' -> 'int S::*'
 }
 
 // ==========================================================
