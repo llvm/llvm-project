@@ -2444,13 +2444,13 @@ bool AsmPrinter::doFinalization(Module &M) {
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
 
-  std::vector<GlobalVariable*> GlobalsToTag;
+  std::vector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
     if (G.isDeclaration() || !G.isTagged())
       continue;
     GlobalsToTag.push_back(&G);
   }
-  for (GlobalVariable* G : GlobalsToTag)
+  for (GlobalVariable *G : GlobalsToTag)
     tagGlobalDefinition(M, G);
 
   // Gather all GOT equivalent globals in the module. We really need two
