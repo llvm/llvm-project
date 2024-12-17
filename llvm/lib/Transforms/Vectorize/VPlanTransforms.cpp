@@ -1446,6 +1446,7 @@ void VPlanTransforms::addActiveLaneMask(
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   using namespace llvm::VPlanPatternMatch;
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
 
@@ -1454,6 +1455,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       R->setOperand(1, &EVL);
   }
 
+  SmallVector<VPRecipeBase *> ToErase;
+
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
@@ -1461,10 +1464,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         assert(OrigMask && "Unmasked recipe when folding tail");
         return HeaderMask == OrigMask ? nullptr : OrigMask;
       };
-
-      // Don't preseve the type info cache across loop iterations since
-      // CurRecipe will be erased and invalidate it.
-      VPTypeAnalysis TypeInfo(CanonicalIVType);
 
       VPRecipeBase *NewRecipe =
           TypeSwitch<VPRecipeBase *, VPRecipeBase *>(CurRecipe)
@@ -1568,10 +1567,17 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       }
-      CurRecipe->eraseFromParent();
+      // Defer erasing recipes till the end so that we don't invalidate the
+      // VPTypeAnalysis cache
+      ToErase.push_back(CurRecipe);
     }
-    recursivelyDeleteDeadRecipes(HeaderMask);
   }
+
+  for (VPRecipeBase *R : ToErase)
+    R->eraseFromParent();
+
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan))
+    recursivelyDeleteDeadRecipes(HeaderMask);
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
