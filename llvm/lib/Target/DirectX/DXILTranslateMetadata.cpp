@@ -15,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -299,11 +300,11 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
 // TODO: We might need to refactor this to be more generic,
 // in case we need more metadata to be replaced.
 static void translateBranchMetadata(Module &M) {
-  for (auto &F : M) {
-    for (auto &BB : F) {
-      auto *BBTerminatorInst = BB.getTerminator();
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      Instruction *BBTerminatorInst = BB.getTerminator();
 
-      auto *HlslControlFlowMD =
+      MDNode *HlslControlFlowMD =
           BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
 
       if (!HlslControlFlowMD)
@@ -313,14 +314,14 @@ static void translateBranchMetadata(Module &M) {
              "invalid operands for hlsl.controlflow.hint");
 
       MDBuilder MDHelper(M.getContext());
-      auto *Op1 =
+      ConstantInt *Op1 =
           mdconst::extract<ConstantInt>(HlslControlFlowMD->getOperand(1));
 
       SmallVector<llvm::Metadata *, 2> Vals(
           ArrayRef<Metadata *>{MDHelper.createString("dx.controlflow.hints"),
                                MDHelper.createConstant(Op1)});
 
-      auto *MDNode = llvm::MDNode::get(M.getContext(), Vals);
+      MDNode *MDNode = llvm::MDNode::get(M.getContext(), Vals);
 
       BBTerminatorInst->setMetadata("dx.controlflow.hints", MDNode);
       BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);

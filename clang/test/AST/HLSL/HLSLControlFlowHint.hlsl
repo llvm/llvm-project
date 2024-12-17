@@ -29,8 +29,8 @@ export int flatten(int X){
 }
 
 // CHECK: FunctionDecl 0x{{[0-9A-Fa-f]+}} <{{.*}}> {{.*}} used no_attr 'int (int)'
-// CHECK-NO: AttributedStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>
-// CHECK-NO: -HLSLControlFlowHintAttr
+// CHECK-NOT: AttributedStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>
+// CHECK-NOT: -HLSLControlFlowHintAttr
 export int no_attr(int X){
     int resp;
     if (X > 0) {

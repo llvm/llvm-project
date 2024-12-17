@@ -40,6 +40,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -2081,8 +2082,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
-  auto *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights,
-                                      Unpredictable);
+  llvm::Instruction *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock,
+                                                   Weights, Unpredictable);
   switch (HLSLControlFlowAttr) {
   case HLSLControlFlowHintAttr::Microsoft_branch:
   case HLSLControlFlowHintAttr::Microsoft_flatten: {

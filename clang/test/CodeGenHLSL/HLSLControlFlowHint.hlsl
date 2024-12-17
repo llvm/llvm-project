@@ -32,7 +32,7 @@ export int test_flatten(int X){
 }
 
 // CHECK: define {{.*}} i32 {{.*}}test_no_attr{{.*}}(i32 {{.*}} [[VALD:%.*]])
-// CHECK-NO: !hlsl.controlflow.hint
+// CHECK-NOT: !hlsl.controlflow.hint
 export int test_no_attr(int X){
     int resp;
     if (X > 0) {

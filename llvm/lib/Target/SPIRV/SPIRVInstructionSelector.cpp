@@ -2800,7 +2800,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_selection_merge: {
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));
-    assert(I.getOperand(1).isMBB());
+    assert(I.getOperand(1).isMBB() &&
+           "operand 1 to spv_selection_merge must be a basic block");
     MIB.addMBB(I.getOperand(1).getMBB());
     MIB.addImm(getSelectionOperandForImm(I.getOperand(2).getImm()));
     return MIB.constrainAllUses(TII, TRI, RBI);
