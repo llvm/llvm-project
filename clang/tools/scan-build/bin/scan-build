@@ -23,6 +23,7 @@ use Term::ANSIColor qw(:constants);
 use Cwd qw/ getcwd abs_path /;
 use Sys::Hostname;
 use Hash::Util qw(lock_keys);
+use URI::Escape;
 
 my $Prog = "scan-build";
 my $BuildName;
@@ -820,7 +821,8 @@ ENDTEXT
       }
 
       # Emit the "View" link.
-      print OUT "<td><a href=\"$ReportFile#EndPath\">View Report</a></td>";
+      my $EncodedReport = uri_escape($ReportFile, "^A-Za-z0-9\-\._~\/");
+      print OUT "<td><a href=\"$EncodedReport#EndPath\">View Report</a></td>";
 
       # Emit REPORTBUG markers.
       print OUT "\n<!-- REPORTBUG id=\"$ReportFile\" -->\n";
