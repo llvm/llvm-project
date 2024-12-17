@@ -636,7 +636,6 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
       .Case("fsl", Triple::Freescale)
       .Case("ibm", Triple::IBM)
       .Case("img", Triple::ImaginationTechnologies)
-      .Case("intel", Triple::Intel)
       .Case("mti", Triple::MipsTechnologies)
       .Case("nvidia", Triple::NVIDIA)
       .Case("csr", Triple::CSR)
@@ -644,6 +643,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
       .Case("mesa", Triple::Mesa)
       .Case("suse", Triple::SUSE)
       .Case("oe", Triple::OpenEmbedded)
+      .Case("intel", Triple::Intel)
       .Default(Triple::UnknownVendor);
 }
 
