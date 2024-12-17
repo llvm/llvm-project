@@ -80,11 +80,6 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   IRBuilder<> Builder(Orig);
   bool IsFAdd = (IntrinsicId == Intrinsic::vector_reduce_fadd);
 
-  // Define the addition operation based on the intrinsic ID.
-  auto AddOp = [&Builder, IsFAdd](Value *Sum, Value *Elt) {
-    return IsFAdd ? Builder.CreateFAdd(Sum, Elt) : Builder.CreateAdd(Sum, Elt);
-  };
-
   Value *X = Orig->getOperand(IsFAdd ? 1 : 0);
   Type *Ty = X->getType();
   auto *XVec = dyn_cast<FixedVectorType>(Ty);
@@ -93,8 +88,7 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
 
   // Handle the initial start value for floating-point addition.
   if (IsFAdd) {
-    llvm::Constant *StartValue =
-        llvm::dyn_cast<llvm::Constant>(Orig->getOperand(0));
+    Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
     if (StartValue && !StartValue->isZeroValue())
       Sum = Builder.CreateFAdd(Sum, StartValue);
   }
@@ -102,7 +96,10 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   // Accumulate the remaining vector elements.
   for (unsigned I = 1; I < XVecSize; I++) {
     Value *Elt = Builder.CreateExtractElement(X, I);
-    Sum = AddOp(Sum, Elt);
+    if (IsFAdd)
+      Sum = Builder.CreateFAdd(Sum, Elt);
+    else
+      Sum = Builder.CreateAdd(Sum, Elt);
   }
 
   return Sum;
