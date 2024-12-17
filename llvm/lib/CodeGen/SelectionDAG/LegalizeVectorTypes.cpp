@@ -455,7 +455,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N) {
-
   SDValue Result = DAG.getAtomic(
       ISD::ATOMIC_LOAD, SDLoc(N), N->getMemoryVT().getVectorElementType(),
       N->getValueType(0).getVectorElementType(), N->getChain(), N->getBasePtr(),
