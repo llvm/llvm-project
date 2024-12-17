@@ -496,18 +496,18 @@ writeFileDefinition(const Location &L,
                     std::optional<StringRef> RepositoryUrl = std::nullopt) {
   if (!L.IsFileInRootDir || !RepositoryUrl)
     return std::make_unique<TagNode>(
-        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
+        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.StartLineNumber) +
                             " of file " + L.Filename);
   SmallString<128> FileURL(*RepositoryUrl);
   llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
   auto Node = std::make_unique<TagNode>(HTMLTag::TAG_P);
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
   auto LocNumberNode =
-      std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
+      std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.StartLineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
   LocNumberNode->Attributes.emplace_back(
-      "href", (FileURL + "#" + std::to_string(L.LineNumber)).str());
+      "href", (FileURL + "#" + std::to_string(L.StartLineNumber)).str());
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
@@ -1133,7 +1133,8 @@ static llvm::Error genIndex(const ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
-static llvm::Error copyFile(StringRef FilePath, StringRef OutDirectory) {
+static llvm::Error 
+copyFile(StringRef FilePath, StringRef OutDirectory) {
   llvm::SmallString<128> PathWrite;
   llvm::sys::path::native(OutDirectory, PathWrite);
   llvm::sys::path::append(PathWrite, llvm::sys::path::filename(FilePath));

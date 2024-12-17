@@ -74,16 +74,19 @@ static void StringAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
 static void LocationAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
   AbbrevGen(
       Abbrev,
-      {// 0. Fixed-size integer (line number)
+      {// 0. Start fixed-size integer (line number)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::LineNumberSize),
-       // 1. Boolean (IsFileInRootDir)
+       // 1. End fixed-size integer (line number)
+       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                             BitCodeConstants::LineNumberSize),
+       // 2. Boolean (IsFileInRootDir)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::BoolSize),
-       // 2. Fixed-size integer (length of the following string (filename))
+       // 3. Fixed-size integer (length of the following string (filename))
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::StringLengthSize),
-       // 3. The string blob
+       // 4. The string blob
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
 }
 
@@ -154,6 +157,8 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {COMMENT_ARG, {"Arg", &StringAbbrev}},
           {FIELD_TYPE_NAME, {"Name", &StringAbbrev}},
           {FIELD_DEFAULT_VALUE, {"DefaultValue", &StringAbbrev}},
+          {TYPE_IS_BUILTIN, {"IsBuiltIn", &BoolAbbrev}},
+          {TYPE_IS_TEMPLATE, {"IsTemplate", &BoolAbbrev}},
           {MEMBER_TYPE_NAME, {"Name", &StringAbbrev}},
           {MEMBER_TYPE_ACCESS, {"Access", &IntAbbrev}},
           {NAMESPACE_USR, {"USR", &SymbolIDAbbrev}},
@@ -169,6 +174,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {ENUM_VALUE_EXPR, {"Expr", &StringAbbrev}},
           {RECORD_USR, {"USR", &SymbolIDAbbrev}},
           {RECORD_NAME, {"Name", &StringAbbrev}},
+          {RECORD_FULLNAME, {"FullName", &StringAbbrev}},
           {RECORD_PATH, {"Path", &StringAbbrev}},
           {RECORD_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {RECORD_LOCATION, {"Location", &LocationAbbrev}},
@@ -187,6 +193,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {FUNCTION_LOCATION, {"Location", &LocationAbbrev}},
           {FUNCTION_ACCESS, {"Access", &IntAbbrev}},
           {FUNCTION_IS_METHOD, {"IsMethod", &BoolAbbrev}},
+          {FUNCTION_PROTOTYPE, {"ProtoType", &StringAbbrev}},
           {REFERENCE_USR, {"USR", &SymbolIDAbbrev}},
           {REFERENCE_NAME, {"Name", &StringAbbrev}},
           {REFERENCE_QUAL_NAME, {"QualName", &StringAbbrev}},
@@ -196,6 +203,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {TEMPLATE_PARAM_CONTENTS, {"Contents", &StringAbbrev}},
           {TEMPLATE_SPECIALIZATION_OF, {"SpecializationOf", &SymbolIDAbbrev}},
           {TYPEDEF_USR, {"USR", &SymbolIDAbbrev}},
+          {TYPEDEF_DECLARATION, {"Declaration", &StringAbbrev}},
           {TYPEDEF_NAME, {"Name", &StringAbbrev}},
           {TYPEDEF_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {TYPEDEF_IS_USING, {"IsUsing", &BoolAbbrev}}};
@@ -218,7 +226,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
           COMMENT_PARAMNAME, COMMENT_CLOSENAME, COMMENT_SELFCLOSING,
           COMMENT_EXPLICIT, COMMENT_ATTRKEY, COMMENT_ATTRVAL, COMMENT_ARG}},
         // Type Block
-        {BI_TYPE_BLOCK_ID, {}},
+        {BI_TYPE_BLOCK_ID, {TYPE_IS_BUILTIN, TYPE_IS_TEMPLATE}},
         // FieldType Block
         {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
         // MemberType Block
@@ -231,13 +239,14 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
          {ENUM_VALUE_NAME, ENUM_VALUE_VALUE, ENUM_VALUE_EXPR}},
         // Typedef Block
         {BI_TYPEDEF_BLOCK_ID,
-         {TYPEDEF_USR, TYPEDEF_NAME, TYPEDEF_DEFLOCATION, TYPEDEF_IS_USING}},
+         {TYPEDEF_USR, TYPEDEF_NAME, TYPEDEF_DECLARATION, TYPEDEF_DEFLOCATION, 
+          TYPEDEF_IS_USING}},
         // Namespace Block
         {BI_NAMESPACE_BLOCK_ID,
          {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_PATH}},
         // Record Block
         {BI_RECORD_BLOCK_ID,
-         {RECORD_USR, RECORD_NAME, RECORD_PATH, RECORD_DEFLOCATION,
+         {RECORD_USR, RECORD_NAME, RECORD_FULLNAME, RECORD_PATH, RECORD_DEFLOCATION,
           RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF}},
         // BaseRecord Block
         {BI_BASE_RECORD_BLOCK_ID,
@@ -246,11 +255,11 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
           BASE_RECORD_IS_PARENT}},
         // Function Block
         {BI_FUNCTION_BLOCK_ID,
-         {FUNCTION_USR, FUNCTION_NAME, FUNCTION_DEFLOCATION, FUNCTION_LOCATION,
-          FUNCTION_ACCESS, FUNCTION_IS_METHOD}},
+         {FUNCTION_USR, FUNCTION_PROTOTYPE, FUNCTION_NAME, FUNCTION_DEFLOCATION, 
+          FUNCTION_LOCATION, FUNCTION_ACCESS, FUNCTION_IS_METHOD}},
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
-         {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE,
+         {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE, 
           REFERENCE_PATH, REFERENCE_FIELD}},
         // Template Blocks.
         {BI_TEMPLATE_BLOCK_ID, {}},
@@ -352,7 +361,8 @@ void ClangDocBitcodeWriter::emitRecord(const Location &Loc, RecordId ID) {
   if (!prepRecordData(ID, true))
     return;
   // FIXME: Assert that the line number is of the appropriate size.
-  Record.push_back(Loc.LineNumber);
+  Record.push_back(Loc.StartLineNumber);
+  Record.push_back(Loc.EndLineNumber);
   assert(Loc.Filename.size() < (1U << BitCodeConstants::StringLengthSize));
   Record.push_back(Loc.IsFileInRootDir);
   Record.push_back(Loc.Filename.size());
@@ -425,6 +435,7 @@ void ClangDocBitcodeWriter::emitBlockInfo(BlockId BID,
 void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   if (R.USR == EmptySID && R.Name.empty())
     return;
+  
   StreamSubBlockGuard Block(Stream, BI_REFERENCE_BLOCK_ID);
   emitRecord(R.USR, REFERENCE_USR);
   emitRecord(R.Name, REFERENCE_NAME);
@@ -437,12 +448,15 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TYPE_BLOCK_ID);
   emitBlock(T.Type, FieldId::F_type);
+  emitRecord(T.IsBuiltIn, TYPE_IS_BUILTIN);
+  emitRecord(T.IsTemplate, TYPE_IS_TEMPLATE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TYPEDEF_BLOCK_ID);
   emitRecord(T.USR, TYPEDEF_USR);
   emitRecord(T.Name, TYPEDEF_NAME);
+  emitRecord(T.TypeDeclaration, TYPEDEF_DECLARATION);
   for (const auto &N : T.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : T.Description)
@@ -455,14 +469,14 @@ void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
 
 void ClangDocBitcodeWriter::emitBlock(const FieldTypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_FIELD_TYPE_BLOCK_ID);
-  emitBlock(T.Type, FieldId::F_type);
+  emitBlock(static_cast<TypeInfo>(T));
   emitRecord(T.Name, FIELD_TYPE_NAME);
   emitRecord(T.DefaultValue, FIELD_DEFAULT_VALUE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_MEMBER_TYPE_BLOCK_ID);
-  emitBlock(T.Type, FieldId::F_type);
+  emitBlock(static_cast<FieldTypeInfo>(T));
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
   for (const auto &CI : T.Description)
@@ -544,6 +558,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_RECORD_BLOCK_ID);
   emitRecord(I.USR, RECORD_USR);
   emitRecord(I.Name, RECORD_NAME);
+  emitRecord(I.FullName, RECORD_FULLNAME);
   emitRecord(I.Path, RECORD_PATH);
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
@@ -593,6 +608,7 @@ void ClangDocBitcodeWriter::emitBlock(const BaseRecordInfo &I) {
 void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_FUNCTION_BLOCK_ID);
   emitRecord(I.USR, FUNCTION_USR);
+  emitRecord(I.ProtoType, FUNCTION_PROTOTYPE);
   emitRecord(I.Name, FUNCTION_NAME);
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);

@@ -21,6 +21,14 @@ target_link_libraries(clang-doc
 
 set(assets
   index.js
+  mustache-index.js
+  class-template.mustache
+  comments-template.mustache
+  enum-template.mustache      
+  function-template.mustache
+  namespace-template.mustache
+  typedef-template.mustache      
+  clang-doc-mustache.css
   clang-doc-default-stylesheet.css
 )
 

@@ -85,7 +85,7 @@ llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace((int)R[0], Blob, (bool)R[1]);
+  Field.emplace((int)R[0], (int)R[1], Blob, (bool)R[2]);
   return llvm::Error::success();
 }
 
@@ -135,7 +135,7 @@ llvm::Error decodeRecord(const Record &R,
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace_back((int)R[0], Blob, (bool)R[1]);
+  Field.emplace_back((int)R[0], (int)R[1], Blob, (bool)R[2]);
   return llvm::Error::success();
 }
 
@@ -169,6 +169,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->USR, Blob);
   case RECORD_NAME:
     return decodeRecord(R, I->Name, Blob);
+  case RECORD_FULLNAME: 
+    return decodeRecord(R, I->FullName, Blob);
   case RECORD_PATH:
     return decodeRecord(R, I->Path, Blob);
   case RECORD_DEFLOCATION:
@@ -232,6 +234,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
   switch (ID) {
   case TYPEDEF_USR:
     return decodeRecord(R, I->USR, Blob);
+  case TYPEDEF_DECLARATION:
+    return decodeRecord(R, I->TypeDeclaration, Blob);
   case TYPEDEF_NAME:
     return decodeRecord(R, I->Name, Blob);
   case TYPEDEF_DEFLOCATION:
@@ -268,6 +272,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->Name, Blob);
   case FUNCTION_DEFLOCATION:
     return decodeRecord(R, I->DefLoc, Blob);
+  case FUNCTION_PROTOTYPE:
+    return decodeRecord(R, I->ProtoType, Blob);
   case FUNCTION_LOCATION:
     return decodeRecord(R, I->Loc, Blob);
   case FUNCTION_ACCESS:
@@ -282,7 +288,15 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
 
 llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         TypeInfo *I) {
-  return llvm::Error::success();
+  switch (ID) {
+  case TYPE_IS_BUILTIN:
+    return decodeRecord(R, I->IsBuiltIn, Blob);
+  case TYPE_IS_TEMPLATE:
+    return decodeRecord(R, I->IsTemplate, Blob);
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid field for TypeInfo");
+  }
 }
 
 llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
@@ -465,6 +479,22 @@ template <> llvm::Error addTypeInfo(EnumInfo *I, TypeInfo &&T) {
 
 template <> llvm::Error addTypeInfo(TypedefInfo *I, TypeInfo &&T) {
   I->Underlying = std::move(T);
+  return llvm::Error::success();
+}
+
+template <> llvm::Error addTypeInfo(FieldTypeInfo *I, TypeInfo &&T) {
+  I->Type = std::move(T.Type);
+  I->IsTemplate = T.IsTemplate;
+  I->IsBuiltIn = T.IsBuiltIn;
+  return llvm::Error::success();
+}
+
+template <> llvm::Error addTypeInfo(MemberTypeInfo *I, FieldTypeInfo &&T) {
+  I->Type = std::move(T.Type);
+  I->IsTemplate = T.IsTemplate;
+  I->IsBuiltIn = T.IsBuiltIn;
+  I->Name = std::move(T.Name);
+  I->DefaultValue = std::move(T.DefaultValue);
   return llvm::Error::success();
 }
 

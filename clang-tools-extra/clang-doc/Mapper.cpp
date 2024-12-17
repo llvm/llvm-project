@@ -22,14 +22,28 @@ static llvm::StringSet<> USRVisited;
 static llvm::sys::Mutex USRVisitedGuard;
 
 template <typename T> bool isTypedefAnonRecord(const T *D) {
-  if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
+  if (const auto *C = dyn_cast<CXXRecordDecl>(D))
     return C->getTypedefNameForAnonDecl();
-  }
   return false;
 }
 
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
+}
+
+Location MapASTVisitor::getDeclLocation(const NamedDecl *D) const {
+  bool IsFileInRootDir;
+  llvm::SmallString<128> File =
+      getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
+  ASTContext &Context = D->getASTContext();
+  int Start = Context.getSourceManager()
+                     .getPresumedLoc(D->getBeginLoc())
+                     .getLine();
+  int End = Context.getSourceManager()
+                   .getPresumedLoc(D->getEndLoc())
+                   .getLine();
+  
+  return Location(Start, End, File, IsFileInRootDir);
 }
 
 template <typename T>
@@ -60,8 +74,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
   auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
-                               getLine(D, D->getASTContext()), File,
-                               IsFileInRootDir, CDCtx.PublicOnly);
+                               getDeclLocation(D), CDCtx.PublicOnly);
 
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
@@ -116,11 +129,6 @@ MapASTVisitor::getComment(const NamedDecl *D, const ASTContext &Context) const {
   return nullptr;
 }
 
-int MapASTVisitor::getLine(const NamedDecl *D,
-                           const ASTContext &Context) const {
-  return Context.getSourceManager().getPresumedLoc(D->getBeginLoc()).getLine();
-}
-
 llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
                                               const ASTContext &Context,
                                               llvm::StringRef RootDir,
@@ -128,9 +136,12 @@ llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
   llvm::SmallString<128> File(Context.getSourceManager()
                                   .getPresumedLoc(D->getBeginLoc())
                                   .getFilename());
+  llvm::SmallString<128> Result;
   IsFileInRootDir = false;
+  Result = llvm::sys::path::remove_leading_dotslash(File);
+  Result = llvm::SmallString<128>(llvm::sys::path::convert_to_slash(Result));
   if (RootDir.empty() || !File.starts_with(RootDir))
-    return File;
+    return Result;
   IsFileInRootDir = true;
   llvm::SmallString<128> Prefix(RootDir);
   // replace_path_prefix removes the exact prefix provided. The result of
@@ -139,8 +150,9 @@ llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
   // ends with a / and the result has the desired format.
   if (!llvm::sys::path::is_separator(Prefix.back()))
     Prefix += llvm::sys::path::get_separator();
-  llvm::sys::path::replace_path_prefix(File, Prefix, "");
-  return File;
+  
+  llvm::sys::path::replace_path_prefix(Result, Prefix, "");
+  return Result;
 }
 
 } // namespace doc

@@ -103,6 +103,7 @@ enum OutputFormatTy {
   md,
   yaml,
   html,
+  mhtml
 };
 
 static llvm::cl::opt<OutputFormatTy>
@@ -112,7 +113,9 @@ static llvm::cl::opt<OutputFormatTy>
                                 clEnumValN(OutputFormatTy::md, "md",
                                            "Documentation in MD format."),
                                 clEnumValN(OutputFormatTy::html, "html",
-                                           "Documentation in HTML format.")),
+                                           "Documentation in HTML format."),
+                                clEnumValN(OutputFormatTy::mhtml, "mhtml",
+                                           "Documentation in mHTML format")),
                llvm::cl::init(OutputFormatTy::yaml),
                llvm::cl::cat(ClangDocCategory));
 
@@ -124,6 +127,8 @@ std::string getFormatString() {
     return "md";
   case OutputFormatTy::html:
     return "html";
+  case OutputFormatTy::mhtml:
+    return "mhtml";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -158,6 +163,15 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
+llvm::SmallString<128> appendPathNative(llvm::SmallString<128> Path, 
+                                    llvm::StringRef Asset) {
+  llvm::SmallString<128> Default;
+  llvm::sys::path::native(Path, Default);
+  llvm::sys::path::append(Default, Asset);
+  return Default;
+}
+
+
 llvm::Error getDefaultAssetFiles(const char *Argv0,
                                  clang::doc::ClangDocContext &CDCtx) {
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
@@ -168,13 +182,10 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   llvm::SmallString<128> AssetsPath;
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
   llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
-  llvm::SmallString<128> DefaultStylesheet;
-  llvm::sys::path::native(AssetsPath, DefaultStylesheet);
-  llvm::sys::path::append(DefaultStylesheet,
-                          "clang-doc-default-stylesheet.css");
-  llvm::SmallString<128> IndexJS;
-  llvm::sys::path::native(AssetsPath, IndexJS);
-  llvm::sys::path::append(IndexJS, "index.js");
+  llvm::SmallString<128> DefaultStylesheet =
+      appendPathNative(AssetsPath, "clang-doc-default-stylesheet.css");
+  llvm::SmallString<128> IndexJS =
+      appendPathNative(AssetsPath, "index.js");
 
   if (!llvm::sys::fs::is_regular_file(IndexJS))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -203,6 +214,60 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
   if (llvm::sys::fs::is_directory(std::string(UserAssetPath)))
     return getAssetFiles(CDCtx);
   return getDefaultAssetFiles(Argv0, CDCtx);
+}
+
+
+llvm::Error getMustacheHtmlFiles(const char *Argv0,
+                                 clang::doc::ClangDocContext &CDCtx) {
+  if (!UserAssetPath.empty() &&
+      !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+  if (llvm::sys::fs::is_directory(std::string(UserAssetPath)))
+    return getAssetFiles(CDCtx);
+  
+  void *MainAddr = (void *)(intptr_t)getExecutablePath;
+  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
+  
+  llvm::SmallString<128> DefaultStylesheet
+      = appendPathNative(AssetsPath, "clang-doc-mustache.css");
+  llvm::SmallString<128> NamespaceTemplate 
+      = appendPathNative(AssetsPath, "namespace-template.mustache");
+  llvm::SmallString<128> ClassTemplate
+      = appendPathNative(AssetsPath, "class-template.mustache");
+  llvm::SmallString<128> EnumTemplate
+      = appendPathNative(AssetsPath, "enum-template.mustache");
+  llvm::SmallString<128> FunctionTemplate
+      = appendPathNative(AssetsPath, "function-template.mustache");
+  llvm::SmallString<128> CommentTemplate
+      = appendPathNative(AssetsPath, "comments-template.mustache");
+  llvm::SmallString<128> TypedefTemplate
+      = appendPathNative(AssetsPath, "typedef-template.mustache");
+  llvm::SmallString<128> IndexJS
+      = appendPathNative(AssetsPath, "mustache-index.js");
+  
+  CDCtx.MustacheTemplates.insert({"namespace-template", 
+                                  NamespaceTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"class-template",
+                                  ClassTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"enum-template",
+                                  EnumTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"function-template",
+                                  FunctionTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"comments-template", 
+                                  CommentTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"typedef-template",
+                                  TypedefTemplate.c_str()});
+  CDCtx.JsScripts.insert(CDCtx.JsScripts.begin(), IndexJS.c_str());
+  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                               std::string(DefaultStylesheet));
+  
+  return llvm::Error::success();
 }
 
 /// Make the output of clang-doc deterministic by sorting the children of
@@ -273,6 +338,13 @@ Example usage for a project using a compile commands database:
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
+      llvm::errs() << toString(std::move(Err)) << "\n";
+      return 1;
+    }
+  }
+  
+  if (Format == "mhtml") {
+    if (auto Err = getMustacheHtmlFiles(argv[0], CDCtx)) {
       llvm::errs() << toString(std::move(Err)) << "\n";
       return 1;
     }
@@ -357,7 +429,7 @@ Example usage for a project using a compile commands database:
     return 1;
 
   sortUsrToInfo(USRToInfo);
-
+  
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
       Err != std::error_code()) {

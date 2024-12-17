@@ -1,0 +1,29 @@
+{{! 
+    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    See https://llvm.org/LICENSE.txt for license information.
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    
+    This file defines the template for type definition
+}}
+<div class="delimiter-container">
+    <div id="{{ID}}">
+        {{! Function Prototype }}
+        <pre>
+            <code class="language-cpp code-clang-doc">
+{{TypeDeclaration}};
+            </code>
+        </pre>
+        {{#TypeDefComments}}
+        <div>
+            {{>Comments}}
+        </div>
+        {{/TypeDefComments}}
+        {{#Location}}
+        <div class="definition">
+            <div>
+                Defined on line {{LineNumber}} at <a href="{{FileURL}}">{{Filename}}</a>
+            </div>
+        </div>
+        {{/Location}}
+    </div>
+</div>

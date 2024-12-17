@@ -113,7 +113,8 @@ struct Reference {
   llvm::SmallString<16> getFileBaseName() const;
 
   SymbolID USR = SymbolID(); // Unique identifier for referenced decl
-
+  
+  
   // Name of type (possibly unresolved). Not including namespaces or template
   // parameters (so for a std::vector<int> this would be "vector"). See also
   // QualName.
@@ -152,7 +153,9 @@ struct ScopeChildren {
 
 // A base struct for TypeInfos
 struct TypeInfo {
+  
   TypeInfo() = default;
+  
   TypeInfo(const Reference &R) : Type(R) {}
 
   // Convenience constructor for when there is no symbol ID or info type
@@ -161,8 +164,11 @@ struct TypeInfo {
       : Type(SymbolID(), Name, InfoType::IT_default, Name, Path) {}
 
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
-
+  
   Reference Type; // Referenced type in this info.
+  
+  bool IsTemplate = false;
+  bool IsBuiltIn = false;
 };
 
 // Represents one template parameter.
@@ -209,6 +215,7 @@ struct FieldTypeInfo : public TypeInfo {
     return std::tie(Type, Name, DefaultValue) ==
            std::tie(Other.Type, Other.Name, Other.DefaultValue);
   }
+  
 
   SmallString<16> Name; // Name associated with this info.
 
@@ -238,19 +245,23 @@ struct MemberTypeInfo : public FieldTypeInfo {
 };
 
 struct Location {
-  Location(int LineNumber = 0, StringRef Filename = StringRef(),
+  Location(int StartLineNumber = 0, 
+           int EndLineNumber = 0,
+           StringRef Filename = StringRef(),
            bool IsFileInRootDir = false)
-      : LineNumber(LineNumber), Filename(Filename),
+      : StartLineNumber(StartLineNumber),
+        EndLineNumber(EndLineNumber),
+        Filename(Filename),
         IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
-    return std::tie(LineNumber, Filename) ==
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, EndLineNumber, Filename) ==
+           std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
   bool operator!=(const Location &Other) const {
-    return std::tie(LineNumber, Filename) !=
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, Filename) !=
+           std::tie(Other.StartLineNumber, Other.Filename);
   }
 
   // This operator is used to sort a vector of Locations.
@@ -258,11 +269,12 @@ struct Location {
   // sort is enough, the order is only needed to call std::unique after sorting
   // the vector.
   bool operator<(const Location &Other) const {
-    return std::tie(LineNumber, Filename) <
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, Filename) <
+           std::tie(Other.StartLineNumber, Other.Filename);
   }
 
-  int LineNumber = 0;           // Line number of this Location.
+  int StartLineNumber = 0;      // Line number of this Location.
+  int EndLineNumber = 0;        // End line number of this Location.
   SmallString<32> Filename;     // File for this Location.
   bool IsFileInRootDir = false; // Indicates if file is inside root directory
 };
@@ -359,6 +371,9 @@ struct FunctionInfo : public SymbolInfo {
   // Full qualified name of this function, including namespaces and template
   // specializations.
   SmallString<16> FullName;
+  
+  // Function Prototype
+  SmallString<256> ProtoType;
 
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
@@ -379,7 +394,7 @@ struct RecordInfo : public SymbolInfo {
   // Full qualified name of this record, including namespaces and template
   // specializations.
   SmallString<16> FullName;
-
+  
   // When present, this record is a template or specialization.
   std::optional<TemplateInfo> Template;
 
@@ -412,12 +427,15 @@ struct TypedefInfo : public SymbolInfo {
   void merge(TypedefInfo &&I);
 
   TypeInfo Underlying;
-
-  // Inidicates if this is a new C++ "using"-style typedef:
+  // Underlying type declaration
+  SmallString<16> TypeDeclaration;
+  // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
   // False means it's a C-style typedef:
   //   typedef std::vector<int> MyVector;
   bool IsUsing = false;
+  
+  std::vector<CommentInfo> Description; 
 };
 
 struct BaseRecordInfo : public RecordInfo {
@@ -455,8 +473,9 @@ struct EnumValueInfo {
   // Stores the user-supplied initialization expression for this enumeration
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
-
-  std::vector<CommentInfo> Description; /// Comment description of this field.
+  
+  /// Comment description of this field.
+  std::vector<CommentInfo> Description; 
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -521,8 +540,10 @@ struct ClangDocContext {
   // Path of CSS stylesheets that will be copied to OutDirectory and used to
   // style all HTML files.
   std::vector<std::string> UserStylesheets;
-  // JavaScript files that will be imported in allHTML file.
+  // JavaScript files that will be imported in all HTML file.
   std::vector<std::string> JsScripts;
+  // Mustache Template files
+  llvm::StringMap<std::string> MustacheTemplates;
   Index Idx;
 };
 
