@@ -18,7 +18,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
-#include "llvm/IR/VectorUtils.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {

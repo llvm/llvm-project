@@ -1,4 +1,4 @@
-//===- VectorUtils.cpp - Vector type utility functions --------------------===//
+//===------- VectorTypeUtils.cpp - Vector type utility functions ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/VectorUtils.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace llvm;

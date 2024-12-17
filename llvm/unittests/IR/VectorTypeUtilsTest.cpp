@@ -1,4 +1,4 @@
-//===------- VectorUtilsTest.cpp - Vector utils tests ---------------------===//
+//===------- VectorTypeUtilsTest.cpp - Vector utils tests -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/VectorUtils.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
