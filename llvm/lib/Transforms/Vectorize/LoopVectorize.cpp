@@ -8406,10 +8406,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     if (Reverse)
       VectorPtr = new VPReverseVectorPointerRecipe(
           Ptr, &Plan.getVF(), getLoadStoreType(I),
-          GEP ? GEP->isInBounds() : false, I->getDebugLoc());
+          GEP && GEP->isInBounds() ? GEPNoWrapFlags::inBounds()
+                                   : GEPNoWrapFlags::none(),
+          I->getDebugLoc());
     else
       VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
-                                            GEP ? GEP->isInBounds() : false,
+                                            GEP ? GEP->getNoWrapFlags()
+                                                : GEPNoWrapFlags::none(),
                                             I->getDebugLoc());
     Builder.getInsertBlock()->appendRecipe(VectorPtr);
     Ptr = VectorPtr;
