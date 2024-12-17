@@ -3326,7 +3326,7 @@ def int_amdgcn_s_sema_signal :
   ClangBuiltin<"__builtin_amdgcn_s_sema_signal">,
   Intrinsic<
     [],
-    [local_ptr_ty, llvm_i32_ty],
+    [local_ptr_ty],
     [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 

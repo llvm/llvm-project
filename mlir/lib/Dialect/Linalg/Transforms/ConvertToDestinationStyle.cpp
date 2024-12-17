@@ -170,9 +170,8 @@ static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
     SmallVector<Value> dynSizes;
     for (int64_t i = 0; i < tensorType.getRank(); ++i) {
       if (tensorType.isDynamicDim(i))
-        dynSizes.push_back(
-            reifiedShape[cast<OpResult>(value).getResultNumber()][i]
-                .get<Value>());
+        dynSizes.push_back(cast<Value>(
+            reifiedShape[cast<OpResult>(value).getResultNumber()][i]));
     }
     return dynSizes;
   }
@@ -437,7 +436,7 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   SmallVector<Value> dynamicSizes;
   for (int64_t i = 0; i < resultType.getRank(); ++i)
     if (resultType.isDynamicDim(i))
-      dynamicSizes.push_back(reifiedShape[0][i].get<Value>());
+      dynamicSizes.push_back(cast<Value>(reifiedShape[0][i]));
 
   // If the `padOp` has a nofold attribute and all paddings are known to be 0,
   // explicitly insert a `linalg.copy`.

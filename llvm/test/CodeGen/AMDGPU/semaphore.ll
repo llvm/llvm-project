@@ -20,7 +20,7 @@ define amdgpu_kernel void @test_sema(i32 %arg) {
 ; GFX13-NEXT:    s_sema_set_limit 0x2003
 ; GFX13-NEXT:    s_sema_signal 2
 ; GFX13-NEXT:    s_sema_signal 1
-; GFX13-NEXT:    s_sema_signal 0x731
+; GFX13-NEXT:    s_sema_signal 49
 ; GFX13-NEXT:    s_sema_wait 2
 ; GFX13-NEXT:    s_sema_wait 1
 ; GFX13-NEXT:    s_sema_wait 1
@@ -31,9 +31,9 @@ define amdgpu_kernel void @test_sema(i32 %arg) {
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem, i32 0)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 0)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3, i32 7)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem3)

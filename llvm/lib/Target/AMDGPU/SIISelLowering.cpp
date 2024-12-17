@@ -4538,17 +4538,15 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   Chain = SP.getValue(1);
   MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
-  unsigned Opc =
-      TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp
-          ? ISD::ADD
-          : ISD::SUB;
+  assert(TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
+         "Stack grows upwards for AMDGPU");
 
   SDValue ScaledSize = DAG.getNode(
       ISD::SHL, dl, VT, Size,
       DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
   Align StackAlign = TFL->getStackAlign();
-  Tmp1 = DAG.getNode(Opc, dl, VT, SP, ScaledSize); // Value
+  Tmp1 = DAG.getNode(ISD::ADD, dl, VT, SP, ScaledSize); // Value
   if (Alignment && *Alignment > StackAlign) {
     Tmp1 = DAG.getNode(
         ISD::AND, dl, VT, Tmp1,
@@ -11487,22 +11485,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
           cast<ConstantSDNode>(Op->getOperand(3))->getZExtValue() & 0xFFF;
       SDValue K = DAG.getTargetConstant(SemID << 13 | Limit, DL, MVT::i32);
       auto NewMI = DAG.getMachineNode(AMDGPU::S_SEMA_SET_LIMIT, DL,
-                                      Op->getVTList(), {K, Chain});
-      return SDValue(NewMI, 0);
-    }
-    // TODO-GFX13: Handle non-constant semaphore ID.
-    return SDValue();
-  }
-  case Intrinsic::amdgcn_s_sema_signal: {
-    // TODO-GFX13: Implement this in tablegen with an SDNodeXForm.
-    SDValue Sem = Op->getOperand(2);
-    if (auto *SemAddr = dyn_cast<ConstantSDNode>(Sem)) {
-      unsigned SemIDAndRank = (SemAddr->getZExtValue() >> 4) & 0xFF;
-      unsigned Count =
-          cast<ConstantSDNode>(Op->getOperand(3))->getZExtValue() & 0xF;
-      SDValue K =
-          DAG.getTargetConstant(Count << 8 | SemIDAndRank, DL, MVT::i32);
-      auto NewMI = DAG.getMachineNode(AMDGPU::S_SEMA_SIGNAL, DL,
                                       Op->getVTList(), {K, Chain});
       return SDValue(NewMI, 0);
     }

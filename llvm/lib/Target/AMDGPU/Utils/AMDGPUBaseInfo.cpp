@@ -564,7 +564,7 @@ bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
 bool isVOPMAsmOnly(unsigned Opc) { return isVOPMAsmOnlyOpcodeHelper(Opc); }
 
-bool isVOPMPseudo(unsigned Opc) { return isVOPMPsuedoOpcodeHelper(Opc); }
+bool isVOPMPseudo(unsigned Opc) { return isVOPMPseudoOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
