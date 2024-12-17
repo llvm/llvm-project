@@ -221,7 +221,7 @@ getVectorLoweringShape(EVT VectorVT) {
   }
 
   llvm_unreachable("All cases in switch should return.");
-};
+}
 
 /// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
 /// EVTs that compose it.  Unlike ComputeValueVTs, this will break apart vectors
