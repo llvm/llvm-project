@@ -1130,9 +1130,8 @@ int x = a.^
   auto CompletionList =
       llvm::cantFail(runCodeComplete(Server, File, Test.point(), {}));
 
-  EXPECT_THAT(
-      CompletionList.Completions,
-      Contains(AllOf(named("gamma"), doc("This is a member field."))));
+  EXPECT_THAT(CompletionList.Completions,
+              Contains(AllOf(named("gamma"), doc("This is a member field."))));
   EXPECT_THAT(
       CompletionList.Completions,
       Contains(AllOf(named("delta"), doc("This is a member function."))));
