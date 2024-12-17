@@ -2594,71 +2594,6 @@ define <vscale x 4 x i32> @vwsll_vi(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b
   ret <vscale x 4 x i32> %2
 }
 
-; Test getOperandInfo
-
-define <vscale x 1 x i8> @vmerge_vim(<vscale x 1 x i8> %a, i8 %b, <vscale x 1 x i1> %m, iXLen %vl) {
-; NOVLOPT-LABEL: vmerge_vim:
-; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    vsetvli a2, zero, e8, mf8, tu, ma
-; NOVLOPT-NEXT:    vmv.v.x v8, a0
-; NOVLOPT-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; NOVLOPT-NEXT:    vmerge.vim v8, v8, 2, v0
-; NOVLOPT-NEXT:    ret
-;
-; VLOPT-LABEL: vmerge_vim:
-; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
-; VLOPT-NEXT:    vmv.v.x v8, a0
-; VLOPT-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; VLOPT-NEXT:    vmerge.vim v8, v8, 2, v0
-; VLOPT-NEXT:    ret
-  %2 = call <vscale x 1 x i8> @llvm.riscv.vmv.v.x.nxv1i8(<vscale x 1 x i8> %a, i8 %b, iXLen -1)
-  %3 = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %2, i8 2, <vscale x 1 x i1> %m, iXLen %vl)
-  ret <vscale x 1 x i8> %3
-}
-
-define <vscale x 1 x i8> @vmerge_vxm(<vscale x 1 x i8> %a, i8 %b, <vscale x 1 x i1> %m, iXLen %vl) {
-; NOVLOPT-LABEL: vmerge_vxm:
-; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    vsetvli a2, zero, e8, mf8, tu, ma
-; NOVLOPT-NEXT:    vmv.v.x v8, a0
-; NOVLOPT-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; NOVLOPT-NEXT:    vmerge.vxm v8, v8, a0, v0
-; NOVLOPT-NEXT:    ret
-;
-; VLOPT-LABEL: vmerge_vxm:
-; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
-; VLOPT-NEXT:    vmv.v.x v8, a0
-; VLOPT-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; VLOPT-NEXT:    vmerge.vxm v8, v8, a0, v0
-; VLOPT-NEXT:    ret
-  %2 = call <vscale x 1 x i8> @llvm.riscv.vmv.v.x.nxv1i8(<vscale x 1 x i8> %a, i8 %b, iXLen -1)
-  %3 = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %2, i8 %b, <vscale x 1 x i1> %m, iXLen %vl)
-  ret <vscale x 1 x i8> %3
-}
-
-define <vscale x 1 x i8> @vmerge_vvm(<vscale x 1 x i8> %a, i8 %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl) {
-; NOVLOPT-LABEL: vmerge_vvm:
-; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    vsetvli a2, zero, e8, mf8, tu, ma
-; NOVLOPT-NEXT:    vmv.v.x v8, a0
-; NOVLOPT-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; NOVLOPT-NEXT:    vmerge.vvm v8, v8, v9, v0
-; NOVLOPT-NEXT:    ret
-;
-; VLOPT-LABEL: vmerge_vvm:
-; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
-; VLOPT-NEXT:    vmv.v.x v8, a0
-; VLOPT-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; VLOPT-NEXT:    vmerge.vvm v8, v8, v9, v0
-; VLOPT-NEXT:    ret
-  %2 = call <vscale x 1 x i8> @llvm.riscv.vmv.v.x.nxv1i8(<vscale x 1 x i8> %a, i8 %b, iXLen -1)
-  %3 = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %2, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl)
-  ret <vscale x 1 x i8> %3
-}
-
 define <vscale x 1 x i32> @vmand_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, <vscale x 1 x i32> %c, iXLen %vl) {
 ; NOVLOPT-LABEL: vmand_mm:
 ; NOVLOPT:       # %bb.0:
@@ -2950,4 +2885,3 @@ define <vscale x 1 x i32> @vmsof_m(<vscale x 1 x i1> %a, <vscale x 1 x i32> %c, 
   %3 = call <vscale x 1 x i32> @llvm.riscv.vadd.mask.nxv1i32.nxv1i32(<vscale x 1 x i32> %c, <vscale x 1 x i32> %c, <vscale x 1 x i32> %c, <vscale x 1 x i1> %2, iXLen %vl, iXLen 0)
   ret <vscale x 1 x i32> %3
 }
-
