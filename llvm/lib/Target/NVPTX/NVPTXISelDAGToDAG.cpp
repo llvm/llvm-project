@@ -1230,17 +1230,16 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   if (EltVT.isVector()) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
-    // vectors of 16bits type are loaded/stored as multiples of v2x16 elements.
+    // vectors of 8/16bits type are loaded/stored as multiples of v4i8/v2x16
+    // elements.
     if ((EltVT == MVT::f16 && OrigType == MVT::v2f16) ||
         (EltVT == MVT::bf16 && OrigType == MVT::v2bf16) ||
-        (EltVT == MVT::i16 && OrigType == MVT::v2i16)) {
-      assert(NumElts % 2 == 0 && "Vector must have even number of elements");
+        (EltVT == MVT::i16 && OrigType == MVT::v2i16) ||
+        (EltVT == MVT::i8 && OrigType == MVT::v4i8)) {
+      assert(NumElts % OrigType.getVectorNumElements() == 0 &&
+             "NumElts must be divisible by the number of elts in subvectors");
       EltVT = OrigType;
-      NumElts /= 2;
-    } else if (OrigType == MVT::v4i8) {
-      assert(NumElts % 4 == 0 && "NumElts must be a multuple of 4");
-      EltVT = OrigType;
-      NumElts /= 4;
+      NumElts /= OrigType.getVectorNumElements();
     }
   }
 
