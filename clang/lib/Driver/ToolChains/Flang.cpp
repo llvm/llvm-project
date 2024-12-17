@@ -55,7 +55,9 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fdefault_double_8,
                             options::OPT_flarge_sizes,
                             options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files});
+                            options::OPT_fhermetic_module_files,
+                            options::OPT_frealloc_lhs,
+                            options::OPT_fno_realloc_lhs});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
