@@ -597,6 +597,7 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 let SubtargetPredicate = isGFX13Plus in {
   let hasSideEffects = 1 in {
     def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32">;
+    def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32">;
   }
 } // End SubtargetPredicate = isGFX13Plus
 
@@ -2178,6 +2179,7 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
 
 defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x11>;
 defm S_SET_GPR_IDX_U32 : SOP1_Real_gfx13<0x6f>;
+defm S_ADD_GPR_IDX_U32 : SOP1_Real_gfx13<0x70>;
 
 //===----------------------------------------------------------------------===//
 //  SOP1 - GFX11, GFX12
