@@ -419,6 +419,9 @@ Non-comprehensive list of changes in this release
 - Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
   not a power of two, matching preexisting behaviour for vector types.
 
+- Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
+  which allows them to be stored in STL containers.
+
 New Compiler Flags
 ------------------
 
