@@ -3413,7 +3413,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     // TODO: The sentinel value is not always necessary. When the start value is
     // a constant, and smaller than the start value of the induction variable,
     // the start value can be directly used to initialize the reduction phi.
-    StartV = Iden = StartV;
+    Iden = StartV;
     if (!ScalarPHI) {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());
