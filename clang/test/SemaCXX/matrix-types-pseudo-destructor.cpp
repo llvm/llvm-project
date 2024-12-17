@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fenable-matrix -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fenable-matrix -verify %s
 // expected-no-diagnostics
 
 template <typename T>
