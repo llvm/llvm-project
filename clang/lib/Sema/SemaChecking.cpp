@@ -2451,7 +2451,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
     break;
   }
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case Builtin::BI##ID:                                                        \
     return AtomicOpsOverloaded(TheCallResult, AtomicExpr::AO##ID);
