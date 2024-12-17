@@ -10213,15 +10213,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // of a loop-defined variable, but it ignores induction variables which are
     // handled by InnerLoopVectorizer::fixupIVUsers. We need to bail out if we
     // encounter induction variables too otherwise fixupIVUsers will crash.
-    for (BasicBlock *BB : L->blocks()) {
-      for (Instruction &I : *BB) {
-        for (User *U : I.users()) {
+    BasicBlock *LoopLatch = L->getLoopLatch();
+    for (const auto &Induction : LVL.getInductionVars()) {
+      PHINode *Ind = Induction.first;
+      Instruction *IndUpdate =
+          cast<Instruction>(Ind->getIncomingValueForBlock(LoopLatch));
+      for (Instruction *I : {cast<Instruction>(Ind), IndUpdate}) {
+        for (User *U : I->users()) {
           Instruction *UI = cast<Instruction>(U);
           if (!L->contains(UI)) {
             reportVectorizationFailure(
-                "Auto-vectorization of loops with uncountable "
-                "early exit and live-outs is not supported",
-                "UncountableEarlyExitLoopLiveOutsUnsupported", ORE, L);
+                "Auto-vectorization of loops with uncountable early exits and "
+                "outside uses of induction variables unsupported",
+                "UncountableEarlyExitLoopIndLiveOutsUnsupported", ORE, L);
             return false;
           }
         }
