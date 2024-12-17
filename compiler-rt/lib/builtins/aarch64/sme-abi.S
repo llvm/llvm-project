@@ -206,23 +206,41 @@ DEFINE_COMPILERRT_FUNCTION(__arm_get_current_vg)
   ret
 END_COMPILERRT_FUNCTION(__arm_get_current_vg)
 
+// The diagram below describes the layout used in the following routines:
+// * __arm_sme_state_size
+// * __arm_sme_save
+// * __arm_sme_restore
+//
+// +---------------------------------+
+// |             ...                 |
+// |           ZA buffer             |
+// |             ...                 |
+// +---------------------------------+ <- @96
+// |         ZT0 contents            |
+// +---------------------------------+ <- @32
+// | byte 15-10: zero (reserved)     |
+// | byte   9-8: num_za_save_slices  |           TPIDR2 block
+// | byte   7-0: za_save_buffer      |
+// +---------------------------------+ <- @16
+// | bit  127-1: zero (reserved)     |           Internal state for __arm_sme_save/restore
+// | bit      0: VALID               |
+// +---------------------------------+ <- @0
+
 DEFINE_COMPILERRT_FUNCTION(__arm_sme_state_size)
   .variant_pcs __arm_sme_state_size
   BTI_C
 
   // Test if SME is available and ZA state is 'active'.
-  adrp    x16, CPU_FEATS_SYMBOL
-  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
-  tbz     x16, #FEAT_SME_BIT, 0f
+  adrp    x17, CPU_FEATS_SYMBOL
+  ldr     x17, [x17, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x17, #FEAT_SME_BIT, 0f
   mrs     x16, SVCR
   tbz     x16, #1, 0f
   mrs     x16, TPIDR2_EL0
   cbnz    x16, 0f
 
   // Size = HAS_FEAT_SME2 ? 96 : 32
-  adrp    x16, CPU_FEATS_SYMBOL
-  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
-  tst     x16, #FEAT_SME2_MASK
+  tst     x17, #FEAT_SME2_MASK
   mov     w17, #32
   mov     w16, #96
   csel    x16, x17, x16, eq
@@ -242,17 +260,17 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   .variant_pcs __arm_sme_save
   BTI_C
 
-  // Clear internal state bits
-  stp     xzr, xzr, [x0]
-
   // If PTR is not 16-byte aligned, abort.
   tst     x0, #0xF
   b.ne    3f
 
+  // Clear internal state bits
+  stp     xzr, xzr, [x0]
+
   // If SME is not available, PSTATE.ZA = 0 or TPIDR2_EL0 != 0, return.
-  adrp    x16, CPU_FEATS_SYMBOL
-  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
-  tbz     x16, #FEAT_SME_BIT, 2f
+  adrp    x17, CPU_FEATS_SYMBOL
+  ldr     x17, [x17, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x17, #FEAT_SME_BIT, 2f
   mrs     x16, SVCR
   tbz     x16, #1, 2f
   mrs     x16, TPIDR2_EL0
@@ -262,19 +280,14 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   mov     w16, #1
   str     x16, [x0]
 
-  adrp    x16, CPU_FEATS_SYMBOL
-  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
-  tbz     x16, #FEAT_SME2_BIT, 0f
+  add     x18, x0, #32
+  tbz     x17, #FEAT_SME2_BIT, 1f
 
   // Store ZT0 and ZA
   add     x16, x0, #32
   str     zt0, [x16]
-  add     x18, x0, #96
+  add     x18, x18, #64
   b       1f
-
-0:
-  // Has SME only
-  add     x18, x0, #32
 
 1:
   // Set up lazy-save (x18 = pointer to buffer)
@@ -284,7 +297,6 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   stur    wzr, [x0, #10]
   strh    wzr, [x0, #14]
   msr     TPIDR2_EL0, x0
-  ret
 
 2:
   // Do nothing
@@ -296,7 +308,7 @@ END_COMPILERRT_FUNCTION(__arm_sme_save)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
   .cfi_startproc
-  .variant_pcs __arm_sme_save
+  .variant_pcs __arm_sme_restore
   BTI_C
 
   stp     x29, x30, [sp, #-16]!
@@ -312,16 +324,16 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
 
   // If the VALID bit is 0, return early.
   ldr     x16, [x0]
-  tbz     x16, #0, 2f
+  cbz     x16, 2f
 
   // If SME is not available, abort.
-  adrp    x16, CPU_FEATS_SYMBOL
-  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
-  tbz     x16, #FEAT_SME_BIT, 3f
+  adrp    x17, CPU_FEATS_SYMBOL
+  ldr     x17, [x17, CPU_FEATS_SYMBOL_OFFSET]
+  tbz     x17, #FEAT_SME_BIT, 3f
 
   // If TPIDR2_EL0 != nullptr, no lazy-save was committed, try to reload zt0.
   mrs     x16, TPIDR2_EL0
-  cbnz    x16, 0f
+  cbnz    x16, 1f
 
   // If TPIDR2_EL0 == nullptr and PSTATE.ZA = 1 (<=> ZA state is 'active'),
   // abort.
@@ -330,20 +342,16 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
 
   // Restore za.
   smstart za
-  mov     x16, x0
   add     x0, x0, #16
   bl      __arm_tpidr2_restore
-  mov     x0, x16
-  msr     TPIDR2_EL0, xzr
-
-0:
-  smstart za
+  sub     x0, x0, #16
 
 1:
+  smstart za
+  msr     TPIDR2_EL0, xzr
+
   // Check if zt0 needs restoring.
-  adrp    x16, CPU_FEATS_SYMBOL
-  ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
-  tbz     x16, #FEAT_SME2_BIT, 2f
+  tbz     x17, #FEAT_SME2_BIT, 2f
 
   // Restore zt0.
   add     x16, x0, #32
