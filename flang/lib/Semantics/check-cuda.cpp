@@ -340,7 +340,7 @@ private:
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
-          "Host array '%s' cannot be present in CUF kernel"_err_en_US,
+          "Host array '%s' cannot be present in device context"_err_en_US,
           hostArray->name());
     }
   }
@@ -387,13 +387,10 @@ private:
               Check(x.value());
             },
             [&](const common::Indirection<parser::AssignmentStmt> &x) {
-              if (IsCUFKernelDo) {
-                const evaluate::Assignment *assign{
-                    semantics::GetAssignment(x.value())};
-                if (assign) {
-                  ErrorIfHostSymbol(assign->lhs, source);
-                  ErrorIfHostSymbol(assign->rhs, source);
-                }
+              if (const evaluate::Assignment *
+                  assign{semantics::GetAssignment(x.value())}) {
+                ErrorIfHostSymbol(assign->lhs, source);
+                ErrorIfHostSymbol(assign->rhs, source);
               }
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));

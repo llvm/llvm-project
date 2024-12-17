@@ -117,7 +117,6 @@ if (FLANG_STANDALONE_BUILD)
     set(USE_NO_MAYBE_UNINITIALIZED 1)
   endif()
 
-  include(CMakeParseArguments)
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
@@ -445,7 +444,6 @@ if (APPLE)
   endif()
 endif()
 
-include(CMakeParseArguments)
 include(AddFlang)
 
 if (FLANG_INCLUDE_TESTS)

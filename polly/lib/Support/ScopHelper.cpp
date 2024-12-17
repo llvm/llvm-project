@@ -315,7 +315,7 @@ private:
     auto *InstClone = Inst->clone();
     for (auto &Op : Inst->operands()) {
       assert(GenSE.isSCEVable(Op->getType()));
-      auto *OpSCEV = GenSE.getSCEV(Op);
+      const SCEV *OpSCEV = GenSE.getSCEV(Op);
       auto *OpClone = expandCodeFor(OpSCEV, Op->getType(), IP);
       InstClone->replaceUsesOfWith(Op, OpClone);
     }
@@ -330,7 +330,7 @@ private:
     // If a value mapping was given try if the underlying value is remapped.
     Value *NewVal = VMap ? VMap->lookup(E->getValue()) : nullptr;
     if (NewVal) {
-      auto *NewE = GenSE.getSCEV(NewVal);
+      const SCEV *NewE = GenSE.getSCEV(NewVal);
 
       // While the mapped value might be different the SCEV representation might
       // not be. To this end we will check before we go into recursion here.
