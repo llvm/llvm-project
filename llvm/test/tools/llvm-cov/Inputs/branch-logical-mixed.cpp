@@ -1,6 +1,6 @@
-// RUN: llvm-profdata merge %S/Inputs/branch-logical-mixed.proftext -o %t.profdata
-// RUN: llvm-cov show --show-branches=count %S/Inputs/branch-logical-mixed.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck %s
-// RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-logical-mixed.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S %s | FileCheck %s -check-prefix=REPORT
+
+
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,10 +81,3 @@ int main(int argc, char *argv[])
   __llvm_profile_write_file();
   return 0;
 }
-
-// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
-// REPORT-NEXT: ---
-// REPORT-NEXT: _Z4funcii                        77       9  88.31%        68       3  95.59%        80      32  60.00%
-// REPORT-NEXT: main                              1       0 100.00%         5       0 100.00%         0       0   0.00%
-// REPORT-NEXT: ---
-// REPORT-NEXT: TOTAL                            78       9  88.46%        73       3  95.89%        80      32  60.00%

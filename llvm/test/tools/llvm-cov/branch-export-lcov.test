@@ -1,7 +1,8 @@
 
+// RUN: yaml2obj %S/Inputs/branch-showBranchPercentage.yaml -o %t-branch-showBranchPercentage.o
 // RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
-// RUN: llvm-cov export --format=lcov %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
-// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s --check-prefix=NOBRANCH
+// RUN: llvm-cov export --format=lcov %t-branch-showBranchPercentage.o -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov export --format=lcov --skip-branches %t-branch-showBranchPercentage.o -instr-profile %t.profdata | FileCheck %s --check-prefix=NOBRANCH
 
 // CHECK-DAG: BRDA:14,0,0,1
 // CHECK-DAG: BRDA:14,0,1,5
@@ -38,9 +39,10 @@
 // CHECK: BRH:26
 
 // Check recursive macro-expansions.
+// RUN: yaml2obj %S/Inputs/branch-macros.yaml -o %t-branch-macros.o
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
-// RUN: llvm-cov export --format=lcov %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
-// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=NOBRANCH
+// RUN: llvm-cov export --format=lcov %t-branch-macros.o -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
+// RUN: llvm-cov export --format=lcov --skip-branches %t-branch-macros.o -instr-profile %t.profdata | FileCheck %s -check-prefix=NOBRANCH
 
 // MACROS-COUNT-4: BRDA:17
 // MACROS-NOT: BRDA:17

@@ -1,5 +1,6 @@
+// RUN: yaml2obj %S/Inputs/mcdc-general.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/mcdc-general.proftext -o %t.profdata
-// RUN: llvm-cov export --format=text %S/Inputs/mcdc-general.o -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov export --format=text %t.o -instr-profile %t.profdata | FileCheck %s
 
 // CHECK: 12,7,12,27,0,5,[true,true,true,true]
 // CHECK: 15,7,15,13,0,5,[true,true]

@@ -1,6 +1,6 @@
-// RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
-// RUN: llvm-cov show --show-expansions --show-branches=count %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck %s
-// RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S %s | FileCheck %s -check-prefix=REPORT
+
+
+
 
 #define COND1 (a == b)
 #define COND2 (a != b)
@@ -50,11 +50,3 @@ int main(int argc, char *argv[])
   __llvm_profile_write_file();
   return 0;
 }
-
-// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
-// REPORT-NEXT: ---
-// REPORT-NEXT: _Z4funcii                        28       4  85.71%        18       0 100.00%        30      14  53.33%
-// REPORT-NEXT: _Z5func2ii                       13       1  92.31%         8       0 100.00%        10       2  80.00%
-// REPORT-NEXT: main                              1       0 100.00%         6       0 100.00%         0       0   0.00%
-// REPORT-NEXT: ---
-// REPORT-NEXT: TOTAL                            42       5  88.10%        32       0 100.00% 40      16  60.00%
