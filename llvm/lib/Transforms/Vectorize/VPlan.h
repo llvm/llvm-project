@@ -3832,14 +3832,6 @@ public:
     TripCount = TC;
   }
 
-  /// Constructor variants that take disconnected preheader and entry blocks,
-  /// connecting them as part of construction.
-  /// FIXME: Only used to reduce the need of code changes during transition.
-  VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
-        VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader);
-  VPlan(VPBasicBlock *OriginalPreheader, VPBasicBlock *EntryVectorPreHeader,
-        VPIRBasicBlock *ScalarHeader);
-
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
