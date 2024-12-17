@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -mcpu=v3 -verify-machineinstrs -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v3 -verify-machineinstrs -show-mc-encoding | FileCheck %s
 ;
 ; Source:
 ;   int test_load_add_32(int *p, int v) {
