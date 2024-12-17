@@ -15,9 +15,9 @@ using namespace llvm;
 
 namespace {
 
-class VectorUtilsTest : public ::testing::Test {};
+class VectorTypeUtilsTest : public ::testing::Test {};
 
-TEST(VectorUtilsTest, TestToVectorizedTy) {
+TEST(VectorTypeUtilsTest, TestToVectorizedTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -62,7 +62,7 @@ TEST(VectorUtilsTest, TestToVectorizedTy) {
   }
 }
 
-TEST(VectorUtilsTest, TestToScalarizedTy) {
+TEST(VectorTypeUtilsTest, TestToScalarizedTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -80,7 +80,7 @@ TEST(VectorUtilsTest, TestToScalarizedTy) {
   }
 }
 
-TEST(VectorUtilsTest, TestGetContainedTypes) {
+TEST(VectorTypeUtilsTest, TestGetContainedTypes) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -97,7 +97,7 @@ TEST(VectorUtilsTest, TestGetContainedTypes) {
   EXPECT_EQ(getContainedTypes(MixedStructTy), ArrayRef<Type *>({FTy, ITy}));
 }
 
-TEST(VectorUtilsTest, TestIsVectorizedTy) {
+TEST(VectorTypeUtilsTest, TestIsVectorizedTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -130,7 +130,7 @@ TEST(VectorUtilsTest, TestIsVectorizedTy) {
   EXPECT_FALSE(isVectorizedTy(PackedWideStruct));
 }
 
-TEST(VectorUtilsTest, TestGetVectorizedTypeVF) {
+TEST(VectorTypeUtilsTest, TestGetVectorizedTypeVF) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
