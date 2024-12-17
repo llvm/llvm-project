@@ -821,7 +821,8 @@ public:
   }
 
   /// Return true if function is referenced in a non-control flow instruction.
-  /// This flag is only used with safe ICF.
+  /// This flag is set when the code and relocation analyses are being
+  /// performed, which occurs when safe ICF (Identical Code Folding) is enabled.
   bool hasAddressTaken() const { return HasAddressTaken; }
 
   /// Set whether function is referenced in a non-control flow instruction.

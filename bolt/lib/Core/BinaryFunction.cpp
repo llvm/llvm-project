@@ -1521,7 +1521,7 @@ void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
     if (Expr.getKind() != MCExpr::SymbolRef)
       continue;
     const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-    // Set HasAdressTaken for a function regardless of the ICF level.
+    // Set HasAddressTaken for a function regardless of the ICF level.
     if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
       BF->setHasAddressTaken(true);
   }
