@@ -52,8 +52,8 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
-#include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -15994,15 +15994,15 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     if (FD->isDeleted()) {
       Diag(FD->getAttr<SYCLKernelEntryPointAttr>()->getLocation(),
            diag::err_sycl_entry_point_invalid)
-          << /*deleted function*/2;
+          << /*deleted function*/ 2;
     } else if (FD->isDefaulted()) {
       Diag(FD->getAttr<SYCLKernelEntryPointAttr>()->getLocation(),
            diag::err_sycl_entry_point_invalid)
-          << /*defaulted function*/3;
+          << /*defaulted function*/ 3;
     } else if (FSI->isCoroutine()) {
       Diag(FD->getAttr<SYCLKernelEntryPointAttr>()->getLocation(),
            diag::err_sycl_entry_point_invalid)
-          << /*coroutine*/7;
+          << /*coroutine*/ 7;
     }
   }
 

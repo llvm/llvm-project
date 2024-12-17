@@ -235,8 +235,7 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
     S.Diag(Loc, diag::warn_sycl_kernel_name_not_a_class_type) << KernelName;
     SourceLocation DeclTypeLoc = SourceLocationForType(KernelName);
     if (DeclTypeLoc.isValid())
-      S.Diag(DeclTypeLoc, diag::note_entity_declared_at)
-          << KernelName;
+      S.Diag(DeclTypeLoc, diag::note_entity_declared_at) << KernelName;
     return true;
   }
 
@@ -248,8 +247,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   // and warn about any redundant ones.
   const SYCLKernelEntryPointAttr *SKEPAttr = nullptr;
   for (auto SAI = FD->specific_attr_begin<SYCLKernelEntryPointAttr>();
-       SAI != FD->specific_attr_end<SYCLKernelEntryPointAttr>();
-       ++SAI) {
+       SAI != FD->specific_attr_end<SYCLKernelEntryPointAttr>(); ++SAI) {
     if (!SKEPAttr) {
       SKEPAttr = *SAI;
       continue;
@@ -284,8 +282,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
         Diag(SKEPAttr->getLocation(),
              diag::err_sycl_entry_point_invalid_redeclaration)
             << SKEPAttr->getKernelName() << PrevSKEPAttr->getKernelName();
-        Diag(PrevSKEPAttr->getLocation(), diag::note_previous_decl)
-            << PrevFD;;
+        Diag(PrevSKEPAttr->getLocation(), diag::note_previous_decl) << PrevFD;
       }
     }
   }
@@ -293,23 +290,23 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     if (!MD->isStatic()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*non-static member function*/0;
+          << /*non-static member function*/ 0;
     }
   }
   if (FD->isVariadic()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << /*variadic function*/1;
+        << /*variadic function*/ 1;
   }
   if (FD->isConsteval()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << /*consteval function*/5;
+        << /*consteval function*/ 5;
   } else if (FD->isConstexpr()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << /*constexpr function*/4;
+        << /*constexpr function*/ 4;
   }
   if (FD->isNoReturn()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << /*noreturn function*/6;
+        << /*noreturn function*/ 6;
   }
 
   if (!FD->getReturnType()->isVoidType()) {
