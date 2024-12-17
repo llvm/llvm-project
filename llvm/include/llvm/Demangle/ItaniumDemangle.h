@@ -4335,7 +4335,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     case 'F': {
       First += 2;
       if (consumeIf("16b"))
-        return make<NameType>("bfloat16_t");
+        return make<NameType>("std::bfloat16_t");
       Node *DimensionNumber = make<NameType>(parseNumber());
       if (!DimensionNumber)
         return nullptr;
