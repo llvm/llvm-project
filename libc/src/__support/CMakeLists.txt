@@ -238,6 +238,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_header_library(
