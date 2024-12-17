@@ -1124,7 +1124,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   //   an enumerator, the first expression is a discarded-value expression; if
   //   the id-expression names a non-static data member, the first expression
   //   shall be a glvalue.
-  auto MakeDiscardedValue = [&] {
+  auto ConvertBaseExprToDiscardedValue = [&] {
     assert(getLangOpts().CPlusPlus &&
            "Static member / member enumerator outside of C++");
     if (IsArrow)
@@ -1136,7 +1136,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     DiagnoseDiscardedExprMarkedNodiscard(BaseExpr);
     return false;
   };
-  auto MakeGLValue = [&] {
+  auto ConvertBaseExprToGLValue = [&] {
     if (IsArrow || !BaseExpr->isPRValue())
       return false;
     ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
@@ -1151,7 +1151,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     return ExprError();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl)) {
-    if (MakeGLValue())
+    if (ConvertBaseExprToGLValue())
       return ExprError();
     return BuildFieldReferenceExpr(BaseExpr, IsArrow, OpLoc, SS, FD, FoundDecl,
                                    MemberNameInfo);
@@ -1168,7 +1168,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   }
 
   if (IndirectFieldDecl *FD = dyn_cast<IndirectFieldDecl>(MemberDecl)) {
-    if (MakeGLValue())
+    if (ConvertBaseExprToGLValue())
       return ExprError();
     // We may have found a field within an anonymous union or struct
     // (C++ [class.union]).
@@ -1179,7 +1179,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
   // Static data member
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
-    if (MakeDiscardedValue())
+    if (ConvertBaseExprToDiscardedValue())
       return ExprError();
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
                            SS.getWithLocInContext(Context), TemplateKWLoc, Var,
@@ -1194,11 +1194,12 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (MemberFn->isInstance()) {
       valueKind = VK_PRValue;
       type = Context.BoundMemberTy;
-      if (MemberFn->isImplicitObjectMemberFunction() && MakeGLValue())
+      if (MemberFn->isImplicitObjectMemberFunction() &&
+          ConvertBaseExprToGLValue())
         return ExprError();
     } else {
       // Static member function
-      if (MakeDiscardedValue())
+      if (ConvertBaseExprToDiscardedValue())
         return ExprError();
       valueKind = VK_LValue;
       type = MemberFn->getType();
@@ -1212,7 +1213,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
-    if (MakeDiscardedValue())
+    if (ConvertBaseExprToDiscardedValue())
       return ExprError();
     return BuildMemberExpr(
         BaseExpr, IsArrow, OpLoc, SS.getWithLocInContext(Context),
@@ -1221,7 +1222,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   }
 
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
-    if (MakeDiscardedValue())
+    if (ConvertBaseExprToDiscardedValue())
       return ExprError();
     if (!TemplateArgs) {
       diagnoseMissingTemplateArguments(

@@ -10661,7 +10661,7 @@ public:
 
   /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
   /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
-  /// value has been discarded
+  /// value has been discarded.
   void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
 
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
