@@ -374,6 +374,20 @@ public:
   CanonicalizeSugar(swift::Demangle::Demangler &dem,
                     swift::Demangle::NodePointer node);
 
+  /// Finds the nominal type node (struct, class, enum) that contains the
+  /// module and identifier nodes for that type. If \p node is not a valid
+  /// type node, returns a nullptr.
+  static swift::Demangle::NodePointer
+  FindTypeWithModuleAndIdentifierNode(swift::Demangle::NodePointer node);
+
+  /// Types with the @_originallyDefinedIn attribute are serialized with with
+  /// the original module name in reflection metadata. At the same time the type
+  /// is serialized with the swiftmodule name in debug info, but with a parent
+  /// module with the original module name. This function adjusts \type to look
+  /// up the type in reflection metadata if necessary.
+  std::string
+  AdjustTypeForOriginallyDefinedInModule(llvm::StringRef mangled_typename);
+
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
   swift::Demangle::NodePointer
   GetCanonicalDemangleTree(swift::Demangle::Demangler &dem,
