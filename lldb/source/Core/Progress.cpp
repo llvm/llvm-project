@@ -111,8 +111,8 @@ void Progress::ReportProgress() {
 
   // Change the category bit if we're an internal or external progress.
   uint32_t progress_category_bit = m_origin == ProgressOrigin::eExternal
-                                       ? lldb::eBroadcastBitProgress
-                                       : lldb::eBroadcastBitExternalProgress;
+                                       ? lldb::eBroadcastBitExternalProgress
+                                       : lldb::eBroadcastBitProgress;
 
   Debugger::ReportProgress(m_progress_data.progress_id, m_progress_data.title,
                            m_details, completed, m_total,
