@@ -11789,7 +11789,8 @@ static bool checkForArray(const Expr *E) {
 /// Detect patterns ptr + size >= ptr and ptr + size < ptr, where ptr is a
 /// pointer and size is an unsigned integer. Return whether the result is
 /// always true/false.
-static std::optional<bool> isTautologicalBoundsCheck(Expr *LHS, Expr *RHS,
+static std::optional<bool> isTautologicalBoundsCheck(const Expr *LHS,
+                                                     const Expr *RHS,
                                                      BinaryOperatorKind Opc) {
   if (!LHS->getType()->isPointerType())
     return std::nullopt;
