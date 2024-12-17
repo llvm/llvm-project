@@ -32,6 +32,11 @@ int ptr_ule_add_idx_ptr(const char *ptr, unsigned index) {
   return ptr <= index + ptr; // expected-warning {{pointer comparison always evaluates to true}}
 }
 
+int add_ptr_idx_ult_ptr_array(unsigned index) {
+  char ptr[10];
+  return ptr + index < ptr; // expected-warning {{pointer comparison always evaluates to false}}
+}
+
 // Negative tests with wrong predicate.
 
 int add_ptr_idx_ule_ptr(const char *ptr, unsigned index) {
