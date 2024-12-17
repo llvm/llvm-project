@@ -910,13 +910,9 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &S) {
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // https://en.cppreference.com/w/cpp/language/for
-          // While in C++, the scope of the init-statement and the scope of
-          // statement are one and the same, in C the scope of statement is
-          // nested within the scope of init-statement.
-          bool useCurrentScope =
-              CGM.getASTContext().getLangOpts().CPlusPlus ? true : false;
-          if (emitStmt(S.getBody(), useCurrentScope).failed())
+          // The scope of the for loop body is nested within the scope of the
+          // for loop's init-statement and condition.
+          if (emitStmt(S.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&S);
         },
@@ -973,7 +969,8 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &S) {
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (emitStmt(S.getBody(), /*useCurrentScope=*/true).failed())
+          // The scope of the do-while loop body is a nested scope.
+          if (emitStmt(S.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&S);
         });
@@ -1028,7 +1025,8 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &S) {
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (emitStmt(S.getBody(), /*useCurrentScope=*/true).failed())
+          // The scope of the while loop body is a nested scope.
+          if (emitStmt(S.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&S);
         });

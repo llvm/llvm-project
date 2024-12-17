@@ -967,13 +967,6 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
                                                       mlir::Type t,
                                                       mlir::Location loc,
                                                       unsigned nestLevel) {
-  // The same alloca can be hit more than once when checking for dangling
-  // pointers out of subsequent loop iterations (e.g. second iteraton using
-  // pointer invalidated in the first run). Since we copy the pmap out to
-  // start those subsequent checks, make sure sure we skip existing alloca
-  // tracking.
-  if (getPmap().count(addr))
-    return;
   getPmap()[addr] = {};
 
   enum TypeCategory {

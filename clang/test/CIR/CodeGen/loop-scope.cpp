@@ -12,10 +12,13 @@ void l0(void) {
 // CPPSCOPE: cir.func @_Z2l0v()
 // CPPSCOPE-NEXT:   cir.scope {
 // CPPSCOPE-NEXT:     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
-// CPPSCOPE-NEXT:     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["j", init] {alignment = 4 : i64}
-// CPPSCOPE-NEXT:     %2 = cir.const #cir.int<0> : !s32i
-// CPPSCOPE-NEXT:     cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+// CPPSCOPE-NEXT:     %1 = cir.const #cir.int<0> : !s32i
+// CPPSCOPE-NEXT:     cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
 // CPPSCOPE-NEXT:     cir.for : cond {
+
+//      CPPSCOPE:     } body {
+// CPPSCOPE-NEXT:       cir.scope {
+// CPPSCOPE-NEXT:         %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["j", init] {alignment = 4 : i64}
 
 // CSCOPE: cir.func @l0()
 // CSCOPE-NEXT: cir.scope {

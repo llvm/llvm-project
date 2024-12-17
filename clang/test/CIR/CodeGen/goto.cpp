@@ -171,13 +171,16 @@ int jumpIntoLoop(int* ar) {
 // CHECK:  ^bb[[#BLK6]]:
 // CHECK:    cir.br ^bb[[#COND:]]
 // CHECK:  ^bb[[#COND]]:
-// CHECK:    cir.brcond {{.*}} ^bb[[#BODY]], ^bb[[#EXIT:]]
+// CHECK:    cir.brcond {{.*}} ^bb[[#BLK8:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BLK8]]:
+// CHECK:    cir.br ^bb[[#BODY]]
 // CHECK:  ^bb[[#BODY]]: 
 // CHECK:    cir.br ^bb[[#COND]]
 // CHECK:  ^bb[[#EXIT]]:
 // CHECK:    cir.br ^bb[[#BLK7:]]
 // CHECK:  ^bb[[#BLK7]]:
 // CHECK:    cir.br ^bb[[#RETURN]]
+// CHECK: }
 
 
 
@@ -222,6 +225,7 @@ err:
 // CHECK:    cir.br ^bb[[#RETURN2:]]
 // CHECK:  ^bb[[#RETURN2]]:
 // CHECK:    cir.return 
+// CHECK:  }
   
 
 void flatLoopWithNoTerminatorInFront(int* ptr) {

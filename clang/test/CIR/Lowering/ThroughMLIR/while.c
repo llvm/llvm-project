@@ -32,10 +32,12 @@ void nestedWhile() {
 //CHECK:       %[[FIVE:.+]] = arith.trunci %[[FOUR:.+]] : i8 to i1
 //CHECK:       scf.condition(%[[FIVE]])
 //CHECK:     } do {
-//CHECK:       %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32>
-//CHECK:       %[[C1_I32:.+]] = arith.constant 1 : i32
-//CHECK:       %[[ONE:.+]] = arith.addi %0, %[[C1_I32:.+]] : i32
-//CHECK:       memref.store %[[ONE:.+]], %[[alloca]][] : memref<i32>
+//CHECK:       memref.alloca_scope {
+//CHECK:         %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32>
+//CHECK:         %[[C1_I32:.+]] = arith.constant 1 : i32
+//CHECK:         %[[ONE:.+]] = arith.addi %0, %[[C1_I32:.+]] : i32
+//CHECK:         memref.store %[[ONE:.+]], %[[alloca]][] : memref<i32>
+//CHECK:       }
 //CHECK:       scf.yield
 //CHECK:     }
 //CHECK:  }
@@ -47,7 +49,6 @@ void nestedWhile() {
 //CHECK:   %[[C0_I32:.+]] = arith.constant 0 : i32
 //CHECK:   memref.store %[[C0_I32]], %[[alloca]][] : memref<i32>
 //CHECK:   memref.alloca_scope  {
-//CHECK:     %[[alloca_0:.+]] = memref.alloca() {alignment = 4 : i64} : memref<i32>
 //CHECK:     scf.while : () -> () {
 //CHECK:       %[[ZERO:.+]] = memref.load %alloca[] : memref<i32>
 //CHECK:       %[[C2_I32:.+]] = arith.constant 2 : i32
@@ -56,6 +57,8 @@ void nestedWhile() {
 //CHECK:       %[[FIVE:.+]] = arith.trunci %[[FOUR]] : i8 to i1
 //CHECK:       scf.condition(%[[FIVE]])
 //CHECK:     } do {
+//CHECK:       memref.alloca_scope {
+//CHECK:         %[[alloca_0:.+]] = memref.alloca() {alignment = 4 : i64} : memref<i32>
 //CHECK:         %[[C0_I32_1:.+]] = arith.constant 0 : i32
 //CHECK:         memref.store %[[C0_I32_1]], %[[alloca_0]][] : memref<i32>
 //CHECK:         memref.alloca_scope  {
@@ -78,9 +81,9 @@ void nestedWhile() {
 //CHECK:         %[[C1_I32:.+]] = arith.constant 1 : i32
 //CHECK:         %[[ONE]] = arith.addi %[[ZERO]], %[[C1_I32]] : i32
 //CHECK:         memref.store %[[ONE]], %[[alloca]][] : memref<i32>
-//CHECK:         scf.yield
 //CHECK:       }
+//CHECK:       scf.yield
 //CHECK:     }
-//CHECK:     return
 //CHECK:   }
+//CHECK:   return
 //CHECK: }
