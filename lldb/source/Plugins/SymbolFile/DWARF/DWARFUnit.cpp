@@ -736,10 +736,6 @@ bool DWARFUnit::LinkToSkeletonUnit(DWARFUnit &skeleton_unit) {
   return false; // Already linked to a different unit.
 }
 
-bool DWARFUnit::Supports_DW_AT_APPLE_objc_complete_type() { return true; }
-
-bool DWARFUnit::DW_AT_decl_file_attributes_are_invalid() { return false; }
-
 bool DWARFUnit::Supports_unnamed_objc_bitfields() {
   if (GetProducer() == eProducerClang)
     return GetProducerVersion() >= llvm::VersionTuple(425, 0, 13);
