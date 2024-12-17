@@ -373,6 +373,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__chrono/steady_clock.h>
 #    include <__chrono/time_point.h>
 #    include <__condition_variable/condition_variable.h>
+#    include <__cstddef/nullptr_t.h>
 #    include <__exception/exception_ptr.h>
 #    include <__memory/addressof.h>
 #    include <__memory/allocator.h>

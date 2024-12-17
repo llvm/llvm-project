@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Check that we no longer generate 4 inserts.
 ; CHECK: combine(r{{[0-9]+}}.l,r{{[0-9]+}}.l)

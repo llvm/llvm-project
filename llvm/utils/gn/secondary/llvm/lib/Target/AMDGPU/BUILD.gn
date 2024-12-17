@@ -187,6 +187,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUResourceUsageAnalysis.cpp",
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPURewriteUndefForPHI.cpp",
+    "AMDGPUSelectionDAGInfo.cpp",
     "AMDGPUSetWavePriority.cpp",
     "AMDGPUSplitModule.cpp",
     "AMDGPUSubtarget.cpp",
