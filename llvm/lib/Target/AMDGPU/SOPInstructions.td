@@ -1682,12 +1682,17 @@ let SchedRW = [WriteBarrier], isConvergent = 1 in {
 }
 
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
-  let SubtargetPredicate = isGFX8Plus;
+  let SubtargetPredicate = isGFX8GFX9GFX10GFX11GFX12;
   let simm16 = 0;
   let fixed_imm = 1;
   let mayLoad = 1;
   let mayStore = 1;
 }
+
+let SubtargetPredicate = isGFX13Plus in {
+  def S_WAKEUP_imm : SOPP_Pseudo <"s_wakeup",
+    (ins i16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = isGFX13Plus
 
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
@@ -2870,6 +2875,7 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+defm S_WAKEUP_imm             : SOPP_Real_32_gfx13<0x003>;
 defm S_BARRIER_WAIT           : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP          : SOPP_Real_32_gfx13<0x2c>;
 defm S_SET_VGPR_FRAMES        : SOPP_Real_32_gfx13<0x1c>;
@@ -3127,7 +3133,7 @@ multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<bits<7> op>
 
 defm S_NOP                      : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x000>;
 defm S_ENDPGM                   : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<0x001>;
-defm S_WAKEUP                   : SOPP_Real_32_gfx8_gfx9_gfx10_gfx13<0x003>;
+defm S_WAKEUP                   : SOPP_Real_32_gfx8_gfx9_gfx10<0x003>;
 defm S_BARRIER                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00a>;
 defm S_WAITCNT                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00c>;
 defm S_SETHALT                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<0x00d>;

@@ -957,6 +957,7 @@ public:
     bool Changed = false;
     constexpr unsigned NumScopes =
         static_cast<unsigned>(Barrier::Scope::NUM_SCOPES);
+    const DataLayout &DL = M.getDataLayout();
     // The 1st round: give module-absolute assignments
     unsigned NumAbsolutes[NumScopes] = {0};
     std::vector<GlobalVariable *> OrderedGVs;
@@ -978,9 +979,11 @@ public:
     }
     OrderedGVs = sortByName(std::move(OrderedGVs));
     for (GlobalVariable *GV : OrderedGVs) {
-      TargetExtType *ExtTy = cast<TargetExtType>(GV->getValueType());
+      TargetExtType *ExtTy = isNamedBarrier(*GV);
       unsigned BarrierScope = ExtTy->getIntParameter(0);
-      unsigned BarId = ++NumAbsolutes[BarrierScope];
+      unsigned BarId = NumAbsolutes[BarrierScope] + 1;
+      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+      NumAbsolutes[BarrierScope] += BarCnt;
       // 4 bits for alignment, 5 bits for the barrier num,
       // 3 bits for the barrier scope
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
@@ -1018,10 +1021,12 @@ public:
         // create a new GV used only by this kernel and its function.
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
-        TargetExtType *ExtTy = cast<TargetExtType>(GV->getValueType());
+        TargetExtType *ExtTy = isNamedBarrier(*GV);
         unsigned BarrierScope = ExtTy->getIntParameter(0);
-        unsigned BarId = Kernel2BarId[BarrierScope][F]++;
+        unsigned BarId = Kernel2BarId[BarrierScope][F];
         BarId += NumAbsolutes[BarrierScope] + 1;
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        Kernel2BarId[BarrierScope][F] += BarCnt;
         unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
         recordLDSAbsoluteAddress(&M, NewGV, Offset);
       }

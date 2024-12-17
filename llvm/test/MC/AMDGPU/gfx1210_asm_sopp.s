@@ -63,3 +63,6 @@ s_sendmsg sendmsg(MSG_SAVEWAVE_HAS_TDM)
 
 s_barrier_wait -3
 // GFX1210: s_barrier_wait -3                       ; encoding: [0xfd,0xff,0x94,0xbf]
+
+s_wakeup
+// GFX1210: s_wakeup                                ; encoding: [0x00,0x00,0xb4,0xbf]

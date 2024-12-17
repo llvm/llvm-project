@@ -213,3 +213,77 @@ define void @test_fmlall_single_vg4x4(i32 %slice, <vscale x 16 x i8> %zn0, <vsca
                                                              <vscale x 16 x i8> %zm)
     ret void
 }
+
+; FMLAL (multi)
+
+define void @test_fmlal_multi_vg2x2(i32 %slice, <vscale x 16 x i8> %zn0,  <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zm0,  <vscale x 16 x i8> %zm1) {
+; CHECK-LABEL: test_fmlal_multi_vg2x2:
+; CHECK:  // %bb.0:
+; CHECK:    mov w8, w0
+; CHECK:    fmlal za.h[w8, 0:1, vgx2], { z0.b, z1.b }, { z2.b, z3.b }
+; CHECK:    fmlal za.h[w8, 6:7, vgx2], { z0.b, z1.b }, { z2.b, z3.b }
+; CHECK:    ret
+    call void @llvm.aarch64.sme.fp8.fmlal.multi.za16.vg2x2(i32 %slice,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1)
+    %add = add i32 %slice, 6
+    call void @llvm.aarch64.sme.fp8.fmlal.multi.za16.vg2x2(i32 %add,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1)
+    ret void
+}
+
+define void @test_fmlal_multi_vg2x4(i32 %slice,  <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+; CHECK-LABEL: test_fmlal_multi_vg2x4:
+; CHECK:  // %bb.0:
+; CHECK:    mov w8, w0
+; CHECK:    fmlal za.h[w8, 0:1, vgx4], { z0.b - z3.b }, { z4.b - z7.b }
+; CHECK:    fmlal za.h[w8, 6:7, vgx4], { z0.b - z3.b }, { z4.b - z7.b }
+; CHECK:    ret
+                                    <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3) {
+    call void @llvm.aarch64.sme.fp8.fmlal.multi.za16.vg2x4(i32 %slice,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3)
+    %add = add i32 %slice, 6
+    call void @llvm.aarch64.sme.fp8.fmlal.multi.za16.vg2x4(i32 %add,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3)
+    ret void
+}
+
+; FMLALL (multi)
+
+define void @test_fmlal_multi_vg4x2(i32 %slice, <vscale x 16 x i8> %zn0,  <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zm0,  <vscale x 16 x i8> %zm1) {
+; CHECK-LABEL: test_fmlal_multi_vg4x2:
+; CHECK:  // %bb.0:
+; CHECK:    mov w8, w0
+; CHECK:    fmlall za.s[w8, 0:3, vgx2], { z0.b, z1.b }, { z2.b, z3.b }
+; CHECK:    fmlall za.s[w8, 4:7, vgx2], { z0.b, z1.b }, { z2.b, z3.b }
+; CHECK:    ret
+    call void @llvm.aarch64.sme.fp8.fmlall.multi.za32.vg4x2(i32 %slice,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1)
+    %add = add i32 %slice, 4
+    call void @llvm.aarch64.sme.fp8.fmlall.multi.za32.vg4x2(i32 %add,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1)
+    ret void
+}
+
+define void @test_fmlal_multi_vg4x4(i32 %slice,  <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+; CHECK-LABEL: test_fmlal_multi_vg4x4:
+; CHECK:  // %bb.0:
+; CHECK:    mov w8, w0
+; CHECK:    fmlall za.s[w8, 0:3, vgx4], { z0.b - z3.b }, { z4.b - z7.b }
+; CHECK:    fmlall za.s[w8, 4:7, vgx4], { z0.b - z3.b }, { z4.b - z7.b }
+; CHECK:    ret
+                                    <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3) {
+    call void @llvm.aarch64.sme.fp8.fmlall.multi.za32.vg4x4(i32 %slice,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3)
+    %add = add i32 %slice, 4
+    call void @llvm.aarch64.sme.fp8.fmlall.multi.za32.vg4x4(i32 %add,
+                                                           <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zm0, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3)
+    ret void
+}

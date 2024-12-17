@@ -472,8 +472,7 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFileSP objfile_sp,
     : SymbolFileCommon(std::move(objfile_sp)), m_debug_map_module_wp(),
       m_debug_map_symfile(nullptr),
       m_context(m_objfile_sp->GetModule()->GetSectionList(), dwo_section_list),
-      m_fetched_external_modules(false),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
+      m_fetched_external_modules(false) {}
 
 SymbolFileDWARF::~SymbolFileDWARF() = default;
 
@@ -2920,37 +2919,6 @@ Symbol *SymbolFileDWARF::GetObjCClassSymbol(ConstString objc_class_name) {
   return objc_class_symbol;
 }
 
-// Some compilers don't emit the DW_AT_APPLE_objc_complete_type attribute. If
-// they don't then we can end up looking through all class types for a complete
-// type and never find the full definition. We need to know if this attribute
-// is supported, so we determine this here and cache th result. We also need to
-// worry about the debug map
-// DWARF file
-// if we are doing darwin DWARF in .o file debugging.
-bool SymbolFileDWARF::Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu) {
-  if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolCalculate) {
-    m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolNo;
-    if (cu && cu->Supports_DW_AT_APPLE_objc_complete_type())
-      m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-    else {
-      DWARFDebugInfo &debug_info = DebugInfo();
-      const uint32_t num_compile_units = GetNumCompileUnits();
-      for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFUnit *dwarf_cu = debug_info.GetUnitAtIndex(cu_idx);
-        if (dwarf_cu != cu &&
-            dwarf_cu->Supports_DW_AT_APPLE_objc_complete_type()) {
-          m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-          break;
-        }
-      }
-    }
-    if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolNo &&
-        GetDebugMapSymfile())
-      return m_debug_map_symfile->Supports_DW_AT_APPLE_objc_complete_type(this);
-  }
-  return m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolYes;
-}
-
 // This function can be used when a DIE is found that is a forward declaration
 // DIE and we want to try and find a type that has the complete definition.
 TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
@@ -2968,8 +2936,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
         if (type_die == die || !IsStructOrClassTag(type_die.Tag()))
           return true;
 
-        if (must_be_implementation &&
-            type_die.Supports_DW_AT_APPLE_objc_complete_type()) {
+        if (must_be_implementation) {
           const bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
               DW_AT_APPLE_objc_complete_type, 0);
           if (!try_resolving_type)
