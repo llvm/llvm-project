@@ -69,9 +69,8 @@ def : WriteRes<WriteREV8, [p8700WriteEitherALU]>;
 def : WriteRes<WriteORCB, [p8700WriteEitherALU]>;
 def : WriteRes<WriteIMinMax, [p8700WriteEitherALU]>;
 
-let Latency = 0 in {
+let Latency = 0 in
 def : WriteRes<WriteNop, [p8700WriteEitherALU]>;
-}
 
 let Latency = 4 in {
 def : WriteRes<WriteLDB, [p8700IssueLSU]>;
