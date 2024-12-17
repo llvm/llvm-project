@@ -93,17 +93,15 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
                      targetOptions.getOptimizedLlvmIRCallback(),
                      targetOptions.getISACallback()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
-      fileList(targetOptions.getLinkFiles()) {
+      librariesToLink(targetOptions.getLibrariesToLink()) {
 
   // If `targetOptions` have an empty toolkitPath use `getCUDAToolkitPath`
   if (toolkitPath.empty())
     toolkitPath = getCUDAToolkitPath();
 
   // Append the files in the target attribute.
-  if (ArrayAttr files = target.getLink())
-    for (Attribute attr : files.getValue())
-      if (auto file = dyn_cast<StringAttr>(attr))
-        fileList.push_back(file.str());
+  if (target.getLink())
+    librariesToLink.append(target.getLink().begin(), target.getLink().end());
 
   // Append libdevice to the files to be loaded.
   (void)appendStandardLibs();
@@ -126,8 +124,8 @@ NVVMTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
 
 StringRef SerializeGPUModuleBase::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
-  return fileList;
+ArrayRef<Attribute> SerializeGPUModuleBase::getLibrariesToLink() const {
+  return librariesToLink;
 }
 
 // Try to append `libdevice` from a CUDA toolkit installation.
@@ -149,7 +147,7 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
                                  << " does not exist or is not a file.\n";
       return failure();
     }
-    fileList.push_back(pathRef.str());
+    librariesToLink.push_back(StringAttr::get(target.getContext(), pathRef));
   }
   return success();
 }
@@ -157,8 +155,8 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
 SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
-  if (failed(loadBitcodeFilesFromList(module.getContext(), fileList, bcFiles,
-                                      true)))
+  if (failed(loadBitcodeFilesFromList(module.getContext(), librariesToLink,
+                                      bcFiles, true)))
     return std::nullopt;
   return std::move(bcFiles);
 }
