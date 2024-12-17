@@ -821,6 +821,7 @@ public:
   }
 
   /// Return true if function is referenced in a non-control flow instruction.
+  /// This flag is only used with safe ICF.
   bool hasAddressTaken() const { return HasAddressTaken; }
 
   /// Set whether function is referenced in a non-control flow instruction.

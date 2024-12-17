@@ -21,23 +21,14 @@ namespace bolt {
 ///
 class IdenticalCodeFolding : public BinaryFunctionPass {
 protected:
-  bool shouldOptimize(const BinaryFunction &BF) const override {
-    if (BF.hasUnknownControlFlow())
-      return false;
-    if (BF.isFolded())
-      return false;
-    if (BF.hasSDTMarker())
-      return false;
-    if (BF.hasAddressTaken())
-      return false;
-    return BinaryFunctionPass::shouldOptimize(BF);
-  }
+  /// Return true if the function is safe to fold.
+  bool shouldOptimize(const BinaryFunction &BF) const override;
 
 public:
   enum class ICFLevel {
-    None, // No ICF. (Default)
-    Safe, // Safe ICF for all sections.
-    All,  // Aggressive ICF for code.
+    None, /// No ICF. (Default)
+    Safe, /// Safe ICF.
+    All,  /// Aggressive ICF.
   };
   explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass)
       : BinaryFunctionPass(PrintPass) {}

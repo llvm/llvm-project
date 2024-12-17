@@ -64,6 +64,20 @@ cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
         cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
+bool IdenticalCodeFolding::shouldOptimize(const BinaryFunction &BF) const {
+  if (BF.hasUnknownControlFlow())
+    return false;
+  if (BF.isFolded())
+    return false;
+  if (BF.hasSDTMarker())
+    return false;
+  if (BF.isPseudo())
+    return false;
+  if (opts::ICF == ICFLevel::Safe && BF.hasAddressTaken())
+    return false;
+  return BinaryFunctionPass::shouldOptimize(BF);
+}
+
 /// Compare two jump tables in 2 functions. The function relies on consistent
 /// ordering of basic blocks in both binary functions (e.g. DFS).
 static bool equalJumpTables(const JumpTable &JumpTableA,
