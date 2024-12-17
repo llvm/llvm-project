@@ -2951,6 +2951,20 @@ void ASTStmtWriter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
   Code = serialization::STMT_OPENACC_HOST_DATA_CONSTRUCT;
 }
 
+void ASTStmtWriter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
+  VisitStmt(S);
+  Record.push_back(S->getExprs().size());
+  VisitOpenACCConstructStmt(S);
+  Record.AddSourceLocation(S->LParenLoc);
+  Record.AddSourceLocation(S->RParenLoc);
+  Record.AddSourceLocation(S->QueuesLoc);
+
+  for(Expr *E : S->getExprs())
+    Record.AddStmt(E);
+
+  Code = serialization::STMT_OPENACC_WAIT_CONSTRUCT;
+}
+
 //===----------------------------------------------------------------------===//
 // HLSL Constructs/Directives.
 //===----------------------------------------------------------------------===//

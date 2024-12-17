@@ -1238,6 +1238,34 @@ void StmtPrinter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
   PrintStmt(S->getStructuredBlock());
 }
 
+void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
+  Indent() << "#pragma acc wait";
+  if (!S->getLParenLoc().isInvalid()) {
+    OS << "(";
+    if (S->hasDevNumExpr()) {
+      OS << "devnum: ";
+      S->getDevNumExpr()->printPretty(OS, nullptr, Policy);
+      OS << " : ";
+    }
+
+    if (S->hasQueuesTag())
+      OS << "queues: ";
+
+    llvm::interleaveComma(S->getQueueIdExprs(), OS, [&](const Expr *E) {
+      E->printPretty(OS, nullptr, Policy);
+    });
+
+    OS << ")";
+  }
+
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS, Policy);
+    Printer.VisitClauseList(S->clauses());
+  }
+  OS << '\n';
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
