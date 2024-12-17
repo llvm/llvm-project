@@ -936,12 +936,6 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     }
 
     // The SEW and LMUL of destination and source registers need to match.
-
-    // We know that MI DEF is a vector register, because that was the guard
-    // to call this function, so we don't need to assert it.
-    assert(isVectorRegClass(UserOp.getReg(), MRI) &&
-           "Expected consumed operand to be a vector register");
-
     OperandInfo ConsumerInfo = getOperandInfo(UserOp, MRI);
     OperandInfo ProducerInfo = getOperandInfo(MI.getOperand(0), MRI);
     if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown() ||
