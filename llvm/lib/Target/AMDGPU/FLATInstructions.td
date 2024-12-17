@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot], -10>;
-def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
-def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
+let WantsRoot = true in {
+  def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [], -10>;
+  def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [], -10>;
+  def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [], -10>;
 
-def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
+  def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [], -10>;
+  def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [], -10>;
+  def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [], -10>;
+}
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -207,14 +209,13 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   opName,
   (outs vdata_op:$vdst),
   !con(
-    !con(
-      !if(EnableSaddr,
-        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
-        (ins VReg_64:$vaddr)),
-        (ins flat_offset:$offset)),
-        // FIXME: Operands with default values do not work with following non-optional operands.
-        !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                           (ins CPol_0:$cpol))),
+    !if(EnableSaddr,
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
+      (ins VReg_64:$vaddr)),
+      (ins flat_offset:$offset),
+      // FIXME: Operands with default values do not work with following non-optional operands.
+      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                         (ins CPol_0:$cpol))),
   " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
   let has_data = 0;
   let mayLoad = 1;

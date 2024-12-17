@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_ARRAY_H
-#define _LIBCPP___FWD_ARRAY_H
+#ifndef _LIBCPP___CXX03___FWD_ARRAY_H
+#define _LIBCPP___CXX03___FWD_ARRAY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -43,4 +43,4 @@ struct __is_std_array<array<_Tp, _Size> > : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_ARRAY_H
+#endif // _LIBCPP___CXX03___FWD_ARRAY_H

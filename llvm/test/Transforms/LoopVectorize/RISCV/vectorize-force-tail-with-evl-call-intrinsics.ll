@@ -708,9 +708,9 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP10]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
-; IF-EVL-NEXT:    [[TMP13:%.*]] = fpext <vscale x 4 x float> [[VP_OP_LOAD]] to <vscale x 4 x double>
+; IF-EVL-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x double> @llvm.vp.fpext.nxv4f64.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = call <vscale x 4 x i64> @llvm.vp.lrint.nxv4i64.nxv4f64(<vscale x 4 x double> [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
-; IF-EVL-NEXT:    [[TMP15:%.*]] = trunc <vscale x 4 x i64> [[TMP14]] to <vscale x 4 x i32>
+; IF-EVL-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i32> @llvm.vp.trunc.nxv4i32.nxv4i64(<vscale x 4 x i64> [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP10]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP15]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
@@ -817,9 +817,9 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP10]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
-; IF-EVL-NEXT:    [[TMP13:%.*]] = fpext <vscale x 4 x float> [[VP_OP_LOAD]] to <vscale x 4 x double>
+; IF-EVL-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x double> @llvm.vp.fpext.nxv4f64.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = call <vscale x 4 x i64> @llvm.vp.llrint.nxv4i64.nxv4f64(<vscale x 4 x double> [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
-; IF-EVL-NEXT:    [[TMP15:%.*]] = trunc <vscale x 4 x i64> [[TMP14]] to <vscale x 4 x i32>
+; IF-EVL-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i32> @llvm.vp.trunc.nxv4i32.nxv4i64(<vscale x 4 x i64> [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP10]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP15]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])

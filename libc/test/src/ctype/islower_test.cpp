@@ -11,16 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcIsLower, SimpleTest) {
-  EXPECT_NE(LIBC_NAMESPACE::islower('a'), 0);
-
-  EXPECT_EQ(LIBC_NAMESPACE::islower('B'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::islower('3'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::islower(' '), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::islower('?'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::islower('\0'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::islower(-1), 0);
-}
+namespace {
 
 // TODO: Merge the ctype tests using this framework.
 constexpr char LOWER_ARRAY[] = {
@@ -33,6 +24,19 @@ bool in_span(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
     if (static_cast<int>(arr[i]) == ch)
       return true;
   return false;
+}
+
+} // namespace
+
+TEST(LlvmLibcIsLower, SimpleTest) {
+  EXPECT_NE(LIBC_NAMESPACE::islower('a'), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::islower('B'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::islower('3'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::islower(' '), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::islower('?'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::islower('\0'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::islower(-1), 0);
 }
 
 TEST(LlvmLibcIsLower, DefaultLocale) {

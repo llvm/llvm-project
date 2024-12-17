@@ -1,5 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
+ integer :: m(100)
  contains
   attributes(device) subroutine devsub
     !ERROR: Statement may not appear in device code
@@ -15,6 +16,12 @@ module m
     !WARNING: I/O statement might not be supported on device
     write(12,'(10F4.1)'), x
   end
+  attributes(global) subroutine hostglobal(a)
+    integer :: a(*)
+    i = threadIdx%x
+    !ERROR: Host array 'm' cannot be present in device context
+    if (i .le. N) a(i) = m(i)
+  end subroutine
 end
 
 program main
@@ -96,7 +103,7 @@ program main
   !$cuf kernel do (2) <<<*, *>>>
   do j = 1, 10
      do i = 1, 10
-        !ERROR: Host array 'b' cannot be present in CUF kernel
+        !ERROR: Host array 'b' cannot be present in device context
         a_d(i,j) = b(i,j)
      enddo
   enddo

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CONDITION_VARIABLE
-#define _LIBCPP_CONDITION_VARIABLE
+#ifndef _LIBCPP___CXX03_CONDITION_VARIABLE
+#define _LIBCPP___CXX03_CONDITION_VARIABLE
 
 /*
     condition_variable synopsis
@@ -366,4 +366,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_CONDITION_VARIABLE
+#endif // _LIBCPP___CXX03_CONDITION_VARIABLE

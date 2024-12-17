@@ -102,6 +102,8 @@ public:
   void Enter(const parser::OmpDeclareTargetWithList &);
   void Enter(const parser::OmpDeclareTargetWithClause &);
   void Leave(const parser::OmpDeclareTargetWithClause &);
+  void Enter(const parser::OpenMPErrorConstruct &);
+  void Leave(const parser::OpenMPErrorConstruct &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
@@ -141,6 +143,10 @@ public:
 
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
+
+  void Leave(const parser::OmpClause::Fail &);
+  void Enter(const parser::OmpFailClause &);
+  void Leave(const parser::OmpFailClause &);
 
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
@@ -226,10 +232,10 @@ private:
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
-  bool CheckReductionOperators(const parser::OmpClause::Reduction &);
-  bool CheckIntrinsicOperator(
-      const parser::DefinedOperator::IntrinsicOperator &);
-  void CheckReductionTypeList(const parser::OmpClause::Reduction &);
+  bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
+      parser::CharBlock source, llvm::omp::Clause clauseId);
+  void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
+      const parser::OmpReductionIdentifier &ident);
   void CheckReductionModifier(const parser::OmpReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
@@ -237,7 +243,8 @@ private:
   void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);
   void ChecksOnOrderedAsStandalone();
   void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
-  void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
+  void CheckReductionArraySection(
+      const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
   void CheckSharedBindingInOuterContext(
@@ -276,6 +283,7 @@ private:
   using LoopConstruct = std::variant<const parser::DoConstruct *,
       const parser::OpenMPLoopConstruct *>;
   std::vector<LoopConstruct> loopStack_;
+  bool isFailClause{false};
 };
 
 /// Find a duplicate entry in the range, and return an iterator to it.
