@@ -821,18 +821,6 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPlan::VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
-             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
-    : VPlan(OriginalPreheader, TC, ScalarHeader) {
-  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
-}
-
-VPlan::VPlan(VPBasicBlock *OriginalPreheader,
-             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
-    : VPlan(OriginalPreheader, ScalarHeader) {
-  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
-}
-
 VPlan::~VPlan() {
   if (Entry) {
     VPValue DummyValue;
