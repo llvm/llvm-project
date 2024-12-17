@@ -7606,11 +7606,9 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         }
         continue;
       }
-      // A partial reduction is very differently costed compared to its
-      // underlying add instruction that the legacy cost model sees, so consider
-      // it an additional simplification.
+      // The VPlan-based cost model is more accurate for partial reduction and comparing against the legacy cost isn't desirable.
       if (dyn_cast<VPPartialReductionRecipe>(&R))
-        continue;
+        return true;
       if (Instruction *UI = GetInstructionForCost(&R))
         SeenInstrs.insert(UI);
     }
