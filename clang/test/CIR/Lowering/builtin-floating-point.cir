@@ -138,22 +138,22 @@ module {
     %215 = cir.copysign %arg2, %arg2 : !cir.vector<!cir.float x 4>
     // CHECK: llvm.intr.copysign(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
 
-    %16 = cir.fmax %arg0, %arg0 : !cir.float
+    %16 = cir.fmaxnum %arg0, %arg0 : !cir.float
     // CHECK: llvm.intr.maxnum(%arg0, %arg0) : (f32, f32) -> f32
 
-    %116 = cir.fmax %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    %116 = cir.fmaxnum %arg1, %arg1 : !cir.vector<!cir.double x 2>
     // CHECK: llvm.intr.maxnum(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
 
-    %216 = cir.fmax %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    %216 = cir.fmaxnum %arg2, %arg2 : !cir.vector<!cir.float x 4>
     // CHECK: llvm.intr.maxnum(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
 
-    %17 = cir.fmin %arg0, %arg0 : !cir.float
+    %17 = cir.fminnum %arg0, %arg0 : !cir.float
     // CHECK: llvm.intr.minnum(%arg0, %arg0) : (f32, f32) -> f32
 
-    %117 = cir.fmin %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    %117 = cir.fminnum %arg1, %arg1 : !cir.vector<!cir.double x 2>
     // CHECK: llvm.intr.minnum(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
 
-    %217 = cir.fmin %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    %217 = cir.fminnum %arg2, %arg2 : !cir.vector<!cir.float x 4>
     // CHECK: llvm.intr.minnum(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
 
     %18 = cir.fmod %arg0, %arg0 : !cir.float
@@ -173,6 +173,24 @@ module {
 
     %219 = cir.pow %arg2, %arg2 : !cir.vector<!cir.float x 4>
     // CHECK: llvm.intr.pow(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+
+    %20 = cir.fmaximum %arg0, %arg0 : !cir.float
+    // CHECK: llvm.intr.maximum(%arg0, %arg0) : (f32, f32) -> f32
+
+    %120 = cir.fmaximum %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.maximum(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+
+    %220 = cir.fmaximum %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.maximum(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+
+    %21 = cir.fminimum %arg0, %arg0 : !cir.float
+    // CHECK: llvm.intr.minimum(%arg0, %arg0) : (f32, f32) -> f32
+
+    %121 = cir.fminimum %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.minimum(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+
+    %221 = cir.fminimum %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.minimum(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
 
     cir.return
   }

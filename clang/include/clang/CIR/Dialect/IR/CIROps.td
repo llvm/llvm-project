@@ -4520,8 +4520,10 @@ class BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
 }
 
 def CopysignOp : BinaryFPToFPBuiltinOp<"copysign", "CopySignOp">;
-def FMaxOp : BinaryFPToFPBuiltinOp<"fmax", "MaxNumOp">;
-def FMinOp : BinaryFPToFPBuiltinOp<"fmin", "MinNumOp">;
+def FMaxNumOp : BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp">;
+def FMinNumOp : BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp">;
+def FMaximumOp : BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp">;
+def FMinimumOp : BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp">;
 def FModOp : BinaryFPToFPBuiltinOp<"fmod", "FRemOp">;
 def PowOp : BinaryFPToFPBuiltinOp<"pow", "PowOp">;
 

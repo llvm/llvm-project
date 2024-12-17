@@ -1300,7 +1300,7 @@ long double call_copysignl(long double x, long double y) {
 float my_fmaxf(float x, float y) {
   return __builtin_fmaxf(x, y);
   // CHECK: cir.func @my_fmaxf
-  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.float
+  // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @my_fmaxf
   // LLVM:   %{{.+}} = call float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
@@ -1310,7 +1310,7 @@ float my_fmaxf(float x, float y) {
 double my_fmax(double x, double y) {
   return __builtin_fmax(x, y);
   // CHECK: cir.func @my_fmax
-  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.double
+  // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @my_fmax
   // LLVM:   %{{.+}} = call double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
@@ -1320,8 +1320,8 @@ double my_fmax(double x, double y) {
 long double my_fmaxl(long double x, long double y) {
   return __builtin_fmaxl(x, y);
   // CHECK: cir.func @my_fmaxl
-  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
-  // AARCH64: %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+  // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fmaxl
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
@@ -1335,7 +1335,7 @@ long double fmaxl(long double, long double);
 float call_fmaxf(float x, float y) {
   return fmaxf(x, y);
   // CHECK: cir.func @call_fmaxf
-  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.float
+  // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @call_fmaxf
   // LLVM:   %{{.+}} = call float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
@@ -1345,7 +1345,7 @@ float call_fmaxf(float x, float y) {
 double call_fmax(double x, double y) {
   return fmax(x, y);
   // CHECK: cir.func @call_fmax
-  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.double
+  // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @call_fmax
   // LLVM:   %{{.+}} = call double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
@@ -1355,8 +1355,8 @@ double call_fmax(double x, double y) {
 long double call_fmaxl(long double x, long double y) {
   return fmaxl(x, y);
   // CHECK: cir.func @call_fmaxl
-  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
-  // AARCH64: %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+  // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fmaxl
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
@@ -1368,7 +1368,7 @@ long double call_fmaxl(long double x, long double y) {
 float my_fminf(float x, float y) {
   return __builtin_fminf(x, y);
   // CHECK: cir.func @my_fminf
-  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.float
+  // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @my_fminf
   // LLVM:   %{{.+}} = call float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
@@ -1378,7 +1378,7 @@ float my_fminf(float x, float y) {
 double my_fmin(double x, double y) {
   return __builtin_fmin(x, y);
   // CHECK: cir.func @my_fmin
-  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.double
+  // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @my_fmin
   // LLVM:   %{{.+}} = call double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
@@ -1388,8 +1388,8 @@ double my_fmin(double x, double y) {
 long double my_fminl(long double x, long double y) {
   return __builtin_fminl(x, y);
   // CHECK: cir.func @my_fminl
-  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
-  // AARCH64: %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+  // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fminl
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
@@ -1403,7 +1403,7 @@ long double fminl(long double, long double);
 float call_fminf(float x, float y) {
   return fminf(x, y);
   // CHECK: cir.func @call_fminf
-  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.float
+  // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @call_fminf
   // LLVM:   %{{.+}} = call float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
@@ -1413,7 +1413,7 @@ float call_fminf(float x, float y) {
 double call_fmin(double x, double y) {
   return fmin(x, y);
   // CHECK: cir.func @call_fmin
-  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.double
+  // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @call_fmin
   // LLVM:   %{{.+}} = call double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
@@ -1423,8 +1423,8 @@ double call_fmin(double x, double y) {
 long double call_fminl(long double x, long double y) {
   return fminl(x, y);
   // CHECK: cir.func @call_fminl
-  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
-  // AARCH64: %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+  // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fminl
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})

@@ -670,7 +670,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaxf:
     case Builtin::BI__builtin_fmaxl:
       return RValue::get(
-          emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxOp>(*this, *E));
+          emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxNumOp>(*this, *E));
 
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxf128:
@@ -683,7 +683,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminf:
     case Builtin::BI__builtin_fminl:
       return RValue::get(
-          emitBinaryMaybeConstrainedFPBuiltin<cir::FMinOp>(*this, *E));
+          emitBinaryMaybeConstrainedFPBuiltin<cir::FMinNumOp>(*this, *E));
 
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminf128:
