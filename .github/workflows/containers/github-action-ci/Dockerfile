@@ -41,13 +41,13 @@ RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C .
 FROM base
     
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
-    
+
 # Need to install curl for hendrikmuhs/ccache-action
 # Need nodejs for some of the GitHub actions.
 # Need perl-modules for clang analyzer tests.
 # Need git for SPIRV-Tools tests.
 RUN apt-get update && \
-    apt-get install -y \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
     binutils \ 
     cmake \
     curl \
@@ -56,7 +56,15 @@ RUN apt-get update && \
     ninja-build \
     nodejs \
     perl-modules \
-    python3-psutil
+    python3-psutil \
+
+    # These are needed by the premerge pipeline. Pip is used to install
+    # dependent python packages and ccache is used for build caching. File and
+    # tzdata are used for tests.
+    python3-pip \
+    ccache \
+    file \
+    tzdata
 
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
