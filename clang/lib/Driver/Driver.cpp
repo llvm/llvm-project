@@ -923,7 +923,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                  C, C.getArgs(), Action::OFK_OpenMP, &*TempTC, true))
           Archs.insert(Arch);
       }
-
       if (!AMDTriple && !NVPTXTriple) {
         for (StringRef Arch :
              getOffloadArchs(C, C.getArgs(), Action::OFK_OpenMP, nullptr, true))

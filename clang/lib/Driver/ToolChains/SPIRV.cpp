@@ -28,7 +28,6 @@ void SPIRV::constructTranslateCommand(Compilation &C, const Tool &T,
 
   if (Input.getType() == types::TY_PP_Asm)
     CmdArgs.push_back("-to-binary");
-
   if (Output.getType() == types::TY_PP_Asm)
     CmdArgs.push_back("--spirv-tools-dis");
 
