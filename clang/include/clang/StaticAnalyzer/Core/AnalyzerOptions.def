@@ -193,6 +193,8 @@ ANALYZER_OPTION(
     "with \"crosscheck-with-z3-timeout-threshold\" of 300 ms, would nicely "
     "guarantee that no bug report equivalence class can take longer than "
     "1 second, effectively mitigating Z3 hangs during refutation. "
+    "If there were Z3 retries, only the minimum query time is considered "
+    "when accumulating query times within a report equivalence class. "
     "Set 0 for no timeout.", 0)
 
 ANALYZER_OPTION(
@@ -212,6 +214,15 @@ ANALYZER_OPTION(
     "resources. "
     "400'000 should on average make Z3 queries run for up to 100ms on modern "
     "hardware. Set 0 for unlimited.", 0)
+
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckRetriesOnTimeout,
+    "crosscheck-with-z3-retries-on-timeout",
+    "Set how many times the oracle is allowed to retry a Z3 query. "
+    "Set 0 for not allowing retries, in which case each Z3 query would be "
+    "attempted only once. Increasing the number of retries is often more "
+    "effective at reducing the number of nondeterministic diagnostics than "
+    "\"crosscheck-with-z3-timeout-threshold\" in practice.", 2)
 
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",
