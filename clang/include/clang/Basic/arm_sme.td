@@ -873,6 +873,11 @@ let SMETargetGuard = "sme-f8f32" in {
                                          [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
   def SVMLA_FP8_SINGLE_ZA32_VG4x4 : Inst<"svmla[_single]_za32[_mf8]_vg4x4_fpm", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fmlall_single_za32_vg4x4",
                                          [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
+  // FMLALL (multiple)
+  def SVMLA_FP8_MULTI_ZA32_VG4x2 : Inst<"svmla_za32[_mf8]_vg4x2_fpm", "vm22>", "m", MergeNone, "aarch64_sme_fp8_fmlall_multi_za32_vg4x2",
+                                        [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
+  def SVMLA_FP8_MULTI_ZA32_VG4x4 : Inst<"svmla_za32[_mf8]_vg4x4_fpm", "vm44>", "m", MergeNone, "aarch64_sme_fp8_fmlall_multi_za32_vg4x4",
+                                        [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
 }
 
 let SMETargetGuard = "sme-f8f16" in {
@@ -892,6 +897,11 @@ let SMETargetGuard = "sme-f8f16" in {
                                          [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
   def SVMLA_FP8_SINGLE_ZA16_VG2x4 : Inst<"svmla[_single]_za16[_mf8]_vg2x4_fpm", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fmlal_single_za16_vg2x4",
                                          [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
+  // FMLAL (multiple)
+  def SVMLA_FP8_MULTI_ZA16_VG2x2 : Inst<"svmla_za16[_mf8]_vg2x2_fpm", "vm22>", "m", MergeNone, "aarch64_sme_fp8_fmlal_multi_za16_vg2x2",
+                                        [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
+  def SVMLA_FP8_MULTI_ZA16_VG2x4 : Inst<"svmla_za16[_mf8]_vg2x4_fpm", "vm44>", "m", MergeNone, "aarch64_sme_fp8_fmlal_multi_za16_vg2x4",
+                                        [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], []>;
 }
 
 } // let SVETargetGuard = InvalidMode
