@@ -3463,6 +3463,9 @@ defm diagnostics_show_line_numbers : BoolFOption<"diagnostics-show-line-numbers"
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Show line numbers in diagnostic code snippets">,
   PosFlag<SetTrue>>;
+def fno_realloc_lhs : Flag<["-"], "fno-realloc-lhs">, Group<f_Group>,
+  HelpText<"An allocatable left-hand side of an intrinsic assignment is assumed to be allocated and match the shape/type of the right-hand side">,
+  Visibility<[FlangOption, FC1Option]>;
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
   HelpText<"Disable the use of stack protectors">;
 def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
@@ -4296,6 +4299,9 @@ defm stack_size_section : BoolFOption<"stack-size-section",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit section containing metadata on function stack sizes">,
   NegFlag<SetFalse>>;
+def frealloc_lhs : Flag<["-"], "frealloc-lhs">, Group<f_Group>,
+  Visibility<[FlangOption, FC1Option]>,
+  HelpText<"If an allocatable left-hand side of an intrinsic assignment is unallocated or its shape/type does not match the right-hand side, then it is automatically (re)allocated">;
 def fstack_usage : Flag<["-"], "fstack-usage">, Group<f_Group>,
   HelpText<"Emit .su file containing information on function stack sizes">;
 def stack_usage_file : Separate<["-"], "stack-usage-file">,
@@ -6775,7 +6781,6 @@ defm real_4_real_8 : BooleanFFlag<"real-4-real-8">, Group<gfortran_Group>;
 defm real_8_real_10 : BooleanFFlag<"real-8-real-10">, Group<gfortran_Group>;
 defm real_8_real_16 : BooleanFFlag<"real-8-real-16">, Group<gfortran_Group>;
 defm real_8_real_4 : BooleanFFlag<"real-8-real-4">, Group<gfortran_Group>;
-defm realloc_lhs : BooleanFFlag<"realloc-lhs">, Group<gfortran_Group>;
 defm recursive : BooleanFFlag<"recursive">, Group<gfortran_Group>;
 defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;

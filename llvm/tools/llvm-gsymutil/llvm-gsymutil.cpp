@@ -99,6 +99,7 @@ static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
 static bool StoreMergedFunctionInfo = false;
+static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 
 static void parseArgs(int argc, char **argv) {
@@ -191,6 +192,8 @@ static void parseArgs(int argc, char **argv) {
       std::exit(1);
     }
   }
+
+  LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
 }
 
 /// @}
@@ -365,7 +368,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym, LoadDwarfCallSites);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
