@@ -26,57 +26,23 @@ struct MDBuilder {
   MDBuilder(LLVMContext &Context, Type *Int32Ty, Type *Int1Ty)
       : Context(Context), Int32Ty(Int32Ty), Int1Ty(Int1Ty) {}
 
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, int V, Ts... More) {
-    MDs.push_back(ConstantAsMetadata::get(
-        Constant::getIntegerValue(Int32Ty, APInt(32, V))));
-    appendMDs(MDs, More...);
+  Metadata *toMD(unsigned int V) {
+    return ConstantAsMetadata::get(
+        Constant::getIntegerValue(Int32Ty, APInt(32, V)));
   }
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, unsigned int V, Ts... More) {
-    MDs.push_back(ConstantAsMetadata::get(
-        Constant::getIntegerValue(Int32Ty, APInt(32, V))));
-    appendMDs(MDs, More...);
+  Metadata *toMD(int V) { return toMD(static_cast<unsigned int>(V)); }
+  Metadata *toMD(bool V) {
+    return ConstantAsMetadata::get(
+        Constant::getIntegerValue(Int32Ty, APInt(1, V)));
   }
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, bool V, Ts... More) {
-    MDs.push_back(ConstantAsMetadata::get(
-        Constant::getIntegerValue(Int1Ty, APInt(1, V))));
-    appendMDs(MDs, More...);
-  }
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, Value *V, Ts... More) {
-    MDs.push_back(ValueAsMetadata::get(V));
-    appendMDs(MDs, More...);
-  }
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, const char *V, Ts... More) {
-    MDs.push_back(MDString::get(Context, V));
-    appendMDs(MDs, More...);
-  }
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, StringRef V, Ts... More) {
-    MDs.push_back(MDString::get(Context, V));
-    appendMDs(MDs, More...);
-  }
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, std::nullptr_t V,
-                 Ts... More) {
-    MDs.push_back(nullptr);
-    appendMDs(MDs, More...);
-  }
-  template <typename... Ts>
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs, MDTuple *V, Ts... More) {
-    MDs.push_back(V);
-    appendMDs(MDs, More...);
-  }
-  void appendMDs(SmallVectorImpl<Metadata *> &MDs) {
-    // Base case, nothing to do.
-  }
+  Metadata *toMD(Value *V) { return ValueAsMetadata::get(V); }
+  Metadata *toMD(const char *V) { return MDString::get(Context, V); }
+  Metadata *toMD(StringRef V) { return MDString::get(Context, V); }
+  Metadata *toMD(std::nullptr_t V) { return nullptr; }
+  Metadata *toMD(MDTuple *V) { return V; }
 
-  template <typename... Ts> MDTuple *get(Ts... Data) {
-    SmallVector<Metadata *> MDs;
-    appendMDs(MDs, Data...);
+  template <typename... Ts> MDTuple *get(Ts... Vs) {
+    std::array<Metadata *, sizeof...(Vs)> MDs{toMD(std::forward<Ts>(Vs))...};
     return MDNode::get(Context, MDs);
   }
 };
