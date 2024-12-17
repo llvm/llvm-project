@@ -1686,7 +1686,8 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
   if (!isa<Constant>(Cmp.getOperand(1)))
     return false;
   auto *CmpOp = Cmp.getOperand(0);
-  // Iterate over the users of the function to check if it's a recursive function:
+  // Iterate over the users of the function to check if it's a recursive
+  // function:
   for (auto *U : F->users()) {
     CallInst *Call = dyn_cast<CallInst>(U);
     if (!Call || Call->getFunction() != F)
@@ -1704,14 +1705,15 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
     auto *CmpInstr = dyn_cast<CmpInst>(Br->getCondition());
     if (!CmpInstr || CmpInstr != &Cmp)
       continue;
-    // Check if there are any arg of the recursive callsite is affecting the cmp instr:
+    // Check if there are any arg of the recursive callsite is affecting the cmp
+    // instr:
     bool ArgFound = false;
     Value *FuncArg = nullptr, *CallArg = nullptr;
-    for (unsigned ArgNum = 0; ArgNum < F->arg_size() && ArgNum < Call->arg_size(); ArgNum ++) {
+    for (unsigned ArgNum = 0;
+         ArgNum < F->arg_size() && ArgNum < Call->arg_size(); ArgNum++) {
       FuncArg = F->getArg(ArgNum);
       CallArg = Call->getArgOperand(ArgNum);
-      if ((FuncArg == CmpOp) &&
-          (CallArg != CmpOp)) {
+      if ((FuncArg == CmpOp) && (CallArg != CmpOp)) {
         ArgFound = true;
         break;
       }
@@ -1726,7 +1728,8 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
     SQ.DC = &DC;
     DominatorTree DT(*F);
     SQ.DT = &DT;
-    Value *simplifiedInstruction = llvm::simplifyInstructionWithOperands(CmpInstr, {CallArg, Cmp.getOperand(1)}, SQ);
+    Value *simplifiedInstruction = llvm::simplifyInstructionWithOperands(
+        CmpInstr, {CallArg, Cmp.getOperand(1)}, SQ);
     if (!simplifiedInstruction)
       continue;
     if (auto *ConstVal = dyn_cast<llvm::ConstantInt>(simplifiedInstruction)) {
