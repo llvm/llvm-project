@@ -1019,8 +1019,8 @@ middle.block:                                     ; preds = %vector.body
   ret i16 %0
 }
 
-define i32 @cdotp_i8_rot0_fixed_length(<32 x i8> %a, <32 x i8> %b) {
-; CHECK-SVE2-LABEL: define i32 @cdotp_i8_rot0_fixed_length(
+define i32 @not_cdotp_i8_rot0_fixed_length(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-SVE2-LABEL: define i32 @not_cdotp_i8_rot0_fixed_length(
 ; CHECK-SVE2-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-SVE2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-SVE2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1046,7 +1046,7 @@ define i32 @cdotp_i8_rot0_fixed_length(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-SVE2-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE_SUB]])
 ; CHECK-SVE2-NEXT:    ret i32 [[TMP0]]
 ;
-; CHECK-SVE-LABEL: define i32 @cdotp_i8_rot0_fixed_length(
+; CHECK-SVE-LABEL: define i32 @not_cdotp_i8_rot0_fixed_length(
 ; CHECK-SVE-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-SVE-NEXT:  [[ENTRY:.*]]:
 ; CHECK-SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1072,7 +1072,7 @@ define i32 @cdotp_i8_rot0_fixed_length(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE_SUB]])
 ; CHECK-SVE-NEXT:    ret i32 [[TMP0]]
 ;
-; CHECK-NOSVE-LABEL: define i32 @cdotp_i8_rot0_fixed_length(
+; CHECK-NOSVE-LABEL: define i32 @not_cdotp_i8_rot0_fixed_length(
 ; CHECK-NOSVE-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) {
 ; CHECK-NOSVE-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NOSVE-NEXT:    br label %[[VECTOR_BODY:.*]]
