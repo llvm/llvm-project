@@ -7824,7 +7824,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   StringRef SubsectionName;
   ARMBuildAttrs::VendorID SubsectionNameID;
   if (Parser.getTok().is(AsmToken::Identifier)) {
-    StringRef SubsectionName = Parser.getTok().getIdentifier();
+    SubsectionName = Parser.getTok().getIdentifier();
     SubsectionNameID = ARMBuildAttrs::getVendorID(SubsectionName);
     if (ARMBuildAttrs::VENDOR_NOT_FOUND == SubsectionNameID) {
       Error(Parser.getTok().getLoc(),
@@ -7901,7 +7901,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
       ARMBuildAttrs::AEABI_PAUTHABI == SubsectionNameID) {
     if (ARMBuildAttrs::NTBS == Type) {
       Error(Parser.getTok().getLoc(),
-            SubsectionName + "must be marked as ULEB128");
+            SubsectionName + " must be marked as ULEB128");
       return true;
     }
   }
