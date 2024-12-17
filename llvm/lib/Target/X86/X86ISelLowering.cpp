@@ -30124,7 +30124,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // be treated identically.
     SmallVector<SDValue, 32> AmtWideElts;
     AmtWideElts.reserve(NumElts);
-    for (int I = 0; I != NumElts; ++I) {
+    for (unsigned I = 0; I != NumElts; ++I) {
       AmtWideElts.push_back(Amt.getOperand(I));
     }
     SmallVector<SDValue, 32> TmpAmtWideElts;
@@ -30200,7 +30200,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         (WideEltSizeInBits < 32 || IsConstantSplat) && !Subtarget.hasAVX2()) {
       Profitable = false;
     }
-    int WideNumElts = AmtWideElts.size();
+    unsigned WideNumElts = AmtWideElts.size();
     // We are only dealing with identical pairs.
     if (Profitable && WideNumElts != NumElts) {
       MVT WideScalarVT = MVT::getIntegerVT(WideEltSizeInBits);
@@ -30450,7 +30450,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     }
 
     SmallVector<SDValue, 16> LoAmt, HiAmt;
-    for (int i = 0; i != NumElts; i += 16) {
+    for (unsigned i = 0; i != NumElts; i += 16) {
       for (int j = 0; j != 8; ++j) {
         LoAmt.push_back(Amt.getOperand(i + j));
         HiAmt.push_back(Amt.getOperand(i + j + 8));
