@@ -137,11 +137,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchVecShuffle) {
                        m_Shuffle(m_Value(), m_Value(), CapturedMask)));
   EXPECT_TRUE(sd_match(VecShuffleWithMask,
                        m_ShuffleSpecificMask(m_Value(), m_Value(), MaskData)));
-  EXPECT_TRUE(std::equal(MaskData.begin(), MaskData.end(), CapturedMask.begin(),
-                         CapturedMask.end()));
   EXPECT_FALSE(
       sd_match(VecShuffleWithMask,
                m_ShuffleSpecificMask(m_Value(), m_Value(), otherMaskData)));
+
+  EXPECT_TRUE(std::equal(MaskData.begin(), MaskData.end(), CapturedMask.begin(),
+                         CapturedMask.end()));
   EXPECT_FALSE(std::equal(otherMaskData.begin(), otherMaskData.end(),
                           CapturedMask.begin(), CapturedMask.end()));
 }

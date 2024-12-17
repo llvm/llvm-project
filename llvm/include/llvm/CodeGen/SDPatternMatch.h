@@ -554,9 +554,11 @@ template <typename T0, typename T1> struct SDShuffle_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
-      CapturedMask = I->getMask();
-      return Op1.match(Ctx, I->getOperand(0)) &&
-             Op2.match(Ctx, I->getOperand(1));
+      if (Op1.match(Ctx, I->getOperand(0)) &&
+          Op2.match(Ctx, I->getOperand(1))) {
+        CapturedMask = I->getMask();
+        return true;
+      }
     }
     return false;
   }
