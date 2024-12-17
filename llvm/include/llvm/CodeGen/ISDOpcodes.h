@@ -1455,8 +1455,8 @@ enum NodeType {
   // unsigned).
   // Operands: Accumulator, Input
   // Outputs: Output
-  PARTIAL_REDUCE_SADD,
-  PARTIAL_REDUCE_UADD,
+  PARTIAL_REDUCE_SMLA,
+  PARTIAL_REDUCE_UMLA,
 
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]

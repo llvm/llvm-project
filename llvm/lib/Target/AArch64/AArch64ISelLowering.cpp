@@ -1128,7 +1128,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(
       {ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
 
-  setTargetDAGCombine({ISD::PARTIAL_REDUCE_SADD, ISD::PARTIAL_REDUCE_UADD});
+  setTargetDAGCombine({ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 
@@ -1848,14 +1848,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     for (auto VT : {MVT::nxv2i64, MVT::nxv4i32, MVT::nxv8i16}) {
-      setOperationAction(ISD::PARTIAL_REDUCE_UADD, VT, Custom);
-      setOperationAction(ISD::PARTIAL_REDUCE_SADD, VT, Custom);
+      setOperationAction(ISD::PARTIAL_REDUCE_UMLA, VT, Custom);
+      setOperationAction(ISD::PARTIAL_REDUCE_SMLA, VT, Custom);
     }
   }
 
   for (auto VT : {MVT::v4i64, MVT::v4i32, MVT::v2i32}) {
-    setOperationAction(ISD::PARTIAL_REDUCE_UADD, VT, Custom);
-    setOperationAction(ISD::PARTIAL_REDUCE_SADD, VT, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, VT, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SMLA, VT, Custom);
   }
 
   if (Subtarget->hasMOPS() && Subtarget->hasMTE()) {
@@ -7669,9 +7669,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFLDEXP(Op, DAG);
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return LowerVECTOR_HISTOGRAM(Op, DAG);
-  case ISD::PARTIAL_REDUCE_UADD:
-  case ISD::PARTIAL_REDUCE_SADD:
-    return LowerPARTIAL_REDUCE_ADD(Op, DAG);
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
 
@@ -22112,9 +22112,8 @@ SDValue tryCombineToDotProduct(SDValue &Acc, SDValue &Input, SelectionDAG &DAG,
     return DAG.expandPartialReduceAdd(DL, Acc, Input);
 
   unsigned NewOpcode =
-      AIsSigned ? ISD::PARTIAL_REDUCE_SADD : ISD::PARTIAL_REDUCE_UADD;
-  auto NewMul = DAG.getNode(ISD::MUL, DL, A.getValueType(), A, B);
-  return DAG.getNode(NewOpcode, DL, AccVT, Acc, NewMul);
+      AIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+  return DAG.getNode(NewOpcode, DL, AccVT, Acc, A, B);
 }
 
 SDValue tryCombineToWideAdd(SDValue &Acc, SDValue &Input, SelectionDAG &DAG,
@@ -22136,9 +22135,10 @@ SDValue tryCombineToWideAdd(SDValue &Acc, SDValue &Input, SelectionDAG &DAG,
     return SDValue();
 
   unsigned NewOpcode = InputOpcode == ISD::SIGN_EXTEND
-                           ? ISD::PARTIAL_REDUCE_SADD
-                           : ISD::PARTIAL_REDUCE_UADD;
-  return DAG.getNode(NewOpcode, DL, AccVT, Acc, Input);
+                           ? ISD::PARTIAL_REDUCE_SMLA
+                           : ISD::PARTIAL_REDUCE_UMLA;
+  return DAG.getNode(NewOpcode, DL, AccVT, Acc, Input,
+                     DAG.getConstant(1, DL, InputVT));
 }
 
 SDValue performPartialReduceAddCombine(SDNode *N, SelectionDAG &DAG,
@@ -26599,8 +26599,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MSCATTER:
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return performMaskedGatherScatterCombine(N, DCI, DAG);
-  case ISD::PARTIAL_REDUCE_UADD:
-  case ISD::PARTIAL_REDUCE_SADD:
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
     return performPartialReduceAddCombine(N, DAG, Subtarget);
   case ISD::FP_EXTEND:
     return performFPExtendCombine(N, DAG, DCI, Subtarget);
@@ -29372,39 +29372,29 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 }
 
 SDValue
-AArch64TargetLowering::LowerPARTIAL_REDUCE_ADD(SDValue Op,
+AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Acc = Op.getOperand(0);
-  SDValue Input = Op.getOperand(1);
+  SDValue Input1 = Op.getOperand(1);
+  SDValue Input2 = Op.getOperand(2);
 
   EVT AccVT = Acc.getValueType();
-  EVT InputVT = Input.getValueType();
+  EVT InputVT = Input1.getValueType();
 
   unsigned Opcode = Op.getOpcode();
 
-  // If the following condition is true and the input opcode was not ISD::MUL
-  // during the DAG-combine, it is already expanded. So this condition means the
-  // input opcode must have been ISD::MUL.
   if (AccVT.getVectorElementCount() * 4 == InputVT.getVectorElementCount()) {
-    unsigned IndexAdd = 0;
-    // ISD::MUL may have already been lowered, meaning the operands would be in
-    // different positions.
-    if (Input.getOpcode() != ISD::MUL)
-      IndexAdd = 1;
-    auto A = Input.getOperand(IndexAdd);
-    auto B = Input.getOperand(IndexAdd + 1);
-
-    unsigned DotOpcode = Opcode == ISD::PARTIAL_REDUCE_SADD ? AArch64ISD::SDOT
+    unsigned DotOpcode = Opcode == ISD::PARTIAL_REDUCE_SMLA ? AArch64ISD::SDOT
                                                             : AArch64ISD::UDOT;
-    return DAG.getNode(DotOpcode, DL, AccVT, Acc, A, B);
+    return DAG.getNode(DotOpcode, DL, AccVT, Acc, Input1, Input2);
   }
-  bool InputIsSigned = Opcode == ISD::PARTIAL_REDUCE_SADD;
+  bool InputIsSigned = Opcode == ISD::PARTIAL_REDUCE_SMLA;
   unsigned BottomOpcode =
       InputIsSigned ? AArch64ISD::SADDWB : AArch64ISD::UADDWB;
   unsigned TopOpcode = InputIsSigned ? AArch64ISD::SADDWT : AArch64ISD::UADDWT;
-  auto BottomNode = DAG.getNode(BottomOpcode, DL, AccVT, Acc, Input);
-  return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, Input);
+  auto BottomNode = DAG.getNode(BottomOpcode, DL, AccVT, Acc, Input1);
+  return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, Input1);
 }
 
 SDValue
