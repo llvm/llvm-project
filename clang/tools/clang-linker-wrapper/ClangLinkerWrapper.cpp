@@ -597,6 +597,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::ppc64le:
   case Triple::spirv64:
   case Triple::systemz:
+  case Triple::loongarch64:
     return generic::clang(InputFiles, Args);
   default:
     return createStringError(Triple.getArchName() +

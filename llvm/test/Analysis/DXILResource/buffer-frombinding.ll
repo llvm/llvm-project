@@ -8,8 +8,6 @@ define void @test_typedbuffer() {
       @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
           i32 1, i32 8, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[SRV0:[0-9]+]]:
-  ; CHECK:   Symbol: ptr undef
-  ; CHECK:   Name: ""
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 0
   ; CHECK:     Space: 1
@@ -24,8 +22,6 @@ define void @test_typedbuffer() {
       @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
           i32 4, i32 2, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[SRV1:[0-9]+]]:
-  ; CHECK:   Symbol: ptr undef
-  ; CHECK:   Name: ""
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 1
   ; CHECK:     Space: 4
@@ -41,8 +37,6 @@ define void @test_typedbuffer() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0t(
           i32 5, i32 3, i32 24, i32 0, i1 false)
   ; CHECK: Binding [[SRV2:[0-9]+]]:
-  ; CHECK:   Symbol: ptr undef
-  ; CHECK:   Name: ""
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 2
   ; CHECK:     Space: 5
@@ -58,8 +52,6 @@ define void @test_typedbuffer() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0t(
           i32 2, i32 7, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[UAV0:[0-9]+]]:
-  ; CHECK:   Symbol: ptr undef
-  ; CHECK:   Name: ""
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 0
   ; CHECK:     Space: 2
@@ -78,8 +70,6 @@ define void @test_typedbuffer() {
               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
                   i32 3, i32 5, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[UAV1:[0-9]+]]:
-  ; CHECK:   Symbol: ptr undef
-  ; CHECK:   Name: ""
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 1
   ; CHECK:     Space: 3
@@ -103,8 +93,6 @@ define void @test_typedbuffer() {
               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
                   i32 4, i32 0, i32 10, i32 5, i1 false)
   ; CHECK: Binding [[UAV2:[0-9]+]]:
-  ; CHECK:   Symbol: ptr undef
-  ; CHECK:   Name: ""
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 2
   ; CHECK:     Space: 4
