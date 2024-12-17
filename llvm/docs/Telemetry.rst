@@ -166,7 +166,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     dispatch(Entry);
   }
   
-  void logAdditionalPoint(TelemetryInfo  Entry) {
+  void logAdditionalPoint(TelemetryInfo *Entry) {
     // .... code here
   }
   
