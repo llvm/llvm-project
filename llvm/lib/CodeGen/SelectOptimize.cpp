@@ -148,6 +148,7 @@ public:
     Type *getType() const { return I->getType(); }
 
     unsigned getConditionOpIndex() { return CondIdx; };
+
     /// Return the true value for the SelectLike instruction. Note this may not
     /// exist for all SelectLike instructions. For example, for `or(zext(c), x)`
     /// the true value would be `or(x,1)`. As this value does not exist, nullptr
