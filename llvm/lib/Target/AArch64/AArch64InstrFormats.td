@@ -8528,28 +8528,28 @@ multiclass SIMDTableLookup<bit op, string asm> {
 
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8One"),
-                         V64, VecListOne128>;
+                         V64, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Two"),
-                         V64, VecListTwo128>;
+                         V64, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Three"),
-                         V64, VecListThree128>;
+                         V64, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Four"),
-                         V64, VecListFour128>;
+                         V64, VecListFourConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8One"),
-                         V128, VecListOne128>;
+                         V128, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Two"),
-                         V128, VecListTwo128>;
+                         V128, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Three"),
-                         V128, VecListThree128>;
+                         V128, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Four"),
-                         V128, VecListFour128>;
+                         V128, VecListFourConsecutive128>;
 }
 
 multiclass SIMDTableLookupTied<bit op, string asm> {
@@ -8572,28 +8572,28 @@ multiclass SIMDTableLookupTied<bit op, string asm> {
 
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8One"),
-                         V64, VecListOne128>;
+                         V64, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Two"),
-                         V64, VecListTwo128>;
+                         V64, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Three"),
-                         V64, VecListThree128>;
+                         V64, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Four"),
-                         V64, VecListFour128>;
+                         V64, VecListFourConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8One"),
-                         V128, VecListOne128>;
+                         V128, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Two"),
-                         V128, VecListTwo128>;
+                         V128, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Three"),
-                         V128, VecListThree128>;
+                         V128, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Four"),
-                         V128, VecListFour128>;
+                         V128, VecListFourConsecutive128>;
 }
 
 //----------------------------------------------------------------------------
