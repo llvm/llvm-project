@@ -32,6 +32,10 @@ public:
 
   virtual mlir::Value lowerVAArg(CIRBaseBuilderTy &builder, cir::VAArgOp op,
                                  const cir::CIRDataLayout &datalayout) = 0;
+
+  virtual mlir::Value
+  lowerDeleteArray(cir::CIRBaseBuilderTy &builder, cir::DeleteArrayOp op,
+                   const cir::CIRDataLayout &datalayout) = 0;
   virtual ~LoweringPrepareCXXABI() {}
 
   virtual mlir::Value lowerDynamicCast(CIRBaseBuilderTy &builder,

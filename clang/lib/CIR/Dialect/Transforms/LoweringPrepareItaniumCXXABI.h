@@ -21,4 +21,16 @@ public:
                                cir::DynamicCastOp op) override;
   mlir::Value lowerVAArg(cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
                          const cir::CIRDataLayout &datalayout) override;
+
+  mlir::Value lowerDeleteArray(cir::CIRBaseBuilderTy &builder,
+                               cir::DeleteArrayOp op,
+                               const cir::CIRDataLayout &datalayout) override {
+    // Note: look at `CIRGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *)`
+    // in CIRGenExprCXX.cpp.
+    // In traditional code gen, we need handle ABI related array cookie to
+    // generate codes to handle the expression to delete array. We need similar
+    // mechanism here for ItaniumCXXABI.
+    llvm_unreachable("NYI && Delete Array is not supported to be lowered in "
+                     "Itanium CXX ABI");
+  }
 };

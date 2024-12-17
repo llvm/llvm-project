@@ -3556,6 +3556,21 @@ def LLVMIntrinsicCallOp : CIR_Op<"llvm.intrinsic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+def DeleteArrayOp : CIR_Op<"delete.array">,
+              Arguments<(ins CIR_PointerType:$address)> {
+  let summary = "Delete address representing an array";
+  let description = [{
+    `cir.delete.array` operation deletes an array. For example, `delete[] ptr;`
+    will be translated to `cir.delete.array %ptr`.
+  }];
+  let assemblyFormat = "$address `:` type($address) attr-dict";
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 

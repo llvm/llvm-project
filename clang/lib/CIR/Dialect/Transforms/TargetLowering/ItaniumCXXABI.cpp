@@ -210,4 +210,7 @@ public:
                                cir::DynamicCastOp op) override;
   mlir::Value lowerVAArg(cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
                          const cir::CIRDataLayout &datalayout) override;
+  mlir::Value lowerDeleteArray(cir::CIRBaseBuilderTy &builder,
+                               cir::DeleteArrayOp op,
+                               const cir::CIRDataLayout &datalayout) override;
 };

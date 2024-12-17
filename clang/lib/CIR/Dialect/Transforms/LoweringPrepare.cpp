@@ -77,6 +77,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerComplexBinOp(ComplexBinOp op);
   void lowerThreeWayCmpOp(CmpThreeWayOp op);
   void lowerVAArgOp(VAArgOp op);
+  void lowerDeleteArrayOp(DeleteArrayOp op);
   void lowerGlobalOp(GlobalOp op);
   void lowerDynamicCastOp(DynamicCastOp op);
   void lowerStdFindOp(StdFindOp op);
@@ -156,6 +157,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   /// Tracks current module.
   ModuleOp theModule;
+
+  std::optional<cir::CIRDataLayout> datalayout;
 
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
@@ -344,13 +347,23 @@ static void canonicalizeIntrinsicThreeWayCmp(CIRBaseBuilderTy &builder,
 void LoweringPreparePass::lowerVAArgOp(VAArgOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPoint(op);
-  cir::CIRDataLayout datalayout(theModule);
 
-  auto res = cxxABI->lowerVAArg(builder, op, datalayout);
+  auto res = cxxABI->lowerVAArg(builder, op, *datalayout);
   if (res) {
     op.replaceAllUsesWith(res);
     op.erase();
   }
+  return;
+}
+
+void LoweringPreparePass::lowerDeleteArrayOp(DeleteArrayOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPoint(op);
+
+  cxxABI->lowerDeleteArray(builder, op, *datalayout);
+  // DeleteArrayOp won't have a result, so we don't need to replace
+  // the uses.
+  op.erase();
   return;
 }
 
@@ -1154,6 +1167,8 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerThreeWayCmpOp(threeWayCmp);
   } else if (auto vaArgOp = dyn_cast<VAArgOp>(op)) {
     lowerVAArgOp(vaArgOp);
+  } else if (auto deleteArrayOp = dyn_cast<DeleteArrayOp>(op)) {
+    lowerDeleteArrayOp(deleteArrayOp);
   } else if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
     lowerGlobalOp(getGlobal);
   } else if (auto dynamicCast = dyn_cast<DynamicCastOp>(op)) {
@@ -1188,6 +1203,7 @@ void LoweringPreparePass::runOnOperation() {
   auto *op = getOperation();
   if (isa<::mlir::ModuleOp>(op)) {
     theModule = cast<::mlir::ModuleOp>(op);
+    datalayout.emplace(theModule);
   }
 
   llvm::SmallVector<Operation *> opsToTransform;

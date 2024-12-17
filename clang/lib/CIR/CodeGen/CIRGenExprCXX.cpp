@@ -901,17 +901,23 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return;
   }
 
+  // In CodeGen:
   // We might be deleting a pointer to array.  If so, GEP down to the
   // first non-array element.
   // (this assumes that A(*)[3][7] is converted to [3 x [7 x %A]]*)
+  // In CIRGen: we handle this differently because the deallocation of
+  // array highly relates to the array cookies, which is ABI sensitive,
+  // we plan to handle it in LoweringPreparePass and the corresponding
+  // ABI part.
   if (DeleteTy->isConstantArrayType()) {
-    llvm_unreachable("NYI");
+    Ptr = Ptr;
   }
 
   assert(convertTypeForMem(DeleteTy) == Ptr.getElementType());
 
   if (E->isArrayForm()) {
-    llvm_unreachable("NYI");
+    builder.create<cir::DeleteArrayOp>(Ptr.getPointer().getLoc(),
+                                       Ptr.getPointer());
   } else {
     (void)EmitObjectDelete(*this, E, Ptr, DeleteTy);
   }
