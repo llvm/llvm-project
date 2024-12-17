@@ -341,11 +341,6 @@ static void collectElements(Constant *Init,
       Elements.push_back(Constant::getNullValue(ArrayTy->getElementType()));
     return;
   }
-  if (isa<UndefValue>(Init)) {
-    for (unsigned I = 0; I < ArrSize; ++I)
-      Elements.push_back(UndefValue::get(ArrayTy->getElementType()));
-    return;
-  }
 
   // Recursive case: Process each element in the array.
   if (auto *ArrayConstant = dyn_cast<ConstantArray>(Init)) {

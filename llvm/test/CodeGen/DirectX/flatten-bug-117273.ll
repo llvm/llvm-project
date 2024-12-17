@@ -2,22 +2,22 @@
 ; RUN: opt -S -passes='dxil-flatten-arrays,dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 
-@ZerroInitAndUndefArr = internal constant [2 x [3 x float]] [[3 x float] zeroinitializer, [3 x float] undef], align 16
+@ZerroInitArr = internal constant [2 x [3 x float]] [[3 x float] zeroinitializer, [3 x float] [float 1.000000e+00, float 1.000000e+00, float 1.000000e+00]], align 16
 
 
 define internal void @main() {
 ; CHECK-LABEL: define internal void @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [24 x float], ptr @ZerroInitAndUndefArr.1dim, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [24 x float], ptr @ZerroInitArr.1dim, i32 1
 ; CHECK-NEXT:    [[DOTI0:%.*]] = load float, ptr [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [24 x float], ptr @ZerroInitAndUndefArr.1dim, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [24 x float], ptr @ZerroInitArr.1dim, i32 2
 ; CHECK-NEXT:    [[DOTI03:%.*]] = load float, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = getelementptr [8 x [3 x float]], ptr @ZerroInitAndUndefArr, i32 0, i32 1
+  %0 = getelementptr [8 x [3 x float]], ptr @ZerroInitArr, i32 0, i32 1
   %.i0 = load float, ptr %0, align 16
-  %1 = getelementptr [8 x [3 x float]], ptr @ZerroInitAndUndefArr, i32 0, i32 2
+  %1 = getelementptr [8 x [3 x float]], ptr @ZerroInitArr, i32 0, i32 2
   %.i03 = load float, ptr %1, align 16
   ret void
 }
