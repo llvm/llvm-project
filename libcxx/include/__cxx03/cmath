@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CMATH
-#define _LIBCPP_CMATH
+#ifndef _LIBCPP___CXX03_CMATH
+#define _LIBCPP___CXX03_CMATH
 
 /*
     cmath synopsis
@@ -327,7 +327,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <__cxx03/__math/special_functions.h>
 #include <__cxx03/math.h>
 
-#ifndef _LIBCPP_MATH_H
+#ifndef _LIBCPP___CXX03_MATH_H
 #   error <cmath> tried including <math.h> but didn't find libc++'s <math.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -643,4 +643,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_CMATH
+#endif // _LIBCPP___CXX03_CMATH

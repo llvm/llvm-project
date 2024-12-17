@@ -61,6 +61,8 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now rejects ``_Complex _BitInt`` types.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -408,12 +410,17 @@ Non-comprehensive list of changes in this release
   The flexible array member (FAM) can now be accessed immediately without causing
   issues with the sanitizer because the counter is automatically set.
 
-- ``__builtin_reduce_add`` function can now be used in constant expressions.
-- ``__builtin_reduce_mul`` function can now be used in constant expressions.
-- ``__builtin_reduce_and`` function can now be used in constant expressions.
-- ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
-- ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
-- ``__builtin_elementwise_bitreverse`` function can now be used in constant expressions.
+- The following builtins can now be used in constant expressions: ``__builtin_reduce_add``,
+  ``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
+  ``__builtin_reduce_xor``, ``__builtin_elementwise_popcount``,
+  ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
+  ``__builtin_elementwise_sub_sat``.
+
+- Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
+  not a power of two, matching preexisting behaviour for vector types.
+
+- Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
+  which allows them to be stored in STL containers.
 
 New Compiler Flags
 ------------------
@@ -427,6 +434,9 @@ New Compiler Flags
 
 - The ``-Warray-compare`` warning has been added to warn about array comparison
   on versions older than C++20.
+
+- The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
+  starting from C++26, this warning is enabled as an error by default.
 
 Deprecated Compiler Flags
 -------------------------
@@ -455,6 +465,10 @@ Modified Compiler Flags
   passing non-trivially-copyable destination parameter to ``memcpy``,
   ``memset`` and similar functions for which it is a documented undefined
   behavior. It is implied by ``-Wnontrivial-memaccess``
+
+- Added ``-fmodules-reduced-bmi`` flag corresponding to
+  ``-fexperimental-modules-reduced-bmi`` flag. The ``-fmodules-reduced-bmi`` flag
+  is intended to be enabled by default in the future.
 
 Removed Compiler Flags
 -------------------------
@@ -524,6 +538,9 @@ Attribute Changes in Clang
   used to specify when a reference to a function parameter is captured by another capturing entity ``X``.
 
 - The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
+
+- Clang now permits the usage of the placement new operator in ``[[msvc::constexpr]]``
+  context outside of the std namespace. (#GH74924)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -603,6 +620,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Fix false positives when `[[gsl::Owner/Pointer]]` and `[[clang::lifetimebound]]` are used together.
+
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
 
 - Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
@@ -641,6 +660,29 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
 
+- Fixed a bug where Clang would not emit ``-Wunused-private-field`` warnings when an unrelated class 
+  defined a defaulted comparison operator (#GH116270).
+
+  .. code-block:: c++
+
+    class A {
+    private:
+      int a; // warning: private field 'a' is not used, no diagnostic previously
+    };
+
+    class C {
+      bool operator==(const C&) = default;
+    };
+
+- Clang now emits `-Wdangling-capture` diangostic when a STL container captures a dangling reference.
+
+  .. code-block:: c++
+
+    void test() {
+      std::vector<std::string_view> views;
+      views.push_back(std::string("123")); // warning
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -663,6 +705,9 @@ Bug Fixes in This Version
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
+- No longer return ``false`` for ``noexcept`` expressions involving a
+  ``delete`` which resolves to a destroying delete but the type of the object
+  being deleted has a potentially throwing destructor (#GH118660).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -675,6 +720,8 @@ Bug Fixes to Compiler Builtins
 - ``__noop`` can now be used in a constant expression. (#GH102064)
 
 - Fix ``__has_builtin`` incorrectly returning ``false`` for some C++ type traits. (#GH111477)
+
+- Fix ``__builtin_source_location`` incorrectly returning wrong column for method chains. (#GH119129)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -776,10 +823,14 @@ Bug Fixes to C++ Support
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
+- Fixed a parser crash when using pack indexing as a nested name specifier. (#GH119072) 
+- Fixed a null pointer dereference issue when heuristically computing ``sizeof...(pack)`` expressions. (#GH81436)
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
 - Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
+- Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
+  out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -49,6 +49,7 @@ void mlirPassManagerEnableIRPrinting(MlirPassManager passManager,
                                      bool printModuleScope,
                                      bool printAfterOnlyOnChange,
                                      bool printAfterOnlyOnFailure,
+                                     MlirOpPrintingFlags flags,
                                      MlirStringRef treePrintingPath) {
   auto shouldPrintBeforePass = [printBeforeAll](Pass *, Operation *) {
     return printBeforeAll;
@@ -60,13 +61,14 @@ void mlirPassManagerEnableIRPrinting(MlirPassManager passManager,
     return unwrap(passManager)
         ->enableIRPrinting(shouldPrintBeforePass, shouldPrintAfterPass,
                            printModuleScope, printAfterOnlyOnChange,
-                           printAfterOnlyOnFailure);
+                           printAfterOnlyOnFailure, /*out=*/llvm::errs(),
+                           *unwrap(flags));
 
   unwrap(passManager)
       ->enableIRPrintingToFileTree(shouldPrintBeforePass, shouldPrintAfterPass,
                                    printModuleScope, printAfterOnlyOnChange,
                                    printAfterOnlyOnFailure,
-                                   unwrap(treePrintingPath));
+                                   unwrap(treePrintingPath), *unwrap(flags));
 }
 
 void mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable) {

@@ -138,9 +138,9 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
           const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
         return LHS.first < RHS.first;
       });
-  if (Cand == Candidates.end())
-    return nullptr;
-  if (Cand != Candidates.begin()) {
+  if (Cand == Candidates.end()) {
+    Cand = std::prev(Cand);
+  } else if (Cand != Candidates.begin()) {
     const StubTy *LeftCand = std::prev(Cand);
     if (Cand->first - DotAddress > DotAddress - LeftCand->first)
       Cand = LeftCand;

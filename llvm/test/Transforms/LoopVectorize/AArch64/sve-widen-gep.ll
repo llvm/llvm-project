@@ -13,13 +13,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:   Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, 1
+; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, ir<1>
 ; CHECK-NEXT:     vp<[[PTR_IDX:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<8>
 ; CHECK-NEXT:     vp<[[PTR_IDX_STEPS:%.+]]> = SCALAR-STEPS vp<[[PTR_IDX]]>, ir<8>
 ; CHECK-NEXT:     EMIT vp<[[PTR_IV_1:%.+]]> = ptradd ir<%start.1>, vp<[[PTR_IDX_STEPS]]>

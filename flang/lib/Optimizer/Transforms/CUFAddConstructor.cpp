@@ -106,7 +106,8 @@ struct CUFAddConstructor
 
         mlir::func::FuncOp func;
         switch (attr.getValue()) {
-        case cuf::DataAttribute::Device: {
+        case cuf::DataAttribute::Device:
+        case cuf::DataAttribute::Constant: {
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
               loc, builder);
           auto fTy = func.getFunctionType();

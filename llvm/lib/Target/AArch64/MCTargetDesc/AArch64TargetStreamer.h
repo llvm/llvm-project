@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCELFStreamer.h"
+#include "AArch64MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include <cstdint>
@@ -42,6 +43,11 @@ public:
   /// Callback used to implement the .note.gnu.property section.
   void emitNoteSection(unsigned Flags, uint64_t PAuthABIPlatform = -1,
                        uint64_t PAuthABIVersion = -1);
+
+  /// Callback used to emit AUTH expressions (e.g. signed
+  /// personality function pointer).
+  void emitAuthValue(const MCExpr *Expr, uint16_t Discriminator,
+                     AArch64PACKey::ID Key, bool HasAddressDiversity);
 
   /// Callback used to implement the .inst directive.
   virtual void emitInst(uint32_t Inst);

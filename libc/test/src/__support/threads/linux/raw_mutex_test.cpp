@@ -12,7 +12,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/sleep.h"
-#include "src/__support/time/linux/clock_gettime.h"
+#include "src/__support/time/clock_gettime.h"
 #include "src/stdlib/exit.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"

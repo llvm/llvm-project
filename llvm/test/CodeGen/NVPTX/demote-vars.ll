@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc -o - %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s
 
 ; Check that we do global variable demotion when the symbols don't need to be
 ; shared across modules or functions.
