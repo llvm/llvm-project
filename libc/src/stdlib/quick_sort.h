@@ -80,7 +80,9 @@ size_t partition_hoare_branchy(const A &array, const void *pivot,
 template <typename A, typename F>
 size_t partition(const A &array, size_t pivot_index, const F &is_less) {
   // Place the pivot at the beginning of the array.
-  array.swap(0, pivot_index);
+  if (pivot_index != 0) {
+    array.swap(0, pivot_index);
+  }
 
   const A array_without_pivot = array.make_array(1, array.len() - 1);
   const void *pivot = array.get(0);
