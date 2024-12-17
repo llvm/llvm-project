@@ -55,68 +55,65 @@ using ::llvm::Error;
 using ::llvm::telemetry::Destination;
 using ::llvm::telemetry::TelemetryInfo;
 
-static size_t ToNanosecOrZero(const std::optional<SteadyTimePoint> &Point) {
-  if (!Point.has_value())
-    return 0;
-
-  return Point.value().time_since_epoch().count();
+static unsigned long long ToNanosec(const SteadyTimePoint Point) {
+  return nanoseconds(Point.value().time_since_epoch()).count();
 }
 
 void LldbBaseTelemetryInfo::serialize(Serializer &serializer) const {
-  serializer.writeInt32("EntryKind", getKind());
-  serializer.writeString("SessionId", SessionId);
+  serializer.write("EntryKind", getKind());
+  serializer.write("SessionId", SessionId);
 }
 
 void DebuggerTelemetryInfo::serialize(Serializer &serializer) const {
   LldbBaseTelemetryInfo::serialize(serializer);
-  serializer.writeString("username", username);
-  serializer.writeString("lldb_path", lldb_path);
-  serializer.writeString("cwd", cwd);
-  serializer.writeSizeT("start", stats.start.time_since_epoch().count());
-  serializer.writeSizeT("end", ToNanosecOrZero(stats.end));
+  serializer.write("username", username);
+  serializer.write("lldb_path", lldb_path);
+  serializer.write("cwd", cwd);
+  serializer.write("start", ToNanosec(stats.start));
+  if (stats.end.has_value())
+    serializer.write("end", ToNanosec(stats.end.value()));
 }
 
 void ClientTelemetryInfo::serialize(Serializer &serializer) const {
   LldbBaseTelemetryInfo::serialize(serializer);
-  serializer.writeString("request_name", request_name);
-  serializer.writeString("error_msg", error_msg);
-  serializer.writeSizeT("start", stats.start.time_since_epoch().count());
-  serializer.writeSizeT("end", ToNanosecOrZero(stats.end));
+  serializer.write("request_name", request_name);
+  serializer.write("error_msg", error_msg);
+  serializer.write("start", ToNanosec(stats.start));
+  if (stats.end.has_value())
+    serializer.write("end", ToNanosec(stats.end.value()));
 }
 
 void TargetTelemetryInfo::serialize(Serializer &serializer) const {
   LldbBaseTelemetryInfo::serialize(serializer);
-  serializer.writeString("target_uuid", target_uuid);
-  serializer.writeString("binary_path", binary_path);
-  serializer.writeSizeT("binary_size", binary_size);
+  serializer.write("target_uuid", target_uuid);
+  serializer.write("binary_path", binary_path);
+  serializer.write("binary_size", binary_size);
 }
 
 void CommandTelemetryInfo::serialize(Serializer &serializer) const {
   LldbBaseTelemetryInfo::serialize(serializer);
-  serializer.writeString("target_uuid", target_uuid);
-  serializer.writeString("command_uuid", command_uuid);
-  serializer.writeString("args", args);
-  serializer.writeString("original_command", original_command);
-  serializer.writeSizeT("start", stats.start.time_since_epoch().count());
-  serializer.writeSizeT("end", ToNanosecOrZero(stats.end));
+  serializer.write("target_uuid", target_uuid);
+  serializer.write("command_uuid", command_uuid);
+  serializer.write("args", args);
+  serializer.write("original_command", original_command);
+  serializer.write("start", ToNanosec(stats.start));
+  if (stats.end.has_value())
+    serializer.write("end", ToNanosec(stats.end.value()));
 
-  // If this entry was emitted at the end of the command-execution,
-  // then calculate the runtime too.
-  if (stats.end.has_value()) {
-    serializer.writeSizeT("command_runtime",
-                          (stats.end.value() - stats.start).count());
-    if (exit_desc.has_value()) {
-      serializer.writeInt32("exit_code", exit_desc->exit_code);
-      serializer.writeString("exit_msg", exit_desc->description);
-      serializer.writeInt32("return_status", static_cast<int>(ret_status));
-    }
+  if (exit_desc.has_value()) {
+    serializer.write("exit_code", exit_desc->exit_code);
+    serializer.write("exit_msg", exit_desc->description);
+    serializer.write("return_status", static_cast<int>(ret_status));
   }
 }
 
 void MiscTelemetryInfo::serialize(Serializer &serializer) const {
   LldbBaseTelemetryInfo::serialize(serializer);
-  serializer.writeString("target_uuid", target_uuid);
-  serializer.writeKeyValueMap("meta_data", meta_data);
+  serializer.write("target_uuid", target_uuid);
+  write.beginObject("meta_data");
+  for (const auto &kv : meta_data)
+    serializer.write(kv.first, kv.second);
+  serializer.endObject();
 }
 
 static std::string MakeUUID(lldb_private::Debugger *debugger) {
@@ -154,13 +151,12 @@ std::unique_ptr<TelemetryManager> TelemetryManager::CreateInstance(
 llvm::Error TelemetryManager::dispatch(TelemetryInfo *entry) {
   entry->SessionId = m_session_uuid;
 
+  llvm::Error defferedErrs = llvm::Error::success();
   for (auto &destination : m_destinations) {
-    llvm::Error err = destination->receiveEntry(entry);
-    if (err) {
-      return std::move(err);
-    }
+    if (auto err = destination->receiveEntry(entry))
+      deferredErrs = llvm::joinErrors(std::move(deferredErrs), std::move(err));
   }
-  return Error::success();
+  return std::move(deferredErrs);
 }
 
 void TelemetryManager::addDestination(

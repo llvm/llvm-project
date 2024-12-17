@@ -45,7 +45,8 @@ struct LldbEntryKind : public ::llvm::telemetry::EntryKind {
 
 /// Defines a convenient type for timestamp of various events.
 /// This is used by the EventStats below.
-using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock,
+                                                std::chrono::nanoseconds>;
 
 /// Various time (and possibly memory) statistics of an event.
 struct EventStats {
@@ -74,8 +75,6 @@ struct LldbBaseTelemetryInfo : public TelemetryInfo {
   KindType getKind() const override { return LldbEntryKind::BaseInfo; }
 
   static bool classof(const TelemetryInfo *t) {
-    if (t == nullptr)
-      return false;
     // Subclasses of this is also acceptable.
     return (t->getKind() & LldbEntryKind::BaseInfo) == LldbEntryKind::BaseInfo;
   }

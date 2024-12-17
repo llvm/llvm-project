@@ -27,15 +27,14 @@ namespace telemetry {
 
 class Serializer {
 public:
-  virtual llvm::Error start() = 0;
-  virtual void writeBool(StringRef KeyName, bool Value) = 0;
-  virtual void writeInt32(StringRef KeyName, int Value) = 0;
-  virtual void writeSizeT(StringRef KeyName, size_t Value) = 0;
-  virtual void writeString(StringRef KeyName, StringRef Value) = 0;
-  virtual void
-  writeKeyValueMap(StringRef KeyName,
-                   const std::map<std::string, std::string> &Value) = 0;
-  virtual llvm::Error finish() = 0;
+  virtual Error init() = 0;
+  virtual void write(StringRef KeyName, bool Value) = 0;
+  virtual void write(StringRef KeyName, int Value) = 0;
+  virtual void write(StringRef KeyName, unsigned long long Value) = 0;
+  virtual void write(StringRef KeyName, StringRef Value) = 0;
+  virtual void beginObject(StringRef KeyName) = 0;
+  virtual void endObject() = 0;
+  virtual Error finalize() = 0;
 };
 
 /// Configuration for the Telemeter class.
