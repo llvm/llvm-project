@@ -859,11 +859,25 @@ let SMETargetGuard = "sme-lutv2" in {
 let SMETargetGuard = "sme-f8f32" in {
   def SVMOPA_FP8_ZA32 : Inst<"svmopa_za32[_mf8]_m_fpm", "viPPdd>", "m", MergeNone, "aarch64_sme_fp8_fmopa_za32",
                              [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<0, ImmCheck0_3>]>;
+   // FMLALL (indexed)
+  def SVMLA_FP8_ZA32_VG4x1 : Inst<"svmla_lane_za32[_mf8]_vg4x1_fpm", "vmddi>", "m", MergeNone, "aarch64_sme_fp8_fmlall_lane_za32_vg4x1",
+                                  [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_ZA32_VG4x2 : Inst<"svmla_lane_za32[_mf8]_vg4x2_fpm", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fmlall_lane_za32_vg4x2",
+                                  [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_ZA16_VG4x4 : Inst<"svmla_lane_za32[_mf8]_vg4x4_fpm", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fmlall_lane_za32_vg4x4",
+                                  [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
 }
 
 let SMETargetGuard = "sme-f8f16" in {
   def SVMOPA_FP8_ZA16 : Inst<"svmopa_za16[_mf8]_m_fpm", "viPPdd>", "m", MergeNone, "aarch64_sme_fp8_fmopa_za16",
                              [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<0, ImmCheck0_1>]>;
+  // FMLAL (indexed)
+  def SVMLA_FP8_ZA16_VG2x1 : Inst<"svmla_lane_za16[_mf8]_vg2x1_fpm", "vmddi>", "m", MergeNone, "aarch64_sme_fp8_fmlal_lane_za16_vg2x1",
+                                  [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_ZA16_VG2x2 : Inst<"svmla_lane_za16[_mf8]_vg2x2_fpm", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fmlal_lane_za16_vg2x2",
+                                  [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_ZA16_VG2x4 : Inst<"svmla_lane_za16[_mf8]_vg2x4_fpm", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fmlal_lane_za16_vg2x4",
+                                  [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
 }
 
 } // let SVETargetGuard = InvalidMode
