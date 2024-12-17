@@ -2125,7 +2125,7 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
   }
 }
 
-let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,bf16,neon" in {
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
   def VBF1CVT_BF16_MF8        : VInst<"vcvt1_bf16_mf8_fpm",      "(QB).V", "m">;
   def VBF1CVT_LOW_BF16_MF8    : VInst<"vcvt1_low_bf16_mf8_fpm",  "B.V",    "Qm">;
   def VBF2CVTL_BF16_MF8       : VInst<"vcvt2_bf16_mf8_fpm",      "(QB).V", "m">;
