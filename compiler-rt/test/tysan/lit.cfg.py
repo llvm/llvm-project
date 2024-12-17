@@ -10,7 +10,7 @@ import lit.formats
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value :
+    if attr_value is not None:
         return attr_value
 
     lit_config.fatal(
