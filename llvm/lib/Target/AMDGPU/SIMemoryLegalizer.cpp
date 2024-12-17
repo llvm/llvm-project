@@ -2325,9 +2325,9 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       break;
     case SIAtomicScope::WORKGROUP:
       // GFX120x:
-      //   In WGP mode the waves of a work-group can be executing on either CU of
-      //   the WGP. Therefore need to wait for operations to complete to ensure
-      //   they are visible to waves in the other CU as the L0 is per CU.
+      //   In WGP mode the waves of a work-group can be executing on either CU
+      //   of the WGP. Therefore need to wait for operations to complete to
+      //   ensure they are visible to waves in the other CU as the L0 is per CU.
       //   Otherwise in CU mode and all waves of a work-group are on the same CU
       //   which shares the same L0.
       //
@@ -2443,8 +2443,8 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     // GFX12:
     //  In WGP mode the waves of a work-group can be executing on either CU of
     //  the WGP. Therefore we need to invalidate the L0 which is per CU.
-    //  Otherwise in CU mode all waves of a work-group are on the same CU, and so
-    //  the L0 does not need to be invalidated.
+    //  Otherwise in CU mode all waves of a work-group are on the same CU, and
+    //  so the L0 does not need to be invalidated.
     //
     // GFX125x has a shared CU$, so no invalidates are required.
     if  (ST.isCuModeEnabled())
