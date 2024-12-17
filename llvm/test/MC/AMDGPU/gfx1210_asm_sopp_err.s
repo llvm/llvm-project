@@ -2,3 +2,6 @@
 
 s_setkill 0
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wakeup 0
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
