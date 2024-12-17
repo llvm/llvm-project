@@ -3737,6 +3737,12 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (isa<PoisonValue>(RHS))
     return PoisonValue::get(ITy);
 
+  // For EQ and NE, we can always pick a value for the undef to make the
+  // predicate pass or fail, so we can return undef.
+  // Matches behavior in llvm::ConstantFoldCompareInstruction.
+  if (Q.isUndefValue(RHS) && ICmpInst::isEquality(Pred))
+    return UndefValue::get(ITy);
+
   // icmp X, X -> true/false
   if (LHS == RHS)
     return ConstantInt::get(ITy, CmpInst::isTrueWhenEqual(Pred));
