@@ -1248,7 +1248,7 @@ FunctionPass *llvm::createSPIRVStructurizerPass() {
 
 PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
                                                 FunctionAnalysisManager &AF) {
-  // TODO: Review this after migrating SPIRV passes to "modern" pass manager.
+
   auto FPM = legacy::FunctionPassManager(F.getParent());
   FPM.add(createLoopSimplifyPass());
   FPM.add(new DominatorTreeWrapperPass());
