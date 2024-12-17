@@ -836,7 +836,7 @@ public:
     return getOpcode() == CheckedOpcode || getAltOpcode() == CheckedOpcode;
   }
 
-  InstructionsState() = delete;
+  InstructionsState() = default;
   InstructionsState(Instruction *MainOp, Instruction *AltOp)
       : MainOp(MainOp), AltOp(AltOp) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
@@ -2407,15 +2407,16 @@ public:
     }
 
     /// Go through the instructions in VL and append their operands.
-    void appendOperandsOfVL(ArrayRef<Value *> VL, Instruction *VL0) {
+    void appendOperandsOfVL(ArrayRef<Value *> VL, const InstructionsState &S) {
       assert(!VL.empty() && "Bad VL");
       assert((empty() || VL.size() == getNumLanes()) &&
              "Expected same number of lanes");
       // IntrinsicInst::isCommutative returns true if swapping the first "two"
       // arguments to the intrinsic produces the same result.
       constexpr unsigned IntrinsicNumOperands = 2;
-      unsigned NumOperands = VL0->getNumOperands();
-      ArgSize = isa<IntrinsicInst>(VL0) ? IntrinsicNumOperands : NumOperands;
+      unsigned NumOperands = S.getMainOp()->getNumOperands();
+      ArgSize = isa<IntrinsicInst>(S.getMainOp()) ? IntrinsicNumOperands
+                                                  : NumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
       for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
@@ -2435,8 +2436,8 @@ public:
           // tell the inverse operations by checking commutativity.
           if (isa<PoisonValue>(VL[Lane])) {
             OpsVec[OpIdx][Lane] = {
-                PoisonValue::get(VL0->getOperand(OpIdx)->getType()), true,
-                false};
+                PoisonValue::get(S.getMainOp()->getOperand(OpIdx)->getType()),
+                true, false};
             continue;
           }
           bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
@@ -2549,11 +2550,12 @@ public:
 
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
-    VLOperands(ArrayRef<Value *> RootVL, Instruction *VL0, const BoUpSLP &R)
+    VLOperands(ArrayRef<Value *> RootVL, const InstructionsState &S,
+               const BoUpSLP &R)
         : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R),
-          L(R.LI->getLoopFor((VL0->getParent()))) {
+          L(R.LI->getLoopFor(S.getMainOp()->getParent())) {
       // Append all the operands of RootVL.
-      appendOperandsOfVL(RootVL, VL0);
+      appendOperandsOfVL(RootVL, S);
     }
 
     /// \Returns a value vector with the operands across all lanes for the
@@ -3317,9 +3319,7 @@ private:
     /// reordering of operands during buildTree_rec() and vectorizeTree().
     SmallVector<ValueList, 2> Operands;
 
-    /// The main/alternate instruction.
-    Instruction *MainOp = nullptr;
-    Instruction *AltOp = nullptr;
+    InstructionsState S;
 
     /// Interleaving factor for interleaved loads Vectorize nodes.
     unsigned InterleaveFactor = 0;
@@ -3343,10 +3343,10 @@ private:
 
     /// Set this bundle's operand from Scalars.
     void setOperand(const BoUpSLP &R, bool RequireReorder = false) {
-      VLOperands Ops(Scalars, MainOp, R);
+      VLOperands Ops(Scalars, S, R);
       if (RequireReorder)
         Ops.reorder();
-      for (unsigned I : seq<unsigned>(MainOp->getNumOperands()))
+      for (unsigned I : seq<unsigned>(S.getMainOp()->getNumOperands()))
         setOperand(I, Ops.getVL(I));
     }
 
@@ -3379,13 +3379,9 @@ private:
     }
 
     /// Some of the instructions in the list have alternate opcodes.
-    bool isAltShuffle() const { return MainOp != AltOp; }
+    bool isAltShuffle() const { return S.isAltShuffle(); }
 
-    bool isOpcodeOrAlt(Instruction *I) const {
-      unsigned CheckedOpcode = I->getOpcode();
-      return (getOpcode() == CheckedOpcode ||
-              getAltOpcode() == CheckedOpcode);
-    }
+    bool isOpcodeOrAlt(Instruction *I) const { return S.isOpcodeOrAlt(I); }
 
     /// Chooses the correct key for scheduling data. If \p Op has the same (or
     /// alternate) opcode as \p OpValue, the key is \p Op. Otherwise the key is
@@ -3394,30 +3390,19 @@ private:
       auto *I = dyn_cast<Instruction>(Op);
       if (I && isOpcodeOrAlt(I))
         return Op;
-      return MainOp;
+      return S.getMainOp();
     }
 
-    void setOperations(const InstructionsState &S) {
-      MainOp = S.getMainOp();
-      AltOp = S.getAltOp();
-    }
+    void setOperations(const InstructionsState &S) { this->S = S; }
 
-    Instruction *getMainOp() const {
-      return MainOp;
-    }
+    Instruction *getMainOp() const { return S.getMainOp(); }
 
-    Instruction *getAltOp() const {
-      return AltOp;
-    }
+    Instruction *getAltOp() const { return S.getAltOp(); }
 
     /// The main/alternate opcodes for the list of instructions.
-    unsigned getOpcode() const {
-      return MainOp ? MainOp->getOpcode() : 0;
-    }
+    unsigned getOpcode() const { return S.getOpcode(); }
 
-    unsigned getAltOpcode() const {
-      return AltOp ? AltOp->getOpcode() : 0;
-    }
+    unsigned getAltOpcode() const { return S.getAltOpcode(); }
 
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
@@ -3514,13 +3499,13 @@ private:
         break;
       }
       dbgs() << "MainOp: ";
-      if (MainOp)
-        dbgs() << *MainOp << "\n";
+      if (S.getMainOp())
+        dbgs() << *S.getMainOp() << "\n";
       else
         dbgs() << "NULL\n";
       dbgs() << "AltOp: ";
-      if (AltOp)
-        dbgs() << *AltOp << "\n";
+      if (S.getAltOp())
+        dbgs() << *S.getAltOp() << "\n";
       else
         dbgs() << "NULL\n";
       dbgs() << "VectorizedValue: ";
@@ -8561,7 +8546,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       LLVM_DEBUG(dbgs() << "SLP: added a vector of compares.\n");
 
       ValueList Left, Right;
-      VLOperands Ops(VL, VL0, *this);
+      VLOperands Ops(VL, S, *this);
       if (cast<CmpInst>(VL0)->isCommutative()) {
         // Commutative predicate - collect + sort operands of the instructions
         // so that each side is more likely to have the same opcode.
