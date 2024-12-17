@@ -40,7 +40,7 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_offset w30, -24
   .cfi_offset w29, -32
   .cfi_offset 46, -16
-  bl  __arm_sme_state
+  bl  SYMBOL_NAME(__arm_sme_state)
   tbz  x0, #0, 2f
 1:
   smstop sm
@@ -54,7 +54,7 @@ END_COMPILERRT_FUNCTION(do_abort)
 // __arm_sme_state fills the result registers based on a local
 // that is set as part of the compiler-rt startup code.
 //   __aarch64_has_sme_and_tpidr2_el0
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
+DEFINE_COMPILERRT_FUNCTION(__arm_sme_state)
   .variant_pcs __arm_sme_state
   BTI_C
   mov x0, xzr
@@ -70,9 +70,9 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
   mrs x1, TPIDR2_EL0
 1:
   ret
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_sme_state)
+END_COMPILERRT_FUNCTION(__arm_sme_state)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
+DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
   .variant_pcs __arm_tpidr2_restore
   BTI_C
   // If TPIDR2_EL0 is nonnull, the subroutine aborts in some platform-specific
@@ -106,9 +106,9 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
   ret
 2:
   b  SYMBOL_NAME(do_abort)
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_restore)
+END_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
+DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_save)
   .variant_pcs __arm_tpidr2_save
   BTI_C
   // If the current thread does not have access to TPIDR2_EL0, the subroutine
@@ -147,9 +147,10 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
   ret
 2:
   b  SYMBOL_NAME(do_abort)
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_save)
+END_COMPILERRT_FUNCTION(__arm_tpidr2_save)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
+DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
+  .cfi_startproc
   .variant_pcs __arm_za_disable
   BTI_C
   // If the current thread does not have access to SME, the subroutine does
@@ -166,7 +167,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
   .cfi_def_cfa w29, 16
   .cfi_offset w30, -8
   .cfi_offset w29, -16
-  bl  __arm_tpidr2_save
+  bl  SYMBOL_NAME(__arm_tpidr2_save)
 
   // * Set TPIDR2_EL0 to null.
   msr TPIDR2_EL0, xzr
@@ -181,9 +182,10 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
   .cfi_restore w29
 0:
   ret
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_za_disable)
+  .cfi_endproc
+END_COMPILERRT_FUNCTION(__arm_za_disable)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
+DEFINE_COMPILERRT_FUNCTION(__arm_get_current_vg)
   .variant_pcs __arm_get_current_vg
   BTI_C
 
@@ -200,7 +202,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
 2:
   mov     x0, xzr
   ret
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_get_current_vg)
+END_COMPILERRT_FUNCTION(__arm_get_current_vg)
 
 NO_EXEC_STACK_DIRECTIVE
 
