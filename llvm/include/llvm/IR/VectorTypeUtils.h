@@ -44,7 +44,7 @@ bool isVectorizedStructTy(StructType *StructTy);
 /// equivalent to calling `ToVectorTy`. For struct types, this returns a new
 /// struct where each element type has been widened to a vector type.
 /// Note:
-///   - If the he incoming type is void, we return void
+///   - If the incoming type is void, we return void
 ///   - If \p EC is scalar, \p Ty is returned unchanged
 ///   - Only unpacked literal struct types are supported
 inline Type *toVectorizedTy(Type *Ty, ElementCount EC) {
