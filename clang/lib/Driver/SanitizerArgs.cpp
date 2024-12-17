@@ -690,14 +690,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // default in ASan?
 
   // Parse -f(no-)?sanitize-recover flags.
-  SanitizerMask RecoverableKinds = parseSanitizeArgs(
-      D, Args, DiagnoseErrors,
-      /* Default */ RecoverableByDefault,
-      /* AlwaysIn */ AlwaysRecoverable,
-      /* AlwaysOut */ Unrecoverable,
-      /* OptInID */ options::OPT_fsanitize_recover_EQ,
-      /* OptOutID */ options::OPT_fno_sanitize_recover_EQ,
-      /* AlwaysOutAdvisoryOnly */ false);
+  SanitizerMask RecoverableKinds =
+      parseSanitizeArgs(D, Args, DiagnoseErrors,
+                        /* Default */ RecoverableByDefault,
+                        /* AlwaysIn */ AlwaysRecoverable,
+                        /* AlwaysOut */ Unrecoverable,
+                        /* OptInID */ options::OPT_fsanitize_recover_EQ,
+                        /* OptOutID */ options::OPT_fno_sanitize_recover_EQ,
+                        /* AlwaysOutAdvisoryOnly */ false);
 
   RecoverableKinds &= Kinds;
 
