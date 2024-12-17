@@ -64,7 +64,6 @@ add_llvm_component_library(LLVMCore
   PseudoProbe.cpp
   ReplaceConstant.cpp
   Statepoint.cpp
-  StructWideningUtils.cpp
   StructuralHash.cpp
   Type.cpp
   TypedPointerType.cpp
@@ -74,6 +73,7 @@ add_llvm_component_library(LLVMCore
   Value.cpp
   ValueSymbolTable.cpp
   VectorBuilder.cpp
+  VectorUtils.cpp
   Verifier.cpp
   VFABIDemangler.cpp
   RuntimeLibcalls.cpp

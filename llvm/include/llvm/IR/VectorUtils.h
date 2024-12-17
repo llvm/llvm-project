@@ -10,7 +10,6 @@
 #define LLVM_IR_VECTORUTILS_H
 
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/StructWideningUtils.h"
 
 namespace llvm {
 
@@ -26,6 +25,18 @@ inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
 inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
   return ToVectorTy(Scalar, ElementCount::getFixed(VF));
 }
+
+/// A helper for converting structs of scalar types to structs of vector types.
+/// Note: Only unpacked literal struct types are supported.
+Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC);
+
+/// A helper for converting structs of vector types to structs of scalar types.
+/// Note: Only unpacked literal struct types are supported.
+Type *toScalarizedStructTy(StructType *StructTy);
+
+/// Returns true if `StructTy` is an unpacked literal struct where all elements
+/// are vectors of matching element count. This does not include empty structs.
+bool isVectorizedStructTy(StructType *StructTy);
 
 /// A helper for converting to vectorized types. For scalar types, this is
 /// equivalent to calling `ToVectorTy`. For struct types, this returns a new
@@ -67,6 +78,10 @@ inline ArrayRef<Type *> getContainedTypes(Type *const &Ty) {
 inline ElementCount getVectorizedTypeVF(Type *Ty) {
   assert(isVectorizedTy(Ty) && "expected widened type");
   return cast<VectorType>(getContainedTypes(Ty).front())->getElementCount();
+}
+
+inline bool isUnpackedStructLiteral(StructType *StructTy) {
+  return StructTy->isLiteral() && !StructTy->isPacked();
 }
 
 } // namespace llvm

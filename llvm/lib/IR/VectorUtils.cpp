@@ -1,4 +1,4 @@
-//===- StructWideningUtils.cpp - Utils for vectorizing struct types------- ===//
+//===- VectorUtils.cpp - Vector type utility functions --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/StructWideningUtils.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/IR/VectorUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace llvm;
 
