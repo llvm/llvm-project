@@ -204,7 +204,6 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   StringRef filename = mb->getBufferIdentifier();
 
   MemoryBufferRef mbref = takeBuffer(std::move(mb));
-  filePaths.push_back(filename);
 
   // File type is detected by contents, not by file extension.
   switch (identify_magic(mbref.getBuffer())) {
@@ -866,7 +865,6 @@ static std::string rewritePath(StringRef s) {
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
 static std::string createResponseFile(const opt::InputArgList &args,
-                                      ArrayRef<StringRef> filePaths,
                                       ArrayRef<StringRef> searchPaths) {
   SmallString<0> data;
   raw_svector_ostream os(data);
@@ -875,10 +873,14 @@ static std::string createResponseFile(const opt::InputArgList &args,
     switch (arg->getOption().getID()) {
     case OPT_linkrepro:
     case OPT_reproduce:
-    case OPT_INPUT:
-    case OPT_defaultlib:
     case OPT_libpath:
     case OPT_winsysroot:
+      break;
+    case OPT_INPUT:
+      os << quote(rewritePath(arg->getValue())) << "\n";
+      break;
+    case OPT_wholearchive_file:
+      os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_call_graph_ordering_file:
     case OPT_deffile:
@@ -915,9 +917,6 @@ static std::string createResponseFile(const opt::InputArgList &args,
     std::string relPath = relativeToRoot(path);
     os << "/libpath:" << quote(relPath) << "\n";
   }
-
-  for (StringRef path : filePaths)
-    os << quote(relativeToRoot(path)) << "\n";
 
   return std::string(data);
 }
@@ -2355,9 +2354,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
-    tar->append("response.txt",
-                createResponseFile(args, filePaths,
-                                   ArrayRef<StringRef>(searchPaths).slice(1)));
+    tar->append(
+        "response.txt",
+        createResponseFile(args, ArrayRef<StringRef>(searchPaths).slice(1)));
   }
 
   // Handle /largeaddressaware
