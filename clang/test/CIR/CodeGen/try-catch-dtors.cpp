@@ -308,3 +308,34 @@ void yo2(bool x) {
 // CIR:   } catch [type #cir.all {
 // CIR:     cir.catch_param -> !cir.ptr<!void>
 // CIR:   }]
+
+
+int foo() { return 42; }
+
+struct A {
+  ~A() {}
+};
+
+void bar() {
+  A a;
+  int b = foo();
+}
+
+// CIR-LABEL: @_Z3barv
+// CIR:  %[[V0:.*]] = cir.alloca !ty_A, !cir.ptr<!ty_A>, ["a"] {alignment = 1 : i64}
+// CIR:  %[[V1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+// CIR:  %[[V2:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp.try.call.res"] {alignment = 4 : i64}
+// CIR:  cir.try synthetic cleanup {
+// CIR:    %[[V4:.*]] = cir.call exception @_Z3foov() : () -> !s32i cleanup {
+// CIR:      cir.call @_ZN1AD2Ev(%[[V0]]) : (!cir.ptr<!ty_A>) -> () extra(#fn_attr)
+// CIR:      cir.yield
+// CIR:    }
+// CIR:    cir.store %[[V4]], %[[V2]] : !s32i, !cir.ptr<!s32i>
+// CIR:    cir.yield
+// CIR:  } catch [#cir.unwind {
+// CIR:    cir.resume
+// CIR:  }]
+// CIR:  %[[V3:.*]] = cir.load %[[V2]] : !cir.ptr<!s32i>, !s32i
+// CIR:  cir.store %[[V3]], %[[V1]] : !s32i, !cir.ptr<!s32i>
+// CIR:  cir.call @_ZN1AD2Ev(%[[V0]]) : (!cir.ptr<!ty_A>) -> () extra(#fn_attr)
+// CIR:  cir.return
