@@ -455,6 +455,9 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  static unsigned getHasPredecessorMaxSteps();
+
   explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;

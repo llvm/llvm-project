@@ -48,13 +48,19 @@ add_header_library(
     .freetrie
 )
 
-add_header_library(
+add_object_library(
   freelist_heap
+  SRCS
+    freelist_heap.cpp
   HDRS
     freelist_heap.h
+  COMPILE_OPTIONS
+    -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
   DEPENDS
     .block
+    .freelist
     .freestore
+    .freetrie
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.array
     libc.src.__support.CPP.optional

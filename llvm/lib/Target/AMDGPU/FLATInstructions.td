@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot], -10>;
-def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
-def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
+let WantsRoot = true in {
+  def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [], -10>;
+  def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [], -10>;
+  def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [], -10>;
 
-def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
+  def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [], -10>;
+  def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [], -10>;
+  def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [], -10>;
+}
 
 //===----------------------------------------------------------------------===//
 // FLAT classes

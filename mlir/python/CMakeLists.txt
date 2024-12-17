@@ -355,6 +355,14 @@ declare_mlir_python_sources(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/EmitC.td
+  SOURCES 
+    dialects/emitc.py
+  DIALECT_NAME emitc)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/PDLOps.td
   SOURCES
     dialects/pdl.py
