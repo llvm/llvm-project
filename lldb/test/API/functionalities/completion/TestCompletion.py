@@ -335,13 +335,22 @@ class CommandLineCompletionTestCase(TestBase):
         )
 
     def test_settings_show_term(self):
-        self.complete_from_to("settings show term-", "settings show term-width")
+        self.complete_from_to("settings show term-w", "settings show term-width")
 
     def test_settings_list_term(self):
-        self.complete_from_to("settings list term-", "settings list term-width")
+        self.complete_from_to("settings list term-w", "settings list term-width")
+
+    def test_settings_show_term(self):
+        self.complete_from_to("settings show term-h", "settings show term-height")
+
+    def test_settings_list_term(self):
+        self.complete_from_to("settings list term-h", "settings list term-height")
 
     def test_settings_remove_term(self):
-        self.complete_from_to("settings remove term-", "settings remove term-width")
+        self.complete_from_to("settings remove term-w", "settings remove term-width")
+
+    def test_settings_remove_term(self):
+        self.complete_from_to("settings remove term-h", "settings remove term-height")
 
     def test_settings_s(self):
         """Test that 'settings s' completes to ['set', 'show']."""
