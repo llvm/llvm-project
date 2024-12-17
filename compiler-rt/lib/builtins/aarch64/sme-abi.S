@@ -283,9 +283,8 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   add     x18, x0, #32
   tbz     x17, #FEAT_SME2_BIT, 1f
 
-  // Store ZT0 and ZA
-  add     x16, x0, #32
-  str     zt0, [x16]
+  // Store ZT0
+  str     zt0, [x18]
   add     x18, x18, #64
   b       1f
 
