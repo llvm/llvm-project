@@ -10,12 +10,6 @@ body:             |
     ; CHECK-LABEL: name: vec_instr_with_scalar_def
     ; CHECK: [[PseudoVMNAND_MM_B8_:%[0-9]+]]:vr = PseudoVMNAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
     ; CHECK-NEXT: [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 killed [[PseudoVMNAND_MM_B8_]], -1, 0 /* e8 */
-    ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU killed [[PseudoVCPOP_M_B1_]], 1
-    ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
-    ; CHECK-NEXT: PseudoRET implicit $x10
     %1:vr = PseudoVMNAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
     %2:gpr = PseudoVCPOP_M_B1 killed %1, -1, 0 /* e8 */
-    %3:gpr = SLTIU killed %2, 1
-    $x10 = COPY %3
-    PseudoRET implicit $x10
 ...
