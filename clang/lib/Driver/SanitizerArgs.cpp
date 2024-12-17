@@ -258,8 +258,10 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
                   SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
                   int OptOutID) {
+  assert(!(AlwaysIn & AlwaysOut) &&
+         "parseSanitizeArgs called with contradictory in/out requirements");
 
-  SanitizerMask Output = Default | AlwaysIn;
+  SanitizerMask Output = Default;
   // Keep track of which violations we have already reported, to avoid
   // duplicate error messages.
   SanitizerMask DiagnosedAlwaysInViolations;
@@ -300,6 +302,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
     }
   }
 
+  Output |= AlwaysIn;
   Output &= ~AlwaysOut;
 
   return Output;
