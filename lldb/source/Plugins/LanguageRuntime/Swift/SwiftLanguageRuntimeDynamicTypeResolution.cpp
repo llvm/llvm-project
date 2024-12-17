@@ -321,7 +321,7 @@ public:
       // Try `mangledName` as plain ObjC class name. Ex: NSObject, NSView, etc.
       // Since this looking up an ObjC type, the default mangling falvor should
       // be used.
-      auto maybeMangled = swift_demangle::mangleClass(
+      auto maybeMangled = swift_demangle::MangleClass(
           dem, swift::MANGLING_MODULE_OBJC, mangledName,
           swift::Mangle::ManglingFlavor::Default);
       if (!maybeMangled.isSuccess()) {
@@ -3068,6 +3068,117 @@ bool SwiftLanguageRuntimeImpl::IsStoredInlineInBuffer(CompilerType type) {
   if (auto *type_info = GetSwiftRuntimeTypeInfo(type, nullptr))
     return type_info->isBitwiseTakable() && type_info->getSize() <= 24;
   return true;
+}
+
+llvm::Expected<CompilerType>
+SwiftLanguageRuntimeImpl::ResolveTypeAlias(CompilerType alias) {
+  using namespace swift::Demangle;
+  Demangler dem;
+
+  auto tss = alias.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!tss)
+    return llvm::createStringError("not a Swift type");
+  auto tr_ts = tss->GetTypeSystemSwiftTypeRef();
+  if (!tr_ts)
+    return llvm::createStringError("could not get typesystem");
+
+  // Extract the mangling of the alias type's parent type and its
+  // generic substitutions if any.
+  auto mangled = alias.GetMangledTypeName().GetStringRef();
+  NodePointer type = swift_demangle::GetDemangledType(dem, mangled);
+  if (!type || type->getKind() != Node::Kind::TypeAlias ||
+      type->getNumChildren() != 2)
+    return llvm::createStringError("not a type alias");
+
+  NodePointer alias_node = type->getChild(1);
+  if (!alias_node || alias_node->getKind() != Node::Kind::Identifier ||
+      !alias_node->hasText())
+    return llvm::createStringError("type alias has no name");
+  std::string member = alias_node->getText().str();
+
+  NodePointer parent_node = type->getChild(0);
+  if (!parent_node)
+    return llvm::createStringError("top-level type alias");
+  NodePointer subst_node = nullptr;
+
+  switch (parent_node->getKind()) {
+  case Node::Kind::Class:
+  case Node::Kind::Structure:
+  case Node::Kind::Enum:
+    break;
+    // For the lookup, get the unbound type.
+  case Node::Kind::BoundGenericClass:
+    subst_node =
+        swift_demangle::ChildAtPath(parent_node, {Node::Kind::TypeList});
+    parent_node = swift_demangle::ChildAtPath(
+        parent_node, {Node::Kind::Type, Node::Kind::Class});
+    break;
+  case Node::Kind::BoundGenericStructure:
+    subst_node =
+        swift_demangle::ChildAtPath(parent_node, {Node::Kind::TypeList});
+    parent_node = swift_demangle::ChildAtPath(
+        parent_node, {Node::Kind::Type, Node::Kind::Structure});
+    break;
+  case Node::Kind::BoundGenericEnum:
+    subst_node =
+        swift_demangle::ChildAtPath(parent_node, {Node::Kind::TypeList});
+    parent_node = swift_demangle::ChildAtPath(
+        parent_node, {Node::Kind::Type, Node::Kind::Enum});
+    break;
+  default:
+    return llvm::createStringError("unsupported parent kind");
+  }
+  if (!parent_node)
+    return llvm::createStringError("unsupported generic parent kind");
+
+  NodePointer global = dem.createNode(Node::Kind::Global);
+  global->addChild(parent_node, dem);
+  auto mangling = swift::Demangle::mangleNode(global);
+  if (!mangling.isSuccess())
+    return llvm::createStringError("mangling error");
+  std::string in_type =
+      swift::Demangle::dropSwiftManglingPrefix(mangling.result()).str();
+
+  // `in_type` now holds the type alias' parent type.
+  // `member` is the name of the type alias.
+  // Scan through the witness tables of all of the parent's conformances.
+  ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return llvm::createStringError("no reflection context");
+  for (const std::string &protocol : GetConformances(in_type)) {
+    auto *type_ref =
+        reflection_ctx->LookupTypeWitness(in_type, member, protocol);
+    if (!type_ref)
+      continue;
+
+    // Success, we found an associated type in the conformance.  If
+    // the parent type was generic, the type alias could point to a
+    // type parameter. Reapply any substitutions from the parent type.
+    if (subst_node) {
+      swift::reflection::GenericArgumentMap substitutions;
+      unsigned idx = 0;
+      for (auto &child : *subst_node) {
+        auto mangling = swift_demangle::GetMangledName(dem, child);
+        if (!mangling.isSuccess())
+          continue;
+        const auto *type_ref = reflection_ctx->GetTypeRefOrNull(
+            mangling.result(), tr_ts->GetDescriptorFinder());
+        if (!type_ref)
+          continue;
+
+        substitutions.insert({{0, idx++}, type_ref});
+      }
+      type_ref = reflection_ctx->ApplySubstitutions(
+          type_ref, substitutions, tr_ts->GetDescriptorFinder());
+    }
+
+    CompilerType resolved = GetTypeFromTypeRef(*tr_ts, type_ref);
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "Resolved type alias {0} = {1} using reflection metadata.",
+             alias.GetMangledTypeName(), resolved.GetMangledTypeName());
+    return resolved;
+  }
+  return llvm::createStringError("cannot resolve type alias via reflection");
 }
 
 std::optional<uint64_t>

@@ -19,6 +19,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
@@ -282,6 +283,11 @@ public:
     return false;
   }
 
+  CompilerType ResolveTypeAlias(CompilerType alias) {
+    STUB_LOG();
+    return {};
+  }
+
   void DumpTyperef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
                    Stream *s) {
     STUB_LOG();
@@ -521,6 +527,36 @@ SwiftLanguageRuntimeImpl::GetSwiftMetadataCache() {
   if (!m_swift_metadata_cache.is_enabled())
     return {};
   return &m_swift_metadata_cache;
+}
+
+std::vector<std::string>
+SwiftLanguageRuntimeImpl::GetConformances(llvm::StringRef mangled_name) {
+  if (m_conformances.empty()) {
+    using namespace swift::Demangle;
+    Demangler dem;
+
+    ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+    if (!reflection_ctx)
+      return {};
+
+    Progress progress("Parsing Swift conformances");
+    swift::reflection::ConformanceCollectionResult conformances =
+        reflection_ctx->GetAllConformances();
+
+    for (auto &conformance : conformances.Conformances) {
+      auto [mod, proto] = StringRef(conformance.ProtocolName).split('.');
+      NodePointer n =
+          swift_demangle::CreateNominal(dem, Node::Kind::Protocol, mod, proto);
+      auto mangling = mangleNode(n);
+      if (!mangling.isSuccess())
+        return {};
+      llvm::StringRef protocol =
+          swift::Demangle::dropSwiftManglingPrefix(mangling.result());
+
+      m_conformances[mangled_name].push_back(protocol.str());
+    }
+  }
+  return m_conformances.lookup(mangled_name);
 }
 
 void SwiftLanguageRuntimeImpl::SetupReflection() {
@@ -943,6 +979,9 @@ void SwiftLanguageRuntimeImpl::ModulesDidLoad(const ModuleList &module_list) {
   // The modules will be lazily processed on the next call to
   // GetReflectionContext.
   m_modules_to_add.AppendIfNeeded(module_list);
+
+  // This could be done more efficiently with a better reflection API.
+  m_conformances.clear();
 }
 
 std::string
@@ -2399,6 +2438,11 @@ CompilerType SwiftLanguageRuntime::GetTypeFromMetadata(TypeSystemSwift &tss,
 
 bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {
   FORWARD(IsStoredInlineInBuffer, type);
+}
+
+llvm::Expected<CompilerType>
+SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
+  FORWARD(ResolveTypeAlias, alias);
 }
 
 std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(

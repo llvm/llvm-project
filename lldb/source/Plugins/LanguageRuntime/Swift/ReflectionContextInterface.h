@@ -130,6 +130,11 @@ public:
       const swift::reflection::TypeRef *enum_type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  virtual const swift::reflection::TypeRef *
+  LookupTypeWitness(const std::string &MangledTypeName,
+                    const std::string &Member, StringRef Protocol) = 0;
+  virtual swift::reflection::ConformanceCollectionResult
+  GetAllConformances() = 0;
   virtual const swift::reflection::TypeRef *ReadTypeFromMetadata(
       lldb::addr_t metadata_address,
       swift::reflection::DescriptorFinder *descriptor_finder,
