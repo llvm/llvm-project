@@ -71,7 +71,8 @@ using namespace __asan;
 // See http://llvm.org/bugs/show_bug.cgi?id=11763.
 #define ASAN_MEMCPY_IMPL(ctx, to, from, size)                       \
   do {                                                              \
-    if (!ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, to, size, from)) { \
+    if (SANITIZER_WINDOWS64 &&                                      \
+        !ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, to, size, from)) { \
       return REAL(memcpy)(to, from, size);                          \
     }                                                               \
     if (LIKELY(replace_intrin_cached)) {                            \
@@ -89,7 +90,8 @@ using namespace __asan;
 // memset is called inside Printf.
 #define ASAN_MEMSET_IMPL(ctx, block, c, size)                    \
   do {                                                           \
-    if (!ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, block, size)) { \
+    if (SANITIZER_WINDOWS64 &&                                   \
+        !ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, block, size)) { \
       return REAL(memset)(block, c, size);                       \
     }                                                            \
     if (LIKELY(replace_intrin_cached)) {                         \
@@ -102,7 +104,8 @@ using namespace __asan;
 
 #define ASAN_MEMMOVE_IMPL(ctx, to, from, size)                      \
   do {                                                              \
-    if (!ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, to, size, from)) { \
+    if (SANITIZER_WINDOWS64 &&                                      \
+        !ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, to, size, from)) { \
       return internal_memmove(to, from, size);                      \
     }                                                               \
     if (LIKELY(replace_intrin_cached)) {                            \
