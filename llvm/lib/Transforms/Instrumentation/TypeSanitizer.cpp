@@ -854,7 +854,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
 
   if (!Src) {
     IRB.CreateMemSet(ShadowData, IRB.getInt8(0), IRB.CreateShl(Size, PtrShift),
-                     Align(1u << PtrShift));
+                     Align(1ull << PtrShift));
     return true;
   }
 
@@ -866,11 +866,11 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
   Value *SrcShadowData = IRB.CreateIntToPtr(SrcShadowDataInt, IRB.getPtrTy());
 
   if (NeedsMemMove) {
-    IRB.CreateMemMove(ShadowData, Align(1u << PtrShift), SrcShadowData,
-                      Align(1u << PtrShift), IRB.CreateShl(Size, PtrShift));
+    IRB.CreateMemMove(ShadowData, Align(1ull << PtrShift), SrcShadowData,
+                      Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
   } else {
-    IRB.CreateMemCpy(ShadowData, Align(1u << PtrShift), SrcShadowData,
-                     Align(1u << PtrShift), IRB.CreateShl(Size, PtrShift));
+    IRB.CreateMemCpy(ShadowData, Align(1ull << PtrShift), SrcShadowData,
+                     Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
   }
 
   return true;
