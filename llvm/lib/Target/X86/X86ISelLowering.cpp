@@ -30224,8 +30224,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // another. The construction of this mask will be constant folded.
       // The mask for a logical right shift is nearly identical, the only
       // difference is that the all ones mask is shifted right instead of left.
-      SDValue CstFullMask = DAG.getAllOnesConstant(dl, NarrowScalarVT);
-      SDValue SplatFullMask = DAG.getSplat(VT, dl, CstFullMask);
+      SDValue SplatFullMask = DAG.getAllOnesConstant(dl, VT);
       SDValue Mask = DAG.getNode(LogicalOpc, dl, VT, SplatFullMask, Amt);
       Mask = DAG.getBitcast(WideVT, Mask);
       // Finally, we mask the shifted vector with the SWAR mask.
@@ -30258,9 +30257,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       //
       // This is equal to Masked - 2*SignBitMask which will correctly sign
       // extend our result.
-      SDValue CstHighBit =
-          DAG.getConstant(1ULL << (EltSizeInBits - 1), dl, NarrowScalarVT);
-      SDValue SplatHighBit = DAG.getSplat(VT, dl, CstHighBit);
+      SDValue SplatHighBit =
+          DAG.getConstant(APInt::getSignMask(EltSizeInBits), dl, VT);
       // This does not induce recursion, all operands are constants.
       SDValue SignBitMask = DAG.getNode(LogicalOpc, dl, VT, SplatHighBit, Amt);
       SDValue FlippedSignBit =

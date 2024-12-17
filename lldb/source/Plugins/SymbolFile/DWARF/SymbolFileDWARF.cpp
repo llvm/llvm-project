@@ -14,6 +14,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 
 #include "lldb/Core/Module.h"
@@ -1704,7 +1705,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
       // We have a SymbolFileDWARFDebugMap, so let it find the right file
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
-    
+
     // Handle the .dwp file case correctly
     if (*file_index == DIERef::k_file_index_mask)
       return GetDwpSymbolFile().get(); // DWP case
@@ -3506,17 +3507,20 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     // Check if the location has a DW_OP_addr with any address value...
     lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
     if (!location_is_const_value_data) {
-      bool op_error = false;
-      const DWARFExpression* location = location_list.GetAlwaysValidExpr();
-      if (location)
-        location_DW_OP_addr =
-            location->GetLocation_DW_OP_addr(location_form.GetUnit(), op_error);
-      if (op_error) {
-        StreamString strm;
-        location->DumpLocation(&strm, eDescriptionLevelFull, nullptr);
-        GetObjectFile()->GetModule()->ReportError(
-            "{0:x16}: {1} ({2}) has an invalid location: {3}", die.GetOffset(),
-            DW_TAG_value_to_name(die.Tag()), die.Tag(), strm.GetData());
+      if (const DWARFExpression *location =
+              location_list.GetAlwaysValidExpr()) {
+        if (auto maybe_location_DW_OP_addr =
+                location->GetLocation_DW_OP_addr(location_form.GetUnit())) {
+          location_DW_OP_addr = *maybe_location_DW_OP_addr;
+        } else {
+          StreamString strm;
+          location->DumpLocation(&strm, eDescriptionLevelFull, nullptr);
+          GetObjectFile()->GetModule()->ReportError(
+              "{0:x16}: {1} ({2}) has an invalid location: {3}: {4}",
+              die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+              llvm::fmt_consume(maybe_location_DW_OP_addr.takeError()),
+              strm.GetData());
+        }
       }
       if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
         is_static_lifetime = true;
