@@ -110,3 +110,226 @@ define <1 x bfloat> @atomic_vec1_bfloat(ptr %x) {
   ret <1 x bfloat> %ret
 }
 
+define <1 x i64> @atomic_vec1_i64(ptr %x) {
+; CHECK-LABEL: atomic_vec1_i64:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, %rsi
+; CHECK-NEXT:    movq %rsp, %rdx
+; CHECK-NEXT:    movl $8, %edi
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    callq ___atomic_load
+; CHECK-NEXT:    movq (%rsp), %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec1_i64:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    pushq %rax
+; CHECK0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK0-NEXT:    movq %rdi, %rsi
+; CHECK0-NEXT:    movl $8, %edi
+; CHECK0-NEXT:    movq %rsp, %rdx
+; CHECK0-NEXT:    movl $2, %ecx
+; CHECK0-NEXT:    callq ___atomic_load
+; CHECK0-NEXT:    movq (%rsp), %rax
+; CHECK0-NEXT:    popq %rcx
+; CHECK0-NEXT:    retq
+  %ret = load atomic <1 x i64>, ptr %x acquire, align 4
+  ret <1 x i64> %ret
+}
+
+define <1 x double> @atomic_vec1_double(ptr %x) {
+; CHECK-LABEL: atomic_vec1_double:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, %rsi
+; CHECK-NEXT:    movq %rsp, %rdx
+; CHECK-NEXT:    movl $8, %edi
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    callq ___atomic_load
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec1_double:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    pushq %rax
+; CHECK0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK0-NEXT:    movq %rdi, %rsi
+; CHECK0-NEXT:    movl $8, %edi
+; CHECK0-NEXT:    movq %rsp, %rdx
+; CHECK0-NEXT:    movl $2, %ecx
+; CHECK0-NEXT:    callq ___atomic_load
+; CHECK0-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK0-NEXT:    popq %rax
+; CHECK0-NEXT:    retq
+  %ret = load atomic <1 x double>, ptr %x acquire, align 4
+  ret <1 x double> %ret
+}
+
+define <2 x i32> @atomic_vec2_i32(ptr %x) {
+; CHECK-LABEL: atomic_vec2_i32:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, %rsi
+; CHECK-NEXT:    movq %rsp, %rdx
+; CHECK-NEXT:    movl $8, %edi
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    callq ___atomic_load
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec2_i32:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    pushq %rax
+; CHECK0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK0-NEXT:    movq %rdi, %rsi
+; CHECK0-NEXT:    movl $8, %edi
+; CHECK0-NEXT:    movq %rsp, %rdx
+; CHECK0-NEXT:    movl $2, %ecx
+; CHECK0-NEXT:    callq ___atomic_load
+; CHECK0-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK0-NEXT:    popq %rax
+; CHECK0-NEXT:    retq
+  %ret = load atomic <2 x i32>, ptr %x acquire, align 4
+  ret <2 x i32> %ret
+}
+
+define <4 x float> @atomic_vec4_float(ptr %x) {
+; CHECK-LABEL: atomic_vec4_float:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    movq %rdi, %rsi
+; CHECK-NEXT:    movq %rsp, %rdx
+; CHECK-NEXT:    movl $16, %edi
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    callq ___atomic_load
+; CHECK-NEXT:    movaps (%rsp), %xmm0
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec4_float:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    subq $24, %rsp
+; CHECK0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK0-NEXT:    movq %rdi, %rsi
+; CHECK0-NEXT:    movl $16, %edi
+; CHECK0-NEXT:    movq %rsp, %rdx
+; CHECK0-NEXT:    movl $2, %ecx
+; CHECK0-NEXT:    callq ___atomic_load
+; CHECK0-NEXT:    movaps (%rsp), %xmm0
+; CHECK0-NEXT:    addq $24, %rsp
+; CHECK0-NEXT:    retq
+  %ret = load atomic <4 x float>, ptr %x acquire, align 4
+  ret <4 x float> %ret
+}
+
+define <8 x double> @atomic_vec8_double(ptr %x) {
+; CHECK-LABEL: atomic_vec8_double:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    subq $72, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    movq %rdi, %rsi
+; CHECK-NEXT:    movq %rsp, %rdx
+; CHECK-NEXT:    movl $64, %edi
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    callq ___atomic_load
+; CHECK-NEXT:    movaps (%rsp), %xmm0
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK-NEXT:    addq $72, %rsp
+; CHECK-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec8_double:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    subq $72, %rsp
+; CHECK0-NEXT:    .cfi_def_cfa_offset 80
+; CHECK0-NEXT:    movq %rdi, %rsi
+; CHECK0-NEXT:    movl $64, %edi
+; CHECK0-NEXT:    movq %rsp, %rdx
+; CHECK0-NEXT:    movl $2, %ecx
+; CHECK0-NEXT:    callq ___atomic_load
+; CHECK0-NEXT:    movapd (%rsp), %xmm0
+; CHECK0-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
+; CHECK0-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
+; CHECK0-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
+; CHECK0-NEXT:    addq $72, %rsp
+; CHECK0-NEXT:    retq
+  %ret = load atomic <8 x double>, ptr %x acquire, align 4
+  ret <8 x double> %ret
+}
+
+define <16 x bfloat> @atomic_vec16_bfloat(ptr %x) {
+; CHECK-LABEL: atomic_vec16_bfloat:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    movq %rdi, %rsi
+; CHECK-NEXT:    movq %rsp, %rdx
+; CHECK-NEXT:    movl $32, %edi
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    callq ___atomic_load
+; CHECK-NEXT:    movaps (%rsp), %xmm0
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec16_bfloat:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    subq $40, %rsp
+; CHECK0-NEXT:    .cfi_def_cfa_offset 48
+; CHECK0-NEXT:    movq %rdi, %rsi
+; CHECK0-NEXT:    movl $32, %edi
+; CHECK0-NEXT:    movq %rsp, %rdx
+; CHECK0-NEXT:    movl $2, %ecx
+; CHECK0-NEXT:    callq ___atomic_load
+; CHECK0-NEXT:    movaps (%rsp), %xmm0
+; CHECK0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK0-NEXT:    addq $40, %rsp
+; CHECK0-NEXT:    retq
+  %ret = load atomic <16 x bfloat>, ptr %x acquire, align 4
+  ret <16 x bfloat> %ret
+}
+
+define <32 x half> @atomic_vec32_half(ptr %x) {
+; CHECK-LABEL: atomic_vec32_half:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    subq $72, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    movq %rdi, %rsi
+; CHECK-NEXT:    movq %rsp, %rdx
+; CHECK-NEXT:    movl $64, %edi
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    callq ___atomic_load
+; CHECK-NEXT:    movaps (%rsp), %xmm0
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK-NEXT:    addq $72, %rsp
+; CHECK-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec32_half:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    subq $72, %rsp
+; CHECK0-NEXT:    .cfi_def_cfa_offset 80
+; CHECK0-NEXT:    movq %rdi, %rsi
+; CHECK0-NEXT:    movl $64, %edi
+; CHECK0-NEXT:    movq %rsp, %rdx
+; CHECK0-NEXT:    movl $2, %ecx
+; CHECK0-NEXT:    callq ___atomic_load
+; CHECK0-NEXT:    movaps (%rsp), %xmm0
+; CHECK0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK0-NEXT:    addq $72, %rsp
+; CHECK0-NEXT:    retq
+  %ret = load atomic <32 x half>, ptr %x acquire, align 4
+  ret <32 x half> %ret
+}
