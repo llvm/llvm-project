@@ -23,15 +23,14 @@ llvm::ArrayRef<DiagnosticRecord> diagtool::getBuiltinDiagnosticsByName() {
   return llvm::ArrayRef(BuiltinDiagnosticsByName);
 }
 
-
 // FIXME: Is it worth having two tables, especially when this one can get
 // out of sync easily?
+// clang-format off
 static const DiagnosticRecord BuiltinDiagnosticsByID[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFER, CATEGORY)                 \
   {#ENUM, diag::ENUM, STR_SIZE(#ENUM, uint8_t)},
 #include "clang/Basic/DiagnosticCommonKinds.inc"
-#include "clang/Basic/DiagnosticCrossTUKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
 #include "clang/Basic/DiagnosticSerializationKinds.inc"
@@ -39,12 +38,14 @@ static const DiagnosticRecord BuiltinDiagnosticsByID[] = {
 #include "clang/Basic/DiagnosticParseKinds.inc"
 #include "clang/Basic/DiagnosticASTKinds.inc"
 #include "clang/Basic/DiagnosticCommentKinds.inc"
+#include "clang/Basic/DiagnosticCrossTUKinds.inc"
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
 #include "clang/Basic/DiagnosticInstallAPIKinds.inc"
 #undef DIAG
 };
+// clang-format on
 
 static bool orderByID(const DiagnosticRecord &Left,
                       const DiagnosticRecord &Right) {
