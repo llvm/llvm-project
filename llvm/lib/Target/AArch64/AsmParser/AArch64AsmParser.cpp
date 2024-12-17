@@ -7068,11 +7068,12 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     else
       return true;
   } else if (!IsMachO && !IsCOFF) {
-      if (IDVal == ".aeabi_subsection")
-        parseDirectiveAeabiSubSectionHeader(Loc);
-      else if (IDVal == ".aeabi_attribute")
-        parseDirectiveAeabiAArch64Attr(Loc);
-  } else return true;
+    if (IDVal == ".aeabi_subsection")
+      parseDirectiveAeabiSubSectionHeader(Loc);
+    else if (IDVal == ".aeabi_attribute")
+      parseDirectiveAeabiAArch64Attr(Loc);
+  } else
+    return true;
   return false;
 }
 
@@ -7808,9 +7809,9 @@ bool AArch64AsmParser::parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired,
 }
 
 bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
-  // Expecting 3 AsmToken::Identifier after '.aeabi_subsection', a name and 2 parameters, e.g.:
-  // .aeabi_subsection (1)aeabi_feature_and_bits, (2)optional, (3)uleb128
-  // separated by 2 commas.
+  // Expecting 3 AsmToken::Identifier after '.aeabi_subsection', a name and 2
+  // parameters, e.g.: .aeabi_subsection (1)aeabi_feature_and_bits, (2)optional,
+  // (3)uleb128 separated by 2 commas.
   MCAsmParser &Parser = getParser();
 
   // Consume the name (subsection name)
@@ -7820,15 +7821,17 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     StringRef SubsectionName = Parser.getTok().getIdentifier();
     SubsectionNameID = ARMBuildAttrs::getVendorID(SubsectionName);
     if (ARMBuildAttrs::VENDOR_NOT_FOUND == SubsectionNameID) {
-      Error(Parser.getTok().getLoc(), ARMBuildAttrs::getSubsectionUnknownError() + ": " + SubsectionName);
+      Error(Parser.getTok().getLoc(),
+            ARMBuildAttrs::getSubsectionUnknownError() + ": " + SubsectionName);
     }
   } else {
-      Error(Parser.getTok().getLoc(), "Expecting subsection name");
-      return true;
+    Error(Parser.getTok().getLoc(), "Expecting subsection name");
+    return true;
   }
   Parser.Lex();
   // consume a comma
-  // parseComma() return *false* on success, and call Lex(), no need to call Lex() again.
+  // parseComma() return *false* on success, and call Lex(), no need to call
+  // Lex() again.
   if (Parser.parseComma()) {
     Error(Parser.getTok().getLoc(), "expected ','");
     return true;
@@ -7841,24 +7844,29 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     StringRef Name = Parser.getTok().getIdentifier();
     IsOptional = ARMBuildAttrs::getOptionalID(Name);
     if (ARMBuildAttrs::OPTIONAL_NOT_FOUND == IsOptional) {
-      Error(Parser.getTok().getLoc(), ARMBuildAttrs::getSubsectionOptionalUnknownError() + ": " + Name);
+      Error(Parser.getTok().getLoc(),
+            ARMBuildAttrs::getSubsectionOptionalUnknownError() + ": " + Name);
       return true;
     }
   } else {
-      Error(Parser.getTok().getLoc(), "Expecitng optionality parameter \n Hint: use 'optional' | 'required'");
-      return true;
+    Error(
+        Parser.getTok().getLoc(),
+        "Expecitng optionality parameter \n Hint: use 'optional' | 'required'");
+    return true;
   }
   // Check for possible IsOptional unaccepted values for known subsections
   if (ARMBuildAttrs::AEABI_FEATURE_AND_BITS == SubsectionNameID) {
     if (ARMBuildAttrs::REQUIRED == IsOptional) {
-        Error(Parser.getTok().getLoc(), "aeabi_feature_and_bits must be marked as optional");
-        return true;
+      Error(Parser.getTok().getLoc(),
+            "aeabi_feature_and_bits must be marked as optional");
+      return true;
     }
   }
   if (ARMBuildAttrs::AEABI_PAUTHABI == SubsectionNameID) {
     if (ARMBuildAttrs::OPTIONAL == IsOptional) {
-        Error(Parser.getTok().getLoc(), "aeabi_pauthabi must be marked as required");
-        return true;
+      Error(Parser.getTok().getLoc(),
+            "aeabi_pauthabi must be marked as required");
+      return true;
     }
   }
   Parser.Lex();
@@ -7874,24 +7882,28 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     StringRef Name = Parser.getTok().getIdentifier();
     Type = ARMBuildAttrs::getTypeID(Name);
     if (ARMBuildAttrs::TYPE_NOT_FOUND == Type) {
-      Error(Parser.getTok().getLoc(), ARMBuildAttrs::getSubsectionTypeUnknownError() + ": " + Name);
+      Error(Parser.getTok().getLoc(),
+            ARMBuildAttrs::getSubsectionTypeUnknownError() + ": " + Name);
       return true;
     }
   } else {
-      Error(Parser.getTok().getLoc(), "Expecitng type parameter");
-      return true;
+    Error(Parser.getTok().getLoc(), "Expecitng type parameter");
+    return true;
   }
   // Check for possible Type unaccepted values for known subsections
-  if (ARMBuildAttrs::AEABI_FEATURE_AND_BITS == SubsectionNameID || ARMBuildAttrs::AEABI_PAUTHABI == SubsectionNameID) {
+  if (ARMBuildAttrs::AEABI_FEATURE_AND_BITS == SubsectionNameID ||
+      ARMBuildAttrs::AEABI_PAUTHABI == SubsectionNameID) {
     if (ARMBuildAttrs::NTBS == Type) {
-        Error(Parser.getTok().getLoc(), SubsectionName + "must be marked as ULEB128");
-        return true;
+      Error(Parser.getTok().getLoc(),
+            SubsectionName + "must be marked as ULEB128");
+      return true;
     }
   }
   Parser.Lex();
   // Parsing finished, check for trailing tokens.
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
-    Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build attributes subsection header directive");
+    Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build "
+                                    "attributes subsection header directive");
     return true;
   }
 
@@ -7914,34 +7926,45 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     TagStr = Parser.getTok().getIdentifier();
     ActiveSubsection = getTargetStreamer().getActiveSubsection();
     if ("" == ActiveSubsection) {
-      Error(Parser.getTok().getLoc(), "no active subsection, build attribute can not be added");
+      Error(Parser.getTok().getLoc(),
+            "no active subsection, build attribute can not be added");
       return true;
     }
-    if(ARMBuildAttrs::VendorName[ARMBuildAttrs::AEABI_PAUTHABI] == ActiveSubsection) {
+    if (ARMBuildAttrs::VendorName[ARMBuildAttrs::AEABI_PAUTHABI] ==
+        ActiveSubsection) {
       ActiveSubsectionID = ARMBuildAttrs::AEABI_PAUTHABI;
       Tag = ARMBuildAttrs::getPauthABITagsID(TagStr);
       if (ARMBuildAttrs::PAUTHABI_TAG_NOT_FOUND == Tag) {
-        Error(Parser.getTok().getLoc(), "Unknown AArch64 build attribute '" + TagStr + "' for subsection '" + ActiveSubsection + "'");
+        Error(Parser.getTok().getLoc(), "Unknown AArch64 build attribute '" +
+                                            TagStr + "' for subsection '" +
+                                            ActiveSubsection + "'");
         return true;
       }
-    } else if(ARMBuildAttrs::VendorName[ARMBuildAttrs::AEABI_FEATURE_AND_BITS] == ActiveSubsection) {
+    } else if (ARMBuildAttrs::VendorName
+                   [ARMBuildAttrs::AEABI_FEATURE_AND_BITS] ==
+               ActiveSubsection) {
       ActiveSubsectionID = ARMBuildAttrs::AEABI_FEATURE_AND_BITS;
       Tag = ARMBuildAttrs::getFeatureAndBitsTagsID(TagStr);
       if (ARMBuildAttrs::FEATURE_AND_BITS_TAG_NOT_FOUND == Tag) {
-        Error(Parser.getTok().getLoc(), "Unknown AArch64 build attribute '" + TagStr + "' for subsection '" + ActiveSubsection + "' \n Hint: options are: Tag_Feature_BTI, Tag_Feature_PAC, Tag_Feature_GCS");
+        Error(Parser.getTok().getLoc(),
+              "Unknown AArch64 build attribute '" + TagStr +
+                  "' for subsection '" + ActiveSubsection +
+                  "' \n Hint: options are: Tag_Feature_BTI, Tag_Feature_PAC, "
+                  "Tag_Feature_GCS");
         return true;
       }
     }
-  // for compatability
-  } else if(Parser.getTok().is(AsmToken::Integer)) {
+    // for compatability
+  } else if (Parser.getTok().is(AsmToken::Integer)) {
     Tag = getTok().getIntVal();
   } else {
-      Error(Parser.getTok().getLoc(), "AArch64 build attributes Tag not found");
-      return true;
+    Error(Parser.getTok().getLoc(), "AArch64 build attributes Tag not found");
+    return true;
   }
   Parser.Lex();
   // consume a comma
-  // parseComma() return *false* on success, and call Lex(), no need to call Lex() again.
+  // parseComma() return *false* on success, and call Lex(), no need to call
+  // Lex() again.
   if (Parser.parseComma()) {
     Error(Parser.getTok().getLoc(), "expected ','");
     return true;
@@ -7952,25 +7975,32 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   if (Parser.getTok().is(AsmToken::Integer)) {
     Value = getTok().getIntVal();
   } else {
-      Error(Parser.getTok().getLoc(), "AArch64 build attributes Value not found");
-      return true;
+    Error(Parser.getTok().getLoc(), "AArch64 build attributes Value not found");
+    return true;
   }
   // Check for possible unaccepted values for known tags
   if (TagStr != "") { // Tag was a recognized string
     if (0 != Value && 1 != Value) {
-      Error(Parser.getTok().getLoc(), "Unknown AArch64 build attributes Value for Tag '" + TagStr + "' \n Hint: options are '0'|'1'");
+      Error(Parser.getTok().getLoc(),
+            "Unknown AArch64 build attributes Value for Tag '" + TagStr +
+                "' \n Hint: options are '0'|'1'");
       return true;
     }
-  // Tag was an integer
-  } else if (0 == Tag || 1 == Tag || 2 == Tag) { // might be at attempt to represent known tags
+    // Tag was an integer
+  } else if (0 == Tag || 1 == Tag ||
+             2 == Tag) { // might be at attempt to represent known tags
     if (0 != Value && 1 != Value) {
-      Warning(Parser.getTok().getLoc(), "Unknown AArch64 build attributes Value for any known AArch64 build attributes tags");
+      Warning(Parser.getTok().getLoc(),
+              "Unknown AArch64 build attributes Value for any known AArch64 "
+              "build attributes tags");
     }
   }
   Parser.Lex();
   // Parsing finished, check for trailing tokens.
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
-    Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build attributes tag and value attribute directive");
+    Error(Parser.getTok().getLoc(),
+          "unexpected token for AArch64 build attributes tag and value "
+          "attribute directive");
     return true;
   }
 

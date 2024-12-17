@@ -31,20 +31,29 @@ StringRef getSubsectionTag();
 StringRef getAttrTag();
 
 /// AArch64 build attributes vendors IDs (a.k.a subsection name)
-enum VendorID : unsigned { AEABI_FEATURE_AND_BITS = 0, AEABI_PAUTHABI = 1, VENDOR_NOT_FOUND = 404 };
-static const StringRef VendorName[] = { "aeabi_feature_and_bits", "aeabi_pauthabi" };
+enum VendorID : unsigned {
+  AEABI_FEATURE_AND_BITS = 0,
+  AEABI_PAUTHABI = 1,
+  VENDOR_NOT_FOUND = 404
+};
+static const StringRef VendorName[] = {"aeabi_feature_and_bits",
+                                       "aeabi_pauthabi"};
 StringRef getVendorName(unsigned const Vendor);
 VendorID getVendorID(StringRef const Vendor);
 StringRef getSubsectionUnknownError();
 
-enum SubsectionOptional : unsigned { REQUIRED = 0, OPTIONAL = 1, OPTIONAL_NOT_FOUND = 404 };
-static const StringRef OptionalStr[] = { "required", "optional"};
+enum SubsectionOptional : unsigned {
+  REQUIRED = 0,
+  OPTIONAL = 1,
+  OPTIONAL_NOT_FOUND = 404
+};
+static const StringRef OptionalStr[] = {"required", "optional"};
 StringRef getOptionalStr(unsigned Optional);
 SubsectionOptional getOptionalID(StringRef Optional);
 StringRef getSubsectionOptionalUnknownError();
 
 enum SubsectionType : unsigned { ULEB128 = 0, NTBS = 1, TYPE_NOT_FOUND = 404 };
-static const StringRef TypeStr[] = { "uleb128", "ntbs" };
+static const StringRef TypeStr[] = {"uleb128", "ntbs"};
 StringRef getTypeStr(unsigned Type);
 SubsectionType getTypeID(StringRef Type);
 StringRef getSubsectionTypeUnknownError();
@@ -54,7 +63,8 @@ enum PauthABITags : unsigned {
   TAG_PAUTH_SCHEMA = 2,
   PAUTHABI_TAG_NOT_FOUND = 404
 };
-static const StringRef PauthABITagsStr[] = { "Tag_PAuth_Platform", "Tag_PAuth_Schema"};
+static const StringRef PauthABITagsStr[] = {"Tag_PAuth_Platform",
+                                            "Tag_PAuth_Schema"};
 StringRef getPauthABITagsStr(unsigned PauthABITag);
 PauthABITags getPauthABITagsID(StringRef PauthABITag);
 StringRef getPauthabiTagError();
@@ -65,7 +75,8 @@ enum FeatureAndBitsTags : unsigned {
   TAG_FEATURE_GCS = 2,
   FEATURE_AND_BITS_TAG_NOT_FOUND = 404
 };
-static const StringRef FeatureAndBitsTagsStr[] = { "Tag_Feature_BTI", "Tag_Feature_PAC", "Tag_Feature_GCS"};
+static const StringRef FeatureAndBitsTagsStr[] = {
+    "Tag_Feature_BTI", "Tag_Feature_PAC", "Tag_Feature_GCS"};
 StringRef getFeatureAndBitsTagsStr(unsigned FeatureAndBitsTag);
 FeatureAndBitsTags getFeatureAndBitsTagsID(StringRef FeatureAndBitsTag);
 StringRef getFeatureAndBitsTagError();

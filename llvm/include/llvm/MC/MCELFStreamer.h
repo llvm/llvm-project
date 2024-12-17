@@ -107,12 +107,14 @@ public:
     unsigned Tag;
     unsigned IntValue;
     std::string StringValue;
-    AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV) : Type(Ty), Tag(Tg), IntValue(IV), StringValue(SV) {}
+    AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
+        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(SV) {}
   };
 
   /// ELF object attributes subsection support
   struct AttributeSubSection {
-    bool IsActive; // Indicates whether the section is the active section, required for assembly parsing
+    bool IsActive; // Indicates whether the section is the active section,
+                   // required for assembly parsing
     // [<uint32: subsection-length> NTBS: vendor-name <bytes: vendor-data>]*
     StringRef VendorName;
     // <uint8: optional> <uint8: parameter type> <attribute>*
