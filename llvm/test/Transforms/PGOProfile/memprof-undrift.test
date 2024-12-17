@@ -13,35 +13,61 @@ HeapProfileRecords:
   - GUID:            _Z3foov
     AllocSites:
       - Callstack:
-          - { Function: _Z3foov, LineOffset: 3, Column: 30, IsInlineFrame: false }
+          - { Function: _Z3foov, LineOffset: 10, Column: 50, IsInlineFrame: true }
+          - { Function: _Z3barv, LineOffset: 20, Column: 30, IsInlineFrame: false }
           - { Function: main, LineOffset: 2, Column: 5, IsInlineFrame: false }
         MemInfoBlock:
-          # With these numbers, llvm::memprof::getAllocType will determine that
-          # the call to new is cold.  See MemoryProfileInfo.cpp for details.
-          TotalSize:                  400
           AllocCount:                 1
-          TotalLifetimeAccessDensity: 1
+          TotalSize:                  400
           TotalLifetime:              1000000
+          TotalLifetimeAccessDensity: 1
     CallSites:       []
+  - GUID:            _Z3barv
+    AllocSites:
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 10, Column: 50, IsInlineFrame: true }
+          - { Function: _Z3barv, LineOffset: 20, Column: 30, IsInlineFrame: false }
+          - { Function: main, LineOffset: 2, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:                 1
+          TotalSize:                  400
+          TotalLifetime:              1000000
+          TotalLifetimeAccessDensity: 1
+    CallSites:
+      - - { Function: _Z3foov, LineOffset: 10, Column: 50, IsInlineFrame: true }
+        - { Function: _Z3barv, LineOffset: 20, Column: 30, IsInlineFrame: false }
 ...
 ;--- memprof_annotate_yaml.ll
 define dso_local ptr @_Z3foov() !dbg !4 {
+; CHECK-LABEL: @_Z3foov
 entry:
   %call = call ptr @_Znam(i64 4) #0, !dbg !5
-; CHECK: call ptr @_Znam(i64 4) #[[ATTR:[0-9]+]],
+; CHECK: = call {{.*}} #[[ATTR:[0-9]+]]
   ret ptr %call
 }
 
-declare ptr @_Znam(i64)
+declare ptr @_Znam(i64 noundef)
+
+define dso_local ptr @_Z3barv() !dbg !6 {
+; CHECK-LABEL: @_Z3barv
+entry:
+  %call.i = call ptr @_Znam(i64 4) #0, !dbg !7
+; CHECK: = call {{.*}} #[[ATTR]]
+  ret ptr %call.i
+}
 
 attributes #0 = { builtin allocsize(0) }
-; CHECK: attributes #[[ATTR]] = {{.*}} "memprof"="cold"
+; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="cold" }
 
+!llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
-!1 = !DIFile(filename: "t", directory: "/")
+!1 = !DIFile(filename: "undrift.cc", directory: "/")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 1, unit: !0)
-!5 = !DILocation(line: 1, column: 22, scope: !4)
+!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 55, unit: !0)
+!5 = !DILocation(line: 55, column: 53, scope: !4)
+!6 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 56, unit: !0)
+!7 = !DILocation(line: 55, column: 53, scope: !4, inlinedAt: !8)
+!8 = distinct !DILocation(line: 56, column: 22, scope: !6)
