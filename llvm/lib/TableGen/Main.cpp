@@ -93,7 +93,7 @@ struct SMCoords {
 
 /// Create preprocessed output for `-E` option.
 static int preprocessInput(raw_ostream &OS) {
-  TGLexer Lex(SrcMgr, {});
+  TGLexer Lex(SrcMgr, MacroNames);
   SMCoords Last;
   bool Any = false;
   while (true) {
