@@ -2151,8 +2151,11 @@ DEF_TRAVERSE_DECL(DecompositionDecl, {
 })
 
 DEF_TRAVERSE_DECL(BindingDecl, {
-  if (getDerived().shouldVisitImplicitCode())
+  if (getDerived().shouldVisitImplicitCode()) {
     TRY_TO(TraverseStmt(D->getBinding()));
+    if (const auto HoldingVar = D->getHoldingVar())
+      TRY_TO(TraverseDecl(HoldingVar));
+  }
 })
 
 DEF_TRAVERSE_DECL(MSPropertyDecl, { TRY_TO(TraverseDeclaratorHelper(D)); })
@@ -4057,6 +4060,12 @@ DEF_TRAVERSE_STMT(OpenACCComputeConstruct,
 DEF_TRAVERSE_STMT(OpenACCLoopConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 DEF_TRAVERSE_STMT(OpenACCCombinedConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCDataConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCEnterDataConstruct, {})
+DEF_TRAVERSE_STMT(OpenACCExitDataConstruct, {})
+DEF_TRAVERSE_STMT(OpenACCHostDataConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 
 // Traverse HLSL: Out argument expression

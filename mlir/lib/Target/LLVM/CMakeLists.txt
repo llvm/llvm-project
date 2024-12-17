@@ -88,6 +88,20 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
       # Link against `nvptxcompiler_static`. TODO: use `CUDA::nvptxcompiler_static`.
       target_link_libraries(MLIRNVVMTarget PRIVATE MLIR_NVPTXCOMPILER_LIB)
       target_include_directories(obj.MLIRNVVMTarget PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+
+      # Add the `nvfatbin` library.
+      find_library(MLIR_NVFATBIN_LIB_PATH nvfatbin_static
+                  PATHS ${CUDAToolkit_LIBRARY_DIR} NO_DEFAULT_PATH)
+      # Fail if `nvfatbin_static` couldn't be found.
+      if(MLIR_NVFATBIN_LIB_PATH STREQUAL "MLIR_NVFATBIN_LIB_PATH-NOTFOUND")
+        message(FATAL_ERROR
+                "Requested using the static `nvptxcompiler` library which requires the \
+                'nvfatbin` library, but it couldn't be found.")
+      endif()
+
+      add_library(MLIR_NVFATBIN_LIB STATIC IMPORTED GLOBAL)
+      set_property(TARGET MLIR_NVFATBIN_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVFATBIN_LIB_PATH})  
+      target_link_libraries(MLIRNVVMTarget PRIVATE MLIR_NVFATBIN_LIB)
     endif()
   else()
     # Fail if `MLIR_ENABLE_NVPTXCOMPILER` is enabled and the toolkit couldn't be found.

@@ -167,7 +167,7 @@ defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
 } // End SchedRW = [WriteIntMul]
 
-let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0, AddedComplexity = 1 in {
 defm V_MINIMUM_F32 : VOP3Inst <"v_minimum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fminimum>>;
 defm V_MAXIMUM_F32 : VOP3Inst <"v_maximum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fmaximum>>;
 defm V_MINIMUM_F16 : VOP3Inst <"v_minimum_f16", VOP3_Profile<VOP_F16_F16_F16>, DivergentBinFrag<fminimum>>;
@@ -177,7 +177,7 @@ let SchedRW = [WriteDoubleAdd] in {
 defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, fminimum>;
 defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaximum>;
 } // End SchedRW = [WriteDoubleAdd]
-} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0, AddedComplexity = 1
 
 } // End isReMaterializable = 1
 
@@ -1014,7 +1014,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
-  let HasFP8DstByteSel = 1;
+  let HasFP4DstByteSel = 1;
 }
 
 def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32, v2f32, i32, f32]>, VOP3_OPSEL> {
@@ -1026,7 +1026,7 @@ def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
-  let HasFP8DstByteSel = 1;
+  let HasFP4DstByteSel = 1;
 }
 
 class VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
@@ -1296,8 +1296,7 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = HasBitOp3Insts  in {
   let isReMaterializable = 1 in {
     defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
-                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i32]>>,
-                                                      VOP3_OPSEL>>;
+                                  VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>;
   }
@@ -1561,7 +1560,7 @@ class MinimumMaximumByMinimum3Maximum3<SDPatternOperator node, ValueType vt,
 >;
 
 // Prefer the real 2 operand form if legal
-let SubtargetPredicate = HasMinimum3Maximum3F32, AddedComplexity = -1000 in {
+let SubtargetPredicate = HasMinimum3Maximum3F32 in {
 def : MinimumMaximumByMinimum3Maximum3<fminimum, f32, V_MINIMUM3_F32_e64>;
 def : MinimumMaximumByMinimum3Maximum3<fmaximum, f32, V_MAXIMUM3_F32_e64>;
 }

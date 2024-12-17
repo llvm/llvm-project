@@ -164,8 +164,6 @@ void CallStackTrie::addCallStack(
   assert(Curr);
   Curr->ContextSizeInfo.insert(Curr->ContextSizeInfo.end(),
                                ContextSizeInfo.begin(), ContextSizeInfo.end());
-  std::vector<ContextTotalSize> AllContextSizeInfo;
-  collectContextSizeInfo(Curr, AllContextSizeInfo);
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {

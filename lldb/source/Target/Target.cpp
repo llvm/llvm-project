@@ -24,6 +24,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/DataFormatters/FormatterSection.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
@@ -63,8 +64,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
-#include "lldb/ValueObject/ValueObject.h"
-#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -1818,6 +1817,8 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     for (size_t idx = 0; idx < num_images; ++idx) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
       LoadScriptingResourceForModule(module_sp, this);
+      LoadTypeSummariesForModule(module_sp);
+      LoadFormattersForModule(module_sp);
     }
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);

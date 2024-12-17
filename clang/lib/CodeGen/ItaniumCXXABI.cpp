@@ -3302,6 +3302,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
       CharUnits Align = CGM.getContext().getDeclAlign(VD);
       Val = Builder.CreateAlignedLoad(Var->getValueType(), Val, Align);
     }
+    Val = Builder.CreateAddrSpaceCast(Val, Wrapper->getReturnType());
 
     Builder.CreateRet(Val);
   }

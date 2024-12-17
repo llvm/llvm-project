@@ -74,7 +74,7 @@ public:
     if (Next == nullptr) {
       X->Next = getEndOfListVal();
     } else {
-      DCHECK_LE(static_cast<LinkTy>(Next - Base), Size);
+      assertElementInRange(Next);
       X->Next = static_cast<LinkTy>(Next - Base);
     }
   }
@@ -88,15 +88,21 @@ public:
   }
   // Set `X->Prev` to `Prev`.
   void setPrev(T *X, T *Prev) const {
-    DCHECK_LT(reinterpret_cast<uptr>(Prev),
-              reinterpret_cast<uptr>(Base + Size));
-    if (Prev == nullptr)
+    if (Prev == nullptr) {
       X->Prev = getEndOfListVal();
-    else
+    } else {
+      assertElementInRange(Prev);
       X->Prev = static_cast<LinkTy>(Prev - Base);
+    }
   }
 
   LinkTy getEndOfListVal() const { return T::EndOfListVal; }
+
+private:
+  void assertElementInRange(T *X) const {
+    DCHECK_GE(reinterpret_cast<uptr>(X), reinterpret_cast<uptr>(Base));
+    DCHECK_LE(static_cast<LinkTy>(X - Base), Size);
+  }
 
 protected:
   T *Base = nullptr;

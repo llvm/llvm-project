@@ -61,6 +61,8 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now rejects ``_Complex _BitInt`` types.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -414,6 +416,12 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
   ``__builtin_elementwise_sub_sat``.
 
+- Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
+  not a power of two, matching preexisting behaviour for vector types.
+
+- Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
+  which allows them to be stored in STL containers.
+
 New Compiler Flags
 ------------------
 
@@ -612,6 +620,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Fix false positives when `[[gsl::Owner/Pointer]]` and `[[clang::lifetimebound]]` are used together.
+
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
 
 - Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
@@ -663,6 +673,15 @@ Improvements to Clang's diagnostics
     class C {
       bool operator==(const C&) = default;
     };
+
+- Clang now emits `-Wdangling-capture` diangostic when a STL container captures a dangling reference.
+
+  .. code-block:: c++
+
+    void test() {
+      std::vector<std::string_view> views;
+      views.push_back(std::string("123")); // warning
+    }
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -810,6 +829,8 @@ Bug Fixes to C++ Support
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
 - Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
+- Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
+  out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

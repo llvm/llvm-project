@@ -3,7 +3,7 @@
 
 !llvm.tysan.globals = !{!0}
 
-!0 = distinct !{ptr undef, !1}
+!0 = distinct !{ptr null, !1}
 !1 = !{!"any pointer", !2, i64 0}
 !2 = !{!"omnipotent char", !3, i64 0}
 !3 = !{!"Simple C/C++ TBAA"}
@@ -28,7 +28,7 @@
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !{ptr undef, [[META1:![0-9]+]]}
+; CHECK: [[META0:![0-9]+]] = distinct !{ptr null, [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"any pointer", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"Simple C/C++ TBAA"}
