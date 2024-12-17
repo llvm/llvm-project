@@ -27,7 +27,7 @@ Characteristics
     vendor).
 
 Important notes
-----------------
+---------------
 
 * There is no concrete implementation of a Telemetry library in upstream LLVM.
   We only provide the abstract API here. Any tool that wants telemetry will
