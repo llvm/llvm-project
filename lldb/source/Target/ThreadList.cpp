@@ -528,12 +528,13 @@ bool ThreadList::WillResume() {
   bool wants_solo_run = false;
 
   for (pos = m_threads.begin(); pos != end; ++pos) {
-    lldbassert((*pos)->GetCurrentPlan() &&
+    ThreadSP thread_sp(*pos);
+    lldbassert(thread_sp->GetCurrentPlan() &&
                "thread should not have null thread plan");
-    if ((*pos)->GetResumeState() != eStateSuspended &&
-        (*pos)->GetCurrentPlan()->StopOthers()) {
-      if ((*pos)->IsOperatingSystemPluginThread() &&
-          !(*pos)->GetBackingThread())
+    if (thread_sp->GetResumeState() != eStateSuspended &&
+        thread_sp->GetCurrentPlan()->StopOthers()) {
+      if (thread_sp->IsOperatingSystemPluginThread() &&
+          !thread_sp->GetBackingThread())
         continue;
       wants_solo_run = true;
       break;
@@ -546,12 +547,13 @@ bool ThreadList::WillResume() {
   // others, only call setup on the threads that request StopOthers...
 
   for (pos = m_threads.begin(); pos != end; ++pos) {
-    if ((*pos)->GetResumeState() != eStateSuspended &&
-        (!wants_solo_run || (*pos)->GetCurrentPlan()->StopOthers())) {
-      if ((*pos)->IsOperatingSystemPluginThread() &&
-          !(*pos)->GetBackingThread())
+    ThreadSP thread_sp(*pos);
+    if (thread_sp->GetResumeState() != eStateSuspended &&
+        (!wants_solo_run || thread_sp->GetCurrentPlan()->StopOthers())) {
+      if (thread_sp->IsOperatingSystemPluginThread() &&
+          !thread_sp->GetBackingThread())
         continue;
-      (*pos)->SetupForResume();
+      thread_sp->SetupForResume();
     }
   }
 
@@ -574,8 +576,8 @@ bool ThreadList::WillResume() {
     ThreadSP thread_sp(*pos);
     if (thread_sp->GetResumeState() != eStateSuspended &&
         thread_sp->GetCurrentPlan()->StopOthers()) {
-      if ((*pos)->IsOperatingSystemPluginThread() &&
-          !(*pos)->GetBackingThread())
+      if (thread_sp->IsOperatingSystemPluginThread() &&
+          !thread_sp->GetBackingThread())
         continue;
 
       // You can't say "stop others" and also want yourself to be suspended.
