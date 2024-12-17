@@ -1573,11 +1573,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
   }
 
-  for (VPRecipeBase *R : ToErase)
+  for (VPRecipeBase *R : reverse(ToErase)) {
+    SmallVector<VPValue *> PossiblyDead(R->operands());
     R->eraseFromParent();
-
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan))
-    recursivelyDeleteDeadRecipes(HeaderMask);
+    for (VPValue *Op : PossiblyDead)
+      recursivelyDeleteDeadRecipes(Op);
+  }
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
