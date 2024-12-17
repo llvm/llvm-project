@@ -10,8 +10,8 @@ void foo() {
 #pragma acc data default(none)
   ;
 
-// CHECK: #pragma acc data device_type(int)
-#pragma acc data device_type(int)
+// CHECK: #pragma acc data default(none) device_type(int)
+#pragma acc data default(none) device_type(int)
   ;
 
 // CHECK: #pragma acc enter data copyin(Var)
