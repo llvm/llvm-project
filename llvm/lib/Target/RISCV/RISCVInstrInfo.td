@@ -493,7 +493,15 @@ def LeadingOnesMask : PatLeaf<(imm), [{
   if (!N->hasOneUse())
     return false;
   return !isInt<32>(N->getSExtValue()) && isMask_64(~N->getSExtValue());
-}], TrailingZeros>;
+}], TrailingZeros> {
+  let GISelPredicateCode = [{
+    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
+      return false;
+    const auto &MO = MI.getOperand(1);
+    return !isInt<32>(MO.getCImm()->getSExtValue()) && 
+           isMask_64(~MO.getCImm()->getSExtValue());
+  }];
+}
 
 def TrailingOnesMask : PatLeaf<(imm), [{
   if (!N->hasOneUse())
@@ -520,7 +528,17 @@ def LeadingOnesWMask : PatLeaf<(imm), [{
   int64_t Imm = N->getSExtValue();
   return !isInt<32>(Imm) && isUInt<32>(Imm) && isShiftedMask_64(Imm) &&
          Imm != UINT64_C(0xffffffff);
-}], TrailingZeros>;
+}], TrailingZeros> {
+  let GISelPredicateCode = [{
+    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
+      return false;
+    const auto &MO = MI.getOperand(1);
+    int64_t Imm = MO.getCImm()->getSExtValue();
+    return !isInt<32>(Imm) && isUInt<32>(Imm) && isShiftedMask_64(Imm) &&
+           Imm != UINT64_C(0xffffffff);
+  }];
+
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats

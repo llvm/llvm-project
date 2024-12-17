@@ -1707,7 +1707,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   Value *TrueVal = I.getTrueValue();
   Value *FalseVal = I.getFalseValue();
   Value *CmpVal;
-  FCmpInst::Predicate Pred;
+  CmpPredicate Pred;
 
   if (ST.has16BitInsts() && needsPromotionToI32(I.getType())) {
     if (UA.isUniform(&I))
