@@ -260,4 +260,33 @@ void test8() {
   const decltype(nullptr) & nullptrCRef = nullptr;
 }
 
+class G {};
+union H {};
+
+G fG();
+H fH();
+
+enum class I : int {};
+enum J { J_ONE = 1, };
+
+void fGRef(G&);
+void fHRef(H&);
+
+void test9() {
+  G& g1 = fG();
+  const G& g2 = fG();
+
+  H& h1 = fH();
+  const H& h2 = fH();
+
+  fGRef(fG());
+  fHRef(fH());
+
+  I& i1 = I{ 1 }; // expected-error{{non-const lvalue reference to type 'I' cannot bind to a temporary of type 'I'}}
+  const I& i2 = I{ 1 };
+
+  J& j1 = J_ONE; // expected-error{{non-const lvalue reference to type 'J' cannot bind to a temporary of type 'J'}}
+  const J& j2 = J_ONE;
+}
+
 #endif
