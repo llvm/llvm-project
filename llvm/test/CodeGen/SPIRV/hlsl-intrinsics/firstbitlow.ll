@@ -76,8 +76,8 @@ entry:
   ret i32 %elt.firstbitlow
 }
 
-; CHECK-LABEL: Begin function firstbitlow_v2i16
-define noundef <2 x i32> @firstbitlow_v2i16(<2 x i16> noundef %a) {
+; CHECK-LABEL: Begin function firstbitlow_v2xi16
+define noundef <2 x i32> @firstbitlow_v2xi16(<2 x i16> noundef %a) {
 entry:
 ; CHECK: [[a16:%.+]] = OpFunctionParameter [[u16x2_t]]
 ; CHECK: [[a32:%.+]] = OpUConvert [[u32x2_t]] [[a16]]
@@ -126,8 +126,8 @@ entry:
   ret i32 %elt.firstbitlow
 }
 
-; CHECK-LABEL: Begin function firstbitlow_v2i64
-define noundef <2 x i32> @firstbitlow_v2i64(<2 x i64> noundef %a) {
+; CHECK-LABEL: Begin function firstbitlow_v2xi64
+define noundef <2 x i32> @firstbitlow_v2xi64(<2 x i64> noundef %a) {
 entry:
 ; CHECK: [[a64x2:%.+]] = OpFunctionParameter [[u64x2_t]]
 ; CHECK: [[a32x4:%.+]] = OpBitcast [[u32x4_t]] [[a64x2]]
@@ -143,8 +143,8 @@ entry:
   ret <2 x i32> %elt.firstbitlow
 }
 
-; CHECK-LABEL: Begin function firstbitlow_v3i64
-define noundef <3 x i32> @firstbitlow_v3i64(<3 x i64> noundef %a) {
+; CHECK-LABEL: Begin function firstbitlow_v3xi64
+define noundef <3 x i32> @firstbitlow_v3xi64(<3 x i64> noundef %a) {
 entry:
 ; Split the i64x3 into i64, i64x2
 ; CHECK: [[a:%.+]] = OpFunctionParameter [[u64x3_t]]
@@ -177,8 +177,8 @@ entry:
   ret <3 x i32> %elt.firstbitlow
 }
 
-; CHECK-LABEL: Begin function firstbitlow_v4i64
-define noundef <4 x i32> @firstbitlow_v4i64(<4 x i64> noundef %a) {
+; CHECK-LABEL: Begin function firstbitlow_v4xi64
+define noundef <4 x i32> @firstbitlow_v4xi64(<4 x i64> noundef %a) {
 entry:
 ; Split the i64x4 into 2 i64x2
 ; CHECK: [[a:%.+]] = OpFunctionParameter [[u64x4_t]]
