@@ -335,12 +335,10 @@ public:
   /// chain of loads or stores within same block) operations set when lowered.
   /// \p AccessTy is the type of the loads/stores that will ultimately use the
   /// \p Ptrs.
-  InstructionCost
-  getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
-                       const PointersChainInfo &Info, Type *AccessTy,
-                       TargetCostKind CostKind = TTI::TCK_RecipThroughput
-
-  ) const;
+  InstructionCost getPointersChainCost(
+      ArrayRef<const Value *> Ptrs, const Value *Base,
+      const PointersChainInfo &Info, Type *AccessTy,
+      TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
@@ -615,6 +613,9 @@ public:
     unsigned MaxIterationsCountToAnalyze;
     /// Don't disable runtime unroll for the loops which were vectorized.
     bool UnrollVectorizedLoop = false;
+    /// Don't allow runtime unrolling if expanding the trip count takes more
+    /// than SCEVExpansionBudget.
+    unsigned SCEVExpansionBudget;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
@@ -909,11 +910,13 @@ public:
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
-  /// extracted from vectors.
+  /// extracted from vectors.  The involved values may be passed in VL if
+  /// Insert is true.
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind) const;
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
@@ -2001,10 +2004,10 @@ public:
                                                   unsigned ScalarOpdIdx) = 0;
   virtual bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
                                                       int ScalarOpdIdx) = 0;
-  virtual InstructionCost getScalarizationOverhead(VectorType *Ty,
-                                                   const APInt &DemandedElts,
-                                                   bool Insert, bool Extract,
-                                                   TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                           bool Insert, bool Extract, TargetCostKind CostKind,
+                           ArrayRef<Value *> VL = {}) = 0;
   virtual InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                    ArrayRef<Type *> Tys,
@@ -2585,9 +2588,10 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TargetCostKind CostKind) override {
+                                           TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) override {
     return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                         CostKind);
+                                         CostKind, VL);
   }
   InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,

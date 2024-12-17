@@ -205,6 +205,16 @@ ProgramStateRef ProgramState::killBinding(Loc LV) const {
   return makeWithStore(newStore);
 }
 
+/// We should never form a MemRegion that would wrap a TypedValueRegion of a
+/// reference type. What we actually wanted was to create a MemRegion refering
+/// to the pointee of that reference.
+SVal ProgramState::desugarReference(SVal Val) const {
+  const auto *TyReg = dyn_cast_or_null<TypedValueRegion>(Val.getAsRegion());
+  if (!TyReg || !TyReg->getValueType()->isReferenceType())
+    return Val;
+  return getSVal(TyReg);
+}
+
 /// SymbolicRegions are expected to be wrapped by an ElementRegion as a
 /// canonical representation. As a canonical representation, SymbolicRegions
 /// should be wrapped by ElementRegions before getting a FieldRegion.
@@ -445,12 +455,14 @@ void ProgramState::setStore(const StoreRef &newStore) {
 }
 
 SVal ProgramState::getLValue(const FieldDecl *D, SVal Base) const {
+  Base = desugarReference(Base);
   Base = wrapSymbolicRegion(Base);
   return getStateManager().StoreMgr->getLValueField(D, Base);
 }
 
 SVal ProgramState::getLValue(const IndirectFieldDecl *D, SVal Base) const {
   StoreManager &SM = *getStateManager().StoreMgr;
+  Base = desugarReference(Base);
   Base = wrapSymbolicRegion(Base);
 
   // FIXME: This should work with `SM.getLValueField(D->getAnonField(), Base)`,

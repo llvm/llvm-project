@@ -5,4 +5,4 @@ define void @memcpy() #0 {
   ret void
 }
 
-attributes #0 = { "target-features"="-bulk-memory" }
+attributes #0 = { "target-features"="-bulk-memory,-bulk-memory-opt" }

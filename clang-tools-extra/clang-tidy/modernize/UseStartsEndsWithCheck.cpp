@@ -20,11 +20,15 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 static bool isNegativeComparison(const Expr *ComparisonExpr) {
-  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(ComparisonExpr))
-    return BO->getOpcode() == BO_NE;
+  if (const auto *Op = llvm::dyn_cast<BinaryOperator>(ComparisonExpr))
+    return Op->getOpcode() == BO_NE;
 
   if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr))
     return Op->getOperator() == OO_ExclaimEqual;
+
+  if (const auto *Op =
+          llvm::dyn_cast<CXXRewrittenBinaryOperator>(ComparisonExpr))
+    return Op->getOperator() == BO_NE;
 
   return false;
 }
@@ -185,7 +189,7 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
 
   // Case 6: X.substr(0, LEN(Y)) [!=]= Y -> starts_with.
   Finder->addMatcher(
-      cxxOperatorCallExpr(
+      binaryOperation(
           hasAnyOperatorName("==", "!="),
           hasOperands(
               expr().bind("needle"),

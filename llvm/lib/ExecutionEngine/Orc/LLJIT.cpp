@@ -1006,7 +1006,7 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     : DL(std::move(*S.DL)), TT(S.JTMB->getTargetTriple()) {
 
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
 
   assert(!(S.EPC && S.ES) && "EPC and ES should not both be set");
 

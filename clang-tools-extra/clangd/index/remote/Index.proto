@@ -131,3 +131,21 @@ message Relation {
   optional string subject_id = 1;
   optional Symbol object = 2;
 }
+
+message ContainedRefsRequest {
+  optional string id = 1;
+  optional uint32 limit = 2;
+}
+
+message ContainedRefsReply {
+  oneof kind {
+    ContainedRef stream_result = 1;
+    FinalResult final_result = 2;
+  }
+}
+
+message ContainedRef {
+  optional SymbolLocation location = 1;
+  optional uint32 kind = 2;
+  optional string symbol = 3;
+}

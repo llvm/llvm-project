@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
-#define _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -46,4 +46,4 @@ using __make_32_64_or_128_bit_t =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H

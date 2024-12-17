@@ -87,7 +87,7 @@ TestClient::launchCustom(StringRef Log, bool disable_stdio,
   const std::string &LocalhostIP = *LocalhostIPOrErr;
 
   Status status;
-  TCPSocket listen_socket(true, false);
+  TCPSocket listen_socket(true);
   status = listen_socket.Listen(LocalhostIP + ":0", 5);
   if (status.Fail())
     return status.ToError();

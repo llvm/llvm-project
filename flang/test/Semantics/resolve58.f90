@@ -69,12 +69,12 @@ subroutine s6()
 
   !ERROR: Implied-shape array 'local1' must be a named constant or a dummy argument
   real, dimension (*) :: local1
-  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
   real, intent(in) :: local2
-  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
   procedure(), intent(in) :: p1
-  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
   real, optional :: local3
-  !ERROR: Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
   procedure(), optional :: p2
 end subroutine

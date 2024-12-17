@@ -155,7 +155,7 @@ body:             |
     ; CHECK: liveins: $q0, $q1, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $q1 = LDRQui renamable $x1, 1 :: (load (s128))
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1 :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1, implicit $w1_hi :: (load (s128))
     ; CHECK-NEXT: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: RET undef $lr
     renamable $q1 = LDRQui renamable $x1, 1 :: (load (s128))
@@ -246,7 +246,7 @@ body:             |
     ; CHECK-LABEL: name: 9-ldrspre-ldrsui-mod-base-reg-no-merge
     ; CHECK: liveins: $s0, $s1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: dead early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: renamable $x1 = LDRXui renamable $x0, 1 :: (load (s64))
     ; CHECK-NEXT: renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
     ; CHECK-NEXT: STPSi renamable $s0, renamable $s1, renamable $x1, 0 :: (store (s32))
@@ -280,7 +280,7 @@ body:             |
     ; CHECK-LABEL: name: 10-ldrspre-ldrsui-used-base-reg-no-merge
     ; CHECK: liveins: $s0, $s1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: renamable $x0 = LDRXui renamable $x1, 1 :: (load (s64))
     ; CHECK-NEXT: STRXui renamable $x0, renamable $x0, 1 :: (store (s64))
     ; CHECK-NEXT: renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
@@ -315,12 +315,12 @@ body:             |
     ; CHECK-LABEL: name: 11-ldrqpre-ldrqpre-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1 :: (load (s128))
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 1, implicit $w1 :: (load (s128))
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1 :: (load (s128))
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 12, implicit $w1 :: (load (s128))
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1 :: (load (s128))
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q1 = LDRQpre renamable $x1, 16, implicit $w1 :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1, implicit $w1_hi :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 1, implicit $w1, implicit $w1_hi :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1, implicit $w1_hi :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 12, implicit $w1, implicit $w1_hi :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1, implicit $w1_hi :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q1 = LDRQpre renamable $x1, 16, implicit $w1, implicit $w1_hi :: (load (s128))
     ; CHECK-NEXT: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 48 :: (load (s128))
@@ -352,7 +352,7 @@ body:             |
     ; CHECK-LABEL: name: 12-ldrspre-ldrsui-no-merge
     ; CHECK: liveins: $s0, $s1, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: renamable $s1 = LDRSui renamable $x1, 2 :: (load (s32))
     ; CHECK-NEXT: STPSi renamable $s0, renamable $s1, renamable $x1, 0 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -383,7 +383,7 @@ body:             |
     ; CHECK-LABEL: name: 13-ldrqpre-ldrdui-no-merge
     ; CHECK: liveins: $d1, $q0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1, implicit $w1_hi :: (load (s128))
     ; CHECK-NEXT: renamable $d1 = LDRDui renamable $x1, 1 :: (load (s64))
     ; CHECK-NEXT: STRQui renamable $q0, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: STRDui renamable $d1, renamable $x1, 1 :: (store (s64))
@@ -415,7 +415,7 @@ body:             |
     ; CHECK-LABEL: name: 14-ldrqpre-strqui-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1, implicit $w1_hi :: (load (s128))
     ; CHECK-NEXT: STRQui renamable $q0, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))
@@ -473,7 +473,7 @@ body:             |
     ; CHECK-LABEL: name: 16-ldrqpre-ldrqui-diff-base-reg-no-merge
     ; CHECK: liveins: $q0, $q1, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1, implicit $w1_hi :: (load (s128))
     ; CHECK-NEXT: renamable $q1 = LDRQui renamable $x2, 1 :: (load (s128))
     ; CHECK-NEXT: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: RET undef $lr
@@ -534,7 +534,7 @@ body:             |
     ; CHECK-LABEL: name: 18-ldrqpre-ldurqi-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1, implicit $w1_hi :: (load (s128))
     ; CHECK-NEXT: renamable $q1 = LDURQi renamable $x1, 1 :: (load (s128))
     ; CHECK-NEXT: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: RET undef $lr
@@ -587,7 +587,7 @@ body:             |
     ; CHECK-LABEL: name: 20-ldrspre-ldrsui-unaligned-no-merge
     ; CHECK: liveins: $s0, $s1, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 251, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 251, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
     ; CHECK-NEXT: STPSi renamable $s0, renamable $s1, renamable $x1, 0 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -667,7 +667,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
     renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
@@ -694,7 +694,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $x2 = LDURSWi renamable $x1, 4 :: (load (s32))
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
     renamable $x2 = LDURSWi renamable $x1, 4 :: (load (s32))
@@ -720,12 +720,12 @@ body:             |
     ; CHECK-LABEL: name: 25-ldrswpre-ldrswpre-no-merge
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x0 = LDRSWpre renamable $x1, 48, implicit $w1 :: (load (s32))
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x2 = LDRSWpre renamable $x1, 1, implicit $w1 :: (load (s32))
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x0 = LDRSWpre renamable $x1, 16, implicit $w1 :: (load (s32))
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x2 = LDRSWpre renamable $x1, 12, implicit $w1 :: (load (s32))
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 16, implicit $w1 :: (load (s32))
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x2 = LDRSWpre renamable $x1, 16, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x0 = LDRSWpre renamable $x1, 48, implicit $w1, implicit $w1_hi :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x2 = LDRSWpre renamable $x1, 1, implicit $w1, implicit $w1_hi :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x0 = LDRSWpre renamable $x1, 16, implicit $w1, implicit $w1_hi :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $x2 = LDRSWpre renamable $x1, 12, implicit $w1, implicit $w1_hi :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 16, implicit $w1, implicit $w1_hi :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x2 = LDRSWpre renamable $x1, 16, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 48 :: (load (s32))
@@ -755,8 +755,8 @@ body:             |
     ; CHECK-LABEL: name: 26-ldrswpre-ldrwui-no-merge
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
-    ; CHECK-NEXT: renamable $w2 = LDRWui renamable $x1, 1, implicit-def $x2 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1, implicit $w1_hi :: (load (s32))
+    ; CHECK-NEXT: renamable $w2 = LDRWui renamable $x1, 1, implicit-def $x2, implicit $w2_hi :: (load (s32))
     ; CHECK-NEXT: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 40 :: (load (s32))
@@ -782,7 +782,7 @@ body:             |
     ; CHECK-LABEL: name: 27-ldrwpre-ldrswui-no-merge
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, renamable $w0 = LDRWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x1, renamable $w0 = LDRWpre renamable $x1, 40, implicit $w1, implicit $w1_hi :: (load (s32))
     ; CHECK-NEXT: renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
     ; CHECK-NEXT: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
@@ -808,9 +808,9 @@ body:             |
     ; CHECK-LABEL: name: 28-ldrswpre-ldrwpre-no-merge
     ; CHECK: liveins: $x11, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $x10 = LDRSWpre renamable $x11, 8, implicit $w11 :: (load (s32), align 8)
+    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $x10 = LDRSWpre renamable $x11, 8, implicit $w11, implicit $w11_hi :: (load (s32), align 8)
     ; CHECK-NEXT: $x14 = EORXrs renamable $x11, renamable $x13, 0
-    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $w12 = LDRWpre renamable $x11, 4, implicit $w11 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $w12 = LDRWpre renamable $x11, 4, implicit $w11, implicit $w11_hi :: (load (s32))
     ; CHECK-NEXT: $x13 = EORXrs renamable $x11, renamable $x13, 0
     ; CHECK-NEXT: STPXi renamable $x13, renamable $x14, renamable $x11, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
@@ -838,9 +838,9 @@ body:             |
     ; CHECK-LABEL: name: 29-ldrwpre-ldrswpre-no-merge
     ; CHECK: liveins: $x11, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $w12 = LDRWpre renamable $x11, 8, implicit $w11 :: (load (s32))
+    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $w12 = LDRWpre renamable $x11, 8, implicit $w11, implicit $w11_hi :: (load (s32))
     ; CHECK-NEXT: $x14 = EORXrs renamable $x11, renamable $x13, 0
-    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $x10 = LDRSWpre renamable $x11, 4, implicit $w11 :: (load (s32), align 8)
+    ; CHECK-NEXT: early-clobber renamable $x11, dead renamable $x10 = LDRSWpre renamable $x11, 4, implicit $w11, implicit $w11_hi :: (load (s32), align 8)
     ; CHECK-NEXT: $x13 = EORXrs renamable $x11, renamable $x13, 0
     ; CHECK-NEXT: STPXi renamable $x13, renamable $x14, renamable $x11, 0 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr

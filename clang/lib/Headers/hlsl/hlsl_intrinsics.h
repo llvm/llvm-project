@@ -2241,6 +2241,15 @@ float4 trunc(float4);
 // Wave* builtins
 //===----------------------------------------------------------------------===//
 
+/// \brief Returns true if the expression is true in all active lanes in the
+/// current wave.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return True if the expression is true in all lanes.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_true)
+__attribute__((convergent)) bool WaveActiveAllTrue(bool Val);
+
 /// \brief Returns true if the expression is true in any active lane in the
 /// current wave.
 ///
@@ -2480,6 +2489,18 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float3 radians(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float4 radians(float4);
+
+//===----------------------------------------------------------------------===//
+// GroupMemoryBarrierWithGroupSync builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void GroupMemoryBarrierWithGroupSync(void)
+/// \brief Blocks execution of all threads in a group until all group shared
+/// accesses have been completed and all threads in the group have reached this
+/// call.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
+void GroupMemoryBarrierWithGroupSync(void);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

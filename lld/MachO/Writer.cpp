@@ -409,6 +409,31 @@ private:
   StringRef path;
 };
 
+class LCSubClient final : public LoadCommand {
+public:
+  explicit LCSubClient(StringRef client) : client(client) {}
+
+  uint32_t getSize() const override {
+    return alignToPowerOf2(sizeof(sub_client_command) + client.size() + 1,
+                           target->wordSize);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<sub_client_command *>(buf);
+    buf += sizeof(sub_client_command);
+
+    c->cmd = LC_SUB_CLIENT;
+    c->cmdsize = getSize();
+    c->client = sizeof(sub_client_command);
+
+    memcpy(buf, client.data(), client.size());
+    buf[client.size()] = '\0';
+  }
+
+private:
+  StringRef client;
+};
+
 class LCDyldEnv final : public LoadCommand {
 public:
   explicit LCDyldEnv(StringRef name) : name(name) {}
@@ -822,6 +847,8 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
                                             config->dylibCompatibilityVersion,
                                             config->dylibCurrentVersion));
+    for (StringRef client : config->allowableClients)
+      in.header->addLoadCommand(make<LCSubClient>(client));
     break;
   case MH_BUNDLE:
     break;

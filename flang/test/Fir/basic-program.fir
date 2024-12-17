@@ -106,11 +106,17 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: BoxedProcedurePass
 
-// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT:  'fir.global' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
 // PASSES-NEXT:  'func.func' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
+// PASSES-NEXT:  'gpu.module' Pipeline
+// PASSES-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
+// PASSES-NEXT:   'func.func' Pipeline 
+// PASSES-NEXT:   AbstractResultOpt
+// PASSES-NEXT:   'gpu.func' Pipeline 
+// PASSES-NEXT:   AbstractResultOpt
 // PASSES-NEXT:  'omp.declare_reduction' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
 // PASSES-NEXT:  'omp.private' Pipeline
@@ -120,6 +126,8 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
 // PASSES-NEXT: TargetRewrite
 // PASSES-NEXT: CompilerGeneratedNamesConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:  FunctionAttr
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
 // PASSES-NEXT: LLVMIRLoweringPass

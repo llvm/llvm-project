@@ -204,7 +204,7 @@ namespace cwg1330 { // cwg1330: 4 c++11
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*af2)() throw() = &A::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (cwg1330::A::*)() throw()' with an rvalue of type 'void (cwg1330::A::*)() throw(T)': different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an rvalue of type 'void (cwg1330::A::*)() throw(T)': different exception specifications}}
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(A().g()), "");
