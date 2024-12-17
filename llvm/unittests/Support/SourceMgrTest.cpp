@@ -39,6 +39,13 @@ public:
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
                     const Twine &Msg, ArrayRef<SMRange> Ranges,
                     ArrayRef<SMFixIt> FixIts) {
+    // Check that we can round-trip from SMLoc to buffer ID, line and column
+    // number and back.
+    unsigned BufferID = SM.FindBufferContainingLoc(Loc);
+    auto [LineNo, ColNo] = SM.getLineAndColumn(Loc, BufferID);
+    EXPECT_EQ(Loc, SM.FindLocForLineAndColumn(BufferID, LineNo, ColNo));
+
+    Output.clear();
     raw_string_ostream OS(Output);
     SM.PrintMessage(OS, Loc, Kind, Msg, Ranges, FixIts);
   }
@@ -193,6 +200,40 @@ TEST_F(SourceMgrTest, LocationOnEOLOfSecondSecondLineOfMultiline) {
   EXPECT_EQ("file.in:2:5: error: message\n"
             "6789\n"
             "    ^\n",
+            Output);
+}
+
+TEST_F(SourceMgrTest, MixedLineEndings) {
+  setMainBuffer("CR\rLF\nCRLF\r\nLFCR\n\rEND", "file.in");
+
+  printMessage(getLoc(0), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:1:1: error: message\n"
+            "CR\n"
+            "^\n",
+            Output);
+
+  printMessage(getLoc(3), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:2:1: error: message\n"
+            "LF\n"
+            "^\n",
+            Output);
+
+  printMessage(getLoc(6), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:3:1: error: message\n"
+            "CRLF\n"
+            "^\n",
+            Output);
+
+  printMessage(getLoc(12), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:4:1: error: message\n"
+            "LFCR\n"
+            "^\n",
+            Output);
+
+  printMessage(getLoc(18), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:5:1: error: message\n"
+            "END\n"
+            "^\n",
             Output);
 }
 
