@@ -112,8 +112,7 @@ static int preprocessInput(raw_ostream &OS) {
       OS << '\n';
       // Indent the first token on a line to its original indentation, to make
       // the output look pretty.
-      for (unsigned I = 1; I < This.Col; ++I)
-        OS << ' ';
+      OS.indent(This.Col - 1);
     }
 
     const char *Start = Lex.getLoc().getPointer();
