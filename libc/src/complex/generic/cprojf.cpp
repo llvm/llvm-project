@@ -1,4 +1,4 @@
-//===-- Implementation of conjl function ----------------------------------===//
+//===-- Implementation of cprojf function ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/complex/conjl.h"
+#include "src/complex/cprojf.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(_Complex long double, conjl, (_Complex long double x)) {
-  return conjugate<_Complex long double>(x);
+LLVM_LIBC_FUNCTION(_Complex float, cprojf, (_Complex float x)) {
+  return project<_Complex float>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
