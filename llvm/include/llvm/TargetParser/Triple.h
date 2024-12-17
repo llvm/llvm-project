@@ -194,7 +194,8 @@ public:
     SUSE,
     OpenEmbedded,
     Swift,
-    LastVendorType = Swift
+    Intel,
+    LastVendorType = Intel
   };
   enum OSType {
     UnknownOS,
