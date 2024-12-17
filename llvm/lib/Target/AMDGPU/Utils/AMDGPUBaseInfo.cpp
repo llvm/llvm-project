@@ -581,7 +581,7 @@ bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 #if LLPC_BUILD_NPI
 bool isVOPMAsmOnly(unsigned Opc) { return isVOPMAsmOnlyOpcodeHelper(Opc); }
 
-bool isVOPMPseudo(unsigned Opc) { return isVOPMPsuedoOpcodeHelper(Opc); }
+bool isVOPMPseudo(unsigned Opc) { return isVOPMPseudoOpcodeHelper(Opc); }
 
 #endif /* LLPC_BUILD_NPI */
 bool getMAIIsDGEMM(unsigned Opc) {

@@ -138,7 +138,7 @@ MODULE_PASS("rel-lookup-table-converter", RelLookupTableConverterPass())
 MODULE_PASS("rewrite-statepoints-for-gc", RewriteStatepointsForGC())
 MODULE_PASS("rewrite-symbols", RewriteSymbolPass())
 MODULE_PASS("rpo-function-attrs", ReversePostOrderFunctionAttrsPass())
-MODULE_PASS("rtsan-module", ModuleRealtimeSanitizerPass())
+MODULE_PASS("rtsan", RealtimeSanitizerPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("sancov-module", SanitizerCoveragePass())
 MODULE_PASS("sanmd-module", SanitizerBinaryMetadataPass())
@@ -620,10 +620,6 @@ FUNCTION_PASS_WITH_PARAMS(
       return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
     },
     parseWinEHPrepareOptions, "demote-catchswitch-only")
-FUNCTION_PASS_WITH_PARAMS(
-    "rtsan", "RealtimeSanitizerPass",
-    [](RealtimeSanitizerOptions Opts) { return RealtimeSanitizerPass(Opts); },
-    parseRtSanPassOptions, "")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

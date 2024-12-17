@@ -61,8 +61,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
         VPValue *Step =
             vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-        NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step,
-                                                      &Plan->getVF(), *II);
+        NewRecipe = new VPWidenIntOrFpInductionRecipe(
+            Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
@@ -1059,6 +1059,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
+    return R.getVPSingleValue()->replaceAllUsesWith(A);
+
+  if (match(&R, m_Not(m_Not(m_VPValue(A)))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 

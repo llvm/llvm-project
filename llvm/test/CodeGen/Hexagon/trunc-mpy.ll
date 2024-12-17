@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-hexagon-peephole < %s  | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hexagon-peephole < %s | FileCheck %s
 
 ; Test that we're generating a 32-bit multiply high instead of a 64-bit version,
 ; when using the high 32-bits only.

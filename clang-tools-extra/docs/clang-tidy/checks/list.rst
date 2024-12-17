@@ -115,8 +115,8 @@ Clang-Tidy Checks
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
    :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,
    :doc:`bugprone-no-escape <bugprone/no-escape>`,
-   :doc:`bugprone-nondeterministic-pointer-iteration-order <bugprone/nondeterministic-pointer-iteration-order>`,
    :doc:`bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion>`,
+   :doc:`bugprone-nondeterministic-pointer-iteration-order <bugprone/nondeterministic-pointer-iteration-order>`,
    :doc:`bugprone-not-null-terminated-result <bugprone/not-null-terminated-result>`, "Yes"
    :doc:`bugprone-optional-value-conversion <bugprone/optional-value-conversion>`, "Yes"
    :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
@@ -514,6 +514,7 @@ Check aliases
    :doc:`clang-analyzer-security.insecureAPI.bcmp <clang-analyzer/security.insecureAPI.bcmp>`, `Clang Static Analyzer security.insecureAPI.bcmp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp>`_,
    :doc:`clang-analyzer-security.insecureAPI.bcopy <clang-analyzer/security.insecureAPI.bcopy>`, `Clang Static Analyzer security.insecureAPI.bcopy <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcopy>`_,
    :doc:`clang-analyzer-security.insecureAPI.bzero <clang-analyzer/security.insecureAPI.bzero>`, `Clang Static Analyzer security.insecureAPI.bzero <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bzero>`_,
+   :doc:`clang-analyzer-security.insecureAPI.decodeValueOfObjCType <clang-analyzer/security.insecureAPI.decodeValueOfObjCType>`, Clang Static Analyzer security.insecureAPI.decodeValueOfObjCType,
    :doc:`clang-analyzer-security.insecureAPI.getpw <clang-analyzer/security.insecureAPI.getpw>`, `Clang Static Analyzer security.insecureAPI.getpw <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-getpw>`_,
    :doc:`clang-analyzer-security.insecureAPI.gets <clang-analyzer/security.insecureAPI.gets>`, `Clang Static Analyzer security.insecureAPI.gets <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-gets>`_,
    :doc:`clang-analyzer-security.insecureAPI.mkstemp <clang-analyzer/security.insecureAPI.mkstemp>`, `Clang Static Analyzer security.insecureAPI.mkstemp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-mkstemp>`_,

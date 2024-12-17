@@ -965,7 +965,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
     }
 
-    CmpInst::Predicate SrcPred;
+    CmpPredicate SrcPred;
     Value *SrcLHS;
     Value *SrcRHS;
 

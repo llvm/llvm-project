@@ -422,7 +422,7 @@ TEST(MemProf, BaseMemProfReader) {
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
   FakeRecord.AllocSites.emplace_back(/*CSId=*/CSId, /*MB=*/Block);
-  MemProfData.Records.insert({F1.hash(), FakeRecord});
+  MemProfData.Records.try_emplace(0x1234, std::move(FakeRecord));
 
   MemProfReader Reader(std::move(MemProfData));
 
@@ -454,7 +454,7 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
   FakeRecord.AllocSites.emplace_back(/*CSId=*/CSId, /*MB=*/Block);
-  MemProfData.Records.insert({F1.hash(), FakeRecord});
+  MemProfData.Records.try_emplace(0x1234, std::move(FakeRecord));
 
   MemProfReader Reader(std::move(MemProfData));
 
