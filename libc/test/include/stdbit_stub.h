@@ -17,21 +17,11 @@
 #include <stdbool.h> // bool in C
 
 #define STDBIT_STUB_FUNCTION(FUNC_NAME, LEADING_VAL)                           \
-  unsigned FUNC_NAME##_uc(unsigned char x) {                        \
-    return LEADING_VAL##AU;                                                    \
-  }                                                                            \
-  unsigned FUNC_NAME##_us(unsigned short x) {                       \
-    return LEADING_VAL##BU;                                                    \
-  }                                                                            \
-  unsigned FUNC_NAME##_ui(unsigned int x) {                         \
-    return LEADING_VAL##CU;                                                    \
-  }                                                                            \
-  unsigned FUNC_NAME##_ul(unsigned long x) {                        \
-    return LEADING_VAL##DU;                                                    \
-  }                                                                            \
-  unsigned FUNC_NAME##_ull(unsigned long long x) {                  \
-    return LEADING_VAL##EU;                                                    \
-  }
+  unsigned FUNC_NAME##_uc(unsigned char x) { return LEADING_VAL##AU; }         \
+  unsigned FUNC_NAME##_us(unsigned short x) { return LEADING_VAL##BU; }        \
+  unsigned FUNC_NAME##_ui(unsigned int x) { return LEADING_VAL##CU; }          \
+  unsigned FUNC_NAME##_ul(unsigned long x) { return LEADING_VAL##DU; }         \
+  unsigned FUNC_NAME##_ull(unsigned long long x) { return LEADING_VAL##EU; }
 
 __BEGIN_C_DECLS
 
@@ -58,16 +48,12 @@ unsigned char stdc_bit_floor_uc(unsigned char x) { return 0x5AU; }
 unsigned short stdc_bit_floor_us(unsigned short x) { return 0x5BU; }
 unsigned stdc_bit_floor_ui(unsigned x) { return 0x5CU; }
 unsigned long stdc_bit_floor_ul(unsigned long x) { return 0x5DUL; }
-unsigned long long stdc_bit_floor_ull(unsigned long long x) {
-  return 0x5EULL;
-}
+unsigned long long stdc_bit_floor_ull(unsigned long long x) { return 0x5EULL; }
 
 unsigned char stdc_bit_ceil_uc(unsigned char x) { return 0x6AU; }
 unsigned short stdc_bit_ceil_us(unsigned short x) { return 0x6BU; }
 unsigned stdc_bit_ceil_ui(unsigned x) { return 0x6CU; }
 unsigned long stdc_bit_ceil_ul(unsigned long x) { return 0x6DUL; }
-unsigned long long stdc_bit_ceil_ull(unsigned long long x) {
-  return 0x6EULL;
-}
+unsigned long long stdc_bit_ceil_ull(unsigned long long x) { return 0x6EULL; }
 
 __END_C_DECLS
