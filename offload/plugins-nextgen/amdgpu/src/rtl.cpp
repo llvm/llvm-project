@@ -609,11 +609,22 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 
   /// Create an empty memory manager.
   AMDGPUMemoryManagerTy(AMDGPUPluginTy &Plugin)
-      : Plugin(Plugin), MemoryPool(nullptr), MemoryManager(nullptr) {}
+      : Plugin(Plugin), MemoryPool(nullptr), MemoryManager(nullptr),
+        OMPX_AMDMemoryMgrThreshold("OMPX_AMD_MEMORY_MANAGER_THRESHOLD_EXP_2",
+                                   30) {}
 
   /// Initialize the memory manager from a memory pool.
   Error init(AMDGPUMemoryPoolTy &MemoryPool) {
-    const uint32_t Threshold = 1 << 30;
+    // Sanity check to ensure user input will not overflow the variable.
+    if (OMPX_AMDMemoryMgrThreshold > sizeof(size_t) * CHAR_BIT - 1) {
+      // if user input is too large, trim it down to the upper limit of size_t.
+      OMPX_AMDMemoryMgrThreshold = sizeof(size_t) * CHAR_BIT - 1;
+      DP("User input for AMDGPUMemoryManager threshhold is too larget and was "
+         "trimmed to: %u\n",
+         OMPX_AMDMemoryMgrThreshold.get());
+    }
+    const size_t Threshold = 1UL << OMPX_AMDMemoryMgrThreshold;
+    DP("AMDGPUMemoryManager threshhold was set to: %zu B\n", Threshold);
     this->MemoryManager = new MemoryManagerTy(*this, Threshold);
     this->MemoryPool = &MemoryPool;
     return Plugin::success();
@@ -675,6 +686,12 @@ private:
 
   /// Reference to the actual memory manager.
   MemoryManagerTy *MemoryManager;
+
+  /// Set the threshold for the size of the allocated memory
+  /// that will be handled by AMDGPUMemoryMangerTy. The input
+  /// value should be the exponent in the expression (2^n).
+  /// e.g input 10 => 2 ^ 10 = 1KB
+  UInt32Envar OMPX_AMDMemoryMgrThreshold;
 };
 
 /// Class implementing the AMDGPU device images' properties.
