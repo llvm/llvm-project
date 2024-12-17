@@ -3,30 +3,21 @@
 import os
 import platform
 import re
+import shlex
 
 import lit.formats
-
-# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
-# it's not available.
-try:
-    import shlex
-
-    sh_quote = shlex.quote
-except:
-    import pipes
-
-    sh_quote = pipes.quote
 
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
-        lit_config.fatal(
-            "No attribute %r in test configuration! You may need to run "
-            "tests from your build directory or add this attribute "
-            "to lit.site.cfg.py " % attr_name
-        )
-    return attr_value
+    if attr_value :
+        return attr_value
+
+    lit_config.fatal(
+        "No attribute %r in test configuration! You may need to run "
+        "tests from your build directory or add this attribute "
+        "to lit.site.cfg.py " % attr_name
+    )
 
 
 def push_dynamic_library_lookup_path(config, new_path):
@@ -68,11 +59,6 @@ config.name = "TypeSanitizer" + config.name_suffix
 
 # Platform-specific default TYSAN_OPTIONS for lit tests.
 default_tysan_opts = list(config.default_sanitizer_opts)
-
-# On Darwin, leak checking is not enabled by default. Enable on macOS
-# tests to prevent regressions
-if config.host_os == "Darwin" and config.apple_platform == "osx":
-    default_tysan_opts += ["detect_leaks=1"]
 
 default_tysan_opts_str = ":".join(default_tysan_opts)
 if default_tysan_opts_str:
@@ -133,7 +119,7 @@ config.substitutions.append(("%clangxx_tysan ", build_invocation(clang_tysan_cxx
 tysan_source_dir = os.path.join(
     get_required_attr(config, "compiler_rt_src_root"), "lib", "tysan"
 )
-python_exec = sh_quote(get_required_attr(config, "python_executable"))
+python_exec = shlex.quote(get_required_attr(config, "python_executable"))
 
 # Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
 push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)

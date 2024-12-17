@@ -63,7 +63,7 @@ static void printTDName(tysan_type_descriptor *td) {
 
   switch (td->Tag) {
   default:
-    DCHECK(0);
+    CHECK(false && "invalid enum value");
     break;
   case TYSAN_MEMBER_TD:
     printTDName(td->Member.Access);
@@ -117,9 +117,8 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
   }
 
   do {
-    if (TDA == TDB) {
+    if (TDA == TDB)
       return OffsetA == OffsetB;
-    }
 
     if (TDA->Tag == TYSAN_STRUCT_TD) {
       // Reached root type descriptor.
@@ -135,7 +134,7 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
       OffsetA -= TDA->Struct.Members[Idx].Offset;
       TDA = TDA->Struct.Members[Idx].Type;
     } else {
-      DCHECK(0);
+      CHECK(false && "invalid enum value");
       break;
     }
   } while (TDA);
