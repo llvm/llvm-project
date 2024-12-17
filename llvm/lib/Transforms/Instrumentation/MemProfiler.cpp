@@ -171,9 +171,10 @@ static cl::opt<std::string>
                                  cl::desc("The default memprof options"),
                                  cl::Hidden, cl::init(""));
 
-static cl::opt<bool> UndriftProfile("memprof-undrift-profile",
-                                    cl::desc("Undrift MemProf profile"),
-                                    cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    SalvageStaleProfile("memprof-salvage-stale-profile",
+                        cl::desc("Salvage stale MemProf profile"),
+                        cl::init(false), cl::Hidden);
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 
@@ -992,7 +993,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
 
   // If requested, undrfit MemProfRecord so that the source locations in it
   // match those in the IR.
-  if (UndriftProfile)
+  if (SalvageStaleProfile)
     undriftMemProfRecord(UndriftMaps, *MemProfRec);
 
   // Detect if there are non-zero column numbers in the profile. If not,
@@ -1215,7 +1216,7 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
 
   TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(*M.begin());
   DenseMap<uint64_t, LocToLocMap> UndriftMaps;
-  if (UndriftProfile)
+  if (SalvageStaleProfile)
     UndriftMaps = computeUndriftMap(M, MemProfReader.get(), TLI);
 
   // Map from the stack has of each allocation context in the function profiles
