@@ -13,7 +13,9 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_CACHED_CONST_ACCESSORS_LATTICE_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_CACHED_CONST_ACCESSORS_LATTICE_H
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
@@ -71,9 +73,27 @@ public:
   /// Requirements:
   ///
   ///  - `CE` should return a location (GLValue or a record type).
+  ///
+  /// DEPRECATED: switch users to the below overload which takes Callee and Type
+  /// directly.
   StorageLocation *getOrCreateConstMethodReturnStorageLocation(
       const RecordStorageLocation &RecordLoc, const CallExpr *CE,
       Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize);
+
+  /// Creates or returns a previously created `StorageLocation` associated with
+  /// a const method call `obj.getFoo()` where `RecordLoc` is the
+  /// `RecordStorageLocation` of `obj`, `Callee` is the decl for `getFoo`,
+  /// and `Type` is the return type of `getFoo`.
+  ///
+  /// The callback `Initialize` runs on the storage location if newly created.
+  ///
+  /// Requirements:
+  ///
+  ///  - `Type` should return a location (GLValue or a record type).
+  StorageLocation &getOrCreateConstMethodReturnStorageLocation(
+      const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
+      QualType Type, Environment &Env,
+      llvm::function_ref<void(StorageLocation &)> Initialize);
 
   void clearConstMethodReturnValues(const RecordStorageLocation &RecordLoc) {
     ConstMethodReturnValues.erase(&RecordLoc);
@@ -210,6 +230,27 @@ CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
 
   ObjMap.insert({DirectCallee, &Loc});
   return &Loc;
+}
+
+template <typename Base>
+StorageLocation &
+CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
+    const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
+    QualType Type, Environment &Env,
+    llvm::function_ref<void(StorageLocation &)> Initialize) {
+  assert(Callee != nullptr);
+  assert(!Type.isNull());
+  assert(Type->isReferenceType() || Type->isRecordType());
+  auto &ObjMap = ConstMethodReturnStorageLocations[&RecordLoc];
+  auto it = ObjMap.find(Callee);
+  if (it != ObjMap.end())
+    return *it->second;
+
+  StorageLocation &Loc = Env.createStorageLocation(Type.getNonReferenceType());
+  Initialize(Loc);
+
+  ObjMap.insert({Callee, &Loc});
+  return Loc;
 }
 
 } // namespace dataflow
