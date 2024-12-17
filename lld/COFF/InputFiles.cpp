@@ -192,6 +192,8 @@ void ObjFile::parseLazy() {
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab.addLazyObject(this, name);
+    if (!lazy)
+      return;
     i += coffSym.getNumberOfAuxSymbols();
   }
 }
@@ -1291,8 +1293,11 @@ void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   for (const lto::InputFile::Symbol &sym : obj->symbols())
-    if (!sym.isUndefined())
+    if (!sym.isUndefined()) {
       symtab.addLazyObject(this, sym.getName());
+      if (!lazy)
+        return;
+    }
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
