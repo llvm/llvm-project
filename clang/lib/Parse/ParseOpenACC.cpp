@@ -1002,13 +1002,13 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
-    case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList(ClauseKind);
       break;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
+    case OpenACCClauseKind::UseDevice:
       ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
@@ -1512,8 +1512,8 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   ParsingOpenACCDirectiveRAII DirScope(*this);
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
-  if (getActions().OpenACC().ActOnStartStmtDirective(DirInfo.DirKind,
-                                                     DirInfo.StartLoc))
+  if (getActions().OpenACC().ActOnStartStmtDirective(
+          DirInfo.DirKind, DirInfo.StartLoc, DirInfo.Clauses))
     return StmtError();
 
   StmtResult AssocStmt;

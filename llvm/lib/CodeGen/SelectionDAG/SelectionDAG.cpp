@@ -111,9 +111,16 @@ static cl::opt<int> MaxLdStGlue("ldstmemcpy-glue-max",
        cl::desc("Number limit for gluing ld/st of memcpy."),
        cl::Hidden, cl::init(0));
 
+static cl::opt<unsigned>
+    MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
+             cl::desc("DAG combiner limit number of steps when searching DAG "
+                      "for predecessor nodes"));
+
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
 }
+
+unsigned SelectionDAG::getHasPredecessorMaxSteps() { return MaxSteps; }
 
 //===----------------------------------------------------------------------===//
 //                              ConstantFPSDNode Class
@@ -2474,6 +2481,51 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
   return Subvectors[0];
 }
 
+/// Given a store node \p StoreNode, return true if it is safe to fold that node
+/// into \p FPNode, which expands to a library call with output pointers.
+static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
+                                                  SDNode *FPNode) {
+  SmallVector<const SDNode *, 8> Worklist;
+  SmallVector<const SDNode *, 8> DeferredNodes;
+  SmallPtrSet<const SDNode *, 16> Visited;
+
+  // Skip FPNode use by StoreNode (that's the use we want to fold into FPNode).
+  for (SDValue Op : StoreNode->ops())
+    if (Op.getNode() != FPNode)
+      Worklist.push_back(Op.getNode());
+
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  while (!Worklist.empty()) {
+    const SDNode *Node = Worklist.pop_back_val();
+    auto [_, Inserted] = Visited.insert(Node);
+    if (!Inserted)
+      continue;
+
+    if (MaxSteps > 0 && Visited.size() >= MaxSteps)
+      return false;
+
+    // Reached the FPNode (would result in a cycle).
+    // OR Reached CALLSEQ_START (would result in nested call sequences).
+    if (Node == FPNode || Node->getOpcode() == ISD::CALLSEQ_START)
+      return false;
+
+    if (Node->getOpcode() == ISD::CALLSEQ_END) {
+      // Defer looking into call sequences (so we can check we're outside one).
+      // We still need to look through these for the predecessor check.
+      DeferredNodes.push_back(Node);
+      continue;
+    }
+
+    for (SDValue Op : Node->ops())
+      Worklist.push_back(Op.getNode());
+  }
+
+  // True if we're outside a call sequence and don't have the FPNode as a
+  // predecessor. No cycles or nested call sequences possible.
+  return !SDNode::hasPredecessorHelper(FPNode, Visited, DeferredNodes,
+                                       MaxSteps);
+}
+
 bool SelectionDAG::expandMultipleResultFPLibCall(
     RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
     std::optional<unsigned> CallRetResNo) {
@@ -2502,11 +2554,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
-  // FIXME: This should allow stores with the same chains (not just the entry
-  // chain), but there's a risk the store is within a (CALLSEQ_START,
-  // CALLSEQ_END) pair, which after this expansion will lead to nested call
-  // sequences.
-  SDValue InChain = getEntryNode();
+  SDValue StoresInChain;
   SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
   for (SDNode *User : Node->uses()) {
     if (!ISD::isNormalStore(User))
@@ -2514,14 +2562,27 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     auto *ST = cast<StoreSDNode>(User);
     SDValue StoreValue = ST->getValue();
     unsigned ResNo = StoreValue.getResNo();
+    // Ensure the store corresponds to an output pointer.
+    if (CallRetResNo == ResNo)
+      continue;
+    // Ensure the store to the default address space and not atomic or volatile.
+    if (!ST->isSimple() || ST->getAddressSpace() != 0)
+      continue;
+    // Ensure all store chains are the same (so they don't alias).
+    if (StoresInChain && ST->getChain() != StoresInChain)
+      continue;
+    // Ensure the store is properly aligned.
     Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
-    if (CallRetResNo == ResNo || !ST->isSimple() ||
-        ST->getAddressSpace() != 0 ||
-        ST->getAlign() <
-            getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
-        ST->getChain() != InChain)
+    if (ST->getAlign() <
+        getDataLayout().getABITypeAlign(StoreType->getScalarType()))
+      continue;
+    // Avoid:
+    //  1. Creating cyclic dependencies.
+    //  2. Expanding the node to a call within a call sequence.
+    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node))
       continue;
     ResultStores[ResNo] = ST;
+    StoresInChain = ST->getChain();
   }
 
   TargetLowering::ArgListTy Args;
@@ -2563,6 +2624,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   Type *RetType = CallRetResNo.has_value()
                       ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
                       : Type::getVoidTy(Ctx);
+  SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
   SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
                                      TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);

@@ -1532,6 +1532,11 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
+  // If all args are constant than this will be constant folded away.
+  if (!Args.empty() &&
+      all_of(Args, [](const Value *Arg) { return isa<Constant>(Arg); }))
+    return TTI::TCC_Free;
+
   // Recognize a basic concat_vector shuffle.
   if (Kind == TTI::SK_PermuteTwoSrc &&
       Mask.size() == (2 * BaseTp->getElementCount().getKnownMinValue()) &&
