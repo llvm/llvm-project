@@ -1708,13 +1708,24 @@ def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
 #endif /* LLPC_BUILD_NPI */
 
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
+#ifdef LLPC_BUILD_NPI
+  let SubtargetPredicate = isGFX8GFX9GFX10GFX11GFX12;
+#else /* LLPC_BUILD_NPI */
   let SubtargetPredicate = isGFX8Plus;
+#endif /* LLPC_BUILD_NPI */
   let simm16 = 0;
   let fixed_imm = 1;
   let mayLoad = 1;
   let mayStore = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = isGFX13Plus in {
+  def S_WAKEUP_imm : SOPP_Pseudo <"s_wakeup",
+    (ins i16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = isGFX13Plus
+
+#endif /* LLPC_BUILD_NPI */
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 
@@ -2462,15 +2473,15 @@ multiclass SOP1_Real_gfx10<bits<8> op> {
 #ifdef LLPC_BUILD_NPI
 multiclass SOP1_Real_gfx10_gfx13<bits<8> op> :
   SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op>;
+
+multiclass SOP1_Real_gfx10_Renamed_gfx13<bits<8> op, string gfx13_name> :
+  SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op, gfx13_name>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOP1_Real_gfx10_gfx11_gfx12<bits<8> op> :
   SOP1_Real_gfx10<op>, SOP1_Real_gfx11_gfx12<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOP1_Real_gfx10_Renamed_gfx13<bits<8> op, string gfx13_name> :
-  SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op, gfx13_name>;
-
 defm S_ANDN1_SAVEEXEC_B64   : SOP1_Real_gfx10_Renamed_gfx13<0x37, "s_and_not0_saveexec_b64">;
 defm S_ORN1_SAVEEXEC_B64    : SOP1_Real_gfx10_Renamed_gfx13<0x38, "s_or_not0_saveexec_b64">;
 defm S_ANDN1_WREXEC_B64     : SOP1_Real_gfx10_Renamed_gfx13<0x39, "s_and_not0_wrexec_b64">;
@@ -2899,15 +2910,15 @@ multiclass SOP2_Real_gfx6_gfx7<bits<7> op> {
 #ifdef LLPC_BUILD_NPI
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx13<bits<7> op> :
   SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op>;
-
-multiclass SOP2_Real_gfx6_gfx7_gfx10_Renamed_gfx13<bits<7> op, string gfx13_name> :
-  SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op, gfx13_name>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOP2_Real_gfx6_gfx7_gfx10<bits<7> op> :
   SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+multiclass SOP2_Real_gfx6_gfx7_gfx10_Renamed_gfx13<bits<7> op, string gfx13_name> :
+  SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op, gfx13_name>;
+
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<7> op, string gfx12_gfx13_name> :
 #else /* LLPC_BUILD_NPI */
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<bits<7> op, string gfx12_name> :
@@ -3240,6 +3251,7 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+defm S_WAKEUP_imm             : SOPP_Real_32_gfx13<0x003>;
 defm S_BARRIER_WAIT           : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP          : SOPP_Real_32_gfx13<0x2c>;
 defm S_SET_VGPR_FRAMES        : SOPP_Real_32_gfx13<0x1c>;
@@ -3543,12 +3555,11 @@ multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<bits<7> op>
 
 defm S_NOP                      : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12_gfx13<0x000>;
 defm S_ENDPGM                   : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<0x001>;
-defm S_WAKEUP                   : SOPP_Real_32_gfx8_gfx9_gfx10_gfx13<0x003>;
 #else /* LLPC_BUILD_NPI */
 defm S_NOP                      : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11_gfx12<0x000>;
 defm S_ENDPGM                   : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x001>;
-defm S_WAKEUP                   : SOPP_Real_32_gfx8_gfx9_gfx10<0x003>;
 #endif /* LLPC_BUILD_NPI */
+defm S_WAKEUP                   : SOPP_Real_32_gfx8_gfx9_gfx10<0x003>;
 defm S_BARRIER                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00a>;
 defm S_WAITCNT                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00c>;
 #ifdef LLPC_BUILD_NPI

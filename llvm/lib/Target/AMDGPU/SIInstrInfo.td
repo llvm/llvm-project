@@ -2855,9 +2855,20 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 }
 
 // Return an AGPR+VGPR operand class for the given VGPR register class.
+#ifdef LLPC_BUILD_NPI
+// In case of a SGPR register class, just return the register operand.
+#endif /* LLPC_BUILD_NPI */
 class getLdStRegisterOperand<RegisterClass RC> {
+#ifdef LLPC_BUILD_NPI
+  SIRegisterClass SIRC = !cast<SIRegisterClass>(RC);
+#endif /* LLPC_BUILD_NPI */
   RegisterOperand ret =
+#ifdef LLPC_BUILD_NPI
+    !cond(SIRC.HasSGPR       : RegisterOperand<RC>,
+          !eq(RC.Size, 32)   : AVLdSt_32,
+#else /* LLPC_BUILD_NPI */
     !cond(!eq(RC.Size, 32)   : AVLdSt_32,
+#endif /* LLPC_BUILD_NPI */
           !eq(RC.Size, 64)   : AVLdSt_64,
           !eq(RC.Size, 96)   : AVLdSt_96,
           !eq(RC.Size, 128)  : AVLdSt_128,

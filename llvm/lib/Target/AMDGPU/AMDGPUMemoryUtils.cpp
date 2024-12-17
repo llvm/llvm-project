@@ -37,6 +37,19 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
+#if LLPC_BUILD_NPI
+// Returns the target extension type of a global variable,
+// which can only be a TargetExtType, an array or single-element struct of it,
+// or their nesting combination.
+// TODO: allow struct of multiple TargetExtType elements of the same type.
+// TODO: Disallow other uses of target("amdgcn.named.barrier") or
+// target("amdgcn.semaphore") including:
+// - Structs containing barriers/semaphore in different scope/rank
+// - Structs containing a mixture of barriers/semaphore and other data.
+// - Globals in other address spaces.
+// - Allocas.
+static TargetExtType *getTargetExtType(const GlobalVariable &GV) {
+#else /* LLPC_BUILD_NPI */
 TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
   // TODO: Allow arrays and structs, if all members are barriers
   // in the same scope.
@@ -45,41 +58,46 @@ TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
   // - Structs containing a mixture of barriers and other data.
   // - Globals in other address spaces.
   // - Allocas.
+#endif /* LLPC_BUILD_NPI */
   Type *Ty = GV.getValueType();
   while (true) {
     if (auto *TTy = dyn_cast<TargetExtType>(Ty))
+#if LLPC_BUILD_NPI
+      return TTy;
+#else /* LLPC_BUILD_NPI */
       return TTy->getName() == "amdgcn.named.barrier" ? TTy : nullptr;
+#endif /* LLPC_BUILD_NPI */
     if (auto *STy = dyn_cast<StructType>(Ty)) {
+#if LLPC_BUILD_NPI
+      if (STy->getNumElements() != 1)
+#else /* LLPC_BUILD_NPI */
       if (STy->getNumElements() == 0)
+#endif /* LLPC_BUILD_NPI */
         return nullptr;
       Ty = STy->getElementType(0);
       continue;
     }
+#if LLPC_BUILD_NPI
+    if (auto *ATy = dyn_cast<ArrayType>(Ty)) {
+      Ty = ATy->getElementType();
+      continue;
+    }
+#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 }
 
 #if LLPC_BUILD_NPI
+TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
+  if (TargetExtType *Ty = getTargetExtType(GV))
+    return Ty->getName() == "amdgcn.named.barrier" ? Ty : nullptr;
+  return nullptr;
+}
+
 TargetExtType *isLDSSemaphore(const GlobalVariable &GV) {
-  // TODO-GFX13: Allow arrays and structs, if all members are semaphores owned
-  // by the same rank.
-  // TODO-GFX13: Disallow other uses of target("amdgcn.semaphore") including:
-  // - Structs containing semaphores owned by different ranks.
-  // - Structs containing a mixture of semaphores and other data.
-  // - Globals in other address spaces.
-  // - Allocas.
-  Type *Ty = GV.getValueType();
-  while (true) {
-    if (auto *TTy = dyn_cast<TargetExtType>(Ty))
-      return TTy->getName() == "amdgcn.semaphore" ? TTy : nullptr;
-    if (auto *STy = dyn_cast<StructType>(Ty)) {
-      if (STy->getNumElements() == 0)
-        return nullptr;
-      Ty = STy->getElementType(0);
-      continue;
-    }
-    return nullptr;
-  }
+  if (TargetExtType *Ty = getTargetExtType(GV))
+    return Ty->getName() == "amdgcn.semaphore" ? Ty : nullptr;
+  return nullptr;
 }
 
 #endif /* LLPC_BUILD_NPI */

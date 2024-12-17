@@ -108,16 +108,24 @@ class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
   let has_vdst = 0;
 }
 
+#ifdef LLPC_BUILD_NPI
+class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32,
+                    RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
+#else /* LLPC_BUILD_NPI */
 class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
+#endif /* LLPC_BUILD_NPI */
 : DS_Pseudo<opName,
   (outs),
 #ifdef LLPC_BUILD_NPI
-  (ins VGPRSrc_32:$addr, getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
+  (ins !if(!eq(rc, SReg_32), rc, VGPRSrc_32):$addr, data_op:$data0, Offset:$offset, gds:$gds),
 #else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
 #endif /* LLPC_BUILD_NPI */
   " $addr, $data0$offset$gds"> {
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   let has_data1 = 0;
   let has_vdst = 0;
   let IsAtomicNoRet = 1;
@@ -204,12 +212,15 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
 #ifdef LLPC_BUILD_NPI
-  (ins VGPRSrc_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
+  (ins !if(!eq(rc, SReg_32), rc, VGPRSrc_32):$addr, data_op:$data0, Offset:$offset, gds:$gds),
 #else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
 #endif /* LLPC_BUILD_NPI */
   " $vdst, $addr, $data0$offset$gds"> {
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   let has_data1 = 0;
   let IsAtomicRet = 1;
 }
@@ -308,15 +319,15 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
                 RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
-  !if(HasTiedOutput,
 #ifdef LLPC_BUILD_NPI
-    (ins VGPRSrc_32:$addr, ofs:$offset, gds:$gds, data_op:$vdst_in),
-    (ins VGPRSrc_32:$addr, ofs:$offset, gds:$gds)),
+  !con((ins !if(!eq(rc, SReg_32), rc, VGPRSrc_32):$addr, ofs:$offset, gds:$gds),
+       !if(HasTiedOutput, (ins data_op:$vdst_in), (ins))), " $vdst, $addr$offset$gds"> {
 #else /* LLPC_BUILD_NPI */
+  !if(HasTiedOutput,
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds, data_op:$vdst_in),
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
-#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr$offset$gds"> {
+#endif /* LLPC_BUILD_NPI */
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
   let has_data0 = 0;
@@ -505,6 +516,10 @@ class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity 
   let AddedComplexity = complexity;
 }
 
+#ifdef LLPC_BUILD_NPI
+def DS_ADD_SGPR_U32   : DS_1A1D_NORET<"ds_add_sgpr_u32", SReg_32>;
+
+#endif /* LLPC_BUILD_NPI */
 defm DS_ADD_U32       : DS_1A1D_NORET_mc<"ds_add_u32">;
 defm DS_SUB_U32       : DS_1A1D_NORET_mc<"ds_sub_u32">;
 defm DS_RSUB_U32      : DS_1A1D_NORET_mc<"ds_rsub_u32">;
@@ -532,6 +547,9 @@ defm DS_WRITE_B32     : DS_1A1D_NORET_mc<"ds_write_b32">;
 defm DS_WRITE2_B32    : DS_1A2D_Off8_NORET_mc<"ds_write2_b32">;
 defm DS_WRITE2ST64_B32: DS_1A2D_Off8_NORET_mc<"ds_write2st64_b32">;
 
+#ifdef LLPC_BUILD_NPI
+def DS_STORE_SGPR_B32 : DS_1A1D_NORET<"ds_store_sgpr_b32", SReg_32>;
+#endif /* LLPC_BUILD_NPI */
 
 let has_m0_read = 0 in {
 
@@ -597,6 +615,9 @@ defm DS_MIN_F64       : DS_1A1D_NORET_mc<"ds_min_f64", VReg_64>;
 defm DS_MAX_F64       : DS_1A1D_NORET_mc<"ds_max_f64", VReg_64>;
 
 defm DS_ADD_RTN_U32   : DS_1A1D_RET_mc<"ds_add_rtn_u32", VGPR_32>;
+#ifdef LLPC_BUILD_NPI
+def DS_ADD_SGPR_RTN_U32   : DS_1A1D_RET<"ds_add_sgpr_rtn_u32", SReg_32>;
+#endif /* LLPC_BUILD_NPI */
 
 let SubtargetPredicate = HasLDSFPAtomicAddF32 in {
 defm DS_ADD_RTN_F32   : DS_1A1D_RET_mc<"ds_add_rtn_f32", VGPR_32>;
@@ -701,6 +722,10 @@ defm DS_READ_U16     : DS_1A_RET_mc<"ds_read_u16">;
 defm DS_READ_B32     : DS_1A_RET_mc<"ds_read_b32">;
 defm DS_READ_B64     : DS_1A_RET_mc<"ds_read_b64", VReg_64>;
 
+#ifdef LLPC_BUILD_NPI
+def DS_LOAD_SGPR_B32 : DS_1A_RET<"ds_load_sgpr_b32", SReg_32>;
+
+#endif /* LLPC_BUILD_NPI */
 defm DS_READ2_B32    : DS_1A_Off8_RET_mc<"ds_read2_b32", VReg_64>;
 defm DS_READ2ST64_B32: DS_1A_Off8_RET_mc<"ds_read2st64_b32", VReg_64>;
 
@@ -1487,6 +1512,15 @@ let AssemblerPredicate = isGFX12Plus in {
 // Aliases that have existed since these instructions were introduced.
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1210Plus]>;
 def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1210Plus]>;
+
+//===----------------------------------------------------------------------===//
+// GFX13.
+//===----------------------------------------------------------------------===//
+
+defm DS_STORE_SGPR_B32   : DS_Real_gfx13<0x080>;
+defm DS_ADD_SGPR_U32     : DS_Real_gfx13<0x081>;
+defm DS_LOAD_SGPR_B32    : DS_Real_gfx13<0x0ad>;
+defm DS_ADD_SGPR_RTN_U32 : DS_Real_gfx13<0x0ae>;
 
 #endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
