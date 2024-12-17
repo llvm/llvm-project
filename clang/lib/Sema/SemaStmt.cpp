@@ -230,8 +230,8 @@ namespace {
 
 // Diagnoses unused expressions that call functions marked [[nodiscard]],
 // [[gnu::warn_unused_result]] and similar.
-// Additionally, a DiagID can be provided to emit a warning in additional contexts
-// (such as for an unused LHS of a comma expression)
+// Additionally, a DiagID can be provided to emit a warning in additional
+// contexts (such as for an unused LHS of a comma expression)
 void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
   bool NoDiscardOnly = !DiagID.has_value();
 
@@ -332,8 +332,8 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     if (const TagDecl *TD = ILE->getType()->getAsTagDecl()) {
 
-      if (DiagnoseNoDiscard(S, TD, TD->getAttr<WarnUnusedResultAttr>(), Loc,
-                            R1, R2, /*isCtor=*/false))
+      if (DiagnoseNoDiscard(S, TD, TD->getAttr<WarnUnusedResultAttr>(), Loc, R1,
+                            R2, /*isCtor=*/false))
         return;
     }
   } else if (ShouldSuppress)
@@ -347,7 +347,8 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
     }
     const ObjCMethodDecl *MD = ME->getMethodDecl();
     if (MD) {
-      if (DiagnoseNoDiscard(S, nullptr, MD->getAttr<WarnUnusedResultAttr>(), Loc, R1, R2,
+      if (DiagnoseNoDiscard(S, nullptr, MD->getAttr<WarnUnusedResultAttr>(),
+                            Loc, R1, R2,
                             /*isCtor=*/false))
         return;
     }
@@ -400,11 +401,6 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
     S.Diag(Loc, diag::warn_unused_volatile) << R1 << R2;
     return;
   }
-
-  // Don't diagnose discarded left of dot in static class member access
-  // because its type is "used" to determine the class to access
-  //if (DiagID == diag::warn_discarded_class_member_access)
-  //  return;
 
   // Do not diagnose use of a comma operator in a SFINAE context because the
   // type of the left operand could be used for SFINAE, so technically it is
