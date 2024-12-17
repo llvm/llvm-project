@@ -292,16 +292,39 @@ LazyReexportsManager::Create(EmitTrampolinesFn EmitTrampolines,
   return std::move(LRM);
 }
 
+Error LazyReexportsManager::handleRemoveResources(JITDylib &JD, ResourceKey K) {
+  JD.getExecutionSession().runSessionLocked([&]() {
+    auto I = KeyToReentryAddr.find(K);
+    if (I != KeyToReentryAddr.end()) {
+      auto ReentryAddr = I->second;
+      CallThroughs.erase(ReentryAddr);
+      KeyToReentryAddr.erase(I);
+    }
+  });
+  return Error::success();
+}
+
+void LazyReexportsManager::handleTransferResources(JITDylib &JD,
+                                                   ResourceKey DstK,
+                                                   ResourceKey SrcK) {
+  auto I = KeyToReentryAddr.find(SrcK);
+  if (I != KeyToReentryAddr.end()) {
+    auto ReentryAddr = I->second;
+    KeyToReentryAddr.erase(I);
+    KeyToReentryAddr[DstK] = ReentryAddr;
+  }
+}
+
 LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
                                            RedirectableSymbolManager &RSMgr,
                                            JITDylib &PlatformJD, Error &Err)
-    : EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr) {
+    : ES(PlatformJD.getExecutionSession()),
+      EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr) {
 
   using namespace shared;
 
   ErrorAsOutParameter _(&Err);
 
-  auto &ES = PlatformJD.getExecutionSession();
   ExecutionSession::JITDispatchHandlerAssociationMap WFs;
 
   WFs[ES.intern("__orc_rt_resolve_tag")] =
@@ -345,15 +368,22 @@ void LazyReexportsManager::emitRedirectableSymbols(
 
   // Bind entry points to names.
   SymbolMap Redirs;
-  {
-    std::lock_guard<std::mutex> Lock(M);
-    size_t I = 0;
-    for (auto &[Name, AI] : Reexports) {
-      const auto &ReentryPoint = (*ReentryPoints)[I++];
-      Redirs[Name] = ReentryPoint;
-      CallThroughs[ReentryPoint.getAddress()] = {Name, AI.Aliasee,
-                                                 &MR->getTargetJITDylib()};
-    }
+  size_t I = 0;
+  for (auto &[Name, AI] : Reexports)
+    Redirs[Name] = (*ReentryPoints)[I++];
+
+  I = 0;
+  if (auto Err = MR->withResourceKeyDo([&](ResourceKey K) {
+        for (auto &[Name, AI] : Reexports) {
+          const auto &ReentryPoint = (*ReentryPoints)[I++];
+          CallThroughs[ReentryPoint.getAddress()] = {Name, AI.Aliasee,
+                                                     &MR->getTargetJITDylib()};
+          KeyToReentryAddr[K] = ReentryPoint.getAddress();
+        }
+      })) {
+    MR->getExecutionSession().reportError(std::move(Err));
+    MR->failMaterialization();
+    return;
   }
 
   RSMgr.emitRedirectableSymbols(std::move(MR), std::move(Redirs));
@@ -364,9 +394,7 @@ void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
 
   CallThroughInfo LandingInfo;
 
-  {
-    std::lock_guard<std::mutex> Lock(M);
-
+  ES.runSessionLocked([&]() {
     auto I = CallThroughs.find(ReentryStubAddr);
     if (I == CallThroughs.end())
       return SendResult(make_error<StringError>(
@@ -374,7 +402,7 @@ void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
               " not registered",
           inconvertibleErrorCode()));
     LandingInfo = I->second;
-  }
+  });
 
   SymbolInstance LandingSym(LandingInfo.JD, std::move(LandingInfo.BodyName));
   LandingSym.lookupAsync([this, JD = std::move(LandingInfo.JD),
