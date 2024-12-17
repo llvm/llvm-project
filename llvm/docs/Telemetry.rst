@@ -205,7 +205,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   struct MyTelemetryInfo : public telemetry::TelemetryInfo {
     std::string Msg;
     
-    Error serialize(Serializer& Serializer) const override {
+    Error serialize(Serializer &Serializer) const override {
       TelemetryInfo::serialize(serializer);
       Serializer.writeString("MyMsg", Msg);
     }
