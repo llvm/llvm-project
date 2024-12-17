@@ -19100,16 +19100,15 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   auto isSupportedType = [](EVT VT) {
-    return VT != MVT::bf16 && VT != MVT::f128;
+    return !VT.isVector() && VT != MVT::bf16 && VT != MVT::f128;
   };
-
-  if (!isSupportedType(N->getValueType(0)) ||
-      !isSupportedType(N->getOperand(0).getValueType()))
-    return SDValue();
 
   SDValue SrcVal = N->getOperand(0);
   EVT SrcTy = SrcVal.getValueType();
   EVT DestTy = N->getValueType(0);
+
+  if (!isSupportedType(SrcTy) || !isSupportedType(DestTy))
+    return SDValue();
 
   EVT SrcVecTy;
   EVT DestVecTy;
@@ -19130,9 +19129,7 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
   SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
                             DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
   SDValue Convert = DAG.getNode(N->getOpcode(), DL, DestVecTy, Vec);
-  SDValue Scalar =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
-  return Scalar;
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
 }
 
 static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
