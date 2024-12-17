@@ -172,18 +172,15 @@ bool llvm::BuildDebugInfoMDMap(DenseMap<const Metadata *, TrackingMDRef> &MD,
     };
 
     // Avoid cloning types, compile units, and (other) subprograms.
-    SmallPtrSet<const DISubprogram *, 16> MappedToSelfSPs;
     for (DISubprogram *ISP : DIFinder.subprograms()) {
-      if (ISP != SPClonedWithinModule) {
+      if (ISP != SPClonedWithinModule)
         mapToSelfIfNew(ISP);
-        MappedToSelfSPs.insert(ISP);
-      }
     }
 
     // If a subprogram isn't going to be cloned skip its lexical blocks as well.
     for (DIScope *S : DIFinder.scopes()) {
       auto *LScope = dyn_cast<DILocalScope>(S);
-      if (LScope && MappedToSelfSPs.count(LScope->getSubprogram()))
+      if (LScope && LScope->getSubprogram() != SPClonedWithinModule)
         mapToSelfIfNew(S);
     }
 
