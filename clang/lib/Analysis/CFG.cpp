@@ -461,7 +461,7 @@ reverse_children::reverse_children(Stmt *S, ASTContext *AstC) {
       assert(AstC &&
              "Attributes need the ast context to determine side-effects");
       AttributedStmt *AS = cast<AttributedStmt>(S);
-      assert(attrStmt);
+      assert(AS);
 
       // for an attributed stmt, the "children()" returns only the NullStmt
       // (;) but semantically the "children" are supposed to be the

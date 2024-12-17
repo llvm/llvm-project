@@ -819,22 +819,6 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   bool hasValue = false;
   SVal V;
 
-  llvm::errs() << "\nSrcBlock"; SrcBlock->dump();
-  llvm::errs() << "\nempty=" << SrcBlock->empty();
-  llvm::errs() << "\nsize=" << SrcBlock->size();
-  CFGBlock::const_iterator  bb = SrcBlock->begin();
-  llvm::errs() << "\nbegin=|" ;   bb->dump(); llvm::errs() << "|";
-  CFGElement const&  xx = *bb;
-  llvm::errs() << "\nbegin-deref=|" ;   xx.dump();llvm::errs() << "|";
-  // manual iteration
-  for(auto it = SrcBlock->begin(); it != SrcBlock->end() ; ++it) {
-    llvm::errs() << "\nit.kind=|" << it->getKind() << "|";
-  }
-
-  llvm::errs() << "\nend=" ; (SrcBlock->end()-1)->dump();
-  llvm::errs() << "\nrbegin=" << SrcBlock->rbegin();
-  llvm::errs() << "\nrend=" << SrcBlock->rend();
-
   for (CFGElement CE : llvm::reverse(*SrcBlock)) {
     if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
       const Expr *ValEx = cast<Expr>(CS->getStmt());

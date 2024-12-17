@@ -1223,14 +1223,7 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
     }
     Expr *AssumeExpr = AssumeAttr->getAssumption();
     for (ExplodedNode *N : CheckerPreStmt) {
-      // Assume State to narrow down here?
-      // for now
-      // ?????? VINAY HERE, need to narrow it down here
-      ExplodedNode CloneWithAssume = *N;
-      auto stateWithAssume = CloneWithAssume.getState();
-      Bldr.generateNode(AssumeExpr, N, stateWithAssume);
-
-      Visit(AssumeExpr, &CloneWithAssume, EvalSet);
+      Visit(AssumeExpr, N, EvalSet);
     }
   }
 
