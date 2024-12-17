@@ -1568,7 +1568,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       }
       // Defer erasing recipes till the end so that we don't invalidate the
-      // VPTypeAnalysis cache
+      // VPTypeAnalysis cache.
       ToErase.push_back(CurRecipe);
     }
   }
