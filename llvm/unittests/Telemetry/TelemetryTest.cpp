@@ -175,13 +175,12 @@ public:
   JsonStorageDestination(TestContext *Ctxt) : CurrentContext(Ctxt) {}
 
   Error receiveEntry(const TelemetryInfo *Entry) override {
-    if (Error err = serializer.init()) {
-      return err;
-    }
+    if (Error Err = serializer.init())
+      return Err;
+
     Entry->serialize(serializer);
-    if (Error err = serializer.finalize()) {
-      return err;
-    }
+    if (Error Err = serializer.finalize())
+      return Err;
 
     json::Object copied = *serializer.getOutputObject();
     CurrentContext->EmittedJsons.push_back(std::move(copied));
@@ -218,10 +217,10 @@ struct ExitInfo : public TelemetryInfo {
 class TestManager : public Manager {
 public:
   static std::unique_ptr<TestManager>
-  createInstance(Config *config, TestContext *CurrentContext) {
-    if (!config->EnableTelemetry)
+  createInstance(Config *Config, TestContext *CurrentContext) {
+    if (!Config->EnableTelemetry)
       return nullptr;
-    CurrentContext->ExpectedUuid = config->makeSessionId();
+    CurrentContext->ExpectedUuid = Config->makeSessionId();
     std::unique_ptr<TestManager> Ret = std::make_unique<TestManager>(
         CurrentContext, CurrentContext->ExpectedUuid);
 
@@ -237,12 +236,12 @@ public:
 
   Error dispatch(TelemetryInfo *Entry) override {
     Entry->SessionId = SessionId;
+    Error AllErrs = Error::success();
     for (auto &Dest : Destinations) {
-      if (Error err = Dest->receiveEntry(Entry)) {
-        return err;
-      }
+      if (Error Err = Dest->receiveEntry(Entry))
+        AllErrs = joinErrors(std::move(AllErrs), std::move(Err));
     }
-    return Error::success();
+    return AllErrs;
   }
 
   void addDestination(std::unique_ptr<Destination> Dest) override {

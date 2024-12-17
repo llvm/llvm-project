@@ -142,7 +142,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
        
   class MyManager : public telemery::Manager {
   public:
-  static std::unique_ptr<MyManager> createInstatnce(telemetry::Config *config) {
+  static std::unique_ptr<MyManager> createInstatnce(telemetry::Config *Config) {
     // If Telemetry is not enabled, then just return null;
     if (!config->EnableTelemetry)
       return nullptr;
@@ -153,7 +153,12 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 
   Error dispatch(TelemetryInfo *Entry) const override {
     Entry->SessionId = SessionId;
-    emitToAllDestinations(Entry);
+    Error AllErrs = Error::success();
+    for (auto &Dest : Destinations) {
+      if (Error Err = Dest->receiveEntry(Entry))
+        AllErrs = joinErrors(std::move(AllErrs), std::move(Err));
+    }
+    return AllErrs;
   }
       
   void addDestination(std::unique_ptr<Destination> Dest) override {
@@ -171,13 +176,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     // .... code here
   }
   
-  private:
-    void emitToAllDestinations(const TelemetryInfo *Entry) {
-      for (Destination *Dest : Destinations) {
-        Dest->receiveEntry(Entry);
-      }
-    }
-    
+  private:    
     std::vector<Destination> Destinations;
     const std::string SessionId;
   };
@@ -185,14 +184,13 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   class MyDestination : public telemetry::Destination {
   public:
     Error receiveEntry(const TelemetryInfo *Entry) override {
-      if (Error Err = Serializer.init()) {
+      if (Error Err = Serializer.init())
         return Err;
-      }
+      
       Entry->serialize(Serializer);
-      if (Error Err = Serializer.finalize()) {
+      if (Error Err = Serializer.finalize())
         return Err;
-      }
-
+      
       json::Object Copied = *Serializer.getOutputObject();
       // Send the `Copied` object to wherever.
       return Error::success();
