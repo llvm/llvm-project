@@ -181,6 +181,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_unistd_macros",
+    hdrs = ["hdr/unistd_macros.h"],
+    deps = [
+        ":hdr_unistd_overlay",
+    ],
+)
+
+libc_support_library(
     name = "hdr_limits_macros",
     hdrs = ["hdr/limits_macros.h"],
 )
@@ -193,6 +201,11 @@ libc_support_library(
 libc_support_library(
     name = "hdr_stdlib_overlay",
     hdrs = ["hdr/stdlib_overlay.h"],
+)
+
+libc_support_library(
+    name = "hdr_unistd_overlay",
+    hdrs = ["hdr/unistd_overlay.h"],
 )
 
 ############################ Type Proxy Header Files ###########################
@@ -298,6 +311,11 @@ libc_support_library(
 libc_support_library(
     name = "types_pid_t",
     hdrs = ["hdr/types/pid_t.h"],
+)
+
+libc_support_library(
+    name = "types_uid_t",
+    hdrs = ["hdr/types/uid_t.h"],
 )
 
 libc_support_library(
@@ -3996,6 +4014,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4008,6 +4027,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4023,6 +4043,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4067,6 +4088,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
     ],
 )
 
@@ -4078,6 +4101,8 @@ libc_function(
 #         ":__support_common",
 #         ":__support_osutil_syscall",
 #         ":errno",
+#         ":hdr_unistd_macros",
+#         ":types_size_t",
 #     ],
 # )
 
@@ -4089,6 +4114,9 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_uid_t",
     ],
 )
 
@@ -4100,6 +4128,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_pid_t",
     ],
 )
 
@@ -4111,6 +4141,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_uid_t",
     ],
 )
 
@@ -4125,6 +4157,7 @@ libc_function(
 #         ":__support_file_file",
 #         ":__support_osutil_syscall",
 #         ":errno",
+#         ":hdr_unistd_macros",
 #     ],
 # )
 
@@ -4136,6 +4169,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4148,6 +4182,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4160,6 +4195,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4184,6 +4220,8 @@ libc_function(
         ":__support_file_linux_lseekimpl",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
     ],
 )
 
@@ -4200,6 +4238,10 @@ libc_function(
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4215,6 +4257,10 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4228,6 +4274,9 @@ libc_function(
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4240,6 +4289,9 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4252,6 +4304,9 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4276,6 +4331,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4288,6 +4344,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4302,6 +4359,7 @@ libc_function(
 #         ":__support_common",
 #         ":__support_osutil_syscall",
 #         ":errno",
+#         ":hdr_unistd_macros",
 #     ],
 # )
 
@@ -4313,6 +4371,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_ssize_t",
     ],
 )
 
@@ -4324,6 +4384,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
     ],
 )
 
@@ -4360,6 +4422,9 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
