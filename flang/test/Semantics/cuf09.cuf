@@ -22,6 +22,12 @@ module m
     !ERROR: Host array 'm' cannot be present in device context
     if (i .le. N) a(i) = m(i)
   end subroutine
+
+  attributes(global) subroutine localarray()
+    integer :: a(10)
+    i = threadIdx%x
+    a(i) = i
+  end subroutine
 end
 
 program main
