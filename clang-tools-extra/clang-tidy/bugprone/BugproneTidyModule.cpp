@@ -9,7 +9,6 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../cppcoreguidelines/NarrowingConversionsCheck.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
@@ -17,6 +16,7 @@
 #include "BitwisePointerCastCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
+#include "NarrowingConversionsCheck.h"
 #include "CastingThroughVoidCheck.h"
 #include "ChainedComparisonCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
@@ -183,7 +183,7 @@ public:
         "bugprone-pointer-arithmetic-on-polymorphic-object");
     CheckFactories.registerCheck<RedundantBranchConditionCheck>(
         "bugprone-redundant-branch-condition");
-    CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
+    CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "bugprone-narrowing-conversions");
     CheckFactories.registerCheck<NoEscapeCheck>("bugprone-no-escape");
     CheckFactories.registerCheck<NonZeroEnumToBoolConversionCheck>(

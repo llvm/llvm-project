@@ -30,7 +30,7 @@
 #include "MacroUsageCheck.h"
 #include "MisleadingCaptureDefaultByValueCheck.h"
 #include "MissingStdForwardCheck.h"
-#include "NarrowingConversionsCheck.h"
+#include "../bugprone/NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
 #include "NoSuspendWithLockCheck.h"
 #include "OwningMemoryCheck.h"
@@ -87,7 +87,7 @@ public:
         "cppcoreguidelines-misleading-capture-default-by-value");
     CheckFactories.registerCheck<MissingStdForwardCheck>(
         "cppcoreguidelines-missing-std-forward");
-    CheckFactories.registerCheck<NarrowingConversionsCheck>(
+    CheckFactories.registerCheck<bugprone::NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
     CheckFactories.registerCheck<NoSuspendWithLockCheck>(

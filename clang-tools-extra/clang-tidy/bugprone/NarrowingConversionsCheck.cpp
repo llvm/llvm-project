@@ -22,7 +22,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cppcoreguidelines {
+namespace clang::tidy::bugprone {
 
 namespace {
 

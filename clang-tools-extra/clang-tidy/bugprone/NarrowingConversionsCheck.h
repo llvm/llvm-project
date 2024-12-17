@@ -11,7 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cppcoreguidelines {
+namespace clang::tidy::bugprone {
 
 /// Checks for narrowing conversions, e.g:
 ///   int i = 0;
