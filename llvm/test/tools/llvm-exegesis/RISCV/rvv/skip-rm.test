@@ -1,0 +1,12 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVAADDU_VV_M1 \
+# RUN:    --riscv-enumerate-rounding-modes=false --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s --check-prefix=VXRM
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVFADD_VFPR16_M1_E16 \
+# RUN:    --riscv-enumerate-rounding-modes=false --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s --check-prefix=FRM
+
+# VXRM: PseudoVAADDU_VV_M1
+# VXRM: VXRM: rnu
+# VXRM-NOT: VXRM: {{(rne|rdn|rod)}}
+
+# FRM: PseudoVFADD_VFPR16_M1_E16
+# FRM: FRM: rne
+# FRM-NOT: FRM: {{(rtz|rdn|rup|rmm|dyn)}}

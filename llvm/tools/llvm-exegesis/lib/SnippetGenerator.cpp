@@ -108,6 +108,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
   BitVector DefinedRegs = State.getRATC().emptyRegisters();
+  const auto &ET = State.getExegesisTarget();
   std::vector<RegisterValue> RIV;
   for (const InstructionTemplate &IT : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not
@@ -121,18 +122,19 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
         return IT.getValueFor(Op).getReg();
       return 0;
     };
+    const Instruction &I = IT.getInstr();
     // Collect used registers that have never been def'ed.
-    for (const Operand &Op : IT.getInstr().Operands) {
+    for (const Operand &Op : I.Operands) {
       if (Op.isUse()) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0 && !DefinedRegs.test(Reg)) {
-          RIV.push_back(RegisterValue::zero(Reg));
+          RIV.push_back(ET.assignInitialRegisterValue(I, Op, Reg));
           DefinedRegs.set(Reg);
         }
       }
     }
     // Mark defs as having been def'ed.
-    for (const Operand &Op : IT.getInstr().Operands) {
+    for (const Operand &Op : I.Operands) {
       if (Op.isDef()) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0)
@@ -286,16 +288,17 @@ Error randomizeUnsetVariables(const LLVMState &State,
 }
 
 Error validateGeneratedInstruction(const LLVMState &State, const MCInst &Inst) {
-  for (const auto &Operand : Inst) {
-    if (!Operand.isValid()) {
+  for (const auto &Operand : llvm::enumerate(Inst)) {
+    if (!Operand.value().isValid()) {
       // Mention the particular opcode - it is not necessarily the "main"
       // opcode being benchmarked by this snippet. For example, serial snippet
       // generator uses one more opcode when in SERIAL_VIA_NON_MEMORY_INSTR
       // execution mode.
       const auto OpcodeName = State.getInstrInfo().getName(Inst.getOpcode());
-      return make_error<Failure>("Not all operands were initialized by the "
-                                 "snippet generator for " +
-                                 OpcodeName + " opcode.");
+      return make_error<Failure>(
+          "Operand #" + std::to_string(Operand.index()) +
+          " was not initialized by the snippet generator for " + OpcodeName +
+          " opcode.");
     }
   }
   return Error::success();

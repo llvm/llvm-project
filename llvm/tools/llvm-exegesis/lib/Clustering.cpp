@@ -8,6 +8,7 @@
 
 #include "Clustering.h"
 #include "Error.h"
+#include "ProgressMeter.h"
 #include "SchedClassResolution.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
@@ -129,8 +130,12 @@ Error BenchmarkClustering::validateAndSetup() {
 }
 
 void BenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
+  ProgressMeter<> Meter(Points_.size());
+
   std::vector<size_t> Neighbors; // Persistent buffer to avoid allocs.
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
+    ProgressMeter<>::ProgressMeterStep MeterStep(&Meter);
+
     if (!ClusterIdForPoint_[P].isUndef())
       continue; // Previously processed in inner loop.
     rangeQuery(P, Neighbors);

@@ -1,0 +1,29 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -start-before-phase=measure --mode=latency --dry-run-measurement --use-dummy-perf-counters \
+# RUN:    --dump-object-to-disk=%t.o %s > %t.result.yml
+# RUN: llvm-objdump -d %t.o | FileCheck %s
+
+# CHECK: vsetvli {{.*}}, zero, e32, m1, tu, ma
+# CHECK: fsrmi   {{.*}}, 0x0
+# CHECK: vfwredusum.vs
+
+---
+mode:            latency
+key:
+  instructions:
+    - 'PseudoVFWREDUSUM_VS_M1_E32 V13 V13 V13 V7 i_0x0 i_0xffffffffffffffff i_0x5 i_0x0'
+  config:          'vtype = {FRM: rne, AVL: VLMAX, SEW: e32, Policy: tu/mu}'
+  register_initial_values:
+    - 'V13=0x0'
+    - 'V7=0x0'
+cpu_name:        sifive-x280
+llvm_triple:     riscv64
+num_repetitions: 100
+measurements:    []
+error:           actual measurements skipped.
+info:            ''
+assembled_snippet: 57730009F3532000D796D3C6D796D3C6D796D3C6D796D3C6739023008280
+object_file:
+  compression:     zlib
+  original_size:   5632
+  compressed_bytes: 'eJztWDFvEzEUfk6btEgMoWVAogMSHSokrJybRrCgIFQQEjAUKiYU3V3s9kQul5zN6egC4hd0YmTuL2FGYuB3oK5IYPt8SXBcIbYO/qTn973Pfs8v5zflw/6zxw2EoAaCc5hHC7heuaa0vmZ9WHef9PDw8PDw8PDw8PDw8PDwuGR4zeHK+ctb8OPz96/eLo/x09vw6ePDFgLIEx4XgH7J11ptN/Oi103IJBikZNIZhIoxMiGDoVpipRWBXE6SmOdEE0bHMU00Z8dB5dJkrFkUVi7SrqC7hM1YaVivO5wxNmNm11Qs5iWLUUDumXojster6S6p2V4wo72uZiVnskLEZI2O/EEqnKZhHE+zqdxWc9o284pODgCVCN282tDaDaN/+cdfUWvq68HP3+7dxpJydIEe6XV1SX+j1+aSfkfaxkKdus8tE9+3b8GClgL2S3pEecKfjln2inIBWE8BDoXIk+idoBxYlgEeZ4LiJy8O73IRxm/lKToKMT0esDxMKWAuchFG0r9Pld8eYqKWALZL3HF/iv/Ec2krDv10s/IjS7efCRlr2QXMgy+9a/vvEDtq6rxrDtFxVs2P7H9yUf6alWDnPzKaPSlnG5XfsfR1K34A1TT1Lb3cnPen+4Bquur8Wj903K3wzdx/ttB3y5H/B0zRwDY='
+...

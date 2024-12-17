@@ -1,0 +1,8 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVFWREDUSUM_VS_M1_E32 \
+# RUN:    --max-configs-per-opcode=1 --min-instructions=100 | FileCheck %s
+
+# A simple check on object file serialization
+# CHECK: object_file:
+# CHECK-NEXT: compression: {{(zlib|zstd)}}
+# CHECK-NEXT: original_size: {{[0-9]+}}
+# CHECK-NEXT: compressed_bytes: '{{.*}}'

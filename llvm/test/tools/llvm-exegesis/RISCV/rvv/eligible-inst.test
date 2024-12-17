@@ -1,0 +1,10 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency \
+# RUN:    --opcode-name=PseudoVCOMPRESS_VM_M2_E8,PseudoVCPOP_M_B32 | FileCheck %s --allow-empty --check-prefix=LATENCY
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVCOMPRESS_VM_M2_E8,PseudoVCPOP_M_B32 --min-instructions=100 | FileCheck %s --check-prefix=RTHROUGHPUT
+
+# LATENCY-NOT: PseudoVCOMPRESS_VM_M2_E8
+# LATENCY-NOT: PseudoVCPOP_M_B32
+
+# RTHROUGHPUT: PseudoVCOMPRESS_VM_M2_E8
+# RTHROUGHPUT: PseudoVCPOP_M_B32

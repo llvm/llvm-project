@@ -44,6 +44,8 @@ bool Operand::isDef() const { return IsDef; }
 
 bool Operand::isUse() const { return !IsDef; }
 
+bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
+
 bool Operand::isReg() const { return Tracker; }
 
 bool Operand::isTied() const { return TiedToIndex.has_value(); }
@@ -114,6 +116,8 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < Description->getNumDefs());
+    Operand.IsEarlyClobber =
+        (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
     // TODO(gchatelet): Handle isLookupPtrRegClass.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);

@@ -31,9 +31,8 @@ namespace exegesis {
 // Computes the idealized ProcRes Unit pressure. This is the expected
 // distribution if the CPU scheduler can distribute the load as evenly as
 // possible.
-std::vector<std::pair<uint16_t, float>>
-computeIdealizedProcResPressure(const MCSchedModel &SM,
-                                SmallVector<MCWriteProcResEntry, 8> WPRS);
+std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
+    const MCSchedModel &SM, const SmallVector<MCWriteProcResEntry, 8> &WPRS);
 
 // An MCSchedClassDesc augmented with some additional data.
 struct ResolvedSchedClass {
@@ -47,6 +46,9 @@ struct ResolvedSchedClass {
   std::vector<BenchmarkMeasure>
   getAsPoint(Benchmark::ModeE Mode, const MCSubtargetInfo &STI,
              ArrayRef<PerInstructionStats> Representative) const;
+
+  unsigned computeNormalizedWriteLatency(const MCWriteLatencyEntry *WLE,
+                                         const MCSubtargetInfo &STI) const;
 
   const unsigned SchedClassId;
   const MCSchedClassDesc *const SCDesc;

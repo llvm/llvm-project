@@ -103,8 +103,9 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
   for (; I != E; ++I) {
     if (!I->ReleaseAtCycle)
       continue;
+    assert(I->ReleaseAtCycle > I->AcquireAtCycle);
     unsigned NumUnits = SM.getProcResource(I->ProcResourceIdx)->NumUnits;
-    double Temp = NumUnits * 1.0 / I->ReleaseAtCycle;
+    double Temp = NumUnits * 1.0 / (I->ReleaseAtCycle - I->AcquireAtCycle);
     Throughput = Throughput ? std::min(*Throughput, Temp) : Temp;
   }
   if (Throughput)

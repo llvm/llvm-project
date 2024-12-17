@@ -227,8 +227,19 @@ char RISCVInsertWriteVXRM::ID = 0;
 INITIALIZE_PASS(RISCVInsertWriteVXRM, DEBUG_TYPE, RISCV_INSERT_WRITE_VXRM_NAME,
                 false, false)
 
+static unsigned getAndCacheRVVMCOpcode(unsigned VPseudoOpcode) {
+  // VPseudo opcode -> MC opcode
+  static DenseMap<unsigned, unsigned> OpcodeCache;
+  auto It = OpcodeCache.find(VPseudoOpcode);
+  if (It != OpcodeCache.end())
+    return It->second;
+  unsigned MCOpcode = RISCV::getRVVMCOpcode(VPseudoOpcode);
+  OpcodeCache.insert({VPseudoOpcode, MCOpcode});
+  return MCOpcode;
+}
+
 static bool ignoresVXRM(const MachineInstr &MI) {
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  switch (getAndCacheRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VNCLIP_WI:

@@ -17,6 +17,11 @@
 #include <perfmon/pfmlib_perf_event.h>
 #endif
 
+#include <asm/unistd.h>
+#include <linux/perf_event.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
 #include <cassert>
 #include <cstddef>
 #include <errno.h>  // for erno
@@ -44,6 +49,12 @@ void pfmTerminate() {
 #endif
 }
 
+static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
+                            int cpu, int group_fd, unsigned long flags) {
+  int ret = syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
+  return ret;
+}
+
 // Performance counters may be unavailable for a number of reasons (such as
 // kernel.perf_event_paranoid restriction or CPU being unknown to libpfm).
 //
@@ -51,12 +62,7 @@ void pfmTerminate() {
 // counters while still passing control to the generated code snippet.
 const char *const PerfEvent::DummyEventString = "not-really-an-event";
 
-PerfEvent::~PerfEvent() {
-#ifdef HAVE_LIBPFM
-  delete Attr;
-  ;
-#endif
-}
+PerfEvent::~PerfEvent() { delete Attr; }
 
 PerfEvent::PerfEvent(PerfEvent &&Other)
     : EventString(std::move(Other.EventString)),
@@ -112,7 +118,6 @@ ConfiguredEvent::ConfiguredEvent(PerfEvent &&EventToConfigure)
   assert(Event.valid());
 }
 
-#ifdef HAVE_LIBPFM
 void ConfiguredEvent::initRealEvent(const pid_t ProcessID, const int GroupFD) {
   const int CPU = -1;
   const uint32_t Flags = 0;
@@ -145,17 +150,6 @@ ConfiguredEvent::readOrError(StringRef /*unused*/) const {
 }
 
 ConfiguredEvent::~ConfiguredEvent() { close(FileDescriptor); }
-#else
-void ConfiguredEvent::initRealEvent(pid_t ProcessID, const int GroupFD) {}
-
-Expected<SmallVector<int64_t>>
-ConfiguredEvent::readOrError(StringRef /*unused*/) const {
-  return make_error<StringError>("Not implemented",
-                                 errc::function_not_supported);
-}
-
-ConfiguredEvent::~ConfiguredEvent() = default;
-#endif // HAVE_LIBPFM
 
 CounterGroup::CounterGroup(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
                            pid_t ProcessID)
@@ -169,7 +163,6 @@ CounterGroup::CounterGroup(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
     initRealEvent(ProcessID);
 }
 
-#ifdef HAVE_LIBPFM
 void CounterGroup::initRealEvent(pid_t ProcessID) {
   EventCounter.initRealEvent(ProcessID);
 
@@ -178,8 +171,10 @@ void CounterGroup::initRealEvent(pid_t ProcessID) {
 }
 
 void CounterGroup::start() {
-  if (!IsDummyEvent)
+  if (!IsDummyEvent) {
     ioctl(getFileDescriptor(), PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+    ioctl(getFileDescriptor(), PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+  }
 }
 
 void CounterGroup::stop() {
@@ -215,32 +210,6 @@ CounterGroup::readValidationCountersOrError() const {
 }
 
 int CounterGroup::numValues() const { return 1; }
-#else
-
-void CounterGroup::initRealEvent(pid_t ProcessID) {}
-
-void CounterGroup::start() {}
-
-void CounterGroup::stop() {}
-
-Expected<SmallVector<int64_t, 4>>
-CounterGroup::readOrError(StringRef /*unused*/) const {
-  if (IsDummyEvent) {
-    SmallVector<int64_t, 4> Result;
-    Result.push_back(42);
-    return Result;
-  }
-  return make_error<StringError>("Not implemented", errc::io_error);
-}
-
-Expected<SmallVector<int64_t>>
-CounterGroup::readValidationCountersOrError() const {
-  return SmallVector<int64_t>(0);
-}
-
-int CounterGroup::numValues() const { return 1; }
-
-#endif
 
 } // namespace pfm
 } // namespace exegesis
