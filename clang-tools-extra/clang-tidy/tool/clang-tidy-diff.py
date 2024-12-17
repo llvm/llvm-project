@@ -35,6 +35,7 @@ import sys
 import tempfile
 import threading
 import traceback
+from pathlib import Path
 
 try:
     import yaml
@@ -122,6 +123,19 @@ def merge_replacement_files(tmpdir, mergefile):
     else:
         # Empty the file:
         open(mergefile, "w").close()
+
+
+def get_compiling_file_list(compiledb : Path) -> list[Path]:
+    """ Read a compile_commands.json database and return a list of file paths """
+    file_list = []
+    with open(compiledb) as db_file:
+        db_json = json.load(db_file)
+        for entry in db_json:
+            if "file" not in entry:
+                continue
+            if entry["file"] not in file_list:
+                file_list.append(Path(entry["file"]))
+    return file_list
 
 
 def main():
@@ -243,6 +257,12 @@ def main():
 
     args = parser.parse_args(argv)
 
+    # Read compile_commands.json database to extract a compiling file list
+    current_dir = Path(__file__).parent.resolve()
+    compile_commands_json = (current_dir / args.build_path) if args.build_path else current_dir
+    compile_commands_json = (compile_commands_json / "compile_commands.json")
+    compiling_files = get_compiling_file_list(compile_commands_json)
+
     # Extract changed lines for each file.
     filename = None
     lines_by_file = {}
@@ -259,6 +279,10 @@ def main():
         else:
             if not re.match("^%s$" % args.iregex, filename, re.IGNORECASE):
                 continue
+
+        # Skip any files not in the compiling list
+        if (current_dir / filename) not in compiling_files:
+            continue
 
         match = re.search(r"^@@.*\+(\d+)(,(\d+))?", line)
         if match:
