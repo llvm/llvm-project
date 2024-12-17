@@ -541,22 +541,6 @@ bool ThreadList::WillResume() {
     }
   }
 
-  // Give all the threads that are likely to run a last chance to set up their
-  // state before we negotiate who is actually going to get a chance to run...
-  // Don't set to resume suspended threads, and if any thread wanted to stop
-  // others, only call setup on the threads that request StopOthers...
-
-  for (pos = m_threads.begin(); pos != end; ++pos) {
-    ThreadSP thread_sp(*pos);
-    if (thread_sp->GetResumeState() != eStateSuspended &&
-        (!wants_solo_run || thread_sp->GetCurrentPlan()->StopOthers())) {
-      if (thread_sp->IsOperatingSystemPluginThread() &&
-          !thread_sp->GetBackingThread())
-        continue;
-      thread_sp->SetupForResume();
-    }
-  }
-
   // Now go through the threads and see if any thread wants to run just itself.
   // if so then pick one and run it.
 
@@ -591,6 +575,36 @@ bool ThreadList::WillResume() {
         // This takes precedence, so if we find one of these, service it:
         stop_others_thread_sp = thread_sp;
         break;
+      }
+    }
+  }
+
+  // Give all the threads that are likely to run a last chance to set up their
+  // state before we negotiate who is actually going to get a chance to run...
+  // Don't set to resume suspended threads, and if any thread wanted to stop
+  // others, only call setup on the threads that request StopOthers...
+  for (pos = m_threads.begin(); pos != end; ++pos) {
+    ThreadSP thread_sp(*pos);
+    if (thread_sp->GetResumeState() != eStateSuspended &&
+        (!wants_solo_run || thread_sp->GetCurrentPlan()->StopOthers())) {
+      if (thread_sp->IsOperatingSystemPluginThread() &&
+          !thread_sp->GetBackingThread())
+        continue;
+      if (thread_sp->SetupForResume()) {
+        // You can't say "stop others" and also want yourself to be suspended.
+        assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
+        run_me_only_list.AddThread(thread_sp);
+
+        if (!(stop_others_thread_sp && stop_others_thread_sp->ShouldRunBeforePublicStop())) {
+          if (thread_sp == GetSelectedThread())
+            stop_others_thread_sp = thread_sp;
+
+          if (thread_sp->ShouldRunBeforePublicStop()) {
+            // This takes precedence, so if we find one of these, service it:
+            stop_others_thread_sp = thread_sp;
+            break;
+          }
+        }
       }
     }
   }
