@@ -368,7 +368,7 @@ public:
     InstructionCost Invalid = InstructionCost::getInvalid();
     InstructionCost Cost(TTI::TCC_Basic);
 
-    if (Opcode != Instruction::Add)
+    if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
       return Invalid;
 
     if (InputTypeA != InputTypeB)
