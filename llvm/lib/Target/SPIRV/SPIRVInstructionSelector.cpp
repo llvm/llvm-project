@@ -3191,16 +3191,13 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
   // (ie i64x4 -> i64x2, i64x2)
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *OpType = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
-  SPIRVType *LeftOpType;
-  SPIRVType *LeftResType;
+  SPIRVType *LeftOpType = OpType;
+  SPIRVType *LeftResType = BaseType;
   if (LeftIsVector) {
     LeftOpType =
         GR.getOrCreateSPIRVVectorType(OpType, LeftComponentCount, MIRBuilder);
     LeftResType =
         GR.getOrCreateSPIRVVectorType(BaseType, LeftComponentCount, MIRBuilder);
-  } else {
-    LeftOpType = OpType;
-    LeftResType = BaseType;
   }
 
   SPIRVType *RightOpType =
@@ -3211,8 +3208,6 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
   Register LeftSideIn = MRI->createVirtualRegister(GR.getRegClass(LeftOpType));
   Register RightSideIn =
       MRI->createVirtualRegister(GR.getRegClass(RightOpType));
-
-  bool Result;
 
   // Extract the left half from the SrcReg into LeftSideIn
   // accounting for the special case when it only has one element
@@ -3225,14 +3220,16 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
                    // Per the spec, repeat the vector if only one vec is needed
                    .addUse(SrcReg);
 
-    for (unsigned J = 0; J < LeftComponentCount; J++) {
+    for (unsigned J = 0; J < LeftComponentCount; J++)
       MIB.addImm(J);
-    }
 
-    Result = MIB.constrainAllUses(TII, TRI, RBI);
+    if (!MIB.constrainAllUses(TII, TRI, RBI))
+      return false;
+
   } else {
-    Result = selectOpWithSrcs(LeftSideIn, LeftOpType, I, {SrcReg, ConstIntZero},
-                              SPIRV::OpVectorExtractDynamic);
+    if (!selectOpWithSrcs(LeftSideIn, LeftOpType, I, {SrcReg, ConstIntZero},
+                          SPIRV::OpVectorExtractDynamic))
+      return false;
   }
 
   // Extract the right half from the SrcReg into RightSideIn.
@@ -3246,28 +3243,28 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
                  // Per the spec, repeat the vector if only one vec is needed
                  .addUse(SrcReg);
 
-  for (unsigned J = LeftComponentCount; J < ComponentCount; J++) {
+  for (unsigned J = LeftComponentCount; J < ComponentCount; J++)
     MIB.addImm(J);
-  }
 
-  Result = Result && MIB.constrainAllUses(TII, TRI, RBI);
+  if (!MIB.constrainAllUses(TII, TRI, RBI))
+    return false;
 
   // Recursively call selectFirstBitSet64 on the 2 halves
   Register LeftSideOut =
       MRI->createVirtualRegister(GR.getRegClass(LeftResType));
   Register RightSideOut =
       MRI->createVirtualRegister(GR.getRegClass(RightResType));
-  Result =
-      Result && selectFirstBitSet64(LeftSideOut, LeftResType, I, LeftSideIn,
-                                    BitSetOpcode, SwapPrimarySide);
-  Result =
-      Result && selectFirstBitSet64(RightSideOut, RightResType, I, RightSideIn,
-                                    BitSetOpcode, SwapPrimarySide);
+
+  if (!selectFirstBitSet64(LeftSideOut, LeftResType, I, LeftSideIn,
+                           BitSetOpcode, SwapPrimarySide))
+    return false;
+  if (!selectFirstBitSet64(RightSideOut, RightResType, I, RightSideIn,
+                           BitSetOpcode, SwapPrimarySide))
+    return false;
 
   // Join the two resulting registers back into the return type
   // (ie i32x2, i32x2 -> i32x4)
-  return Result &&
-         selectOpWithSrcs(ResVReg, ResType, I, {LeftSideOut, RightSideOut},
+  return selectOpWithSrcs(ResVReg, ResType, I, {LeftSideOut, RightSideOut},
                           SPIRV::OpCompositeConstruct);
 }
 
@@ -3297,13 +3294,15 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
       GR.getOrCreateSPIRVVectorType(BaseType, 2 * ComponentCount, MIRBuilder);
   Register BitcastReg =
       MRI->createVirtualRegister(GR.getRegClass(PostCastType));
-  bool Result =
-      selectOpWithSrcs(BitcastReg, PostCastType, I, {SrcReg}, SPIRV::OpBitcast);
+
+  if (!selectOpWithSrcs(BitcastReg, PostCastType, I, {SrcReg},
+                        SPIRV::OpBitcast))
+    return false;
 
   // 2. Find the first set bit from the primary side for all the pieces in #1
   Register FBSReg = MRI->createVirtualRegister(GR.getRegClass(PostCastType));
-  Result = Result && selectFirstBitSet32(FBSReg, PostCastType, I, BitcastReg,
-                                         BitSetOpcode);
+  if (!selectFirstBitSet32(FBSReg, PostCastType, I, BitcastReg, BitSetOpcode))
+    return false;
 
   // 3. Split result vector into high bits and low bits
   Register HighReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
@@ -3312,12 +3311,12 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
   bool IsScalarRes = ResType->getOpcode() != SPIRV::OpTypeVector;
   if (IsScalarRes) {
     // if scalar do a vector extract
-    Result =
-        Result && selectOpWithSrcs(HighReg, ResType, I, {FBSReg, ConstIntZero},
-                                   SPIRV::OpVectorExtractDynamic);
-    Result =
-        Result && selectOpWithSrcs(LowReg, ResType, I, {FBSReg, ConstIntOne},
-                                   SPIRV::OpVectorExtractDynamic);
+    if (!selectOpWithSrcs(HighReg, ResType, I, {FBSReg, ConstIntZero},
+                          SPIRV::OpVectorExtractDynamic))
+      return false;
+    if (!selectOpWithSrcs(LowReg, ResType, I, {FBSReg, ConstIntOne},
+                          SPIRV::OpVectorExtractDynamic))
+      return false;
   } else {
     // if vector do a shufflevector
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
@@ -3332,7 +3331,9 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     for (unsigned J = 0; J < ComponentCount * 2; J += 2) {
       MIB.addImm(J);
     }
-    Result = Result && MIB.constrainAllUses(TII, TRI, RBI);
+
+    if (!MIB.constrainAllUses(TII, TRI, RBI))
+      return false;
 
     MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                   TII.get(SPIRV::OpVectorShuffle))
@@ -3346,7 +3347,8 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     for (unsigned J = 1; J < ComponentCount * 2; J += 2) {
       MIB.addImm(J);
     }
-    Result = Result && MIB.constrainAllUses(TII, TRI, RBI);
+    if (!MIB.constrainAllUses(TII, TRI, RBI))
+      return false;
   }
 
   // 4. Check the result. When primary bits == -1 use secondary, otherwise use
@@ -3376,10 +3378,10 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     AddOp = SPIRV::OpIAddV;
   }
 
-  Register PrimaryReg;
-  Register SecondaryReg;
-  Register PrimaryShiftReg;
-  Register SecondaryShiftReg;
+  Register PrimaryReg = HighReg;
+  Register SecondaryReg = LowReg;
+  Register PrimaryShiftReg = Reg32;
+  Register SecondaryShiftReg = Reg0;
 
   // By default the emitted opcodes check for the set bit from the MSB side.
   // Setting SwapPrimarySide checks the set bit from the LSB side
@@ -3388,32 +3390,27 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     SecondaryReg = HighReg;
     PrimaryShiftReg = Reg0;
     SecondaryShiftReg = Reg32;
-  } else {
-    PrimaryReg = HighReg;
-    SecondaryReg = LowReg;
-    PrimaryShiftReg = Reg32;
-    SecondaryShiftReg = Reg0;
   }
 
   // Check if the primary bits are == -1
   Register BReg = MRI->createVirtualRegister(GR.getRegClass(BoolType));
-  Result = Result && selectOpWithSrcs(BReg, BoolType, I,
-                                      {PrimaryReg, NegOneReg}, SPIRV::OpIEqual);
+  if (!selectOpWithSrcs(BReg, BoolType, I, {PrimaryReg, NegOneReg},
+                        SPIRV::OpIEqual))
+    return false;
 
   // Select secondary bits if true in BReg, otherwise primary bits
   Register TmpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  Result =
-      Result && selectOpWithSrcs(TmpReg, ResType, I,
-                                 {BReg, SecondaryReg, PrimaryReg}, SelectOp);
+  if (!selectOpWithSrcs(TmpReg, ResType, I, {BReg, SecondaryReg, PrimaryReg},
+                        SelectOp))
+    return false;
 
   // 5. Add 32 when high bits are used, otherwise 0 for low bits
   Register ValReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  Result = Result && selectOpWithSrcs(
-                         ValReg, ResType, I,
-                         {BReg, SecondaryShiftReg, PrimaryShiftReg}, SelectOp);
+  if (!selectOpWithSrcs(ValReg, ResType, I,
+                        {BReg, SecondaryShiftReg, PrimaryShiftReg}, SelectOp))
+    return false;
 
-  return Result &&
-         selectOpWithSrcs(ResVReg, ResType, I, {ValReg, TmpReg}, AddOp);
+  return selectOpWithSrcs(ResVReg, ResType, I, {ValReg, TmpReg}, AddOp);
 }
 
 bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
