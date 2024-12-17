@@ -4,7 +4,7 @@
 // CHECK-LABEL: test_basic
 func.func @test_basic() {
   %0 = memref.alloc() : memref<i32>
-  // CHECK: %alice
+  // CHECK: %alice = memref.load
   %1 = memref.load %0[] : memref<i32> loc("alice")
   return
 }
@@ -14,9 +14,9 @@ func.func @test_basic() {
 // CHECK-LABEL: test_repeat_namelocs
 func.func @test_repeat_namelocs() {
   %0 = memref.alloc() : memref<i32>
-  // CHECK: %alice
+  // CHECK: %alice = memref.load
   %1 = memref.load %0[] : memref<i32> loc("alice")
-  // CHECK: %alice_0
+  // CHECK: %alice_0 = memref.load
   %2 = memref.load %0[] : memref<i32> loc("alice")
   return
 }
@@ -36,9 +36,9 @@ func.func private @make_two_results() -> (index, index)
 
 // CHECK-LABEL: test_multiple_results
 func.func @test_multiple_results(%cond: i1) {
-  // CHECK: %foo:2
+  // CHECK: %foo:2 = call @make_two_results
   %0:2 = call @make_two_results() : () -> (index, index) loc("foo")
-  // CHECK: %bar:2
+  // CHECK: %bar:2 = call @make_two_results
   %1, %2 = call @make_two_results() : () -> (index, index) loc("bar")
 
   // CHECK: %kevin:2 = scf.while (%arg1 = %bar#0, %arg2 = %bar#0)
@@ -65,9 +65,9 @@ func.func @test_multiple_results(%cond: i1) {
 
 // CHECK-LABEL: test_op_asm_interface
 func.func @test_op_asm_interface(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) {
-  // CHECK: %c0
+  // CHECK: %c0 = arith.constant
   %0 = arith.constant 0 : index
-  // CHECK: %foo
+  // CHECK: %foo = arith.constant
   %1 = arith.constant 1 : index loc("foo")
 
   linalg.generic #trait ins(%arg0: tensor<?xf32>) outs(%arg0, %arg1: tensor<?xf32>, tensor<?xf32>) {

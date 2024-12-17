@@ -369,7 +369,7 @@ bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
   return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
 }
 
-/// Return if the printer should use NameLocs as prefixes when printing SSA IDs
+/// Return if the printer should use NameLocs as prefixes when printing SSA IDs.
 bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
   return useNameLocAsPrefix;
 }
