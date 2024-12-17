@@ -1506,9 +1506,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                   })
               .Case<VPWidenCastRecipe>(
                   [&](VPWidenCastRecipe *CInst) -> VPRecipeBase * {
-                    auto *CI = dyn_cast<CastInst>(CInst->getUnderlyingInstr());
                     Intrinsic::ID VPID =
-                        VPIntrinsic::getForOpcode(CI->getOpcode());
+                        VPIntrinsic::getForOpcode(CInst->getOpcode());
                     assert(VPID != Intrinsic::not_intrinsic &&
                            "Expected vp.casts Instrinsic");
 
@@ -1516,8 +1515,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
+                    VPValue *Mask = Plan.getOrAddLiveIn(
+                        ConstantInt::getTrue(IntegerType::getInt1Ty(Ctx)));
                     Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
