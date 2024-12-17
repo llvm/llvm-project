@@ -621,6 +621,9 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
   }
   // Try to find the unwind info using `dl_find_object`
   dl_find_object findResult;
+#if __has_feature(memory_sanitizer)
+  __builtin_memset(&findResult, 0, sizeof(dl_find_object));
+#endif
   if (dlFindObject && dlFindObject((void *)targetAddr, &findResult) == 0) {
     if (findResult.dlfo_eh_frame == nullptr) {
       // Found an entry for `targetAddr`, but there is no unwind info.

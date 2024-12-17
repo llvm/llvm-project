@@ -133,6 +133,10 @@ _LIBUNWIND_EXPORT _Unwind_Reason_Code
 _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
   unw_cursor_t cursor;
   unw_context_t uc;
+#if __has_feature(memory_sanitizer)
+  __builtin_memset(&cursor, 0, sizeof(cursor));
+  __builtin_memset(&uc, 0, sizeof(uc));
+#endif
   __unw_getcontext(&uc);
   __unw_init_local(&cursor, &uc);
 

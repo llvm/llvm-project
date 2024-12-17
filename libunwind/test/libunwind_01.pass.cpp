@@ -16,10 +16,10 @@
 #include <string.h>
 
 void backtrace(int lower_bound) {
-  unw_context_t context;
+  unw_context_t context = {0};
   unw_getcontext(&context);
 
-  unw_cursor_t cursor;
+  unw_cursor_t cursor = {0};
   unw_init_local(&cursor, &context);
 
   char buffer[1024];
@@ -64,10 +64,10 @@ __attribute__((noinline)) void test3(int i, int j, int k) {
 }
 
 void test_no_info() {
-  unw_context_t context;
+  unw_context_t context = {0};
   unw_getcontext(&context);
 
-  unw_cursor_t cursor;
+  unw_cursor_t cursor = {0};
   unw_init_local(&cursor, &context);
 
   unw_proc_info_t info;
@@ -84,10 +84,10 @@ void test_no_info() {
 }
 
 void test_reg_names() {
-  unw_context_t context;
+  unw_context_t context = {0};
   unw_getcontext(&context);
 
-  unw_cursor_t cursor;
+  unw_cursor_t cursor = {0};
   unw_init_local(&cursor, &context);
 
   int max_reg_num = -100;
@@ -110,7 +110,7 @@ void test_reg_names() {
 
 #if defined(__x86_64__)
 void test_reg_get_set() {
-  unw_context_t context;
+  unw_context_t context = {0};
   unw_getcontext(&context);
 
   unw_cursor_t cursor;
@@ -131,10 +131,10 @@ void test_reg_get_set() {
 }
 
 void test_fpreg_get_set() {
-  unw_context_t context;
+  unw_context_t context = {0};
   unw_getcontext(&context);
 
-  unw_cursor_t cursor;
+  unw_cursor_t cursor = {0};
   unw_init_local(&cursor, &context);
 
   // get/set is not implemented for x86_64 fpregs.

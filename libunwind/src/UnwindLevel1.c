@@ -507,6 +507,10 @@ _Unwind_ForcedUnwind(_Unwind_Exception *exception_object,
                        (void *)exception_object, (void *)(uintptr_t)stop);
   unw_context_t uc;
   unw_cursor_t cursor;
+#if __has_feature(memory_sanitizer)
+  __builtin_memset(&uc, 0, sizeof(uc));
+  __builtin_memset(&cursor, 0, sizeof(cursor));
+#endif
   __unw_getcontext(&uc);
 
   // Mark that this is a forced unwind, so _Unwind_Resume() can do

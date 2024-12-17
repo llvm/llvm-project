@@ -13,8 +13,8 @@
 #include <libunwind.h>
 
 __attribute__((noinline)) void test_unw_resume() {
-  unw_context_t context;
-  unw_cursor_t cursor;
+  unw_context_t context = {0};
+  unw_cursor_t cursor = {0};
 
   unw_getcontext(&context);
   unw_init_local(&cursor, &context);

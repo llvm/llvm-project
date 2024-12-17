@@ -29,8 +29,8 @@
 
 void test() {
   asm(".cfi_signal_frame");
-  unw_cursor_t cursor;
-  unw_context_t uc;
+  unw_cursor_t cursor = {0};
+  unw_context_t uc = {0};
   unw_getcontext(&uc);
   unw_init_local(&cursor, &uc);
   assert(unw_step(&cursor) > 0);
