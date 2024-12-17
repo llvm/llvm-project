@@ -21,7 +21,6 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -127,7 +126,7 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
     return matchStridedConstant(StartC);
 
   // Base case, start is a stepvector
-  if (match(Start, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+  if (match(Start, m_Intrinsic<Intrinsic::stepvector>())) {
     auto *Ty = Start->getType()->getScalarType();
     return std::make_pair(ConstantInt::get(Ty, 0), ConstantInt::get(Ty, 1));
   }
@@ -504,7 +503,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
     return false;
 
   LLVMContext &Ctx = PtrI->getContext();
-  IRBuilder<InstSimplifyFolder> Builder(Ctx, *DL);
+  IRBuilder Builder(Ctx, InstSimplifyFolder(*DL));
   Builder.SetInsertPoint(PtrI);
 
   Value *BasePtr, *Stride;

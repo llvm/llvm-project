@@ -25,11 +25,11 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -37,9 +37,9 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -259,7 +259,11 @@ public:
   }
 
   void emitMachine(StringRef CPU) override {
-    OS << "\t.machine " << CPU << '\n';
+    const Triple &TT = Streamer.getContext().getTargetTriple();
+    if (TT.isOSBinFormatXCOFF())
+      OS << "\t.machine\t" << '\"' << CPU << '\"' << '\n';
+    else
+      OS << "\t.machine " << CPU << '\n';
   }
 
   void emitAbiVersion(int AbiVersion) override {
@@ -423,7 +427,8 @@ public:
   }
 
   void emitMachine(StringRef CPU) override {
-    llvm_unreachable("Machine pseudo-ops are invalid for XCOFF.");
+    static_cast<XCOFFObjectWriter &>(Streamer.getAssemblerPtr()->getWriter())
+        .setCPU(CPU);
   }
 
   void emitAbiVersion(int AbiVersion) override {

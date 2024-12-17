@@ -30,10 +30,11 @@ enum { ConstraintAlignment = 8 };
 
 struct alignas(ConstraintAlignment) AtomicConstraint {
   const Expr *ConstraintExpr;
+  NamedDecl *ConstraintDecl;
   std::optional<ArrayRef<TemplateArgumentLoc>> ParameterMapping;
 
-  AtomicConstraint(Sema &S, const Expr *ConstraintExpr) :
-      ConstraintExpr(ConstraintExpr) { };
+  AtomicConstraint(const Expr *ConstraintExpr, NamedDecl *ConstraintDecl)
+      : ConstraintExpr(ConstraintExpr), ConstraintDecl(ConstraintDecl) {};
 
   bool hasMatchingParameterMapping(ASTContext &C,
                                    const AtomicConstraint &Other) const {
@@ -209,17 +210,17 @@ bool subsumes(const NormalForm &PDNF, const NormalForm &QCNF,
       bool Found = false;
       for (NormalFormConstraint Pia : Pi) {
         for (NormalFormConstraint Qjb : Qj) {
-          if (Pia.is<FoldExpandedConstraint *>() &&
-              Qjb.is<FoldExpandedConstraint *>()) {
-            if (Pia.get<FoldExpandedConstraint *>()->subsumes(
-                    *Qjb.get<FoldExpandedConstraint *>(), E)) {
+          if (isa<FoldExpandedConstraint *>(Pia) &&
+              isa<FoldExpandedConstraint *>(Qjb)) {
+            if (cast<FoldExpandedConstraint *>(Pia)->subsumes(
+                    *cast<FoldExpandedConstraint *>(Qjb), E)) {
               Found = true;
               break;
             }
-          } else if (Pia.is<AtomicConstraint *>() &&
-                     Qjb.is<AtomicConstraint *>()) {
-            if (E(*Pia.get<AtomicConstraint *>(),
-                  *Qjb.get<AtomicConstraint *>())) {
+          } else if (isa<AtomicConstraint *>(Pia) &&
+                     isa<AtomicConstraint *>(Qjb)) {
+            if (E(*cast<AtomicConstraint *>(Pia),
+                  *cast<AtomicConstraint *>(Qjb))) {
               Found = true;
               break;
             }

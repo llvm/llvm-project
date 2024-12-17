@@ -34,4 +34,19 @@ void NamelistChecker::Leave(const parser::NamelistStmt &nmlStmt) {
   }
 }
 
+void NamelistChecker::Leave(const parser::LocalitySpec::Reduce &x) {
+  for (const parser::Name &name : std::get<std::list<parser::Name>>(x.t)) {
+    Symbol *sym{name.symbol};
+    // This is not disallowed by the standard, but would be difficult to
+    // support. This has to go here not with the other checks for locality specs
+    // in resolve-names.cpp so that it is done after the InNamelist flag is
+    // applied.
+    if (sym && sym->GetUltimate().test(Symbol::Flag::InNamelist)) {
+      context_.Say(name.source,
+          "NAMELIST variable '%s' not allowed in a REDUCE locality-spec"_err_en_US,
+          name.ToString());
+    }
+  }
+}
+
 } // namespace Fortran::semantics

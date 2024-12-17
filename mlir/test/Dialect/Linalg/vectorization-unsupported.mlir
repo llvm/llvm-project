@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics | FileCheck %s
 
 func.func @conv1d_nwc_wcf_dyn_ch_dim(%input: memref<4x6x?xf32>, %filter: memref<1x?x8xf32>, %output: memref<4x2x8xf32>) {
   // expected-error @+1 {{Attempted to vectorize, but failed}}
@@ -250,6 +250,33 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [2, [4], [4]] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// With dynamically shaped source, the vectorizer infers the vector size for
+// xfer Ops from the destination tensor and, conservatively, assumes
+// out-of-bounds accesses. Out-of-bounds accesses require a pad value, but
+// that's impossible to recover in this example. Hence no vectorization.
+
+// TODO: Use diagnostics once we can vectorize tensor.insert_slice with
+// transform.structured.vectorize
+
+// CHECK-LABEL: @insert_dynamic_slice_unknown_pad
+// CHECK-NOT: vector
+// CHECK: tensor.insert_slice
+func.func @insert_dynamic_slice_unknown_pad(%arg0: tensor<1x?x3xf32>, %arg1: tensor<9x8x7x1x2x3xf32>, %size: index) -> tensor<9x8x7x1x2x3xf32> {
+  %res = tensor.insert_slice %arg0 into %arg1[0, 0, 0, 0, 0, 0] [1, 1, 1, 1, %size, 3][1, 1, 1, 1, 1, 1] : tensor<1x?x3xf32> into tensor<9x8x7x1x2x3xf32>
+  return %res : tensor<9x8x7x1x2x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }

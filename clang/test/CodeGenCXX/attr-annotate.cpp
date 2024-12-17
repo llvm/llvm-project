@@ -50,7 +50,7 @@ static B<int long, -1>::foo<unsigned, 9> gf;
 // CHECK-NEXT:    store i32 [[ARGC:%.*]], ptr [[ARGC_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[ARGV:%.*]], ptr [[ARGV_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
-// CHECK-NEXT:    [[V:%.*]] = getelementptr inbounds %"struct.B<int, 7>::foo", ptr [[F]], i32 0, i32 0
+// CHECK-NEXT:    [[V:%.*]] = getelementptr inbounds nuw %"struct.B<int, 7>::foo", ptr [[F]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr [[V]], ptr @.str, ptr @.str.1, i32 {{.*}}, ptr @.args)
 // CHECK-NEXT:    [[TMP5:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr [[TMP2]], ptr @.str.3, ptr @.str.1, i32 {{.*}}, ptr @.args.4)
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP5]], align 4

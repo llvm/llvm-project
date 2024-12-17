@@ -12,11 +12,11 @@ s_add_i32 s106, s0, s1
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 
 s_add_i32 s104, s0, s1
-// SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: s104 register not available on this GPU
 // GFX10: s_add_i32 s104, s0, s1 ; encoding:
 
 s_add_i32 s105, s0, s1
-// SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: s105 register not available on this GPU
 // GFX10: s_add_i32 s105, s0, s1 ; encoding:
 
 v_add_i32 v256, v0, v1
@@ -41,7 +41,7 @@ s_mov_b64 s[105:106], -1
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
 
 s_mov_b64 s[104:105], -1
-// SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: s[104:105] register not available on this GPU
 // GFX10: s_mov_b64 s[104:105], -1 ; encoding:
 
 s_load_dwordx4 s[102:105], s[2:3], s4
@@ -89,29 +89,29 @@ s_mov_b32 ttmp16, 0
 s_mov_b32 ttmp12, 0
 // GFX9: s_mov_b32 ttmp12, 0 ; encoding:
 // GFX10: s_mov_b32 ttmp12, 0 ; encoding:
-// SIVICI-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// SIVICI-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: ttmp12 register not available on this GPU
 
 s_mov_b32 ttmp15, 0
 // GFX9: s_mov_b32 ttmp15, 0 ; encoding:
 // GFX10: s_mov_b32 ttmp15, 0 ; encoding:
-// SIVICI-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// SIVICI-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: ttmp15 register not available on this GPU
 
 s_mov_b32 flat_scratch_lo, 0
-// SI-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
-// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// SI-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: flat_scratch_lo register not available on this GPU
+// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: flat_scratch_lo register not available on this GPU
 // CIVI9: s_mov_b32 flat_scratch_lo, 0 ; encoding: [0x80,0x00,0xe6,0xbe]
 
 s_mov_b32 flat_scratch_hi, 0
-// SI-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
-// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// SI-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: flat_scratch_hi register not available on this GPU
+// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: flat_scratch_hi register not available on this GPU
 // CIVI9: s_mov_b32 flat_scratch_hi, 0 ; encoding: [0x80,0x00,0xe7,0xbe]
 
 s_mov_b32 tma_lo, 0
 // SIVICI: s_mov_b32 tma_lo, 0 ; encoding:
-// GFX9-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
-// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// GFX9-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
 
 s_mov_b32 tba_lo, 0
 // SIVICI: s_mov_b32 tba_lo, 0 ; encoding:
-// GFX9-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
-// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// GFX9-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: tba_lo register not available on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: tba_lo register not available on this GPU

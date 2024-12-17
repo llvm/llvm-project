@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=des -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=des < %s | llvm-objdump --no-print-imm-hex -d --mattr=des - | FileCheck --check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=des < %s | llvm-objdump --no-print-imm-hex -dr --mattr=des - | FileCheck --check-prefix=CHECK-INST %s
 
 foo:
-
   des 0
   des 6
   des 1

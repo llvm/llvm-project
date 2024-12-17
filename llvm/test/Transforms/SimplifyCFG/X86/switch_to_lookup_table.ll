@@ -314,20 +314,20 @@ lor.end:
 define i32 @overflow(i32 %type) {
 ; CHECK-LABEL: @overflow(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[TYPE:%.*]], label [[IF_END:%.*]] [
+; CHECK-NEXT:    switch i32 [[TYPE:%.*]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 3, label [[SW_BB3:%.*]]
 ; CHECK-NEXT:      i32 -2147483645, label [[SW_BB3]]
-; CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF_END:%.*]]
 ; CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       sw.bb2:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       sw.bb3:
 ; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       sw.default:
+; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[DIRENT_TYPE_0:%.*]] = phi i32 [ 6, [[SW_BB3]] ], [ 5, [[SW_BB2]] ], [ 0, [[SW_BB1]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[DIRENT_TYPE_0:%.*]] = phi i32 [ 3, [[SW_DEFAULT]] ], [ 6, [[SW_BB3]] ], [ 5, [[SW_BB2]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[DIRENT_TYPE_0]]
 ;
 entry:
@@ -340,15 +340,23 @@ entry:
   i32 3, label %sw.bb3
   ]
 
-sw.bb: br label %if.end
-sw.bb1: br label %if.end
-sw.bb2: br label %if.end
-sw.bb3: br label %if.end
-sw.default: br label %if.end
-if.else: br label %if.end
+sw.bb:                                            ; preds = %entry, %entry
+  br label %if.end
 
-if.end:
-  %dirent_type.0 = phi i32 [ 3, %sw.default ], [ 6, %sw.bb3 ], [ 5, %sw.bb2 ], [ 0, %sw.bb1 ], [ 3, %sw.bb ], [ 0, %if.else ]
+sw.bb1:                                           ; preds = %entry
+  br label %if.end
+
+sw.bb2:                                           ; preds = %entry
+  br label %if.end
+
+sw.bb3:                                           ; preds = %entry, %entry
+  br label %if.end
+
+sw.default:                                       ; preds = %entry
+  br label %if.end
+
+if.end:                                           ; preds = %sw.default, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb
+  %dirent_type.0 = phi i32 [ 3, %sw.default ], [ 6, %sw.bb3 ], [ 5, %sw.bb2 ], [ 0, %sw.bb1 ], [ 3, %sw.bb ]
   ret i32 %dirent_type.0
 }
 
@@ -2116,6 +2124,31 @@ cond.end:                                         ; preds = %entry, %cond.false
   %cond = phi i3 [ %mul, %cond.false ], [ 2, %entry ]
   %conv = sext i3 %cond to i8
   ret i8 %conv
+}
+
+define i1 @linearmap_trunc_smaller_table_size(i8 %arg) {
+; CHECK-LABEL: @linearmap_trunc_smaller_table_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[ARG:%.*]], 10
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i8 [[ARG]] to i1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_IDX_CAST]], i1 false
+; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+;
+entry:
+  switch i8 %arg, label %exit [
+  i8 1, label %sw
+  i8 3, label %sw
+  i8 5, label %sw
+  i8 7, label %sw
+  i8 9, label %sw
+  ]
+
+sw:
+  br label %exit
+
+exit:
+  %phi = phi i1 [ true, %sw ], [ false, %entry ]
+  ret i1 %phi
 }
 
 ; Don't create a table with an unknown type

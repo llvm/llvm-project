@@ -67,7 +67,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<EdgeBundles>();
+      AU.addRequired<EdgeBundlesWrapperLegacy>();
       AU.addPreservedID(MachineLoopInfoID);
       AU.addPreservedID(MachineDominatorsID);
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -303,7 +303,7 @@ char FPS::ID = 0;
 
 INITIALIZE_PASS_BEGIN(FPS, DEBUG_TYPE, "X86 FP Stackifier",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
+INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
 INITIALIZE_PASS_END(FPS, DEBUG_TYPE, "X86 FP Stackifier",
                     false, false)
 
@@ -337,7 +337,7 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
   // Early exit.
   if (!FPIsUsed) return false;
 
-  Bundles = &getAnalysis<EdgeBundles>();
+  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   TII = MF.getSubtarget().getInstrInfo();
 
   // Prepare cross-MBB liveness.
@@ -431,6 +431,24 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     if (MI.isCall())
       FPInstClass = X86II::SpecialFP;
+
+    // A fake_use with a floating point pseudo register argument that is
+    // killed must behave like any other floating point operation and pop
+    // the floating point stack (this is done in handleSpecialFP()).
+    // Fake_use is, however, unusual, in that sometimes its operand is not
+    // killed because a later instruction (probably a return) will use it.
+    // It is this instruction that will pop the stack.
+    // In this scenario we can safely remove the fake_use's operand
+    // (it is live anyway).
+    if (MI.isFakeUse()) {
+      const MachineOperand &MO = MI.getOperand(0);
+      if (MO.isReg() && X86::RFP80RegClass.contains(MO.getReg())) {
+        if (MO.isKill())
+          FPInstClass = X86II::SpecialFP;
+        else
+          MI.removeOperand(0);
+      }
+    }
 
     if (FPInstClass == X86II::NotFP)
       continue;  // Efficiently ignore non-fp insts!
@@ -1634,24 +1652,25 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     }
 
     if (STUses && !isMask_32(STUses))
-      MI.emitError("fixed input regs must be last on the x87 stack");
+      MI.emitGenericError("fixed input regs must be last on the x87 stack");
     unsigned NumSTUses = llvm::countr_one(STUses);
 
     // Defs must be contiguous from the stack top. ST0-STn.
     if (STDefs && !isMask_32(STDefs)) {
-      MI.emitError("output regs must be last on the x87 stack");
+      MI.emitGenericError("output regs must be last on the x87 stack");
       STDefs = NextPowerOf2(STDefs) - 1;
     }
     unsigned NumSTDefs = llvm::countr_one(STDefs);
 
     // So must the clobbered stack slots. ST0-STm, m >= n.
     if (STClobbers && !isMask_32(STDefs | STClobbers))
-      MI.emitError("clobbers must be last on the x87 stack");
+      MI.emitGenericError("clobbers must be last on the x87 stack");
 
     // Popped inputs are the ones that are also clobbered or defined.
     unsigned STPopped = STUses & (STDefs | STClobbers);
     if (STPopped && !isMask_32(STPopped))
-      MI.emitError("implicitly popped regs must be last on the x87 stack");
+      MI.emitGenericError(
+          "implicitly popped regs must be last on the x87 stack");
     unsigned NumSTPopped = llvm::countr_one(STPopped);
 
     LLVM_DEBUG(dbgs() << "Asm uses " << NumSTUses << " fixed regs, pops "
@@ -1735,6 +1754,20 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     }
 
     // Don't delete the inline asm!
+    return;
+  }
+
+  // FAKE_USE must pop its register operand off the stack if it is killed,
+  // because this constitutes the register's last use. If the operand
+  // is not killed, it will have its last use later, so we leave it alone.
+  // In either case we remove the operand so later passes don't see it.
+  case TargetOpcode::FAKE_USE: {
+    assert(MI.getNumExplicitOperands() == 1 &&
+           "FAKE_USE must have exactly one operand");
+    if (MI.getOperand(0).isKill()) {
+      freeStackSlotBefore(Inst, getFPReg(MI.getOperand(0)));
+    }
+    MI.removeOperand(0);
     return;
   }
   }

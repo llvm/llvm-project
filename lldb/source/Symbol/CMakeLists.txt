@@ -39,6 +39,7 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
     lldbHost
     lldbTarget
     lldbUtility
+    lldbValueObject
 
   LINK_COMPONENTS
     Support

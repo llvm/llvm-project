@@ -161,6 +161,17 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
 
     The coefficient and polynomial modulus parameters are optional, and the
     coefficient modulus is only allowed if the coefficient type is integral.
+
+    The coefficient modulus, if specified, should be positive and not larger
+    than `2 ** width(coefficientType)`.
+
+    If the coefficient modulus is not specified, the handling of coefficients
+    overflows is determined by subsequent lowering passes, which may choose to
+    wrap around or widen the overflow at their discretion.
+
+    Note that coefficient modulus is contained in `i64` by default, which is signed.
+    To specify a 64 bit number without intepreting it as a negative number, its container
+    type should be manually specified like `coefficientModulus=18446744073709551615:i128`.
   }];
 
   let parameters = (ins
@@ -168,6 +179,7 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     OptionalParameter<"::mlir::IntegerAttr">: $coefficientModulus,
     OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">: $polynomialModulus
   );
+  let genVerifyDecl = 1;
   let assemblyFormat = "`<` struct(params) `>`";
   let builders = [
     AttrBuilderWithInferredContext<

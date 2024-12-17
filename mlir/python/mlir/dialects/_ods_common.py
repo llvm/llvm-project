@@ -51,13 +51,14 @@ def segmented_accessor(elements, raw_segments, idx):
 
 
 def equally_sized_accessor(
-    elements, n_variadic, n_preceding_simple, n_preceding_variadic
+    elements, n_simple, n_variadic, n_preceding_simple, n_preceding_variadic
 ):
     """
     Returns a starting position and a number of elements per variadic group
     assuming equally-sized groups and the given numbers of preceding groups.
 
       elements: a sequential container.
+      n_simple: the number of non-variadic groups in the container.
       n_variadic: the number of variadic groups in the container.
       n_preceding_simple: the number of non-variadic groups preceding the current
           group.
@@ -65,7 +66,7 @@ def equally_sized_accessor(
           group.
     """
 
-    total_variadic_length = len(elements) - n_variadic + 1
+    total_variadic_length = len(elements) - n_simple
     # This should be enforced by the C++-side trait verifier.
     assert total_variadic_length % n_variadic == 0
 

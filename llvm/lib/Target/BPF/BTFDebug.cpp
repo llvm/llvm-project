@@ -35,6 +35,15 @@ static const char *BTFKindStr[] = {
 #include "llvm/DebugInfo/BTF/BTF.def"
 };
 
+static const DIType *tryRemoveAtomicType(const DIType *Ty) {
+  if (!Ty)
+    return Ty;
+  auto DerivedTy = dyn_cast<DIDerivedType>(Ty);
+  if (DerivedTy && DerivedTy->getTag() == dwarf::DW_TAG_atomic_type)
+    return DerivedTy->getBaseType();
+  return Ty;
+}
+
 /// Emit a BTF common type.
 void BTFTypeBase::emitType(MCStreamer &OS) {
   OS.AddComment(std::string(BTFKindStr[Kind]) + "(id = " + std::to_string(Id) +
@@ -90,7 +99,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     return;
 
   // The base type for PTR/CONST/VOLATILE could be void.
-  const DIType *ResolvedType = DTy->getBaseType();
+  const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
   if (!ResolvedType) {
     assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
             Kind == BTF::BTF_KIND_VOLATILE) &&
@@ -305,7 +314,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     } else {
       BTFMember.Offset = DDTy->getOffsetInBits();
     }
-    const auto *BaseTy = DDTy->getBaseType();
+    const auto *BaseTy = tryRemoveAtomicType(DDTy->getBaseType());
     BTFMember.Type = BDebug.getTypeId(BaseTy);
     Members.push_back(BTFMember);
   }
@@ -342,7 +351,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeRefArray Elements = STy->getTypeArray();
-  auto RetType = Elements[0];
+  auto RetType = tryRemoveAtomicType(Elements[0]);
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
 
@@ -350,7 +359,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   // to represent the vararg, encode the NameOff/Type to be 0.
   for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
     struct BTF::BTFParam Param;
-    auto Element = Elements[I];
+    auto Element = tryRemoveAtomicType(Elements[I]);
     if (Element) {
       Param.NameOff = BDebug.addString(FuncArgNames[I]);
       Param.Type = BDebug.getTypeId(Element);
@@ -483,7 +492,7 @@ void BTFTypeTypeTag::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
   BTFType.NameOff = BDebug.addString(Tag);
   if (DTy) {
-    const DIType *ResolvedType = DTy->getBaseType();
+    const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
     if (!ResolvedType)
       BTFType.Type = 0;
     else
@@ -706,7 +715,7 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
         int64_t Count = CI->getSExtValue();
 
         // For struct s { int b; char c[]; }, the c[] will be represented
@@ -799,6 +808,10 @@ bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
 void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                                 bool CheckPointer, bool SeenPointer) {
   unsigned Tag = DTy->getTag();
+
+  if (Tag == dwarf::DW_TAG_atomic_type)
+    return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer,
+                          SeenPointer);
 
   /// Try to avoid chasing pointees, esp. structure pointees which may
   /// unnecessary bring in a lot of types.
@@ -1444,8 +1457,10 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       DIGlobal = GVE->getVariable();
       if (SecName.starts_with(".maps"))
         visitMapDefType(DIGlobal->getType(), GVTypeId);
-      else
-        visitTypeEntry(DIGlobal->getType(), GVTypeId, false, false);
+      else {
+        const DIType *Ty = tryRemoveAtomicType(DIGlobal->getType());
+        visitTypeEntry(Ty, GVTypeId, false, false);
+      }
       break;
     }
 
@@ -1484,17 +1499,15 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       continue;
 
     // Find or create a DataSec
-    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
-      DataSecEntries[std::string(SecName)] =
-          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
-    }
+    auto [It, Inserted] = DataSecEntries.try_emplace(std::string(SecName));
+    if (Inserted)
+      It->second = std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
 
     // Calculate symbol size
     const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
-    DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,
-        Asm->getSymbol(&Global), Size);
+    It->second->addDataSecEntry(VarId, Asm->getSymbol(&Global), Size);
 
     if (Global.hasInitializer())
       processGlobalInitializer(Global.getInitializer());
@@ -1594,14 +1607,12 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   if (F->hasSection()) {
     StringRef SecName = F->getSection();
 
-    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
-      DataSecEntries[std::string(SecName)] =
-          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
-    }
+    auto [It, Inserted] = DataSecEntries.try_emplace(std::string(SecName));
+    if (Inserted)
+      It->second = std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
 
     // We really don't know func size, set it to 0.
-    DataSecEntries[std::string(SecName)]->addDataSecEntry(FuncId,
-        Asm->getSymbol(F), 0);
+    It->second->addDataSecEntry(FuncId, Asm->getSymbol(F), 0);
   }
 }
 

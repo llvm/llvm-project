@@ -5,18 +5,19 @@
 ; to do floating-point negations, because the arguments aren't vectors
 ; and aren't vector-aligned.
 
-define void @foo(ptr %p, ptr %q, float %s, float %y) {
+define void @foo(ptr %p, ptr %q, float %s, float %y) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    xorps %xmm1, %xmm0
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    xorps %xmm1, %xmm2
-; CHECK-NEXT:    movss %xmm0, (%ecx)
-; CHECK-NEXT:    movss %xmm2, (%eax)
+; CHECK-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    xorl %edx, %esi
+; CHECK-NEXT:    movl %esi, (%ecx)
+; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl %edx, (%eax)
+; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %ss = fsub float -0.0, %s
   %yy = fsub float -0.0, %y

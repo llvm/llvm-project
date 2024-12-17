@@ -47,7 +47,7 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{correction.Add(x, rounding)};
+          auto next{x.Subtract(correction, rounding)};
           overflow |= next.flags.test(RealFlag::Overflow);
           auto added{sum.Add(next.value, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
@@ -90,7 +90,7 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{correction.Add(x, rounding)};
+          auto next{x.Subtract(correction, rounding)};
           overflow |= next.flags.test(RealFlag::Overflow);
           auto added{sum.Add(next.value, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
@@ -108,7 +108,7 @@ static Expr<T> FoldDotProduct(
     if (overflow &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
           T::AsFortran());
     }
@@ -326,7 +326,7 @@ static Expr<T> FoldProduct(
     if (accumulator.overflow() &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
     return result;
@@ -348,7 +348,7 @@ public:
       overflow_ |= sum.overflow;
       element = sum.value;
     } else { // Real & Complex: use Kahan summation
-      auto next{array_.At(at).Add(correction_, rounding_)};
+      auto next{array_.At(at).Subtract(correction_, rounding_)};
       overflow_ |= next.flags.test(RealFlag::Overflow);
       auto sum{element.Add(next.value, rounding_)};
       overflow_ |= sum.flags.test(RealFlag::Overflow);
@@ -394,7 +394,7 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
     if (accumulator.overflow() &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
     return result;

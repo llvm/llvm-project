@@ -30,3 +30,11 @@
 // CHECK-VERIFY-BLOCK-BAD: command-line option '-config': warning: check glob 'bugprone-arguments-*' doesn't match any known check [-verify-config]
 // CHECK-VERIFY-BLOCK-BAD: command-line option '-config': warning: unknown check 'bugprone-assert-side-effects'; did you mean 'bugprone-assert-side-effect' [-verify-config]
 
+// RUN: echo -e 'Checks: "-*,clang-analyzer-optin.cplusplus.UninitializedObject"\nCheckOptions:\n clang-analyzer-optin.cplusplus.UninitializedObject:Pedantic: true' > %T/MyClangTidyConfigCSA
+// RUN: clang-tidy --verify-config --config-file=%T/MyClangTidyConfigCSA 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-CSA-OK -implicit-check-not='{{warnings|error}}'
+// CHECK-VERIFY-CSA-OK: No config errors detected.
+
+// RUN: echo -e 'Checks: "-*,clang-analyzer-optin.cplusplus.UninitializedObject"\nCheckOptions:\n clang-analyzer-optin.cplusplus.UninitializedObject.Pedantic: true' > %T/MyClangTidyConfigCSABad
+// RUN: not clang-tidy --verify-config --config-file=%T/MyClangTidyConfigCSABad 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-CSA-BAD -implicit-check-not='{{warnings|error}}'
+// CHECK-VERIFY-CSA-BAD: command-line option '-config': warning: unknown check option 'clang-analyzer-optin.cplusplus.UninitializedObject.Pedantic'; did you mean 'clang-analyzer-optin.cplusplus.UninitializedObject:Pedantic' [-verify-config]
+

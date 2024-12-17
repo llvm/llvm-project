@@ -10,10 +10,10 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK: .tagtype  __cpp_exception i32
 
-; CHECK-LABEL: test_throw:
+; CHECK-LABEL: throw:
 ; CHECK:     throw __cpp_exception, $0
 ; CHECK-NOT: unreachable
-define void @test_throw(ptr %p) {
+define void @throw(ptr %p) {
   call void @llvm.wasm.throw(i32 0, ptr %p)
   ret void
 }
@@ -21,14 +21,14 @@ define void @test_throw(ptr %p) {
 ; Simple test with a try-catch
 ;
 ; void foo();
-; void test_catch() {
+; void catch() {
 ;   try {
 ;     foo();
 ;   } catch (int) {
 ;   }
 ; }
 
-; CHECK-LABEL: test_catch:
+; CHECK-LABEL: catch:
 ; CHECK:     global.get  ${{.+}}=, __stack_pointer
 ; CHECK:     try
 ; CHECK:       call      foo
@@ -44,7 +44,7 @@ define void @test_throw(ptr %p) {
 ; CHECK:       end_block
 ; CHECK:       rethrow   0
 ; CHECK:     end_try
-define void @test_catch() personality ptr @__gxx_wasm_personality_v0 {
+define void @catch() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -79,12 +79,12 @@ try.cont:                                         ; preds = %catch, %entry
 ; struct Temp {
 ;   ~Temp() {}
 ; };
-; void test_cleanup() {
+; void cleanup() {
 ;   Temp t;
 ;   foo();
 ; }
 
-; CHECK-LABEL: test_cleanup:
+; CHECK-LABEL: cleanup:
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch_all
@@ -92,7 +92,7 @@ try.cont:                                         ; preds = %catch, %entry
 ; CHECK:   call      $drop=, _ZN4TempD2Ev
 ; CHECK:   rethrow   0
 ; CHECK: end_try
-define void @test_cleanup() personality ptr @__gxx_wasm_personality_v0 {
+define void @cleanup() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %t = alloca %struct.Temp, align 1
   invoke void @foo()
@@ -109,10 +109,10 @@ ehcleanup:                                        ; preds = %entry
 }
 
 ; Calling a function that may throw within a 'catch (...)' generates a
-; temrinatepad, because __cxa_end_catch() also can throw within 'catch (...)'.
+; terminatepad, because __cxa_end_catch() also can throw within 'catch (...)'.
 ;
 ; void foo();
-; void test_terminatepad() {
+; void terminatepad() {
 ;   try {
 ;     foo();
 ;   } catch (...) {
@@ -120,7 +120,7 @@ ehcleanup:                                        ; preds = %entry
 ;   }
 ; }
 
-; CHECK-LABEL: test_terminatepad
+; CHECK-LABEL: terminatepad
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
@@ -138,7 +138,7 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK:   end_try
 ; CHECK:   call      __cxa_end_catch
 ; CHECK: end_try
-define void @test_terminatepad() personality ptr @__gxx_wasm_personality_v0 {
+define void @terminatepad() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -182,7 +182,7 @@ terminate:                                        ; preds = %ehcleanup
 ; instructions after a catch instruction.
 ;
 ; void bar(int) noexcept;
-; void test_no_prolog_epilog_in_ehpad() {
+; void no_prolog_epilog_in_ehpad() {
 ;   int stack_var = 0;
 ;   bar(stack_var);
 ;   try {
@@ -192,7 +192,7 @@ terminate:                                        ; preds = %ehcleanup
 ;   }
 ; }
 
-; CHECK-LABEL: test_no_prolog_epilog_in_ehpad
+; CHECK-LABEL: no_prolog_epilog_in_ehpad
 ; CHECK:     try
 ; CHECK:       call      foo
 ; CHECK:     catch
@@ -217,7 +217,7 @@ terminate:                                        ; preds = %ehcleanup
 ; CHECK-NOT:   global.set  __stack_pointer, $pop{{.+}}
 ; CHECK:       call      __cxa_end_catch
 ; CHECK:     end_try
-define void @test_no_prolog_epilog_in_ehpad() personality ptr @__gxx_wasm_personality_v0 {
+define void @no_prolog_epilog_in_ehpad() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %stack_var = alloca i32, align 4
   call void @bar(ptr %stack_var)
@@ -262,14 +262,14 @@ ehcleanup:                                        ; preds = %catch
 ; store SP back to __stack_pointer global at the epilog.
 ;
 ; void foo();
-; void test_no_sp_writeback() {
+; void no_sp_writeback() {
 ;   try {
 ;     foo();
 ;   } catch (...) {
 ;   }
 ; }
 
-; CHECK-LABEL: test_no_sp_writeback
+; CHECK-LABEL: no_sp_writeback
 ; CHECK:     try
 ; CHECK:       call      foo
 ; CHECK:     catch
@@ -278,7 +278,7 @@ ehcleanup:                                        ; preds = %catch
 ; CHECK:     end_try
 ; CHECK-NOT: global.set  __stack_pointer
 ; CHECK:     return
-define void @test_no_sp_writeback() personality ptr @__gxx_wasm_personality_v0 {
+define void @no_sp_writeback() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -300,7 +300,7 @@ try.cont:                                         ; preds = %catch.start, %entry
 
 ; When the result of @llvm.wasm.get.exception is not used. This is created to
 ; fix a bug in LateEHPrepare and this should not crash.
-define void @test_get_exception_wo_use() personality ptr @__gxx_wasm_personality_v0 {
+define void @get_exception_wo_use() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -320,7 +320,7 @@ try.cont:                                         ; preds = %catch.start, %entry
 
 ; Tests a case when a cleanup region (cleanuppad ~ clanupret) contains another
 ; catchpad
-define void @test_complex_cleanup_region() personality ptr @__gxx_wasm_personality_v0 {
+define void @complex_cleanup_region() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %invoke.cont unwind label %ehcleanup
@@ -352,7 +352,7 @@ ehcleanupret:                                     ; preds = %catch.start, %ehcle
 
 ; Regression test for the bug that 'rethrow' was not treated correctly as a
 ; terminator in isel.
-define void @test_rethrow_terminator() personality ptr @__gxx_wasm_personality_v0 {
+define void @rethrow_terminator() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -400,6 +400,107 @@ unreachable:                                      ; preds = %rethrow
   unreachable
 }
 
+; The bitcode below is generated when the code below is compiled and
+; Temp::~Temp() is inlined into inlined_cleanupret():
+;
+; void inlined_cleanupret() {
+; try {
+;   Temp t;
+;   throw 2;
+; } catch (...)
+; }
+;
+; Temp::~Temp() {
+;   try {
+;     throw 1;
+;   } catch (...) {
+;   }
+; }
+;
+; ~Temp() generates cleanupret, which is lowered to a 'rethrow' later. That
+; rethrow's immediate argument should correctly target the top-level cleanuppad
+; (catch_all). This is a regression test for the bug where we did not compute
+; rethrow's argument correctly.
+
+; CHECK-LABEL: inlined_cleanupret:
+; CHECK: try
+; CHECK:   call  __cxa_throw
+; CHECK: catch_all
+; CHECK:   try
+; CHECK:     try
+; CHECK:       call  __cxa_throw
+; CHECK:       catch
+; CHECK:       call  __cxa_end_catch
+; CHECK:       try
+; CHECK:         try
+; Note that this rethrow targets the top-level catch_all
+; CHECK:           rethrow   4
+; CHECK:         catch
+; CHECK:           try
+; CHECK:             call  __cxa_end_catch
+; CHECK:           delegate    5
+; CHECK:           return
+; CHECK:         end_try
+; CHECK:       delegate    3
+; CHECK:     end_try
+; CHECK:   catch_all
+; CHECK:     call  _ZSt9terminatev
+; CHECK:   end_try
+; CHECK: end_try
+define void @inlined_cleanupret() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  %exception = tail call ptr @__cxa_allocate_exception(i32 4)
+  store i32 2, ptr %exception, align 16
+  invoke void @__cxa_throw(ptr nonnull %exception, ptr nonnull @_ZTIi, ptr null)
+          to label %unreachable unwind label %ehcleanup
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  %exception.i = call ptr @__cxa_allocate_exception(i32 4) [ "funclet"(token %0) ]
+  store i32 1, ptr %exception.i, align 16
+  invoke void @__cxa_throw(ptr nonnull %exception.i, ptr nonnull @_ZTIi, ptr null) [ "funclet"(token %0) ]
+          to label %unreachable unwind label %catch.dispatch.i
+
+catch.dispatch.i:                                 ; preds = %ehcleanup
+  %1 = catchswitch within %0 [label %catch.start.i] unwind label %terminate.i
+
+catch.start.i:                                    ; preds = %catch.dispatch.i
+  %2 = catchpad within %1 [ptr null]
+  %3 = tail call ptr @llvm.wasm.get.exception(token %2)
+  %4 = tail call i32 @llvm.wasm.get.ehselector(token %2)
+  %5 = call ptr @__cxa_begin_catch(ptr %3) [ "funclet"(token %2) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %2) ]
+          to label %invoke.cont.i unwind label %terminate.i
+
+invoke.cont.i:                                    ; preds = %catch.start.i
+  catchret from %2 to label %_ZN4TempD2Ev.exit
+
+terminate.i:                                      ; preds = %catch.start.i, %catch.dispatch.i
+  %6 = cleanuppad within %0 []
+  call void @_ZSt9terminatev() [ "funclet"(token %6) ]
+  unreachable
+
+_ZN4TempD2Ev.exit:                                ; preds = %invoke.cont.i
+  cleanupret from %0 unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %_ZN4TempD2Ev.exit
+  %7 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %8 = catchpad within %7 [ptr null]
+  %9 = tail call ptr @llvm.wasm.get.exception(token %8)
+  %10 = tail call i32 @llvm.wasm.get.ehselector(token %8)
+  %11 = call ptr @__cxa_begin_catch(ptr %9) #8 [ "funclet"(token %8) ]
+  call void @__cxa_end_catch() [ "funclet"(token %8) ]
+  catchret from %8 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start
+  ret void
+
+unreachable:                                      ; preds = %entry
+  unreachable
+}
+
 
 declare void @foo()
 declare void @bar(ptr)
@@ -415,8 +516,12 @@ declare i32 @llvm.wasm.get.ehselector(token) #0
 declare void @llvm.wasm.rethrow() #1
 ; Function Attrs: nounwind
 declare i32 @llvm.eh.typeid.for(ptr) #0
+; Function Attrs: nounwind
+declare ptr @__cxa_allocate_exception(i32) #0
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
+; Function Attrs: noreturn
+declare void @__cxa_throw(ptr, ptr, ptr) #1
 declare void @_ZSt9terminatev()
 declare ptr @_ZN4TempD2Ev(ptr returned)
 

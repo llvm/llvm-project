@@ -123,6 +123,7 @@ void BinaryContext::logBOLTErrorsAndQuitOnFatal(Error E) {
 BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<DWARFContext> DwCtx,
                              std::unique_ptr<Triple> TheTriple,
+                             std::shared_ptr<orc::SymbolStringPool> SSP,
                              const Target *TheTarget, std::string TripleName,
                              std::unique_ptr<MCCodeEmitter> MCE,
                              std::unique_ptr<MCObjectFileInfo> MOFI,
@@ -136,13 +137,12 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<MCDisassembler> DisAsm,
                              JournalingStreams Logger)
     : Ctx(std::move(Ctx)), DwCtx(std::move(DwCtx)),
-      TheTriple(std::move(TheTriple)), TheTarget(TheTarget),
-      TripleName(TripleName), MCE(std::move(MCE)), MOFI(std::move(MOFI)),
-      AsmInfo(std::move(AsmInfo)), MII(std::move(MII)), STI(std::move(STI)),
-      InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
-      MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
-      Logger(Logger), InitialDynoStats(isAArch64()) {
-  Relocation::Arch = this->TheTriple->getArch();
+      TheTriple(std::move(TheTriple)), SSP(std::move(SSP)),
+      TheTarget(TheTarget), TripleName(TripleName), MCE(std::move(MCE)),
+      MOFI(std::move(MOFI)), AsmInfo(std::move(AsmInfo)), MII(std::move(MII)),
+      STI(std::move(STI)), InstPrinter(std::move(InstPrinter)),
+      MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
+      DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -160,8 +160,9 @@ BinaryContext::~BinaryContext() {
 /// Create BinaryContext for a given architecture \p ArchName and
 /// triple \p TripleName.
 Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
-    Triple TheTriple, StringRef InputFileName, SubtargetFeatures *Features,
-    bool IsPIC, std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger) {
+    Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
+    StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
+    std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger) {
   StringRef ArchName = "";
   std::string FeaturesStr = "";
   switch (TheTriple.getArch()) {
@@ -284,8 +285,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   auto BC = std::make_unique<BinaryContext>(
       std::move(Ctx), std::move(DwCtx), std::make_unique<Triple>(TheTriple),
-      TheTarget, std::string(TripleName), std::move(MCE), std::move(MOFI),
-      std::move(AsmInfo), std::move(MII), std::move(STI),
+      std::move(SSP), TheTarget, std::string(TripleName), std::move(MCE),
+      std::move(MOFI), std::move(AsmInfo), std::move(MII), std::move(STI),
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm), Logger);
 
@@ -1295,8 +1296,8 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
     Veneer->getOrCreateLocalLabel(Address);
     Veneer->setMaxSize(TotalSize);
     Veneer->updateState(BinaryFunction::State::Disassembled);
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x" << Address
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x"
+                      << Twine::utohexstr(Address) << "\n");
     return true;
   };
 
@@ -1608,13 +1609,7 @@ std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
                   SortedFunctions.begin(),
                   [](BinaryFunction &BF) { return &BF; });
 
-  llvm::stable_sort(SortedFunctions,
-                    [](const BinaryFunction *A, const BinaryFunction *B) {
-                      if (A->hasValidIndex() && B->hasValidIndex()) {
-                        return A->getIndex() < B->getIndex();
-                      }
-                      return A->hasValidIndex();
-                    });
+  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
   return SortedFunctions;
 }
 
@@ -2022,6 +2017,9 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
   // Find a segment with a matching file offset.
   for (auto &KV : SegmentMapInfo) {
     const SegmentInfo &SegInfo = KV.second;
+    // Only consider executable segments.
+    if (!SegInfo.IsExecutable)
+      continue;
     // FileOffset is got from perf event,
     // and it is equal to alignDown(SegInfo.FileOffset, pagesize).
     // If the pagesize is not equal to SegInfo.Alignment.

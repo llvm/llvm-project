@@ -61,27 +61,25 @@ constexpr bool test_constraints() {
 
 template <class Iter, class Sent, class Alloc>
 constexpr void test_with_input(std::vector<char> input) {
-  auto b = Iter(input.data());
-  auto e = Iter(input.data() + input.size());
-  std::ranges::subrange in(std::move(b), Sent(std::move(e)));
-
   { // (range)
+    std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     std::string c(std::from_range, in);
 
     LIBCPP_ASSERT(c.__invariants());
     assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
-    assert(std::ranges::equal(in, c));
+    assert(std::ranges::equal(input, c));
     LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 
   { // (range, allocator)
+    std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     Alloc alloc;
     std::basic_string<char, std::char_traits<char>, Alloc> c(std::from_range, in, alloc);
 
     LIBCPP_ASSERT(c.__invariants());
     assert(c.get_allocator() == alloc);
     assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
-    assert(std::ranges::equal(in, c));
+    assert(std::ranges::equal(input, c));
     LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 }

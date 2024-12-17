@@ -138,7 +138,7 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
                                      nullptr));
 
   if (emulator_up == nullptr)
-    return Status("Instruction emulator not found!");
+    return Status::FromErrorString("Instruction emulator not found!");
 
   EmulatorBaton baton(process, register_context);
   emulator_up->SetBaton(&baton);
@@ -151,13 +151,13 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
     // try to get at least the size of next instruction to set breakpoint.
     auto instr_size = emulator_up->GetLastInstrSize();
     if (!instr_size)
-      return Status("Read instruction failed!");
+      return Status::FromErrorString("Read instruction failed!");
     bool success = false;
     auto pc = emulator_up->ReadRegisterUnsigned(eRegisterKindGeneric,
                                                 LLDB_REGNUM_GENERIC_PC,
                                                 LLDB_INVALID_ADDRESS, &success);
     if (!success)
-      return Status("Reading pc failed!");
+      return Status::FromErrorString("Reading pc failed!");
     lldb::addr_t next_pc = pc + *instr_size;
     auto result =
         SetSoftwareBreakpointOnPC(arch, next_pc, /* next_flags */ 0x0, process);
@@ -202,7 +202,8 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
     // The instruction emulation failed after it modified the PC. It is an
     // unknown error where we can't continue because the next instruction is
     // modifying the PC but we don't  know how.
-    return Status("Instruction emulation failed unexpectedly.");
+    return Status::FromErrorString(
+        "Instruction emulation failed unexpectedly.");
   }
   auto result = SetSoftwareBreakpointOnPC(arch, next_pc, next_flags, process);
   m_threads_stepping_with_breakpoint.insert({thread.GetID(), next_pc});

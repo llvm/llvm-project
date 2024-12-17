@@ -39,8 +39,6 @@ VRegRenamer::getVRegRenameMap(const std::vector<NamedVReg> &VRegs) {
   StringMap<unsigned> VRegNameCollisionMap;
 
   auto GetUniqueVRegName = [&VRegNameCollisionMap](const NamedVReg &Reg) {
-    if (!VRegNameCollisionMap.contains(Reg.getName()))
-      VRegNameCollisionMap[Reg.getName()] = 0;
     const unsigned Counter = ++VRegNameCollisionMap[Reg.getName()];
     return Reg.getName() + "__" + std::to_string(Counter);
   };

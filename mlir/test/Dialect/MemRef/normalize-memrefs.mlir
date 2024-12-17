@@ -3,6 +3,10 @@
 // This file tests whether the memref type having non-trivial map layouts
 // are normalized to trivial (identity) layouts.
 
+// CHECK-DAG: #[[$REDUCE_MAP1:.*]] = affine_map<(d0, d1) -> ((d0 mod 2) * 2 + d1 mod 2 + (d0 floordiv 2) * 4 + (d1 floordiv 2) * 8)>
+// CHECK-DAG: #[[$REDUCE_MAP2:.*]] = affine_map<(d0, d1) -> (d0 mod 2 + (d1 mod 2) * 2 + (d0 floordiv 2) * 8 + (d1 floordiv 2) * 4)>
+// CHECK-DAG: #[[$REDUCE_MAP3:.*]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
+
 // CHECK-LABEL: func @permute()
 func.func @permute() {
   %A = memref.alloc() : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
@@ -356,10 +360,44 @@ func.func @neg_map() -> memref<2x3xf32, #neg> {
 // CHECK-LABEL: func @memref_with_strided_offset
 func.func @memref_with_strided_offset(%arg0: tensor<128x512xf32>, %arg1: index, %arg2: index) -> tensor<16x512xf32> {
   %c0 = arith.constant 0 : index
-  %0 = bufferization.to_memref %arg0 : memref<128x512xf32, strided<[?, ?], offset: ?>>
+  %0 = bufferization.to_memref %arg0 : tensor<128x512xf32> to memref<128x512xf32, strided<[?, ?], offset: ?>>
   %subview = memref.subview %0[%arg2, 0] [%arg1, 512] [1, 1] : memref<128x512xf32, strided<[?, ?], offset: ?>> to memref<?x512xf32, strided<[?, ?], offset: ?>>
   // CHECK: %{{.*}} = memref.cast %{{.*}} : memref<?x512xf32, strided<[?, ?], offset: ?>> to memref<16x512xf32, strided<[?, ?], offset: ?>>
   %cast = memref.cast %subview : memref<?x512xf32, strided<[?, ?], offset: ?>> to memref<16x512xf32, strided<[?, ?], offset: ?>>
-  %1 = bufferization.to_tensor %cast : memref<16x512xf32, strided<[?, ?], offset: ?>>
+  %1 = bufferization.to_tensor %cast : memref<16x512xf32, strided<[?, ?], offset: ?>> to tensor<16x512xf32>
   return %1 : tensor<16x512xf32>
+}
+
+#map0 = affine_map<(i,k) -> (2 * (i mod 2) + (k mod 2) + 4 * (i floordiv 2) + 8 * (k floordiv 2))>
+#map1 = affine_map<(k,j) -> ((k mod 2) + 2 * (j mod 2) + 8 * (k floordiv 2) + 4 * (j floordiv 2))>
+#map2 = affine_map<(i,j) -> (4 * i + j)>
+// CHECK-LABEL: func @memref_load_with_reduction_map
+func.func @memref_load_with_reduction_map(%arg0 :  memref<4x4xf32,#map2>) -> () {
+  %0 = memref.alloc() : memref<4x8xf32,#map0>
+  %1 = memref.alloc() : memref<8x4xf32,#map1>
+  %2 = memref.alloc() : memref<4x4xf32,#map2>
+  // CHECK-NOT:  memref<4x8xf32>
+  // CHECK-NOT:  memref<8x4xf32>
+  // CHECK-NOT:  memref<4x4xf32>
+  %cst = arith.constant 3.0 : f32
+  %cst0 = arith.constant 0 : index
+  affine.for %i = 0 to 4 {
+    affine.for %j = 0 to 8 {
+      affine.for %k = 0 to 8 {
+        // CHECK: %[[INDEX0:.*]] = affine.apply #[[$REDUCE_MAP1]](%{{.*}}, %{{.*}})
+        // CHECK: memref.load %alloc[%[[INDEX0]]] : memref<32xf32>
+        %a = memref.load %0[%i, %k] : memref<4x8xf32,#map0>
+        // CHECK: %[[INDEX1:.*]] = affine.apply #[[$REDUCE_MAP2]](%{{.*}}, %{{.*}})
+        // CHECK: memref.load %alloc_0[%[[INDEX1]]] : memref<32xf32>
+        %b = memref.load %1[%k, %j] :memref<8x4xf32,#map1>
+        // CHECK: %[[INDEX2:.*]] = affine.apply #[[$REDUCE_MAP3]](%{{.*}}, %{{.*}})
+        // CHECK: memref.load %alloc_1[%[[INDEX2]]] : memref<16xf32>
+        %c = memref.load %2[%i, %j] : memref<4x4xf32,#map2>
+        %3 = arith.mulf %a, %b : f32
+        %4 = arith.addf %3, %c : f32
+        affine.store %4, %arg0[%i, %j] : memref<4x4xf32,#map2>
+      }
+    }
+  }
+  return
 }

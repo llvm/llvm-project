@@ -61,7 +61,7 @@ namespace test1 {
     // CHECK-NEXT: [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, ptr [[ACTIVE]]
     // CHECK-NEXT: invoke void @_ZN5test11BC1Ev(ptr {{[^,]*}} [[T0:%.*]])
-    // CHECK:      [[T1:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[T0]], i32 0, i32 0
+    // CHECK:      [[T1:%.*]] = getelementptr inbounds nuw [[B:%.*]], ptr [[T0]], i32 0, i32 0
     // CHECK-NEXT: [[T2:%.*]] = load i32, ptr [[T1]], align 4
     // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[T2]])
     // CHECK:      store i1 false, ptr [[ACTIVE]]
@@ -515,7 +515,7 @@ namespace test11 {
   //   Construct single.
   // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[THIS]])
   //   Construct array.
-  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 1
+  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds nuw [[C:%.*]], ptr [[THIS]], i32 0, i32 1
   // CHECK-NEXT: [[ARRAYBEGIN:%.*]] = getelementptr inbounds [2 x [3 x [[A:%.*]]]], ptr [[ARRAY]], i32 0, i32 0, i32 0
   // CHECK-NEXT: [[ARRAYEND:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[ARRAYBEGIN]], i64 6
   // CHECK-NEXT: br label

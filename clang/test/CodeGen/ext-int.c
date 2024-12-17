@@ -16,7 +16,7 @@
 unsigned _BitInt(1) GlobSize1 = 0;
 // CHECK: @GlobSize1 = {{.*}}global i8 0
 
-// CHECK64: @__const.foo.A = private unnamed_addr constant { i32, [4 x i8], <{ i8, [23 x i8] }> } { i32 1, [4 x i8] undef, <{ i8, [23 x i8] }> <{ i8 -86, [23 x i8] zeroinitializer }> }, align 8
+// CHECK64: @__const.foo.A = private unnamed_addr constant { i32, [4 x i8], <{ i8, [23 x i8] }> } { i32 1, [4 x i8] zeroinitializer, <{ i8, [23 x i8] }> <{ i8 -86, [23 x i8] zeroinitializer }> }, align 8
 // @BigGlob = global [40 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF", align 8
 // CHECK64: @f.p = internal global <{ i8, i8, [22 x i8] }> <{ i8 16, i8 39, [22 x i8] zeroinitializer }>, align 8
 
@@ -86,28 +86,28 @@ struct S1 {
 };
 
 int foo(int a) {
-  // CHECK: %A1 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 0
+  // CHECK: %A1 = getelementptr inbounds nuw %struct.S1, ptr %B, i32 0, i32 0
   // CHECK: store i32 1, ptr %A1
-  // CHECK64: %B2 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 2
-  // WIN32: %B2 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 2
-  // LIN32: %B2 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 1
-  // CHECK: %0 = load i32, ptr %a.addr, align 4
-  // CHECK: %conv = sext i32 %0 to i129
+  // CHECK64: %B2 = getelementptr inbounds nuw %struct.S1, ptr %B, i32 0, i32 2
+  // WIN32: %B2 = getelementptr inbounds nuw %struct.S1, ptr %B, i32 0, i32 2
+  // LIN32: %B2 = getelementptr inbounds nuw %struct.S1, ptr %B, i32 0, i32 1
+  // CHECK: %[[V1:.+]] = load i32, ptr %a.addr, align 4
+  // CHECK: %conv = sext i32 %[[V1]] to i129
   // CHECK64: storedv = sext i129 %conv to i192
   // WIN32: storedv = sext i129 %conv to i192
   // LIN32: storedv = sext i129 %conv to i160
   // CHECK64: store i192 %storedv, ptr %B2, align 8
   // WIN32: store i192 %storedv, ptr %B2, align 8
   // LIN32: store i160 %storedv, ptr %B2, align 4
-  // CHECK64: %B3 = getelementptr inbounds %struct.S1, ptr %A, i32 0, i32 2
-  // WIN32: %B3 = getelementptr inbounds %struct.S1, ptr %A, i32 0, i32 2
-  // LIN32: %B3 = getelementptr inbounds %struct.S1, ptr %A, i32 0, i32 1
-  // CHECK64: %1 = load i192, ptr %B3, align 8
-  // WIN32: %1 = load i192, ptr %B3, align 8
-  // LIN32: %1 = load i160, ptr %B3, align 4
-  // CHECK64: %loadedv = trunc i192 %1 to i129
-  // WIN32: %loadedv = trunc i192 %1 to i129
-  // LIN32: %loadedv = trunc i160 %1 to i129
+  // CHECK64: %B3 = getelementptr inbounds nuw %struct.S1, ptr %A, i32 0, i32 2
+  // WIN32: %B3 = getelementptr inbounds nuw %struct.S1, ptr %A, i32 0, i32 2
+  // LIN32: %B3 = getelementptr inbounds nuw %struct.S1, ptr %A, i32 0, i32 1
+  // CHECK64: %[[V2:.+]] = load i192, ptr %B3, align 8
+  // WIN32: %[[V2:.+]] = load i192, ptr %B3, align 8
+  // LIN32: %[[V2:.+]] = load i160, ptr %B3, align 4
+  // CHECK64: %loadedv = trunc i192 %[[V2]] to i129
+  // WIN32: %loadedv = trunc i192 %[[V2]] to i129
+  // LIN32: %loadedv = trunc i160 %[[V2]] to i129
   // CHECK: %conv4 = trunc i129 %loadedv to i32
   struct S1 A = {1, 170};
   struct S1 B = {1, a};
@@ -127,7 +127,7 @@ _BitInt(257) bar() {
   // CHECK64: store i8 1, ptr %1, align 8
   // CHECK64: %2 = getelementptr inbounds { <{ i8, [39 x i8] }>, i32, [4 x i8] }, ptr %A, i32 0, i32 1
   // CHECK64: store i32 10000, ptr %2, align 8
-  // CHECK64: %A1 = getelementptr inbounds %struct.S2, ptr %A, i32 0, i32 0
+  // CHECK64: %A1 = getelementptr inbounds nuw %struct.S2, ptr %A, i32 0, i32 0
   // CHECK64: %3 = load i320, ptr %A1, align 8
   // CHECK64: %loadedv = trunc i320 %3 to i257
   // CHECK64: %storedv = sext i257 %loadedv to i320
@@ -154,7 +154,7 @@ _BitInt(129) *f1(_BitInt(129) *p) {
 }
 
 char *f2(char *p) {
-  // CHECK64: getelementptr inbounds i8, {{.*}} i64 24
+  // CHECK64: getelementptr inbounds nuw i8, {{.*}} i64 24
   return p + sizeof(_BitInt(129));
 }
 
@@ -202,7 +202,7 @@ void bitField() {
   // LIN64: %bf.clear = and i64 %bf.load1, -281474976710656
   // LIN64: %bf.set = or i64 %bf.clear, %bf.value
   // LIN64: store i64 %bf.set, ptr %s1, align 8
-  // LIN64: %a = getelementptr inbounds %struct.anon, ptr %s1, i32 0, i32 1
+  // LIN64: %a = getelementptr inbounds nuw %struct.anon, ptr %s1, i32 0, i32 1
   // LIN64: store i32 0, ptr %a, align 8
   // LIN64: %bf.load2 = load i64, ptr %s1, align 8
   // LIN64: %bf.clear3 = and i64 %bf.load2, -281474976710656

@@ -64,6 +64,26 @@ namespace RefTempSubobject {
   constexpr const SelfReferential &sr = SelfReferential();
 }
 
+namespace Vector {
+  typedef __attribute__((vector_size(16))) int vi4a;
+  typedef __attribute__((ext_vector_type(4))) int vi4b;
+  struct S {
+    vi4a v;
+    vi4b w;
+  };
+
+  int &&r = S().v[1];
+  // CHECK: @_ZGRN6Vector1rE_ = internal global i32 0, align 4
+  // CHECK: @_ZN6Vector1rE = constant ptr @_ZGRN6Vector1rE_, align 8
+
+  int &&s = S().w[1];
+  // CHECK: @_ZGRN6Vector1sE_ = internal global i32 0, align 4
+  // CHECK: @_ZN6Vector1sE = constant ptr @_ZGRN6Vector1sE_, align 8
+
+  int &&t = S().w.y;
+  // CHECK: @_ZGRN6Vector1tE_ = internal global i32 0, align 4
+  // CHECK: @_ZN6Vector1tE = constant ptr @_ZGRN6Vector1tE_, align 8
+}
 struct A {
   A();
   ~A();
@@ -504,7 +524,7 @@ namespace Elision {
     // CHECK-NEXT: [[BT2:%.*]] = alloca [[B]], align 8
 
     // CHECK:      call void @_ZN7Elision1BC1Ev(ptr {{[^,]*}} [[BT0]])
-    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], ptr [[BT0]], i32 0, i32 0
+    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds nuw [[B]], ptr [[BT0]], i32 0, i32 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[AT0]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision5takeAENS_1AE(ptr noundef [[AT0]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[AT0]])
@@ -512,13 +532,13 @@ namespace Elision {
     takeA(B().a);
 
     // CHECK-NEXT: call void @_ZN7Elision1BC1Ev(ptr {{[^,]*}} [[BT1]])
-    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], ptr [[BT1]], i32 0, i32 0
+    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds nuw [[B]], ptr [[BT1]], i32 0, i32 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[X]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev(ptr {{[^,]*}} [[BT1]])
     A x = B().a;
 
     // CHECK-NEXT: call void @_ZN7Elision1BC1Ev(ptr {{[^,]*}} [[BT2]])
-    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], ptr [[BT2]], i32 0, i32 0
+    // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds nuw [[B]], ptr [[BT2]], i32 0, i32 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[RET:%.*]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev(ptr {{[^,]*}} [[BT2]])
     return B().a;
@@ -665,27 +685,6 @@ namespace Bitfield {
   int &&r = S().a;
 }
 
-namespace Vector {
-  typedef __attribute__((vector_size(16))) int vi4a;
-  typedef __attribute__((ext_vector_type(4))) int vi4b;
-  struct S {
-    vi4a v;
-    vi4b w;
-  };
-  // CHECK: alloca
-  // CHECK: extractelement
-  // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1rE_
-  // CHECK: store ptr @_ZGRN6Vector1rE_, ptr @_ZN6Vector1rE,
-  int &&r = S().v[1];
-
-  // CHECK: alloca
-  // CHECK: extractelement
-  // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1sE_
-  // CHECK: store ptr @_ZGRN6Vector1sE_, ptr @_ZN6Vector1sE,
-  int &&s = S().w[1];
-  int &&ss = S().w.y;
-}
-
 namespace ImplicitTemporaryCleanup {
   struct A { A(int); ~A(); };
   void g();
@@ -719,7 +718,7 @@ namespace MultipleExtension {
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e1E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds ({{.*}} @[[TEMPE]], i32 0, i32 2)
+  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[TEMPE]], i32 0, i32 2)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[TEMPE]]
   // CHECK: store {{.*}} @[[TEMPE]], ptr @_ZN17MultipleExtension2e1E, align 8
 
@@ -733,7 +732,7 @@ namespace MultipleExtension {
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e2E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds ({{.*}} @[[E]], i32 0, i32 2)
+  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[E]], i32 0, i32 2)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[E]]
 
 

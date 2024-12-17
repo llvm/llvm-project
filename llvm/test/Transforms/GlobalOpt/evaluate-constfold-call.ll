@@ -1,12 +1,9 @@
-; Check if we can evaluate a bitcasted call to a function which is constant folded.
-; Evaluator folds call to fmodf, replacing it with constant value in case both operands
-; are known at compile time.
+; Check that we do not try to evaluate function calls with signature
+; mismatches.
 ; RUN: opt -passes=globalopt,instcombine %s -S -o - | FileCheck %s
 
-; CHECK:        @_q = dso_local local_unnamed_addr global %struct.Q { i32 1066527622 }
-; CHECK:        define dso_local i32 @main
-; CHECK-NEXT:     %[[V:.+]] = load i32, ptr @_q
-; CHECK-NEXT:     ret i32 %[[V]]
+; CHECK: @_q = dso_local global %struct.Q zeroinitializer
+; CHECK: @llvm.global_ctors
 
 source_filename = "main.cpp"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

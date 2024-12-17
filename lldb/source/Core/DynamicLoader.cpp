@@ -83,7 +83,11 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
       ModuleSpec module_spec(executable->GetFileSpec(),
                              executable->GetArchitecture());
       auto module_sp = std::make_shared<Module>(module_spec);
-
+      // If we're a coredump and we already have a main executable, we don't
+      // need to reload the module list that target already has
+      if (!m_process->IsLiveDebugSession()) {
+        return executable;
+      }
       // Check if the executable has changed and set it to the target
       // executable if they differ.
       if (module_sp && module_sp->GetUUID().IsValid() &&
@@ -153,6 +157,10 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
 ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   Target &target = m_process->GetTarget();
   ModuleSpec module_spec(file, target.GetArchitecture());
+  if (UUID uuid = m_process->FindModuleUUID(file.GetPath())) {
+    // Process may be able to augment the module_spec with UUID, e.g. ELF core.
+    module_spec.GetUUID() = uuid;
+  }
 
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
@@ -369,4 +377,3 @@ void DynamicLoader::LoadOperatingSystemPlugin(bool flush)
     if (m_process)
         m_process->LoadOperatingSystemPlugin(flush);
 }
-

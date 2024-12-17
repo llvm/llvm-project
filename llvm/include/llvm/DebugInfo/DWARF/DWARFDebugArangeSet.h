@@ -62,7 +62,7 @@ public:
 
   void clear();
   Error extract(DWARFDataExtractor data, uint64_t *offset_ptr,
-                function_ref<void(Error)> WarningHandler);
+                function_ref<void(Error)> WarningHandler = nullptr);
   void dump(raw_ostream &OS) const;
 
   uint64_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }

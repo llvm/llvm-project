@@ -3,7 +3,7 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t.dwo -dwarf-version=5 %s -o %t.o
 # RUN: llvm-dwp %t.dwo -o %t.dwp 2>&1
 # RUN: llvm-dwarfdump -debug-macro -debug-cu-index %t.dwp | FileCheck -check-prefix=CHECK %s
-# RUN: llvm-dwarfdump -debug-macro -debug-cu-index -manaully-generate-unit-index %t.dwp | FileCheck -check-prefix=CHECK2 %s
+# RUN: llvm-dwarfdump -debug-macro -debug-cu-index -manually-generate-unit-index %t.dwp | FileCheck -check-prefix=CHECK2 %s
 
 # CHECK-DAG: .debug_macro.dwo contents:
 # CHECK: macro header: version = 0x0005, flags = 0x00, format = DWARF32

@@ -1,0 +1,56 @@
+# REQUIRES: shell
+# UNSUPPORTED: system-windows
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -march=armv8.1m.main --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-DIRECTORY-NOMVE-SOFTFLOAT %s
+# CHECK-PRINT-MULTI-DIRECTORY-NOMVE-SOFTFLOAT: nomve-softfloat
+
+# RUN: not %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -march=armv8.1m.main+mve --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-ERROR %s
+# CHECK-ERROR: multilib configuration error: mve-softfloat is not supported
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -march=armv8.1m.main+mve -mfloat-abi=hard --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-DIRECTORY-MVE-HARDFLOAT %s
+# CHECK-PRINT-MULTI-DIRECTORY-MVE-HARDFLOAT: mve-hardfloat
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-lib 2>&1 \
+# RUN:     --target=arm-none-eabi --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-LIB %s
+# CHECK-PRINT-MULTI-LIB: nomve-softfloat;@-target=thumbv8.1m.main-unknown-none-eabi
+# CHECK-PRINT-MULTI-LIB-NEXT: mve-hardfloat;@-target=thumbv8.1m.main-unknown-none-eabihf@march=thumbv8.1m.main+mve@mfloat-abi=hard
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=arm-none-eabi --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-NO-MATCH-WARNING %s
+# CHECK-NO-MATCH-WARNING: clang: note: available multilibs are:
+# CHECK-NO-MATCH-WARNING-NEXT: --target=thumbv8.1m.main-unknown-none-eabi
+# CHECK-NO-MATCH-WARNING-NEXT: --target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfloat-abi=hard
+
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: nomve-softfloat
+  Flags:
+  - --target=thumbv8.1m.main-unknown-none-eabi
+
+- Error: mve-softfloat is not supported
+  Flags: 
+  - --target=thumbv8.1m.main-unknown-none-eabi
+  - -march=thumbv8.1m.main+mve
+
+- Dir: mve-hardfloat
+  Flags: 
+  - --target=thumbv8.1m.main-unknown-none-eabihf
+  - -march=thumbv8.1m.main+mve
+  - -mfloat-abi=hard
+
+Mappings:
+- Match: -march=thumbv8\.1m\.main(\+[^\+]+)*\+mve(\+[^\+]+)*
+  Flags:
+  - -march=thumbv8.1m.main+mve
+
+...

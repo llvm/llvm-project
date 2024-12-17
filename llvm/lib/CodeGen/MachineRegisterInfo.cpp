@@ -47,7 +47,6 @@ MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
                                : MF->getSubtarget().enableSubRegLiveness()) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
-  RegAllocHints.reserve(256);
   UsedPhysRegMask.resize(NumRegs);
   PhysRegUseDefLists.reset(new MachineOperand*[NumRegs]());
   TheDelegates.clear();
@@ -147,7 +146,6 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
 Register MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
   Register Reg = Register::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);
-  RegAllocHints.grow(Reg);
   insertVRegByName(Name, Reg);
   return Reg;
 }
@@ -637,7 +635,13 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
   if (IsUpdatedCSRsInitialized)
     return UpdatedCSRs.data();
 
-  return getTargetRegisterInfo()->getCalleeSavedRegs(MF);
+  const MCPhysReg *Regs = getTargetRegisterInfo()->getCalleeSavedRegs(MF);
+
+  for (unsigned I = 0; Regs[I]; ++I)
+    if (MF->getSubtarget().isRegisterReservedByUser(Regs[I]))
+      MF->getRegInfo().disableCalleeSavedRegister(Regs[I]);
+
+  return Regs;
 }
 
 void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {

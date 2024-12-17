@@ -14,12 +14,10 @@
 #ifndef LLVM_ANALYSIS_DOMTREEUPDATER_H
 #define LLVM_ANALYSIS_DOMTREEUPDATER_H
 
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
-#include <cstddef>
 #include <functional>
 #include <vector>
 
@@ -83,6 +81,9 @@ public:
 
   ///@}
 
+  /// Debug method to help view the internal state of this class.
+  LLVM_DUMP_METHOD void dump() const;
+
 private:
   class CallBackOnDeletion final : public CallbackVH {
   public:
@@ -111,9 +112,6 @@ private:
 
   /// Returns true if at least one BasicBlock is deleted.
   bool forceFlushDeletedBB();
-
-  /// Debug method to help view the internal state of this class.
-  LLVM_DUMP_METHOD void dump() const;
 };
 
 extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
@@ -122,6 +120,13 @@ extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
 extern template void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                       PostDominatorTree>::recalculate(Function &F);
+
+extern template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/true>();
+extern template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/false>();
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DOMTREEUPDATER_H

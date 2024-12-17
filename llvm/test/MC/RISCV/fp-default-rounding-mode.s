@@ -193,9 +193,12 @@ fcvt.h.lu fa0, a0
 
 # Zfbfmin instructions
 
-# CHECK-INST: fcvt.s.bf16 fa0, fa0, dyn{{$}}
+# CHECK-INST: fcvt.s.bf16 fa0, fa0{{$}}
 # CHECK-ALIAS: fcvt.s.bf16 fa0, fa0{{$}}
 fcvt.s.bf16 fa0, fa0
+# CHECK-INST: fcvt.s.bf16 fa0, fa0{{$}}
+# CHECK-ALIAS: fcvt.s.bf16 fa0, fa0{{$}}
+fcvt.s.bf16 fa0, fa0, rne
 
 # CHECK-INST: fcvt.bf16.s fa0, fa0, dyn{{$}}
 # CHECK-ALIAS: fcvt.bf16.s fa0, fa0{{$}}

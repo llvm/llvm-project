@@ -4,7 +4,7 @@
 ; Earlier version using auto-generated checks from utils/update_test_checks.py
 ; had bot problems though...
 
-define void @patatino() {
+define void @patatino(i1 %arg) {
 
 ; CHECK-LABEL: @patatino
 
@@ -12,16 +12,16 @@ define void @patatino() {
 bb1:                                              ; preds = %bb36, %0
   br label %bb2
 bb2:                                              ; preds = %bb3, %bb1
-  br i1 undef, label %bb4, label %bb3
+  br i1 %arg, label %bb4, label %bb3
 bb3:                                              ; preds = %bb4, %bb2
-  br i1 undef, label %bb2, label %bb5
+  br i1 %arg, label %bb2, label %bb5
 bb4:                                              ; preds = %bb2
   switch i32 undef, label %bb3 [
   ]
 bb5:                                              ; preds = %bb3
   br label %bb6
 bb6:                                              ; preds = %bb5
-  br i1 undef, label %bb7, label %bb9
+  br i1 %arg, label %bb7, label %bb9
 bb7:                                              ; preds = %bb6
   %tmp = or i64 undef, 1
   %tmp8 = icmp ult i64 %tmp, 0
@@ -58,17 +58,17 @@ bb27:                                             ; preds = %bb24
   %tmp29 = icmp ult i64 %tmp28, 0
   br i1 %tmp29, label %bb30, label %bb9
 bb30:                                             ; preds = %bb27
-  br i1 undef, label %bb31, label %bb9
+  br i1 %arg, label %bb31, label %bb9
 bb31:                                             ; preds = %bb30
-  br i1 undef, label %bb32, label %bb9
+  br i1 %arg, label %bb32, label %bb9
 bb32:                                             ; preds = %bb31
-  br i1 undef, label %bb33, label %bb9
+  br i1 %arg, label %bb33, label %bb9
 bb33:                                             ; preds = %bb32
-  br i1 undef, label %bb34, label %bb9
+  br i1 %arg, label %bb34, label %bb9
 bb34:                                             ; preds = %bb33
-  br i1 undef, label %bb35, label %bb9
+  br i1 %arg, label %bb35, label %bb9
 bb35:                                             ; preds = %bb34
-  br i1 undef, label %bb36, label %bb9
+  br i1 %arg, label %bb36, label %bb9
 bb36:                                             ; preds = %bb35
-  br i1 undef, label %bb1, label %bb10
+  br i1 %arg, label %bb1, label %bb10
 }

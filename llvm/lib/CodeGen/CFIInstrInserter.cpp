@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 using namespace llvm;
 
@@ -184,6 +185,10 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   unsigned NumRegs = TRI.getNumSupportedRegs(*MF);
   BitVector CSRSaved(NumRegs), CSRRestored(NumRegs);
 
+#ifndef NDEBUG
+  int RememberState = 0;
+#endif
+
   // Determine cfa offset and register set by the block.
   for (MachineInstr &MI : *MBBInfo.MBB) {
     if (MI.isCFIInstruction()) {
@@ -228,17 +233,25 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpRememberState:
         // TODO: Add support for handling cfi_remember_state.
 #ifndef NDEBUG
-        report_fatal_error(
-            "Support for cfi_remember_state not implemented! Value of CFA "
-            "may be incorrect!\n");
+        // Currently we need cfi_remember_state and cfi_restore_state to be in
+        // the same BB, so it will not impact outgoing CFA.
+        ++RememberState;
+        if (RememberState != 1)
+          MF->getContext().reportError(
+              SMLoc(),
+              "Support for cfi_remember_state not implemented! Value of CFA "
+              "may be incorrect!\n");
 #endif
         break;
       case MCCFIInstruction::OpRestoreState:
         // TODO: Add support for handling cfi_restore_state.
 #ifndef NDEBUG
-        report_fatal_error(
-            "Support for cfi_restore_state not implemented! Value of CFA may "
-            "be incorrect!\n");
+        --RememberState;
+        if (RememberState != 0)
+          MF->getContext().reportError(
+              SMLoc(),
+              "Support for cfi_restore_state not implemented! Value of CFA may "
+              "be incorrect!\n");
 #endif
         break;
       // Other CFI directives do not affect CFA value.
@@ -247,8 +260,10 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpEscape:
       case MCCFIInstruction::OpWindowSave:
       case MCCFIInstruction::OpNegateRAState:
+      case MCCFIInstruction::OpNegateRAStateWithPC:
       case MCCFIInstruction::OpGnuArgsSize:
       case MCCFIInstruction::OpLabel:
+      case MCCFIInstruction::OpValOffset:
         break;
       }
       if (CSRReg || CSROffset) {
@@ -263,6 +278,14 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       }
     }
   }
+
+#ifndef NDEBUG
+  if (RememberState != 0)
+    MF->getContext().reportError(
+        SMLoc(),
+        "Support for cfi_remember_state not implemented! Value of CFA may be "
+        "incorrect!\n");
+#endif
 
   MBBInfo.Processed = true;
 

@@ -88,8 +88,12 @@ private:
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(SyntaxTreeTests, BuildSyntaxTreeTest,
-                        testing::ValuesIn(allTestClangConfigs()) );
+INSTANTIATE_TEST_SUITE_P(
+    SyntaxTreeTests, BuildSyntaxTreeTest,
+    testing::ValuesIn(allTestClangConfigs()),
+    [](const testing::TestParamInfo<TestClangConfig> &Info) {
+      return Info.param.toShortString();
+    });
 
 TEST_P(BuildSyntaxTreeTest, Simple) {
   EXPECT_TRUE(treeDumpEqual(
@@ -5655,8 +5659,6 @@ struct X {
 };
 [[void (X::*xp)();]]
 [[void (X::**xpp)(const int*);]]
-// FIXME: Generate the right syntax tree for this type,
-// i.e. create a syntax node for the outer member pointer
 [[void (X::Y::*xyp)(const int*, char);]]
 )cpp",
       {R"txt(
@@ -5710,9 +5712,9 @@ SimpleDeclaration
 | `-SimpleDeclarator ListElement
 |   |-ParenDeclarator
 |   | |-'(' OpenParen
-|   | |-'X'
-|   | |-'::'
 |   | |-MemberPointer
+|   | | |-'X'
+|   | | |-'::'
 |   | | |-'Y'
 |   | | |-'::'
 |   | | `-'*'

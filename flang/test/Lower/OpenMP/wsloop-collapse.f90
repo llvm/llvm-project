@@ -84,7 +84,6 @@ program wsloop_collapse
 !CHECK:               hlfir.assign %[[VAL_42]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
 !CHECK:               omp.yield
 !CHECK-NEXT:        }
-!CHECK-NEXT:        omp.terminator
            x = x + i + j + k
         end do
      end do

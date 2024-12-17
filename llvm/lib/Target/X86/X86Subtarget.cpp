@@ -279,6 +279,13 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
         FullFS += ",+evex512";
   }
 
+  // Disable 64-bit only features in non-64-bit mode.
+  SmallVector<StringRef, 9> FeaturesIn64BitOnly = {
+      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  if (FullFS.find("-64bit-mode") != std::string::npos)
+    for (StringRef F : FeaturesIn64BitOnly)
+      FullFS += ",-" + F.str();
+
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPU, TuneCPU, FullFS);
 

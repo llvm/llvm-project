@@ -406,9 +406,9 @@
 // RUN:    /Zm \
 // RUN:    /Zo \
 // RUN:    /Zo- \
-// RUN:    -### -- %s 2>&1 | FileCheck -check-prefix=IGNORED %s
+// RUN:    -### -- %s 2>&1 | FileCheck -DMSG=%errc_ENOENT -check-prefix=IGNORED %s
 // IGNORED-NOT: argument unused during compilation
-// IGNORED-NOT: no such file or directory
+// IGNORED-NOT: [[MSG]]
 // Don't confuse /openmp- with the /o flag:
 // IGNORED-NOT: "-o" "penmp-.obj"
 
@@ -605,6 +605,9 @@
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++20 -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX20 %s
 // STDCXX20: -std=c++20
 
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23PREVIEW %s
+// STDCXX23PREVIEW: -std=c++23
+
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++latest -### -- %s 2>&1 | FileCheck -check-prefix=STDCXXLATEST %s
 // STDCXXLATEST: -std=c++26
 
@@ -626,6 +629,8 @@
 // LTO-THIN: -flto=thin
 
 // RUN: not %clang_cl -### -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// RUN: not %clang_cl -### -fuse-ld=link -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// RUN: not %clang -### --target=x86_64-windows-msvc -fuse-ld=link -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
 // LTO-WITHOUT-LLD: LTO requires -fuse-ld=lld
 
 // RUN: %clang_cl  -### -- %s 2>&1 | FileCheck -check-prefix=NOCFGUARD %s
@@ -708,6 +713,7 @@
 // RUN:     -fbracket-depth=123 \
 // RUN:     -fprofile-generate \
 // RUN:     -fprofile-generate=dir \
+// RUN:     -fprofile-sample-use=%S/Inputs/file.prof \
 // RUN:     -fno-profile-generate \
 // RUN:     -fno-profile-instr-generate \
 // RUN:     -fno-profile-instr-use \

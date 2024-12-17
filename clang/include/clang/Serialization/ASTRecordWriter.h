@@ -60,8 +60,9 @@ class ASTRecordWriter
 
 public:
   /// Construct a ASTRecordWriter that uses the default encoding scheme.
-  ASTRecordWriter(ASTWriter &W, ASTWriter::RecordDataImpl &Record)
-      : DataStreamBasicWriter(W.getASTContext()), Writer(&W), Record(&Record) {}
+  ASTRecordWriter(ASTContext &Context, ASTWriter &W,
+                  ASTWriter::RecordDataImpl &Record)
+      : DataStreamBasicWriter(Context), Writer(&W), Record(&Record) {}
 
   /// Construct a ASTRecordWriter that uses the same encoding scheme as another
   /// ASTRecordWriter.
@@ -127,6 +128,8 @@ public:
   void writeStmtRef(const Stmt *S) {
     AddStmt(const_cast<Stmt*>(S));
   }
+
+  void writeAttr(const Attr *A) { AddAttr(A); }
 
   /// Write an BTFTypeTagAttr object.
   void writeBTFTypeTagAttr(const BTFTypeTagAttr *A) { AddAttr(A); }
@@ -206,7 +209,7 @@ public:
 
   /// Emit a reference to a type.
   void AddTypeRef(QualType T) {
-    return Writer->AddTypeRef(T, *Record);
+    return Writer->AddTypeRef(getASTContext(), T, *Record);
   }
   void writeQualType(QualType T) {
     AddTypeRef(T);

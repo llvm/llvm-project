@@ -1171,8 +1171,7 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress =
-            SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1209,7 +1208,7 @@ void CompileUnit::cloneDieAttrExpression(
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
-              SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+              SA->Address + VarAddressAdjustment.value_or(0);
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
@@ -1814,19 +1813,19 @@ DwarfUnit *CompileUnit::OutputUnitVariantPtr::operator->() {
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isCompileUnit() {
-  return Ptr.is<CompileUnit *>();
+  return isa<CompileUnit *>(Ptr);
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isTypeUnit() {
-  return Ptr.is<TypeUnit *>();
+  return isa<TypeUnit *>(Ptr);
 }
 
 CompileUnit *CompileUnit::OutputUnitVariantPtr::getAsCompileUnit() {
-  return Ptr.get<CompileUnit *>();
+  return cast<CompileUnit *>(Ptr);
 }
 
 TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
-  return Ptr.get<TypeUnit *>();
+  return cast<TypeUnit *>(Ptr);
 }
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(

@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_50 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_50 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_50 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_50 -verify-machineinstrs | %ptxas-verify %}
 
 ; calls with a bitcasted function symbol should be fine, but in combination with
 ; a byval attribute were causing a segfault during isel. This testcase was
@@ -14,11 +14,11 @@ target triple = "nvptx64-nvidia-cuda"
 %complex_half = type { half, half }
 
 ; CHECK: .param .align 2 .b8 param2[4];
-; CHECK: st.param.b16   [param2+0], %rs1;
+; CHECK: st.param.b16   [param2], %rs1;
 ; CHECK: st.param.b16   [param2+2], %rs2;
 ; CHECK: .param .align 2 .b8 retval0[4];
-; CHECK: call.uni (retval0),
-; CHECK-NEXT: _Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE,
+; CHECK-NEXT: prototype_0 : .callprototype (.param .align 2 .b8 _[4]) _ (.param .b32 _, .param .b32 _, .param .align 2 .b8 _[4]);
+; CHECK-NEXT: call (retval0),
 define weak_odr void @foo() {
 entry:
   %call.i.i.i = tail call %"class.complex" @_Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE(i32 0, i32 0, ptr byval(%"class.complex") null)
@@ -37,7 +37,7 @@ define internal void @callee(ptr byval(%"class.complex") %byval_arg) {
 define void @boom() {
   %fp = call ptr @usefp(ptr @callee)
   ; CHECK: .param .align 2 .b8 param0[4];
-  ; CHECK: st.param.b16 [param0+0], %rs1;
+  ; CHECK: st.param.b16 [param0], %rs1;
   ; CHECK: st.param.b16 [param0+2], %rs2;
   ; CHECK: .callprototype ()_ (.param .align 2 .b8 _[4]);
   call void %fp(ptr byval(%"class.complex") null)

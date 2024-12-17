@@ -4,7 +4,7 @@
 define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -44,7 +44,7 @@ failure:                                          ; preds = %backedge
 define i32 @test_01a(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01a:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB1_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -84,7 +84,7 @@ failure:                                          ; preds = %backedge
 define i32 @test_02(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_02:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB2_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -126,7 +126,7 @@ failure:                                          ; preds = %backedge
 define i32 @test_03(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_03:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB3_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi

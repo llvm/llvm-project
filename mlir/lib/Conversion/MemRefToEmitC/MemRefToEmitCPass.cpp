@@ -33,12 +33,25 @@ struct ConvertMemRefToEmitCPass
 
     // Fallback for other types.
     converter.addConversion([](Type type) -> std::optional<Type> {
-      if (isa<MemRefType>(type))
-        return {};
-      return type;
+      if (emitc::isSupportedEmitCType(type))
+        return type;
+      return {};
     });
 
     populateMemRefToEmitCTypeConversion(converter);
+
+    auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,
+                                          ValueRange inputs,
+                                          Location loc) -> Value {
+      if (inputs.size() != 1)
+        return Value();
+
+      return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+          .getResult(0);
+    };
+
+    converter.addSourceMaterialization(materializeAsUnrealizedCast);
+    converter.addTargetMaterialization(materializeAsUnrealizedCast);
 
     RewritePatternSet patterns(&getContext());
     populateMemRefToEmitCConversionPatterns(patterns, converter);

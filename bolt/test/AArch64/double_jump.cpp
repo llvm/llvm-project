@@ -1,6 +1,6 @@
 // A contrived example to test the double jump removal peephole.
 
-// RUN: %clang %cflags -O0 %s -o %t.exe
+// RUN: %clangxx %cxxflags -O0 %s -o %t.exe
 // RUN: llvm-bolt %t.exe -o %t.bolt --peepholes=double-jumps | \
 // RUN:   FileCheck %s -check-prefix=CHECKBOLT
 // RUN: llvm-objdump --no-print-imm-hex -d %t.bolt | FileCheck %s

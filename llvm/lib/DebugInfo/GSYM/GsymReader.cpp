@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -398,17 +397,80 @@ void GsymReader::dump(raw_ostream &OS) {
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI) {
+void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
+                      uint32_t Indent) {
+  OS.indent(Indent);
   OS << FI.Range << " \"" << getString(FI.Name) << "\"\n";
   if (FI.OptLineTable)
-    dump(OS, *FI.OptLineTable);
+    dump(OS, *FI.OptLineTable, Indent);
   if (FI.Inline)
-    dump(OS, *FI.Inline);
+    dump(OS, *FI.Inline, Indent);
+
+  if (FI.CallSites)
+    dump(OS, *FI.CallSites, Indent);
+
+  if (FI.MergedFunctions) {
+    assert(Indent == 0 && "MergedFunctionsInfo should only exist at top level");
+    dump(OS, *FI.MergedFunctions);
+  }
 }
 
-void GsymReader::dump(raw_ostream &OS, const LineTable &LT) {
+void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
+  for (uint32_t inx = 0; inx < MFI.MergedFunctions.size(); inx++) {
+    OS << "++ Merged FunctionInfos[" << inx << "]:\n";
+    dump(OS, MFI.MergedFunctions[inx], 4);
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
+  OS << HEX16(CSI.ReturnOffset);
+
+  std::string Flags;
+  auto addFlag = [&](const char *Flag) {
+    if (!Flags.empty())
+      Flags += " | ";
+    Flags += Flag;
+  };
+
+  if (CSI.Flags == CallSiteInfo::Flags::None)
+    Flags = "None";
+  else {
+    if (CSI.Flags & CallSiteInfo::Flags::InternalCall)
+      addFlag("InternalCall");
+
+    if (CSI.Flags & CallSiteInfo::Flags::ExternalCall)
+      addFlag("ExternalCall");
+  }
+  OS << " Flags[" << Flags << "]";
+
+  if (!CSI.MatchRegex.empty()) {
+    OS << " MatchRegex[";
+    for (uint32_t i = 0; i < CSI.MatchRegex.size(); ++i) {
+      if (i > 0)
+        OS << ";";
+      OS << getString(CSI.MatchRegex[i]);
+    }
+    OS << "]";
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+                      uint32_t Indent) {
+  OS.indent(Indent);
+  OS << "CallSites (by relative return offset):\n";
+  for (const auto &CS : CSIC.CallSites) {
+    OS.indent(Indent);
+    OS << "  ";
+    dump(OS, CS);
+    OS << "\n";
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent) {
+  OS.indent(Indent);
   OS << "LineTable:\n";
   for (auto &LE: LT) {
+    OS.indent(Indent);
     OS << "  " << HEX64(LE.Addr) << ' ';
     if (LE.File)
       dump(OS, getFile(LE.File));

@@ -23,12 +23,12 @@ define i32 @t(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb.outer
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_3 Depth 2
 ; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %bb
 ; CHECK-NEXT:    # Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
@@ -40,7 +40,7 @@ define i32 @t(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:    jmp .LBB0_6
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_5: # %cond_false
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    subl %edx, %ecx

@@ -300,10 +300,12 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
     flags |= decimal::AlwaysSign;
   }
   int scale{edit.modes.scale}; // 'kP' value
+  bool isEN{edit.variation == 'N'};
+  bool isES{edit.variation == 'S'};
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
       if (editDigits == 0 && scale <= 0) { // E0.0
-        significantDigits = 1;
+        significantDigits = isEN || isES ? 0 : 1;
       }
     } else { // E0
       flags |= decimal::Minimize;
@@ -311,8 +313,6 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
           sizeof buffer_ - 5; // sign, NUL, + 3 extra for EN scaling
     }
   }
-  bool isEN{edit.variation == 'N'};
-  bool isES{edit.variation == 'S'};
   int zeroesAfterPoint{0};
   if (isEN) {
     scale = IsZero() ? 1 : 3;

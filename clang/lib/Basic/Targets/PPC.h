@@ -73,6 +73,8 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasExtDiv = false;
   bool HasP9Vector = false;
   bool HasSPE = false;
+  bool HasFrsqrte = false;
+  bool HasFrsqrtes = false;
   bool PairedVectorMemops = false;
   bool HasP10Vector = false;
   bool HasPCRelativeMemops = false;
@@ -460,12 +462,12 @@ public:
 
     if (Triple.isOSAIX()) {
       // TODO: Set appropriate ABI for AIX platform.
-      DataLayout = "E-m:a-Fi64-i64:64-n32:64";
+      DataLayout = "E-m:a-Fi64-i64:64-i128:128-n32:64";
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     } else if ((Triple.getArch() == llvm::Triple::ppc64le)) {
-      DataLayout = "e-m:e-Fn32-i64:64-n32:64";
+      DataLayout = "e-m:e-Fn32-i64:64-i128:128-n32:64";
       ABI = "elfv2";
     } else {
       DataLayout = "E-m:e";
@@ -476,7 +478,7 @@ public:
         ABI = "elfv1";
         DataLayout += "-Fi64";
       }
-      DataLayout += "-i64:64-n32:64";
+      DataLayout += "-i64:64-i128:128-n32:64";
     }
 
     if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {

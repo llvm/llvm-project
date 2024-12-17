@@ -14,6 +14,7 @@
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
 #include "BadSignalToKillThreadCheck.h"
+#include "BitwisePointerCastCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
 #include "CastingThroughVoidCheck.h"
@@ -48,6 +49,7 @@
 #include "MultipleStatementMacroCheck.h"
 #include "NoEscapeCheck.h"
 #include "NonZeroEnumToBoolConversionCheck.h"
+#include "NondeterministicPointerIterationOrderCheck.h"
 #include "NotNullTerminatedResultCheck.h"
 #include "OptionalValueConversionCheck.h"
 #include "ParentVirtualCallCheck.h"
@@ -78,6 +80,7 @@
 #include "SuspiciousStringviewDataUsageCheck.h"
 #include "SwappedArgumentsCheck.h"
 #include "SwitchMissingDefaultCaseCheck.h"
+#include "TaggedUnionMemberCountCheck.h"
 #include "TerminatingContinueCheck.h"
 #include "ThrowKeywordMissingCheck.h"
 #include "TooSmallLoopVariableCheck.h"
@@ -108,6 +111,8 @@ public:
         "bugprone-assignment-in-if-condition");
     CheckFactories.registerCheck<BadSignalToKillThreadCheck>(
         "bugprone-bad-signal-to-kill-thread");
+    CheckFactories.registerCheck<BitwisePointerCastCheck>(
+        "bugprone-bitwise-pointer-cast");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<BranchCloneCheck>("bugprone-branch-clone");
@@ -170,6 +175,8 @@ public:
         "bugprone-multiple-new-in-one-expression");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<NondeterministicPointerIterationOrderCheck>(
+        "bugprone-nondeterministic-pointer-iteration-order");
     CheckFactories.registerCheck<OptionalValueConversionCheck>(
         "bugprone-optional-value-conversion");
     CheckFactories.registerCheck<PointerArithmeticOnPolymorphicObjectCheck>(
@@ -229,6 +236,8 @@ public:
         "bugprone-suspicious-stringview-data-usage");
     CheckFactories.registerCheck<SwappedArgumentsCheck>(
         "bugprone-swapped-arguments");
+    CheckFactories.registerCheck<TaggedUnionMemberCountCheck>(
+        "bugprone-tagged-union-member-count");
     CheckFactories.registerCheck<TerminatingContinueCheck>(
         "bugprone-terminating-continue");
     CheckFactories.registerCheck<ThrowKeywordMissingCheck>(

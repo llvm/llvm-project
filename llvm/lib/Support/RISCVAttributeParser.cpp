@@ -50,7 +50,8 @@ Error RISCVAttributeParser::atomicAbi(unsigned Tag) {
 }
 
 Error RISCVAttributeParser::unalignedAccess(unsigned tag) {
-  static const char *strings[] = {"No unaligned access", "Unaligned access"};
+  static const char *const strings[] = {"No unaligned access",
+                                        "Unaligned access"};
   return parseStringAttribute("Unaligned_access", tag, ArrayRef(strings));
 }
 

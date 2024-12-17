@@ -16,7 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 
 using namespace llvm;
 
@@ -34,6 +34,11 @@ LoongArchTargetELFStreamer::LoongArchTargetELFStreamer(
 MCELFStreamer &LoongArchTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
 }
+
+void LoongArchTargetELFStreamer::emitDirectiveOptionPush() {}
+void LoongArchTargetELFStreamer::emitDirectiveOptionPop() {}
+void LoongArchTargetELFStreamer::emitDirectiveOptionRelax() {}
+void LoongArchTargetELFStreamer::emitDirectiveOptionNoRelax() {}
 
 void LoongArchTargetELFStreamer::finish() {
   LoongArchTargetStreamer::finish();

@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_VALUETRACKING_H
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
@@ -30,12 +29,9 @@ namespace llvm {
 
 class Operator;
 class AddOperator;
-class AllocaInst;
-class APInt;
 class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
-class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
 class Loop;
@@ -43,7 +39,7 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
-class Value;
+template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
@@ -123,6 +119,9 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                             const DominatorTree *DT = nullptr,
                             bool UseInstrInfo = true);
 
+bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
+                            const SimplifyQuery &Q);
+
 bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
 
 bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
@@ -160,7 +159,7 @@ bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-bool isKnownNegative(const Value *V, const SimplifyQuery &DL,
+bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
                      unsigned Depth = 0);
 
 /// Return true if the given values are known to be non-equal when defined.
@@ -181,7 +180,7 @@ bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the elements in the vector.
 bool MaskedValueIsZero(const Value *V, const APInt &Mask,
-                       const SimplifyQuery &DL, unsigned Depth = 0);
+                       const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Return the number of times the sign bit of the register is replicated into
 /// the other bits. We know that at least 1 bit is always equal to the sign
@@ -792,12 +791,13 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
-/// Return true if speculation of the given load must be suppressed to avoid
-/// ordering or interfering with an active sanitizer.  If not suppressed,
-/// dereferenceability and alignment must be proven separately.  Note: This
-/// is only needed for raw reasoning; if you use the interface below
-/// (isSafeToSpeculativelyExecute), this is handled internally.
-bool mustSuppressSpeculation(const LoadInst &LI);
+/// Return true if the instruction doesn't potentially cross vector lanes. This
+/// condition is weaker than checking that the instruction is lanewise: lanewise
+/// means that the same operation is splatted across all lanes, but we also
+/// include the case where there is a different operation on each lane, as long
+/// as the operation only uses data from that lane. An example of an operation
+/// that is not lanewise, but doesn't cross vector lanes is insertelement.
+bool isNotCrossLaneOperation(const Instruction *I);
 
 /// Return true if the instruction does not have any effects besides
 /// calculating the result and does not have undefined behavior.
@@ -813,7 +813,9 @@ bool mustSuppressSpeculation(const LoadInst &LI);
 ///
 /// If the CtxI is specified this method performs context-sensitive analysis
 /// and returns true if it is safe to execute the instruction immediately
-/// before the CtxI.
+/// before the CtxI. If the instruction has (transitive) operands that don't
+/// dominate CtxI, the analysis is performed under the assumption that these
+/// operands will also be speculated to a point before CxtI.
 ///
 /// If the CtxI is NOT specified this method only looks at the instruction
 /// itself and its operands, so if this method returns true, it is safe to
@@ -1176,9 +1178,19 @@ SelectPatternResult matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
     Instruction::CastOps *CastOp = nullptr, unsigned Depth = 0);
 
+/// Determine the pattern for predicate `X Pred Y ? X : Y`.
+SelectPatternResult
+getSelectPattern(CmpInst::Predicate Pred,
+                 SelectPatternNaNBehavior NaNBehavior = SPNB_NA,
+                 bool Ordered = false);
+
 /// Return the canonical comparison predicate for the specified
 /// minimum/maximum flavor.
 CmpInst::Predicate getMinMaxPred(SelectPatternFlavor SPF, bool Ordered = false);
+
+/// Convert given `SPF` to equivalent min/max intrinsic.
+/// Caller must ensure `SPF` is an integer min or max pattern.
+Intrinsic::ID getMinMaxIntrinsic(SelectPatternFlavor SPF);
 
 /// Return the inverse minimum/maximum flavor of the specified flavor.
 /// For example, signed minimum is the inverse of signed maximum.
@@ -1243,8 +1255,7 @@ std::optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
                                        const DataLayout &DL,
                                        bool LHSIsTrue = true,
                                        unsigned Depth = 0);
-std::optional<bool> isImpliedCondition(const Value *LHS,
-                                       CmpInst::Predicate RHSPred,
+std::optional<bool> isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
                                        const Value *RHSOp0, const Value *RHSOp1,
                                        const DataLayout &DL,
                                        bool LHSIsTrue = true,
@@ -1255,8 +1266,8 @@ std::optional<bool> isImpliedCondition(const Value *LHS,
 std::optional<bool> isImpliedByDomCondition(const Value *Cond,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
-std::optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
-                                            const Value *LHS, const Value *RHS,
+std::optional<bool> isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS,
+                                            const Value *RHS,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
 

@@ -1,0 +1,92 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-patchable.s -o arm64ec-patchable.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-alias.s -o arm64ec-alias.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test-sec.s -o test-sec.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+RUN: lld-link -out:test.dll -machine:arm64ec arm64ec-patchable.obj test-sec.obj loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-objdump -d test.dll | FileCheck -check-prefix=PATCH-DISASM %s
+PATCH-DISASM:      Disassembly of section .text:
+PATCH-DISASM-EMPTY:
+PATCH-DISASM-NEXT: 0000000180001000 <.text>:
+PATCH-DISASM-NEXT: 180001000: 52800040     mov     w0, #0x2                // =2
+PATCH-DISASM-NEXT: 180001004: d65f03c0     ret
+PATCH-DISASM-EMPTY:
+PATCH-DISASM-NEXT: Disassembly of section .hexpthk:
+PATCH-DISASM-EMPTY:
+PATCH-DISASM-NEXT: 0000000180002000
+PATCH-DISASM-NEXT: 180002000: 48 8b c4                     movq    %rsp, %rax
+PATCH-DISASM-NEXT: 180002003: 48 89 58 20                  movq    %rbx, 0x20(%rax)
+PATCH-DISASM-NEXT: 180002007: 55                           pushq   %rbp
+PATCH-DISASM-NEXT: 180002008: 5d                           popq    %rbp
+PATCH-DISASM-NEXT: 180002009: e9 f2 ef ff ff               jmp     0x180001000 <.text>
+PATCH-DISASM-NEXT: 18000200e: cc                           int3
+PATCH-DISASM-NEXT: 18000200f: cc                           int3
+
+RUN: llvm-readobj --hex-dump=.test test.dll | FileCheck -check-prefix=RVA %s
+RVA: 0x180006000 00200000
+
+RUN: llvm-readobj --coff-load-config test.dll | FileCheck -check-prefix=PATCH-CHPE %s
+PATCH-CHPE:       CodeMap [
+PATCH-CHPE-NEXT:    0x1000 - 0x1008  ARM64EC
+PATCH-CHPE-NEXT:    0x2000 - 0x2010  X64
+PATCH-CHPE-NEXT:  ]
+PATCH-CHPE-NEXT:  CodeRangesToEntryPoints [
+PATCH-CHPE-NEXT:    0x2000 - 0x2010 -> 0x2000
+PATCH-CHPE-NEXT:  ]
+PATCH-CHPE-NEXT:  RedirectionMetadata [
+PATCH-CHPE-NEXT:    0x2000 -> 0x1000
+PATCH-CHPE-NEXT:  ]
+
+
+RUN: lld-link -out:test2.dll -machine:arm64ec arm64ec-alias.obj test-sec.obj loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-objdump -d test2.dll | FileCheck -check-prefix=PATCH-DISASM %s
+RUN: llvm-readobj --hex-dump=.test test2.dll | FileCheck -check-prefix=RVA %s
+RUN: llvm-readobj --coff-load-config test2.dll | FileCheck -check-prefix=PATCH-CHPE %s
+
+RUN: lld-link -out:test3.dll -machine:arm64ec arm64ec-alias.obj test-sec.obj loadconfig-arm64ec.obj -dll -noentry -export:patchable_func
+
+RUN: llvm-objdump -d test3.dll | FileCheck -check-prefix=PATCH-DISASM %s
+RUN: llvm-readobj --hex-dump=.test test3.dll | FileCheck -check-prefix=RVA %s
+RUN: llvm-readobj --coff-load-config test3.dll | FileCheck -check-prefix=PATCH-CHPE %s
+
+
+RUN: not lld-link -out:test4.dll -machine:arm64ec test-sec.obj loadconfig-arm64ec.obj -dll -noentry 2>&1 | FileCheck --check-prefix=ERR %s
+ERR: error: undefined symbol: EXP+#patchable_func
+
+
+#--- arm64ec-patchable.s
+    .section ".text", "x", discard, "#patchable_func$hp_target"
+    .globl "#patchable_func$hp_target"
+    .p2align 2, 0x0
+"#patchable_func$hp_target":
+    mov w0, #2
+    ret
+
+    .def "EXP+#patchable_func"
+    .scl 2
+    .type 32
+    .endef
+
+#--- arm64ec-alias.s
+    .section ".text", "x", discard, "#patchable_func$hp_target"
+    .globl "#patchable_func$hp_target"
+    .p2align 2, 0x0
+"#patchable_func$hp_target":
+    mov w0, #2
+    ret
+
+    .def "EXP+#patchable_func"
+    .scl 2
+    .type 32
+    .endef
+    .weak patchable_func
+patchable_func = "EXP+#patchable_func"
+
+#--- test-sec.s
+    .section ".test", "rd"
+    .rva "EXP+#patchable_func"

@@ -58,6 +58,6 @@ void ActionProfiler::print(const ActionActiveStack *action,
   if (printComma)
     os << ",\n";
   printComma = true;
-  os << event.str();
+  os << str;
   os.flush();
 }

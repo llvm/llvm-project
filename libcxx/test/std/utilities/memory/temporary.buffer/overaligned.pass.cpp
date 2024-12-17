@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <memory>
@@ -21,11 +22,10 @@
 //   return_temporary_buffer(T* p);
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
-
-#include "test_macros.h"
 
 struct alignas(32) A {
     int field;

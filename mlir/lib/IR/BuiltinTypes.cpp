@@ -32,6 +32,10 @@ using namespace mlir::detail;
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.cpp.inc"
 
+namespace mlir {
+#include "mlir/IR/BuiltinTypeConstraints.cpp.inc"
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // BuiltinDialect
 //===----------------------------------------------------------------------===//
@@ -87,25 +91,17 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  if (llvm::isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType,
-                Float8E5M2FNUZType, Float8E4M3FNUZType, Float8E4M3B11FNUZType>(
-          *this))
-    return 8;
-  if (llvm::isa<Float16Type, BFloat16Type>(*this))
-    return 16;
-  if (llvm::isa<Float32Type, FloatTF32Type>(*this))
-    return 32;
-  if (llvm::isa<Float64Type>(*this))
-    return 64;
-  if (llvm::isa<Float80Type>(*this))
-    return 80;
-  if (llvm::isa<Float128Type>(*this))
-    return 128;
-  llvm_unreachable("unexpected float type");
+  return APFloat::semanticsSizeInBits(getFloatSemantics());
 }
 
 /// Returns the floating semantics for the given type.
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
+  if (llvm::isa<Float4E2M1FNType>(*this))
+    return APFloat::Float4E2M1FN();
+  if (llvm::isa<Float6E2M3FNType>(*this))
+    return APFloat::Float6E2M3FN();
+  if (llvm::isa<Float6E3M2FNType>(*this))
+    return APFloat::Float6E3M2FN();
   if (llvm::isa<Float8E5M2Type>(*this))
     return APFloat::Float8E5M2();
   if (llvm::isa<Float8E4M3Type>(*this))
@@ -118,6 +114,10 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
     return APFloat::Float8E4M3FNUZ();
   if (llvm::isa<Float8E4M3B11FNUZType>(*this))
     return APFloat::Float8E4M3B11FNUZ();
+  if (llvm::isa<Float8E3M4Type>(*this))
+    return APFloat::Float8E3M4();
+  if (llvm::isa<Float8E8M0FNUType>(*this))
+    return APFloat::Float8E8M0FNU();
   if (llvm::isa<BFloat16Type>(*this))
     return APFloat::BFloat();
   if (llvm::isa<Float16Type>(*this))
@@ -228,6 +228,10 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 // VectorType
 //===----------------------------------------------------------------------===//
 
+bool VectorType::isValidElementType(Type t) {
+  return isValidVectorTypeElementType(t);
+}
+
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
                                  ArrayRef<bool> scalableDims) {
@@ -276,7 +280,9 @@ Type TensorType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool TensorType::hasRank() const { return !llvm::isa<UnrankedTensorType>(*this); }
+bool TensorType::hasRank() const {
+  return !llvm::isa<UnrankedTensorType>(*this);
+}
 
 ArrayRef<int64_t> TensorType::getShape() const {
   return llvm::cast<RankedTensorType>(*this).getShape();
@@ -363,7 +369,9 @@ Type BaseMemRefType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool BaseMemRefType::hasRank() const { return !llvm::isa<UnrankedMemRefType>(*this); }
+bool BaseMemRefType::hasRank() const {
+  return !llvm::isa<UnrankedMemRefType>(*this);
+}
 
 ArrayRef<int64_t> BaseMemRefType::getShape() const {
   return llvm::cast<MemRefType>(*this).getShape();
@@ -789,20 +797,6 @@ static LogicalResult getStridesAndOffset(MemRefType t,
   offset = simplifyAffineExpr(offset, numDims, numSymbols);
   for (auto &stride : strides)
     stride = simplifyAffineExpr(stride, numDims, numSymbols);
-
-  // In practice, a strided memref must be internally non-aliasing. Test
-  // against 0 as a proxy.
-  // TODO: static cases can have more advanced checks.
-  // TODO: dynamic cases would require a way to compare symbolic
-  // expressions and would probably need an affine set context propagated
-  // everywhere.
-  if (llvm::any_of(strides, [](AffineExpr e) {
-        return e == getAffineConstantExpr(0, e.getContext());
-      })) {
-    offset = AffineExpr();
-    strides.clear();
-    return failure();
-  }
 
   return success();
 }

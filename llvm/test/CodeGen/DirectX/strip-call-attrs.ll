@@ -1,6 +1,6 @@
 
 ; RUN: opt -S -dxil-prepare < %s | FileCheck %s
-target triple = "dxil-unknown-unknown"
+target triple = "dxil-unknown-shadermodel6.0-library"
 
 @f = internal unnamed_addr global float 0.000000e+00, align 4
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_static_global.hlsl, ptr null }]

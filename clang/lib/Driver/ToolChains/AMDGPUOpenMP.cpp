@@ -57,7 +57,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   }
 
   // Link the bitcode library late if we're using device LTO.
-  if (getDriver().isUsingLTO(/* IsOffload */ true))
+  if (getDriver().isUsingOffloadLTO())
     return;
 }
 
@@ -118,6 +118,11 @@ void AMDGPUOpenMPToolChain::addClangWarningOptions(
 ToolChain::CXXStdlibType
 AMDGPUOpenMPToolChain::GetCXXStdlibType(const ArgList &Args) const {
   return HostTC.GetCXXStdlibType(Args);
+}
+
+void AMDGPUOpenMPToolChain::AddClangCXXStdlibIncludeArgs(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args) const {
+  HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
 }
 
 void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(

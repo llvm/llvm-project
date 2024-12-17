@@ -90,10 +90,18 @@ entry:
 ; CHECK-LABEL: define dso_local noundef ptr @notprofiled
 define dso_local noundef ptr @notprofiled() #0 !dbg !66 {
 entry:
+  ;; When foo is inlined, both the memprof and callsite metadata should be
+  ;; stripped from the inlined call to new, as there is no callsite metadata on
+  ;; the call.
   ; CHECK: call {{.*}} @_Znam
   ; CHECK-NOT: !memprof
   ; CHECK-NOT: !callsite
   %call = call noundef ptr @_Z3foov(), !dbg !67
+  ;; When baz is inlined, the callsite metadata should be stripped from the
+  ;; inlined call to foo2, as there is no callsite metadata on the call.
+  ; CHECK: call {{.*}} @_Z4foo2v
+  ; CHECK-NOT: !callsite
+  %call2 = call noundef ptr @_Z3bazv()
   ; CHECK-NEXT: ret
   ret ptr %call, !dbg !68
 }

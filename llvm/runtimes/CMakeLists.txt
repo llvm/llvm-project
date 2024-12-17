@@ -19,7 +19,12 @@ endforeach()
 function(get_compiler_rt_path path)
   set(all_runtimes ${runtimes})
   foreach(name ${LLVM_RUNTIME_TARGETS})
-    list(APPEND all_runtimes ${RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES})
+    foreach(proj ${RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES})
+      set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+      if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
+        list(APPEND all_runtimes ${proj_dir})
+      endif()
+    endforeach()
   endforeach()
   list(REMOVE_DUPLICATES all_runtimes)
   foreach(entry ${all_runtimes})
@@ -89,6 +94,7 @@ function(builtin_default_target compiler_rt_path)
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
+                                      -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -128,6 +134,7 @@ function(builtin_register_target compiler_rt_path name)
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+                                      -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
@@ -270,6 +277,7 @@ function(runtime_default_target)
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
+                                                FFI # offload uses libffi
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -497,39 +505,21 @@ if(build_runtimes)
 
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
-      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
-      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang-new")
+      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
+      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang")
       set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
       # TODO: This is a workaround until flang becomes a first-class project
-      # in llvm/CMakeList.txt.  Until then, this line ensures that flang-new is
-      # built before "openmp" is built as a runtime project.  Besides "flang-new"
+      # in llvm/CMakeList.txt.  Until then, this line ensures that flang is
+      # built before "openmp" is built as a runtime project.  Besides "flang"
       # to build the compiler, we also need to add "module_files" to make sure
       # that all .mod files are also properly build.
-      list(APPEND extra_deps "flang-new" "module_files")
+      list(APPEND extra_deps "flang" "module_files")
     endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
-  endif()
-  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
-      (LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD))
-    if(LIBC_HDRGEN_EXE)
-      set(hdrgen_exe ${LIBC_HDRGEN_EXE})
-    else()
-      if(TARGET ${LIBC_TABLEGEN_EXE})
-        set(hdrgen_exe $<TARGET_FILE:${LIBC_TABLEGEN_EXE}>)
-      else()
-        set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
-      endif()
-      set(hdrgen_deps ${LIBC_TABLEGEN_TARGET})
-    endif()
-    if(NOT hdrgen_exe)
-      message(FATAL_ERROR "libc-hdrgen executable missing")
-    endif()
-    list(APPEND extra_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
-    list(APPEND extra_deps ${hdrgen_deps})
   endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
@@ -551,6 +541,9 @@ if(build_runtimes)
     endif()
     if(TARGET clang-offload-packager)
       list(APPEND extra_deps clang-offload-packager)
+    endif()
+    if(TARGET clang-nvlink-wrapper)
+      list(APPEND extra_deps clang-nvlink-wrapper)
     endif()
   endif()
   if(LLVM_LIBC_FULL_BUILD)
@@ -625,6 +618,7 @@ if(build_runtimes)
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
+                     ${extra_cmake_args}
           BASE_NAME ${name}
           EXTRA_ARGS TARGET_TRIPLE ${name})
       endforeach()

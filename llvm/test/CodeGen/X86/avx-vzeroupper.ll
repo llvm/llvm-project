@@ -131,7 +131,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    subq $16, %rsp
 ; VZ-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; VZ-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; VZ-NEXT:    .p2align 4, 0x90
+; VZ-NEXT:    .p2align 4
 ; VZ-NEXT:  .LBB3_1: # %while.cond
 ; VZ-NEXT:    # =>This Inner Loop Header: Depth=1
 ; VZ-NEXT:    callq foo
@@ -140,7 +140,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:  # %bb.2: # %for.body.preheader
 ; VZ-NEXT:    movl $4, %ebx
 ; VZ-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; VZ-NEXT:    .p2align 4, 0x90
+; VZ-NEXT:    .p2align 4
 ; VZ-NEXT:  .LBB3_3: # %for.body
 ; VZ-NEXT:    # =>This Inner Loop Header: Depth=1
 ; VZ-NEXT:    callq do_sse
@@ -160,7 +160,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; DISABLE-VZ-NEXT:    subq $16, %rsp
 ; DISABLE-VZ-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; DISABLE-VZ-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; DISABLE-VZ-NEXT:    .p2align 4, 0x90
+; DISABLE-VZ-NEXT:    .p2align 4
 ; DISABLE-VZ-NEXT:  .LBB3_1: # %while.cond
 ; DISABLE-VZ-NEXT:    # =>This Inner Loop Header: Depth=1
 ; DISABLE-VZ-NEXT:    callq foo
@@ -169,7 +169,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; DISABLE-VZ-NEXT:  # %bb.2: # %for.body.preheader
 ; DISABLE-VZ-NEXT:    movl $4, %ebx
 ; DISABLE-VZ-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; DISABLE-VZ-NEXT:    .p2align 4, 0x90
+; DISABLE-VZ-NEXT:    .p2align 4
 ; DISABLE-VZ-NEXT:  .LBB3_3: # %for.body
 ; DISABLE-VZ-NEXT:    # =>This Inner Loop Header: Depth=1
 ; DISABLE-VZ-NEXT:    callq do_sse
@@ -189,7 +189,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BDVER2-NEXT:    subq $16, %rsp
 ; BDVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; BDVER2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; BDVER2-NEXT:    .p2align 4, 0x90
+; BDVER2-NEXT:    .p2align 4
 ; BDVER2-NEXT:  .LBB3_1: # %while.cond
 ; BDVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BDVER2-NEXT:    callq foo
@@ -198,7 +198,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BDVER2-NEXT:  # %bb.2: # %for.body.preheader
 ; BDVER2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; BDVER2-NEXT:    movl $4, %ebx
-; BDVER2-NEXT:    .p2align 4, 0x90
+; BDVER2-NEXT:    .p2align 4
 ; BDVER2-NEXT:  .LBB3_3: # %for.body
 ; BDVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BDVER2-NEXT:    callq do_sse
@@ -218,7 +218,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BTVER2-NEXT:    subq $16, %rsp
 ; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; BTVER2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; BTVER2-NEXT:    .p2align 4, 0x90
+; BTVER2-NEXT:    .p2align 4
 ; BTVER2-NEXT:  .LBB3_1: # %while.cond
 ; BTVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BTVER2-NEXT:    callq foo
@@ -227,7 +227,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BTVER2-NEXT:  # %bb.2: # %for.body.preheader
 ; BTVER2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; BTVER2-NEXT:    movl $4, %ebx
-; BTVER2-NEXT:    .p2align 4, 0x90
+; BTVER2-NEXT:    .p2align 4
 ; BTVER2-NEXT:  .LBB3_3: # %for.body
 ; BTVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BTVER2-NEXT:    callq do_sse

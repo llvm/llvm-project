@@ -15,20 +15,3 @@ add_object_library(
   DEPENDS
     ${target_os_util}
 )
-
-if (LIBC_CONF_ENABLE_PID_CACHE)
-  set(libc_copt_enable_pid_cache 1)
-else()
-  set(libc_copt_enable_pid_cache 0)
-endif()
-
-if(TARGET libc.src.__support.OSUtil.${LIBC_TARGET_OS}.pid)
-  add_object_library(
-    pid
-    ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.pid
-    COMPILE_OPTIONS
-      -DLIBC_COPT_ENABLE_PID_CACHE=${libc_copt_enable_pid_cache}
-  )
-endif()

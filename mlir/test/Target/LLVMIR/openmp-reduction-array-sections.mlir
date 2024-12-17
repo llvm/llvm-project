@@ -4,11 +4,15 @@
 // for array reductions. The important thing here is that we are testing a byref
 // reduction with a cleanup region, and the various regions contain multiple
 // blocks
-omp.declare_reduction @add_reduction_byref_box_Uxf32 : !llvm.ptr init {
-^bb0(%arg0: !llvm.ptr):
+omp.declare_reduction @add_reduction_byref_box_Uxf32 : !llvm.ptr alloc {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
   omp.yield(%1 : !llvm.ptr)
+} init {
+^bb0(%arg0: !llvm.ptr, %alloc: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  llvm.store %0, %alloc : i64, !llvm.ptr
+  omp.yield(%alloc : !llvm.ptr)
 } combiner {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.mlir.constant(0 : i64) : i64
@@ -40,8 +44,7 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
   %2 = llvm.mlir.constant(1 : index) : i64
   omp.parallel {
     %3 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
-    omp.sections reduction(byref @add_reduction_byref_box_Uxf32 -> %3 : !llvm.ptr) {
-    ^bb0(%arg1: !llvm.ptr):
+    omp.sections reduction(byref @add_reduction_byref_box_Uxf32 %3 -> %arg1 : !llvm.ptr) {
       omp.section {
       ^bb0(%arg2: !llvm.ptr):
         llvm.br ^bb1(%0 : i64)
@@ -83,17 +86,17 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         %[[VAL_11:.*]] = load i32, ptr %[[VAL_12:.*]], align 4
 // CHECK:         store i32 %[[VAL_11]], ptr %[[VAL_10]], align 4
 // CHECK:         %[[VAL_13:.*]] = load i32, ptr %[[VAL_10]], align 4
+// CHECK:         %[[VAL_20:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
+// CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_14:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_15:.*]]
 // CHECK:       omp.reduction.init:                               ; preds = %[[VAL_16:.*]]
+// CHECK:         store ptr %[[VAL_20]], ptr %[[VAL_21]], align 8
 // CHECK:         br label %[[VAL_17:.*]]
 // CHECK:       omp.par.region:                                   ; preds = %[[VAL_15]]
 // CHECK:         br label %[[VAL_18:.*]]
 // CHECK:       omp.par.region1:                                  ; preds = %[[VAL_17]]
 // CHECK:         %[[VAL_19:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
-// CHECK:         %[[VAL_20:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
-// CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
-// CHECK:         store ptr %[[VAL_20]], ptr %[[VAL_21]], align 8
 // CHECK:         br label %[[VAL_22:.*]]
 // CHECK:       omp_section_loop.preheader:                       ; preds = %[[VAL_18]]
 // CHECK:         store i32 0, ptr %[[VAL_7]], align 4

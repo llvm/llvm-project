@@ -15,9 +15,31 @@
 // insert_return_type insert(node_type&&);
 
 #include <map>
+#include <memory>
 #include <type_traits>
 #include "test_macros.h"
 #include "min_allocator.h"
+
+template <class Container, class T>
+void verify_insert_return_type(T&& t) {
+  using verified_type = std::remove_cv_t<std::remove_reference_t<T>>;
+  static_assert(std::is_aggregate_v<verified_type>);
+  static_assert(std::is_same_v<verified_type, typename Container::insert_return_type>);
+
+  auto& [pos, ins, nod] = t;
+
+  static_assert(std::is_same_v<decltype(pos), typename Container::iterator>);
+  static_assert(std::is_same_v<decltype(t.position), typename Container::iterator>);
+  assert(std::addressof(pos) == std::addressof(t.position));
+
+  static_assert(std::is_same_v<decltype(ins), bool>);
+  static_assert(std::is_same_v<decltype(t.inserted), bool>);
+  assert(&ins == &t.inserted);
+
+  static_assert(std::is_same_v<decltype(nod), typename Container::node_type>);
+  static_assert(std::is_same_v<decltype(t.node), typename Container::node_type>);
+  assert(std::addressof(nod) == std::addressof(t.node));
+}
 
 template <class Container>
 typename Container::node_type
@@ -44,6 +66,7 @@ void test(Container& c)
         assert(irt.inserted);
         assert(irt.node.empty());
         assert(irt.position->first == i && irt.position->second == i + 1);
+        verify_insert_return_type<Container>(irt);
     }
 
     assert(c.size() == 10);
@@ -55,6 +78,7 @@ void test(Container& c)
         assert(!irt.inserted);
         assert(irt.node.empty());
         assert(irt.position == c.end());
+        verify_insert_return_type<Container>(irt);
     }
 
     { // Insert duplicate node.
@@ -65,6 +89,7 @@ void test(Container& c)
         assert(!irt.node.empty());
         assert(irt.position == c.find(0));
         assert(irt.node.key() == 0 && irt.node.mapped() == 42);
+        verify_insert_return_type<Container>(irt);
     }
 
     assert(c.size() == 10);

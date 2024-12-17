@@ -225,6 +225,9 @@ private:
   /// split stack prologue.
   bool HasNoSplitStack = false;
 
+  /// True if debugging information is available in this module.
+  bool DbgInfoAvailable = false;
+
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 
@@ -429,6 +432,9 @@ public:
 
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
+
+  /// Returns true if valid debug info is present.
+  bool hasDebugInfo() const { return DbgInfoAvailable; }
 
   bool needsSEHMoves();
 
@@ -888,6 +894,10 @@ private:
 
   void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
+
+  void emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+                                 const Function &F) const;
+
   void emitLLVMUsedList(const ConstantArray *InitList);
   /// Emit llvm.ident metadata in an '.ident' directive.
   void emitModuleIdents(Module &M);

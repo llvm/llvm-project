@@ -22,7 +22,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
   foreach(dep IN LISTS unchecked_list)
     if (NOT TARGET ${dep})
       # Skip tests with undefined dependencies.
-      list(APPEND skipped_list ${dep})
+      # Compiler-RT targets are added only if they are enabled. However, such targets may not be defined
+      # at the time of the libc build. We should skip checking such targets.
+      if (NOT ${dep} MATCHES "^RTScudo.*|^RTGwp.*")
+        list(APPEND skipped_list ${dep})
+      endif()
       continue()
     endif()
     get_target_property(aliased_target ${dep} "ALIASED_TARGET")
@@ -64,6 +68,10 @@ function(get_object_files_for_test result skipped_entrypoints_list)
         endif()
         get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
         if(object_file_raw)
+          # TODO: Remove this once we stop suffixing the target with ".__internal__"
+          if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test.__unit__" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test.__unit__")
+            string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
+          endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
       elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
@@ -188,6 +196,7 @@ function(create_libc_unittest fq_target_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_link_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -344,7 +353,7 @@ function(add_libc_fuzzer target_name)
 endfunction(add_libc_fuzzer)
 
 # Get libgcc_s to be used in hermetic and integration tests.
-if(NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
                   OUTPUT_VARIABLE LIBGCC_S_LOCATION)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
@@ -393,7 +402,7 @@ function(add_integration_test test_name)
   if(NOT INTEGRATION_TEST_SRCS)
     message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
   endif()
-  if(NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
+  if(NOT LLVM_LIBC_FULL_BUILD AND NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
     message(FATAL_ERROR "The 'crt1' target for the integration test is missing.")
   endif()
 
@@ -407,12 +416,12 @@ function(add_integration_test test_name)
       libc.test.IntegrationTest.test
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
-      libc.src.string.bcmp
-      libc.src.string.bzero
       libc.src.string.memcmp
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
+      libc.src.strings.bcmp
+      libc.src.strings.bzero
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -461,19 +470,22 @@ function(add_integration_test test_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  _get_hermetic_test_compile_options(compile_options "${INTEGRATION_TEST_COMPILE_OPTIONS}")
-  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  _get_hermetic_test_compile_options(compile_options "")
+  target_compile_options(${fq_build_target_name} PRIVATE
+                         ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
-      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
-      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
+      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
-      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
-      "-Wl,--suppress-stack-size-warning"
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
+      "-Wl,--suppress-stack-size-warning" -Wno-multi-gpu
+      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
+      "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
@@ -571,13 +583,13 @@ function(add_libc_hermetic test_name)
       libc.startup.${LIBC_TARGET_OS}.crt1
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
-      libc.src.string.bcmp
-      libc.src.string.bzero
+      libc.src.__support.StringUtil.error_to_string
       libc.src.string.memcmp
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
-      libc.src.__support.StringUtil.error_to_string
+      libc.src.strings.bcmp
+      libc.src.strings.bzero
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -632,11 +644,12 @@ function(add_libc_hermetic test_name)
       #OUTPUT_NAME ${fq_target_name}
   )
 
-  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
-  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  _get_hermetic_test_compile_options(compile_options "")
+  target_compile_options(${fq_build_target_name} PRIVATE
+                         ${compile_options}
+                         ${HERMETIC_TEST_COMPILE_OPTIONS})
 
   set(link_libraries "")
   foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
@@ -657,6 +670,8 @@ function(add_libc_hermetic test_name)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
+      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
+      "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
@@ -751,3 +766,33 @@ function(add_libc_test test_name)
     endif()
   endif()
 endfunction(add_libc_test)
+
+# Tests all implementations that can run on the target CPU.
+function(add_libc_multi_impl_test name suite)
+  get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
+  foreach(fq_config_name IN LISTS fq_implementations)
+    get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
+    cpu_supports(can_run "${required_cpu_features}")
+    if(can_run)
+      string(FIND ${fq_config_name} "." last_dot_loc REVERSE)
+      math(EXPR name_loc "${last_dot_loc} + 1")
+      string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
+      add_libc_test(
+        ${target_name}_test
+        SUITE
+          ${suite}
+        COMPILE_OPTIONS
+          ${LIBC_COMPILE_OPTIONS_NATIVE}
+        LINK_LIBRARIES
+          LibcMemoryHelpers
+        ${ARGN}
+        DEPENDS
+          ${fq_config_name}
+          libc.src.__support.macros.sanitizer
+      )
+      get_fq_target_name(${fq_config_name}_test fq_target_name)
+    else()
+      message(STATUS "Skipping test for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
+    endif()
+  endforeach()
+endfunction()

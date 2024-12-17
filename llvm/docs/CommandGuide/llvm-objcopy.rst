@@ -119,8 +119,8 @@ multiple file formats.
 
 .. option:: --remove-symbol-prefix <prefix>
 
-Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
-not start with ``<prefix>``.
+ Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
+ not start with ``<prefix>``.
 
 .. option:: --remove-section <section>, -R
 
@@ -302,6 +302,15 @@ them.
 .. option:: --change-section-lma \*{+-}<val>
 
  Shift LMA of non-zero-sized segments by ``<val>``.
+
+.. option:: --change-section-address <section>{=+-}<val>, --adjust-section-vma
+
+ Change the address of sections that match ``<section>`` pattern to the
+ specified value, or apply ``+<val>``/``-<val>`` to the current value. Can be
+ specified multiple times to specify multiple patterns. Each section is only
+ modified by one ``--change-section-address`` argument. If a section name
+ matches multiple patterns, the rightmost change applies. The object file needs
+ to be of ET_REL type.
 
 .. option:: --change-start <incr>, --adjust-start
 

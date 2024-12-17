@@ -43,9 +43,8 @@ public:
   ConstraintSatisfaction() = default;
 
   ConstraintSatisfaction(const NamedDecl *ConstraintOwner,
-                         ArrayRef<TemplateArgument> TemplateArgs) :
-      ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs.begin(),
-                                                     TemplateArgs.end()) { }
+                         ArrayRef<TemplateArgument> TemplateArgs)
+      : ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs) {}
 
   using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
   using Detail = llvm::PointerUnion<Expr *, SubstitutionDiagnostic *>;

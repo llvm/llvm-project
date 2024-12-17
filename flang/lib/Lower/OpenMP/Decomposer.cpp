@@ -22,7 +22,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/ClauseT.h"
-#include "llvm/Frontend/OpenMP/ConstructCompositionT.h"
 #include "llvm/Frontend/OpenMP/ConstructDecompositionT.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
@@ -68,12 +67,6 @@ struct ConstructDecomposition {
 };
 } // namespace
 
-static UnitConstruct mergeConstructs(uint32_t version,
-                                     llvm::ArrayRef<UnitConstruct> units) {
-  tomp::ConstructCompositionT compose(version, units);
-  return compose.merged;
-}
-
 namespace Fortran::lower::omp {
 LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                                const UnitConstruct &uc) {
@@ -90,41 +83,40 @@ ConstructQueue buildConstructQueue(
     Fortran::lower::pft::Evaluation &eval, const parser::CharBlock &source,
     llvm::omp::Directive compound, const List<Clause> &clauses) {
 
-  List<UnitConstruct> constructs;
-
   ConstructDecomposition decompose(modOp, semaCtx, eval, compound, clauses);
   assert(!decompose.output.empty() && "Construct decomposition failed");
 
-  llvm::SmallVector<llvm::omp::Directive> loweringUnits;
-  std::ignore =
-      llvm::omp::getLeafOrCompositeConstructs(compound, loweringUnits);
-  uint32_t version = getOpenMPVersionAttribute(modOp);
-
-  int leafIndex = 0;
-  for (llvm::omp::Directive dir_id : loweringUnits) {
-    llvm::ArrayRef<llvm::omp::Directive> leafsOrSelf =
-        llvm::omp::getLeafConstructsOrSelf(dir_id);
-    size_t numLeafs = leafsOrSelf.size();
-
-    llvm::ArrayRef<UnitConstruct> toMerge{&decompose.output[leafIndex],
-                                          numLeafs};
-    auto &uc = constructs.emplace_back(mergeConstructs(version, toMerge));
-
-    if (!transferLocations(clauses, uc.clauses)) {
-      // If some clauses are left without source information, use the
-      // directive's source.
-      for (auto &clause : uc.clauses) {
-        if (clause.source.empty())
-          clause.source = source;
-      }
-    }
-    leafIndex += numLeafs;
+  for (UnitConstruct &uc : decompose.output) {
+    assert(getLeafConstructs(uc.id).empty() && "unexpected compound directive");
+    //  If some clauses are left without source information, use the directive's
+    //  source.
+    for (auto &clause : uc.clauses)
+      if (clause.source.empty())
+        clause.source = source;
   }
 
-  return constructs;
+  return decompose.output;
 }
 
-bool isLastItemInQueue(ConstructQueue::iterator item,
+bool matchLeafSequence(ConstructQueue::const_iterator item,
+                       const ConstructQueue &queue,
+                       llvm::omp::Directive directive) {
+  llvm::ArrayRef<llvm::omp::Directive> leafDirs =
+      llvm::omp::getLeafConstructsOrSelf(directive);
+
+  for (auto [dir, leaf] :
+       llvm::zip_longest(leafDirs, llvm::make_range(item, queue.end()))) {
+    if (!dir.has_value() || !leaf.has_value())
+      return false;
+
+    if (*dir != leaf->id)
+      return false;
+  }
+
+  return true;
+}
+
+bool isLastItemInQueue(ConstructQueue::const_iterator item,
                        const ConstructQueue &queue) {
   return std::next(item) == queue.end();
 }

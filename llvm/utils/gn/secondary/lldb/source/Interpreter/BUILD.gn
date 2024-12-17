@@ -15,6 +15,7 @@ static_library("Interpreter") {
   deps = [
     ":InterpreterProperties",
     ":InterpreterPropertiesEnum",
+    "Interfaces",
     "//lldb/source/Commands",
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",

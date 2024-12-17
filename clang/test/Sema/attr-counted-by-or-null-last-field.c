@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,immediate %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-late-parse-attributes -verify=expected,late %s
 
 #define __counted_by_or_null(f)  __attribute__((counted_by_or_null(f)))
 
@@ -82,7 +83,9 @@ struct found_outside_of_struct {
 
 struct self_referrential {
   int bork;
-  struct bar *self[] __counted_by_or_null(self); // expected-error {{use of undeclared identifier 'self'}}
+  // immediate-error@+2{{use of undeclared identifier 'self'}}
+  // late-error@+1{{'counted_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
+  struct bar *self[] __counted_by_or_null(self);
 };
 
 struct non_int_count {

@@ -28,7 +28,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
   Transforms/BufferDeallocationOpInterfaceImpl.cpp
-  Transforms/DecomposeMemrefs.cpp
+  Transforms/DecomposeMemRefs.cpp
   Transforms/EliminateBarriers.cpp
   Transforms/GlobalIdRewriter.cpp
   Transforms/KernelOutlining.cpp
@@ -40,7 +40,6 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
   Transforms/SubgroupReduceLowering.cpp
-  Transforms/Utils.cpp
   
   OBJECT
 
@@ -59,6 +58,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils
   MLIRGPUDialect
+  MLIRGPUUtils
   MLIRIR
   MLIRIndexDialect
   MLIRLLVMDialect
@@ -76,3 +76,4 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
 add_subdirectory(TransformOps)
 add_subdirectory(Pipelines)
+add_subdirectory(Utils)

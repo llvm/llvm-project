@@ -8,14 +8,11 @@
 
 #include "clang/Driver/Multilib.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Version.h"
+#include "clang/Driver/Driver.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
@@ -31,9 +28,9 @@ using namespace llvm::sys;
 
 Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
                    StringRef IncludeSuffix, const flags_list &Flags,
-                   StringRef ExclusiveGroup)
+                   StringRef ExclusiveGroup, std::optional<StringRef> Error)
     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
-      Flags(Flags), ExclusiveGroup(ExclusiveGroup) {
+      Flags(Flags), ExclusiveGroup(ExclusiveGroup), Error(Error) {
   assert(GCCSuffix.empty() ||
          (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
   assert(OSSuffix.empty() ||
@@ -94,10 +91,11 @@ MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
 
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
-bool MultilibSet::select(const Multilib::flags_list &Flags,
+bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
                          llvm::SmallVectorImpl<Multilib> &Selected) const {
   llvm::StringSet<> FlagSet(expandFlags(Flags));
   Selected.clear();
+  bool AnyErrors = false;
 
   // Decide which multilibs we're going to select at all.
   llvm::DenseSet<StringRef> ExclusiveGroupsSelected;
@@ -121,6 +119,12 @@ bool MultilibSet::select(const Multilib::flags_list &Flags,
         continue;
     }
 
+    // If this multilib is actually a placeholder containing an error message
+    // written by the multilib.yaml author, then set a flag that will cause a
+    // failure return. Our caller will display the error message.
+    if (M.isError())
+      AnyErrors = true;
+
     // Select this multilib.
     Selected.push_back(M);
   }
@@ -129,7 +133,7 @@ bool MultilibSet::select(const Multilib::flags_list &Flags,
   // round.
   std::reverse(Selected.begin(), Selected.end());
 
-  return !Selected.empty();
+  return !AnyErrors && !Selected.empty();
 }
 
 llvm::StringSet<>
@@ -162,7 +166,8 @@ namespace {
 static const VersionTuple MultilibVersionCurrent(1, 0);
 
 struct MultilibSerialization {
-  std::string Dir;
+  std::string Dir;        // if this record successfully selects a library dir
+  std::string Error;      // if this record reports a fatal error message
   std::vector<std::string> Flags;
   std::string Group;
 };
@@ -205,11 +210,16 @@ struct MultilibSetSerialization {
 
 template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
   static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
-    io.mapRequired("Dir", V.Dir);
+    io.mapOptional("Dir", V.Dir);
+    io.mapOptional("Error", V.Error);
     io.mapRequired("Flags", V.Flags);
     io.mapOptional("Group", V.Group);
   }
   static std::string validate(IO &io, MultilibSerialization &V) {
+    if (V.Dir.empty() && V.Error.empty())
+      return "one of the 'Dir' and 'Error' keys must be specified";
+    if (!V.Dir.empty() && !V.Error.empty())
+      return "the 'Dir' and 'Error' keys may not both be specified";
     if (StringRef(V.Dir).starts_with("/"))
       return "paths must be relative but \"" + V.Dir + "\" starts with \"/\"";
     return std::string{};
@@ -295,14 +305,18 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
   multilib_list Multilibs;
   Multilibs.reserve(MS.Multilibs.size());
   for (const auto &M : MS.Multilibs) {
-    std::string Dir;
-    if (M.Dir != ".")
-      Dir = "/" + M.Dir;
-    // We transfer M.Group straight into the ExclusiveGroup parameter for the
-    // Multilib constructor. If we later support more than one type of group,
-    // we'll have to look up the group name in MS.Groups, check its type, and
-    // decide what to do here.
-    Multilibs.emplace_back(Dir, Dir, Dir, M.Flags, M.Group);
+    if (!M.Error.empty()) {
+      Multilibs.emplace_back("", "", "", M.Flags, M.Group, M.Error);
+    } else {
+      std::string Dir;
+      if (M.Dir != ".")
+        Dir = "/" + M.Dir;
+      // We transfer M.Group straight into the ExclusiveGroup parameter for the
+      // Multilib constructor. If we later support more than one type of group,
+      // we'll have to look up the group name in MS.Groups, check its type, and
+      // decide what to do here.
+      Multilibs.emplace_back(Dir, Dir, Dir, M.Flags, M.Group);
+    }
   }
 
   return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers));

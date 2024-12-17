@@ -78,7 +78,7 @@ module m
     class(t), allocatable :: f07
   end function
   pure function f08() ! C1585
-    !ERROR: Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%a'
+    !ERROR: Result of pure function may not have polymorphic ALLOCATABLE potential component '%a'
     type(polyAlloc) :: f08
   end function
 

@@ -7,8 +7,8 @@ define void @PR35618(ptr %st1, ptr %st2) {
 ; CHECK-NEXT:    [[Z1:%.*]] = alloca double, align 8
 ; CHECK-NEXT:    [[LD1:%.*]] = load double, ptr [[Y1]], align 8
 ; CHECK-NEXT:    [[LD2:%.*]] = load double, ptr [[Z1]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp olt double [[LD1]], [[LD2]]
-; CHECK-NEXT:    [[TMP12_V:%.*]] = select i1 [[TMP10]], double [[LD1]], double [[LD2]]
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp olt double [[LD1]], [[LD2]]
+; CHECK-NEXT:    [[TMP12_V:%.*]] = select i1 [[TMP]], double [[LD1]], double [[LD2]]
 ; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST1:%.*]], align 8
 ; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST2:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -17,8 +17,32 @@ define void @PR35618(ptr %st1, ptr %st2) {
   %z1 = alloca double
   %ld1 = load double, ptr %y1
   %ld2 = load double, ptr %z1
-  %tmp10 = fcmp olt double %ld1, %ld2
-  %sel = select i1 %tmp10, ptr %y1, ptr %z1
+  %tmp = fcmp olt double %ld1, %ld2
+  %sel = select i1 %tmp, ptr %y1, ptr %z1
+  %tmp12 = load i64, ptr %sel
+  store i64 %tmp12, ptr %st1
+  store i64 %tmp12, ptr %st2
+  ret void
+}
+
+define void @PR35618_asan(ptr %st1, ptr %st2) sanitize_address {
+; CHECK-LABEL: @PR35618_asan(
+; CHECK-NEXT:    [[Y1:%.*]] = alloca double, align 8
+; CHECK-NEXT:    [[Z1:%.*]] = alloca double, align 8
+; CHECK-NEXT:    [[LD1:%.*]] = load double, ptr [[Y1]], align 8
+; CHECK-NEXT:    [[LD2:%.*]] = load double, ptr [[Z1]], align 8
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp olt double [[LD1]], [[LD2]]
+; CHECK-NEXT:    [[TMP12_V:%.*]] = select i1 [[TMP]], double [[LD1]], double [[LD2]]
+; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST1:%.*]], align 8
+; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST2:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %y1 = alloca double
+  %z1 = alloca double
+  %ld1 = load double, ptr %y1
+  %ld2 = load double, ptr %z1
+  %tmp = fcmp olt double %ld1, %ld2
+  %sel = select i1 %tmp, ptr %y1, ptr %z1
   %tmp12 = load i64, ptr %sel
   store i64 %tmp12, ptr %st1
   store i64 %tmp12, ptr %st2

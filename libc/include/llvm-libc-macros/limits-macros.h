@@ -19,12 +19,10 @@
 #endif // __CHAR_BIT__
 #endif // CHAR_BIT
 
-// TODO: https://github.com/llvm/llvm-project/issues/79358
-//   Define MB_LEN_MAX if missing.
-//     clang: MB_LEN_MAX = 1 -
-// https://github.com/llvm/llvm-project/blob/main/clang/lib/Headers/limits.h#L64
-//     glibc: MB_LEN_MAX = 16 -
-// https://github.com/bminor/glibc/blob/master/include/limits.h#L32
+#ifndef MB_LEN_MAX
+// Represents a single UTF-32 wide character in the default locale.
+#define MB_LEN_MAX 4
+#endif // MB_LEN_MAX
 
 // *_WIDTH macros
 

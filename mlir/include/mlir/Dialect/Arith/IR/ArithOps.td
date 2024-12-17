@@ -12,6 +12,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -1549,15 +1550,6 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
     static arith::CmpFPredicate getPredicateByName(StringRef name);
   }];
 
-  let builders = [
-    OpBuilder<(ins "::mlir::arith::CmpFPredicateAttr":$predicate,
-                   "Value":$lhs, "Value":$rhs), [{
-      build($_builder, $_state, predicate, lhs, rhs,
-          mlir::arith::FastMathFlagsAttr::get($_builder.getContext(),
-              mlir::arith::FastMathFlags::none));
-    }]>
-  ];
-
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let assemblyFormat = [{ $predicate `,` $lhs `,` $rhs (`fastmath` `` $fastmath^)?
@@ -1578,6 +1570,7 @@ def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     BooleanConditionOrMatchingShape<"condition", "result">,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
+    DeclareOpInterfaceMethods<SelectLikeOpInterface>,
   ] # ElementwiseMappable.traits> {
   let summary = "select operation";
   let description = [{

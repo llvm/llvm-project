@@ -113,6 +113,10 @@
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
 
+- `--debug-thread-count=<uint>`
+
+  Specifies the number of threads to be used when processing DWO debug information.
+
 - `--dot-tooltip-code`
 
   Add basic block instructions as tool tips on nodes
@@ -494,9 +498,12 @@
   Automatically put hot code on 2MB page(s) (hugify) at runtime. No manual call
   to hugify is needed in the binary (which is what --hot-text relies on).
 
-- `--icf`
+- `--icf=<value>`
 
   Fold functions with identical code
+  - `all`:  Enable identical code folding
+  - `none`: Disable identical code folding (default)
+  - `safe`: Enable safe identical code folding
 
 - `--icp`
 

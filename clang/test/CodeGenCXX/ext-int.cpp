@@ -165,7 +165,7 @@ void TakesVarargs(int i, ...) {
 
   _BitInt(92) A = __builtin_va_arg(args, _BitInt(92));
   // LIN64: %[[AD1:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
-  // LIN64: %[[OFA_P1:.+]] = getelementptr inbounds %struct.__va_list_tag, ptr %[[AD1]], i32 0, i32 0
+  // LIN64: %[[OFA_P1:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[AD1]], i32 0, i32 0
   // LIN64: %[[GPOFFSET:.+]] = load i32, ptr %[[OFA_P1]]
   // LIN64: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 32
   // LIN64: br i1 %[[FITSINGP]]
@@ -203,7 +203,7 @@ void TakesVarargs(int i, ...) {
 
   _BitInt(31) B = __builtin_va_arg(args, _BitInt(31));
   // LIN64: %[[AD2:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
-  // LIN64: %[[OFA_P2:.+]] = getelementptr inbounds %struct.__va_list_tag, ptr %[[AD2]], i32 0, i32 0
+  // LIN64: %[[OFA_P2:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[AD2]], i32 0, i32 0
   // LIN64: %[[GPOFFSET:.+]] = load i32, ptr %[[OFA_P2]]
   // LIN64: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 40
   // LIN64: br i1 %[[FITSINGP]]
@@ -239,7 +239,7 @@ void TakesVarargs(int i, ...) {
 
   _BitInt(16) C = __builtin_va_arg(args, _BitInt(16));
   // LIN64: %[[AD3:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
-  // LIN64: %[[OFA_P3:.+]] = getelementptr inbounds %struct.__va_list_tag, ptr %[[AD3]], i32 0, i32 0
+  // LIN64: %[[OFA_P3:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[AD3]], i32 0, i32 0
   // LIN64: %[[GPOFFSET:.+]] = load i32, ptr %[[OFA_P3]]
   // LIN64: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 40
   // LIN64: br i1 %[[FITSINGP]]
@@ -267,7 +267,7 @@ void TakesVarargs(int i, ...) {
 
   uint16_t4 D = __builtin_va_arg(args, uint16_t4);
   // LIN64: %[[AD4:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
-  // LIN64: %[[OFA_P4:.+]] = getelementptr inbounds %struct.__va_list_tag, ptr %[[AD4]], i32 0, i32 1
+  // LIN64: %[[OFA_P4:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[AD4]], i32 0, i32 1
   // LIN64: %[[GPOFFSET:.+]] = load i32, ptr %[[OFA_P4]]
   // LIN64: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 160
   // LIN64: br i1 %[[FITSINGP]]
@@ -290,7 +290,7 @@ void TakesVarargs(int i, ...) {
 
   vint32_t8 E = __builtin_va_arg(args, vint32_t8);
   // LIN64: %[[AD5:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
-  // LIN64: %[[OFAA_P4:.+]] = getelementptr inbounds %struct.__va_list_tag, ptr %[[AD5]], i32 0, i32 2
+  // LIN64: %[[OFAA_P4:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[AD5]], i32 0, i32 2
   // LIN64: %[[OFAA:.+]] = load ptr, ptr %[[OFAA_P4]]
 
   // LIN64: [[OFAA_GEP:%.*]] = getelementptr inbounds i8, ptr %[[OFAA]], i32 31
@@ -450,38 +450,38 @@ void ShiftBitIntByConstant(uint16_t4 Ext) {
 // LIN32: define dso_local void @_Z21ShiftBitIntByConstantDv4_DU16_(i64 %
 // WIN: define dso_local void @"?ShiftBitIntByConstant@@YAXT?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@Z"(<4 x i16>
   Ext << 7;
-  // CHECK: shl <4 x i16> %{{.+}}, <i16 7, i16 7, i16 7, i16 7>
+  // CHECK: shl <4 x i16> %{{.+}}, splat (i16 7)
   Ext >> 7;
-  // CHECK: lshr <4 x i16> %{{.+}}, <i16 7, i16 7, i16 7, i16 7>
+  // CHECK: lshr <4 x i16> %{{.+}}, splat (i16 7)
   Ext << -7;
-  // CHECK: shl <4 x i16> %{{.+}}, <i16 -7, i16 -7, i16 -7, i16 -7>
+  // CHECK: shl <4 x i16> %{{.+}}, splat (i16 -7)
   Ext >> -7;
-  // CHECK: lshr <4 x i16> %{{.+}}, <i16 -7, i16 -7, i16 -7, i16 -7>
+  // CHECK: lshr <4 x i16> %{{.+}}, splat (i16 -7)
 
   // UB in C/C++, Defined in OpenCL.
   Ext << 29;
-  // CHECK: shl <4 x i16> %{{.+}}, <i16 29, i16 29, i16 29, i16 29>
+  // CHECK: shl <4 x i16> %{{.+}}, splat (i16 29)
   Ext >> 29;
-  // CHECK: lshr <4 x i16> %{{.+}}, <i16 29, i16 29, i16 29, i16 29>
+  // CHECK: lshr <4 x i16> %{{.+}}, splat (i16 29)
 }
 void ShiftBitIntByConstant(vint32_t8 Ext) {
 // LIN64: define{{.*}} void @_Z21ShiftBitIntByConstantDv8_DB32_(ptr byval(<8 x i32>) align 32 %
 // LIN32: define dso_local void @_Z21ShiftBitIntByConstantDv8_DB32_(<8 x i32> %
 // WIN: define dso_local void @"?ShiftBitIntByConstant@@YAXT?$__vector@U?$_BitInt@$0CA@@__clang@@$07@__clang@@@Z"(<8 x i32>
   Ext << 7;
-  // CHECK: shl <8 x i32> %{{.+}}, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  // CHECK: shl <8 x i32> %{{.+}}, splat (i32 7)
   Ext >> 7;
-  // CHECK: ashr <8 x i32> %{{.+}}, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  // CHECK: ashr <8 x i32> %{{.+}}, splat (i32 7)
   Ext << -7;
-  // CHECK: shl <8 x i32> %{{.+}}, <i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7>
+  // CHECK: shl <8 x i32> %{{.+}}, splat (i32 -7)
   Ext >> -7;
-  // CHECK: ashr <8 x i32> %{{.+}}, <i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7>
+  // CHECK: ashr <8 x i32> %{{.+}}, splat (i32 -7)
 
   // UB in C/C++, Defined in OpenCL.
   Ext << 29;
-  // CHECK: shl <8 x i32> %{{.+}}, <i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29>
+  // CHECK: shl <8 x i32> %{{.+}}, splat (i32 29)
   Ext >> 29;
-  // CHECK: ashr <8 x i32> %{{.+}}, <i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29>
+  // CHECK: ashr <8 x i32> %{{.+}}, splat (i32 29)
 }
 
 void ConstantShiftByBitInt(_BitInt(28) Ext, _BitInt(65) LargeExt) {
@@ -549,24 +549,6 @@ void Shift(_BitInt(28) Ext, _BitInt(65) LargeExt, int i) {
   // CHECK: ashr i65 {{.+}}, %[[PROMO]]
 }
 
-void ComplexTest(_Complex _BitInt(12) first, _Complex _BitInt(33) second) {
-  // LIN: define{{.*}} void @_Z11ComplexTestCDB12_CDB33_
-  // WIN: define dso_local void  @"?ComplexTest@@YAXU?$_Complex@U?$_BitInt@$0M@@__clang@@@__clang@@U?$_Complex@U?$_BitInt@$0CB@@__clang@@@2@@Z"
-  first + second;
-  // CHECK: %[[FIRST_REALP:.+]] = getelementptr inbounds { i12, i12 }, ptr %{{.+}}, i32 0, i32 0
-  // CHECK: %[[FIRST_REAL:.+]] = load i12, ptr %[[FIRST_REALP]]
-  // CHECK: %[[FIRST_IMAGP:.+]] = getelementptr inbounds { i12, i12 }, ptr %{{.+}}, i32 0, i32 1
-  // CHECK: %[[FIRST_IMAG:.+]] = load i12, ptr %[[FIRST_IMAGP]]
-  // CHECK: %[[FIRST_REAL_CONV:.+]] = sext i12 %[[FIRST_REAL]]
-  // CHECK: %[[FIRST_IMAG_CONV:.+]] = sext i12 %[[FIRST_IMAG]]
-  // CHECK: %[[SECOND_REALP:.+]] = getelementptr inbounds { i33, i33 }, ptr %{{.+}}, i32 0, i32 0
-  // CHECK: %[[SECOND_REAL:.+]] = load i33, ptr %[[SECOND_REALP]]
-  // CHECK: %[[SECOND_IMAGP:.+]] = getelementptr inbounds { i33, i33 }, ptr %{{.+}}, i32 0, i32 1
-  // CHECK: %[[SECOND_IMAG:.+]] = load i33, ptr %[[SECOND_IMAGP]]
-  // CHECK: %[[REAL:.+]] = add i33 %[[FIRST_REAL_CONV]], %[[SECOND_REAL]]
-  // CHECK: %[[IMAG:.+]] = add i33 %[[FIRST_IMAG_CONV]], %[[SECOND_IMAG]]
-}
-
 typedef  _BitInt(64) vint64_t16 __attribute__((vector_size(16)));
 void VectorTest(vint64_t16 first, vint64_t16 second) {
   // LIN: define{{.*}} void @_Z10VectorTestDv2_DB64_S0_(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
@@ -614,3 +596,18 @@ void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
 // NewStructPathTBAA-DAG: ![[EXTINT_TBAA_ROOT]] = !{![[CHAR_TBAA_ROOT]], i64 4, !"_BitInt(32)"}
 // NewStructPathTBAA-DAG: ![[EXTINT6_TBAA]] = !{![[EXTINT6_TBAA_ROOT:.+]], ![[EXTINT6_TBAA_ROOT]], i64 0, i64 1}
 // NewStructPathTBAA-DAG: ![[EXTINT6_TBAA_ROOT]] = !{![[CHAR_TBAA_ROOT]], i64 1, !"_BitInt(6)"}
+
+namespace A {
+template <int N> struct S {
+  using T = _BitInt(N);
+  T Data;
+};
+template <int N> void foo(S<N> B) {
+  const auto Var = B.Data;
+}
+
+void bar() {
+  S<2080> a;
+  foo(a);
+}
+}

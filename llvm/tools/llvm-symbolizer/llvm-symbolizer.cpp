@@ -56,12 +56,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -72,7 +73,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class SymbolizerOptTable : public opt::GenericOptTable {
 public:
-  SymbolizerOptTable() : GenericOptTable(InfoTable) {
+  SymbolizerOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -490,6 +492,7 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   } else {
     Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
   }
+  Opts.SkipLineZero = Args.hasArg(OPT_skip_line_zero);
   Opts.DebugFileDirectory = Args.getAllArgValues(OPT_debug_file_directory_EQ);
   Opts.DefaultArch = Args.getLastArgValue(OPT_default_arch_EQ).str();
   Opts.Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, !IsAddr2Line);
