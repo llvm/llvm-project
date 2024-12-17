@@ -806,3 +806,31 @@ std::string_view test2(int c, std::string_view sv) {
 }
 
 } // namespace GH120206
+
+namespace GH120543 {
+struct S {
+  std::string_view sv;
+  std::string s;
+};
+struct Q {
+  const S* get() const [[clang::lifetimebound]];
+};
+void test1() {
+  std::string_view k1 = S().sv; // OK
+  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
+  
+  std::string_view k3 = Q().get()->sv; // OK
+  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+}
+
+struct Bar {};
+struct Foo {
+  std::vector<Bar> v;
+};
+Foo getFoo();
+void test2() {
+  const Foo& foo = getFoo();
+  const Bar& bar = foo.v.back(); // OK
+}
+
+} // namespace GH120543
