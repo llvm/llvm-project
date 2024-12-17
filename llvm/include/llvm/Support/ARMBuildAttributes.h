@@ -19,50 +19,65 @@
 #define LLVM_SUPPORT_ARMBUILDATTRIBUTES_H
 
 #include "llvm/Support/ELFAttributes.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Record.h"
 
 namespace llvm {
 class StringRef;
 
 namespace ARMBuildAttrs {
+// AArch64 build attributes
+StringRef getSubsectionTag();
+StringRef getAttrTag();
 
-const TagNameMap &getARMAttributeTags();
+/// AArch64 build attributes vendors IDs (a.k.a subsection name)
+enum VendorID : unsigned { AEABI_FEATURE_AND_BITS = 0, AEABI_PAUTHABI = 1, VENDOR_NOT_FOUND = 404 };
+static const StringRef VendorName[] = { "aeabi_feature_and_bits", "aeabi_pauthabi" };
+StringRef getVendorName(unsigned const Vendor);
+VendorID getVendorID(StringRef const Vendor);
+StringRef getSubsectionUnknownError();
 
-/// AArch64 build attributes vendors (=subsection name)
-enum Vendor : unsigned { AEABI_FEATURE_AND_BITS = 0, AEABI_PAUTHABI = 1 };
+enum SubsectionOptional : unsigned { REQUIRED = 0, OPTIONAL = 1, OPTIONAL_NOT_FOUND = 404 };
+static const StringRef OptionalStr[] = { "required", "optional"};
+StringRef getOptionalStr(unsigned Optional);
+SubsectionOptional getOptionalID(StringRef Optional);
+StringRef getSubsectionOptionalUnknownError();
 
-inline StringRef vendorToStr(unsigned Vendor) {
-  switch (Vendor) {
-  default:
-    llvm_unreachable("unknown AArch64 vendor name");
-    return "";
-  case AEABI_FEATURE_AND_BITS:
-    return "aeabi-feature-and-bits";
-  case AEABI_PAUTHABI:
-    return "aeabi-pauthabi";
-  }
-}
+enum SubsectionType : unsigned { ULEB128 = 0, NTBS = 1, TYPE_NOT_FOUND = 404 };
+static const StringRef TypeStr[] = { "uleb128", "ntbs" };
+StringRef getTypeStr(unsigned Type);
+SubsectionType getTypeID(StringRef Type);
+StringRef getSubsectionTypeUnknownError();
 
-enum SubsectionMandatory : unsigned { OPTIONAL = 0, REQUIRED = 1 };
-
-enum SubsectionType : unsigned { ULEB128 = 0, NTBS = 1 };
+enum PauthABITags : unsigned {
+  TAG_PAUTH_PLATFORM = 1,
+  TAG_PAUTH_SCHEMA = 2,
+  PAUTHABI_TAG_NOT_FOUND = 404
+};
+static const StringRef PauthABITagsStr[] = { "Tag_PAuth_Platform", "Tag_PAuth_Schema"};
+StringRef getPauthABITagsStr(unsigned PauthABITag);
+PauthABITags getPauthABITagsID(StringRef PauthABITag);
+StringRef getPauthabiTagError();
 
 enum FeatureAndBitsTags : unsigned {
-  Tag_PAuth_Platform = 1,
-  Tag_PAuth_Schema = 2
+  TAG_FEATURE_BTI = 0,
+  TAG_FEATURE_PAC = 1,
+  TAG_FEATURE_GCS = 2,
+  FEATURE_AND_BITS_TAG_NOT_FOUND = 404
 };
+static const StringRef FeatureAndBitsTagsStr[] = { "Tag_Feature_BTI", "Tag_Feature_PAC", "Tag_Feature_GCS"};
+StringRef getFeatureAndBitsTagsStr(unsigned FeatureAndBitsTag);
+FeatureAndBitsTags getFeatureAndBitsTagsID(StringRef FeatureAndBitsTag);
+StringRef getFeatureAndBitsTagError();
 
-enum PauthabiTags : unsigned {
-  Tag_Feature_BTI = 0,
-  Tag_Feature_PAC = 1,
-  Tag_Feature_GCS = 2
-};
-
-enum PauthabiTagsFlag : unsigned {
+enum FeatureAndBitsFlag : unsigned {
   Feature_BTI_Flag = 1 << 0,
   Feature_PAC_Flag = 1 << 1,
   Feature_GCS_Flag = 1 << 2
 };
-/// ---
+///--- AArch64 build attributes
+
+const TagNameMap &getARMAttributeTags();
 
 enum SpecialAttr {
   // This is for the .cpu asm attr. It translates into one or more

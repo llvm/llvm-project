@@ -14,10 +14,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/TableGen/Record.h"
-#include <cstddef>
 #include <cstdint>
-#include <utility>
 
 namespace {
 class AArch64ELFStreamer;
@@ -92,11 +89,13 @@ public:
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
-  virtual void emitSubsection(unsigned Vendor,
-                              ARMBuildAttrs::SubsectionMandatory IsMandatory,
+  virtual void emitSubsection(unsigned VendorID,
+                              ARMBuildAttrs::SubsectionOptional IsOptional,
                               ARMBuildAttrs::SubsectionType ParameterType) {}
-  virtual void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value,
+  virtual void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
                              bool Override) {}
+  virtual void activateSubsection(StringRef VendorName) {}
+  virtual StringRef getActiveSubsection() { return ""; }
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -104,26 +103,26 @@ private:
 
 class AArch64TargetELFStreamer : public AArch64TargetStreamer {
 private:
-  StringRef CurrentVendor;
   AArch64ELFStreamer &getStreamer();
 
   MCSection *AttributeSection = nullptr;
   SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
   /// Build attributes implementation
-  void emitSubsection(unsigned Vendor,
-                      ARMBuildAttrs::SubsectionMandatory IsMandatory,
+  void emitSubsection(unsigned VendorID,
+                      ARMBuildAttrs::SubsectionOptional IsOptional,
                       ARMBuildAttrs::SubsectionType ParameterType) override;
-  void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value,
-                     bool Override) override;
+  void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
+                     bool Override = false) override;
+  void activateSubsection(StringRef VendorName) override;
+  StringRef getActiveSubsection() override;
 
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
   void finish() override;
 
 public:
-  AArch64TargetELFStreamer(MCStreamer &S)
-      : AArch64TargetStreamer(S), CurrentVendor("aeabi") {}
+  AArch64TargetELFStreamer(MCStreamer &S) : AArch64TargetStreamer(S) {}
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {

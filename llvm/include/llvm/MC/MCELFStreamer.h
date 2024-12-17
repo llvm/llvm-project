@@ -98,7 +98,7 @@ public:
     // This structure holds all attributes, accounting for their string /
     // numeric value, so we can later emit them in declaration order, keeping
     // all in the same vector.
-    enum {
+    enum Types {
       HiddenAttribute = 0,
       NumericAttribute,
       TextAttribute,
@@ -107,14 +107,16 @@ public:
     unsigned Tag;
     unsigned IntValue;
     std::string StringValue;
+    AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV) : Type(Ty), Tag(Tg), IntValue(IV), StringValue(SV) {}
   };
 
   /// ELF object attributes subsection support
   struct AttributeSubSection {
+    bool IsActive; // Indicates whether the section is the active section, required for assembly parsing
     // [<uint32: subsection-length> NTBS: vendor-name <bytes: vendor-data>]*
-    StringRef Vendor;
+    StringRef VendorName;
     // <uint8: optional> <uint8: parameter type> <attribute>*
-    ARMBuildAttrs::SubsectionMandatory IsMandatory;
+    ARMBuildAttrs::SubsectionOptional IsOptional;
     ARMBuildAttrs::SubsectionType ParameterType;
     SmallVector<AttributeItem, 64> Content;
   };

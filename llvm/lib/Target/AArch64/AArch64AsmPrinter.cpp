@@ -347,7 +347,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement"))) {
     if (!BTE->isZero()) {
-      BAFlags |= ARMBuildAttrs::PauthabiTagsFlag::Feature_BTI_Flag;
+      BAFlags |= ARMBuildAttrs::FeatureAndBitsFlag::Feature_BTI_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
     }
   }
@@ -355,7 +355,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("guarded-control-stack"))) {
     if (!GCS->isZero()) {
-      BAFlags |= ARMBuildAttrs::PauthabiTagsFlag::Feature_GCS_Flag;
+      BAFlags |= ARMBuildAttrs::FeatureAndBitsFlag::Feature_GCS_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
     }
   }
@@ -363,7 +363,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("sign-return-address"))) {
     if (!Sign->isZero()) {
-      BAFlags |= ARMBuildAttrs::PauthabiTagsFlag::Feature_PAC_Flag;
+      BAFlags |= ARMBuildAttrs::FeatureAndBitsFlag::Feature_PAC_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
   }
@@ -461,18 +461,18 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
                                        uint64_t PAuthABIVersion,
                                        AArch64TargetStreamer *TS) {
 
-  PAuthABIPlatform = (PAuthABIPlatform == uint64_t(-1)) ? 0 : PAuthABIPlatform;
-  PAuthABIVersion = (PAuthABIVersion == uint64_t(-1)) ? 0 : PAuthABIVersion;
+  PAuthABIPlatform = (uint64_t(-1) == PAuthABIPlatform) ? 0 : PAuthABIPlatform;
+  PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
 
   if (PAuthABIPlatform || PAuthABIVersion) {
     TS->emitSubsection(ARMBuildAttrs::AEABI_PAUTHABI,
-                       ARMBuildAttrs::SubsectionMandatory::OPTIONAL,
+                       ARMBuildAttrs::SubsectionOptional::REQUIRED,
                        ARMBuildAttrs::SubsectionType::ULEB128);
     TS->emitAttribute(ARMBuildAttrs::AEABI_PAUTHABI,
-                      ARMBuildAttrs::Tag_PAuth_Platform, PAuthABIPlatform,
+                      ARMBuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform,
                       false);
     TS->emitAttribute(ARMBuildAttrs::AEABI_PAUTHABI,
-                      ARMBuildAttrs::Tag_PAuth_Schema, PAuthABIVersion, false);
+                      ARMBuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, false);
   }
 
   unsigned BTIValue = (Flags & ARMBuildAttrs::Feature_BTI_Flag) ? 1 : 0;
@@ -481,14 +481,14 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
 
   if (BTIValue || PACValue || GCSValue) {
     TS->emitSubsection(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
-                       ARMBuildAttrs::SubsectionMandatory::REQUIRED,
+                       ARMBuildAttrs::SubsectionOptional::OPTIONAL,
                        ARMBuildAttrs::SubsectionType::ULEB128);
     TS->emitAttribute(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
-                      ARMBuildAttrs::Tag_Feature_BTI, BTIValue, false);
+                      ARMBuildAttrs::TAG_FEATURE_BTI, BTIValue, false);
     TS->emitAttribute(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
-                      ARMBuildAttrs::Tag_Feature_PAC, PACValue, false);
+                      ARMBuildAttrs::TAG_FEATURE_PAC, PACValue, false);
     TS->emitAttribute(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
-                      ARMBuildAttrs::Tag_Feature_GCS, GCSValue, false);
+                      ARMBuildAttrs::TAG_FEATURE_GCS, GCSValue, false);
   }
 }
 

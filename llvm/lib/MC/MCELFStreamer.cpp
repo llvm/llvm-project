@@ -795,7 +795,7 @@ void MCELFStreamer::createAArch64AttributesSection(
   // ]*
   // vendor-data expends to:
   // <uint8: optional> <uint8: parameter type> <attribute>*
-  if (SubSectionVec.size() == 0) {
+  if (0 == SubSectionVec.size()) {
     return;
   }
 
@@ -812,21 +812,23 @@ void MCELFStreamer::createAArch64AttributesSection(
 
   for (AttributeSubSection &SubSection : SubSectionVec) {
     // subsection-length + vendor-name + '\0'
-    const size_t VendorHeaderSize = 4 + SubSection.Vendor.size() + 1;
+    const size_t VendorHeaderSize = 4 + SubSection.VendorName.size() + 1;
     // optional + parameter-type
     const size_t VendorParameters = 1 + 1;
     const size_t ContentsSize = calculateContentSize(SubSection.Content);
 
     emitInt32(VendorHeaderSize + VendorParameters + ContentsSize);
-    emitBytes(SubSection.Vendor);
-    emitInt8(SubSection.IsMandatory);
+    emitBytes(SubSection.VendorName);
+    emitInt8(0); // '\0'
+    emitInt8(SubSection.IsOptional);
     emitInt8(SubSection.ParameterType);
 
     for (AttributeItem &Item : SubSection.Content) {
       emitULEB128IntValue(Item.Tag);
       switch (Item.Type) {
       default:
-        llvm_unreachable("Invalid attribute type");
+        assert(0 && "Invalid attribute type");
+        break;
       case AttributeItem::NumericAttribute:
         emitULEB128IntValue(Item.IntValue);
         break;
