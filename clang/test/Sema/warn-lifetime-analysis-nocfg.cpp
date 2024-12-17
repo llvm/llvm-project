@@ -777,3 +777,32 @@ void test4() {
 }
 
 } // namespace LifetimeboundInterleave
+
+namespace GH120206 {
+struct S {
+  std::string_view s;
+};
+
+struct [[gsl::Owner]] Q1 {
+  const S* get() const [[clang::lifetimebound]];
+};
+std::string_view test1(int c, std::string_view sv) {
+  std::string_view k = c > 1 ? Q1().get()->s : sv;
+  if (c == 1)
+    return  c > 1 ? Q1().get()->s : sv;
+  Q1 q;
+  return c > 1 ? q.get()->s : sv;
+}
+
+struct Q2 {
+  const S* get() const [[clang::lifetimebound]];
+};
+std::string_view test2(int c, std::string_view sv) {
+  std::string_view k = c > 1 ? Q2().get()->s : sv;
+  if (c == 1)
+    return c > 1 ? Q2().get()->s : sv;
+  Q2 q;
+  return c > 1 ? q.get()->s : sv;
+}
+
+} // namespace GH120206
