@@ -304,7 +304,7 @@ public:
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
-      std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
+      std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps(*F.getParent());
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".

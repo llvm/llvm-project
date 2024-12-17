@@ -204,7 +204,6 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   StringRef filename = mb->getBufferIdentifier();
 
   MemoryBufferRef mbref = takeBuffer(std::move(mb));
-  filePaths.push_back(filename);
 
   // File type is detected by contents, not by file extension.
   switch (identify_magic(mbref.getBuffer())) {
@@ -241,7 +240,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      ctx.symtab.addFile(make<DLLFile>(ctx, mbref));
+      ctx.symtab.addFile(make<DLLFile>(ctx.symtab, mbref));
       break;
     }
     if (filename.ends_with_insensitive(".dll")) {
@@ -591,6 +590,15 @@ std::optional<StringRef> LinkerDriver::findLibIfNew(StringRef filename) {
   return path;
 }
 
+void LinkerDriver::setMachine(MachineTypes machine) {
+  assert(ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN);
+  assert(machine != IMAGE_FILE_MACHINE_UNKNOWN);
+
+  ctx.config.machine = machine;
+  ctx.symtab.machine = machine;
+  addWinSysRootLibSearchPaths();
+}
+
 void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
   IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem();
 
@@ -857,7 +865,6 @@ static std::string rewritePath(StringRef s) {
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
 static std::string createResponseFile(const opt::InputArgList &args,
-                                      ArrayRef<StringRef> filePaths,
                                       ArrayRef<StringRef> searchPaths) {
   SmallString<0> data;
   raw_svector_ostream os(data);
@@ -866,10 +873,14 @@ static std::string createResponseFile(const opt::InputArgList &args,
     switch (arg->getOption().getID()) {
     case OPT_linkrepro:
     case OPT_reproduce:
-    case OPT_INPUT:
-    case OPT_defaultlib:
     case OPT_libpath:
     case OPT_winsysroot:
+      break;
+    case OPT_INPUT:
+      os << quote(rewritePath(arg->getValue())) << "\n";
+      break;
+    case OPT_wholearchive_file:
+      os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_call_graph_ordering_file:
     case OPT_deffile:
@@ -906,9 +917,6 @@ static std::string createResponseFile(const opt::InputArgList &args,
     std::string relPath = relativeToRoot(path);
     os << "/libpath:" << quote(relPath) << "\n";
   }
-
-  for (StringRef path : filePaths)
-    os << quote(relativeToRoot(path)) << "\n";
 
   return std::string(data);
 }
@@ -1887,10 +1895,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Machine arg");
     if (auto *arg = args.getLastArg(OPT_machine)) {
-      config->machine = getMachineType(arg->getValue());
-      if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN)
+      MachineTypes machine = getMachineType(arg->getValue());
+      if (machine == IMAGE_FILE_MACHINE_UNKNOWN)
         Fatal(ctx) << "unknown /machine argument: " << arg->getValue();
-      addWinSysRootLibSearchPaths();
+      setMachine(machine);
     }
   }
 
@@ -2298,8 +2306,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // not we assume x64.
   if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN) {
     Warn(ctx) << "/machine is not specified. x64 is assumed";
-    config->machine = AMD64;
-    addWinSysRootLibSearchPaths();
+    setMachine(AMD64);
   }
   config->wordsize = config->is64() ? 8 : 4;
 
@@ -2347,9 +2354,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
-    tar->append("response.txt",
-                createResponseFile(args, filePaths,
-                                   ArrayRef<StringRef>(searchPaths).slice(1)));
+    tar->append(
+        "response.txt",
+        createResponseFile(args, ArrayRef<StringRef>(searchPaths).slice(1)));
   }
 
   // Handle /largeaddressaware

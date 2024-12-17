@@ -110,6 +110,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let IsSWMMAC = P.IsSWMMAC;
 
   bit HasFP8DstByteSel = P.HasFP8DstByteSel;
+  bit HasFP4DstByteSel = P.HasFP4DstByteSel;
 
   let AsmOperands = !if(!and(!not(P.IsTrue16), isVop3OpSel),
                         P.AsmVOP3OpSel,

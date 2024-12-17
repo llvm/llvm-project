@@ -4346,6 +4346,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handlePclmulIntrinsic(I);
       break;
 
+    case Intrinsic::x86_avx_round_pd_256:
+    case Intrinsic::x86_avx_round_ps_256:
     case Intrinsic::x86_sse41_round_pd:
     case Intrinsic::x86_sse41_round_ps:
       handleRoundPdPsIntrinsic(I);
