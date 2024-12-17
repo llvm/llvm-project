@@ -70,6 +70,13 @@ private:
   void AddAMDGPUTargetArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Add specific options for LoongArch64 target.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddLoongArch64TargetArgs(const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Add specific options for RISC-V target.
   ///
   /// \param [in] Args The list of input driver arguments

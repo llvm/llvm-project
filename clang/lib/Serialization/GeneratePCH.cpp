@@ -29,8 +29,8 @@ PCHGenerator::PCHGenerator(
     bool AllowASTWithErrors, bool IncludeTimestamps,
     bool BuildingImplicitModule, bool ShouldCacheASTInMemory,
     bool GeneratingReducedBMI)
-    : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
-      SemaPtr(nullptr), Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
+    : PP(PP), Subject(&PP), OutputFile(OutputFile), isysroot(isysroot.str()),
+      Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
       Writer(Stream, this->Buffer->Data, ModuleCache, Extensions,
              IncludeTimestamps, BuildingImplicitModule, GeneratingReducedBMI),
       AllowASTWithErrors(AllowASTWithErrors),
@@ -56,6 +56,17 @@ Module *PCHGenerator::getEmittingModule(ASTContext &) {
   return M;
 }
 
+DiagnosticsEngine &PCHGenerator::getDiagnostics() const {
+  return PP.getDiagnostics();
+}
+
+void PCHGenerator::InitializeSema(Sema &S) {
+  if (!PP.getHeaderSearchInfo()
+           .getHeaderSearchOpts()
+           .ModulesSerializeOnlyPreprocessor)
+    Subject = &S;
+}
+
 void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   // Don't create a PCH if there were fatal failures during module loading.
   if (PP.getModuleLoader().HadFatalFailure)
@@ -72,9 +83,7 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   if (AllowASTWithErrors)
     PP.getDiagnostics().getClient()->clear();
 
-  // Emit the PCH file to the Buffer.
-  assert(SemaPtr && "No Sema?");
-  Buffer->Signature = Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot,
+  Buffer->Signature = Writer.WriteAST(Subject, OutputFile, Module, isysroot,
                                       ShouldCacheASTInMemory);
 
   Buffer->IsComplete = true;

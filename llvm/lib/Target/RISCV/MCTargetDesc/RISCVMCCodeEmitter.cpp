@@ -27,7 +27,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -125,11 +124,7 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
   MCRegister Ra;
   if (MI.getOpcode() == RISCV::PseudoTAIL) {
     Func = MI.getOperand(0);
-    Ra = RISCV::X6;
-    // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
-    // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
-    if (STI.hasFeature(RISCV::FeatureStdExtZicfilp))
-      Ra = RISCV::X7;
+    Ra = RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
   } else if (MI.getOpcode() == RISCV::PseudoCALLReg) {
     Func = MI.getOperand(1);
     Ra = MI.getOperand(0).getReg();

@@ -458,6 +458,7 @@ constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
+    liveins: $x2, $x3, $x4
     successors: %bb.2(0x80000000)
   
     %64:g8rc_and_g8rc_nox0 = LDtoc @shortArray, $x2 :: (load (s64) from got)
@@ -472,7 +473,7 @@ body:             |
     %71:g8rc = EXTSW_32_64 killed %68
     $x3 = COPY %70
     $x4 = COPY %71
-    BL8_NOP <mcsymbol .printf>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
+    BL8_NOP <mcsymbol .printf>, csr_ppc64_r2, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit-def $r1, implicit-def $x3
     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
     %73:g8rc_and_g8rc_nox0 = LDtoc @globalShortValue, $x2 :: (load (s64) from got)
     %0:gprc = LHZ 0, killed %73 :: (dereferenceable load (s16) from @globalShortValue, !tbaa !3)
@@ -541,7 +542,8 @@ body:             |
     %126:crrc = CMPLD %11, %12
     B %bb.2
   
-  bb.1.for.cond.cleanup15:
+  bb.1.for.cond.cleanup15 (landing-pad):
+    liveins: $x2
     %150:gprc_and_gprc_nor0 = EXTSH %7
     %151:gprc_and_gprc_nor0 = EXTSH %0
 
@@ -653,9 +655,10 @@ body:             |
     MTCTR8loop killed %139, implicit-def dead $ctr8
     B %bb.10
   
-  bb.8.for.cond21.for.cond.cleanup25_crit_edge:
+  bb.8.for.cond21.for.cond.cleanup25_crit_edge (landing-pad):
     successors: %bb.9(0x80000000)
-  
+    liveins: $x2
+
     %46:gprc = PHI %37, %bb.6, %60, %bb.10
     %47:gprc = PHI %38, %bb.6, %61, %bb.10
     %48:gprc = PHI %39, %bb.6, %62, %bb.10

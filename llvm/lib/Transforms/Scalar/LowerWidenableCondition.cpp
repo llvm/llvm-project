@@ -14,10 +14,8 @@
 #include "llvm/Transforms/Scalar/LowerWidenableCondition.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Scalar.h"
 

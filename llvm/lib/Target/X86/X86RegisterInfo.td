@@ -432,11 +432,11 @@ def TMM4:  X86Reg<"tmm4",   4>;
 def TMM5:  X86Reg<"tmm5",   5>;
 def TMM6:  X86Reg<"tmm6",   6>;
 def TMM7:  X86Reg<"tmm7",   7>;
-}
 // TMM register pairs
 def TPAIRS : RegisterTuples<[sub_t0, sub_t1],
                             [(add TMM0, TMM2, TMM4, TMM6),
                              (add TMM1, TMM3, TMM5, TMM7)]>;
+}
 
 // Floating point stack registers. These don't map one-to-one to the FP
 // pseudo registers, but we still mark them as aliasing FP registers. That

@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -march=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
 
 # Check that the HexagonConstantExtenders pass does not assert when block
 # addresses from different functions are used

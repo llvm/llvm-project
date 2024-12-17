@@ -88,7 +88,7 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
     -Wno-frame-address      # Yes, calling __builtin_return_address with a

@@ -805,7 +805,7 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   // 3. Inject an incoming cast op at the beginning of the block for the bbArg
   // corresponding to the `replacement` value.
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(&newBlock, newBlock.begin());
+  rewriter.setInsertionPointToStart(&newBlock);
   BlockArgument newRegionIterArg = newForOp.getTiedLoopRegionIterArg(
       &newForOp->getOpOperand(operand.getOperandNumber()));
   Value castIn = castFn(rewriter, newForOp.getLoc(), oldType, newRegionIterArg);
@@ -1084,13 +1084,12 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
         continue;
 
       // Create a new ForOp with that iter operand replaced.
-      ValueTypeCastFnTy castFn = [](OpBuilder &b, Location loc, Type type,
-                                    Value source) {
-        return b.create<tensor::CastOp>(loc, type, source);
-      };
       rewriter.replaceOp(
-          op, replaceAndCastForOpIterArg(rewriter, op, iterOpOperand,
-                                         incomingCast.getSource(), castFn));
+          op, replaceAndCastForOpIterArg(
+                  rewriter, op, iterOpOperand, incomingCast.getSource(),
+                  [](OpBuilder &b, Location loc, Type type, Value source) {
+                    return b.create<tensor::CastOp>(loc, type, source);
+                  }));
       return success();
     }
     return failure();

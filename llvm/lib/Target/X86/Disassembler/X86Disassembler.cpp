@@ -329,6 +329,14 @@ static int readPrefixes(struct InternalInstruction *insn) {
       break;
     }
 
+    if (isREX(insn, byte)) {
+      insn->rexPrefix = byte;
+      isPrefix = true;
+      LLVM_DEBUG(dbgs() << format("Found REX prefix 0x%hhx", byte));
+    } else if (isPrefix) {
+      insn->rexPrefix = 0;
+    }
+
     if (isPrefix)
       LLVM_DEBUG(dbgs() << format("Found prefix 0x%hhx", byte));
   }
@@ -506,11 +514,6 @@ static int readPrefixes(struct InternalInstruction *insn) {
     LLVM_DEBUG(dbgs() << format("Found REX2 prefix 0x%hhx 0x%hhx",
                                 insn->rex2ExtensionPrefix[0],
                                 insn->rex2ExtensionPrefix[1]));
-  } else if (isREX(insn, byte)) {
-    if (peek(insn, nextByte))
-      return -1;
-    insn->rexPrefix = byte;
-    LLVM_DEBUG(dbgs() << format("Found REX prefix 0x%hhx", byte));
   } else
     --insn->readerCursor;
 
@@ -2479,7 +2482,7 @@ static MCDisassembler *createX86Disassembler(const Target &T,
   return new X86GenericDisassembler(STI, Ctx, std::move(MII));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Disassembler() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86Disassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheX86_32Target(),
                                          createX86Disassembler);

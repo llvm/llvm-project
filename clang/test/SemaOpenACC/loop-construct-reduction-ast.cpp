@@ -13,113 +13,167 @@ void NormalFunc(int i, float f) {
   // CHECK-NEXT: ParmVarDecl
   // CHECK-NEXT: CompoundStmt
 #pragma acc loop reduction(+: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: +
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(*: f)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: *
   // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(max: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: max
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(min: f)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: min
   // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(&: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: &
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(|: f)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: |
   // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 
 #pragma acc loop reduction(^: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: ^
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(&&: f)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: &&
   // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 
 #pragma acc loop reduction(||: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: ||
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   }
 
@@ -137,28 +191,40 @@ void TemplFunc() {
   // CHECK-NEXT: VarDecl{{.*}} t 'T'
 
 #pragma acc loop reduction(+: t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: +
   // CHECK-NEXT: DeclRefExpr{{.*}} 'T' lvalue Var{{.*}} 't' 'T'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(*: T::SomeFloat)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: *
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
   typename T::IntTy i;
@@ -166,89 +232,131 @@ void TemplFunc() {
   // CHECK-NEXT: VarDecl{{.*}} i 'typename T::IntTy'
 
 #pragma acc loop reduction(max: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: max
   // CHECK-NEXT: DeclRefExpr{{.*}} 'typename T::IntTy' lvalue Var{{.*}} 'i' 'typename T::IntTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(min: t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: min
   // CHECK-NEXT: DeclRefExpr{{.*}} 'T' lvalue Var{{.*}} 't' 'T'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(&: T::SomeFloat)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: &
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(|: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: |
   // CHECK-NEXT: DeclRefExpr{{.*}} 'typename T::IntTy' lvalue Var{{.*}} 'i' 'typename T::IntTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(^: t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: ^
   // CHECK-NEXT: DeclRefExpr{{.*}} 'T' lvalue Var{{.*}} 't' 'T'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(&&: T::SomeFloat)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: &&
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop reduction(||: i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: ||
   // CHECK-NEXT: DeclRefExpr{{.*}} 'typename T::IntTy' lvalue Var{{.*}} 'i' 'typename T::IntTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
   // Match the instantiation:
@@ -267,10 +375,16 @@ void TemplFunc() {
   // CHECK-NEXT: reduction clause Operator: +
   // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
@@ -278,10 +392,16 @@ void TemplFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: DeclStmt
@@ -291,20 +411,32 @@ void TemplFunc() {
   // CHECK-NEXT: reduction clause Operator: max
   // CHECK-NEXT: DeclRefExpr{{.*}} 'typename InstTy::IntTy':'int' lvalue Var{{.*}} 'i' 'typename InstTy::IntTy':'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: min
   // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
@@ -312,30 +444,48 @@ void TemplFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: |
   // CHECK-NEXT: DeclRefExpr{{.*}} 'typename InstTy::IntTy':'int' lvalue Var{{.*}} 'i' 'typename InstTy::IntTy':'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: ^
   // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
@@ -343,20 +493,32 @@ void TemplFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: reduction clause Operator: ||
   // CHECK-NEXT: DeclRefExpr{{.*}} 'typename InstTy::IntTy':'int' lvalue Var{{.*}} 'i' 'typename InstTy::IntTy':'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 }

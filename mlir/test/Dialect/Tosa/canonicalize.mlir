@@ -217,6 +217,17 @@ func.func @pad_noop(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32> {
 
 // -----
 
+// CHECK-LABEL: @pad_noop_padding_mismatch_nofold
+func.func @pad_noop_padding_mismatch_nofold(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[PAD:.+]] = tosa.pad
+  // CHECK: return %[[PAD]]
+  %0 = "tosa.const"() { value = dense_resource<__elided__> : tensor<2x2xi32>} : () -> tensor<2x2xi32>
+  %1 = tosa.pad %arg0, %0 : (tensor<?x?xf32>, tensor<2x2xi32>) -> tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @pad_noop_type_mismatch_nofold
 func.func @pad_noop_type_mismatch_nofold(%arg0: tensor<10xf32>) -> tensor<?xf32> {
   // CHECK: %[[PAD:.+]] = tosa.pad

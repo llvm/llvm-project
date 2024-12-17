@@ -68,6 +68,14 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mbranch-protection=standard | FileCheck --check-prefix=CHECK-BRANCH-PROTECTION %s
 // CHECK-BRANCH-PROTECTION: -mbranch-protection=standard
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mno-unaligned-access | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mno-unaligned-access | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
+// CHECK-NO-UNALIGNED-ACCESS: -mno-unaligned-access
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mbig-endian | FileCheck --check-prefix=CHECK-BIG-ENDIAN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mbig-endian | FileCheck --check-prefix=CHECK-BIG-ENDIAN %s
+// CHECK-BIG-ENDIAN: -mbig-endian
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv32-none-elf -march=rv32g | FileCheck --check-prefix=CHECK-RV32 %s
 // CHECK-RV32: --target=riscv32-unknown-none-elf
 // CHECK-RV32: -mabi=ilp32d

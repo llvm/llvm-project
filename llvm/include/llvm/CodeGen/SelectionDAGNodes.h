@@ -411,12 +411,14 @@ public:
     NoFPExcept = 1 << 12,
     // Instructions with attached 'unpredictable' metadata on IR level.
     Unpredictable = 1 << 13,
+    // Compare instructions which may carry the samesign flag.
+    SameSign = 1 << 14,
 
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
-                            NonNeg | NoNaNs | NoInfs,
+                            NonNeg | NoNaNs | NoInfs | SameSign,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -438,6 +440,7 @@ public:
   void setNoSignedWrap(bool b) { setFlag<NoSignedWrap>(b); }
   void setExact(bool b) { setFlag<Exact>(b); }
   void setDisjoint(bool b) { setFlag<Disjoint>(b); }
+  void setSameSign(bool b) { setFlag<SameSign>(b); }
   void setNonNeg(bool b) { setFlag<NonNeg>(b); }
   void setNoNaNs(bool b) { setFlag<NoNaNs>(b); }
   void setNoInfs(bool b) { setFlag<NoInfs>(b); }
@@ -454,6 +457,7 @@ public:
   bool hasNoSignedWrap() const { return Flags & NoSignedWrap; }
   bool hasExact() const { return Flags & Exact; }
   bool hasDisjoint() const { return Flags & Disjoint; }
+  bool hasSameSign() const { return Flags & SameSign; }
   bool hasNonNeg() const { return Flags & NonNeg; }
   bool hasNoNaNs() const { return Flags & NoNaNs; }
   bool hasNoInfs() const { return Flags & NoInfs; }
@@ -473,7 +477,7 @@ public:
 };
 
 LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
-                             SDNodeFlags::Unpredictable);
+                             SDNodeFlags::SameSign);
 
 inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
   LHS |= RHS;
@@ -660,7 +664,7 @@ private:
   DebugLoc debugLoc;
 
   /// Return a pointer to the specified value type.
-  static const EVT *getValueTypeList(EVT VT);
+  static const EVT *getValueTypeList(MVT VT);
 
   /// Index in worklist of DAGCombiner, or negative if the node is not in the
   /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
@@ -704,15 +708,7 @@ public:
   bool isUndef() const { return NodeType == ISD::UNDEF; }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
-  /// INTRINSIC_W_CHAIN and INTRINSIC_VOID nodes are sometimes created for
-  /// non-memory intrinsics (with chains) that are not really instances of
-  /// MemSDNode. For such nodes, we need some extra state to determine the
-  /// proper classof relationship.
-  bool isMemIntrinsic() const {
-    return (NodeType == ISD::INTRINSIC_W_CHAIN ||
-            NodeType == ISD::INTRINSIC_VOID) &&
-           SDNodeBits.IsMemIntrinsic;
-  }
+  bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
 
   /// Test if this node is a strict floating point pseudo-op.
   bool isStrictFPOpcode() {
@@ -1128,7 +1124,7 @@ public:
   void addUse(SDUse &U) { U.addToList(&UseList); }
 
 protected:
-  static SDVTList getSDVTList(EVT VT) {
+  static SDVTList getSDVTList(MVT VT) {
     SDVTList Ret = { getValueTypeList(VT), 1 };
     return Ret;
   }
@@ -1460,7 +1456,6 @@ public:
     switch (N->getOpcode()) {
     case ISD::LOAD:
     case ISD::STORE:
-    case ISD::PREFETCH:
     case ISD::ATOMIC_CMP_SWAP:
     case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     case ISD::ATOMIC_SWAP:
@@ -1500,7 +1495,7 @@ public:
     case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
       return true;
     default:
-      return N->isMemIntrinsic() || N->isTargetMemoryOpcode();
+      return N->isMemIntrinsic();
     }
   }
 };
@@ -1592,9 +1587,7 @@ public:
   static bool classof(const SDNode *N) {
     // We lower some target intrinsics to their target opcode
     // early a node with a target opcode can be of this class
-    return N->isMemIntrinsic()             ||
-           N->getOpcode() == ISD::PREFETCH ||
-           N->isTargetMemoryOpcode();
+    return N->isMemIntrinsic();
   }
 };
 

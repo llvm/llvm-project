@@ -501,6 +501,12 @@ namespace llvm {
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
 
+    /// SETBC - The ISA 3.1 (P10) SETBC instruction.
+    SETBC,
+
+    /// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
+    SETBCR,
+
     // NOTE: The nodes below may require PC-Rel specific patterns if the
     // address could be PC-Relative. When adding new nodes below, consider
     // whether or not the address can be PC-Relative and add the corresponding
@@ -979,10 +985,8 @@ namespace llvm {
                                  StringRef Constraint, MVT VT) const override;
 
     /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
-    /// function arguments in the caller parameter area.  This is the actual
-    /// alignment, not its logarithm.
-    uint64_t getByValTypeAlignment(Type *Ty,
-                                   const DataLayout &DL) const override;
+    /// function arguments in the caller parameter area.
+    Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
     /// vector.  If it is invalid, don't add anything to Ops.

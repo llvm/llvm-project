@@ -115,7 +115,7 @@ handleInlinedAllocas(Operation *call,
     stackPtr = builder.create<LLVM::StackSaveOp>(
         call->getLoc(), LLVM::LLVMPointerType::get(call->getContext()));
   }
-  builder.setInsertionPoint(callerEntryBlock, callerEntryBlock->begin());
+  builder.setInsertionPointToStart(callerEntryBlock);
   for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
     auto newConstant = builder.create<LLVM::ConstantOp>(
         allocaOp->getLoc(), allocaOp.getArraySize().getType(), arraySize);

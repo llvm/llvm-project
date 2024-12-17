@@ -214,8 +214,8 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
 
   // Otherwise match if the Src is already a regclass that is covered by the Dst
   // RegBank.
-  return DstRBC.is<const RegisterBank *>() && MRI.getRegClassOrNull(SrcReg) &&
-         DstRBC.get<const RegisterBank *>()->covers(
+  return isa<const RegisterBank *>(DstRBC) && MRI.getRegClassOrNull(SrcReg) &&
+         cast<const RegisterBank *>(DstRBC)->covers(
              *MRI.getRegClassOrNull(SrcReg));
 }
 
@@ -525,8 +525,7 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
         RegNumElts % LeftoverNumElts == 0 &&
         RegTy.getScalarSizeInBits() == MainTy.getScalarSizeInBits() &&
         LeftoverNumElts > 1) {
-      LeftoverTy =
-          LLT::fixed_vector(LeftoverNumElts, RegTy.getScalarSizeInBits());
+      LeftoverTy = LLT::fixed_vector(LeftoverNumElts, RegTy.getElementType());
 
       // Unmerge the SrcReg to LeftoverTy vectors
       SmallVector<Register, 4> UnmergeValues;

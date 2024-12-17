@@ -9,7 +9,7 @@
 #include "src/time/nanosleep.h"
 
 #include "src/__support/macros/config.h"
-#include "time_utils.h"
+#include "src/__support/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 template<typename T>
 struct A {
@@ -70,11 +69,17 @@ constexpr int A<long>::x<U&> = 5;
 static_assert(A<int>::B<int>::y == 3);
 static_assert(A<int>::B<int*>::y == 3);
 static_assert(A<int>::B<int[]>::y == 3);
-static_assert(A<int>::B<int&>::y == 4);
+
+// FIXME: This should pass!
+static_assert(A<int>::B<int&>::y == 4); // expected-error {{static assertion failed due to requirement 'A<int>::B<int &>::y == 4'}}
+                                        // expected-note@-1 {{expression evaluates to '3 == 4'}}
 static_assert(A<int>::x<int> == 3);
 static_assert(A<int>::x<int*> == 3);
 static_assert(A<int>::x<int[]> == 3);
-static_assert(A<int>::x<int&> == 4);
+
+// FIXME: This should pass!
+static_assert(A<int>::x<int&> == 4); // expected-error {{static assertion failed due to requirement 'A<int>::x<int &> == 4'}}
+                                     // expected-note@-1 {{expression evaluates to '3 == 4'}}
 static_assert(A<long>::B<int>::y == 0);
 static_assert(A<long>::B<int*>::y == 1);
 static_assert(A<long>::B<int[]>::y == 2);

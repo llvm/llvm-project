@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
-#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVDWARFReader.h"
@@ -89,6 +88,9 @@ Error LVReaderHandler::handleArchive(LVReaders &Readers, StringRef Filename,
                                Filename.str().c_str());
   }
 
+  if (Err)
+    return createStringError(errorToErrorCode(std::move(Err)), "%s",
+                             Filename.str().c_str());
   return Error::success();
 }
 

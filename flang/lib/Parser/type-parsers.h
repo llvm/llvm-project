@@ -63,6 +63,7 @@ constexpr Parser<KindParam> kindParam; // R709
 constexpr Parser<RealLiteralConstant> realLiteralConstant; // R714
 constexpr Parser<CharLength> charLength; // R723
 constexpr Parser<CharLiteralConstant> charLiteralConstant; // R724
+constexpr Parser<CharLiteralConstantSubstring> charLiteralConstantSubstring;
 constexpr Parser<Initialization> initialization; // R743 & R805
 constexpr Parser<DerivedTypeSpec> derivedTypeSpec; // R754
 constexpr Parser<TypeDeclarationStmt> typeDeclarationStmt; // R801
@@ -72,6 +73,7 @@ constexpr Parser<LanguageBindingSpec> languageBindingSpec; // R808, R1528
 constexpr Parser<EntityDecl> entityDecl; // R803
 constexpr Parser<CoarraySpec> coarraySpec; // R809
 constexpr Parser<ArraySpec> arraySpec; // R815
+constexpr Parser<ComponentArraySpec> componentArraySpec;
 constexpr Parser<ExplicitShapeSpec> explicitShapeSpec; // R816
 constexpr Parser<DeferredShapeSpecList> deferredShapeSpecList; // R820
 constexpr Parser<AssumedImpliedSpec> assumedImpliedSpec; // R821
@@ -102,7 +104,6 @@ constexpr Parser<ForallAssignmentStmt> forallAssignmentStmt; // R1053
 constexpr Parser<ForallStmt> forallStmt; // R1055
 constexpr Parser<Selector> selector; // R1105
 constexpr Parser<EndSelectStmt> endSelectStmt; // R1143 & R1151 & R1155
-constexpr Parser<LoopControl> loopControl; // R1123
 constexpr Parser<ConcurrentHeader> concurrentHeader; // R1125
 constexpr Parser<IoUnit> ioUnit; // R1201, R1203
 constexpr Parser<FileUnitNumber> fileUnitNumber; // R1202

@@ -1,0 +1,58 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-0.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-1.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-2.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-3.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-4.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-5.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-6.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-7.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+
+// The same type can appear multiple times within an ignorelist. This is a test
+// to make sure "=sanitize" has priority regardless of the order in which
+// duplicate type entries appear. This is a precautionary measure; we would
+// much rather eagerly sanitize than silently forgo sanitization.
+
+//--- order-0.ignorelist
+type:int
+type:int=sanitize
+
+//--- order-1.ignorelist
+type:int=sanitize
+type:int
+
+//--- order-2.ignorelist
+type:in*
+type:int=sanitize
+
+//--- order-3.ignorelist
+type:in*=sanitize
+type:int
+
+//--- order-4.ignorelist
+type:int
+type:in*=sanitize
+
+//--- order-5.ignorelist
+type:int=sanitize
+type:in*
+
+//--- order-6.ignorelist
+type:int=sanitize
+type:in*
+
+//--- order-7.ignorelist
+type:int
+type:int=sanitize
+
+
+
+
+//--- test.c
+// CHECK-LABEL: @test
+void test(int A) {
+// CHECK: @llvm.sadd.with.overflow.i32
+  ++A;
+}
