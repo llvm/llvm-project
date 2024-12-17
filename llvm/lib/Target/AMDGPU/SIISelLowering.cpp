@@ -13870,24 +13870,22 @@ static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
   if (MulLHS.getValueType() != MVT::i64 || MulLHS.getOpcode() != ISD::SRL)
     return SDValue();
 
-  if (MulLHS.getOperand(1).getOpcode() != ISD::Constant ||
-      MulLHS.getOperand(0) != AddRHS)
+  ConstantSDNode *ShiftVal = dyn_cast<ConstantSDNode>(MulLHS.getOperand(1));
+  if (!ShiftVal || MulLHS.getOperand(0) != AddRHS)
     return SDValue();
 
-  if (cast<ConstantSDNode>(MulLHS->getOperand(1))->getAsZExtVal() != 32)
+  if (ShiftVal->getAsZExtVal() != 32)
     return SDValue();
 
-  APInt Const = cast<ConstantSDNode>(MulRHS.getNode())->getAPIntValue();
+  APInt Const = dyn_cast<ConstantSDNode>(MulRHS.getNode())->getAPIntValue();
   if (!Const.isNegative() || !Const.isSignedIntN(33))
     return SDValue();
 
   SDValue ConstMul =
       DAG.getConstant(Const.getZExtValue() & 0x00000000FFFFFFFF, SL, MVT::i32);
-  AddRHS = DAG.getNode(ISD::AND, SL, MVT::i64, AddRHS,
-                       DAG.getConstant(0x00000000FFFFFFFF, SL, MVT::i64));
   return getMad64_32(DAG, SL, MVT::i64,
                      DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS), ConstMul,
-                     AddRHS, false);
+                     DAG.getZeroExtendInReg(AddRHS, SL, MVT::i32), false);
 }
 
 // Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z) plus high
@@ -13948,8 +13946,7 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   SDValue MulRHS = LHS.getOperand(1);
   SDValue AddRHS = RHS;
 
-  if (MulLHS.getOpcode() == ISD::Constant ||
-      MulRHS.getOpcode() == ISD::Constant) {
+  if (isa<ConstantSDNode>(MulLHS) || isa<ConstantSDNode>(MulRHS)) {
     if (MulRHS.getOpcode() == ISD::SRL)
       std::swap(MulLHS, MulRHS);
 
