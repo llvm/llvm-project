@@ -407,7 +407,6 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__utility/forward.h>
 #    include <__utility/move.h>
 #    include <__utility/swap.h>
-#    include <new>
 #    include <stdexcept>
 #    include <tuple>
 #    include <version>
