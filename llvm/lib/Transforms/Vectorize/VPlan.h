@@ -2295,8 +2295,8 @@ class VPWidenPHIRecipe : public VPSingleDefRecipe {
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr)
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi) {
     if (Start)
       addOperand(Start);
   }

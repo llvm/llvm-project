@@ -308,7 +308,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may have not been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewVPV = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
+      NewVPV = new VPWidenPHIRecipe(Phi);
       VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV));
       PhisToFix.push_back(Phi);
     } else {
