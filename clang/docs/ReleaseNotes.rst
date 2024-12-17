@@ -684,7 +684,7 @@ Improvements to Clang's diagnostics
     }
 
 - Clang now emits a ``-Wtautological-compare`` diagnostic when a check for
-  pointer additional overflow is always true or false, because overflow would
+  pointer addition overflow is always true or false, because overflow would
   be undefined behavior.
 
   .. code-block:: c++
