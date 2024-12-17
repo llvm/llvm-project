@@ -235,7 +235,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec ts;
   if (timespec_get(&ts, TIME_MONOTONIC) != TIME_MONOTONIC)
     __throw_system_error(errno, "timespec_get(TIME_MONOTONIC) failed");
-  return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
+  return steady_clock::time_point(seconds(ts.tv_sec) + microseconds(ts.tv_nsec / 1000));
 }
 
 #  elif defined(_LIBCPP_HAS_CLOCK_GETTIME)
