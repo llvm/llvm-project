@@ -16096,7 +16096,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (N0.getOpcode() == ISD::BUILD_VECTOR) {
     SDLoc DL(N0);
     EVT VT = N0.getValueType();
-    if (llvm::ISD::isBuildVectorAllOnes(N0.getNode()))
+    if (llvm::ISD::isBuildVectorAllOnes(N0.getNode()) && VT.isInteger())
       return DAG.getAllOnesConstant(DL, VT);
     if (llvm::ISD::isBuildVectorOfConstantSDNodes(N0.getNode())) {
       SmallVector<SDValue, 8> NewVecC;
