@@ -1719,7 +1719,8 @@ bool IsSaved(const Symbol &original) {
     return false;
   } else if (scopeKind == Scope::Kind::Module ||
       (scopeKind == Scope::Kind::MainProgram &&
-          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)))) {
+          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)) &&
+          Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol))) {
     // 8.5.16p4
     // In main programs, implied SAVE matters only for pointer
     // initialization targets and coarrays.
