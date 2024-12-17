@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-vectorize -force-tail-folding-style=data-with-evl -prefer-predicate-over-epilogue=predicate-dont-vectorize -mtriple=riscv64 -mattr=+v -S %s
 
-; Make sure we don't crash when transforming a VPWidenCastRecipe is created
-; without an underlying value. This occurs in this test via
+; Make sure we don't crash when transforming a VPWidenCastRecipe created without
+; an underlying value to an EVL recipe. This occurs in this test via
 ; VPlanTransforms::truncateToMinimalBitwidths
 
 define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %dst, ptr %src, i32 %mvx) {
