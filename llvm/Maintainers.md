@@ -323,15 +323,16 @@ peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
-#### Debug info
+#### Debug info and DWARF
 
+Adrian Prantl \
+aprantl@apple.com (email), [adrian-prantl](https://github.com/adrian-prantl) (GitHub) \
+David Blaikie (especially type information) \
+dblaikie@gmail.com (email), [dwblaikie](https://github.com/dwblaike) (GitHub) \
+Jeremy Morse (especially variable information) \
+jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub) \
 Eric Christopher \
 echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
-
-#### DWARF Parser
-
-Benjamin Kramer \
-benny.kra@gmail.com (email), [d0k](https://github.com/d0k) (GitHub)
 
 #### IR Linker and LTO
 
@@ -468,6 +469,7 @@ Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+Benjamin Kramer (benny.kra@gmail.com, [d0k](https://github.com/d0k)) -- DWARF Parser \
 David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
