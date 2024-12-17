@@ -123,8 +123,23 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       }
       writeHelper(KeyName, json::Value(std::move(Inner)));
     }
+    
+    void beginObject(StringRef KeyName) override {
+      Children.push_back(json::Object());
+      ChildrenNames.push_back(KeyName.str());
+    }
 
-    Error finalize() override {
+    void endObject() override {
+      assert(!Children.empty() && !ChildrenNames.empty());
+      json::Value Val = json::Value(std::move(Children.back()));
+      std::string Name = ChildrenNames.back();
+
+      Children.pop_back();
+      ChildrenNames.pop_back();
+      writeHelper(Name, std::move(Val));
+    }
+
+    llvm::Error finalize() override {
       if (!Started)
         return createStringError("Serializer not currently in use");
       Started = false;
@@ -133,11 +148,16 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 
   private:
     template <typename T> void writeHelper(StringRef Name, T Value) {
-      assert(started && "serializer not started");
-      Out->try_emplace(Name, Value);
+      assert(Started && "serializer not started");
+      if (Children.empty())
+        Out->try_emplace(Name, Value);
+      else
+        Children.back().try_emplace(Name, Value);
     }
     bool Started = false;
     std::unique_ptr<json::Object> Out;
+    std::vector<json::Object> Children;
+    std::vector<std::string> ChildrenNames;
   };
        
   class MyManager : public telemery::Manager {

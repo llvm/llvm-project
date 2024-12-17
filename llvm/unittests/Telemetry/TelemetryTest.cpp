@@ -74,13 +74,19 @@ public:
     writeHelper(KeyName, Value);
   }
 
-  void write(StringRef KeyName,
-             const std::map<std::string, std::string> &Value) override {
-    json::Object Inner;
-    for (auto KV : Value) {
-      Inner.try_emplace(KV.first, KV.second);
-    }
-    writeHelper(KeyName, json::Value(std::move(Inner)));
+  void beginObject(StringRef KeyName) override {
+    Children.push_back(json::Object());
+    ChildrenNames.push_back(KeyName.str());
+  }
+
+  void endObject() override {
+    assert(!Children.empty() && !ChildrenNames.empty());
+    json::Value Val = json::Value(std::move(Children.back()));
+    std::string Name = ChildrenNames.back();
+
+    Children.pop_back();
+    ChildrenNames.pop_back();
+    writeHelper(Name, std::move(Val));
   }
 
   llvm::Error finalize() override {
@@ -93,10 +99,15 @@ public:
 private:
   template <typename T> void writeHelper(StringRef Name, T Value) {
     assert(Started && "serializer not started");
-    Out->try_emplace(Name, Value);
+    if (Children.empty())
+      Out->try_emplace(Name, Value);
+    else
+      Children.back().try_emplace(Name, Value);
   }
   bool Started = false;
   std::unique_ptr<json::Object> Out;
+  std::vector<json::Object> Children;
+  std::vector<std::string> ChildrenNames;
 };
 
 class StringSerializer : public Serializer {
@@ -126,16 +137,22 @@ public:
     writeHelper(KeyName, Value);
   }
 
-  void write(StringRef KeyName,
-             const std::map<std::string, std::string> &Value) override {
-    std::string Inner;
-    for (auto KV : Value) {
-      writeHelper(StringRef(KV.first), StringRef(KV.second), &Inner);
-    }
-    writeHelper(KeyName, StringRef(Inner));
+  void beginObject(StringRef KeyName) override {
+    Children.push_back(std::string());
+    ChildrenNames.push_back(KeyName.str());
+  }
+
+  void endObject() override {
+    assert(!Children.empty() && !ChildrenNames.empty());
+    std::string ChildBuff = Children.back();
+    std::string Name = ChildrenNames.back();
+    Children.pop_back();
+    ChildrenNames.pop_back();
+    writeHelper(Name, ChildBuff);
   }
 
   llvm::Error finalize() override {
+    assert(Children.empty() && ChildrenNames.empty());
     if (!Started)
       return createStringError("Serializer not currently in use");
     Started = false;
@@ -144,17 +161,18 @@ public:
 
 private:
   template <typename T>
-  void writeHelper(StringRef Name, T Value, std::string *Buff) {
+  void writeHelper(StringRef Name, T Value) {
     assert(Started && "serializer not started");
-    Buff->append((Name + ":" + llvm::Twine(Value) + "\n").str());
-  }
-
-  template <typename T> void writeHelper(StringRef Name, T Value) {
-    writeHelper(Name, Value, &Buffer);
+    if (Children.empty())
+      Buffer.append((Name + ":" + llvm::Twine(Value) + "\n").str());
+    else
+      Children.back().append((Name + ":" + llvm::Twine(Value) + "\n").str());
   }
 
   bool Started = false;
   std::string Buffer;
+  std::vector<std::string> Children;
+  std::vector<std::string> ChildrenNames;
 };
 
 namespace vendor {

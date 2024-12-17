@@ -32,8 +32,8 @@ public:
   virtual void write(StringRef KeyName, int Value) = 0;
   virtual void write(StringRef KeyName, unsigned long long Value) = 0;
   virtual void write(StringRef KeyName, StringRef Value) = 0;
-  virtual void write(StringRef KeyName,
-                     const std::map<std::string, std::string> &Value) = 0;
+  virtual void beginObject(StringRef KeyName) = 0;
+  virtual void endObject() = 0;
   virtual Error finalize() = 0;
 };
 
