@@ -79,6 +79,7 @@
 #include "llvm/Transforms/Instrumentation/SoftPointerAuth.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -752,6 +753,11 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
       MPM.addPass(ModuleThreadSanitizerPass());
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
+    }
+
+    if (LangOpts.Sanitize.has(SanitizerKind::Type)) {
+      MPM.addPass(ModuleTypeSanitizerPass());
+      MPM.addPass(createModuleToFunctionPassAdaptor(TypeSanitizerPass()));
     }
 
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))

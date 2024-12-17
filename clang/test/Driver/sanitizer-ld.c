@@ -274,6 +274,29 @@
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lresolv"
 
+
+// RUN: %clangxx %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
+// RUN:     -fsanitize=type \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-TYSAN-LINUX-CXX %s
+//
+// CHECK-TYSAN-LINUX-CXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-TYSAN-LINUX-CXX-NOT: stdc++
+// CHECK-TYSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.tysan{{[^.]*}}.a" "--no-whole-archive"
+// CHECK-TYSAN-LINUX-CXX: stdc++
+
+// RUN: %clangxx -fsanitize=type -### %s 2>&1 \
+// RUN:     -mmacosx-version-min=10.6 \
+// RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-TYSAN-DARWIN-CXX %s
+// CHECK-TYSAN-DARWIN-CXX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-TYSAN-DARWIN-CXX: libclang_rt.tysan_osx_dynamic.dylib
+// CHECK-TYSAN-DARWIN-CXX-NOT: -lc++abi
+
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
 // RUN:     -fsanitize=thread \
