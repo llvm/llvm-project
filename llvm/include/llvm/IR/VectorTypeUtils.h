@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_VECTORUTILS_H
-#define LLVM_IR_VECTORUTILS_H
+#ifndef LLVM_IR_VECTORTYPEUTILS_H
+#define LLVM_IR_VECTORTYPEUTILS_H
 
 #include "llvm/IR/DerivedTypes.h"
 
