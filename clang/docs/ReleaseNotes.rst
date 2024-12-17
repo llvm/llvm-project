@@ -672,6 +672,7 @@ Improvements to Clang's diagnostics
       getS(); // Now diagnoses "Reason 2", previously diagnoses "Reason 1"
     }
 
+- Clang now diagnoses ``= delete("reason")`` extension warnings only in pedantic mode rather than on by default. (#GH109311).
 
 - Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
 
