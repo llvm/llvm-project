@@ -1182,4 +1182,7 @@ convert_float_dec_auto(Writer *writer, const FormatSection &to_conv) {
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 
+// Call this function to bring a split implementation into the link.
+extern "C" void __libc_printf_float_dec_converter();
+
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_DEC_CONVERTER_H
