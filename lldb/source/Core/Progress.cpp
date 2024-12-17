@@ -29,17 +29,19 @@ Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
                    lldb_private::Debugger *debugger,
                    Timeout<std::nano> minimum_report_time,
-                   ProgressOrigin origin)
+                   Progress::ProgressOrigin origin)
     : m_total(total.value_or(Progress::kNonDeterministicTotal)),
       m_minimum_report_time(minimum_report_time),
       m_progress_data{title, ++g_id,
                       debugger ? std::optional<user_id_t>(debugger->GetID())
-                               : std::nullopt},
+                               : std::nullopt,
+                      origin},
+      m_origin(origin),
       m_last_report_time_ns(
           std::chrono::nanoseconds(
               std::chrono::steady_clock::now().time_since_epoch())
               .count()),
-      m_details(std::move(details)), m_origin(origin) {
+      m_details(std::move(details)) {
   std::lock_guard<std::mutex> guard(m_mutex);
   ReportProgress();
 
@@ -108,10 +110,9 @@ void Progress::ReportProgress() {
     return; // An overflow in the m_completed counter. Just ignore these events.
 
   // Change the category bit if we're an internal or external progress.
-  uint32_t progress_category_bit =
-      m_origin == ProgressOrigin::eExternal
-          ? lldb::eBroadcastBitExternalProgressCategory
-          : lldb::eBroadcastBitProgressCategory;
+  uint32_t progress_category_bit = m_origin == ProgressOrigin::eExternal
+                                       ? lldb::eBroadcastBitProgress
+                                       : lldb::eBroadcastBitExternalProgress;
 
   Debugger::ReportProgress(m_progress_data.progress_id, m_progress_data.title,
                            m_details, completed, m_total,
@@ -208,10 +209,13 @@ void ProgressManager::ReportProgress(
   // broadcasting to it since that bit doesn't need that information.
   const uint64_t completed =
       (type == EventType::Begin) ? 0 : Progress::kNonDeterministicTotal;
+  const uint32_t progress_category_bit =
+      progress_data.origin == Progress::ProgressOrigin::eExternal
+          ? lldb::eBroadcastBitExternalProgressCategory
+          : lldb::eBroadcastBitProgressCategory;
   Debugger::ReportProgress(progress_data.progress_id, progress_data.title, "",
                            completed, Progress::kNonDeterministicTotal,
-                           progress_data.debugger_id,
-                           lldb::eBroadcastBitProgressCategory);
+                           progress_data.debugger_id, progress_category_bit);
 }
 
 void ProgressManager::Expire(llvm::StringRef key) {
