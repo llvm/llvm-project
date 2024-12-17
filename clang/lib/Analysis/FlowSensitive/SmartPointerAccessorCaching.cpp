@@ -32,9 +32,8 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
     // We only consider methods that are const and have zero parameters.
     // It may be that there is a non-const overload for the method, but
     // there should at least be a const overload as well.
-    if (!MD->isConst() || MD->getNumParams() != 0) {
+    if (!MD->isConst() || MD->getNumParams() != 0)
       continue;
-    }
     if (MD->getOverloadedOperator() == OO_Star &&
         MD->getReturnType()->isReferenceType()) {
       HasStar = true;
