@@ -1347,14 +1347,6 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  /// Return true if this instruction may modify memory.
-  bool mayWriteToMemory() const {
-    // TODO: we can use attributes of the called function to rule out memory
-    //       modifications.
-    return Opcode == Instruction::Store || Opcode == Instruction::Call ||
-           Opcode == Instruction::Invoke || Opcode == SLPStore;
-  }
-
   bool hasResult() const {
     // CallInst may or may not have a result, depending on the called function.
     // Conservatively return calls have results for now.
@@ -4047,12 +4039,6 @@ public:
     assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
     SCEVToExpansion[S] = V;
   }
-
-  /// \return The block corresponding to the original preheader.
-  /// FIXME: There's no separate preheader any longer and Entry now serves the
-  /// same purpose as the original preheader. Remove after transition.
-  VPBasicBlock *getPreheader() { return Entry; }
-  const VPBasicBlock *getPreheader() const { return Entry; }
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.

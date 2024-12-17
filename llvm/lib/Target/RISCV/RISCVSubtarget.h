@@ -82,6 +82,7 @@ public:
     Others,
     SiFive7,
     VentanaVeyron,
+    MIPSP8700,
   };
   // clang-format on
 private:

@@ -32,7 +32,8 @@ bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
   return OpenACCPrivateClause::classof(C) ||
          OpenACCFirstPrivateClause::classof(C) ||
          OpenACCDevicePtrClause::classof(C) ||
-         OpenACCDevicePtrClause::classof(C) ||
+         OpenACCDeleteClause::classof(C) ||
+         OpenACCUseDeviceClause::classof(C) ||
          OpenACCDetachClause::classof(C) || OpenACCAttachClause::classof(C) ||
          OpenACCNoCreateClause::classof(C) ||
          OpenACCPresentClause::classof(C) || OpenACCCopyClause::classof(C) ||
@@ -286,6 +287,26 @@ OpenACCDetachClause *OpenACCDetachClause::Create(const ASTContext &C,
   void *Mem =
       C.Allocate(OpenACCDetachClause::totalSizeToAlloc<Expr *>(VarList.size()));
   return new (Mem) OpenACCDetachClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCDeleteClause *OpenACCDeleteClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 ArrayRef<Expr *> VarList,
+                                                 SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCDeleteClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCDeleteClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCUseDeviceClause *OpenACCUseDeviceClause::Create(const ASTContext &C,
+                                                       SourceLocation BeginLoc,
+                                                       SourceLocation LParenLoc,
+                                                       ArrayRef<Expr *> VarList,
+                                                       SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCUseDeviceClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCUseDeviceClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
 OpenACCDevicePtrClause *OpenACCDevicePtrClause::Create(const ASTContext &C,
@@ -559,6 +580,21 @@ void OpenACCClausePrinter::VisitAttachClause(const OpenACCAttachClause &C) {
 
 void OpenACCClausePrinter::VisitDetachClause(const OpenACCDetachClause &C) {
   OS << "detach(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDeleteClause(const OpenACCDeleteClause &C) {
+  OS << "delete(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitUseDeviceClause(
+    const OpenACCUseDeviceClause &C) {
+  OS << "use_device(";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";

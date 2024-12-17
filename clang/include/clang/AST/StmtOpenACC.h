@@ -127,11 +127,12 @@ public:
 /// the 'Kind'.
 class OpenACCComputeConstruct final
     : public OpenACCAssociatedStmtConstruct,
-      public llvm::TrailingObjects<OpenACCComputeConstruct,
-                                   const OpenACCClause *> {
+      private llvm::TrailingObjects<OpenACCComputeConstruct,
+                                    const OpenACCClause *> {
   friend class ASTStmtWriter;
   friend class ASTStmtReader;
   friend class ASTContext;
+  friend TrailingObjects;
   OpenACCComputeConstruct(unsigned NumClauses)
       : OpenACCAssociatedStmtConstruct(
             OpenACCComputeConstructClass, OpenACCDirectiveKind::Invalid,
@@ -189,7 +190,7 @@ public:
 /// Construct.
 class OpenACCLoopConstruct final
     : public OpenACCAssociatedStmtConstruct,
-      public llvm::TrailingObjects<OpenACCLoopConstruct,
+      private llvm::TrailingObjects<OpenACCLoopConstruct,
                                    const OpenACCClause *> {
   // The compute/combined construct kind this loop is associated with, or
   // invalid if this is an orphaned loop construct.
@@ -202,6 +203,7 @@ class OpenACCLoopConstruct final
   friend class OpenACCAssociatedStmtConstruct;
   friend class OpenACCCombinedConstruct;
   friend class OpenACCComputeConstruct;
+  friend TrailingObjects;
 
   OpenACCLoopConstruct(unsigned NumClauses);
 
@@ -245,8 +247,9 @@ public:
 // shared with both loop and compute constructs.
 class OpenACCCombinedConstruct final
     : public OpenACCAssociatedStmtConstruct,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      private llvm::TrailingObjects<OpenACCCombinedConstruct,
                                    const OpenACCClause *> {
+  friend TrailingObjects;
   OpenACCCombinedConstruct(unsigned NumClauses)
       : OpenACCAssociatedStmtConstruct(
             OpenACCCombinedConstructClass, OpenACCDirectiveKind::Invalid,
@@ -297,8 +300,9 @@ public:
 // and clauses, but is otherwise pretty simple.
 class OpenACCDataConstruct final
     : public OpenACCAssociatedStmtConstruct,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      private llvm::TrailingObjects<OpenACCDataConstruct,
                                    const OpenACCClause *> {
+  friend TrailingObjects;
   OpenACCDataConstruct(unsigned NumClauses)
       : OpenACCAssociatedStmtConstruct(
             OpenACCDataConstructClass, OpenACCDirectiveKind::Data,
@@ -345,8 +349,9 @@ public:
 // This class represents a 'enter data' construct, which JUST has clauses.
 class OpenACCEnterDataConstruct final
     : public OpenACCConstructStmt,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      private llvm::TrailingObjects<OpenACCEnterDataConstruct,
                                    const OpenACCClause *> {
+  friend TrailingObjects;
   OpenACCEnterDataConstruct(unsigned NumClauses)
       : OpenACCConstructStmt(OpenACCEnterDataConstructClass,
                              OpenACCDirectiveKind::EnterData, SourceLocation{},
@@ -382,8 +387,9 @@ public:
 // This class represents a 'exit data' construct, which JUST has clauses.
 class OpenACCExitDataConstruct final
     : public OpenACCConstructStmt,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      private llvm::TrailingObjects<OpenACCExitDataConstruct,
                                    const OpenACCClause *> {
+  friend TrailingObjects;
   OpenACCExitDataConstruct(unsigned NumClauses)
       : OpenACCConstructStmt(OpenACCExitDataConstructClass,
                              OpenACCDirectiveKind::ExitData, SourceLocation{},
@@ -420,8 +426,9 @@ public:
 // statement and clauses, but is otherwise pretty simple.
 class OpenACCHostDataConstruct final
     : public OpenACCAssociatedStmtConstruct,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      private llvm::TrailingObjects<OpenACCHostDataConstruct,
                                    const OpenACCClause *> {
+  friend TrailingObjects;
   OpenACCHostDataConstruct(unsigned NumClauses)
       : OpenACCAssociatedStmtConstruct(
             OpenACCHostDataConstructClass, OpenACCDirectiveKind::HostData,

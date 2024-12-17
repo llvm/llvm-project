@@ -52,7 +52,7 @@
    The loop tail is handled by always copying 64 bytes from the end.
 */
 
-DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sc_memcpy)
         add     srcend1, src, count
         add     dstend1, dstin, count
         cmp     count, 128
@@ -232,7 +232,7 @@ L(copy64_from_start):
         stp     B_l, B_h, [dstin, 16]
         stp     C_l, C_h, [dstin]
         ret
-END_COMPILERRT_FUNCTION(__arm_sc_memcpy)
+END_COMPILERRT_OUTLINE_FUNCTION(__arm_sc_memcpy)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 
@@ -250,7 +250,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 #define dstend2  x4
 #define zva_val  x5
 
-DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sc_memset)
 #ifdef __ARM_FEATURE_SVE
         mov     z0.b, valw
 #else
@@ -346,6 +346,6 @@ L(no_zva_loop):
         stp     q0, q0, [dstend2, -64]
         stp     q0, q0, [dstend2, -32]
         ret
-END_COMPILERRT_FUNCTION(__arm_sc_memset)
+END_COMPILERRT_OUTLINE_FUNCTION(__arm_sc_memset)
 
 #endif // __aarch64__

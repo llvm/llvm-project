@@ -87,16 +87,14 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc serial loop device_type(*) present_or_copy(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'use_device' may not follow a 'device_type' clause in a 'kernels loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'kernels loop' directive}}
 #pragma acc kernels loop device_type(*) use_device(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'attach' may not follow a 'device_type' clause in a 'parallel loop' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel loop device_type(*) attach(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'delete' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) delete(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'kernels loop' directive}}
