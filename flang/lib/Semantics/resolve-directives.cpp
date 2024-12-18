@@ -2270,7 +2270,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
 
   // if -fopenmp-default-none was given on the command line, act as if
   // DEFAULT(NONE) was present at the directive.
-  bool HaveOpenMPDefaultNone = context_.languageFeatures().IsEnabled(
+  bool haveOpenMPDefaultNone = context_.languageFeatures().IsEnabled(
       common::LanguageFeature::OpenMPDefaultNone);
 
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
@@ -2281,7 +2281,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
-        } else if ((HaveOpenMPDefaultNone ||
+        } else if ((haveOpenMPDefaultNone ||
                        GetContext().defaultDSA == Symbol::Flag::OmpNone) &&
             !symbol->test(Symbol::Flag::OmpThreadprivate) &&
             // Exclude indices of sequential loops that are privatised in
