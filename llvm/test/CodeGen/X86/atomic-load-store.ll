@@ -269,3 +269,120 @@ define <1 x i64> @atomic_vec1_i64_align(ptr %x) nounwind {
   %ret = load atomic <1 x i64>, ptr %x acquire, align 8
   ret <1 x i64> %ret
 }
+
+define <1 x half> @atomic_vec1_half(ptr %x) {
+; CHECK-O3-LABEL: atomic_vec1_half:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movzwl (%rdi), %eax
+; CHECK-O3-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-O3-NEXT:    retq
+;
+; CHECK-SSE-O3-LABEL: atomic_vec1_half:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    movzwl (%rdi), %eax
+; CHECK-SSE-O3-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: atomic_vec1_half:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    movzwl (%rdi), %eax
+; CHECK-AVX-O3-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-O0-LABEL: atomic_vec1_half:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movw (%rdi), %cx
+; CHECK-O0-NEXT:    # implicit-def: $eax
+; CHECK-O0-NEXT:    movw %cx, %ax
+; CHECK-O0-NEXT:    # implicit-def: $xmm0
+; CHECK-O0-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec1_half:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    movw (%rdi), %cx
+; CHECK-SSE-O0-NEXT:    # implicit-def: $eax
+; CHECK-SSE-O0-NEXT:    movw %cx, %ax
+; CHECK-SSE-O0-NEXT:    # implicit-def: $xmm0
+; CHECK-SSE-O0-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: atomic_vec1_half:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    movw (%rdi), %cx
+; CHECK-AVX-O0-NEXT:    # implicit-def: $eax
+; CHECK-AVX-O0-NEXT:    movw %cx, %ax
+; CHECK-AVX-O0-NEXT:    # implicit-def: $xmm0
+; CHECK-AVX-O0-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-AVX-O0-NEXT:    retq
+  %ret = load atomic <1 x half>, ptr %x acquire, align 2
+  ret <1 x half> %ret
+}
+
+define <1 x float> @atomic_vec1_float(ptr %x) {
+; CHECK-O3-LABEL: atomic_vec1_float:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O3-NEXT:    retq
+;
+; CHECK-SSE-O3-LABEL: atomic_vec1_float:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: atomic_vec1_float:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-O0-LABEL: atomic_vec1_float:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec1_float:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: atomic_vec1_float:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX-O0-NEXT:    retq
+  %ret = load atomic <1 x float>, ptr %x acquire, align 4
+  ret <1 x float> %ret
+}
+
+define <1 x double> @atomic_vec1_double_align(ptr %x) nounwind {
+; CHECK-O3-LABEL: atomic_vec1_double_align:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-O3-NEXT:    retq
+;
+; CHECK-SSE-O3-LABEL: atomic_vec1_double_align:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: atomic_vec1_double_align:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-O0-LABEL: atomic_vec1_double_align:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec1_double_align:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: atomic_vec1_double_align:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-AVX-O0-NEXT:    retq
+  %ret = load atomic <1 x double>, ptr %x acquire, align 8
+  ret <1 x double> %ret
+}
