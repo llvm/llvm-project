@@ -321,7 +321,6 @@ static DecodeStatus decodeSrcRegOrImmDeferred9(MCInst &Inst, unsigned Imm,
 // operands.
 
 DECODE_OPERAND_REG_8(VGPR_32)
-DECODE_OPERAND_REG_8(VGPR_32_Lo128)
 DECODE_OPERAND_REG_8(VReg_64)
 DECODE_OPERAND_REG_8(VReg_96)
 DECODE_OPERAND_REG_8(VReg_128)
