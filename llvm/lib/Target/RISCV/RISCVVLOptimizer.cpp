@@ -745,6 +745,9 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
   case RISCV::VMV_V_V:
+  // Vector Single-Width Fractional Multiply with Rounding and Saturation
+  case RISCV::VSMUL_VV:
+  case RISCV::VSMUL_VX:
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
@@ -840,7 +843,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
-  if (MI.getNumDefs() != 1)
+  if (MI.getNumExplicitDefs() != 1)
     return false;
 
   // If we're not using VLMAX, then we need to be careful whether we are using
