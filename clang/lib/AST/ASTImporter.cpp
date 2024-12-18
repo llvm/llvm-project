@@ -3165,7 +3165,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
                 if (Error Err = ImportImplicitMethods(DCXX, FoundCXX))
                   return std::move(Err);
             }
-            return FoundDef;
+            // FIXME: We can return FoundDef here.
           }
           PrevDecl = FoundRecord->getMostRecentDecl();
           break;
