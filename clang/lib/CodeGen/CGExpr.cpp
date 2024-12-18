@@ -3581,10 +3581,9 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
-  NoMerge = NoMerge ||
-      ClSanitizeDebugDeoptimization ||
-      !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
-      (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+  NoMerge = NoMerge || ClSanitizeDebugDeoptimization ||
+            !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
+            (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
   if (!MayReturn) {
@@ -3621,7 +3620,7 @@ void CodeGenFunction::EmitCheck(
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
 
     if (CGM.getCodeGenOpts().SanitizeNonMergedHandlers.has(Checked[i].second))
-        NoMerge = true;
+      NoMerge = true;
   }
 
   if (ClSanitizeGuardChecks) {
@@ -3916,10 +3915,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  NoMerge = NoMerge ||
-                ClSanitizeDebugDeoptimization ||
-                !CGM.getCodeGenOpts().OptimizationLevel ||
-                (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+  NoMerge = NoMerge || ClSanitizeDebugDeoptimization ||
+            !CGM.getCodeGenOpts().OptimizationLevel ||
+            (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
   if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();

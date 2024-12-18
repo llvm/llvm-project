@@ -1461,15 +1461,17 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                              bool DiagnoseErrors) {
-  assert((A->getOption().matches(options::OPT_fsanitize_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_nonmerged_handlers_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_nonmerged_handlers_EQ)) &&
-         "Invalid argument in parseArgValues!");
+  assert(
+      (A->getOption().matches(options::OPT_fsanitize_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_nonmerged_handlers_EQ) ||
+       A->getOption().matches(
+           options::OPT_fno_sanitize_nonmerged_handlers_EQ)) &&
+      "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
