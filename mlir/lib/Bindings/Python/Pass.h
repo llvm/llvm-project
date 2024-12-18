@@ -9,12 +9,12 @@
 #ifndef MLIR_BINDINGS_PYTHON_PASS_H
 #define MLIR_BINDINGS_PYTHON_PASS_H
 
-#include "NanobindUtils.h"
+#include "PybindUtils.h"
 
 namespace mlir {
 namespace python {
 
-void populatePassManagerSubmodule(nanobind::module_ &m);
+void populatePassManagerSubmodule(pybind11::module &m);
 
 } // namespace python
 } // namespace mlir
