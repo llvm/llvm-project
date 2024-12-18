@@ -9058,7 +9058,7 @@ addUsersInExitBlocks(VPlan &Plan,
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-    for (VPValue *Op : ExitIRI->operands()) {
+    for (const auto &[Idx, Op] : enumerate(ExitIRI->operands())) {
       // Pass live-in values used by exit phis directly through to their users
       // in the exit block.
       if (Op->isLiveIn())
@@ -9073,7 +9073,7 @@ addUsersInExitBlocks(VPlan &Plan,
       VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
                                     {Op, Plan.getOrAddLiveIn(ConstantInt::get(
                                              IntegerType::get(Ctx, 32), 1))});
-      ExitIRI->setOperand(0, Ext);
+      ExitIRI->setOperand(Idx, Ext);
     }
   }
   return true;
@@ -10236,36 +10236,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasUncountableEarlyExit()) {
-    if (!EnableEarlyExitVectorization) {
-      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                                 "early exit is not enabled",
-                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
-      return false;
-    }
-
-    // In addUsersInExitBlocks we already bail out if there is an outside use
-    // of a loop-defined variable, but it ignores induction variables which are
-    // handled by InnerLoopVectorizer::fixupIVUsers. We need to bail out if we
-    // encounter induction variables too otherwise fixupIVUsers will crash.
-    BasicBlock *LoopLatch = L->getLoopLatch();
-    for (const auto &Induction : LVL.getInductionVars()) {
-      PHINode *Ind = Induction.first;
-      Instruction *IndUpdate =
-          cast<Instruction>(Ind->getIncomingValueForBlock(LoopLatch));
-      for (Instruction *I : {cast<Instruction>(Ind), IndUpdate}) {
-        for (User *U : I->users()) {
-          Instruction *UI = cast<Instruction>(U);
-          if (!L->contains(UI)) {
-            reportVectorizationFailure(
-                "Auto-vectorization of loops with uncountable early exits and "
-                "outside uses of induction variables unsupported",
-                "UncountableEarlyExitLoopIndLiveOutsUnsupported", ORE, L);
-            return false;
-          }
-        }
-      }
-    }
+  if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
+    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                               "early exit is not enabled",
+                               "UncountableEarlyExitLoopsDisabled", ORE, L);
+    return false;
   }
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
