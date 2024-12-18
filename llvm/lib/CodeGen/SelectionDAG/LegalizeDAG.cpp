@@ -1528,22 +1528,21 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
 
 SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
   assert(Node->getOpcode() == ISD::CONCAT_VECTORS && "Unexpected opcode!");
-  SDLoc Dl(Node);
+  SDLoc DL(Node);
   SmallVector<SDValue, 16> Ops;
   unsigned NumOperands = Node->getNumOperands();
   MVT VectorIdxType = TLI.getVectorIdxTy(DAG.getDataLayout());
   for (unsigned I = 0; I < NumOperands; ++I) {
     SDValue SubOp = Node->getOperand(I);
-    EVT VectorValueType =
-        SubOp->getValueType(0);
+    EVT VectorValueType = SubOp.getValueType();
     EVT ElementValueType = VectorValueType.getVectorElementType();
     unsigned NumSubElem = VectorValueType.getVectorNumElements();
     for (unsigned Idx = 0; Idx < NumSubElem; ++Idx) {
-      Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, Dl, ElementValueType,
-                                SubOp, DAG.getConstant(Idx, Dl, VectorIdxType)));
+      Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElementValueType,
+                                SubOp, DAG.getConstant(Idx, DL, VectorIdxType)));
     }
   }
-  return DAG.getBuildVector(Node->getValueType(0), Dl, Ops);
+  return DAG.getBuildVector(Node->getValueType(0), DL, Ops);
 }
 
 SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
