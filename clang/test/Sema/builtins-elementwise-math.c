@@ -69,6 +69,7 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
   // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
 
   s = __builtin_elementwise_add_sat(i, s);
+  // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
 
   enum e { one,
            two };
@@ -128,6 +129,7 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
   // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
 
   s = __builtin_elementwise_sub_sat(i, s);
+  // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
 
   enum e { one,
            two };
@@ -184,6 +186,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
   s = __builtin_elementwise_max(i, s);
+  // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
 
   enum e { one,
            two };
@@ -240,6 +243,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
   s = __builtin_elementwise_min(i, s);
+  // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
 
   enum e { one,
            two };
@@ -273,7 +277,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
 }
 
-void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
+void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_maximum(p, d);
   // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
 
@@ -289,15 +293,19 @@ void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 
   i = __builtin_elementwise_maximum(i, i, i);
   // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
 
-  i = __builtin_elementwise_maximum(v, iv);
+  i = __builtin_elementwise_maximum(fv, iv);
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
 
   i = __builtin_elementwise_maximum(uv, iv);
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
-  d = __builtin_elementwise_maximum(f, d);
+  dv = __builtin_elementwise_maximum(fv, dv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'double4' (vector of 4 'double' values))}}
 
-  v = __builtin_elementwise_maximum(v, v);
+  d = __builtin_elementwise_maximum(f, d);
+  // expected-error@-1 {{arguments are of different types ('float' vs 'double')}}
+
+  fv = __builtin_elementwise_maximum(fv, fv);
 
   i = __builtin_elementwise_maximum(iv, iv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'int3' (vector of 3 'int' values))}}
@@ -314,7 +322,7 @@ void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 
   // expected-error@-1 {{1st argument must be a floating point type (was '_Complex float')}}
 }
 
-void test_builtin_elementwise_minimum(int i, short s, float f, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
+void test_builtin_elementwise_minimum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_minimum(p, d);
   // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
 
@@ -330,15 +338,19 @@ void test_builtin_elementwise_minimum(int i, short s, float f, double d, float4 
   i = __builtin_elementwise_minimum(i, i, i);
   // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
 
-  i = __builtin_elementwise_minimum(v, iv);
+  i = __builtin_elementwise_minimum(fv, iv);
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
 
   i = __builtin_elementwise_minimum(uv, iv);
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
-  d = __builtin_elementwise_minimum(f, d);
+  dv = __builtin_elementwise_minimum(fv, dv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'double4' (vector of 4 'double' values))}}
 
-  v = __builtin_elementwise_minimum(v, v);
+  d = __builtin_elementwise_minimum(f, d);
+  // expected-error@-1 {{arguments are of different types ('float' vs 'double')}}
+
+  fv = __builtin_elementwise_minimum(fv, fv);
 
   i = __builtin_elementwise_minimum(iv, iv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'int3' (vector of 3 'int' values))}}

@@ -2323,7 +2323,8 @@ public:
                          const FunctionProtoType *Proto);
 
   /// \param FPOnly restricts the arguments to floating-point types.
-  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
+  std::optional<QualType> BuiltinVectorMath(CallExpr *TheCall,
+                                            bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
@@ -7556,6 +7557,11 @@ public:
   // will create a runtime trap if the resulting type is not a POD type.
   ExprResult DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
                                               FunctionDecl *FDecl);
+
+  // Check that the usual arithmetic conversions can be performed on this pair
+  // of expressions that might be of enumeration type.
+  void checkEnumArithmeticConversions(Expr *LHS, Expr *RHS, SourceLocation Loc,
+                                      Sema::ArithConvKind ACK);
 
   // UsualArithmeticConversions - performs the UsualUnaryConversions on it's
   // operands and then handles various conversions that are common to binary

@@ -2765,44 +2765,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // types only.
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
-    if (checkArgCount(TheCall, 2))
-      return ExprError();
-    ExprResult LHS = TheCall->getArg(0);
-    ExprResult RHS = TheCall->getArg(1);
-    QualType LHSType = LHS.get()->getType().getUnqualifiedType();
-    QualType RHSType = RHS.get()->getType().getUnqualifiedType();
-    // If both LHS/RHS are promotable integer types, do not perform the usual
-    // conversions - we must keep the saturating operation at the correct
-    // bitwidth.
-    if (Context.isPromotableIntegerType(LHSType) &&
-        Context.isPromotableIntegerType(RHSType)) {
-      // First, convert each argument to an r-value.
-      ExprResult ResLHS = DefaultFunctionArrayLvalueConversion(LHS.get());
-      if (ResLHS.isInvalid())
-        return ExprError();
-      LHS = ResLHS.get();
-
-      ExprResult ResRHS = DefaultFunctionArrayLvalueConversion(RHS.get());
-      if (ResRHS.isInvalid())
-        return ExprError();
-      RHS = ResRHS.get();
-
-      LHSType = LHS.get()->getType().getUnqualifiedType();
-      RHSType = RHS.get()->getType().getUnqualifiedType();
-
-      // If the two integer types are not of equal order, cast the smaller
-      // integer one to the larger one
-      if (int Order = Context.getIntegerTypeOrder(LHSType, RHSType); Order == 1)
-        RHS = ImpCastExprToType(RHS.get(), LHSType, CK_IntegralCast);
-      else if (Order == -1)
-        LHS = ImpCastExprToType(LHS.get(), RHSType, CK_IntegralCast);
-
-      TheCall->setArg(0, LHS.get());
-      TheCall->setArg(1, RHS.get());
-      TheCall->setType(LHS.get()->getType().getUnqualifiedType());
-      break;
-    }
-
     if (BuiltinElementwiseMath(TheCall))
       return ExprError();
 
@@ -2828,28 +2790,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_bitreverse: {
-    if (checkArgCount(TheCall, 1))
-      return ExprError();
-
-    Expr *Arg = TheCall->getArg(0);
-    QualType ArgTy = Arg->getType();
-
-    // If the argument is a promotable integer type, do not perform the usual
-    // conversions - we must keep the operation at the correct bitwidth.
-    if (Context.isPromotableIntegerType(ArgTy)) {
-      // Convert the argument to an r-value - avoid the usual conversions.
-      ExprResult ResLHS = DefaultFunctionArrayLvalueConversion(Arg);
-      if (ResLHS.isInvalid())
-        return ExprError();
-      Arg = ResLHS.get();
-      TheCall->setArg(0, Arg);
-      TheCall->setType(Arg->getType());
-      break;
-    }
-
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
 
+    const Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
     QualType EltTy = ArgTy;
 
     if (auto *VecTy = EltTy->getAs<VectorType>())
@@ -14649,11 +14594,18 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
                      _2, _3, _4));
 }
 
+static ExprResult UsualUnaryConversionsNoPromoteInt(Sema &S, Expr *E) {
+  // Don't promote integer types
+  if (QualType Ty = E->getType(); S.getASTContext().isPromotableIntegerType(Ty))
+    return S.DefaultFunctionArrayLvalueConversion(E);
+  return S.UsualUnaryConversions(E);
+}
+
 bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   if (checkArgCount(TheCall, 1))
     return true;
 
-  ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
+  ExprResult A = UsualUnaryConversionsNoPromoteInt(*this, TheCall->getArg(0));
   if (A.isInvalid())
     return true;
 
@@ -14668,57 +14620,63 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
 }
 
 bool Sema::BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly) {
-  QualType Res;
-  if (BuiltinVectorMath(TheCall, Res, FPOnly))
-    return true;
-  TheCall->setType(Res);
-  return false;
+  if (auto Res = BuiltinVectorMath(TheCall, FPOnly); Res.has_value()) {
+    TheCall->setType(*Res);
+    return false;
+  }
+  return true;
 }
 
 bool Sema::BuiltinVectorToScalarMath(CallExpr *TheCall) {
-  QualType Res;
-  if (BuiltinVectorMath(TheCall, Res))
+  std::optional<QualType> Res = BuiltinVectorMath(TheCall);
+  if (!Res)
     return true;
 
-  if (auto *VecTy0 = Res->getAs<VectorType>())
+  if (auto *VecTy0 = (*Res)->getAs<VectorType>())
     TheCall->setType(VecTy0->getElementType());
   else
-    TheCall->setType(Res);
+    TheCall->setType(*Res);
 
   return false;
 }
 
-bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly) {
+std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
+                                                bool FPOnly) {
   if (checkArgCount(TheCall, 2))
-    return true;
+    return std::nullopt;
 
-  ExprResult A = TheCall->getArg(0);
-  ExprResult B = TheCall->getArg(1);
-  // Do standard promotions between the two arguments, returning their common
-  // type.
-  Res = UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
-  if (A.isInvalid() || B.isInvalid())
-    return true;
+  checkEnumArithmeticConversions(TheCall->getArg(0), TheCall->getArg(1),
+                                 TheCall->getExprLoc(), ACK_Comparison);
 
-  QualType TyA = A.get()->getType();
-  QualType TyB = B.get()->getType();
-
-  if (Res.isNull() || TyA.getCanonicalType() != TyB.getCanonicalType())
-    return Diag(A.get()->getBeginLoc(),
-                diag::err_typecheck_call_different_arg_types)
-           << TyA << TyB;
-
-  if (FPOnly) {
-    if (checkFPMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-      return true;
-  } else {
-    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-      return true;
+  Expr *Args[2];
+  for (int I = 0; I < 2; ++I) {
+    ExprResult Converted =
+        UsualUnaryConversionsNoPromoteInt(*this, TheCall->getArg(I));
+    if (Converted.isInvalid())
+      return std::nullopt;
+    Args[I] = Converted.get();
   }
 
-  TheCall->setArg(0, A.get());
-  TheCall->setArg(1, B.get());
-  return false;
+  SourceLocation LocA = Args[0]->getBeginLoc();
+  QualType TyA = Args[0]->getType();
+  QualType TyB = Args[1]->getType();
+
+  if (TyA.getCanonicalType() != TyB.getCanonicalType()) {
+    Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
+    return std::nullopt;
+  }
+
+  if (FPOnly) {
+    if (checkFPMathBuiltinElementType(*this, LocA, TyA, 1))
+      return std::nullopt;
+  } else {
+    if (checkMathBuiltinElementType(*this, LocA, TyA, 1))
+      return std::nullopt;
+  }
+
+  TheCall->setArg(0, Args[0]);
+  TheCall->setArg(1, Args[1]);
+  return TyA;
 }
 
 bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
@@ -14728,7 +14686,8 @@ bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
 
   Expr *Args[3];
   for (int I = 0; I < 3; ++I) {
-    ExprResult Converted = UsualUnaryConversions(TheCall->getArg(I));
+    ExprResult Converted =
+        UsualUnaryConversionsNoPromoteInt(*this, TheCall->getArg(I));
     if (Converted.isInvalid())
       return true;
     Args[I] = Converted.get();
