@@ -325,7 +325,7 @@ Changes in existing checks
       fixes and fixing false positive for implicit conversion of comparison 
       result in C23.
    - `CheckConversionsToBool`: to allow enabling or disabling warnings for 
-      implicit conversions to ``bool`` .
+      implicit conversions to ``bool``.
    - `CheckConversionsFromBool`: to allow enabling or disabling warnings for 
       implicit conversions from ``bool``.
 
