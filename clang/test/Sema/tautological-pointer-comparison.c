@@ -1,72 +1,43 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -DFWRAPV -fwrapv -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -fwrapv -verify=fwrapv %s
 
-#ifdef FWRAPV
-// expected-no-diagnostics
-#endif
+// fwrapv-no-diagnostics
 
 int add_ptr_idx_ult_ptr(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to false}}
-#endif
-  return ptr + index < ptr;
+  return ptr + index < ptr; // expected-warning {{pointer comparison always evaluates to false}}
 }
 
 int add_idx_ptr_ult_ptr(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to false}}
-#endif
-  return index + ptr < ptr;
+  return index + ptr < ptr; // expected-warning {{pointer comparison always evaluates to false}}
 }
 
 int ptr_ugt_add_ptr_idx(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to false}}
-#endif
-  return ptr > ptr + index;
+  return ptr > ptr + index; // expected-warning {{pointer comparison always evaluates to false}}
 }
 
 int ptr_ugt_add_idx_ptr(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to false}}
-#endif
-  return ptr > index + ptr;
+  return ptr > index + ptr; // expected-warning {{pointer comparison always evaluates to false}}
 }
 
 int add_ptr_idx_uge_ptr(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to true}}
-#endif
-  return ptr + index >= ptr;
+  return ptr + index >= ptr; // expected-warning {{pointer comparison always evaluates to true}}
 }
 
 int add_idx_ptr_uge_ptr(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to true}}
-#endif
-  return index + ptr >= ptr;
+  return index + ptr >= ptr; // expected-warning {{pointer comparison always evaluates to true}}
 }
 
 int ptr_ule_add_ptr_idx(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to true}}
-#endif
-  return ptr <= ptr + index;
+  return ptr <= ptr + index; // expected-warning {{pointer comparison always evaluates to true}}
 }
 
 int ptr_ule_add_idx_ptr(const char *ptr, unsigned index) {
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to true}}
-#endif
-  return ptr <= index + ptr;
+  return ptr <= index + ptr; // expected-warning {{pointer comparison always evaluates to true}}
 }
 
 int add_ptr_idx_ult_ptr_array(unsigned index) {
   char ptr[10];
-#ifndef FWRAPV
-  // expected-warning@+2 {{pointer comparison always evaluates to false}}
-#endif
-  return ptr + index < ptr;
+  return ptr + index < ptr; // expected-warning {{pointer comparison always evaluates to false}}
 }
 
 // Negative tests with wrong predicate.
