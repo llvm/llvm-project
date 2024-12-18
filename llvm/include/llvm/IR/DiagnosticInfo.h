@@ -150,7 +150,7 @@ public:
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(MsgStr) {}
 
   DiagnosticInfoGeneric(const Instruction *I, const Twine &ErrMsg,
-                        DiagnosticSeverity Severity = DS_Warning)
+                        DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(ErrMsg), Inst(I) {}
 
   const Twine &getMsgStr() const { return MsgStr; }
