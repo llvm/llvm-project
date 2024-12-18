@@ -168,16 +168,22 @@ define void @test_add_sext(ptr %dst, ptr %src, i64 %j.start, i64 %p, i64 %i.star
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[L_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 ; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
 ; CHECK-NEXT:    [[L_J:%.*]] = load ptr, ptr [[GEP_J]], align 8
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult ptr [[L_I]], [[L_J]]
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], [[DEC]]
+; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ [[J]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[J_NEXT]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -215,9 +221,9 @@ define void @test_add_sext_not(ptr %dst, ptr %src, i64 %j.start, i64 %p, i64 %i.
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[L_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 ; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
@@ -225,7 +231,13 @@ define void @test_add_sext_not(ptr %dst, ptr %src, i64 %j.start, i64 %p, i64 %i.
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult ptr [[L_I]], [[L_J]]
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], [[DEC]]
+; CHECK-NEXT:    [[NOT_CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[NOT_CMP3_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP0]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[J_NEXT]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -264,9 +276,9 @@ define void @test_add_sext_not_and_regular_select(ptr %dst, ptr %src, i64 %j.sta
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END1:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END1]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END1]] ]
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[L_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 ; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
@@ -274,8 +286,14 @@ define void @test_add_sext_not_and_regular_select(ptr %dst, ptr %src, i64 %j.sta
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult ptr [[L_I]], [[L_J]]
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], [[DEC]]
-; CHECK-NEXT:    [[SINK:%.*]] = select i1 [[CMP3]], ptr [[L_I]], ptr [[L_J]]
+; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE_SINK:%.*]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END1]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP0]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[SINK:%.*]] = phi ptr [ [[L_I]], [[LOOP]] ], [ [[L_J]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[SINK]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -315,9 +333,9 @@ define void @test_add_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END1:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END1]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
@@ -327,10 +345,16 @@ define void @test_add_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[P]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX1_I]], align 8
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[CMP3]], ptr [[TMP0]], ptr [[TMP1]]
+; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE:%.*]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END1]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP0]], [[LOOP]] ], [ [[TMP1]], [[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP5]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], [[DEC]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[DOTSINK]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -529,16 +553,22 @@ define void @test_sub_sext(ptr %dst, ptr %src, i64 %j.start, i64 %p, i64 %i.star
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[L_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 ; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
 ; CHECK-NEXT:    [[L_J:%.*]] = load ptr, ptr [[GEP_J]], align 8
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult ptr [[L_I]], [[L_J]]
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = sub nsw i64 [[J]], [[DEC]]
+; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ [[J]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[J_NEXT]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -576,9 +606,9 @@ define void @test_sub_sext_not(ptr %dst, ptr %src, i64 %j.start, i64 %p, i64 %i.
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[L_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 ; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
@@ -586,7 +616,13 @@ define void @test_sub_sext_not(ptr %dst, ptr %src, i64 %j.start, i64 %p, i64 %i.
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult ptr [[L_I]], [[L_J]]
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = sub nsw i64 [[J]], [[DEC]]
+; CHECK-NEXT:    [[NOT_CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[NOT_CMP3_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP0]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[J_NEXT]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -625,9 +661,9 @@ define void @test_sub_sext_not_and_regular_select(ptr %dst, ptr %src, i64 %j.sta
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END1:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END1]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END1]] ]
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[L_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 ; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
@@ -635,8 +671,14 @@ define void @test_sub_sext_not_and_regular_select(ptr %dst, ptr %src, i64 %j.sta
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult ptr [[L_I]], [[L_J]]
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = sub nsw i64 [[J]], [[DEC]]
-; CHECK-NEXT:    [[SINK:%.*]] = select i1 [[CMP3]], ptr [[L_I]], ptr [[L_J]]
+; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE_SINK:%.*]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END1]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP0]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[SINK:%.*]] = phi ptr [ [[L_I]], [[LOOP]] ], [ [[L_J]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[SINK]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -676,9 +718,9 @@ define void @test_sub_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END1:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[HIGH:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END1]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[J_NEXT]], [[SELECT_END1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
@@ -688,10 +730,16 @@ define void @test_sub_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[P]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX1_I]], align 8
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[CMP3]], ptr [[TMP0]], ptr [[TMP1]]
+; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
+; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE:%.*]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END1]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP0]], [[LOOP]] ], [ [[TMP1]], [[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP5]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
-; CHECK-NEXT:    [[J_NEXT]] = sub nsw i64 [[J]], [[DEC]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[DOTSINK]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1

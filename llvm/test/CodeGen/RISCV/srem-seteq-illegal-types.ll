@@ -664,14 +664,15 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vslidedown.vi v10, v10, 2
 ; RV32MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32MV-NEXT:    vand.vv v8, v10, v8
-; RV32MV-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32MV-NEXT:    vsetivli zero, 3, e8, mf2, ta, ma
 ; RV32MV-NEXT:    vmv.v.i v10, 1
+; RV32MV-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32MV-NEXT:    vmv.v.i v11, 0
 ; RV32MV-NEXT:    vsetivli zero, 3, e8, mf2, tu, ma
 ; RV32MV-NEXT:    vslideup.vi v11, v10, 2
-; RV32MV-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32MV-NEXT:    vsetivli zero, 5, e8, mf2, ta, ma
 ; RV32MV-NEXT:    vmv.v.i v10, 2
-; RV32MV-NEXT:    vsetivli zero, 5, e8, mf2, tu, ma
+; RV32MV-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
 ; RV32MV-NEXT:    vslideup.vi v11, v10, 4
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    vsext.vf4 v12, v11

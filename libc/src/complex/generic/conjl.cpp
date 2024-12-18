@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/complex/conjl.h"
-#include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
 
