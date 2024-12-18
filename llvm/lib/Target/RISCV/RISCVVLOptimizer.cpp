@@ -412,6 +412,8 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   // Vector Compress Instruction
   // EMUL=LMUL. EEW=SEW.
   case RISCV::VCOMPRESS_VM:
+  // Vector Element Index Instruction
+  case RISCV::VID_V:
     return OperandInfo(MIVLMul, MILog2SEW);
 
   // Vector Widening Integer Add/Subtract
@@ -524,6 +526,15 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VMSBF_M:
   case RISCV::VMSIF_M:
   case RISCV::VMSOF_M: {
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+  }
+
+  // Vector Iota Instruction
+  // EEW=SEW and EMUL=LMUL, except the mask operand has EEW=1 and EMUL=
+  // (EEW/SEW)*LMUL. Mask operand is not handled before this switch.
+  case RISCV::VIOTA_M: {
+    if (IsMODef || MO.getOperandNo() == 1)
+      return OperandInfo(MIVLMul, MILog2SEW);
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
   }
 
@@ -738,6 +749,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // vmsbf.m set-before-first mask bit
   // vmsif.m set-including-first mask bit
   // vmsof.m set-only-first mask bit
+  // Vector Iota Instruction
+  // Vector Element Index Instruction
   case RISCV::VMAND_MM:
   case RISCV::VMNAND_MM:
   case RISCV::VMANDN_MM:
@@ -749,6 +762,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSBF_M:
   case RISCV::VMSIF_M:
   case RISCV::VMSOF_M:
+  case RISCV::VIOTA_M:
+  case RISCV::VID_V:
     return true;
   }
 
