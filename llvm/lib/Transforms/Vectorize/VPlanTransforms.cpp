@@ -1455,6 +1455,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       R->setOperand(1, &EVL);
   }
 
+  SmallVector<VPRecipeBase *> ToErase;
+
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
@@ -1505,24 +1507,23 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                         CInst->getDebugLoc());
                   })
               .Case<VPWidenCastRecipe>(
-                  [&](VPWidenCastRecipe *CInst) -> VPRecipeBase * {
-                    auto *CI = dyn_cast<CastInst>(CInst->getUnderlyingInstr());
+                  [&](VPWidenCastRecipe *CastR) -> VPRecipeBase * {
                     Intrinsic::ID VPID =
-                        VPIntrinsic::getForOpcode(CI->getOpcode());
+                        VPIntrinsic::getForOpcode(CastR->getOpcode());
                     assert(VPID != Intrinsic::not_intrinsic &&
                            "Expected vp.casts Instrinsic");
 
-                    SmallVector<VPValue *> Ops(CInst->operands());
+                    SmallVector<VPValue *> Ops(CastR->operands());
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
+                    VPValue *Mask =
+                        Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
                     Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
-                        VPID, Ops, TypeInfo.inferScalarType(CInst),
-                        CInst->getDebugLoc());
+                        VPID, Ops, TypeInfo.inferScalarType(CastR),
+                        CastR->getDebugLoc());
                   })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
@@ -1565,9 +1566,17 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       }
-      CurRecipe->eraseFromParent();
+      // Defer erasing recipes till the end so that we don't invalidate the
+      // VPTypeAnalysis cache.
+      ToErase.push_back(CurRecipe);
     }
-    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
+
+  for (VPRecipeBase *R : reverse(ToErase)) {
+    SmallVector<VPValue *> PossiblyDead(R->operands());
+    R->eraseFromParent();
+    for (VPValue *Op : PossiblyDead)
+      recursivelyDeleteDeadRecipes(Op);
   }
 }
 
