@@ -126,7 +126,7 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   BasicBlock *Cont = OldBB->splitBasicBlock(SplitI);
   OldBB->getTerminator()->eraseFromParent();
 
-  BasicBlock * TrapBB = GetTrapBB(IRB);
+  BasicBlock *TrapBB = GetTrapBB(IRB);
 
   if (C) {
     // If we have a constant zero, unconditionally branch.
