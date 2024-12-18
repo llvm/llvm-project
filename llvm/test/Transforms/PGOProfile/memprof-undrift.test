@@ -62,7 +62,7 @@ define dso_local ptr @_Z3foov() !dbg !5 {
 ; CHECK-LABEL: @_Z3foov()
 entry:
   %call = call ptr @_Znam(i64 4) #1, !dbg !8
-; CHECK: call ptr @_Znam(i64 4) #[[ATTR_COLD:[0-9]+]]
+; CHECK: call ptr @_Znam(i64 4) #[[ATTR:[0-9]+]]
   ret ptr %call, !dbg !9
 }
 
@@ -138,6 +138,8 @@ attributes #1 = { builtin allocsize(0) }
 !24 = distinct !DILocation(line: 59, column: 25, scope: !13, inlinedAt: !25)
 !25 = distinct !DILocation(line: 62, column: 22, scope: !22)
 !26 = !DILocation(line: 62, column: 15, scope: !22)
+
+; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="cold" }
 
 ; CHECK: ![[M1]] = !{![[M1L:[0-9]+]], ![[M1R:[0-9]+]]}
 ; CHECK: ![[M1L]] = !{![[M1LL:[0-9]+]], !"cold"}
