@@ -1044,9 +1044,6 @@ cc_library(
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
-    includes = [
-        "lib/Bindings/Python",
-    ],
     textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsync",
@@ -1054,11 +1051,11 @@ cc_library(
         ":CAPIIR",
         ":CAPIInterfaces",
         ":CAPITransforms",
-        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        ":MLIRBindingsPythonHeadersAndDeps",
         ":Support",
         ":config",
         "//llvm:Support",
-        "@nanobind",
+        "@pybind11",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1068,20 +1065,17 @@ cc_library(
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
-    includes = [
-        "lib/Bindings/Python",
-    ],
     textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
         ":CAPITransformsHeaders",
-        ":MLIRBindingsPythonNanobindHeaders",
+        ":MLIRBindingsPythonHeaders",
         ":Support",
         ":config",
         "//llvm:Support",
-        "@nanobind",
+        "@pybind11",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1114,7 +1108,6 @@ cc_binary(
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@nanobind",
     ],
 )
 
