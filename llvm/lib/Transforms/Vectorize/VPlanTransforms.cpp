@@ -1455,6 +1455,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       R->setOperand(1, &EVL);
   }
 
+  SmallVector<VPRecipeBase *> ToErase;
+
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
@@ -1564,9 +1566,17 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       }
-      CurRecipe->eraseFromParent();
+      // Defer erasing recipes till the end so that we don't invalidate the
+      // VPTypeAnalysis cache.
+      ToErase.push_back(CurRecipe);
     }
-    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
+
+  for (VPRecipeBase *R : reverse(ToErase)) {
+    SmallVector<VPValue *> PossiblyDead(R->operands());
+    R->eraseFromParent();
+    for (VPValue *Op : PossiblyDead)
+      recursivelyDeleteDeadRecipes(Op);
   }
 }
 
