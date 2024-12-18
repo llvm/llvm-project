@@ -126,18 +126,16 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   BasicBlock *Cont = OldBB->splitBasicBlock(SplitI);
   OldBB->getTerminator()->eraseFromParent();
 
-  BasicBlock * TrapBB = GetTrapBB(IRB);
-
   if (C) {
     // If we have a constant zero, unconditionally branch.
     // FIXME: We should really handle this differently to bypass the splitting
     // the block.
-    BranchInst::Create(TrapBB, OldBB);
+    BranchInst::Create(GetTrapBB(IRB), OldBB);
     return;
   }
 
   // Create the conditional branch.
-  BranchInst::Create(TrapBB, Cont, Or, OldBB);
+  BranchInst::Create(GetTrapBB(IRB), Cont, Or, OldBB);
 }
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,

@@ -53,7 +53,11 @@
 #define __restrict restrict // C99 and above support the restrict keyword.
 
 #undef __NOEXCEPT
+#ifdef __GNUC__
+#define __NOEXCEPT __attribute__((__nothrow__))
+#else
 #define __NOEXCEPT
+#endif
 
 #endif // __cplusplus
 
