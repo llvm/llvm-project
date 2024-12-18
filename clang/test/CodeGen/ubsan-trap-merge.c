@@ -269,7 +269,6 @@ int h(int x, int y) {
 int m(int x, int y) {
   return f(x) + g(y);
 }
-//.
 // TRAP: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // HANDLER: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // MINRT: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
