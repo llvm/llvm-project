@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -finclude-default-header -fno-fast-math -triple \
+// RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
-// RUN: %clang_cc1 -finclude-default-header -fno-fast-math -triple \
+// RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-pc-vulkan-compute %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPV
 
