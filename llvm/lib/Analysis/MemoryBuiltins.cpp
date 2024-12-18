@@ -841,8 +841,7 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
     // This is UB, and we'd rather return an empty location then.
     if (Options.EvalMode == ObjectSizeOpts::Mode::Min ||
         Options.EvalMode == ObjectSizeOpts::Mode::Max) {
-      ORT.Before = APInt::getZero(ORT.Before.getBitWidth());
-      ORT.After = APInt::getZero(ORT.Before.getBitWidth());
+      return ObjectSizeOffsetVisitor::unknown();
     }
     // Otherwise it's fine, caller can handle negative offset.
   }
