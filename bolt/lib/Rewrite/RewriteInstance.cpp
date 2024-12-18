@@ -2441,10 +2441,9 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
 
     const uint64_t SymAddress = SymbolAddress + Addend;
     BinaryFunction *Func = BC->getBinaryFunctionContainingAddress(SymAddress);
-    if(Func){
-      const uint64_t FunctionOffset = SymAddress - Func->getAddress();
-      if(FunctionOffset)
-        Func->addEntryPointAtOffset(FunctionOffset);
+    if (Func && !Func->isInConstantIsland(SymAddress)) {
+      if (const uint64_t SymOffset = SymAddress - Func->getAddress())
+        Func->addEntryPointAtOffset(SymOffset);
     }
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
