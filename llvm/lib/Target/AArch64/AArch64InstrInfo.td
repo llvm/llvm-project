@@ -290,6 +290,14 @@ def HasNonStreamingSVE2orSSVE_BitPerm
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_BitPerm())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_BitPerm), "sve2 or ssve-bitperm">;
+def HasSME2p2orSME_MOP4
+    : Predicate<"(Subtarget->isStreaming() &&"
+                "(Subtarget->hasSME2p2() || Subtarget->hasSME_MOP4()))">,
+                AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSME_MOP4), "sme2p2 or sme-mop4">;
+def HasSME2p2orSME_TMOP
+    : Predicate<"(Subtarget->isStreaming() &&"
+                "(Subtarget->hasSME2p2()) || Subtarget->hasSME_TMOP()))">,
+                AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSME_TMOP), "sme2p2 or sme-tmop">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.

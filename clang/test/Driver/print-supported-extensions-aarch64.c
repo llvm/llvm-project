@@ -51,6 +51,8 @@
 // CHECK-NEXT:     pcdphint            FEAT_PCDPHINT                                          Enable Armv9.6-A Producer Consumer Data Placement hints
 // CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     pops                FEAT_PoPS                                              Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions
+// CHECK-NEXT:     sme-mop4            FEAT_SME_MOP4                                          Enable SME Quarter-tile outer product instructions
+// CHECK-NEXT:     sme-tmop            FEAT_SME_TMOP                                          Enable SME Structured sparsity outer product instructions
 // CHECK-NEXT:     predres             FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     rng                 FEAT_RNG                                               Enable Random Number generation instructions
 // CHECK-NEXT:     ras                 FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
