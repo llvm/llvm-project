@@ -424,7 +424,7 @@ public:
 
   /// Returns true if there is at least one function call in the loop which
   /// returns a struct type and needs to be vectorized.
-  bool hasStructVectorCall() const { return StructVecVecCallFound; }
+  bool hasStructVectorCall() const { return StructVecCallFound; }
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
@@ -652,7 +652,7 @@ private:
   /// that so we can bail out until this is supported.
   /// TODO: Remove this flag once vectorizing calls with struct returns is
   /// supported.
-  bool StructVecVecCallFound = false;
+  bool StructVecCallFound = false;
 
   /// Indicates whether this loop has an uncountable early exit, i.e. an
   /// uncountable exiting block that is not the latch.
