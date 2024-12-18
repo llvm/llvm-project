@@ -416,6 +416,12 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
   ``__builtin_elementwise_sub_sat``.
 
+- Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
+  not a power of two, matching preexisting behaviour for vector types.
+
+- Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
+  which allows them to be stored in STL containers.
+
 New Compiler Flags
 ------------------
 
@@ -675,6 +681,16 @@ Improvements to Clang's diagnostics
     void test() {
       std::vector<std::string_view> views;
       views.push_back(std::string("123")); // warning
+    }
+
+- Clang now emits a ``-Wtautological-compare`` diagnostic when a check for
+  pointer addition overflow is always true or false, because overflow would
+  be undefined behavior.
+
+  .. code-block:: c++
+
+    bool incorrect_overflow_check(const char *ptr, size_t index) {
+      return ptr + index < ptr; // warning
     }
 
 Improvements to Clang's time-trace
@@ -1169,6 +1185,10 @@ Sanitizers
   "type" prefix within `Sanitizer Special Case Lists (SSCL)
   <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
   for examples.
+
+- Introduced an experimental Type Sanitizer, activated by using the
+  ``-fsanitize=type`` flag. This sanitizer detects violations of C/C++ type-based
+  aliasing rules.
 
 Python Binding Changes
 ----------------------

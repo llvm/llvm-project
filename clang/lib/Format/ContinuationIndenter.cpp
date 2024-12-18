@@ -826,8 +826,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
       if (Prev->is(TT_TemplateString) && Prev->opensScope())
         return true;
-      if (Prev->is(TT_TemplateString) && Prev->closesScope())
+      if (Prev->opensScope() ||
+          (Prev->is(TT_TemplateString) && Prev->closesScope())) {
         break;
+      }
     }
     return false;
   };

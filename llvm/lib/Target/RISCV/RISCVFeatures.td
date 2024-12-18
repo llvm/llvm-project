@@ -1384,7 +1384,7 @@ def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()"
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
 def TuneMIPSP8700
-    : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "Others",
+    : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",
                        "MIPS p8700 processor">;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",

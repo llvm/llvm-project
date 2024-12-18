@@ -910,8 +910,9 @@ define <4 x i8> @buildvec_not_vid_v4i8_2() {
 define <16 x i8> @buildvec_not_vid_v16i8() {
 ; CHECK-LABEL: buildvec_not_vid_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 7, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 3
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 7, e8, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 6

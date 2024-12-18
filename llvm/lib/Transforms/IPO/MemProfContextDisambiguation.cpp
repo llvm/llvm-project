@@ -896,21 +896,6 @@ struct DenseMapInfo<IndexCall>
 
 namespace {
 
-struct FieldSeparator {
-  bool Skip = true;
-  const char *Sep;
-
-  FieldSeparator(const char *Sep = ", ") : Sep(Sep) {}
-};
-
-raw_ostream &operator<<(raw_ostream &OS, FieldSeparator &FS) {
-  if (FS.Skip) {
-    FS.Skip = false;
-    return OS;
-  }
-  return OS << FS.Sep;
-}
-
 // Map the uint8_t alloc types (which may contain NotCold|Cold) to the alloc
 // type we should actually use on the corresponding allocation.
 // If we can't clone a node that has NotCold+Cold alloc type, we will fall
@@ -2784,9 +2769,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
     OS << "\t\t" << *Edge << "\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    FieldSeparator FS;
+    ListSeparator LS;
     for (auto *Clone : Clones)
-      OS << FS << Clone;
+      OS << LS << Clone;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << "\n";

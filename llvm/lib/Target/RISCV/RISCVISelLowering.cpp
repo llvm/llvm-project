@@ -10901,23 +10901,23 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     return DAG.getMergeValues({Even, Odd}, DL);
   }
 
-  // For the indices, use the same SEW to avoid an extra vsetvli
-  // TODO: If container type is larger than m1, we can consider using a splat
-  // of a constant instead of the following sequence
+  // For the indices, use the vmv.v.x of an i8 constant to fill the largest
+  // possibly mask vector, then extract the required subvector.  Doing this
+  // (instead of a vid, vmsne sequence) reduces LMUL, and allows the mask
+  // creation to be rematerialized during register allocation to reduce
+  // register pressure if needed.
 
-  // Create a vector of even indices {0, 1, 2, ...}
-  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
-  SDValue StepVec = DAG.getStepVector(DL, IdxVT);
-  // 0, 1, 0, 1, 0, 1
-  SDValue ZeroOnes =
-      DAG.getNode(ISD::AND, DL, IdxVT, StepVec, DAG.getConstant(1, DL, IdxVT));
   MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
-  SDValue EvenMask =
-      DAG.getSetCC(DL, MaskVT, ZeroOnes, DAG.getConstant(0, DL, IdxVT),
-                   ISD::CondCode::SETEQ);
-  // Have the latter be the not of the former to minimize the live range of
-  // the index vector since that might be large.
-  SDValue OddMask = DAG.getLogicalNOT(DL, EvenMask, MaskVT);
+
+  SDValue EvenSplat = DAG.getConstant(0b01010101, DL, MVT::nxv8i8);
+  EvenSplat = DAG.getBitcast(MVT::nxv64i1, EvenSplat);
+  SDValue EvenMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskVT, EvenSplat,
+                                 DAG.getVectorIdxConstant(0, DL));
+
+  SDValue OddSplat = DAG.getConstant(0b10101010, DL, MVT::nxv8i8);
+  OddSplat = DAG.getBitcast(MVT::nxv64i1, OddSplat);
+  SDValue OddMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskVT, OddSplat,
+                                DAG.getVectorIdxConstant(0, DL));
 
   // vcompress the even and odd elements into two separate vectors
   SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
@@ -22289,6 +22289,35 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
 unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
                                                  ISD::CondCode Cond) const {
   return isCtpopFast(VT) ? 0 : 1;
+}
+
+bool RISCVTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  if (Subtarget.hasStdExtZalasr()) {
+    if (Subtarget.hasStdExtZtso()) {
+      // Zalasr + TSO means that atomic_load_acquire and atomic_store_release
+      // should be lowered to plain load/store. The easiest way to do this is
+      // to say we should insert fences for them, and the fence insertion code
+      // will just not insert any fences
+      auto *LI = dyn_cast<LoadInst>(I);
+      auto *SI = dyn_cast<StoreInst>(I);
+      if ((LI &&
+           (LI->getOrdering() == AtomicOrdering::SequentiallyConsistent)) ||
+          (SI &&
+           (SI->getOrdering() == AtomicOrdering::SequentiallyConsistent))) {
+        // Here, this is a load or store which is seq_cst, and needs a .aq or
+        // .rl therefore we shouldn't try to insert fences
+        return false;
+      }
+      // Here, we are a TSO inst that isn't a seq_cst load/store
+      return isa<LoadInst>(I) || isa<StoreInst>(I);
+    }
+    return false;
+  }
+  // Note that one specific case requires fence insertion for an
+  // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
+  // than this hook due to limitations in the interface here.
+  return isa<LoadInst>(I) || isa<StoreInst>(I);
 }
 
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {

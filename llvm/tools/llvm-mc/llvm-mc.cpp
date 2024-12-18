@@ -94,6 +94,12 @@ static cl::opt<bool>
                 cl::desc("Prefer hex format for immediate values"),
                 cl::cat(MCCategory));
 
+static cl::opt<bool>
+    HexBytes("hex",
+             cl::desc("Take raw hexadecimal bytes as input for disassembly. "
+                      "Whitespace is ignored"),
+             cl::cat(MCCategory));
+
 static cl::list<std::string>
     DefineSymbol("defsym",
                  cl::desc("Defines a symbol to be an integer constant"),
@@ -592,7 +598,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions);
+                                    SrcMgr, Ctx, MCOptions, HexBytes);
 
   // Keep output if no errors.
   if (Res == 0) {

@@ -2406,11 +2406,49 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
+static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
+  Constant *Initializer = G->getInitializer();
+  uint64_t SizeInBytes =
+      M.getDataLayout().getTypeAllocSize(Initializer->getType());
+
+  uint64_t NewSize = alignTo(SizeInBytes, 16);
+  if (SizeInBytes != NewSize) {
+    // Pad the initializer out to the next multiple of 16 bytes.
+    llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
+    Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
+    Initializer = ConstantStruct::getAnon({Initializer, Padding});
+    auto *NewGV = new GlobalVariable(
+        M, Initializer->getType(), G->isConstant(), G->getLinkage(),
+        Initializer, "", G, G->getThreadLocalMode(), G->getAddressSpace());
+    NewGV->copyAttributesFrom(G);
+    NewGV->setComdat(G->getComdat());
+    NewGV->copyMetadata(G, 0);
+
+    NewGV->takeName(G);
+    G->replaceAllUsesWith(NewGV);
+    G->eraseFromParent();
+    G = NewGV;
+  }
+
+  if (G->getAlign().valueOrOne() < 16)
+    G->setAlignment(Align(16));
+
+  // Ensure that tagged globals don't get merged by ICF - as they should have
+  // different tags at runtime.
+  G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
+
+  for (GlobalVariable &G : make_early_inc_range(M.globals())) {
+    if (G.isDeclaration() || !G.isTagged())
+      continue;
+    tagGlobalDefinition(M, &G);
+  }
 
   // Gather all GOT equivalent globals in the module. We really need two
   // passes over the globals: one to compute and another to avoid its emission
