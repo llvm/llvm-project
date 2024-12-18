@@ -6936,6 +6936,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   RegClassInfo.runOnMachineFunction(*MF);
   RPTracker.init(MF, &RegClassInfo, nullptr, EndLoop->getParent(),
                  EndLoop->getParent()->end(), false, false);
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
 
   bumpCrossIterationPressure(RPTracker, CrossIterationNeeds);
 
@@ -6978,7 +6979,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
 
   auto &P = RPTracker.getPressure().MaxSetPressure;
   for (unsigned I = 0, E = P.size(); I < E; ++I)
-    if (P[I] > RegClassInfo.getRegPressureSetLimit(I)) {
+    if (P[I] > TRI->getRegPressureSetLimit(*MF, I)) {
       return true;
     }
   return false;

@@ -317,6 +317,9 @@ def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
 /// ThreadSanitizer is on.
 def SanitizeThread : EnumAttr<"sanitize_thread", IntersectPreserve, [FnAttr]>;
 
+/// TypeSanitizer is on.
+def SanitizeType : EnumAttr<"sanitize_type", IntersectPreserve, [FnAttr]>;
+
 /// MemorySanitizer is on.
 def SanitizeMemory : EnumAttr<"sanitize_memory", IntersectPreserve, [FnAttr]>;
 
@@ -425,6 +428,7 @@ class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
 
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeThreadAttr>">;
+def : CompatRule<"isEqual<SanitizeTypeAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;

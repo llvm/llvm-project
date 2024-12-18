@@ -21,6 +21,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
@@ -716,6 +717,9 @@ public:
 
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() const;
+
+  // Return the entire MemProf profile.
+  memprof::AllMemProfData getAllMemProfData() const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -821,6 +825,10 @@ public:
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() {
     return MemProfReader.getMemProfCallerCalleePairs();
+  }
+
+  memprof::AllMemProfData getAllMemProfData() const {
+    return MemProfReader.getAllMemProfData();
   }
 
   /// Fill Counts with the profile data for the given function name.

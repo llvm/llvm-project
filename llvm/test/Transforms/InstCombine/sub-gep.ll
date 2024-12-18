@@ -305,7 +305,7 @@ define i16 @test24a_as1(ptr addrspace(1) %P, i16 %A) {
 
 define i64 @test24b(ptr %P, i64 %A){
 ; CHECK-LABEL: @test24b(
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i64 [[A:%.*]], 1
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nuw nsw i64 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i64 [[B_IDX]]
 ;
   %B = getelementptr inbounds [42 x i16], ptr @Arr, i64 0, i64 %A
@@ -316,7 +316,7 @@ define i64 @test24b(ptr %P, i64 %A){
 
 define i64 @test25(ptr %P, i64 %A){
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i64 [[A:%.*]], 1
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nuw nsw i64 [[A:%.*]], 1
 ; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[B_IDX]], -84
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
@@ -395,7 +395,7 @@ define i64 @negative_ptrtoint_sub_zext_ptrtoint(ptr %p, i32 %offset) {
 define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
 ; CHECK-LABEL: @test25_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i16
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i16 [[TMP1]], 1
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nuw nsw i16 [[TMP1]], 1
 ; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i16 [[B_IDX]], -84
 ; CHECK-NEXT:    ret i16 [[GEPDIFF]]
 ;
@@ -409,7 +409,7 @@ define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
 
 define i64 @ptrtoint_sub_zext_ptrtoint_as2_inbounds(i32 %offset) {
 ; CHECK-LABEL: @ptrtoint_sub_zext_ptrtoint_as2_inbounds(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds bfloat, ptr addrspace(2) @Arr_as2, i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw bfloat, ptr addrspace(2) @Arr_as2, i32 [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = ptrtoint ptr addrspace(2) [[A]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = zext i32 [[B]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = sub nsw i64 ptrtoint (ptr addrspace(2) @Arr_as2 to i64), [[C]]
@@ -771,7 +771,7 @@ define i1 @_gep_phi1(ptr %str1) {
 ; CHECK-NEXT:    br i1 [[CMP1_I]], label [[_Z3FOOPKC_EXIT]], label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[STR1]], [[LOR_LHS_FALSE_I]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -820,7 +820,7 @@ define i1 @_gep_phi2(ptr %str1, i64 %val2) {
 ; CHECK-NEXT:    br i1 [[CMP1_I]], label [[_Z3FOOPKC_EXIT]], label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[STR1]], [[LOR_LHS_FALSE_I]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]

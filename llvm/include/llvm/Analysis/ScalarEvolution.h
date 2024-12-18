@@ -241,7 +241,7 @@ public:
   virtual bool isAlwaysTrue() const = 0;
 
   /// Returns true if this predicate implies \p N.
-  virtual bool implies(const SCEVPredicate *N) const = 0;
+  virtual bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const = 0;
 
   /// Prints a textual representation of this predicate with an indentation of
   /// \p Depth.
@@ -286,7 +286,7 @@ public:
                        const SCEV *LHS, const SCEV *RHS);
 
   /// Implementation of the SCEVPredicate interface
-  bool implies(const SCEVPredicate *N) const override;
+  bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
   void print(raw_ostream &OS, unsigned Depth = 0) const override;
   bool isAlwaysTrue() const override;
 
@@ -393,7 +393,7 @@ public:
 
   /// Implementation of the SCEVPredicate interface
   const SCEVAddRecExpr *getExpr() const;
-  bool implies(const SCEVPredicate *N) const override;
+  bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
   void print(raw_ostream &OS, unsigned Depth = 0) const override;
   bool isAlwaysTrue() const override;
 
@@ -418,16 +418,17 @@ private:
   SmallVector<const SCEVPredicate *, 16> Preds;
 
   /// Adds a predicate to this union.
-  void add(const SCEVPredicate *N);
+  void add(const SCEVPredicate *N, ScalarEvolution &SE);
 
 public:
-  SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
+  SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds,
+                     ScalarEvolution &SE);
 
   ArrayRef<const SCEVPredicate *> getPredicates() const { return Preds; }
 
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
-  bool implies(const SCEVPredicate *N) const override;
+  bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
   void print(raw_ostream &OS, unsigned Depth) const override;
 
   /// We estimate the complexity of a union predicate as the size number of
@@ -1779,6 +1780,10 @@ private:
   /// first. Returns a SCEV directly if it can be constructed trivially for \p
   /// V.
   const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops);
+
+  /// Returns SCEV for the first operand of a phi if all phi operands have
+  /// identical opcodes and operands.
+  const SCEV *createNodeForPHIWithIdenticalOperands(PHINode *PN);
 
   /// Provide the special handling we need to analyze PHI SCEVs.
   const SCEV *createNodeForPHI(PHINode *PN);

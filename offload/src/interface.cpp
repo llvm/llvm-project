@@ -284,13 +284,24 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     LocalKernelArgs.Flags = KernelArgs->Flags;
     LocalKernelArgs.DynCGroupMem = 0;
     LocalKernelArgs.NumTeams[0] = NumTeams;
-    LocalKernelArgs.NumTeams[1] = 0;
-    LocalKernelArgs.NumTeams[2] = 0;
+    LocalKernelArgs.NumTeams[1] = 1;
+    LocalKernelArgs.NumTeams[2] = 1;
     LocalKernelArgs.ThreadLimit[0] = ThreadLimit;
-    LocalKernelArgs.ThreadLimit[1] = 0;
-    LocalKernelArgs.ThreadLimit[2] = 0;
+    LocalKernelArgs.ThreadLimit[1] = 1;
+    LocalKernelArgs.ThreadLimit[2] = 1;
     return &LocalKernelArgs;
   }
+
+  // FIXME: This is a WA to "calibrate" the bad work done in the front end.
+  // Delete this ugly code after the front end emits proper values.
+  auto CorrectMultiDim = [](uint32_t(&Val)[3]) {
+    if (Val[1] == 0)
+      Val[1] = 1;
+    if (Val[2] == 0)
+      Val[2] = 1;
+  };
+  CorrectMultiDim(KernelArgs->ThreadLimit);
+  CorrectMultiDim(KernelArgs->NumTeams);
 
   return KernelArgs;
 }
@@ -320,12 +331,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   KernelArgs =
       upgradeKernelArgs(KernelArgs, LocalKernelArgs, NumTeams, ThreadLimit);
 
-  assert(KernelArgs->NumTeams[0] == static_cast<uint32_t>(NumTeams) &&
-         !KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
-         "OpenMP interface should not use multiple dimensions");
-  assert(KernelArgs->ThreadLimit[0] == static_cast<uint32_t>(ThreadLimit) &&
-         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
-         "OpenMP interface should not use multiple dimensions");
   TIMESCOPE_WITH_DETAILS_AND_IDENT(
       "Runtime: target exe",
       "NumTeams=" + std::to_string(NumTeams) +

@@ -27,6 +27,7 @@ thunk:
     .rva func
 
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadcfg.obj
+// RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64ec.s -o native-loadcfg.obj
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test-simple.s -o test-simple.obj
 // RUN: lld-link -machine:arm64ec -dll -noentry -out:out-simple.dll loadcfg.obj test-simple.obj
 // RUN: llvm-objdump -d out-simple.dll | FileCheck --check-prefix=DISASM %s
@@ -43,7 +44,7 @@ thunk:
 // RUN: llvm-readobj --sections out-simple.dll | FileCheck --check-prefix=HYBMP %s
 // HYBMP-NOT: .hybmp
 
-// RUN: lld-link -machine:arm64x -dll -noentry -out:out-simplex.dll loadcfg.obj test-simple.obj
+// RUN: lld-link -machine:arm64x -dll -noentry -out:out-simplex.dll native-loadcfg.obj loadcfg.obj test-simple.obj
 // RUN: llvm-objdump -d out-simplex.dll | FileCheck --check-prefix=DISASM %s
 
 #--- test-split-func.s

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_UNREACHABLE_SENTINEL_H
-#define _LIBCPP___ITERATOR_UNREACHABLE_SENTINEL_H
+#ifndef _LIBCPP___CXX03___ITERATOR_UNREACHABLE_SENTINEL_H
+#define _LIBCPP___CXX03___ITERATOR_UNREACHABLE_SENTINEL_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/concepts.h>
@@ -34,4 +34,4 @@ inline constexpr unreachable_sentinel_t unreachable_sentinel{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_UNREACHABLE_SENTINEL_H
+#endif // _LIBCPP___CXX03___ITERATOR_UNREACHABLE_SENTINEL_H

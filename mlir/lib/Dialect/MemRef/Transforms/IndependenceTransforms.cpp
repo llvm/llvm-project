@@ -21,7 +21,7 @@ using namespace mlir::memref;
 static FailureOr<OpFoldResult> makeIndependent(OpBuilder &b, Location loc,
                                                OpFoldResult ofr,
                                                ValueRange independencies) {
-  if (ofr.is<Attribute>())
+  if (isa<Attribute>(ofr))
     return ofr;
   AffineMap boundMap;
   ValueDimList mapOperands;

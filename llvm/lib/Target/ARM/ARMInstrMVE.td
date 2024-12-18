@@ -184,15 +184,16 @@ def t2am_imm7shift0OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<0>;
 def t2am_imm7shift1OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<1>;
 def t2am_imm7shift2OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<2>;
 
-class t2am_imm7_offset<int shift> : MemOperand,
-      ComplexPattern<i32, 1, "SelectT2AddrModeImm7Offset<"#shift#">",
-                     [], [SDNPWantRoot]> {
+class t2am_imm7_offset<int shift>
+    : MemOperand,
+      ComplexPattern<i32, 1, "SelectT2AddrModeImm7Offset<"#shift#">"> {
   // They are printed the same way as the imm8 version
   let PrintMethod = "printT2AddrModeImm8OffsetOperand";
   let ParserMatchClass =
     !cast<AsmOperandClass>("t2am_imm7shift"#shift#"OffsetAsmOperand");
   let EncoderMethod = "getT2ScaledImmOpValue<7,"#shift#">";
   let DecoderMethod = "DecodeT2Imm7<"#shift#">";
+  let WantsRoot = true;
 }
 
 // Operands for gather/scatter loads of the form [Rbase, Qoffsets]
