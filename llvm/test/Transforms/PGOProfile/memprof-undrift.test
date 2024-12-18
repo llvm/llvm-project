@@ -2,6 +2,28 @@
 
 ; Make sure that we can undrift the MemProf profile and annotate the IR
 ; accordingly.
+;
+; The IR was generated from:
+;
+; char *foo() { return ::new char[4]; }
+; char *leaf() { return ::new char[4]; }
+; char *middle() { return leaf(); }
+; char *aaa() { return middle(); }
+; char *bbb() { return middle(); }
+;
+; int main() {
+;   foo();
+;
+;   char *a = aaa();
+;   char *b = bbb();
+;   a[0] = 'a';
+;   b[0] = 'b';
+;   delete[] a;
+;   sleep(10);
+;   delete[] b;
+;
+;   return 0;
+; }
 
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof_undrift.yaml -o %t/memprof_undrift.memprofdata
@@ -69,7 +91,6 @@ entry:
 ; Function Attrs: nobuiltin allocsize(0)
 declare ptr @_Znam(i64 noundef) #0
 
-; Call hierarchy: leaf -> ::new
 define dso_local ptr @_Z4leafv() !dbg !10 {
 ; CHECK-LABEL: @_Z4leafv()
 entry:
@@ -78,7 +99,6 @@ entry:
   ret ptr %call, !dbg !12
 }
 
-; Call hierarchy: middle -> leaf -> ::new
 define dso_local ptr @_Z6middlev() !dbg !13 {
 ; CHECK-LABEL: @_Z6middlev()
 entry:
@@ -87,7 +107,6 @@ entry:
   ret ptr %call.i, !dbg !16
 }
 
-; Call hierarchy: aaa -> middle -> leaf -> ::new
 define dso_local ptr @_Z3aaav() !dbg !17 {
 ; CHECK-LABEL: @_Z3aaav()
 entry:
@@ -96,7 +115,6 @@ entry:
   ret ptr %call.i.i, !dbg !21
 }
 
-; Call hierarchy: bbb -> middle -> leaf -> ::new
 define dso_local ptr @_Z3bbbv() !dbg !22 {
 ; CHECK-LABEL: @_Z3bbbv()
 entry:
