@@ -275,9 +275,9 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   }
 
   for (auto Pred : Preds) {
-    // dumpRegSet(getBlockInfo(*Pred).SpillSet);
+    //dumpRegSet(getBlockInfo(*Pred).SpillSet);
     Entry.SpillSet.set_union(getBlockInfo(*Pred).SpillSet);
-    // dumpRegSet(Entry.SpillSet);
+    //dumpRegSet(Entry.SpillSet);
   }
   set_intersect(Entry.SpillSet, Entry.ActiveSet);
   for (auto Pred : Preds) {
@@ -453,6 +453,19 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
 
   unsigned ShrinkTo = NumAvailableRegs - DefsRP;
   RegisterSet ToSpill;
+
+  // unsigned SizeToSpill = CurRP - ShrinkTo;
+  // for (auto R : reverse(Active)) {
+  //   if (SizeToSpill == 0)
+  //     break;
+  //   unsigned RegSize = getSizeInRegs(R);
+  //   if (RegSize <= SizeToSpill) {
+  //     ToSpill.insert(R);
+  //     SizeToSpill -= RegSize;
+  //   }
+  // }
+  // Active.set_subtract(ToSpill);
+
   while (CurRP > ShrinkTo) {
     auto R = Active.pop_back_val();
     unsigned RegSize = getSizeInRegs(R);

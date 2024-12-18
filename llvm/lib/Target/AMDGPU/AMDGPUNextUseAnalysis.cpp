@@ -74,29 +74,39 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           mergeDistances(Curr, SuccMapRef.value(), Weight);
         }
       }
-      unsigned MBBLen =
-          Begin.distance(Indexes->getMBBEndIdx(MBB)) / SlotIndex::InstrDist;
-      for (auto &P : Curr) {
-        P.second += MBBLen;
-      }
+      // unsigned MBBLen =
+      //     Begin.distance(Indexes->getMBBEndIdx(MBB)) / SlotIndex::InstrDist;
+      // for (auto &P : Curr) {
+      //   P.second += MBBLen;
+      // }
 
-      NextUseMap[MBB->getNumber()] = std::move(Curr);
-
+      // NextUseMap[MBB->getNumber()] = std::move(Curr);
+ 
+      DenseMap<Register, unsigned> CurrentBlockRegUses;
+      unsigned CurrDist = 0;
       for (auto &MI : make_range(MBB->rbegin(), MBB->rend())) {
         for (auto &MO : MI.operands()) {
-          if (MO.isReg() && MO.getReg().isVirtual() && MO.isUse()) {
+          if (MO.isReg() && MO.getReg().isVirtual()) {
             Register VReg = MO.getReg();
-            MachineInstr *Def = MRI->getVRegDef(VReg);
-            if (Def && Def->getParent() == MBB)
-              // defined in block - skip it
-              continue;
-            unsigned Distance =
-                Begin.distance(Indexes->getInstructionIndex(MI)) /
-                SlotIndex::InstrDist;
-            setNextUseDistance(MBB, VReg, Distance);
-            UsedInBlock[MBB->getNumber()].insert(VReg);
+            // MachineInstr *Def = MRI->getVRegDef(VReg);
+            // if (Def && Def->getParent() == MBB)
+            //   // defined in block - skip it
+            //   continue;
+            // unsigned Distance =
+            //     Begin.distance(Indexes->getInstructionIndex(MI)) /
+            //     SlotIndex::InstrDist;
+            // setNextUseDistance(MBB, VReg, Distance);
+            if(MO.isUse()) {
+              CurrentBlockRegUses[VReg] = CurrDist;
+              UsedInBlock[MBB->getNumber()].insert(VReg);
+            } else if (MO.isDef()) {
+              if (CurrentBlockRegUses.contains(&MI))
+                CurrentBlockRegUses.erase(VReg);
+            }
           }
         }
+        InstrCache[&MI] = std::move(CurrentBlockRegUses);
+        CurrDist++;
       }
       VRegDistances &Next = NextUseMap[MBB->getNumber()];
       // dbgs() << "MBB_" << MBB->getNumber() << "\n";
