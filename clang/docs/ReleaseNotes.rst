@@ -683,6 +683,16 @@ Improvements to Clang's diagnostics
       views.push_back(std::string("123")); // warning
     }
 
+- Clang now emits a ``-Wtautological-compare`` diagnostic when a check for
+  pointer addition overflow is always true or false, because overflow would
+  be undefined behavior.
+
+  .. code-block:: c++
+
+    bool incorrect_overflow_check(const char *ptr, size_t index) {
+      return ptr + index < ptr; // warning
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -1175,6 +1185,10 @@ Sanitizers
   "type" prefix within `Sanitizer Special Case Lists (SSCL)
   <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
   for examples.
+
+- Introduced an experimental Type Sanitizer, activated by using the
+  ``-fsanitize=type`` flag. This sanitizer detects violations of C/C++ type-based
+  aliasing rules.
 
 Python Binding Changes
 ----------------------

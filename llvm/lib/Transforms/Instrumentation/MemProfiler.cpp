@@ -173,6 +173,10 @@ static cl::opt<std::string>
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 
+static cl::opt<unsigned> MinMatchedColdBytePercent(
+    "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
+    cl::desc("Min percent of cold bytes matched to hint allocation cold"));
+
 // Instrumentation statistics
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -1074,6 +1078,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         // contexts. Add them to a Trie specialized for trimming the contexts to
         // the minimal needed to disambiguate contexts with unique behavior.
         CallStackTrie AllocTrie;
+        uint64_t TotalSize = 0;
+        uint64_t TotalColdSize = 0;
         for (auto *AllocInfo : AllocInfoIter->second) {
           // Check the full inlined call stack against this one.
           // If we found and thus matched all frames on the call, include
@@ -1085,6 +1091,9 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes)
               FullStackId = computeFullStackId(AllocInfo->CallStack);
             auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
+            TotalSize += AllocInfo->Info.getTotalSize();
+            if (AllocType == AllocationType::Cold)
+              TotalColdSize += AllocInfo->Info.getTotalSize();
             // Record information about the allocation if match info printing
             // was requested.
             if (ClPrintMemProfMatchInfo) {
@@ -1094,6 +1103,16 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             }
           }
         }
+        // If the threshold for the percent of cold bytes is less than 100%,
+        // and not all bytes are cold, see if we should still hint this
+        // allocation as cold without context sensitivity.
+        if (TotalColdSize < TotalSize && MinMatchedColdBytePercent < 100 &&
+            TotalColdSize * 100 >= MinMatchedColdBytePercent * TotalSize) {
+          AllocTrie.addSingleAllocTypeAttribute(CI, AllocationType::Cold,
+                                                "dominant");
+          continue;
+        }
+
         // We might not have matched any to the full inlined call stack.
         // But if we did, create and attach metadata, or a function attribute if
         // all contexts have identical profiled behavior.
