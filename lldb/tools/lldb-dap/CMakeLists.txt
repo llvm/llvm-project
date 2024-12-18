@@ -1,7 +1,3 @@
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
-  list(APPEND extra_libs lldbHost)
-endif ()
-
 if (HAVE_LIBPTHREAD)
   list(APPEND extra_libs pthread)
 endif ()
@@ -32,7 +28,6 @@ add_lldb_tool(lldb-dap
   IOStream.cpp
   JSONUtils.cpp
   LLDBUtils.cpp
-  OutputRedirector.cpp
   ProgressEvent.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
@@ -42,6 +37,7 @@ add_lldb_tool(lldb-dap
 
   LINK_LIBS
     liblldb
+    lldbHost
     ${extra_libs}
 
   LINK_COMPONENTS

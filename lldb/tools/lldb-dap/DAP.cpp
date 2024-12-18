@@ -6,34 +6,53 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <chrono>
-#include <cstdarg>
-#include <fstream>
-#include <mutex>
-
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <cstdarg>
+#include <cstdio>
+#include <fstream>
+#include <mutex>
+#include <utility>
 
 #if defined(_WIN32)
 #define NOMINMAX
 #include <fcntl.h>
 #include <io.h>
 #include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 using namespace lldb_dap;
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef path, ReplMode repl_mode)
-    : debug_adaptor_path(path), broadcaster("lldb-dap"),
+DAP::DAP(llvm::StringRef path, std::optional<std::ofstream> &log,
+         ReplMode repl_mode, StreamDescriptor input, StreamDescriptor output)
+    : debug_adaptor_path(path), log(log), input(std::move(input)),
+      output(std::move(output)), broadcaster("lldb-dap"),
       exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
       stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
@@ -43,21 +62,7 @@ DAP::DAP(llvm::StringRef path, ReplMode repl_mode)
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(repl_mode) {
-  const char *log_file_path = getenv("LLDBDAP_LOG");
-#if defined(_WIN32)
-  // Windows opens stdout and stdin in text mode which converts \n to 13,10
-  // while the value is just 10 on Darwin/Linux. Setting the file mode to binary
-  // fixes this.
-  int result = _setmode(fileno(stdout), _O_BINARY);
-  assert(result);
-  result = _setmode(fileno(stdin), _O_BINARY);
-  UNUSED_IF_ASSERT_DISABLED(result);
-  assert(result);
-#endif
-  if (log_file_path)
-    log.reset(new std::ofstream(log_file_path));
-}
+      reverse_request_seq(0), repl_mode(repl_mode) {}
 
 DAP::~DAP() = default;
 
@@ -173,6 +178,63 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   return nullptr;
 }
 
+llvm::Error DAP::ConfigureIO(std::optional<std::FILE *> overrideOut,
+                             std::optional<std::FILE *> overrideErr) {
+  auto *inull = lldb_private::FileSystem::Instance().Fopen(
+      lldb_private::FileSystem::DEV_NULL, "w");
+  in = lldb::SBFile(inull, true);
+
+  lldb_private::Status status;
+  status = pout.CreateNew(/*child_process_inherit=*/false);
+  if (status.Fail())
+    return status.takeError();
+  status = perr.CreateNew(/*child_process_inherit=*/false);
+  if (status.Fail())
+    return status.takeError();
+
+  if (overrideOut) {
+    if (dup2(pout.GetWriteFileDescriptor(), fileno(*overrideOut)) == -1) {
+      return llvm::make_error<llvm::StringError>(
+          llvm::errnoAsErrorCode(),
+          llvm::formatv("override fd=%d failed", fileno(*overrideOut))
+              .str()
+              .c_str());
+    }
+  }
+
+  if (overrideErr) {
+    if (dup2(perr.GetWriteFileDescriptor(), fileno(*overrideErr)) == -1) {
+      return llvm::make_error<llvm::StringError>(
+          llvm::errnoAsErrorCode(),
+          llvm::formatv("override fd=%d failed", fileno(*overrideErr))
+              .str()
+              .c_str());
+    }
+  }
+
+  auto forwarder = [&](lldb_private::Pipe &pipe, OutputType outputType) {
+    char buffer[4098];
+    size_t bytes_read;
+    while (pipe.CanRead()) {
+      lldb_private::Status error = pipe.ReadWithTimeout(
+          &buffer, sizeof(buffer), std::chrono::seconds(1), bytes_read);
+      if (error.Success()) {
+        // zero bytes returned on EOF.
+        if (bytes_read == 0)
+          break;
+        SendOutput(outputType, llvm::StringRef(buffer, bytes_read));
+      }
+    }
+  };
+
+  stdout_forward_thread =
+      std::thread(forwarder, std::ref(pout), OutputType::Stdout);
+  stderr_forward_thread =
+      std::thread(forwarder, std::ref(perr), OutputType::Stderr);
+
+  return llvm::Error::success();
+}
+
 // Send the JSON in "json_str" to the "out" stream. Correctly send the
 // "Content-Length:" field followed by the length, followed by the raw
 // JSON bytes.
@@ -208,19 +270,19 @@ std::string DAP::ReadJSON() {
   std::string json_str;
   int length;
 
-  if (!input.read_expected(log.get(), "Content-Length: "))
+  if (!input.read_expected(log, "Content-Length: "))
     return json_str;
 
-  if (!input.read_line(log.get(), length_str))
+  if (!input.read_line(log, length_str))
     return json_str;
 
   if (!llvm::to_integer(length_str, length))
     return json_str;
 
-  if (!input.read_expected(log.get(), "\r\n"))
+  if (!input.read_expected(log, "\r\n"))
     return json_str;
 
-  if (!input.read_full(log.get(), length, json_str))
+  if (!input.read_full(log, length, json_str))
     return json_str;
 
   if (log) {
