@@ -54,7 +54,7 @@ static constexpr StringRef knownBundleName(unsigned BundleTagID) {
   case LLVMContext::OB_convergencectrl:
     return "convergencectrl";
   default:
-    return "";
+    llvm_unreachable("unknown bundle id");
   }
 
   llvm_unreachable("covered switch");
