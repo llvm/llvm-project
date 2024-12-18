@@ -2451,6 +2451,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
         OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
       const MachineOperand &MO = MI.getOperand(Index);
+      if (MO.isReg()) {
+        ErrInfo = "Expected a non-register operand.";
+        return false;
+      }
       if (MO.isImm()) {
         int64_t Imm = MO.getImm();
         bool Ok;
