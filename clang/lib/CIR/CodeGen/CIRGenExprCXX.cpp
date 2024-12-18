@@ -910,7 +910,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *E) {
   // we plan to handle it in LoweringPreparePass and the corresponding
   // ABI part.
   if (DeleteTy->isConstantArrayType()) {
-    Ptr = Ptr;
+    // Nothing to do here, keep it for skeleton comparison sake.
   }
 
   assert(convertTypeForMem(DeleteTy) == Ptr.getElementType());
