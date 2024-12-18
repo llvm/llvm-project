@@ -699,7 +699,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // Parse -f(no-)?sanitize-nonmerged-handlers flags
   SanitizerMask AlwaysMerge; // Empty
-  SanitizerMask NeverMerge; // Empty
+  SanitizerMask NeverMerge;  // Empty
   SanitizerMask MergeKinds = parseSanitizeArgs(
       D, Args, DiagnoseErrors, MergeDefault, AlwaysMerge,
       NeverMerge, options::OPT_fsanitize_merge_handlers_EQ,
