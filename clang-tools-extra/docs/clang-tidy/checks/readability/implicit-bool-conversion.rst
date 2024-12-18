@@ -147,9 +147,11 @@ Options
       if (foo) {}
       // ^ propose replacement default: if (foo != 0u) {}
       // ^ propose replacement with option `UseUpperCaseLiteralSuffix`: if (foo != 0U) {}
+
 .. option:: CheckConversionsToBool
 
-   When `true`, the check diagnoses implicit conversions to `bool`. Default is `true`.
+   When `true`, the check diagnoses implicit conversions to ``bool``.
+   Default is `true`.
 
    Example
 
@@ -165,7 +167,8 @@ Options
 
 .. option:: CheckConversionsFromBool
 
-   When `true`, the check diagnoses implicit conversions from `bool`. Default is `true`.
+   When `true`, the check diagnoses implicit conversions from ``bool``.
+   Default is `true`.
 
    Example
 
