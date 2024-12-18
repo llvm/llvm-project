@@ -42,7 +42,7 @@
 
 %"class.sycl::_V1::nd_item" = type { i8 }
 
-@G1 = private unnamed_addr addrspace(1) constant %"class.sycl::_V1::nd_item" undef, align 1
+@G1 = private unnamed_addr addrspace(1) constant %"class.sycl::_V1::nd_item" poison, align 1
 @g1 = addrspace(1) global i32 1, align 4
 @g2 = internal addrspace(1) global i32 2, align 4
 @g4 = common addrspace(1) global i32 0, align 4
