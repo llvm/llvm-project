@@ -20763,13 +20763,16 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
            "Unexpected legalisation result!");
 
     EVT SrcVectorType = Op.getValueType();
-    // We also assume that SrcVectorType cannot be a V64 (see LowerEXTRACT_VECTOR_ELT).
+    // We also assume that SrcVectorType cannot be a V64 (see
+    // LowerEXTRACT_VECTOR_ELT).
     assert((SrcVectorType.getScalarType() == MVT::i64 &&
-            SrcVectorType != MVT::v1i64) && "Unexpected legalisation result!");
+            SrcVectorType != MVT::v1i64) &&
+           "Unexpected legalisation result!");
 
-    // If the i64 we are extacting has uses other than this truncation, the upper half
-    // of this value must still be live so we prefer to extract it all at once.
-    if(!N0.hasOneUse())
+    // If the i64 we are extacting has uses other than this truncation, the
+    // upper half of this value must still be live so we prefer to extract it
+    // all at once.
+    if (!N0.hasOneUse())
       return SDValue();
 
     unsigned ExtractIndex =
