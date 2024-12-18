@@ -67,8 +67,7 @@ define  <4 x double> @blend_broadcasts_v4f64(ptr %p0, ptr %p1)  {
 define <2 x float> @PR86068(<2 x float> %a0, <2 x float> %a1) {
 ; CHECK-LABEL: define <2 x float> @PR86068(
 ; CHECK-SAME: <2 x float> [[A0:%.*]], <2 x float> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x float> [[A1]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <2 x float> [[S1]], <2 x float> [[A0]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <2 x float> [[A1]], <2 x float> [[A0]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    ret <2 x float> [[S2]]
 ;
   %s1 = shufflevector <2 x float> %a1, <2 x float> poison, <2 x i32> <i32 1, i32 poison>

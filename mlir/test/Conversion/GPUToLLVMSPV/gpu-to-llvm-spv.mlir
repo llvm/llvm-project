@@ -1,6 +1,8 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv))" -split-input-file -verify-diagnostics %s \
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{use-64bit-index=true}))" -split-input-file -verify-diagnostics %s \
 // RUN: | FileCheck --check-prefixes=CHECK-64,CHECK %s
-// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{index-bitwidth=32}))" -split-input-file -verify-diagnostics %s \
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv))" -split-input-file -verify-diagnostics %s \
+// RUN: | FileCheck --check-prefixes=CHECK-32,CHECK %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{use-64bit-index=false}))" -split-input-file -verify-diagnostics %s \
 // RUN: | FileCheck --check-prefixes=CHECK-32,CHECK %s
 
 gpu.module @builtins {
