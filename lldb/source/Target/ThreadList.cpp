@@ -531,8 +531,7 @@ bool ThreadList::WillResume() {
   // There are two special kinds of thread that have priority for "StopOthers":
   // a "ShouldRunBeforePublicStop thread, or the currently selected thread.  If
   // we find one satisfying that critereon, put it here.
-  ThreadSP stop_others_thread_sp;
-
+  ThreadSP thread_to_run;
   for (pos = m_threads.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
     if (thread_sp->GetResumeState() != eStateSuspended &&
@@ -546,21 +545,18 @@ bool ThreadList::WillResume() {
       run_me_only_list.AddThread(thread_sp);
 
       if (thread_sp == GetSelectedThread())
-        stop_others_thread_sp = thread_sp;
-        
+        thread_to_run = thread_sp;
+
       if (thread_sp->ShouldRunBeforePublicStop()) {
         // This takes precedence, so if we find one of these, service it:
-        stop_others_thread_sp = thread_sp;
+        thread_to_run = thread_sp;
         break;
       }
     }
   }
 
-  ThreadSP thread_to_run;
-  if (run_me_only_list.GetSize(false) > 0) {
-    if (stop_others_thread_sp) {
-      thread_to_run = stop_others_thread_sp;
-    } else if (run_me_only_list.GetSize(false) == 1) {
+  if (run_me_only_list.GetSize(false) > 0 && !thread_to_run) {
+    if (run_me_only_list.GetSize(false) == 1) {
       thread_to_run = run_me_only_list.GetThreadAtIndex(0);
     } else {
       int random_thread =
