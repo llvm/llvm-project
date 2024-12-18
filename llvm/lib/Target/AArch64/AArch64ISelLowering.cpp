@@ -6464,7 +6464,7 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
         return false;
 
       unsigned NumExtMaskedLoads = 0;
-      for (auto *U : Ld->getMask()->uses())
+      for (auto *U : Ld->getMask()->users())
         if (isa<MaskedLoadSDNode>(U))
           NumExtMaskedLoads++;
 
@@ -8559,7 +8559,7 @@ SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
   ArgChains.push_back(Chain);
 
   // Add a chain value for each stack argument corresponding
-  for (SDNode *U : DAG.getEntryNode().getNode()->uses())
+  for (SDNode *U : DAG.getEntryNode().getNode()->users())
     if (LoadSDNode *L = dyn_cast<LoadSDNode>(U))
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr()))
         if (FI->getIndex() < 0) {
@@ -19586,7 +19586,7 @@ static SDValue performANDSETCCCombine(SDNode *N,
   // Checks if the current node (N) is used by any SELECT instruction and
   // returns an empty SDValue to avoid applying the optimization to prevent
   // incorrect results
-  for (auto U : N->uses())
+  for (auto U : N->users())
     if (U->getOpcode() == ISD::SELECT)
       return SDValue();
 
@@ -24761,7 +24761,7 @@ static SDValue tryToWidenSetCCOperands(SDNode *Op, SelectionDAG &DAG) {
   EVT UseMVT = FirstUse->getValueType(0);
   if (UseMVT.getScalarSizeInBits() <= Op0MVT.getScalarSizeInBits())
     return SDValue();
-  if (any_of(Op->uses(), [&UseMVT](const SDNode *N) {
+  if (any_of(Op->users(), [&UseMVT](const SDNode *N) {
         return N->getOpcode() != ISD::VSELECT || N->getValueType(0) != UseMVT;
       }))
     return SDValue();
@@ -25335,7 +25335,7 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   uint64_t MinOffset = -1ull;
-  for (SDNode *N : GN->uses()) {
+  for (SDNode *N : GN->users()) {
     if (N->getOpcode() != ISD::ADD)
       return SDValue();
     auto *C = dyn_cast<ConstantSDNode>(N->getOperand(0));
@@ -26054,7 +26054,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
     HasFoundMULLow = false;
 
   // Find ExtractLow.
-  for (SDNode *User : ExtractHighSrcVec.getNode()->uses()) {
+  for (SDNode *User : ExtractHighSrcVec.getNode()->users()) {
     if (User == ExtractHigh.getNode())
       continue;
 
@@ -26561,7 +26561,7 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
     return false;
 
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != AArch64ISD::RET_GLUE)
       return false;
     HasRet = true;
@@ -29650,7 +29650,7 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
   unsigned Opc = N->getOpcode();
   if (ISD::isExtOpcode(Opc)) {
-    if (any_of(N->uses(),
+    if (any_of(N->users(),
                [&](SDNode *Use) { return Use->getOpcode() == ISD::MUL; }))
       return false;
   }
