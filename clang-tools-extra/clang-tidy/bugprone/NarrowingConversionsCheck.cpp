@@ -614,4 +614,4 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     return handleImplicitCast(*Result.Context, *Cast);
   llvm_unreachable("must be binary operator or cast expression");
 }
-} // namespace clang::tidy::cppcoreguidelines
+} // namespace clang::tidy::bugprone

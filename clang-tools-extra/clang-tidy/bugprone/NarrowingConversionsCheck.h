@@ -104,6 +104,6 @@ private:
   const bool PedanticMode;
 };
 
-} // namespace clang::tidy::cppcoreguidelines
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_NARROWING_CONVERSIONS_H
