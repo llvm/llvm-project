@@ -1099,14 +1099,14 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // Since the SVE calling convention preserves registers Z8-Z23, there are no
-  // ZPR2Strided or ZPR4Strided registers which do not overlap with the
-  // callee-saved registers. These will be pushed to the back of the allocation
-  // order for the ZPRStridedOrContiguous classes.
-  // However, if any of the instructions which define VirtReg are
-  // ZPRStridedOrContiguous registers used by a FORM_TRANSPOSED_REG_TUPLE
-  // pseudo, it will likely be better to try assigning a strided register
-  // anyway to avoid extra copy instructions.
+  // The SVE calling convention preserves registers Z8-Z23. As a result, there
+  // are no ZPR2Strided or ZPR4Strided registers that do not overlap with the
+  // callee-saved registers and so by default these will be pushed to the back
+  // of the allocation order for the ZPRStridedOrContiguous classes.
+  // If any of the instructions which define VirtReg are used by the
+  // FORM_TRANSPOSED_REG_TUPLE pseudo, we want to favour reducing copy
+  // instructions over reducing the number of clobbered callee-save registers,
+  // so we add the strided registers as a hint.
   unsigned RegID = MRI.getRegClass(VirtReg)->getID();
   // Look through uses of the register for FORM_TRANSPOSED_REG_TUPLE.
   if ((RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
@@ -1116,8 +1116,6 @@ bool AArch64RegisterInfo::getRegAllocationHints(
                    AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
                Use.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
       })) {
-    // Push the list of 2/4 ZPRStrided registers to Hints to ensure we try to
-    // allocate these first.
     const TargetRegisterClass *StridedRC =
         RegID == AArch64::ZPR2StridedOrContiguousRegClassID
             ? &AArch64::ZPR2StridedRegClass
