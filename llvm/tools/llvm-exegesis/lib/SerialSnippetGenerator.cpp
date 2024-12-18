@@ -53,6 +53,13 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
     if (OtherOpcode == Instr->Description.getOpcode())
       continue;
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
+    const MCInstrDesc &OtherInstrDesc = OtherInstr.Description;
+    // Ignore instructions that we cannot run.
+    if (OtherInstrDesc.isPseudo() || OtherInstrDesc.usesCustomInsertionHook() ||
+        OtherInstrDesc.isBranch() || OtherInstrDesc.isIndirectBranch() ||
+        OtherInstrDesc.isCall() || OtherInstrDesc.isReturn()) {
+          continue;
+    }
     if (OtherInstr.hasMemoryOperands())
       continue;
     if (!ET.allowAsBackToBack(OtherInstr))
@@ -74,10 +81,12 @@ static ExecutionMode getExecutionModes(const Instruction &Instr,
     EM |= ExecutionMode::ALWAYS_SERIAL_TIED_REGS_ALIAS;
   if (Instr.hasMemoryOperands())
     EM |= ExecutionMode::SERIAL_VIA_MEMORY_INSTR;
-  if (Instr.hasAliasingNotMemoryRegisters(ForbiddenRegisters))
-    EM |= ExecutionMode::SERIAL_VIA_EXPLICIT_REGS;
-  if (Instr.hasOneUseOrOneDef())
-    EM |= ExecutionMode::SERIAL_VIA_NON_MEMORY_INSTR;
+  else {
+    if (Instr.hasAliasingRegisters(ForbiddenRegisters))
+      EM |= ExecutionMode::SERIAL_VIA_EXPLICIT_REGS;
+    if (Instr.hasOneUseOrOneDef())
+      EM |= ExecutionMode::SERIAL_VIA_NON_MEMORY_INSTR;
+  }
   return EM;
 }
 
