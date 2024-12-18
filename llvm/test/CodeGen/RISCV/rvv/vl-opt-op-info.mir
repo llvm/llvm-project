@@ -603,16 +603,6 @@ body: |
     PseudoVSUXEI8_V_MF2_MF2 %x, $noreg, $noreg, 1, 3 /* e8 */
 ...
 ---
-name: vmop_mm
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: vmop_mm
-    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
-    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0 /* e8 */
-    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
-    %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0
-...
----
 name: vsuxeiN_v_idx
 body: |
   bb.0:
@@ -691,6 +681,16 @@ body: |
     %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
     %y:vr = PseudoVLUXEI8_V_MF2_MF2 $noreg, $noreg, %x, 1, 3 /* e8 */, 0
     %z:vr = PseudoVADD_VV_MF2 $noreg, %y, $noreg, 1, 3 /* e8 */, 0
+...
+---
+name: vmop_mm
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0
 ...
 ---
 name: vmop_mm_incompatible_eew
