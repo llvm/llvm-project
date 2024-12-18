@@ -282,6 +282,13 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                       hasParent(initListExpr(hasParent(explicitCastExpr(
                           hasType(qualType(equalsBoundNode("type"))))))))));
     
+  auto ImplicitCastFromBool = implicitCastExpr(
+      anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
+            // Prior to C++11 cast from bool literal to pointer was allowed.
+            allOf(anyOf(hasCastKind(CK_NullToPointer),
+                        hasCastKind(CK_NullToMemberPointer)),
+                  hasSourceExpression(cxxBoolLiteral()))),
+      hasSourceExpression(expr(hasType(booleanType()))));
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
@@ -324,13 +331,6 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   if(CheckConversionFromBool){
-  auto ImplicitCastFromBool = implicitCastExpr(
-      anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
-            // Prior to C++11 cast from bool literal to pointer was allowed.
-            allOf(anyOf(hasCastKind(CK_NullToPointer),
-                        hasCastKind(CK_NullToMemberPointer)),
-                  hasSourceExpression(cxxBoolLiteral()))),
-      hasSourceExpression(expr(hasType(booleanType()))));
   
   auto BoolComparison = binaryOperator(hasAnyOperatorName("==", "!="),
                                        hasLHS(ImplicitCastFromBool),
@@ -358,7 +358,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               unless(hasParent(
                   binaryOperator(anyOf(BoolComparison, BoolXor,
                                        BoolOpAssignment, BitfieldAssignment)))),
-              implictCastExpr().bind("implicitCastFromBool"),
+              implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
               anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
