@@ -595,7 +595,7 @@ def bolt_optimize(args):
                 opts.instrumented_output,
                 "-instrument",
                 "--instrumentation-file-append-pid",
-                f'--instrumentation-file={opts.fdata}',
+                f"--instrumentation-file={opts.fdata}",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -615,7 +615,7 @@ def bolt_optimize(args):
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True
+        text=True,
     )
 
     print(process.args)
