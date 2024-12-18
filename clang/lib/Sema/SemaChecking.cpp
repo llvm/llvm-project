@@ -3694,8 +3694,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   } Form = Init;
 
   const unsigned NumForm = Clear + 1;
-  const unsigned NumArgs[] = { 2, 2, 3, 3, 3, 3, 4, 5, 6, 2, 2 };
-  const unsigned NumVals[] = { 1, 0, 1, 1, 1, 1, 2, 2, 3, 0, 0 };
+  const unsigned NumArgs[] = {2, 2, 3, 3, 3, 3, 4, 5, 6, 2, 2};
+  const unsigned NumVals[] = {1, 0, 1, 1, 1, 1, 2, 2, 3, 0, 0};
   // where:
   //   C is an appropriate type,
   //   A is volatile _Atomic(C) for __c11 builtins and is C for GNU builtins,
@@ -4009,8 +4009,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   ValType.removeLocalVolatile();
   ValType.removeLocalConst();
   QualType ResultType = ValType;
-  if (Form == Copy || Form == LoadCopy || Form == GNUXchg ||
-      Form == Init || Form == Clear)
+  if (Form == Copy || Form == LoadCopy || Form == GNUXchg || Form == Init ||
+      Form == Clear)
     ResultType = Context.VoidTy;
   else if (Form == C11CmpXchg || Form == GNUCmpXchg || Form == TestAndSet)
     ResultType = Context.BoolTy;
