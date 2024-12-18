@@ -18383,26 +18383,41 @@ uint64x1_t test_vrsra_n_u64(uint64x1_t a, uint64x1_t b) {
 //   return vneg_s64(a);
 // }
 
-// NYI-LABEL: @test_vaddv_f32(
-// NYI:   [[VADDV_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v2f32(<2 x float> %a)
-// NYI:   ret float [[VADDV_F32_I]]
-// float32_t test_vaddv_f32(float32x2_t a) {
-//   return vaddv_f32(a);
-// }
+float32_t test_vaddv_f32(float32x2_t a) {
+  return vaddv_f32(a);
 
-// NYI-LABEL: @test_vaddvq_f32(
-// NYI:   [[VADDVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> %a)
-// NYI:   ret float [[VADDVQ_F32_I]]
-// float32_t test_vaddvq_f32(float32x4_t a) {
-//   return vaddvq_f32(a);
-// }
+  // CIR-LABEL: vaddv_f32
+  // CIR: cir.llvm.intrinsic "aarch64.neon.faddv" {{%.*}} : (!cir.vector<!cir.float x 2>) -> !cir.float
 
-// NYI-LABEL: @test_vaddvq_f64(
-// NYI:   [[VADDVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> %a)
-// NYI:   ret double [[VADDVQ_F64_I]]
-// float64_t test_vaddvq_f64(float64x2_t a) {
-//   return vaddvq_f64(a);
-// }
+  // LLVM-LABEL: test_vaddv_f32
+  // LLVM-SAME: (<2 x float> [[a:%.*]])
+  // LLVM: [[VADDV_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v2f32(<2 x float> [[a]])
+  // LLVM: ret float [[VADDV_F32_I]]
+}
+
+float32_t test_vaddvq_f32(float32x4_t a) {
+  return vaddvq_f32(a);
+
+  // CIR-LABEL: vaddvq_f32
+  // CIR: cir.llvm.intrinsic "aarch64.neon.faddv" {{%.*}} : (!cir.vector<!cir.float x 4>) -> !cir.float
+
+  // LLVM-LABEL: test_vaddvq_f32
+  // LLVM-SAME: (<4 x float> [[a:%.*]])
+  // LLVM: [[VADDVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> [[a]])
+  // LLVM: ret float [[VADDVQ_F32_I]]
+}
+
+float64_t test_vaddvq_f64(float64x2_t a) {
+  return vaddvq_f64(a);
+
+  // CIR-LABEL: vaddvq_f64
+  // CIR: cir.llvm.intrinsic "aarch64.neon.faddv" {{%.*}} : (!cir.vector<!cir.double x 2>) -> !cir.double
+
+  // LLVM-LABEL: test_vaddvq_f64
+  // LLVM-SAME: (<2 x double> [[a:%.*]])
+  // LLVM: [[VADDVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> [[a]])
+  // LLVM: ret double [[VADDVQ_F64_I]]
+}
 
 // NYI-LABEL: @test_vmaxv_f32(
 // NYI:   [[VMAXV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v2f32(<2 x float> %a)
