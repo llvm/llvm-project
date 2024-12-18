@@ -320,9 +320,10 @@ Changes in existing checks
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` 
-   - `UseUpperCaseLiteralSuffix` : check by adding the option to select the case of the literal suffix in fixes and fixing false positive for implicit conversion of comparison result in C23.
-   - `CheckConversionsToBool`: check by adding the option to allow enabling or disabling warnings for implicit conversions to `bool` .
-   - `CheckConversionsFromBool`: check by adding the option to allow enabling or disabling warnings for implicit conversions from `bool`.
+   Check by adding the option 
+   - `UseUpperCaseLiteralSuffix` : to select the case of the literal suffix in fixes and fixing false positive for implicit conversion of comparison result in C23.
+   - `CheckConversionsToBool`: to allow enabling or disabling warnings for implicit conversions to `bool` .
+   - `CheckConversionsFromBool`: to allow enabling or disabling warnings for implicit conversions from `bool`.
 
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
