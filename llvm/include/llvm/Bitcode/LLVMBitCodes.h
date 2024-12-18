@@ -791,6 +791,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_EXT = 99,
   ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
   ATTR_KIND_SANITIZED_PADDED_GLOBAL = 101,
+  ATTR_KIND_SANITIZE_TYPE = 102,
 };
 
 enum ComdatSelectionKindCodes {

@@ -162,13 +162,26 @@ lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   return v;
 }
 
-ObjFile::ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy)
-    : InputFile(ctx.symtab, ObjectKind, m, lazy) {}
+ObjFile::ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy)
+    : InputFile(symtab, ObjectKind, coffObj->getMemoryBufferRef(), lazy),
+      coffObj(coffObj) {}
+
+ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
+  // Parse a memory buffer as a COFF file.
+  Expected<std::unique_ptr<Binary>> bin = createBinary(m);
+  if (!bin)
+    Fatal(ctx) << "Could not parse " << m.getBufferIdentifier();
+
+  auto *obj = dyn_cast<COFFObjectFile>(bin->get());
+  if (!obj)
+    Fatal(ctx) << m.getBufferIdentifier() << " is not a COFF file";
+
+  bin->release();
+  return make<ObjFile>(ctx.symtab, obj, lazy);
+}
 
 void ObjFile::parseLazy() {
   // Native object file.
-  std::unique_ptr<Binary> coffObjPtr = CHECK(createBinary(mb), this);
-  COFFObjectFile *coffObj = cast<COFFObjectFile>(coffObjPtr.get());
   uint32_t numSymbols = coffObj->getNumberOfSymbols();
   for (uint32_t i = 0; i < numSymbols; ++i) {
     COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
@@ -219,16 +232,6 @@ void ObjFile::initializeECThunks() {
 }
 
 void ObjFile::parse() {
-  // Parse a memory buffer as a COFF file.
-  std::unique_ptr<Binary> bin = CHECK(createBinary(mb), this);
-
-  if (auto *obj = dyn_cast<COFFObjectFile>(bin.get())) {
-    bin.release();
-    coffObj.reset(obj);
-  } else {
-    Fatal(symtab.ctx) << toString(this) << " is not a COFF file";
-  }
-
   // Read section and symbol tables.
   initializeChunks();
   initializeSymbols();
@@ -807,9 +810,7 @@ std::optional<Symbol *> ObjFile::createDefined(
 }
 
 MachineTypes ObjFile::getMachineType() const {
-  if (coffObj)
-    return static_cast<MachineTypes>(coffObj->getMachine());
-  return IMAGE_FILE_MACHINE_UNKNOWN;
+  return static_cast<MachineTypes>(coffObj->getMachine());
 }
 
 ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef secName) {

@@ -1378,6 +1378,11 @@ bool CompilerInvocation::createFromArgs(
       invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
   }
 
+  // -frealloc-lhs is the default.
+  if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
+                    clang::driver::options::OPT_fno_realloc_lhs, true))
+    invoc.loweringOpts.setReallocateLHS(false);
+
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
