@@ -7080,7 +7080,7 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     else if (IDVal == ".aeabi_attribute")
       parseDirectiveAeabiAArch64Attr(Loc);
     else
-     return true;
+      return true;
   } else
     return true;
   return false;
