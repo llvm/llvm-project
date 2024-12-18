@@ -80,6 +80,7 @@ set(printf_converter_srcs converter.cpp)
 if(LIBC_CONF_PRINTF_SPLIT)
   list(APPEND printf_converter_srcs
     float_dec_converter.cpp
+    float_hex_converter.cpp
     split_float.cpp)
 endif()
 

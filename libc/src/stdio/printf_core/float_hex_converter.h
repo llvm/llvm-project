@@ -25,8 +25,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-LIBC_INLINE int convert_float_hex_exp(Writer *writer,
-                                      const FormatSection &to_conv) {
+#ifdef LIBC_PRINTF_DEFINE_SPLIT
+LIBC_PRINTF_SPLIT_FUNCTION int
+convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
   using LDBits = fputil::FPBits<long double>;
   using StorageType = LDBits::StorageType;
 
@@ -253,8 +254,15 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   }
   return WRITE_OK;
 }
+#else
+[[gnu::weak]] int convert_float_hex_exp(Writer *writer,
+                                        const FormatSection &to_conv);
+#endif
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
+
+// Call this function to bring a split implementation into the link.
+extern "C" void __libc_printf_float_hex_converter();
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_HEX_CONVERTER_H
