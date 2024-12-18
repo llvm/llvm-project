@@ -859,6 +859,27 @@ bool Sema::CheckParameterPacksForExpansion(
     }
 
     if (NewPackSize != *NumExpansions) {
+      // In some cases, we might be handling packs with unexpanded template
+      // arguments. For example, this can occur when substituting into a type
+      // alias declaration that uses its injected template parameters as
+      // arguments:
+      //
+      //   template <class... Outer> struct S {
+      //     template <class... Inner> using Alias = S<void(Outer, Inner)...>;
+      //   };
+      //
+      // Consider an instantiation attempt like 'S<int>::Alias<Pack...>', where
+      // Pack comes from another template parameter. 'S<int>' is first
+      // instantiated, expanding the outer pack 'Outer' to <int>. The alias
+      // declaration is accordingly substituted, leaving the template arguments
+      // as unexpanded
+      // '<Pack...>'.
+      //
+      // Since we have no idea of the size of '<Pack...>' until its expansion,
+      // we shouldn't assume its pack size for validation. However if we are
+      // certain that there are extra arguments beyond unexpanded packs, in
+      // which case the pack size is already larger than the previous expansion,
+      // we can complain that before instantiation.
       unsigned LeastNewPackSize = NewPackSize - PendingPackExpansionSize;
       if (PendingPackExpansionSize && LeastNewPackSize <= *NumExpansions) {
         ShouldExpand = false;
