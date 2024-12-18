@@ -3336,15 +3336,15 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
       bool InCircuit = llvm::any_of(
           Circuits, [SU](const NodeSet &Circuit) { return Circuit.count(SU); });
       if (InCircuit)
-        LLVM_DEBUG(dbgs() << "In a circuit, predecessor ";);
+        LLVM_DEBUG(dbgs() << "In a circuit, predecessor ");
       else {
         Valid = false;
         NumNodeOrderIssues++;
-        LLVM_DEBUG(dbgs() << "Predecessor ";);
+        LLVM_DEBUG(dbgs() << "Predecessor ");
       }
       LLVM_DEBUG(dbgs() << Pred->NodeNum << " and successor " << Succ->NodeNum
                         << " are scheduled before node " << SU->NodeNum
-                        << "\n";);
+                        << "\n");
     }
   }
 
@@ -3573,7 +3573,7 @@ bool ResourceManager::canReserveResources(SUnit &SU, int Cycle) {
   bool Result = !isOverbooked();
   unreserveResources(SCDesc, Cycle);
 
-  LLVM_DEBUG(if (SwpDebugResource) dbgs() << "return " << Result << "\n\n";);
+  LLVM_DEBUG(if (SwpDebugResource) dbgs() << "return " << Result << "\n\n");
   return Result;
 }
 

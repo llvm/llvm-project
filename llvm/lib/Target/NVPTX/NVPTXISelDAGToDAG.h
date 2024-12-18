@@ -83,8 +83,6 @@ private:
   bool tryStoreParam(SDNode *N);
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
-  bool tryTextureIntrinsic(SDNode *N);
-  bool trySurfaceIntrinsic(SDNode *N);
   bool tryBFE(SDNode *N);
   bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);

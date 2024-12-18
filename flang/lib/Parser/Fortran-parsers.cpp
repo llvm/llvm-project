@@ -929,8 +929,11 @@ TYPE_PARSER(construct<DataStmtRepeat>(intLiteralConstant) ||
 // components can be ambiguous with a scalar-constant-subobject.
 // So we parse literal constants, designator, null-init, and
 // structure-constructor, so that semantics can figure things out later
-// with the symbol table.
-TYPE_PARSER(sourced(first(construct<DataStmtConstant>(literalConstant),
+// with the symbol table.  A literal constant substring must be attempted
+// first to avoid a partial match with a literal constant.
+TYPE_PARSER(sourced(first(
+    construct<DataStmtConstant>(indirect(charLiteralConstantSubstring)),
+    construct<DataStmtConstant>(literalConstant),
     construct<DataStmtConstant>(signedRealLiteralConstant),
     construct<DataStmtConstant>(signedIntLiteralConstant),
     extension<LanguageFeature::SignedComplexLiteral>(

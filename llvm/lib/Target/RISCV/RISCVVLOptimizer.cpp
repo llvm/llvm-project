@@ -211,10 +211,10 @@ static bool isMaskOperand(const MachineInstr &MI, const MachineOperand &MO,
   return Desc.operands()[MO.getOperandNo()].RegClass == RISCV::VMV0RegClassID;
 }
 
-/// Return the OperandInfo for MO, which is an operand of MI.
-static OperandInfo getOperandInfo(const MachineInstr &MI,
-                                  const MachineOperand &MO,
+/// Return the OperandInfo for MO.
+static OperandInfo getOperandInfo(const MachineOperand &MO,
                                   const MachineRegisterInfo *MRI) {
+  const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   assert(RVV && "Could not find MI in PseudoTable");
@@ -887,13 +887,10 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     // Instructions like reductions may use a vector register as a scalar
     // register. In this case, we should treat it like a scalar register which
     // does not impact the decision on whether to optimize VL.
+    // TODO: Treat it like a scalar register instead of bailing out.
     if (isVectorOpUsedAsScalarOp(UserOp)) {
-      [[maybe_unused]] Register R = UserOp.getReg();
-      [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-      assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-             "Expect LMUL 1 register class for vector as scalar operands!");
-      LLVM_DEBUG(dbgs() << "    Use this operand as a scalar operand\n");
-      continue;
+      CanReduceVL = false;
+      break;
     }
 
     if (mayReadPastVL(UserMI)) {
@@ -936,14 +933,8 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     }
 
     // The SEW and LMUL of destination and source registers need to match.
-
-    // We know that MI DEF is a vector register, because that was the guard
-    // to call this function.
-    assert(isVectorRegClass(UserMI.getOperand(0).getReg(), MRI) &&
-           "Expected DEF and USE to be vector registers");
-
-    OperandInfo ConsumerInfo = getOperandInfo(UserMI, UserOp, MRI);
-    OperandInfo ProducerInfo = getOperandInfo(MI, MI.getOperand(0), MRI);
+    OperandInfo ConsumerInfo = getOperandInfo(UserOp, MRI);
+    OperandInfo ProducerInfo = getOperandInfo(MI.getOperand(0), MRI);
     if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown() ||
         !OperandInfo::EMULAndEEWAreEqual(ConsumerInfo, ProducerInfo)) {
       LLVM_DEBUG(dbgs() << "    Abort due to incompatible or unknown "
