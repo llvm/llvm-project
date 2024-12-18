@@ -322,7 +322,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                    // additional parens in replacement.
                    optionally(hasParent(stmt().bind("parentStmt"))),
                    unless(isInTemplateInstantiation()),
-                   unless(IsInCompilerGeneratedFunction))
+                   unless(IsInCompilerGeneratedFunction),
+                   unless(!CheckConversionToBool)
                    .bind("implicitCastToBool")),
       this);
 
@@ -348,33 +349,32 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               unless(hasParent(
                   binaryOperator(anyOf(BoolComparison, BoolXor,
                                        BoolOpAssignment, BitfieldAssignment)))),
-              implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
               anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
                     anything()),
               unless(isInTemplateInstantiation()),
-              unless(IsInCompilerGeneratedFunction))),
+              unless(IsInCompilerGeneratedFunction),
+              unless(!CheckConversionFromBool))
+              .bind("implicitCastFromBool")),
       this);
 }
 
 void ImplicitBoolConversionCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if(CheckConversionsToBool){
+  
   if (const auto *CastToBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
     return handleCastToBool(CastToBool, Parent, *Result.Context);
   }
-  }
-  if(CheckConversionsFromBool ){
-    if (const auto *CastFromBool =
+  if (const auto *CastFromBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool")) {
       const auto *NextImplicitCast =
         Result.Nodes.getNodeAs<ImplicitCastExpr>("furtherImplicitCast");
       return handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
   }
-}
+
 }
 
 void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
