@@ -31,7 +31,7 @@
 
 using namespace llvm;
 
-static constexpr StringRef knownBundleName(unsigned BundleTagID) {
+static StringRef knownBundleName(unsigned BundleTagID) {
   switch (BundleTagID) {
   case LLVMContext::OB_deopt:
     return "deopt";
