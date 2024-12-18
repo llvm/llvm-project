@@ -290,6 +290,9 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_clear(&flag, memory_order_seq_cst);
   (int)__atomic_clear(&flag, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
   __atomic_clear(0x8000, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  __atomic_clear(&flag, memory_order_consume); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __atomic_clear(&flag, memory_order_acquire); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __atomic_clear(&flag, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
 
   __c11_atomic_init(ci, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
   __c11_atomic_store(ci, 0, memory_order_release); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
