@@ -448,7 +448,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
   MODULE_NAME _mlir
   ADD_TO_PARENT MLIRPythonSources.Core
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
-  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     MainModule.cpp
     IRAffine.cpp
@@ -464,7 +463,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     Globals.h
     IRModule.h
     Pass.h
-    NanobindUtils.h
+    PybindUtils.h
     Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
