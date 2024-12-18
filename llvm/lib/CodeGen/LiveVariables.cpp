@@ -216,9 +216,7 @@ void LiveVariables::HandleVirtRegDef(Register Reg, MachineInstr &MI) {
 /// FindLastPartialDef - Return the last partial def of the specified register.
 /// Also returns the sub-registers that're defined by the instruction.
 MachineInstr *
-LiveVariables::FindLastPartialDef(Register Reg,
-                                  SmallSet<unsigned, 4> &PartDefRegs) {
-  unsigned LastDefReg = 0;
+LiveVariables::FindLastPartialDef(Register Reg) {
   unsigned LastDefDist = 0;
   MachineInstr *LastDef = nullptr;
   for (MCPhysReg SubReg : TRI->subregs(Reg)) {
@@ -227,7 +225,6 @@ LiveVariables::FindLastPartialDef(Register Reg,
       continue;
     unsigned Dist = DistanceMap[Def];
     if (Dist > LastDefDist) {
-      LastDefReg  = SubReg;
       LastDef     = Def;
       LastDefDist = Dist;
     }
@@ -236,16 +233,6 @@ LiveVariables::FindLastPartialDef(Register Reg,
   if (!LastDef)
     return nullptr;
 
-  PartDefRegs.insert(LastDefReg);
-  for (MachineOperand &MO : LastDef->all_defs()) {
-    if (MO.getReg() == 0)
-      continue;
-    Register DefReg = MO.getReg();
-    if (TRI->isSubRegister(Reg, DefReg)) {
-      for (MCPhysReg SubReg : TRI->subregs_inclusive(DefReg))
-        PartDefRegs.insert(SubReg);
-    }
-  }
   return LastDef;
 }
 
@@ -264,30 +251,11 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
     // ...
     //    = EAX
     // All of the sub-registers must have been defined before the use of Reg!
-    SmallSet<unsigned, 4> PartDefRegs;
-    MachineInstr *LastPartialDef = FindLastPartialDef(Reg, PartDefRegs);
+    MachineInstr *LastPartialDef = FindLastPartialDef(Reg);
     // If LastPartialDef is NULL, it must be using a livein register.
     if (LastPartialDef) {
       LastPartialDef->addOperand(MachineOperand::CreateReg(Reg, true/*IsDef*/,
                                                            true/*IsImp*/));
-      PhysRegDef[Reg] = LastPartialDef;
-      SmallSet<unsigned, 8> Processed;
-      for (MCPhysReg SubReg : TRI->subregs(Reg)) {
-        if (Processed.count(SubReg))
-          continue;
-        if (PartDefRegs.count(SubReg))
-          continue;
-
-        // Check if SubReg is defined at LastPartialDef.
-        bool IsDefinedHere = LastPartialDef->modifiesRegister(SubReg, TRI);
-        // This part of Reg was defined before the last partial def. It's killed
-        // here.
-        LastPartialDef->addOperand(
-            MachineOperand::CreateReg(SubReg, IsDefinedHere, true /*IsImp*/));
-        PhysRegDef[SubReg] = LastPartialDef;
-        for (MCPhysReg SS : TRI->subregs(SubReg))
-          Processed.insert(SS);
-      }
     }
   } else if (LastDef && !PhysRegUse[Reg] &&
              !LastDef->findRegisterDefOperand(Reg, /*TRI=*/nullptr))
