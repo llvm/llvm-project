@@ -53,7 +53,7 @@ define i64 @memcpy_constant_arg_ptr_to_alloca_load_atomic(ptr addrspace(4) noali
 ; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_load_atomic(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i64], align 8, addrspace(5)
 ; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 8 dereferenceable(256) [[ALLOCA]], ptr addrspace(4) noundef align 8 dereferenceable(256) [[ARG:%.*]], i64 256, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [32 x i64], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i64], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i64, ptr addrspace(5) [[GEP]] syncscope("somescope") acquire, align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -101,7 +101,7 @@ define amdgpu_kernel void @memcpy_constant_byref_arg_ptr_to_alloca_too_many_byte
 ; CHECK-LABEL: @memcpy_constant_byref_arg_ptr_to_alloca_too_many_bytes(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(5)
 ; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 4 dereferenceable(31) [[ALLOCA]], ptr addrspace(4) noundef align 4 dereferenceable(31) [[ARG:%.*]], i64 31, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [32 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(5) [[GEP]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD]], ptr addrspace(1) [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret void
@@ -120,7 +120,7 @@ define amdgpu_kernel void @memcpy_constant_intrinsic_ptr_to_alloca(ptr addrspace
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(5)
 ; CHECK-NEXT:    [[KERNARG_SEGMENT_PTR:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 4 dereferenceable(32) [[ALLOCA]], ptr addrspace(4) noundef align 16 dereferenceable(32) [[KERNARG_SEGMENT_PTR]], i64 32, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [32 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(5) [[GEP]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD]], ptr addrspace(1) [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret void

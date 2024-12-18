@@ -68,6 +68,8 @@ public:
 
   uint32_t GetAddressByteSize() const override;
 
+  lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
+
   void ParseSymtab(lldb_private::Symtab &symtab) override;
 
   bool IsStripped() override;
@@ -99,6 +101,11 @@ protected:
   static lldb::WritableDataBufferSP
   MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
                       uint64_t Offset);
+
+private:
+  bool CreateBinary();
+
+  std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILE_H

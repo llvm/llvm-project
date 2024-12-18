@@ -420,6 +420,7 @@ end
   [-fimplicit-none-type-never]
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
+* `UNSIGNED` type (-funsigned)
 
 ### Extensions and legacy features deliberately not supported
 

@@ -557,7 +557,7 @@ define void @histogram_array_3op_gep(i64 noundef %N) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [1048576 x i32], ptr @idx_array, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1048576 x i32], ptr @idx_array, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext <vscale x 4 x i32> [[WIDE_LOAD1]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [1048576 x i32], ptr @data_array, i64 0, <vscale x 4 x i64> [[TMP14]]
@@ -573,10 +573,10 @@ define void @histogram_array_3op_gep(i64 noundef %N) #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1048576 x i32], ptr @idx_array, i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1048576 x i32], ptr @idx_array, i64 0, i64 [[IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[TMP9]] to i64
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw [1048576 x i32], ptr @data_array, i64 0, i64 [[IDXPROM5]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [1048576 x i32], ptr @data_array, i64 0, i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP10]], 1
 ; CHECK-NEXT:    store i32 [[INC]], ptr [[ARRAYIDX6]], align 4
