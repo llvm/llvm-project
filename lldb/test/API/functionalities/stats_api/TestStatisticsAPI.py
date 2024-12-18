@@ -120,6 +120,7 @@ class TestStatsAPI(TestBase):
         self.assertNotIn("_regexp-bt", command_stats)
 
     @add_test_categories(["dwo"])
+    @skipIf(bugnumber="rdar://141613283")
     def test_command_stats_force(self):
         """
         Test reporting all pssible debug info stats by force loading all debug
