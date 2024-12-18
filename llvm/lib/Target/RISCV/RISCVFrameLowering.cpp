@@ -2081,10 +2081,9 @@ TargetStackID::Value RISCVFrameLowering::getStackIDForScalableVectors() const {
 }
 
 // Synthesize the probe loop.
-MachineBasicBlock *RISCVFrameLowering::emitStackProbeInline(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, DebugLoc DL, Register TargetReg,
-    bool IsRVV) const {
+static void emitStackProbeInline(MachineFunction &MF, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                                 Register TargetReg, bool IsRVV) {
   assert(TargetReg != RISCV::X2 && "New top of stack cannot already be in SP");
 
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -2152,8 +2151,6 @@ MachineBasicBlock *RISCVFrameLowering::emitStackProbeInline(
   MBB.addSuccessor(LoopTestMBB);
   // Update liveins.
   fullyRecomputeLiveIns({ExitMBB, LoopTestMBB});
-
-  return ExitMBB;
 }
 
 void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
@@ -2163,7 +2160,7 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
   // to traverse the block while potentially creating more blocks.
   SmallVector<MachineInstr *, 4> ToReplace;
   for (MachineInstr &MI : MBB) {
-    int Opc = MI.getOpcode();
+    unsigned Opc = MI.getOpcode();
     if (Opc == RISCV::PROBED_STACKALLOC ||
         Opc == RISCV::PROBED_STACKALLOC_RVV) {
       ToReplace.push_back(&MI);

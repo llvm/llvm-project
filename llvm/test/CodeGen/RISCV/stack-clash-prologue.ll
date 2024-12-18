@@ -538,4 +538,72 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
   ret i32 %c
 }
 
+; alloca < probe_size, align < probe_size, alloca + align > probe_size
+define i32 @f10(i64 %i) local_unnamed_addr #0 {
+; RV64I-LABEL: f10:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    addi s0, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa s0, 0
+; RV64I-NEXT:    addi sp, sp, -2048
+; RV64I-NEXT:    addi sp, sp, -1040
+; RV64I-NEXT:    andi sp, sp, -1024
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    addi a1, sp, 1024
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    sw a1, 0(a0)
+; RV64I-NEXT:    lw a0, 1024(sp)
+; RV64I-NEXT:    addi sp, s0, -2032
+; RV64I-NEXT:    .cfi_def_cfa sp, 2032
+; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: f10:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 2024(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    addi s0, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-NEXT:    addi sp, sp, -2048
+; RV32I-NEXT:    addi sp, sp, -1040
+; RV32I-NEXT:    andi sp, sp, -1024
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    slli a0, a0, 2
+; RV32I-NEXT:    addi a1, sp, 1024
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    sw a1, 0(a0)
+; RV32I-NEXT:    lw a0, 1024(sp)
+; RV32I-NEXT:    addi sp, s0, -2032
+; RV32I-NEXT:    .cfi_def_cfa sp, 2032
+; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+  %a = alloca i32, i32 1000, align 1024
+  %b = getelementptr inbounds i32, ptr %a, i64 %i
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
+  ret i32 %c
+}
+
 attributes #0 = { "probe-stack"="inline-asm" }
