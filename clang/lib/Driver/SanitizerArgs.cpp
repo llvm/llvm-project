@@ -248,48 +248,76 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
   return Kinds;
 }
 
-// Computes the sanitizer mask based on the default plus opt-in (if supported)
-// minus opt-out.
+// Computes the sanitizer mask as:
+//     Default + Arguments (in or out)
+// with arguments parsed from left to right.
+//
+// Error messages are printed if the AlwaysIn or AlwaysOut invariants are
+// violated, but the caller must enforce these invariants themselves.
 static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
-                  bool DiagnoseErrors, SanitizerMask Supported,
-                  SanitizerMask Default, int OptInID, int OptOutID) {
-  SanitizerMask Remove; // During the loop below, the accumulated set of
-                        // sanitizers disabled by the current sanitizer
-                        // argument or any argument after it.
-  SanitizerMask Kinds;
-  SanitizerMask SupportedWithGroups = setGroupBits(Supported);
+                  bool DiagnoseErrors, SanitizerMask Default,
+                  SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
+                  int OptOutID) {
+  assert(!(AlwaysIn & AlwaysOut) &&
+         "parseSanitizeArgs called with contradictory in/out requirements");
 
-  for (const llvm::opt::Arg *Arg : llvm::reverse(Args)) {
+  SanitizerMask Output = Default;
+  // Keep track of which violations we have already reported, to avoid
+  // duplicate error messages.
+  SanitizerMask DiagnosedAlwaysInViolations;
+  SanitizerMask DiagnosedAlwaysOutViolations;
+  for (const auto *Arg : Args) {
     if (Arg->getOption().matches(OptInID)) {
-      Arg->claim();
-      SanitizerMask Add = parseArgValues(D, Arg, true);
-      Add &= ~Remove;
-      SanitizerMask InvalidValues = Add & ~SupportedWithGroups;
-      if (InvalidValues && DiagnoseErrors) {
-        SanitizerSet S;
-        S.Mask = InvalidValues;
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << Arg->getSpelling() << toString(S);
+      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
+      // Report error if user explicitly tries to opt-in to an always-out
+      // sanitizer.
+      if (SanitizerMask KindsToDiagnose =
+              Add & AlwaysOut & ~DiagnosedAlwaysOutViolations) {
+        if (DiagnoseErrors) {
+          SanitizerSet SetToDiagnose;
+          SetToDiagnose.Mask |= KindsToDiagnose;
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << Arg->getSpelling() << toString(SetToDiagnose);
+          DiagnosedAlwaysOutViolations |= KindsToDiagnose;
+        }
       }
-      Kinds |= expandSanitizerGroups(Add) & ~Remove;
-    } else if (Arg->getOption().matches(OptOutID)) {
+      Output |= expandSanitizerGroups(Add);
       Arg->claim();
-      Remove |= expandSanitizerGroups(parseArgValues(D, Arg, DiagnoseErrors));
+    } else if (Arg->getOption().matches(OptOutID)) {
+      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
+      // Report error if user explicitly tries to opt-out of an always-in
+      // sanitizer.
+      if (SanitizerMask KindsToDiagnose =
+              Remove & AlwaysIn & ~DiagnosedAlwaysInViolations) {
+        if (DiagnoseErrors) {
+          SanitizerSet SetToDiagnose;
+          SetToDiagnose.Mask |= KindsToDiagnose;
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << Arg->getSpelling() << toString(SetToDiagnose);
+          DiagnosedAlwaysInViolations |= KindsToDiagnose;
+        }
+      }
+      Output &= ~expandSanitizerGroups(Remove);
+      Arg->claim();
     }
   }
 
-  // Apply default behavior.
-  Kinds |= Default & ~Remove;
-
-  return Kinds;
+  return Output;
 }
 
 static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
                                            const llvm::opt::ArgList &Args,
                                            bool DiagnoseErrors) {
-  return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingSupported,
-                           TrappingDefault, options::OPT_fsanitize_trap_EQ,
+  SanitizerMask AlwaysTrap; // Empty
+  SanitizerMask NeverTrap = ~(setGroupBits(TrappingSupported));
+
+  // N.B. We do *not* enforce NeverTrap. This maintains the behavior of
+  // '-fsanitize=undefined -fsanitize-trap=undefined'
+  // (clang/test/Driver/fsanitize.c ), which is that vptr is not enabled at all
+  // (not even in recover mode) in order to avoid the need for a ubsan runtime.
+  return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
+                           NeverTrap, options::OPT_fsanitize_trap_EQ,
                            options::OPT_fno_sanitize_trap_EQ);
 }
 
@@ -657,44 +685,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // default in ASan?
 
   // Parse -f(no-)?sanitize-recover flags.
-  SanitizerMask RecoverableKinds = RecoverableByDefault | AlwaysRecoverable;
-  SanitizerMask DiagnosedUnrecoverableKinds;
-  SanitizerMask DiagnosedAlwaysRecoverableKinds;
-  for (const auto *Arg : Args) {
-    if (Arg->getOption().matches(options::OPT_fsanitize_recover_EQ)) {
-      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
-      // Report error if user explicitly tries to recover from unrecoverable
-      // sanitizer.
-      if (SanitizerMask KindsToDiagnose =
-              Add & Unrecoverable & ~DiagnosedUnrecoverableKinds) {
-        SanitizerSet SetToDiagnose;
-        SetToDiagnose.Mask |= KindsToDiagnose;
-        if (DiagnoseErrors)
-          D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
-        DiagnosedUnrecoverableKinds |= KindsToDiagnose;
-      }
-      RecoverableKinds |= expandSanitizerGroups(Add);
-      Arg->claim();
-    } else if (Arg->getOption().matches(options::OPT_fno_sanitize_recover_EQ)) {
-      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
-      // Report error if user explicitly tries to disable recovery from
-      // always recoverable sanitizer.
-      if (SanitizerMask KindsToDiagnose =
-              Remove & AlwaysRecoverable & ~DiagnosedAlwaysRecoverableKinds) {
-        SanitizerSet SetToDiagnose;
-        SetToDiagnose.Mask |= KindsToDiagnose;
-        if (DiagnoseErrors)
-          D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
-        DiagnosedAlwaysRecoverableKinds |= KindsToDiagnose;
-      }
-      RecoverableKinds &= ~expandSanitizerGroups(Remove);
-      Arg->claim();
-    }
-  }
-  RecoverableKinds &= Kinds;
+  SanitizerMask RecoverableKinds = parseSanitizeArgs(
+      D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
+      Unrecoverable, options::OPT_fsanitize_recover_EQ,
+      options::OPT_fno_sanitize_recover_EQ);
+  RecoverableKinds |= AlwaysRecoverable;
   RecoverableKinds &= ~Unrecoverable;
+  RecoverableKinds &= Kinds;
 
   TrappingKinds &= Kinds;
   RecoverableKinds &= ~TrappingKinds;

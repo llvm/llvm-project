@@ -1,6 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
  integer :: m(100)
+ integer, constant :: c(10)
  integer, parameter :: p(5) = [1,2,3,4,5]
  contains
   attributes(device) subroutine devsub
@@ -41,6 +42,12 @@ module m
     integer, shared :: s(10)
     i = threadIdx%x
     a(i) = s(10) ! ok, a is device and s is shared
+  end subroutine
+
+  attributes(global) subroutine cstarray(a)
+    integer, device :: a(10)
+    i = threadIdx%x
+    a(i) = c(10) ! ok, a is device and c is constant
   end subroutine
 end
 
