@@ -10349,10 +10349,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   if (LVL.hasStructVectorCall()) {
-    constexpr StringLiteral FailureMessage(
-        "Auto-vectorization of calls that return struct types is not yet "
-        "supported");
-    reportVectorizationFailure(FailureMessage, FailureMessage,
+    reportVectorizationFailure("Auto-vectorization of calls that return struct "
+                               "types is not yet supported",
                                "StructCallVectorizationUnsupported", ORE, L);
     return false;
   }

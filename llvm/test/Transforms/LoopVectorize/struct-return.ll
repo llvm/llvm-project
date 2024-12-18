@@ -114,6 +114,35 @@ exit:
   ret void
 }
 
+; TODO: Allow mixed-struct type vectorization and mark overflow intrinsics as trivially vectorizable.
+; CHECK-REMARKS:         remark: {{.*}} loop not vectorized: call instruction cannot be vectorized
+define void @test_overflow_intrinsic(ptr noalias readonly %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+; CHECK-LABEL: define void @test_overflow_intrinsic
+; CHECK-NOT:   vector.body:
+; CHECK-NOT:   @llvm.sadd.with.overflow.v{{.+}}i32
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
+  %in_val = load i32, ptr %arrayidx, align 4
+  %call = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %in_val, i32 %in_val)
+  %extract_ret = extractvalue { i32, i1 } %call, 0
+  %extract_overflow = extractvalue { i32, i1 } %call, 1
+  %zext_overflow = zext i1 %extract_overflow to i8
+  %arrayidx2 = getelementptr inbounds i32, ptr %out_a, i64 %iv
+  store i32 %extract_ret, ptr %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds i8, ptr %out_b, i64 %iv
+  store i8 %zext_overflow, ptr %arrayidx4, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 ; Negative test. Widening structs with mixed element types is not supported.
 ; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
 define void @negative_mixed_element_type_struct_return(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -172,27 +201,54 @@ exit:
   ret void
 }
 
-; TODO: Allow mixed-struct type vectorization and mark overflow intrinsics as trivially vectorizable.
-; CHECK-REMARKS:         remark: {{.*}} loop not vectorized: call instruction cannot be vectorized
-define void @test_overflow_intrinsic(ptr noalias readonly %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
-; CHECK-LABEL: define void @test_overflow_intrinsic
+; Negative test. Nested homogeneous structs are not supported.
+; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
+define void @negative_nested_struct(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+; CHECK-LABEL: define void @negative_nested_struct
 ; CHECK-NOT:   vector.body:
-; CHECK-NOT:   @llvm.sadd.with.overflow.v{{.+}}i32
 entry:
   br label %for.body
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
-  %in_val = load i32, ptr %arrayidx, align 4
-  %call = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %in_val, i32 %in_val)
-  %extract_ret = extractvalue { i32, i1 } %call, 0
-  %extract_overflow = extractvalue { i32, i1 } %call, 1
-  %zext_overflow = zext i1 %extract_overflow to i8
-  %arrayidx2 = getelementptr inbounds i32, ptr %out_a, i64 %iv
-  store i32 %extract_ret, ptr %arrayidx2, align 4
-  %arrayidx4 = getelementptr inbounds i8, ptr %out_b, i64 %iv
-  store i8 %zext_overflow, ptr %arrayidx4, align 4
+  %in_val = load float, ptr %arrayidx, align 4
+  %call = tail call { { float, float } } @foo_nested_struct(float %in_val) #0
+  %extract_inner = extractvalue { { float, float } } %call, 0
+  %extract_a = extractvalue { float, float } %extract_inner, 0
+  %extract_b = extractvalue { float, float } %extract_inner, 1
+  %arrayidx2 = getelementptr inbounds float, ptr %out_a, i64 %iv
+  store float %extract_a, ptr %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %out_b, i64 %iv
+  store float %extract_b, ptr %arrayidx4, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Negative test. Homogeneous structs of arrays are not supported.
+; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
+define void @negative_struct_array_elements(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+; CHECK-LABEL: define void @negative_struct_array_elements
+; CHECK-NOT:   vector.body:
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
+  %in_val = load float, ptr %arrayidx, align 4
+  %call = tail call { [2 x float] } @foo_arrays(float %in_val) #0
+  %extract_inner = extractvalue { [2 x float] } %call, 0
+  %extract_a = extractvalue [2 x float] %extract_inner, 0
+  %extract_b = extractvalue [2 x float] %extract_inner, 1
+  %arrayidx2 = getelementptr inbounds float, ptr %out_a, i64 %iv
+  store float %extract_a, ptr %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %out_b, i64 %iv
+  store float %extract_b, ptr %arrayidx4, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %for.body
@@ -254,6 +310,8 @@ declare { float, float } @foo(float)
 declare { double, double } @bar(double)
 declare { float, i32 } @baz(float)
 declare %named_struct @bar_named(double)
+declare { { float, float } } @foo_nested_struct(float)
+declare { [2 x float] } @foo_arrays(float)
 
 declare { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float>)
 declare { <2 x double>, <2 x double> } @fixed_vec_bar(<2 x double>)
