@@ -92,8 +92,7 @@ public:
   /// An optional listener that should be notified about IR modifications.
   RewriterBase::Listener *listener = nullptr;
 
-  /// Whether this should fold while greedily rewriting. This also disables
-  /// CSE'ing constants.
+  /// Whether this should fold while greedily rewriting.
   bool fold = true;
 
   /// If set to "true", constants are CSE'd (even across multiple regions that
@@ -131,11 +130,10 @@ applyPatternsGreedily(Region &region, const FrozenRewritePatternSet &patterns,
 /// Same as `applyPatternsAndGreedily` above with folding.
 /// FIXME: Remove this once transition to above is complieted.
 LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
-inline LogicalResult
-applyPatternsAndFoldGreedily(Region &region,
-                             const FrozenRewritePatternSet &patterns,
-                             GreedyRewriteConfig config = GreedyRewriteConfig(),
-                             bool *changed = nullptr) {
+inline LogicalResult applyPatternsAndFoldGreedily(
+    Region &region, const FrozenRewritePatternSet &patterns,
+    GreedyRewriteConfig config = GreedyRewriteConfig(),
+    bool *changed = nullptr) {
   config.fold = true;
   return applyPatternsGreedily(region, patterns, config, changed);
 }
@@ -183,11 +181,10 @@ applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
 /// Same as `applyPatternsGreedily` above with folding.
 /// FIXME: Remove this once transition to above is complieted.
 LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
-inline LogicalResult
-applyPatternsAndFoldGreedily(Operation *op,
-                             const FrozenRewritePatternSet &patterns,
-                             GreedyRewriteConfig config = GreedyRewriteConfig(),
-                             bool *changed = nullptr) {
+inline LogicalResult applyPatternsAndFoldGreedily(
+    Operation *op, const FrozenRewritePatternSet &patterns,
+    GreedyRewriteConfig config = GreedyRewriteConfig(),
+    bool *changed = nullptr) {
   config.fold = true;
   return applyPatternsGreedily(op, patterns, config, changed);
 }
@@ -207,14 +204,14 @@ applyPatternsAndFoldGreedily(Operation *op,
 /// regardless of `strictMode`).
 ///
 /// In addition to strictness, a region scope can be specified. Only ops within
-/// the scope are simplified. This is similar to `applyPatternsAndFoldGreedily`,
+/// the scope are simplified. This is similar to `applyPatternsGreedily`,
 /// where only ops within the given region/op are simplified by default. If no
 /// scope is specified, it is assumed to be the first common enclosing region of
 /// the given ops.
 ///
 /// Note that ops in `ops` could be erased as result of folding, becoming dead,
 /// or via pattern rewrites. If more far reaching simplification is desired,
-/// `applyPatternsAndFoldGreedily` should be used.
+/// `applyPatternsGreedily` should be used.
 ///
 /// Returns "success" if the iterative process converged (i.e., fixpoint was
 /// reached) and no more patterns can be matched. `changed` is set to "true" if
@@ -227,12 +224,12 @@ applyOpPatternsGreedily(ArrayRef<Operation *> ops,
                         bool *changed = nullptr, bool *allErased = nullptr);
 /// Same as `applyOpPatternsGreedily` with folding.
 /// FIXME: Remove this once transition to above is complieted.
-LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
+LLVM_DEPRECATED("Use applyOpPatternsGreedily() instead", "applyOpPatternsGreedily")
 inline LogicalResult
 applyOpPatternsAndFold(ArrayRef<Operation *> ops,
-                       const FrozenRewritePatternSet &patterns,
-                       GreedyRewriteConfig config = GreedyRewriteConfig(),
-                       bool *changed = nullptr, bool *allErased = nullptr) {
+                        const FrozenRewritePatternSet &patterns,
+                        GreedyRewriteConfig config = GreedyRewriteConfig(),
+                        bool *changed = nullptr, bool *allErased = nullptr) {
   config.fold = true;
   return applyOpPatternsGreedily(ops, patterns, config, changed, allErased);
 }

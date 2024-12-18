@@ -38,18 +38,23 @@ func.func @test_dont_reorder_constants() -> (i32, i32, i32) {
   return %0, %1, %2 : i32, i32, i32
 }
 
-func.func @test_dont_fold() -> (i32, i32, i32, i32, i32, i32) {
+// CHECK-LABEL: test_fold_nofold_nocse
+// NOCSE-LABEL: test_fold_nofold_nocse
+// NOFOLD-LABEL: test_fold_nofold_nocse
+func.func @test_fold_nofold_nocse() -> (i32, i32, i32, i32, i32, i32) {
   // Test either not folding or deduping constants.
 
-  // CHECK-LABEL: test_dont_fold
-  // CHECK-NOT: arith.constant 0
+  // Testing folding. There should be only 4 constants here.
+  // CHECK-NOT: arith.constant
   // CHECK-DAG: %[[CST:.+]] = arith.constant 0
   // CHECK-DAG: %[[CST:.+]] = arith.constant 1
   // CHECK-DAG: %[[CST:.+]] = arith.constant 2
   // CHECK-DAG: %[[CST:.+]] = arith.constant 3
+  // CHECK-NOT: arith.constant
   // CHECK-NEXT: return
 
-  // NOCSE-LABEL: test_dont_fold
+  // Testing not-CSE'ing. In this case we have the 3 original constants and 3
+  // produced by folding.
   // NOCSE-DAG: arith.constant 0 : i32
   // NOCSE-DAG: arith.constant 1 : i32
   // NOCSE-DAG: arith.constant 2 : i32
@@ -58,7 +63,10 @@ func.func @test_dont_fold() -> (i32, i32, i32, i32, i32, i32) {
   // NOCSE-DAG: arith.constant 3 : i32
   // NOCSE-NEXT: return
 
-  // NOFOLD-LABEL: test_dont_fold
+  // Testing not folding. In this case we just have the original constants.
+  // NOFOLD-DAG: %[[CST:.+]] = arith.constant 0
+  // NOFOLD-DAG: %[[CST:.+]] = arith.constant 1
+  // NOFOLD-DAG: %[[CST:.+]] = arith.constant 2
   // NOFOLD: arith.addi
   // NOFOLD: arith.addi
   // NOFOLD: arith.addi
@@ -71,3 +79,4 @@ func.func @test_dont_fold() -> (i32, i32, i32, i32, i32, i32) {
   %2 = arith.addi %c2, %c1 : i32
   return %0, %1, %2, %c0, %c1, %c2 : i32, i32, i32, i32, i32, i32
 }
+
