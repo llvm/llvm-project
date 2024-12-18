@@ -42,7 +42,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -61,8 +60,6 @@ namespace llvm {
 class AAResults;
 class NodeSet;
 class SMSchedule;
-class SwingSchedulerDDGEdge;
-class SwingSchedulerDDG;
 
 extern cl::opt<bool> SwpEnableCopyToPhi;
 extern cl::opt<int> SwpForceIssueWidth;
