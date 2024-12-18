@@ -4699,7 +4699,11 @@ public:
                                   llvm::Type *Ty1, bool Extract,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   const CallExpr *E, const char *name);
-  llvm::Value *EmitFP8NeonFDOTCall(unsigned IID, bool ExtendLane,
+  llvm::Value *EmitFP8NeonFDOTCall(unsigned IID, bool ExtendLaneArg,
+                                   llvm::Type *RetTy,
+                                   SmallVectorImpl<llvm::Value *> &Ops,
+                                   const CallExpr *E, const char *name);
+  llvm::Value *EmitFP8NeonFMLACall(unsigned IID, bool ExtendLaneArg,
                                    llvm::Type *RetTy,
                                    SmallVectorImpl<llvm::Value *> &Ops,
                                    const CallExpr *E, const char *name);

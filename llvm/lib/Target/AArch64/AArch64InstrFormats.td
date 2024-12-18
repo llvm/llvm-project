@@ -9105,7 +9105,7 @@ class BaseSIMDThreeSameVectorIndexB<bit Q, bit U, bits<2> sz, bits<4> opc,
                                     RegisterOperand RegType,
                                     RegisterOperand RegType_lo>
   : BaseSIMDIndexedTied<Q, U, 0b0, sz, opc,
-                        RegType, RegType, RegType_lo, VectorIndexB,
+                        RegType, RegType, RegType_lo, VectorIndexB32b_timm,
                         asm, "", dst_kind, ".16b", ".b", []> {
 
   // idx = H:L:M
@@ -9114,14 +9114,24 @@ class BaseSIMDThreeSameVectorIndexB<bit Q, bit U, bits<2> sz, bits<4> opc,
   let Inst{21-19} = idx{2-0};
 }
 
-multiclass SIMDThreeSameVectorMLAIndex<bit Q, string asm> {
-  def v8f16 : BaseSIMDThreeSameVectorIndexB<Q, 0b0, 0b11, 0b0000, asm, ".8h",
-                                            V128, V128_0to7>;
+multiclass SIMDThreeSameVectorMLAIndex<bit Q, string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v8f16 : BaseSIMDThreeSameVectorIndexB<Q, 0b0, 0b11, 0b0000, asm, ".8h",
+                                              V128, V128_0to7>;
+  }
+
+  def : Pat<(v8f16 (op (v8f16 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128_0to7:$Rm), VectorIndexB32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v8f16) $Rd, $Rn, $Rm, $Idx)>;
 }
 
-multiclass SIMDThreeSameVectorMLALIndex<bit Q, bits<2> sz, string asm> {
-  def v4f32 : BaseSIMDThreeSameVectorIndexB<Q, 0b1, sz, 0b1000, asm, ".4s",
-                                            V128, V128_0to7>;
+multiclass SIMDThreeSameVectorMLALIndex<bit Q, bits<2> sz, string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v4f32 : BaseSIMDThreeSameVectorIndexB<Q, 0b1, sz, 0b1000, asm, ".4s",
+                                              V128, V128_0to7>;
+  }
+
+  def : Pat<(v4f32 (op (v4f32 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128_0to7:$Rm), VectorIndexB32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v4f32) $Rd, $Rn, $Rm, $Idx)>;
 }
 
 //----------------------------------------------------------------------------
