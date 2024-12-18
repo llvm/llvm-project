@@ -296,64 +296,7 @@ public:
   void VisitCXXConstructExpr(const CXXConstructExpr *E);
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
   void VisitLambdaExpr(LambdaExpr *E);
-  void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
-    ASTContext &Ctx = CGF.getContext();
-    CIRGenFunction::SourceLocRAIIObject locRAIIObject{
-        CGF, CGF.getLoc(E->getSourceRange())};
-    // Emit an array containing the elements.  The array is externally
-    // destructed if the std::initializer_list object is.
-    LValue Array = CGF.emitLValue(E->getSubExpr());
-    assert(Array.isSimple() && "initializer_list array not a simple lvalue");
-    Address ArrayPtr = Array.getAddress();
-
-    const ConstantArrayType *ArrayType =
-        Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
-    assert(ArrayType && "std::initializer_list constructed from non-array");
-
-    RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
-    RecordDecl::field_iterator Field = Record->field_begin();
-    assert(Field != Record->field_end() &&
-           Ctx.hasSameType(Field->getType()->getPointeeType(),
-                           ArrayType->getElementType()) &&
-           "Expected std::initializer_list first field to be const E *");
-    // Start pointer.
-    auto loc = CGF.getLoc(E->getSourceRange());
-    AggValueSlot Dest = EnsureSlot(loc, E->getType());
-    LValue DestLV = CGF.makeAddrLValue(Dest.getAddress(), E->getType());
-    LValue Start =
-        CGF.emitLValueForFieldInitialization(DestLV, *Field, Field->getName());
-    mlir::Value ArrayStart = ArrayPtr.emitRawPointer();
-    CGF.emitStoreThroughLValue(RValue::get(ArrayStart), Start);
-    ++Field;
-    assert(Field != Record->field_end() &&
-           "Expected std::initializer_list to have two fields");
-
-    auto Builder = CGF.getBuilder();
-
-    auto sizeOp = Builder.getConstInt(loc, ArrayType->getSize());
-
-    mlir::Value Size = sizeOp.getRes();
-    Builder.getUIntNTy(ArrayType->getSizeBitWidth());
-    LValue EndOrLength =
-        CGF.emitLValueForFieldInitialization(DestLV, *Field, Field->getName());
-    if (Ctx.hasSameType(Field->getType(), Ctx.getSizeType())) {
-      // Length.
-      CGF.emitStoreThroughLValue(RValue::get(Size), EndOrLength);
-    } else {
-      // End pointer.
-      assert(Field->getType()->isPointerType() &&
-             Ctx.hasSameType(Field->getType()->getPointeeType(),
-                             ArrayType->getElementType()) &&
-             "Expected std::initializer_list second field to be const E *");
-
-      auto ArrayEnd =
-          Builder.getArrayElement(loc, loc, ArrayPtr.getPointer(),
-                                  ArrayPtr.getElementType(), Size, false);
-      CGF.emitStoreThroughLValue(RValue::get(ArrayEnd), EndOrLength);
-    }
-    assert(++Field == Record->field_end() &&
-           "Expected std::initializer_list to only have two fields");
-  }
+  void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E);
 
   void VisitExprWithCleanups(ExprWithCleanups *E);
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
@@ -951,6 +894,69 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 
     CurField++;
     captureInfo++;
+  }
+}
+
+void AggExprEmitter::VisitCXXStdInitializerListExpr(
+    CXXStdInitializerListExpr *E) {
+  ASTContext &Ctx = CGF.getContext();
+  CIRGenFunction::SourceLocRAIIObject locRAIIObject{
+      CGF, CGF.getLoc(E->getSourceRange())};
+  // Emit an array containing the elements.  The array is externally
+  // destructed if the std::initializer_list object is.
+  LValue Array = CGF.emitLValue(E->getSubExpr());
+  assert(Array.isSimple() && "initializer_list array not a simple lvalue");
+  Address ArrayPtr = Array.getAddress();
+
+  const ConstantArrayType *ArrayType =
+      Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
+  assert(ArrayType && "std::initializer_list constructed from non-array");
+
+  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl::field_iterator Field = Record->field_begin();
+  assert(Field != Record->field_end() &&
+         Ctx.hasSameType(Field->getType()->getPointeeType(),
+                         ArrayType->getElementType()) &&
+         "Expected std::initializer_list first field to be const E *");
+  const FieldDecl *StartField = *Field;
+  ++Field;
+  assert(Field != Record->field_end() &&
+         "Expected std::initializer_list to have two fields");
+  const FieldDecl *EndOrLengthField = *Field;
+  ++Field;
+  assert(Field == Record->field_end() &&
+         "Expected std::initializer_list to only have two fields");
+
+  // Start pointer.
+  auto loc = CGF.getLoc(E->getSourceRange());
+  AggValueSlot Dest = EnsureSlot(loc, E->getType());
+  LValue DestLV = CGF.makeAddrLValue(Dest.getAddress(), E->getType());
+  LValue Start = CGF.emitLValueForFieldInitialization(DestLV, StartField,
+                                                      StartField->getName());
+  mlir::Value ArrayStart = ArrayPtr.emitRawPointer();
+  CGF.emitStoreThroughLValue(RValue::get(ArrayStart), Start);
+
+  auto Builder = CGF.getBuilder();
+
+  auto sizeOp = Builder.getConstInt(loc, ArrayType->getSize());
+
+  mlir::Value Size = sizeOp.getRes();
+  LValue EndOrLength = CGF.emitLValueForFieldInitialization(
+      DestLV, EndOrLengthField, EndOrLengthField->getName());
+  if (Ctx.hasSameType(EndOrLengthField->getType(), Ctx.getSizeType())) {
+    // Length.
+    CGF.emitStoreThroughLValue(RValue::get(Size), EndOrLength);
+  } else {
+    // End pointer.
+    assert(EndOrLengthField->getType()->isPointerType() &&
+           Ctx.hasSameType(EndOrLengthField->getType()->getPointeeType(),
+                           ArrayType->getElementType()) &&
+           "Expected std::initializer_list second field to be const E *");
+
+    auto ArrayEnd =
+        Builder.getArrayElement(loc, loc, ArrayPtr.getPointer(),
+                                ArrayPtr.getElementType(), Size, false);
+    CGF.emitStoreThroughLValue(RValue::get(ArrayEnd), EndOrLength);
   }
 }
 
