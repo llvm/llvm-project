@@ -14261,11 +14261,15 @@ public:
     IsFinalized = true;
     unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewExtMask(ExtMask);
+    SmallVector<int> NewSubVectorsMask(SubVectorsMask);
     if (ScalarTyNumElements != 1) {
       assert(SLPReVec && "FixedVectorType is not expected.");
       transformScalarShuffleIndiciesToVector(ScalarTyNumElements, CommonMask);
       transformScalarShuffleIndiciesToVector(ScalarTyNumElements, NewExtMask);
       ExtMask = NewExtMask;
+      transformScalarShuffleIndiciesToVector(ScalarTyNumElements,
+                                             NewSubVectorsMask);
+      SubVectorsMask = NewSubVectorsMask;
     }
     if (Action) {
       Value *Vec = InVectors.front();
