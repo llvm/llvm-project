@@ -1118,7 +1118,7 @@ name: vred_vs1_vs2
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vs1_vs2
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVREDAND_VS_M1_E8 $noreg, %x, %x, 1, 3 /* e8 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vr = PseudoVREDAND_VS_M1_E8 $noreg, %x, %x, 1, 3 /* e8 */, 0
