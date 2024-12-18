@@ -191,7 +191,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
             Arg,
             LocationSize::precise(
                 LenCI->getZExtValue() *
-                DL.getTypeStoreSize(II->getArgOperand(1)->getType())),
+                DL.getTypeAllocSize(II->getArgOperand(1)->getType())),
             AATags);
       return MemoryLocation::getAfter(Arg, AATags);
 
