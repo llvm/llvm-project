@@ -313,6 +313,20 @@ CXString clang_getTypeSpelling(CXType CT) {
   return cxstring::createDup(OS.str());
 }
 
+CXString clang_getTypePrettyPrinted(CXType CT, CXPrintingPolicy cxPolicy) {
+  QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+
+  SmallString<64> Str;
+  llvm::raw_svector_ostream OS(Str);
+  PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+
+  T.print(OS, *UserPolicy);
+
+  return cxstring::createDup(OS.str());
+}
+
 CXType clang_getTypedefDeclUnderlyingType(CXCursor C) {
   using namespace cxcursor;
   CXTranslationUnit TU = cxcursor::getCursorTU(C);
