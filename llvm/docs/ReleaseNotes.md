@@ -70,6 +70,8 @@ Changes to the LLVM IR
   `llvm.load.relative`.
 * Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
+* A `load atomic` may now be used with vector types.
+
 Changes to LLVM infrastructure
 ------------------------------
 
