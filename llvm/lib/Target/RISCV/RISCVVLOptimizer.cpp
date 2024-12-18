@@ -801,6 +801,15 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSOF_M:
   case RISCV::VIOTA_M:
   case RISCV::VID_V:
+
+  // Vector Single-Width Saturating Add and Subtract
+  case RISCV::VSADDU_VI:
+  case RISCV::VSADDU_VV:
+  case RISCV::VSADDU_VX:
+  case RISCV::VSADD_VI:
+  case RISCV::VSADD_VV:
+  case RISCV::VSADD_VX:
+
     return true;
   }
 
@@ -872,7 +881,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
-  if (MI.getNumDefs() != 1)
+  if (MI.getNumExplicitDefs() != 1)
     return false;
 
   // If we're not using VLMAX, then we need to be careful whether we are using
