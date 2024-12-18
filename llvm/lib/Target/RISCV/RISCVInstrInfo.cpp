@@ -430,7 +430,9 @@ void RISCVInstrInfo::copyPhysRegVector(
     if (UseVMV) {
       const MCInstrDesc &Desc = DefMBBI->getDesc();
       MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
-      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+      unsigned Log2SEW =
+          DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc)).getImm();
+      MIB.addImm(Log2SEW ? Log2SEW : 3);                        // SEW
       MIB.addImm(0);                                            // tu, mu
       MIB.addReg(RISCV::VL, RegState::Implicit);
       MIB.addReg(RISCV::VTYPE, RegState::Implicit);
@@ -2449,6 +2451,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
         OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
       const MachineOperand &MO = MI.getOperand(Index);
+      if (MO.isReg()) {
+        ErrInfo = "Expected a non-register operand.";
+        return false;
+      }
       if (MO.isImm()) {
         int64_t Imm = MO.getImm();
         bool Ok;
@@ -2568,7 +2574,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = (Imm & (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) == Imm;
           break;
         case RISCVOp::OPERAND_SEW:
-          Ok = Imm == 0 || (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
+          Ok = (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
+          break;
+        case RISCVOp::OPERAND_SEW_MASK:
+          Ok = Imm == 0;
           break;
         case RISCVOp::OPERAND_VEC_RM:
           assert(RISCVII::hasRoundModeOp(Desc.TSFlags));
@@ -3199,21 +3208,28 @@ std::string RISCVInstrInfo::createMIROperandComment(
 
   // Print the full VType operand of vsetvli/vsetivli instructions, and the SEW
   // operand of vector codegen pseudos.
-  if (OpInfo.OperandType == RISCVOp::OPERAND_VTYPEI10 ||
-      OpInfo.OperandType == RISCVOp::OPERAND_VTYPEI11) {
+  switch (OpInfo.OperandType) {
+  case RISCVOp::OPERAND_VTYPEI10:
+  case RISCVOp::OPERAND_VTYPEI11: {
     unsigned Imm = Op.getImm();
     RISCVVType::printVType(Imm, OS);
-  } else if (OpInfo.OperandType == RISCVOp::OPERAND_SEW) {
+    break;
+  }
+  case RISCVOp::OPERAND_SEW:
+  case RISCVOp::OPERAND_SEW_MASK: {
     unsigned Log2SEW = Op.getImm();
     unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
     assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
     OS << "e" << SEW;
-  } else if (OpInfo.OperandType == RISCVOp::OPERAND_VEC_POLICY) {
+    break;
+  }
+  case RISCVOp::OPERAND_VEC_POLICY:
     unsigned Policy = Op.getImm();
     assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
     OS << (Policy & RISCVII::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
+    break;
   }
 
   return Comment;

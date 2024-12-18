@@ -1,6 +1,6 @@
-; RUN: llc -march=sparc -O0 <%s
-; RUN: llc -march=sparc   <%s | FileCheck %s --check-prefix=V8
-; RUN: llc -march=sparcv9 <%s | FileCheck %s --check-prefix=V9
+; RUN: llc -mtriple=sparc -O0 <%s
+; RUN: llc -mtriple=sparc <%s | FileCheck %s --check-prefix=V8
+; RUN: llc -mtriple=sparcv9 <%s | FileCheck %s --check-prefix=V9
 
 ; V8-LABEL: test
 ; V8:       save %sp

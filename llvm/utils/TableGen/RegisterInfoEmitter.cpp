@@ -288,7 +288,7 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
      << "  return PressureLimitTable[Idx];\n"
      << "}\n\n";
 
-  SequenceToOffsetTable<std::vector<int>> PSetsSeqs;
+  SequenceToOffsetTable<std::vector<int>> PSetsSeqs(/*Terminator=*/-1);
 
   // This table may be larger than NumRCs if some register units needed a list
   // of unit sets that did not correspond to a register class.
@@ -309,7 +309,7 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
 
   OS << "/// Table of pressure sets per register class or unit.\n"
      << "static const int RCSetsTable[] = {\n";
-  PSetsSeqs.emit(OS, printInt, "-1");
+  PSetsSeqs.emit(OS, printInt);
   OS << "};\n\n";
 
   OS << "/// Get the dimensions of register pressure impacted by this "
@@ -610,7 +610,7 @@ static void printSimpleValueType(raw_ostream &OS, MVT::SimpleValueType VT) {
 }
 
 static void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx) {
-  OS << Idx->EnumValue;
+  OS << (Idx ? Idx->EnumValue : 0);
 }
 
 // Differentially encoded register and regunit lists allow for better
@@ -875,13 +875,14 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   SmallVector<DiffVec, 4> RegUnitLists(Regs.size());
 
   // List of lane masks accompanying register unit sequences.
-  SequenceToOffsetTable<MaskVec> LaneMaskSeqs;
+  SequenceToOffsetTable<MaskVec> LaneMaskSeqs(/*Terminator=*/std::nullopt);
   SmallVector<MaskVec, 4> RegUnitLaneMasks(Regs.size());
 
   // Keep track of sub-register names as well. These are not differentially
   // encoded.
   typedef SmallVector<const CodeGenSubRegIndex *, 4> SubRegIdxVec;
-  SequenceToOffsetTable<SubRegIdxVec, deref<std::less<>>> SubRegIdxSeqs;
+  SequenceToOffsetTable<SubRegIdxVec, deref<std::less<>>> SubRegIdxSeqs(
+      /*Terminator=*/std::nullopt);
   SmallVector<SubRegIdxVec, 4> SubRegIdxLists(Regs.size());
 
   SequenceToOffsetTable<std::string> RegStrings;
@@ -936,9 +937,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   // Emit the shared table of regunit lane mask sequences.
   OS << "extern const LaneBitmask " << TargetName << "LaneMaskLists[] = {\n";
-  // TODO: Omit the terminator since it is never used. The length of this list
-  // is known implicitly from the corresponding reg unit list.
-  LaneMaskSeqs.emit(OS, printMask, "LaneBitmask::getAll()");
+  LaneMaskSeqs.emit(OS, printMask);
   OS << "};\n\n";
 
   // Emit the table of sub-register indexes.
@@ -1209,7 +1208,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   unsigned NumModes = CGH.getNumModeIds();
 
   // Build a shared array of value types.
-  SequenceToOffsetTable<std::vector<MVT::SimpleValueType>> VTSeqs;
+  SequenceToOffsetTable<std::vector<MVT::SimpleValueType>> VTSeqs(
+      /*Terminator=*/MVT::Other);
   for (unsigned M = 0; M < NumModes; ++M) {
     for (const auto &RC : RegisterClasses) {
       std::vector<MVT::SimpleValueType> S;
@@ -1221,7 +1221,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   }
   VTSeqs.layout();
   OS << "\nstatic const MVT::SimpleValueType VTLists[] = {\n";
-  VTSeqs.emit(OS, printSimpleValueType, "MVT::Other");
+  VTSeqs.emit(OS, printSimpleValueType);
   OS << "};\n";
 
   // Emit SubRegIndex names, skipping 0.

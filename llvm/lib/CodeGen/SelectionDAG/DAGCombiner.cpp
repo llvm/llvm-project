@@ -153,12 +153,6 @@ static cl::opt<bool> EnableVectorFCopySignExtendRound(
     "combiner-vector-fcopysign-extend-round", cl::Hidden, cl::init(false),
     cl::desc(
         "Enable merging extends and rounds into FCOPYSIGN on vector types"));
-
-static cl::opt<unsigned int>
-    MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
-             cl::desc("DAG combiner limit number of steps when searching DAG "
-                      "for predecessor nodes"));
-
 namespace {
 
   class DAGCombiner {
@@ -16096,7 +16090,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (N0.getOpcode() == ISD::BUILD_VECTOR) {
     SDLoc DL(N0);
     EVT VT = N0.getValueType();
-    if (llvm::ISD::isBuildVectorAllOnes(N0.getNode()))
+    if (llvm::ISD::isBuildVectorAllOnes(N0.getNode()) && VT.isInteger())
       return DAG.getAllOnesConstant(DL, VT);
     if (llvm::ISD::isBuildVectorOfConstantSDNodes(N0.getNode())) {
       SmallVector<SDValue, 8> NewVecC;
@@ -18929,6 +18923,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
     for (SDNode::use_iterator UI = BasePtr->use_begin(),
                               UE = BasePtr->use_end();
@@ -19093,6 +19088,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
     return false;
 
   SmallPtrSet<const SDNode *, 32> Visited;
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   for (SDNode *Use : BasePtr->uses()) {
     if (Use == Ptr.getNode())
       continue;
@@ -19139,6 +19135,7 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   // 2) Op must be independent of N, i.e. Op is neither a predecessor
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   for (SDNode *Op : Ptr->uses()) {
     // Check for #1.
     if (!shouldCombineToPostInc(N, Ptr, Op, BasePtr, Offset, AM, DAG, TLI))
@@ -20342,17 +20339,21 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
         ST->getPointerInfo().getAddrSpace())
       return SDValue();
 
-    // Find the type to narrow it the load / op / store to.
+    // Find the type NewVT to narrow the load / op / store to.
     SDValue N1 = Value.getOperand(1);
     unsigned BitWidth = N1.getValueSizeInBits();
     APInt Imm = N1->getAsAPIntVal();
     if (Opc == ISD::AND)
-      Imm ^= APInt::getAllOnes(BitWidth);
+      Imm.flipAllBits();
     if (Imm == 0 || Imm.isAllOnes())
       return SDValue();
-    unsigned ShAmt = Imm.countr_zero();
-    unsigned MSB = BitWidth - Imm.countl_zero() - 1;
-    unsigned NewBW = NextPowerOf2(MSB - ShAmt);
+    // Find least/most significant bit that need to be part of the narrowed
+    // operation. We assume target will need to address/access full bytes, so
+    // we make sure to align LSB and MSB at byte boundaries.
+    unsigned BitsPerByteMask = 7u;
+    unsigned LSB = Imm.countr_zero() & ~BitsPerByteMask;
+    unsigned MSB = (Imm.getActiveBits() - 1) | BitsPerByteMask;
+    unsigned NewBW = NextPowerOf2(MSB - LSB);
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     // The narrowing should be profitable, the load/store operation should be
     // legal (or custom) and the store size should be equal to the NewVT width.
@@ -20367,68 +20368,69 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     if (NewBW >= BitWidth)
       return SDValue();
 
-    // TODO: For big-endian we probably want to align given the most significant
-    // bit being modified instead of adjusting ShAmt based on least significant
-    // bits. This to reduce the risk of failing on the alignment check below. If
-    // for example VT.getStoreSize()==5 and Imm is 0x0000ffff00, then we want to
-    // find NewBW=16, and we want to load/store with a PtrOff set to 2. But then
-    // ShAmt should be set to 8, which isn't a multiple of NewBW.  But given
-    // that isNarrowingProfitable doesn't seem to be overridden for any in-tree
-    // big-endian target, then the support for big-endian here isn't covered by
-    // any in-tree lit tests, so it is unfortunately not highly optimized
-    // either. It should be possible to improve that by using
-    // ReduceLoadOpStoreWidthForceNarrowingProfitable.
+    // If we come this far NewVT/NewBW reflect a power-of-2 sized type that is
+    // large enough to cover all bits that should be modified. This type might
+    // however be larger than really needed (such as i32 while we actually only
+    // need to modify one byte). Now we need to find our how to align the memory
+    // accesses to satisfy preferred alignments as well as avoiding to access
+    // memory outside the store size of the orignal access.
 
-    // If the lsb that is modified does not start at the type bitwidth boundary,
-    // align to start at the previous boundary.
-    ShAmt = ShAmt - (ShAmt % NewBW);
+    unsigned VTStoreSize = VT.getStoreSizeInBits().getFixedValue();
 
-    // Make sure we do not access memory outside the memory touched by the
-    // original load/store.
-    if (ShAmt + NewBW > VT.getStoreSizeInBits())
-      return SDValue();
+    // Let ShAmt denote amount of bits to skip, counted from the least
+    // significant bits of Imm. And let PtrOff how much the pointer needs to be
+    // offsetted (in bytes) for the new access.
+    unsigned ShAmt = 0;
+    uint64_t PtrOff = 0;
+    for (; ShAmt + NewBW <= VTStoreSize; ShAmt += 8) {
+      // Make sure the range [ShAmt, ShAmt+NewBW) cover both LSB and MSB.
+      if (ShAmt > LSB)
+        return SDValue();
+      if (ShAmt + NewBW < MSB)
+        continue;
 
-    APInt Mask = APInt::getBitsSet(BitWidth, ShAmt,
-                                   std::min(BitWidth, ShAmt + NewBW));
-    if ((Imm & Mask) == Imm) {
-      APInt NewImm = (Imm & Mask).lshr(ShAmt).trunc(NewBW);
-      if (Opc == ISD::AND)
-        NewImm ^= APInt::getAllOnes(NewBW);
-      uint64_t PtrOff = ShAmt / 8;
-      // For big endian targets, we need to adjust the offset to the pointer to
-      // load the correct bytes.
-      if (DAG.getDataLayout().isBigEndian())
-        PtrOff = (BitWidth + 7 - NewBW) / 8 - PtrOff;
+      // Calculate PtrOff.
+      unsigned PtrAdjustmentInBits = DAG.getDataLayout().isBigEndian()
+                                         ? VTStoreSize - NewBW - ShAmt
+                                         : ShAmt;
+      PtrOff = PtrAdjustmentInBits / 8;
 
+      // Now check if narrow access is allowed and fast, considering alignments.
       unsigned IsFast = 0;
       Align NewAlign = commonAlignment(LD->getAlign(), PtrOff);
-      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), NewVT,
-                                  LD->getAddressSpace(), NewAlign,
-                                  LD->getMemOperand()->getFlags(), &IsFast) ||
-          !IsFast)
-        return SDValue();
-
-      SDValue NewPtr =
-          DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(PtrOff), SDLoc(LD));
-      SDValue NewLD =
-          DAG.getLoad(NewVT, SDLoc(N0), LD->getChain(), NewPtr,
-                      LD->getPointerInfo().getWithOffset(PtrOff), NewAlign,
-                      LD->getMemOperand()->getFlags(), LD->getAAInfo());
-      SDValue NewVal = DAG.getNode(Opc, SDLoc(Value), NewVT, NewLD,
-                                   DAG.getConstant(NewImm, SDLoc(Value),
-                                                   NewVT));
-      SDValue NewST =
-          DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
-                       ST->getPointerInfo().getWithOffset(PtrOff), NewAlign);
-
-      AddToWorklist(NewPtr.getNode());
-      AddToWorklist(NewLD.getNode());
-      AddToWorklist(NewVal.getNode());
-      WorklistRemover DeadNodes(*this);
-      DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), NewLD.getValue(1));
-      ++OpsNarrowed;
-      return NewST;
+      if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), NewVT,
+                                 LD->getAddressSpace(), NewAlign,
+                                 LD->getMemOperand()->getFlags(), &IsFast) &&
+          IsFast)
+        break;
     }
+    // If loop above did not find any accepted ShAmt we need to exit here.
+    if (ShAmt + NewBW > VTStoreSize)
+      return SDValue();
+
+    APInt NewImm = Imm.lshr(ShAmt).trunc(NewBW);
+    if (Opc == ISD::AND)
+      NewImm.flipAllBits();
+    Align NewAlign = commonAlignment(LD->getAlign(), PtrOff);
+    SDValue NewPtr =
+        DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(PtrOff), SDLoc(LD));
+    SDValue NewLD =
+        DAG.getLoad(NewVT, SDLoc(N0), LD->getChain(), NewPtr,
+                    LD->getPointerInfo().getWithOffset(PtrOff), NewAlign,
+                    LD->getMemOperand()->getFlags(), LD->getAAInfo());
+    SDValue NewVal = DAG.getNode(Opc, SDLoc(Value), NewVT, NewLD,
+                                 DAG.getConstant(NewImm, SDLoc(Value), NewVT));
+    SDValue NewST =
+        DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
+                     ST->getPointerInfo().getWithOffset(PtrOff), NewAlign);
+
+    AddToWorklist(NewPtr.getNode());
+    AddToWorklist(NewLD.getNode());
+    AddToWorklist(NewVal.getNode());
+    WorklistRemover DeadNodes(*this);
+    DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), NewLD.getValue(1));
+    ++OpsNarrowed;
+    return NewST;
   }
 
   return SDValue();
