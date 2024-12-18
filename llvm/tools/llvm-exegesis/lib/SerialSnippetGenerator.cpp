@@ -53,7 +53,6 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
     if (OtherOpcode == Instr->Description.getOpcode())
       continue;
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
-    const MCInstrDesc &OtherInstrDesc = OtherInstr.Description;
     if (OtherInstr.hasMemoryOperands())
       continue;
     if (!ET.allowAsBackToBack(OtherInstr))
