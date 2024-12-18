@@ -492,7 +492,8 @@ private:
             ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||
              (CurrentToken->Next->is(tok::l_square) &&
-              Line.MustBeDeclaration))) {
+              (Line.MustBeDeclaration ||
+               PrevNonComment->isTypeName(LangOpts))))) {
           OpeningParen.setType(OpeningParen.Next->is(tok::caret)
                                    ? TT_ObjCBlockLParen
                                    : TT_FunctionTypeLParen);
@@ -2403,7 +2404,8 @@ private:
       // not auto operator->() -> xxx;
       Current.setType(TT_TrailingReturnArrow);
     } else if (Current.is(tok::arrow) && Current.Previous &&
-               Current.Previous->is(tok::r_brace)) {
+               Current.Previous->is(tok::r_brace) &&
+               Current.Previous->is(BK_Block)) {
       // Concept implicit conversion constraint needs to be treated like
       // a trailing return type  ... } -> <type>.
       Current.setType(TT_TrailingReturnArrow);
