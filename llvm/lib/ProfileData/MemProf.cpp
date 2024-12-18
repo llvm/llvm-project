@@ -290,7 +290,7 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
   return Result;
 }
 
-CallStackId hashCallStack(ArrayRef<FrameId> CS) {
+CallStackId IndexedMemProfData::hashCallStack(ArrayRef<FrameId> CS) const {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
       HashBuilder;
   for (FrameId F : CS)
