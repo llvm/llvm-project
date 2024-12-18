@@ -35,6 +35,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       diags(diags), target(astContext.getTargetInfo()), genTypes(*this) {
 
   // Initialize cached types
+  VoidTy = cir::VoidType::get(&getMLIRContext());
   SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
   SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
   SInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
@@ -45,6 +46,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
   UInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
+  FP16Ty = cir::FP16Type::get(&getMLIRContext());
+  BFloat16Ty = cir::BF16Type::get(&getMLIRContext());
+  FloatTy = cir::SingleType::get(&getMLIRContext());
+  DoubleTy = cir::DoubleType::get(&getMLIRContext());
+  FP80Ty = cir::FP80Type::get(&getMLIRContext());
+  FP128Ty = cir::FP128Type::get(&getMLIRContext());
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {

@@ -21,4 +21,5 @@ add_clang_library(clangCIR
   clangLex
   ${dialect_libs}
   MLIRCIR
+  MLIRCIRInterfaces
 )

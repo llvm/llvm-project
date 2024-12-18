@@ -57,3 +57,42 @@ _BitInt(20) sb20;
 
 unsigned _BitInt(48) ub48;
 // CHECK: cir.global @ub48 : !cir.int<u, 48>
+
+_Float16 f16;
+// CHECK: cir.global @f16 : !cir.f16
+
+__bf16 bf16;
+// CHECK: cir.global @bf16 : !cir.bf16
+
+float f;
+// CHECK: cir.global @f : !cir.float
+
+double d;
+// CHECK: cir.global @d : !cir.double
+
+long double ld;
+// CHECK: cir.global @ld : !cir.long_double<!cir.f80>
+
+__float128 f128;
+// CHECK: cir.global @f128 : !cir.f128
+
+void *vp;
+// CHECK: cir.global @vp : !cir.ptr<!cir.void>
+
+int *ip;
+// CHECK: cir.global @ip : !cir.ptr<!cir.int<s, 32>>
+
+double *dp;
+// CHECK: cir.global @dp : !cir.ptr<!cir.double>
+
+char **cpp;
+// CHECK: cir.global @cpp : !cir.ptr<!cir.ptr<!cir.int<s, 8>>>
+
+void (*fp)();
+// CHECK: cir.global @fp : !cir.ptr<!cir.func<!cir.void ()>>
+
+int (*fpii)(int);
+// CHECK: cir.global @fpii : !cir.ptr<!cir.func<!cir.int<s, 32> (!cir.int<s, 32>)>>
+
+void (*fpvar)(int, ...);
+// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<!cir.void (!cir.int<s, 32>, ...)>>
