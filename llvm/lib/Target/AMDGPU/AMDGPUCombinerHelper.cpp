@@ -446,7 +446,7 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
-bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToLdexp(
+bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     MachineInstr &MI, MachineInstr &Sel,
     std::function<void(MachineIRBuilder &)> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_FMUL);
@@ -465,13 +465,13 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToLdexp(
 
     const auto SelectTrueCst =
         DestTy.isVector()
-            ? getFConstantSplat(SelectTrue, MRI, /* allowUndef */ true)
+            ? getFConstantSplat(SelectTrue, MRI, /*allowUndef=*/false)
             : getFConstantVRegValWithLookThrough(SelectTrue, MRI);
     if (!SelectTrueCst)
       return false;
     const auto SelectFalseCst =
         DestTy.isVector()
-            ? getFConstantSplat(SelectFalse, MRI, /* allowUndef */ true)
+            ? getFConstantSplat(SelectFalse, MRI, /*allowUndef=*/false)
             : getFConstantVRegValWithLookThrough(SelectFalse, MRI);
     if (!SelectFalseCst)
       return false;

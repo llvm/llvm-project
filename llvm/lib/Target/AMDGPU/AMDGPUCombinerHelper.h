@@ -31,7 +31,7 @@ public:
   void applyExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
                                    Register Src1, Register Src2);
 
-  bool matchCombineFmulWithSelectToLdexp(
+  bool matchCombineFmulWithSelectToFldexp(
       MachineInstr &MI, MachineInstr &Sel,
       std::function<void(MachineIRBuilder &)> &MatchInfo);
 };
