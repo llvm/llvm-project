@@ -44,7 +44,6 @@ program main
   enddo
   !$omp end target
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
   !$omp target defaultmap(tofrom)
   do i = 1, N
      a = 3.14

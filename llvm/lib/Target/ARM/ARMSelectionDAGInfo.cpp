@@ -10,10 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMTargetMachine.h"
 #include "ARMTargetTransformInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 

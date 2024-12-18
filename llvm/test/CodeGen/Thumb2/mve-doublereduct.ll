@@ -241,6 +241,301 @@ define i32 @smax_i32(<8 x i32> %a, <4 x i32> %b) {
   ret i32 %r
 }
 
+define float @nested_add_f32(<4 x float> %a, <4 x float> %b, float %c, float %d) {
+; CHECK-LABEL: nested_add_f32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vadd.f32 s6, s6, s7
+; CHECK-NEXT:    vadd.f32 s4, s4, s5
+; CHECK-NEXT:    vadd.f32 s2, s2, s3
+; CHECK-NEXT:    vadd.f32 s0, s0, s1
+; CHECK-NEXT:    vadd.f32 s4, s4, s6
+; CHECK-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-NEXT:    vadd.f32 s2, s4, s9
+; CHECK-NEXT:    vadd.f32 s0, s0, s8
+; CHECK-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-NEXT:    bx lr
+  %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
+  %a1 = fadd fast float %r1, %c
+  %r2 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %b)
+  %a2 = fadd fast float %r2, %d
+  %r = fadd fast float %a1, %a2
+  ret float %r
+}
+
+define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d) {
+; CHECK-LABEL: nested_mul_f32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmul.f32 s6, s6, s7
+; CHECK-NEXT:    vmul.f32 s4, s4, s5
+; CHECK-NEXT:    vmul.f32 s2, s2, s3
+; CHECK-NEXT:    vmul.f32 s0, s0, s1
+; CHECK-NEXT:    vmul.f32 s4, s4, s6
+; CHECK-NEXT:    vmul.f32 s0, s0, s2
+; CHECK-NEXT:    vmul.f32 s2, s4, s9
+; CHECK-NEXT:    vmul.f32 s0, s0, s8
+; CHECK-NEXT:    vmul.f32 s0, s0, s2
+; CHECK-NEXT:    bx lr
+  %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
+  %a1 = fmul fast float %r1, %c
+  %r2 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %b)
+  %a2 = fmul fast float %r2, %d
+  %r = fmul fast float %a1, %a2
+  ret float %r
+}
+
+define i32 @nested_add_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_add_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    add r0, r1
+; CHECK-NEXT:    vaddva.u32 r0, q0
+; CHECK-NEXT:    vaddva.u32 r0, q1
+; CHECK-NEXT:    bx lr
+  %r1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
+  %a1 = add i32 %r1, %c
+  %r2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %b)
+  %a2 = add i32 %r2, %d
+  %r = add i32 %a1, %a2
+  ret i32 %r
+}
+
+define i32 @nested_mul_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_mul_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    vmov r8, r3, d2
+; CHECK-NEXT:    vmov r4, r5, d1
+; CHECK-NEXT:    vmov r6, r7, d0
+; CHECK-NEXT:    vmov r12, lr, d3
+; CHECK-NEXT:    mul r3, r8, r3
+; CHECK-NEXT:    muls r5, r4, r5
+; CHECK-NEXT:    mul r2, r12, lr
+; CHECK-NEXT:    muls r7, r6, r7
+; CHECK-NEXT:    muls r2, r3, r2
+; CHECK-NEXT:    mul r3, r7, r5
+; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    muls r0, r3, r0
+; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+  %r1 = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %a)
+  %a1 = mul i32 %r1, %c
+  %r2 = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %b)
+  %a2 = mul i32 %r2, %d
+  %r = mul i32 %a1, %a2
+  ret i32 %r
+}
+
+define i32 @nested_and_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_and_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    vmov r2, r3, d2
+; CHECK-NEXT:    vmov r12, lr, d3
+; CHECK-NEXT:    vmov r8, r5, d1
+; CHECK-NEXT:    vmov r6, r7, d0
+; CHECK-NEXT:    ands r2, r3
+; CHECK-NEXT:    and.w r4, r12, lr
+; CHECK-NEXT:    ands r2, r4
+; CHECK-NEXT:    ands r1, r2
+; CHECK-NEXT:    and.w r2, r8, r5
+; CHECK-NEXT:    and.w r3, r6, r7
+; CHECK-NEXT:    ands r2, r3
+; CHECK-NEXT:    ands r0, r2
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+  %r1 = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %a)
+  %a1 = and i32 %r1, %c
+  %r2 = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %b)
+  %a2 = and i32 %r2, %d
+  %r = and i32 %a1, %a2
+  ret i32 %r
+}
+
+define i32 @nested_or_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_or_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    vmov r2, r3, d2
+; CHECK-NEXT:    vmov r12, lr, d3
+; CHECK-NEXT:    vmov r8, r5, d1
+; CHECK-NEXT:    vmov r6, r7, d0
+; CHECK-NEXT:    orrs r2, r3
+; CHECK-NEXT:    orr.w r4, r12, lr
+; CHECK-NEXT:    orrs r2, r4
+; CHECK-NEXT:    orrs r1, r2
+; CHECK-NEXT:    orr.w r2, r8, r5
+; CHECK-NEXT:    orr.w r3, r6, r7
+; CHECK-NEXT:    orrs r2, r3
+; CHECK-NEXT:    orrs r0, r2
+; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+  %r1 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %a)
+  %a1 = or i32 %r1, %c
+  %r2 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %b)
+  %a2 = or i32 %r2, %d
+  %r = or i32 %a1, %a2
+  ret i32 %r
+}
+
+define i32 @nested_xor_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_xor_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    vmov r2, r3, d2
+; CHECK-NEXT:    vmov r12, lr, d3
+; CHECK-NEXT:    vmov r8, r5, d1
+; CHECK-NEXT:    vmov r6, r7, d0
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    eor.w r4, r12, lr
+; CHECK-NEXT:    eors r2, r4
+; CHECK-NEXT:    eors r1, r2
+; CHECK-NEXT:    eor.w r2, r8, r5
+; CHECK-NEXT:    eor.w r3, r6, r7
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    eors r0, r2
+; CHECK-NEXT:    eors r0, r1
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+  %r1 = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %a)
+  %a1 = xor i32 %r1, %c
+  %r2 = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %b)
+  %a2 = xor i32 %r2, %d
+  %r = xor i32 %a1, %a2
+  ret i32 %r
+}
+
+define i32 @nested_smin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_smin_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mvn r3, #-2147483648
+; CHECK-NEXT:    mvn r2, #-2147483648
+; CHECK-NEXT:    vminv.s32 r3, q1
+; CHECK-NEXT:    vminv.s32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, lt
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, lt
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
+; CHECK-NEXT:    bx lr
+  %r1 = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %a)
+  %a1 = call i32 @llvm.smin.i32(i32 %r1, i32 %c)
+  %r2 = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %b)
+  %a2 = call i32 @llvm.smin.i32(i32 %r2, i32 %d)
+  %r = call i32 @llvm.smin.i32(i32 %a1, i32 %a2)
+  ret i32 %r
+}
+
+define i32 @nested_smax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_smax_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov.w r3, #-2147483648
+; CHECK-NEXT:    mov.w r2, #-2147483648
+; CHECK-NEXT:    vmaxv.s32 r3, q1
+; CHECK-NEXT:    vmaxv.s32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, gt
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, gt
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, gt
+; CHECK-NEXT:    bx lr
+  %r1 = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %a)
+  %a1 = call i32 @llvm.smax.i32(i32 %r1, i32 %c)
+  %r2 = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %b)
+  %a2 = call i32 @llvm.smax.i32(i32 %r2, i32 %d)
+  %r = call i32 @llvm.smax.i32(i32 %a1, i32 %a2)
+  ret i32 %r
+}
+
+define i32 @nested_umin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_umin_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov.w r3, #-1
+; CHECK-NEXT:    mov.w r2, #-1
+; CHECK-NEXT:    vminv.u32 r3, q1
+; CHECK-NEXT:    vminv.u32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, lo
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, lo
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lo
+; CHECK-NEXT:    bx lr
+  %r1 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %a)
+  %a1 = call i32 @llvm.umin.i32(i32 %r1, i32 %c)
+  %r2 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %b)
+  %a2 = call i32 @llvm.umin.i32(i32 %r2, i32 %d)
+  %r = call i32 @llvm.umin.i32(i32 %a1, i32 %a2)
+  ret i32 %r
+}
+
+define i32 @nested_umax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
+; CHECK-LABEL: nested_umax_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmaxv.u32 r3, q1
+; CHECK-NEXT:    vmaxv.u32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, hi
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, hi
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, hi
+; CHECK-NEXT:    bx lr
+  %r1 = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %a)
+  %a1 = call i32 @llvm.umax.i32(i32 %r1, i32 %c)
+  %r2 = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %b)
+  %a2 = call i32 @llvm.umax.i32(i32 %r2, i32 %d)
+  %r = call i32 @llvm.umax.i32(i32 %a1, i32 %a2)
+  ret i32 %r
+}
+
+define float @nested_fmin_float(<4 x float> %a, <4 x float> %b, float %c, float %d) {
+; CHECK-LABEL: nested_fmin_float:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vminnm.f32 s2, s2, s3
+; CHECK-NEXT:    vminnm.f32 s0, s0, s1
+; CHECK-NEXT:    vminnm.f32 s0, s0, s2
+; CHECK-NEXT:    vminnm.f32 s2, s6, s7
+; CHECK-NEXT:    vminnm.f32 s4, s4, s5
+; CHECK-NEXT:    vminnm.f32 s0, s0, s8
+; CHECK-NEXT:    vminnm.f32 s2, s4, s2
+; CHECK-NEXT:    vminnm.f32 s2, s2, s9
+; CHECK-NEXT:    vminnm.f32 s0, s0, s2
+; CHECK-NEXT:    bx lr
+  %r1 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)
+  %a1 = call float @llvm.minnum.f32(float %r1, float %c)
+  %r2 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %b)
+  %a2 = call float @llvm.minnum.f32(float %r2, float %d)
+  %r = call float @llvm.minnum.f32(float %a1, float %a2)
+  ret float %r
+}
+
+define float @nested_fmax_float(<4 x float> %a, <4 x float> %b, float %c, float %d) {
+; CHECK-LABEL: nested_fmax_float:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmaxnm.f32 s2, s2, s3
+; CHECK-NEXT:    vmaxnm.f32 s0, s0, s1
+; CHECK-NEXT:    vmaxnm.f32 s0, s0, s2
+; CHECK-NEXT:    vmaxnm.f32 s2, s6, s7
+; CHECK-NEXT:    vmaxnm.f32 s4, s4, s5
+; CHECK-NEXT:    vmaxnm.f32 s0, s0, s8
+; CHECK-NEXT:    vmaxnm.f32 s2, s4, s2
+; CHECK-NEXT:    vmaxnm.f32 s2, s2, s9
+; CHECK-NEXT:    vmaxnm.f32 s0, s0, s2
+; CHECK-NEXT:    bx lr
+  %r1 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %a)
+  %a1 = call float @llvm.maxnum.f32(float %r1, float %c)
+  %r2 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %b)
+  %a2 = call float @llvm.maxnum.f32(float %r2, float %d)
+  %r = call float @llvm.maxnum.f32(float %a1, float %a2)
+  ret float %r
+}
+
 declare float @llvm.vector.reduce.fadd.f32.v8f32(float, <8 x float>)
 declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
 declare float @llvm.vector.reduce.fmul.f32.v8f32(float, <8 x float>)

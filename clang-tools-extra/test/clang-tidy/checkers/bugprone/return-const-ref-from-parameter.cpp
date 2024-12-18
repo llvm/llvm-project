@@ -76,6 +76,9 @@ struct C {
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: returning a constant reference parameter
 };
 
+const auto Lf1 = [](const T& t) -> const T& { return t; };
+// CHECK-MESSAGES: :[[@LINE-1]]:54: warning: returning a constant reference parameter
+
 } // namespace invalid
 
 namespace false_negative_because_dependent_and_not_instantiated {
@@ -151,6 +154,14 @@ void instantiate(const int &param, const float &paramf, int &mut_param, float &m
         itf6(mut_paramf);
 }
 
+template<class T>
+void f(const T& t) {
+    const auto get = [&t] -> const T& { return t; };
+    return T{};
+}
+
+const auto Lf1 = [](T& t) -> const T& { return t; };
+
 } // namespace valid
 
 namespace overload {
@@ -186,3 +197,32 @@ int const &overload_params_difference3(int p1, int const &a, int p2) { return a;
 int const &overload_params_difference3(int p1, long &&a, int p2);
 
 } // namespace overload
+
+namespace gh117696 {
+namespace use_lifetime_bound_attr {
+int const &f(int const &a [[clang::lifetimebound]]) { return a; }
+} // namespace use_lifetime_bound_attr
+} // namespace gh117696
+
+
+namespace lambda {
+using T = const int &;
+using K = const float &;
+T inner_valid_lambda(T a) {
+  [&]() -> T { return a; };
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+T inner_invalid_lambda(T a) {
+  [&](T a) -> T { return a; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: returning a constant reference parameter
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+T inner_invalid_lambda2(T a) {
+  [&](K a) -> K { return a; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: returning a constant reference parameter
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+} // namespace lambda

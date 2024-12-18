@@ -15,7 +15,6 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"

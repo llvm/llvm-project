@@ -8,37 +8,37 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
   using std::basic_filebuf;
 
-#  ifndef _LIBCPP_HAS_NO_FILESYSTEM
+#  if _LIBCPP_HAS_FILESYSTEM
   using std::swap;
 #  endif
 
   using std::filebuf;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wfilebuf;
 #  endif
 
   using std::basic_ifstream;
 
   using std::ifstream;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wifstream;
 #  endif
 
   using std::basic_ofstream;
 
   using std::ofstream;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wofstream;
 #  endif
 
   using std::basic_fstream;
 
   using std::fstream;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wfstream;
 #  endif
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 } // namespace std

@@ -23,13 +23,9 @@
 
 namespace llvm {
 
-struct RealtimeSanitizerOptions {};
-
-class RealtimeSanitizerPass : public PassInfoMixin<RealtimeSanitizerPass> {
-public:
-  RealtimeSanitizerPass(const RealtimeSanitizerOptions &Options);
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
-
+/// Create ctor and init functions.
+struct RealtimeSanitizerPass : public PassInfoMixin<RealtimeSanitizerPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 

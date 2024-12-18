@@ -8,12 +8,9 @@
 
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Option/Arg.h"
 #include <cassert>
 #include <cstring>
 

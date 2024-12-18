@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_ENABLE_VIEW_H
-#define _LIBCPP___RANGES_ENABLE_VIEW_H
+#ifndef _LIBCPP___CXX03___RANGES_ENABLE_VIEW_H
+#define _LIBCPP___CXX03___RANGES_ENABLE_VIEW_H
 
 #include <__cxx03/__concepts/derived_from.h>
 #include <__cxx03/__concepts/same_as.h>
@@ -48,4 +48,4 @@ inline constexpr bool enable_view = derived_from<_Tp, view_base> || requires {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_ENABLE_VIEW_H
+#endif // _LIBCPP___CXX03___RANGES_ENABLE_VIEW_H

@@ -68,13 +68,13 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       TLS Variable Hoist
 ; CHECK-NEXT:       Type Promotion
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:     A No-Op Barrier Pass
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Merge internal globals
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
@@ -119,6 +119,8 @@
 ; RV64-NEXT:        RISC-V Optimize W Instructions
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Merge Base Offset
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       RISC-V VL Optimizer
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
 ; CHECK-NEXT:       RISC-V Landing Pad Setup
@@ -129,7 +131,6 @@
 ; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Register Coalescer
@@ -196,6 +197,7 @@
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:     Machine Outliner
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Insert CFI remember/restore state instructions
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Stack Frame Layout Analysis

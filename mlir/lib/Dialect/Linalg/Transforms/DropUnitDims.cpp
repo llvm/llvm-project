@@ -392,7 +392,8 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   // 1. Check if any of the iteration dimensions are unit-trip count. They will
   //    end up being unit-trip count if they are used to index into a unit-dim
   //    tensor/memref.
-  AffineMap invertedMap = inversePermutation(concatAffineMaps(indexingMaps));
+  AffineMap invertedMap =
+      inversePermutation(concatAffineMaps(indexingMaps, rewriter.getContext()));
   if (!invertedMap) {
     return rewriter.notifyMatchFailure(genericOp,
                                        "invalid indexing maps for operation");
@@ -486,7 +487,8 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   // Abort if the indexing maps of the result operation are not invertible
   // (i.e. not legal) or if no dimension was reduced.
   if (newIndexingMaps == indexingMaps ||
-      !inversePermutation(concatAffineMaps(newIndexingMaps)))
+      !inversePermutation(
+          concatAffineMaps(newIndexingMaps, rewriter.getContext())))
     return failure();
 
   Location loc = genericOp.getLoc();

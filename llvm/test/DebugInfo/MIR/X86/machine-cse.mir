@@ -24,11 +24,11 @@
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
   
-  define fastcc ptr @t(i32 %base) !dbg !3 {
+  define fastcc ptr @t(i32 %base, i1 %arg) !dbg !3 {
   entry:
     %0 = zext i32 %base to i64
     %1 = getelementptr inbounds %struct.s2, ptr null, i64 %0
-    br i1 undef, label %bb1, label %bb2
+    br i1 %arg, label %bb1, label %bb2
   
   bb1:                                              ; preds = %entry
     %2 = getelementptr inbounds %struct.s2, ptr null, i64 %0, i32 0
@@ -43,9 +43,9 @@
   }
   
   ; This is a stub replicating bb structure of @t
-  define fastcc ptr @u(i32 %base) !dbg !33 {
+  define fastcc ptr @u(i32 %base, i1 %arg) !dbg !33 {
   entry:
-    br i1 undef, label %bb1, label %bb2
+    br i1 %arg, label %bb1, label %bb2
   
   bb1:                                              ; preds = %entry
     unreachable

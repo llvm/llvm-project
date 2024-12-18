@@ -16,7 +16,7 @@ define void @test_scalar_steps_target_instruction_cost(ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IV]], <i64 8, i64 8>
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -33,7 +33,7 @@ define void @test_scalar_steps_target_instruction_cost(ptr %dst) {
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

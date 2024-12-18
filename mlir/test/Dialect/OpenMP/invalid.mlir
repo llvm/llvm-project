@@ -891,7 +891,7 @@ func.func @omp_ordered5(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64, %vec
 
 func.func @omp_atomic_read1(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined.}}
-  omp.atomic.read %v = %x hint(speculative, nonspeculative) : memref<i32>, i32
+  omp.atomic.read %v = %x hint(speculative, nonspeculative) : memref<i32>, memref<i32>, i32
   return
 }
 
@@ -899,7 +899,7 @@ func.func @omp_atomic_read1(%x: memref<i32>, %v: memref<i32>) {
 
 func.func @omp_atomic_read2(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{invalid clause value: 'xyz'}}
-  omp.atomic.read %v = %x memory_order(xyz) : memref<i32>, i32
+  omp.atomic.read %v = %x memory_order(xyz) : memref<i32>, memref<i32>, i32
   return
 }
 
@@ -907,7 +907,7 @@ func.func @omp_atomic_read2(%x: memref<i32>, %v: memref<i32>) {
 
 func.func @omp_atomic_read3(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
-  omp.atomic.read %v = %x memory_order(acq_rel) : memref<i32>, i32
+  omp.atomic.read %v = %x memory_order(acq_rel) : memref<i32>, memref<i32>, i32
   return
 }
 
@@ -915,7 +915,7 @@ func.func @omp_atomic_read3(%x: memref<i32>, %v: memref<i32>) {
 
 func.func @omp_atomic_read4(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
-  omp.atomic.read %v = %x memory_order(release) : memref<i32>, i32
+  omp.atomic.read %v = %x memory_order(release) : memref<i32>, memref<i32>, i32
   return
 }
 
@@ -923,7 +923,7 @@ func.func @omp_atomic_read4(%x: memref<i32>, %v: memref<i32>) {
 
 func.func @omp_atomic_read5(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{`memory_order` clause can appear at most once in the expansion of the oilist directive}}
-  omp.atomic.read %v = %x memory_order(acquire) memory_order(relaxed) : memref<i32>, i32
+  omp.atomic.read %v = %x memory_order(acquire) memory_order(relaxed) : memref<i32>, memref<i32>, i32
   return
 }
 
@@ -931,7 +931,7 @@ func.func @omp_atomic_read5(%x: memref<i32>, %v: memref<i32>) {
 
 func.func @omp_atomic_read6(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{`hint` clause can appear at most once in the expansion of the oilist directive}}
-  omp.atomic.read %v =  %x hint(speculative) hint(contended) : memref<i32>, i32
+  omp.atomic.read %v =  %x hint(speculative) hint(contended) : memref<i32>, memref<i32>, i32
   return
 }
 
@@ -939,7 +939,7 @@ func.func @omp_atomic_read6(%x: memref<i32>, %v: memref<i32>) {
 
 func.func @omp_atomic_read6(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{read and write must not be to the same location for atomic reads}}
-  omp.atomic.read %x =  %x hint(speculative) : memref<i32>, i32
+  omp.atomic.read %x =  %x hint(speculative) : memref<i32>, memref<i32>, i32
   return
 }
 
@@ -1137,7 +1137,7 @@ func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
 func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{expected three operations in atomic.capture region}}
   omp.atomic.capture {
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     omp.terminator
   }
   return
@@ -1148,56 +1148,8 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
-    omp.atomic.read %v = %x : memref<i32>, i32
-    omp.atomic.read %v = %x : memref<i32>, i32
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  omp.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    omp.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      omp.yield (%newval : i32)
-    }
-    omp.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      omp.yield (%newval : i32)
-    }
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  omp.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    omp.atomic.write %x = %expr : memref<i32>, i32
-    omp.atomic.write %x = %expr : memref<i32>, i32
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  omp.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    omp.atomic.write %x = %expr : memref<i32>, i32
-    omp.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      omp.yield (%newval : i32)
-    }
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     omp.terminator
   }
   return
@@ -1213,6 +1165,22 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
     }
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.write %x = %expr : memref<i32>, i32
     omp.atomic.write %x = %expr : memref<i32>, i32
     omp.terminator
   }
@@ -1225,7 +1193,39 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
     omp.atomic.write %x = %expr : memref<i32>, i32
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     omp.terminator
   }
   return
@@ -1241,7 +1241,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
     }
-    omp.atomic.read %v = %y : memref<i32>, i32
+    omp.atomic.read %v = %y : memref<i32>, memref<i32>, i32
     omp.terminator
   }
 }
@@ -1251,7 +1251,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
-    omp.atomic.read %v = %y : memref<i32>, i32
+    omp.atomic.read %v = %y : memref<i32>, memref<i32>, i32
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -1266,7 +1266,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     omp.atomic.write %y = %expr : memref<i32>, i32
     omp.terminator
   }
@@ -1282,7 +1282,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
 }
@@ -1297,7 +1297,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
 }
@@ -1312,7 +1312,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
 }
@@ -1327,7 +1327,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
 }
@@ -1342,7 +1342,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
 }
@@ -1357,7 +1357,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x memory_order(seq_cst) : memref<i32>, i32
+    omp.atomic.read %v = %x memory_order(seq_cst) : memref<i32>, memref<i32>, i32
   }
   return
 }
@@ -1634,7 +1634,7 @@ func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
 // -----
 
 func.func @omp_task_depend(%data_var: memref<i32>) {
-  // expected-error @below {{op expected as many depend values as depend variables}}
+  // expected-error @below {{'omp.task' op operand count (1) does not match with the total size (0) specified in attribute 'operandSegmentSizes'}}
     "omp.task"(%data_var) ({
       "omp.terminator"() : () -> ()
     }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
@@ -2575,5 +2575,89 @@ func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) 
       omp.yield
     }
   } {omp.composite}
+  return
+}
+
+// -----
+
+func.func @omp_loop_invalid_nesting(%lb : index, %ub : index, %step : index) {
+
+  // expected-error @below {{`omp.loop` expected to be a standalone loop wrapper}}
+  omp.loop {
+    omp.simd {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    } {omp.composite}
+  }
+
+  return
+}
+
+// -----
+
+func.func @omp_loop_invalid_nesting2(%lb : index, %ub : index, %step : index) {
+
+  omp.simd {
+    // expected-error @below {{`omp.loop` expected to be a standalone loop wrapper}}
+    omp.loop {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    } {omp.composite}
+  }
+
+  return
+}
+
+// -----
+
+func.func @omp_loop_invalid_binding(%lb : index, %ub : index, %step : index) {
+
+  // expected-error @below {{custom op 'omp.loop' invalid clause value: 'dummy_value'}}
+  omp.loop bind(dummy_value) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  return
+}
+
+// -----
+func.func @nested_wrapper(%idx : index) {
+  omp.workshare {
+    // expected-error @below {{cannot be composite}}
+    omp.workshare.loop_wrapper {
+      omp.simd {
+        omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
+          omp.yield
+        }
+      } {omp.composite}
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @not_wrapper() {
+  omp.workshare {
+    // expected-error @below {{op nested in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
+    omp.workshare.loop_wrapper {
+      %0 = arith.constant 0 : index
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @missing_workshare(%idx : index) {
+  // expected-error @below {{must be nested in an omp.workshare}}
+  omp.workshare.loop_wrapper {
+    omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
+      omp.yield
+    }
+  }
   return
 }

@@ -1581,7 +1581,12 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
           .Case<IntegerAttr>([&](auto intAttr) {
             attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
           })
-          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); });
+          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); })
+          .Case<LLVM::ConstantRangeAttr>([&](auto rangeAttr) {
+            attrBuilder.addConstantRangeAttr(
+                llvmKind, llvm::ConstantRange(rangeAttr.getLower(),
+                                              rangeAttr.getUpper()));
+          });
     } else if (namedAttr.getNameDialect()) {
       if (failed(iface.convertParameterAttr(func, argIdx, namedAttr, *this)))
         return failure();
@@ -1896,6 +1901,13 @@ void ModuleTranslation::setLoopMetadata(Operation *op,
   llvm::MDNode *loopMD =
       loopAnnotationTranslation->translateLoopAnnotation(attr, op);
   inst->setMetadata(llvm::LLVMContext::MD_loop, loopMD);
+}
+
+void ModuleTranslation::setDisjointFlag(Operation *op, llvm::Value *value) {
+  auto iface = cast<DisjointFlagInterface>(op);
+  // We do a dyn_cast here in case the value got folded into a constant.
+  if (auto disjointInst = dyn_cast<llvm::PossiblyDisjointInst>(value))
+    disjointInst->setIsDisjoint(iface.getIsDisjoint());
 }
 
 llvm::Type *ModuleTranslation::convertType(Type type) {

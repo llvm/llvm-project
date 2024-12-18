@@ -4,7 +4,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 target triple = "i386-apple-darwin"
 
 ; PR15344
-define void @test1(ptr nocapture %arg, i32 %arg1) nounwind {
+define void @test1(ptr nocapture %arg, i32 %arg1, i1 %arg2) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK: preheader
 ; CHECK: insertelement <2 x double> zeroinitializer, double %tmp, i32 0
@@ -15,7 +15,7 @@ bb:
 
 bb2:                                              ; preds = %bb
   %tmp = load double, ptr null, align 8
-  br i1 undef, label %bb3, label %bb12
+  br i1 %arg2, label %bb3, label %bb12
 
 bb3:                                              ; preds = %bb3, %bb2
   %tmp4 = phi double [ %tmp9, %bb3 ], [ %tmp, %bb2 ]

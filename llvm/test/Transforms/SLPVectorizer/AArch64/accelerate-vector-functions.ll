@@ -801,6 +801,103 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
+declare float @atan2f(float,float) readonly nounwind willreturn
+define <4 x float> @atan2_4x(ptr %a, ptr %b) {
+; CHECK-LABEL: @atan2_4x(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[BB:%.*]] = load <4 x float>, ptr [[B:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @vatan2f(<4 x float> [[TMP0]], <4 x float> [[BB]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+; NOACCELERATE-LABEL: @atan2_4x(
+; NOACCELERATE-NEXT:  entry:
+; NOACCELERATE-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
+; NOACCELERATE-NEXT:    [[BB:%.*]] = load <4 x float>, ptr [[B:%.*]], align 16
+; NOACCELERATE-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
+; NOACCELERATE-NEXT:    [[VECEXTB:%.*]] = extractelement <4 x float> [[BB]], i32 0
+; NOACCELERATE-NEXT:    [[TMP1:%.*]] = tail call fast float @atan2f(float [[VECEXT]], float [[VECEXTB]])
+; NOACCELERATE-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> undef, float [[TMP1]], i32 0
+; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
+; NOACCELERATE-NEXT:    [[VECEXTB_1:%.*]] = extractelement <4 x float> [[BB]], i32 1
+; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @atan2f(float [[VECEXT_1]], float [[VECEXTB_1]])
+; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[BB]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.atan2.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_3:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_3]]
+;
+entry:
+  %0 = load <4 x float>, ptr %a, align 16
+  %bb = load <4 x float>, ptr %b, align 16
+  %vecext = extractelement <4 x float> %0, i32 0
+  %vecextb = extractelement <4 x float> %bb, i32 0
+  %1 = tail call fast float @atan2f(float %vecext, float %vecextb)
+  %vecins = insertelement <4 x float> undef, float %1, i32 0
+  %vecext.1 = extractelement <4 x float> %0, i32 1
+  %vecextb.1 = extractelement <4 x float> %bb, i32 1
+  %2 = tail call fast float @atan2f(float %vecext.1, float %vecextb.1)
+  %vecins.1 = insertelement <4 x float> %vecins, float %2, i32 1
+  %vecext.2 = extractelement <4 x float> %0, i32 2
+  %vecextb.2 = extractelement <4 x float> %bb, i32 2
+  %3 = tail call fast float @atan2f(float %vecext.2, float %vecextb.2)
+  %vecins.2 = insertelement <4 x float> %vecins.1, float %3, i32 2
+  %vecext.3 = extractelement <4 x float> %0, i32 3
+  %vecextb.3 = extractelement <4 x float> %bb, i32 3
+  %4 = tail call fast float @atan2f(float %vecext.3, float %vecextb.3)
+  %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
+  ret <4 x float> %vecins.3
+}
+define <4 x float> @int_atan2_4x(ptr %a, ptr %b) {
+; CHECK-LABEL: @int_atan2_4x(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[BB:%.*]] = load <4 x float>, ptr [[B:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @vatan2f(<4 x float> [[TMP0]], <4 x float> [[BB]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+; NOACCELERATE-LABEL: @int_atan2_4x(
+; NOACCELERATE-NEXT:  entry:
+; NOACCELERATE-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 16
+; NOACCELERATE-NEXT:    [[BB:%.*]] = load <4 x float>, ptr [[B:%.*]], align 16
+; NOACCELERATE-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
+; NOACCELERATE-NEXT:    [[VECEXTB:%.*]] = extractelement <4 x float> [[BB]], i32 0
+; NOACCELERATE-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.atan2.f32(float [[VECEXT]], float [[VECEXTB]])
+; NOACCELERATE-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> undef, float [[TMP1]], i32 0
+; NOACCELERATE-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
+; NOACCELERATE-NEXT:    [[VECEXTB_1:%.*]] = extractelement <4 x float> [[BB]], i32 1
+; NOACCELERATE-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.atan2.f32(float [[VECEXT_1]], float [[VECEXTB_1]])
+; NOACCELERATE-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
+; NOACCELERATE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[BB]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.atan2.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
+;
+entry:
+  %0 = load <4 x float>, ptr %a, align 16
+  %bb = load <4 x float>, ptr %b, align 16
+  %vecext = extractelement <4 x float> %0, i32 0
+  %vecextb = extractelement <4 x float> %bb, i32 0
+  %1 = tail call fast float @llvm.atan2.f32(float %vecext, float %vecextb)
+  %vecins = insertelement <4 x float> undef, float %1, i32 0
+  %vecext.1 = extractelement <4 x float> %0, i32 1
+  %vecextb.1 = extractelement <4 x float> %bb, i32 1
+  %2 = tail call fast float @llvm.atan2.f32(float %vecext.1, float %vecextb.1)
+  %vecins.1 = insertelement <4 x float> %vecins, float %2, i32 1
+  %vecext.2 = extractelement <4 x float> %0, i32 2
+  %vecextb.2 = extractelement <4 x float> %bb, i32 2
+  %3 = tail call fast float @llvm.atan2.f32(float %vecext.2, float %vecextb.2)
+  %vecins.2 = insertelement <4 x float> %vecins.1, float %3, i32 2
+  %vecext.3 = extractelement <4 x float> %0, i32 3
+  %vecextb.3 = extractelement <4 x float> %bb, i32 3
+  %4 = tail call fast float @llvm.atan2.f32(float %vecext.3, float %vecextb.3)
+  %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
+  ret <4 x float> %vecins.3
+}
 declare float @sinhf(float) readonly nounwind willreturn
 define <4 x float> @sinh_4x(ptr %a) {
 ; CHECK-LABEL: @sinh_4x(

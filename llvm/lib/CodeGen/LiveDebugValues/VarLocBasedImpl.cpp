@@ -144,7 +144,6 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <functional>

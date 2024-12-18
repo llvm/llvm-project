@@ -167,7 +167,11 @@ A **partial** list of flags RealtimeSanitizer respects:
    * - ``halt_on_error``
      - ``true``
      - boolean
-     - Exit after first reported error. If false (continue after a detected error), deduplicates error stacks so errors appear only once.
+     - Exit after first reported error.
+   * - ``suppress_equal_stacks``
+     - ``true``
+     - boolean
+     - If true, suppress duplicate reports (i.e. only print each unique error once). Only particularly useful when ``halt_on_error=false``.
    * - ``print_stats_on_exit``
      - ``false``
      - boolean
@@ -183,16 +187,19 @@ A **partial** list of flags RealtimeSanitizer respects:
    * - ``abort_on_error``
      - OS dependent
      - boolean
-     - If true, the tool calls abort() instead of _exit() after printing the error report. On some OSes (OSX, for exmple) this is beneficial because a better stack trace is emitted on crash.
+     - If true, the tool calls ``abort()`` instead of ``_exit()`` after printing the error report. On some OSes (MacOS, for exmple) this is beneficial because a better stack trace is emitted on crash.
    * - ``symbolize``
      - ``true``
      - boolean
      - If set, use the symbolizer to turn virtual addresses to file/line locations. If false, can greatly speed up the error reporting.
    * - ``suppressions``
-     - ""
+     - ``""``
      - path
-     - If set to a valid suppressions file, will suppress issue reporting. See details in "Disabling", below.
-
+     - If set to a valid suppressions file, will suppress issue reporting. See details in `Disabling and Suppressing`_.
+   * - ``verify_interceptors``
+     - ``true``
+     - boolean
+     - If true, verifies interceptors are working at initialization. The program will abort with error ``==ERROR: Interceptors are not working. This may be because RealtimeSanitizer is loaded too late (e.g. via dlopen)`` if an issue is detected.
 
 Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
 
@@ -202,6 +209,45 @@ Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
    WARNING: found 1 unrecognized flag(s):
    misspelled_flag
    ...
+
+Additional customization
+------------------------
+
+In addition to ``__rtsan_default_options`` outlined above, you can provide definitions of other functions that affect how RTSan operates.
+
+To be notified on every error reported by RTsan, provide a definition of ``__sanitizer_report_error_summary``.
+
+.. code-block:: c
+
+   extern "C" void __sanitizer_report_error_summary(const char *error_summary) {
+      fprintf(stderr, "%s %s\n", "In custom handler! ", error_summary);
+      /* do other custom things */
+   }
+
+The error summary will be of the form: 
+
+.. code-block:: console
+
+   SUMMARY: RealtimeSanitizer: unsafe-library-call main.cpp:8 in process(std::__1::vector<int, std::__1::allocator<int>>&)
+
+To register a callback which will be invoked before a RTSan kills the process:
+
+.. code-block:: c
+
+  extern "C" void __sanitizer_set_death_callback(void (*callback)(void));
+
+  void custom_on_die_callback() {
+    fprintf(stderr, "In custom handler!")
+    /* do other custom things */
+  }
+
+  int main()
+  {
+    __sanitizer_set_death_callback(custom_on_die_callback);
+    ...
+  }
+
+.. _disabling-and-suppressing:
 
 Disabling and suppressing
 -------------------------

@@ -152,3 +152,16 @@ class FindInMemoryTestCase(TestBase):
         )
         self.assertSuccess(error)
         self.assertEqual(addr, lldb.LLDB_INVALID_ADDRESS)
+
+    def test_memory_info_list_iterable(self):
+        """Make sure the SBMemoryRegionInfoList is iterable"""
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+
+        info_list = self.process.GetMemoryRegions()
+        self.assertTrue(info_list.GetSize() > 0)
+        try:
+            for info in info_list:
+                pass
+        except Exception:
+            self.fail("SBMemoryRegionInfoList is not iterable")
