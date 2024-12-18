@@ -1963,8 +1963,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
 
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock()) {
-    if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
-        isa<VPCanonicalIVPHIRecipe>(&R))
+    if (isa<VPCanonicalIVPHIRecipe>(&R) ||
+        match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
       continue;
 
     // Bail out on recipes not supported at the moment:
@@ -2024,13 +2024,13 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
     // Narrow wide load to uniform scalar load, as transformed VPlan will only
     // process one original iteration.
     auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(),
-                                    WideLoad->operands(), true);
+                                    WideLoad->operands(), /*IsUniform*/ true);
     // Narrow interleave group to wide load, as transformed VPlan will only
     // process one original iteration.
     auto *L = new VPWidenLoadRecipe(
         *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
-        LoadGroup->getAddr(), LoadGroup->getMask(), true, false,
-        LoadGroup->getDebugLoc());
+        LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
+        /*Reverse=*/false, LoadGroup->getDebugLoc());
     L->insertBefore(LoadGroup);
     N->insertBefore(LoadGroup);
     Lane0->setOperand(LoadGroupIdx, L);
@@ -2038,8 +2038,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
 
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
-        StoreGroup->getAddr(), Lane0, nullptr, true, false,
-        StoreGroup->getDebugLoc());
+        StoreGroup->getAddr(), Lane0, nullptr, /*Consecutive=*/true,
+        /*Reverse=*/false, StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }
@@ -2047,7 +2047,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
   auto *CanIV = Plan.getCanonicalIV();
-  VPInstruction *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
+  auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
   Inc->setOperand(
       1, Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
