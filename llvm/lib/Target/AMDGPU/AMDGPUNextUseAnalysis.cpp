@@ -13,6 +13,7 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Timer.h"
 
 #include "AMDGPU.h"
 
@@ -26,7 +27,11 @@ using namespace llvm;
 
 
 void NextUseResult::init(const MachineFunction &MF) {
-
+  TG = new TimerGroup("Next Use Analysis",
+                      "Compilation Timers for Next Use Analysis");
+  T1 = new Timer("Next Use Analysis", "Time spent in analyse()", *TG);
+  T2 = new Timer("Next Use Analysis", "Time spent in computeNextUseDistance()",
+                 *TG);
   for (auto L : LI->getLoopsInPreorder()) {
     SmallVector<MachineBasicBlock *> Exiting;
     L->getExitingBlocks(Exiting);
@@ -41,6 +46,9 @@ void NextUseResult::init(const MachineFunction &MF) {
 }
 
 void NextUseResult::analyze(const MachineFunction &MF) {
+
+  T1->startTimer();
+  dbgs() << "Next Use Analysis start\n";
   bool Changed = true;
   while(Changed) {
     Changed = false;
@@ -91,13 +99,15 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         }
       }
       VRegDistances &Next = NextUseMap[MBB->getNumber()];
-      dbgs() << "MBB_" << MBB->getNumber() << "\n";
-      printVregDistancesD(Next);
+      // dbgs() << "MBB_" << MBB->getNumber() << "\n";
+      // printVregDistancesD(Next);
       bool Changed4MBB = diff(Prev, Next);
 
       Changed |= Changed4MBB;
     }
   }
+  T1->stopTimer();
+  TG->print(llvm::errs());
 }
 
 unsigned NextUseResult::getNextUseDistance(const MachineInstr &MI,
@@ -123,6 +133,8 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
 unsigned NextUseResult::computeNextUseDistance(const MachineBasicBlock &MBB,
                                                const SlotIndex I,
                                                Register VReg) {
+  T2->startTimer();
+
   unsigned Dist = Infinity;
 
   SlotIndex Begin = Indexes->getMBBStartIdx(MBB.getNumber());
@@ -235,6 +247,8 @@ unsigned NextUseResult::computeNextUseDistance(const MachineBasicBlock &MBB,
     if (Dist != Infinity)
       InstrCache[&I][VReg] = Dist;
   }
+  T2->stopTimer();
+  TG->print(llvm::errs());
   return Dist;
 }
 

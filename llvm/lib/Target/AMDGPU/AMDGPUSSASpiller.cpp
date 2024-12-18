@@ -9,6 +9,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include "AMDGPUNextUseAnalysis.h"
@@ -38,6 +39,12 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   const SIInstrInfo *TII;
   const GCNSubtarget *ST;
   MachineFrameInfo *MFI;
+
+  TimerGroup *TG;
+  Timer *T1;
+  Timer *T2;
+  Timer *T3;
+  Timer *T4;
 
   using RegisterSet = SetVector<Register>;
 
@@ -75,6 +82,12 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
     MFI = &MF.getFrameInfo();
     TRI = ST->getRegisterInfo();
     TII = ST->getInstrInfo();
+    TG = new TimerGroup("SSA SPiller Timing", "Time Spent in different parts of the SSA Spiller");
+    T1 = new Timer("General time", "ProcessFunction", *TG);
+    T2 = new Timer("Limit", "Time spent in limit()", *TG);
+    T3 = new Timer("Initialization time", "Init Active Sets", *TG);
+    T4 = new Timer("Instruction processing time", "Process Instruction w/o limit", *TG);
+
     NumAvailableRegs =
         IsVGPRsPass ? ST->getMaxNumVGPRs(MF) : ST->getMaxNumSGPRs(MF);
     //  ? TRI->getRegPressureSetLimit(
@@ -118,6 +131,13 @@ public:
   AMDGPUSSASpiller(const LiveIntervals &LIS, MachineLoopInfo &LI,
                    MachineDominatorTree &MDT, AMDGPUNextUseAnalysis::Result &NU)
       : LIS(LIS), LI(LI), MDT(MDT), NU(NU) {}
+      ~AMDGPUSSASpiller() {
+        delete TG;
+        delete T2;
+        delete T3;
+        delete T4;
+        //delete TG;
+      }
   bool run(MachineFunction &MF);
 };
 
@@ -130,15 +150,20 @@ AMDGPUSSASpiller::getBlockInfo(const MachineBasicBlock &MBB) {
 
 void AMDGPUSSASpiller::processFunction(MachineFunction &MF) {
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
+  
+  T1->startTimer();
   for (auto MBB : RPOT) {
+    
+    T3->startTimer();
     if (LI.isLoopHeader(MBB)) {
       initActiveSetLoopHeader(*MBB);
     } else {
       initActiveSetUsualBlock(*MBB);
     }
     connectToPredecessors(*MBB);
+    T3->stopTimer();
     processBlock(*MBB);
-    dump();
+    // dump();
     // We process loop blocks twice: once with Spill/Active sets of
     // loop latch blocks unknown, and then again as soon as the latch blocks
     // sets are computed.
@@ -152,6 +177,7 @@ void AMDGPUSSASpiller::processFunction(MachineFunction &MF) {
       PostponedLoopLatches.erase(MBB->getNumber());
     }
   }
+  T1->stopTimer();
 }
 
 void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
@@ -161,6 +187,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
   
   for (MachineBasicBlock::iterator I : MBB) {
     RegisterSet Reloads;
+    T4->startTimer();
     for (auto U : I->uses()) {
       if (!U.isReg())
         continue;
@@ -189,17 +216,23 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
         Defs.insert(D.getReg());
     }
 
-    if (Reloads.empty() && Defs.empty())
+    if (Reloads.empty() && Defs.empty()) {
+      T4->stopTimer();
       continue;
-
+    }
+    T4->stopTimer();
+    
     limit(MBB, Active, Spilled, I);
     limit(MBB, Active, Spilled, I, Defs);
+    
+    T4->startTimer();
     // FIXME: limit with Defs is assumed to create room for the registers being
     // defined by I. Calling with std::next(I) makes spills inserted AFTER I!!!
     Active.insert(Defs.begin(), Defs.end());
     // Add reloads for VRegs in Reloads before I
     for (auto R : Reloads)
       reloadBefore(R, I);
+    T4->stopTimer();
   }
   // Now, clear dead registers.
   RegisterSet Deads;
@@ -242,9 +275,9 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   }
 
   for (auto Pred : Preds) {
-    dumpRegSet(getBlockInfo(*Pred).SpillSet);
+    // dumpRegSet(getBlockInfo(*Pred).SpillSet);
     Entry.SpillSet.set_union(getBlockInfo(*Pred).SpillSet);
-    dumpRegSet(Entry.SpillSet);
+    // dumpRegSet(Entry.SpillSet);
   }
   set_intersect(Entry.SpillSet, Entry.ActiveSet);
   for (auto Pred : Preds) {
@@ -394,6 +427,7 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
                              RegisterSet &Spilled,
                              MachineBasicBlock::iterator I,
                              const RegisterSet Defs) {
+  //T2->startTimer();
   MachineBasicBlock::iterator LimitPoint = I;
 
   if (!Defs.empty()) {
@@ -403,13 +437,18 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
 
   unsigned CurRP = getSizeInRegs(Active);
   unsigned DefsRP = getSizeInRegs(Defs);
-  if(CurRP <= NumAvailableRegs - DefsRP)
+  if(CurRP <= NumAvailableRegs - DefsRP) {
+    //T2->stopTimer();
     return;
+  }
 
   if (LimitPoint == MBB.end())
     NU.getSortedForBlockEnd(MBB, Active);
-  else
+  else {
+    T2->startTimer();
     NU.getSortedForInstruction(*LimitPoint, Active);
+    T2->stopTimer();
+  }
 
 
   unsigned ShrinkTo = NumAvailableRegs - DefsRP;
@@ -431,6 +470,7 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
       Spilled.insert(R);
     }
   }
+  //T2->stopTimer();
 }
 
 unsigned AMDGPUSSASpiller::getSizeInRegs(const Register VReg) {
@@ -466,7 +506,10 @@ bool AMDGPUSSASpiller::run(MachineFunction &MF) {
   init(MF, false);
   processFunction(MF);
   init(MF, true);
+  
   processFunction(MF);
+  dbgs() << "SSA Spiller end\n";
+  TG->print(llvm::errs());
   return false;
 }
 } // namespace

@@ -30,6 +30,12 @@ class NextUseResult {
   const SIRegisterInfo *TRI;
   MachineLoopInfo *LI;
   DenseMap<const SlotIndex *, DenseMap<Register, unsigned>> InstrCache;
+
+  TimerGroup *TG;
+  Timer *T1;
+  Timer *T2;
+  
+  
 public:
   using VRegDistances = DenseMap<Register, unsigned>;
 
