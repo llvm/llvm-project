@@ -10246,7 +10246,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings
 def warn_comparison_always : Warning<
-  "%select{self-|array }0comparison always evaluates to "
+  "%select{self-|array |pointer }0comparison always evaluates to "
   "%select{a constant|true|false|'std::strong_ordering::equal'}1">,
   InGroup<TautologicalCompare>;
 def warn_comparison_bitwise_always : Warning<
