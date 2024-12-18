@@ -393,9 +393,9 @@ struct IntrinsicLibrary {
   void genSignalSubroutine(llvm::ArrayRef<fir::ExtendedValue>);
   void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
   void genSyncThreads(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genSyncThreadsAnd(mlir::Type,llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsCount(mlir::Type,llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsOr(mlir::Type,llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSyncThreadsAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSystem(std::optional<mlir::Type>,
                                mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
