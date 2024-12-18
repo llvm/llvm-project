@@ -698,14 +698,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   RecoverableKinds &= ~TrappingKinds;
 
   // Parse -f(no-)?sanitize-nonmerged-handlers flags
-  SanitizerMask AlwaysMerge; // Empty
-  SanitizerMask NeverMerge;  // Empty
   SanitizerMask MergeKinds =
-      parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, AlwaysMerge,
-                        NeverMerge, options::OPT_fsanitize_merge_handlers_EQ,
+      parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, {},
+                        {}, options::OPT_fsanitize_merge_handlers_EQ,
                         options::OPT_fno_sanitize_merge_handlers_EQ);
-  MergeKinds |= AlwaysMerge; // No-op
-  MergeKinds &= ~NeverMerge; // No-op
   MergeKinds &= Kinds;
 
   // Setup ignorelist files.
