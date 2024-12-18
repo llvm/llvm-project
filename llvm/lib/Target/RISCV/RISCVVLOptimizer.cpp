@@ -1070,8 +1070,7 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
       const MCInstrDesc &Desc = UserMI.getDesc();
       unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
       const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-      if ((VLOp.isReg() && VLOp.getReg() != RISCV::X0) ||
-          (VLOp.isImm() && VLOp.getImm() != 0)) {
+      if (VLOp.isReg() || (VLOp.isImm() && VLOp.getImm() != 0)) {
         if (!CommonVL) {
           CommonVL = &VLOp;
           continue;
