@@ -1804,9 +1804,10 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
   return getAddr(N, DAG, CM, GV->isDSOLocal());
 }
 
-SDValue LoongArchTargetLowering::getStaticTLSAddr(
-    GlobalAddressSDNode *N, SelectionDAG &DAG, unsigned Opc, bool UseGOT,
-    bool Large, bool IsNormalOrMediumLE) const {
+SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
+                                                  SelectionDAG &DAG,
+                                                  unsigned Opc, bool UseGOT,
+                                                  bool Large) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   MVT GRLenVT = Subtarget.getGRLenVT();
@@ -1815,11 +1816,15 @@ SDValue LoongArchTargetLowering::getStaticTLSAddr(
   // PseudoLA_*_LARGE nodes.
   SDValue Tmp = DAG.getConstant(0, DL, Ty);
   SDValue Addr = DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, 0);
-  SDValue Offset = Large
+
+  // Only IE needs an extra argument for large code model.
+  SDValue Offset = Opc == LoongArch::PseudoLA_TLS_IE_LARGE
                        ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
                        : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
 
-  if (IsNormalOrMediumLE)
+  // If it is LE for normal/medium code model, the add tp operation will occur
+  // during the pseudo-instruction expansion.
+  if (Opc == LoongArch::PseudoLA_TLS_LE && !Large)
     return Offset;
 
   if (UseGOT) {
@@ -1942,7 +1947,7 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     //
     // This node doesn't need an extra argument for the large code model.
     return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE,
-                            /*UseGOT=*/false, /*Large=*/false, !Large);
+                            /*UseGOT=*/false, Large);
   }
 
   return getTLSDescAddr(N, DAG,
