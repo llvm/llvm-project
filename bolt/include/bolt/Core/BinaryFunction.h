@@ -360,6 +360,10 @@ private:
   /// True if another function body was merged into this one.
   bool HasFunctionsFoldedInto{false};
 
+  /// True if the function is used for remapping hot text and shall not be
+  /// placed on a huge page.
+  bool IsHotTextMover{false};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -427,6 +431,9 @@ private:
 
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
+
+  /// Function is referenced by a non-control flow instruction.
+  bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
@@ -821,6 +828,14 @@ public:
 
     return nullptr;
   }
+
+  /// Return true if function is referenced in a non-control flow instruction.
+  /// This flag is set when the code and relocation analyses are being
+  /// performed, which occurs when safe ICF (Identical Code Folding) is enabled.
+  bool hasAddressTaken() const { return HasAddressTaken; }
+
+  /// Set whether function is referenced in a non-control flow instruction.
+  void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
@@ -1368,6 +1383,8 @@ public:
   /// Return true if the original entry point was patched.
   bool isPatched() const { return IsPatched; }
 
+  bool isHotTextMover() const { return IsHotTextMover; }
+
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
     return getJumpTableContainingAddress(Address);
@@ -1719,6 +1736,8 @@ public:
   void setIgnored();
 
   void setIsPatched(bool V) { IsPatched = V; }
+
+  void setHotTextMover(bool V) { IsHotTextMover = V; }
 
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;
@@ -2134,6 +2153,9 @@ public:
   // Check for linker veneers, which lack relocations and need manual
   // adjustments.
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
+
+  /// Analyze instruction to identify a function reference.
+  void analyzeInstructionForFuncReference(const MCInst &Inst);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect

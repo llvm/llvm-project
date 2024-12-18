@@ -111,6 +111,10 @@ cl::opt<bool>
                             cl::desc("try to preserve basic block alignment"),
                             cl::cat(BoltOptCategory));
 
+static cl::opt<bool> PrintOffsets("print-offsets",
+                                  cl::desc("print basic block offsets"),
+                                  cl::Hidden, cl::cat(BoltOptCategory));
+
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -531,6 +535,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
 
       if (BB->isLandingPad())
         OS << "  Landing Pad\n";
+
+      if (opts::PrintOffsets && BB->getOutputStartAddress()) {
+        OS << "  OutputOffset: 0x"
+           << Twine::utohexstr(BB->getOutputStartAddress()) << '\n';
+      }
 
       uint64_t BBExecCount = BB->getExecutionCount();
       if (hasValidProfile()) {
@@ -1504,6 +1513,20 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
   return Target;
 }
 
+void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
+  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
+    if (!Op.isExpr())
+      continue;
+    const MCExpr &Expr = *Op.getExpr();
+    if (Expr.getKind() != MCExpr::SymbolRef)
+      continue;
+    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
+    // Set HasAddressTaken for a function regardless of the ICF level.
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+      BF->setHasAddressTaken(true);
+  }
+}
+
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
@@ -1624,6 +1647,8 @@ bool BinaryFunction::scanExternalRefs() {
                              [](const MCOperand &Op) { return Op.isExpr(); })) {
       // Skip assembly if the instruction may not have any symbolic operands.
       continue;
+    } else {
+      analyzeInstructionForFuncReference(Instruction);
     }
 
     // Emit the instruction using temp emitter and generate relocations.

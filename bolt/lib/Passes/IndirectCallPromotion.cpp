@@ -317,11 +317,25 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     const auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(
         Inst, "CallProfile");
     if (ICSP) {
+      // Deduplicate aliases by using function + entry id as a key type.
+      using FuncEntryTy = std::pair<const BinaryFunction *, uint64_t>;
+      std::map<FuncEntryTy, Callsite> FuncToCallsite;
       for (const IndirectCallProfile &CSP : ICSP.get()) {
         Callsite Site(BF, CSP);
-        if (Site.isValid())
-          Targets.emplace_back(std::move(Site));
+        if (!Site.isValid())
+          continue;
+
+        uint64_t EntryDesc = 0;
+        const BinaryFunction *Func =
+            BC.getFunctionForSymbol(CSP.Symbol, &EntryDesc);
+
+        auto [It, Success] =
+            FuncToCallsite.try_emplace(std::make_pair(Func, EntryDesc), Site);
+        if (!Success)
+          It->second += Site;
       }
+      for (Callsite Site : llvm::make_second_range(FuncToCallsite))
+        Targets.emplace_back(std::move(Site));
     }
   }
 

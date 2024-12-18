@@ -108,6 +108,9 @@ class IndirectCallPromotion : public BinaryFunctionPass {
     Location() {}
     explicit Location(MCSymbol *Sym) : Sym(Sym) {}
     explicit Location(uint64_t Addr) : Addr(Addr) {}
+    bool operator==(const Location &O) {
+      return Sym == O.Sym || Addr == O.Addr;
+    }
   };
 
   struct Callsite {
@@ -123,6 +126,14 @@ class IndirectCallPromotion : public BinaryFunctionPass {
              uint64_t Branches, uint64_t JTIndex)
         : From(From), To(To), Mispreds(Mispreds), Branches(Branches),
           JTIndices(1, JTIndex) {}
+    // Increment the current Callsite counts with another, used for merging
+    // targets.
+    Callsite &operator+=(const Callsite &O) {
+      assert(From == O.From);
+      Mispreds += O.Mispreds;
+      Branches += O.Branches;
+      return *this;
+    }
   };
 
   std::unordered_set<const BinaryFunction *> Modified;

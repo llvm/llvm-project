@@ -19,6 +19,7 @@
 #include "bolt/Core/Relocation.h"
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
+#include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -86,6 +87,9 @@ extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 extern cl::opt<bool> TimeRewrite;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),
@@ -2051,6 +2055,13 @@ void RewriteInstance::adjustCommandLineOptions() {
     exit(1);
   }
 
+  if (!BC->HasRelocations &&
+      opts::ICF == IdenticalCodeFolding::ICFLevel::Safe) {
+    BC->errs() << "BOLT-ERROR: binary built without relocations. Safe ICF is "
+                  "not supported\n";
+    exit(1);
+  }
+
   if (opts::Instrument ||
       (opts::ReorderFunctions != ReorderFunctions::RT_NONE &&
        !opts::HotText.getNumOccurrences())) {
@@ -2423,6 +2434,13 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
 
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
+
+    // Workaround for AArch64 issue with hot text.
+    if (BC->isAArch64() && (SymbolName == "__hot_start" ||
+          SymbolName == "__hot_end")) {
+      BC->addRelocation(Rel.getOffset(), Symbol, ELF::R_AARCH64_ABS64, Addend);
+      continue;
+    }
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }
@@ -3777,15 +3795,41 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       return Address;
     };
 
+    // Try to allocate sections before the \p Address and return an address for
+    // the allocation of the first section or 0 if \p is not big enough.
+    auto allocateBefore = [&](uint64_t Address) -> uint64_t {
+      for (auto SI = CodeSections.rbegin(), SE = CodeSections.rend(); SI != SE;
+           ++SI) {
+        BinarySection *Section = *SI;
+        if (Section->getOutputSize() > Address)
+          return 0;
+        Address -= Section->getOutputSize();
+        Address = alignDown(Address, Section->getAlignment());
+        Section->setOutputAddress(Address);
+      }
+      return Address;
+    };
+
     // Check if we can fit code in the original .text
     bool AllocationDone = false;
     if (opts::UseOldText) {
-      const uint64_t CodeSize =
-          allocateAt(BC->OldTextSectionAddress) - BC->OldTextSectionAddress;
+      uint64_t StartAddress;
+      uint64_t EndAddress;
+      if (opts::HotFunctionsAtEnd) {
+        EndAddress = BC->OldTextSectionAddress + BC->OldTextSectionSize;
+        StartAddress = allocateBefore(EndAddress);
+      } else {
+        StartAddress = BC->OldTextSectionAddress;
+        EndAddress = allocateAt(BC->OldTextSectionAddress);
+      }
 
+      const uint64_t CodeSize = EndAddress - StartAddress;
       if (CodeSize <= BC->OldTextSectionSize) {
         BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                   << Twine::utohexstr(opts::AlignText) << " alignment\n";
+                   << Twine::utohexstr(opts::AlignText) << " alignment";
+        if (StartAddress != BC->OldTextSectionAddress)
+          BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
+        BC->outs() << '\n';
         AllocationDone = true;
       } else {
         BC->errs()
@@ -4060,6 +4104,11 @@ void RewriteInstance::patchELFPHDRTable() {
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
+  }
+
+  if (!NewTextSegmentSize && !NewWritableSegmentSize) {
+    BC->outs() << "BOLT-INFO: not adding new segments\n";
+    return;
   }
 
   const uint64_t SavedPos = OS.tell();
