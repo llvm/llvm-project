@@ -28,7 +28,7 @@
 ; RUN:	-pass-remarks=memprof-context-disambiguation -save-temps \
 ; RUN:	-o %t.out 2>&1 | FileCheck %s --implicit-check-not "call in clone _Z3foov" \
 ; RUN:  --check-prefix=SIZESUNHINTED
-; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --implicit-check-not \"memprof\"=\"cold\"
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --implicit-check-not "\"memprof\"=\"cold\""
 
 source_filename = "memprof-missing-callsite.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
