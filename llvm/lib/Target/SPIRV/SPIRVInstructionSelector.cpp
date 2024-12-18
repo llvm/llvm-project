@@ -3178,100 +3178,74 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
     Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
     Register SrcReg, unsigned BitSetOpcode, bool SwapPrimarySide) const {
 
-  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   // SPIR-V only allow vecs of size 2,3,4. Calling with a larger vec requires
-  // creating a return type with an invalid vec size. If that is resolved
-  // then this function is valid up to vec8 as the intermediate splitting
-  // would create 2 vec4.
+  // creating a param reg and return reg with an invalid vec size. If that is
+  // resolved then this function is valid for vectors of any component size.
+  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   assert(ComponentCount < 5 && "Vec 5+ will generate invalid SPIR-V ops");
 
-
-  SPIRVType *BaseType = GR.retrieveScalarOrVectorIntType(ResType);
   bool ZeroAsNull = STI.isOpenCLEnv();
-  Register ConstIntZero =
-      GR.getOrCreateConstInt(0, I, BaseType, TII, ZeroAsNull);
-  unsigned LeftComponentCount = ComponentCount / 2;
-  unsigned RightComponentCount = ComponentCount - LeftComponentCount;
-  bool LeftIsVector = LeftComponentCount > 1;
-
-  // Split the SrcReg in half into 2 smaller vec registers
-  // (ie i64x4 -> i64x2, i64x2)
   MachineIRBuilder MIRBuilder(I);
-  SPIRVType *OpType = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
-  SPIRVType *LeftOpType = OpType;
-  SPIRVType *LeftResType = BaseType;
-  if (LeftIsVector) {
-    LeftOpType =
-        GR.getOrCreateSPIRVVectorType(OpType, LeftComponentCount, MIRBuilder);
-    LeftResType =
-        GR.getOrCreateSPIRVVectorType(BaseType, LeftComponentCount, MIRBuilder);
-  }
+  SPIRVType *BaseType = GR.retrieveScalarOrVectorIntType(ResType);
+  SPIRVType *I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
+  SPIRVType *I64x2Type = GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder);
+  SPIRVType *Vec2ResType =
+      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder);
 
-  SPIRVType *RightOpType =
-      GR.getOrCreateSPIRVVectorType(OpType, RightComponentCount, MIRBuilder);
-  SPIRVType *RightResType =
-      GR.getOrCreateSPIRVVectorType(BaseType, RightComponentCount, MIRBuilder);
+  std::vector<Register> PartialRegs;
 
-  Register LeftSideIn = MRI->createVirtualRegister(GR.getRegClass(LeftOpType));
-  Register RightSideIn =
-      MRI->createVirtualRegister(GR.getRegClass(RightOpType));
+  // Loops 0, 2, 4, ... but stops one loop early when ComponentCount is odd
+  unsigned CurrentComponent = 0;
+  for (; CurrentComponent + 1 < ComponentCount; CurrentComponent += 2) {
+    Register SubVecReg = MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
 
-  // Extract the left half from the SrcReg into LeftSideIn
-  // accounting for the special case when it only has one element
-  if (LeftIsVector) {
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpVectorShuffle))
-                   .addDef(LeftSideIn)
-                   .addUse(GR.getSPIRVTypeID(LeftOpType))
+                   .addDef(SubVecReg)
+                   .addUse(GR.getSPIRVTypeID(I64x2Type))
                    .addUse(SrcReg)
                    // Per the spec, repeat the vector if only one vec is needed
                    .addUse(SrcReg);
 
-    for (unsigned J = 0; J < LeftComponentCount; ++J)
-      MIB.addImm(J);
+    MIB.addImm(CurrentComponent);
+    MIB.addImm(CurrentComponent + 1);
 
     if (!MIB.constrainAllUses(TII, TRI, RBI))
       return false;
 
-  } else {
-    if (!selectOpWithSrcs(LeftSideIn, LeftOpType, I, {SrcReg, ConstIntZero},
-                          SPIRV::OpVectorExtractDynamic))
+    Register SubVecBitSetReg =
+        MRI->createVirtualRegister(GR.getRegClass(Vec2ResType));
+
+    if (!selectFirstBitSet64(SubVecBitSetReg, Vec2ResType, I, SubVecReg,
+                             BitSetOpcode, SwapPrimarySide))
       return false;
+
+    PartialRegs.push_back(SubVecBitSetReg);
   }
 
-  // Extract the right half from the SrcReg into RightSideIn.
-  // Right will always be a vector since the only time one element is left is
-  // when Component == 3, and in that case Left is one element.
-  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                     TII.get(SPIRV::OpVectorShuffle))
-                 .addDef(RightSideIn)
-                 .addUse(GR.getSPIRVTypeID(RightOpType))
-                 .addUse(SrcReg)
-                 // Per the spec, repeat the vector if only one vec is needed
-                 .addUse(SrcReg);
+  // On odd component counts we need to handle one more component
+  if (CurrentComponent != ComponentCount) {
+    Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
+    Register ConstIntLastIdx = GR.getOrCreateConstInt(
+        ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
 
-  for (unsigned J = LeftComponentCount; J < ComponentCount; ++J)
-    MIB.addImm(J);
+    if (!selectOpWithSrcs(FinalElemReg, I64Type, I, {SrcReg, ConstIntLastIdx},
+                          SPIRV::OpVectorExtractDynamic))
+      return false;
 
-  if (!MIB.constrainAllUses(TII, TRI, RBI))
-    return false;
+    Register FinalElemBitSetReg =
+        MRI->createVirtualRegister(GR.getRegClass(BaseType));
 
-  // Recursively call selectFirstBitSet64 on the 2 halves
-  Register LeftSideOut =
-      MRI->createVirtualRegister(GR.getRegClass(LeftResType));
-  Register RightSideOut =
-      MRI->createVirtualRegister(GR.getRegClass(RightResType));
+    if (!selectFirstBitSet64(FinalElemBitSetReg, BaseType, I, FinalElemReg,
+                             BitSetOpcode, SwapPrimarySide))
+      return false;
 
-  if (!selectFirstBitSet64(LeftSideOut, LeftResType, I, LeftSideIn,
-                           BitSetOpcode, SwapPrimarySide))
-    return false;
-  if (!selectFirstBitSet64(RightSideOut, RightResType, I, RightSideIn,
-                           BitSetOpcode, SwapPrimarySide))
-    return false;
+    PartialRegs.push_back(FinalElemBitSetReg);
+  }
 
-  // Join the two resulting registers back into the return type
-  // (ie i32x2, i32x2 -> i32x4)
-  return selectOpWithSrcs(ResVReg, ResType, I, {LeftSideOut, RightSideOut},
+  // Join all the resulting registers back into the return type in order
+  // (ie i32x2, i32x2, i32x1 -> i32x5)
+  return selectOpWithSrcs(ResVReg, ResType, I, PartialRegs,
                           SPIRV::OpCompositeConstruct);
 }
 
