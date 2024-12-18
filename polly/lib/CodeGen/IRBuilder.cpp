@@ -129,8 +129,8 @@ void ScopAnnotator::popLoop(bool IsParallel) {
 }
 
 static void addVectorizeMetadata(LLVMContext &Ctx,
-                                         SmallVector<Metadata *, 3> *Args,
-                                         bool EnableLoopVectorizer) {
+                                 SmallVector<Metadata *, 3> *Args,
+                                 bool EnableLoopVectorizer) {
   MDString *PropName = MDString::get(Ctx, "llvm.loop.vectorize.enable");
   ConstantInt *Value =
       ConstantInt::get(Type::getInt1Ty(Ctx), EnableLoopVectorizer);
