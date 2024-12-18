@@ -315,12 +315,9 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   // '-fsanitize=undefined -fsanitize-trap=undefined'
   // (clang/test/Driver/fsanitize.c ), which is that vptr is not enabled at all
   // (not even in recover mode) in order to avoid the need for a ubsan runtime.
-  return parseSanitizeArgs(D, Args, DiagnoseErrors,
-                           /* Default */ TrappingDefault,
-                           /* AlwaysIn */ AlwaysTrap,
-                           /* AlwaysOut */ NeverTrap,
-                           /* OptInID */ options::OPT_fsanitize_trap_EQ,
-                           /* OptOutID */ options::OPT_fno_sanitize_trap_EQ);
+  return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
+                           NeverTrap, options::OPT_fsanitize_trap_EQ,
+                           options::OPT_fno_sanitize_trap_EQ);
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
@@ -683,13 +680,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // default in ASan?
 
   // Parse -f(no-)?sanitize-recover flags.
-  SanitizerMask RecoverableKinds =
-      parseSanitizeArgs(D, Args, DiagnoseErrors,
-                        /* Default */ RecoverableByDefault,
-                        /* AlwaysIn */ AlwaysRecoverable,
-                        /* AlwaysOut */ Unrecoverable,
-                        /* OptInID */ options::OPT_fsanitize_recover_EQ,
-                        /* OptOutID */ options::OPT_fno_sanitize_recover_EQ);
+  SanitizerMask RecoverableKinds = parseSanitizeArgs(
+      D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
+      Unrecoverable, options::OPT_fsanitize_recover_EQ,
+      options::OPT_fno_sanitize_recover_EQ);
   RecoverableKinds |= AlwaysRecoverable;
   RecoverableKinds &= ~Unrecoverable;
   RecoverableKinds &= Kinds;
