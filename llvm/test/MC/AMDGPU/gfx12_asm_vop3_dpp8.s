@@ -840,6 +840,12 @@ v_cvt_pk_norm_i16_f16_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x03,0x12,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
 
+v_cvt_pk_norm_i16_f16_e64_dpp v5, -v1.h, |v2.l| dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_cvt_pk_norm_i16_f16_e64_dpp v5, -v1.h, |v2.l| op_sel:[1,0,0] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x0a,0x12,0xd7,0xea,0x04,0x02,0x20,0x01,0x77,0x39,0x05]
+
+v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255.l|, -|v255.h| dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255.l|, -|v255.h| op_sel:[0,1,0] dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x13,0x12,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
+
 v_cvt_pk_norm_u16_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x13,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
@@ -851,6 +857,12 @@ v_cvt_pk_norm_u16_f16_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
 
 v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x03,0x13,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
+
+v_cvt_pk_norm_u16_f16_e64_dpp v5, -v1.h, |v2.l| dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v5, -v1.h, |v2.l| op_sel:[1,0,0] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x0a,0x13,0xd7,0xea,0x04,0x02,0x20,0x01,0x77,0x39,0x05]
+
+v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255.l|, -|v255.h| dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255.l|, -|v255.h| op_sel:[0,1,0] dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x13,0x13,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
 
 v_cvt_pk_u16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_cvt_pk_u16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x07,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
