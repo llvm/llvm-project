@@ -69,8 +69,7 @@ static const SanitizerMask TrappingSupported =
     SanitizerKind::LocalBounds | SanitizerKind::CFI |
     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask NonMergedDefault;
-static const SanitizerMask NonMergedSupported =
-    (SanitizerKind::Undefined & ~SanitizerKind::Vptr);
+static const SanitizerMask NonMergedSupported = SanitizerKind::Undefined;
 static const SanitizerMask TrappingDefault = SanitizerKind::CFI;
 static const SanitizerMask CFIClasses =
     SanitizerKind::CFIVCall | SanitizerKind::CFINVCall |
