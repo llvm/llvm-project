@@ -2,7 +2,6 @@
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -mattr=+neon,+dotprod -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefixes=CHECK-INTERLEAVE1
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -mattr=+neon,+dotprod -S < %s | FileCheck %s --check-prefixes=CHECK-INTERLEAVED
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -mattr=+neon,+dotprod -force-vector-interleave=1 -vectorizer-maximize-bandwidth -S < %s | FileCheck %s --check-prefixes=CHECK-MAXBW
-; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -mattr=+neon -S < %s | FileCheck %s --check-prefixes=CHECK-NODOTPROD
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-unknown-elf"
@@ -98,43 +97,6 @@ define i32 @dotp(ptr %a, ptr %b) {
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-MAXBW-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
-;
-; CHECK-NODOTPROD-LABEL: define i32 @dotp(
-; CHECK-NODOTPROD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i32 16
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i32 16
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i8>, ptr [[TMP7]], align 1
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP8]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[WIDE_LOAD3]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = zext <16 x i8> [[WIDE_LOAD4]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP11:%.*]] = mul <16 x i32> [[TMP9]], [[TMP4]]
-; CHECK-NODOTPROD-NEXT:    [[TMP12:%.*]] = mul <16 x i32> [[TMP10]], [[TMP5]]
-; CHECK-NODOTPROD-NEXT:    [[TMP13]] = add <16 x i32> [[TMP11]], [[VEC_PHI]]
-; CHECK-NODOTPROD-NEXT:    [[TMP14]] = add <16 x i32> [[TMP12]], [[VEC_PHI1]]
-; CHECK-NODOTPROD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; CHECK-NODOTPROD-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK-NODOTPROD:       middle.block:
-; CHECK-NODOTPROD-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP14]], [[TMP13]]
-; CHECK-NODOTPROD-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ;
 entry:
   br label %for.body
@@ -482,165 +444,6 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[TMP70:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP70]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ;
-; CHECK-NODOTPROD-LABEL: define i32 @not_dotp_different_types(
-; CHECK-NODOTPROD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP137:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP138:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
-; CHECK-NODOTPROD-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NODOTPROD-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 8
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 9
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 10
-; CHECK-NODOTPROD-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 11
-; CHECK-NODOTPROD-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 12
-; CHECK-NODOTPROD-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 13
-; CHECK-NODOTPROD-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 14
-; CHECK-NODOTPROD-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 15
-; CHECK-NODOTPROD-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 16
-; CHECK-NODOTPROD-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 17
-; CHECK-NODOTPROD-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 18
-; CHECK-NODOTPROD-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 19
-; CHECK-NODOTPROD-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], 20
-; CHECK-NODOTPROD-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 21
-; CHECK-NODOTPROD-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], 22
-; CHECK-NODOTPROD-NEXT:    [[TMP23:%.*]] = add i64 [[INDEX]], 23
-; CHECK-NODOTPROD-NEXT:    [[TMP24:%.*]] = add i64 [[INDEX]], 24
-; CHECK-NODOTPROD-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], 25
-; CHECK-NODOTPROD-NEXT:    [[TMP26:%.*]] = add i64 [[INDEX]], 26
-; CHECK-NODOTPROD-NEXT:    [[TMP27:%.*]] = add i64 [[INDEX]], 27
-; CHECK-NODOTPROD-NEXT:    [[TMP28:%.*]] = add i64 [[INDEX]], 28
-; CHECK-NODOTPROD-NEXT:    [[TMP29:%.*]] = add i64 [[INDEX]], 29
-; CHECK-NODOTPROD-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
-; CHECK-NODOTPROD-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
-; CHECK-NODOTPROD-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP32]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP32]], i32 16
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP33]], align 1
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP34]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP35:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP36:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP37:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
-; CHECK-NODOTPROD-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
-; CHECK-NODOTPROD-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
-; CHECK-NODOTPROD-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP4]]
-; CHECK-NODOTPROD-NEXT:    [[TMP42:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP5]]
-; CHECK-NODOTPROD-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-NODOTPROD-NEXT:    [[TMP44:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]
-; CHECK-NODOTPROD-NEXT:    [[TMP45:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP8]]
-; CHECK-NODOTPROD-NEXT:    [[TMP46:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
-; CHECK-NODOTPROD-NEXT:    [[TMP47:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP10]]
-; CHECK-NODOTPROD-NEXT:    [[TMP48:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
-; CHECK-NODOTPROD-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP12]]
-; CHECK-NODOTPROD-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP13]]
-; CHECK-NODOTPROD-NEXT:    [[TMP51:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP14]]
-; CHECK-NODOTPROD-NEXT:    [[TMP52:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP15]]
-; CHECK-NODOTPROD-NEXT:    [[TMP53:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
-; CHECK-NODOTPROD-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP17]]
-; CHECK-NODOTPROD-NEXT:    [[TMP55:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP18]]
-; CHECK-NODOTPROD-NEXT:    [[TMP56:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP19]]
-; CHECK-NODOTPROD-NEXT:    [[TMP57:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP20]]
-; CHECK-NODOTPROD-NEXT:    [[TMP58:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP21]]
-; CHECK-NODOTPROD-NEXT:    [[TMP59:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP22]]
-; CHECK-NODOTPROD-NEXT:    [[TMP60:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP23]]
-; CHECK-NODOTPROD-NEXT:    [[TMP61:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP24]]
-; CHECK-NODOTPROD-NEXT:    [[TMP62:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP25]]
-; CHECK-NODOTPROD-NEXT:    [[TMP63:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP26]]
-; CHECK-NODOTPROD-NEXT:    [[TMP64:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP27]]
-; CHECK-NODOTPROD-NEXT:    [[TMP65:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP28]]
-; CHECK-NODOTPROD-NEXT:    [[TMP66:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP29]]
-; CHECK-NODOTPROD-NEXT:    [[TMP67:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP30]]
-; CHECK-NODOTPROD-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP31]]
-; CHECK-NODOTPROD-NEXT:    [[TMP69:%.*]] = load i16, ptr [[TMP37]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP70:%.*]] = load i16, ptr [[TMP38]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP71:%.*]] = load i16, ptr [[TMP39]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP72:%.*]] = load i16, ptr [[TMP40]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP73:%.*]] = load i16, ptr [[TMP41]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP74:%.*]] = load i16, ptr [[TMP42]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP75:%.*]] = load i16, ptr [[TMP43]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP76:%.*]] = load i16, ptr [[TMP44]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP77:%.*]] = load i16, ptr [[TMP45]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP78:%.*]] = load i16, ptr [[TMP46]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP79:%.*]] = load i16, ptr [[TMP47]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP80:%.*]] = load i16, ptr [[TMP48]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP81:%.*]] = load i16, ptr [[TMP49]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP82:%.*]] = load i16, ptr [[TMP50]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP83:%.*]] = load i16, ptr [[TMP51]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP84:%.*]] = load i16, ptr [[TMP52]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP85:%.*]] = insertelement <16 x i16> poison, i16 [[TMP69]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP86:%.*]] = insertelement <16 x i16> [[TMP85]], i16 [[TMP70]], i32 1
-; CHECK-NODOTPROD-NEXT:    [[TMP87:%.*]] = insertelement <16 x i16> [[TMP86]], i16 [[TMP71]], i32 2
-; CHECK-NODOTPROD-NEXT:    [[TMP88:%.*]] = insertelement <16 x i16> [[TMP87]], i16 [[TMP72]], i32 3
-; CHECK-NODOTPROD-NEXT:    [[TMP89:%.*]] = insertelement <16 x i16> [[TMP88]], i16 [[TMP73]], i32 4
-; CHECK-NODOTPROD-NEXT:    [[TMP90:%.*]] = insertelement <16 x i16> [[TMP89]], i16 [[TMP74]], i32 5
-; CHECK-NODOTPROD-NEXT:    [[TMP91:%.*]] = insertelement <16 x i16> [[TMP90]], i16 [[TMP75]], i32 6
-; CHECK-NODOTPROD-NEXT:    [[TMP92:%.*]] = insertelement <16 x i16> [[TMP91]], i16 [[TMP76]], i32 7
-; CHECK-NODOTPROD-NEXT:    [[TMP93:%.*]] = insertelement <16 x i16> [[TMP92]], i16 [[TMP77]], i32 8
-; CHECK-NODOTPROD-NEXT:    [[TMP94:%.*]] = insertelement <16 x i16> [[TMP93]], i16 [[TMP78]], i32 9
-; CHECK-NODOTPROD-NEXT:    [[TMP95:%.*]] = insertelement <16 x i16> [[TMP94]], i16 [[TMP79]], i32 10
-; CHECK-NODOTPROD-NEXT:    [[TMP96:%.*]] = insertelement <16 x i16> [[TMP95]], i16 [[TMP80]], i32 11
-; CHECK-NODOTPROD-NEXT:    [[TMP97:%.*]] = insertelement <16 x i16> [[TMP96]], i16 [[TMP81]], i32 12
-; CHECK-NODOTPROD-NEXT:    [[TMP98:%.*]] = insertelement <16 x i16> [[TMP97]], i16 [[TMP82]], i32 13
-; CHECK-NODOTPROD-NEXT:    [[TMP99:%.*]] = insertelement <16 x i16> [[TMP98]], i16 [[TMP83]], i32 14
-; CHECK-NODOTPROD-NEXT:    [[TMP100:%.*]] = insertelement <16 x i16> [[TMP99]], i16 [[TMP84]], i32 15
-; CHECK-NODOTPROD-NEXT:    [[TMP101:%.*]] = load i16, ptr [[TMP53]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP102:%.*]] = load i16, ptr [[TMP54]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP103:%.*]] = load i16, ptr [[TMP55]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP104:%.*]] = load i16, ptr [[TMP56]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP105:%.*]] = load i16, ptr [[TMP57]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP106:%.*]] = load i16, ptr [[TMP58]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP107:%.*]] = load i16, ptr [[TMP59]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP108:%.*]] = load i16, ptr [[TMP60]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP109:%.*]] = load i16, ptr [[TMP61]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP110:%.*]] = load i16, ptr [[TMP62]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP111:%.*]] = load i16, ptr [[TMP63]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP112:%.*]] = load i16, ptr [[TMP64]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP113:%.*]] = load i16, ptr [[TMP65]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP114:%.*]] = load i16, ptr [[TMP66]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP115:%.*]] = load i16, ptr [[TMP67]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP116:%.*]] = load i16, ptr [[TMP68]], align 2
-; CHECK-NODOTPROD-NEXT:    [[TMP117:%.*]] = insertelement <16 x i16> poison, i16 [[TMP101]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP118:%.*]] = insertelement <16 x i16> [[TMP117]], i16 [[TMP102]], i32 1
-; CHECK-NODOTPROD-NEXT:    [[TMP119:%.*]] = insertelement <16 x i16> [[TMP118]], i16 [[TMP103]], i32 2
-; CHECK-NODOTPROD-NEXT:    [[TMP120:%.*]] = insertelement <16 x i16> [[TMP119]], i16 [[TMP104]], i32 3
-; CHECK-NODOTPROD-NEXT:    [[TMP121:%.*]] = insertelement <16 x i16> [[TMP120]], i16 [[TMP105]], i32 4
-; CHECK-NODOTPROD-NEXT:    [[TMP122:%.*]] = insertelement <16 x i16> [[TMP121]], i16 [[TMP106]], i32 5
-; CHECK-NODOTPROD-NEXT:    [[TMP123:%.*]] = insertelement <16 x i16> [[TMP122]], i16 [[TMP107]], i32 6
-; CHECK-NODOTPROD-NEXT:    [[TMP124:%.*]] = insertelement <16 x i16> [[TMP123]], i16 [[TMP108]], i32 7
-; CHECK-NODOTPROD-NEXT:    [[TMP125:%.*]] = insertelement <16 x i16> [[TMP124]], i16 [[TMP109]], i32 8
-; CHECK-NODOTPROD-NEXT:    [[TMP126:%.*]] = insertelement <16 x i16> [[TMP125]], i16 [[TMP110]], i32 9
-; CHECK-NODOTPROD-NEXT:    [[TMP127:%.*]] = insertelement <16 x i16> [[TMP126]], i16 [[TMP111]], i32 10
-; CHECK-NODOTPROD-NEXT:    [[TMP128:%.*]] = insertelement <16 x i16> [[TMP127]], i16 [[TMP112]], i32 11
-; CHECK-NODOTPROD-NEXT:    [[TMP129:%.*]] = insertelement <16 x i16> [[TMP128]], i16 [[TMP113]], i32 12
-; CHECK-NODOTPROD-NEXT:    [[TMP130:%.*]] = insertelement <16 x i16> [[TMP129]], i16 [[TMP114]], i32 13
-; CHECK-NODOTPROD-NEXT:    [[TMP131:%.*]] = insertelement <16 x i16> [[TMP130]], i16 [[TMP115]], i32 14
-; CHECK-NODOTPROD-NEXT:    [[TMP132:%.*]] = insertelement <16 x i16> [[TMP131]], i16 [[TMP116]], i32 15
-; CHECK-NODOTPROD-NEXT:    [[TMP133:%.*]] = zext <16 x i16> [[TMP100]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP134:%.*]] = zext <16 x i16> [[TMP132]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP135:%.*]] = mul <16 x i32> [[TMP133]], [[TMP35]]
-; CHECK-NODOTPROD-NEXT:    [[TMP136:%.*]] = mul <16 x i32> [[TMP134]], [[TMP36]]
-; CHECK-NODOTPROD-NEXT:    [[TMP137]] = add <16 x i32> [[TMP135]], [[VEC_PHI]]
-; CHECK-NODOTPROD-NEXT:    [[TMP138]] = add <16 x i32> [[TMP136]], [[VEC_PHI1]]
-; CHECK-NODOTPROD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; CHECK-NODOTPROD-NEXT:    [[TMP139:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP139]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK-NODOTPROD:       middle.block:
-; CHECK-NODOTPROD-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP138]], [[TMP137]]
-; CHECK-NODOTPROD-NEXT:    [[TMP140:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
-;
 entry:
   br label %for.body
 
@@ -739,35 +542,6 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ;
-; CHECK-NODOTPROD-LABEL: define i32 @not_dotp_not_loop_carried(
-; CHECK-NODOTPROD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i32> [ <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[WIDE_LOAD1]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP7]] = mul <16 x i32> [[TMP6]], [[TMP3]]
-; CHECK-NODOTPROD-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i32> [[VECTOR_RECUR]], <16 x i32> [[TMP7]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = add <16 x i32> [[TMP7]], [[TMP8]]
-; CHECK-NODOTPROD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; CHECK-NODOTPROD:       middle.block:
-; CHECK-NODOTPROD-NEXT:    [[TMP11:%.*]] = extractelement <16 x i32> [[TMP9]], i32 15
-; CHECK-NODOTPROD-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i32> [[TMP7]], i32 15
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
-;
 entry:
   br label %for.body
 
@@ -862,34 +636,6 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-;
-; CHECK-NODOTPROD-LABEL: define i32 @not_dotp_not_phi(
-; CHECK-NODOTPROD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i32> [ <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[WIDE_LOAD1]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP7:%.*]] = mul <16 x i32> [[TMP6]], [[TMP3]]
-; CHECK-NODOTPROD-NEXT:    [[TMP8]] = add <16 x i32> [[TMP7]], [[TMP6]]
-; CHECK-NODOTPROD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK-NODOTPROD:       middle.block:
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = extractelement <16 x i32> [[TMP8]], i32 15
-; CHECK-NODOTPROD-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i32> [[TMP8]], i32 15
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ;
 entry:
   br label %for.body
@@ -1124,76 +870,6 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUM_IN]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ;
-; CHECK-NODOTPROD-LABEL: define i32 @dotp_unrolled(
-; CHECK-NODOTPROD-SAME: i32 [[NUM_OUT:%.*]], i64 [[NUM_IN:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUM_IN]], 16
-; CHECK-NODOTPROD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[NUM_IN]], 16
-; CHECK-NODOTPROD-NEXT:    [[N_VEC:%.*]] = sub i64 [[NUM_IN]], [[N_MOD_VF]]
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP35:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP29:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI2:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI3:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP0]], 1
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP3]]
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP3]]
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP0]], 2
-; CHECK-NODOTPROD-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-NODOTPROD-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[TMP0]], 3
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP9]]
-; CHECK-NODOTPROD-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP9]]
-; CHECK-NODOTPROD-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP12]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP13:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP14]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP15:%.*]] = sext <16 x i8> [[WIDE_LOAD4]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP16:%.*]] = mul nsw <16 x i32> [[TMP15]], [[TMP13]]
-; CHECK-NODOTPROD-NEXT:    [[TMP17]] = add <16 x i32> [[TMP16]], [[VEC_PHI3]]
-; CHECK-NODOTPROD-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i8>, ptr [[TMP18]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP19:%.*]] = sext <16 x i8> [[WIDE_LOAD5]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD6:%.*]] = load <16 x i8>, ptr [[TMP20]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP21:%.*]] = sext <16 x i8> [[WIDE_LOAD6]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP22:%.*]] = mul nsw <16 x i32> [[TMP19]], [[TMP21]]
-; CHECK-NODOTPROD-NEXT:    [[TMP23]] = add <16 x i32> [[TMP22]], [[VEC_PHI2]]
-; CHECK-NODOTPROD-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD7:%.*]] = load <16 x i8>, ptr [[TMP24]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP25:%.*]] = sext <16 x i8> [[WIDE_LOAD7]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP26]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP27:%.*]] = sext <16 x i8> [[WIDE_LOAD8]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP28:%.*]] = mul nsw <16 x i32> [[TMP25]], [[TMP27]]
-; CHECK-NODOTPROD-NEXT:    [[TMP29]] = add <16 x i32> [[TMP28]], [[VEC_PHI1]]
-; CHECK-NODOTPROD-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD9:%.*]] = load <16 x i8>, ptr [[TMP30]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP31:%.*]] = sext <16 x i8> [[WIDE_LOAD9]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD10:%.*]] = load <16 x i8>, ptr [[TMP32]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP33:%.*]] = sext <16 x i8> [[WIDE_LOAD10]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP34:%.*]] = mul nsw <16 x i32> [[TMP31]], [[TMP33]]
-; CHECK-NODOTPROD-NEXT:    [[TMP35]] = add <16 x i32> [[TMP34]], [[VEC_PHI]]
-; CHECK-NODOTPROD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NODOTPROD-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
-; CHECK-NODOTPROD:       middle.block:
-; CHECK-NODOTPROD-NEXT:    [[TMP37:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP35]])
-; CHECK-NODOTPROD-NEXT:    [[TMP38:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP29]])
-; CHECK-NODOTPROD-NEXT:    [[TMP39:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP23]])
-; CHECK-NODOTPROD-NEXT:    [[TMP40:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP17]])
-; CHECK-NODOTPROD-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUM_IN]], [[N_VEC]]
-; CHECK-NODOTPROD-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
-;
 entry:
   br label %for.body
 
@@ -1353,47 +1029,6 @@ define i32 @not_dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ;
-; CHECK-NODOTPROD-LABEL: define i32 @not_dotp_predicated(
-; CHECK-NODOTPROD-SAME: i64 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 32
-; CHECK-NODOTPROD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 32
-; CHECK-NODOTPROD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = sext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i32 16
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i8>, ptr [[TMP7]], align 1
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP8]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = sext <16 x i8> [[WIDE_LOAD3]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = sext <16 x i8> [[WIDE_LOAD4]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP11:%.*]] = mul nsw <16 x i32> [[TMP9]], [[TMP4]]
-; CHECK-NODOTPROD-NEXT:    [[TMP12:%.*]] = mul nsw <16 x i32> [[TMP10]], [[TMP5]]
-; CHECK-NODOTPROD-NEXT:    [[TMP13]] = add <16 x i32> [[TMP11]], [[VEC_PHI]]
-; CHECK-NODOTPROD-NEXT:    [[TMP14]] = add <16 x i32> [[TMP12]], [[VEC_PHI1]]
-; CHECK-NODOTPROD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; CHECK-NODOTPROD-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
-; CHECK-NODOTPROD:       middle.block:
-; CHECK-NODOTPROD-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP14]], [[TMP13]]
-; CHECK-NODOTPROD-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
-; CHECK-NODOTPROD-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NODOTPROD-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
-;
 entry:
   br label %for.body
 
@@ -1524,42 +1159,6 @@ define i32 @not_dotp_predicated_pragma(i64 %N, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = icmp ule <16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-MAXBW-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i32 0
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
-;
-; CHECK-NODOTPROD-LABEL: define i32 @not_dotp_predicated_pragma(
-; CHECK-NODOTPROD-SAME: i64 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
-; CHECK-NODOTPROD-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
-; CHECK-NODOTPROD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NODOTPROD-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; CHECK-NODOTPROD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; CHECK-NODOTPROD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE62:%.*]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP180:%.*]], [[PRED_LOAD_CONTINUE62]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
-; CHECK-NODOTPROD-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NODOTPROD-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 8
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 9
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 10
-; CHECK-NODOTPROD-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 11
-; CHECK-NODOTPROD-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 12
-; CHECK-NODOTPROD-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 13
-; CHECK-NODOTPROD-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 14
-; CHECK-NODOTPROD-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 15
-; CHECK-NODOTPROD-NEXT:    [[TMP16:%.*]] = icmp ule <16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NODOTPROD-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i32 0
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ;
 entry:
   br label %for.body
@@ -1746,44 +1345,6 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
 ; CHECK-MAXBW-NEXT:    [[RESULT:%.*]] = add i32 [[ADD_LCSSA]], [[EXT_B_LCSSA]]
 ; CHECK-MAXBW-NEXT:    ret i32 [[RESULT]]
-;
-; CHECK-NODOTPROD-LABEL: define i32 @not_dotp_extend_user(
-; CHECK-NODOTPROD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NODOTPROD-NEXT:  entry:
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK-NODOTPROD:       vector.ph:
-; CHECK-NODOTPROD-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-NODOTPROD:       vector.body:
-; CHECK-NODOTPROD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NODOTPROD-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NODOTPROD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i32 16
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NODOTPROD-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
-; CHECK-NODOTPROD-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i32 16
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i8>, ptr [[TMP7]], align 1
-; CHECK-NODOTPROD-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP8]], align 1
-; CHECK-NODOTPROD-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[WIDE_LOAD3]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP10:%.*]] = zext <16 x i8> [[WIDE_LOAD4]] to <16 x i32>
-; CHECK-NODOTPROD-NEXT:    [[TMP11:%.*]] = mul <16 x i32> [[TMP9]], [[TMP4]]
-; CHECK-NODOTPROD-NEXT:    [[TMP12:%.*]] = mul <16 x i32> [[TMP10]], [[TMP5]]
-; CHECK-NODOTPROD-NEXT:    [[TMP13]] = add <16 x i32> [[TMP11]], [[VEC_PHI]]
-; CHECK-NODOTPROD-NEXT:    [[TMP14]] = add <16 x i32> [[TMP12]], [[VEC_PHI1]]
-; CHECK-NODOTPROD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; CHECK-NODOTPROD-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NODOTPROD-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
-; CHECK-NODOTPROD:       middle.block:
-; CHECK-NODOTPROD-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP14]], [[TMP13]]
-; CHECK-NODOTPROD-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
-; CHECK-NODOTPROD-NEXT:    [[TMP17:%.*]] = extractelement <16 x i32> [[TMP10]], i32 15
-; CHECK-NODOTPROD-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ;
 entry:
   br label %for.body
