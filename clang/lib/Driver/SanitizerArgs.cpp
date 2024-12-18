@@ -248,18 +248,16 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
 }
 
 // Computes the sanitizer mask as:
-//     Default + Arguments (in or out) + AlwaysIn - AlwaysOut
+//     Default + Arguments (in or out)
 // with arguments parsed from left to right.
 //
-// AlwaysOut is not enforced if AlwaysOutAdvisoryOnly is enabled.
-//
-// Error messages are optionally printed if the AlwaysIn or AlwaysOut
-// invariants are violated.
+// Error messages are printed if the AlwaysIn or AlwaysOut invariants are
+// violated, but the caller must enforce these invariants themselves.
 static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
                   SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
-                  int OptOutID, bool AlwaysOutAdvisoryOnly) {
+                  int OptOutID) {
   assert(!(AlwaysIn & AlwaysOut) &&
          "parseSanitizeArgs called with contradictory in/out requirements");
 
@@ -304,10 +302,6 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
     }
   }
 
-  Output |= AlwaysIn;
-  if (!AlwaysOutAdvisoryOnly)
-    Output &= ~AlwaysOut;
-
   return Output;
 }
 
@@ -317,7 +311,7 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   SanitizerMask AlwaysTrap; // Empty
   SanitizerMask NeverTrap = ~(setGroupBits(TrappingSupported));
 
-  // AlwaysOutAdvisoryOnly = true is needed to maintain the behavior of
+  // N.B. We do *not* enforce NeverTrap. This maintains the behavior of
   // '-fsanitize=undefined -fsanitize-trap=undefined'
   // (clang/test/Driver/fsanitize.c ), which is that vptr is not enabled at all
   // (not even in recover mode) in order to avoid the need for a ubsan runtime.
@@ -326,8 +320,7 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
                            /* AlwaysIn */ AlwaysTrap,
                            /* AlwaysOut */ NeverTrap,
                            /* OptInID */ options::OPT_fsanitize_trap_EQ,
-                           /* OptOutID */ options::OPT_fno_sanitize_trap_EQ,
-                           /* AlwaysOutAdvisoryOnly */ true);
+                           /* OptOutID */ options::OPT_fno_sanitize_trap_EQ);
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
@@ -696,9 +689,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         /* AlwaysIn */ AlwaysRecoverable,
                         /* AlwaysOut */ Unrecoverable,
                         /* OptInID */ options::OPT_fsanitize_recover_EQ,
-                        /* OptOutID */ options::OPT_fno_sanitize_recover_EQ,
-                        /* AlwaysOutAdvisoryOnly */ false);
-
+                        /* OptOutID */ options::OPT_fno_sanitize_recover_EQ);
+  RecoverableKinds |= AlwaysRecoverable;
+  RecoverableKinds &= ~Unrecoverable;
   RecoverableKinds &= Kinds;
 
   TrappingKinds &= Kinds;
