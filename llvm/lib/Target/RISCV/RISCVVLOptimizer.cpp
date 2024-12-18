@@ -1075,10 +1075,12 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
         if (!CommonVL) {
           CommonVL = &VLOp;
           continue;
-        } else if (!CommonVL->isIdenticalTo(VLOp)) {
+        }
+        if (!CommonVL->isIdenticalTo(VLOp)) {
           CanReduceVL = false;
           break;
         }
+        continue;
       }
     }
 
