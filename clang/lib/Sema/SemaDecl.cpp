@@ -11794,7 +11794,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
                                       LookupResult &Previous) {
   const TargetInfo &TI = S.getASTContext().getTargetInfo();
 
-  // Abort if FMV is disabled.
+  // Check if FMV is disabled.
   if (TI.getTriple().isAArch64() && !TI.hasFeature("fmv"))
     return false;
 
