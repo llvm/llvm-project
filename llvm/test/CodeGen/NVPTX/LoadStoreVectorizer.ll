@@ -172,30 +172,34 @@ define float @ff(ptr %p) {
 define void @combine_v16i8(ptr noundef align 16 %ptr1, ptr noundef align 16 %ptr2) {
 ; ENABLED-LABEL: combine_v16i8(
 ; ENABLED:       {
-; ENABLED-NEXT:    .reg .b32 %r<40>;
+; ENABLED-NEXT:    .reg .b32 %r<36>;
 ; ENABLED-NEXT:    .reg .b64 %rd<3>;
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
 ; ENABLED-NEXT:    ld.param.u64 %rd1, [combine_v16i8_param_0];
-; ENABLED-NEXT:    ld.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; ENABLED-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; ENABLED-NEXT:    ld.param.u64 %rd2, [combine_v16i8_param_1];
-; ENABLED-NEXT:    bfe.u32 %r9, %r1, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r10, %r1, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r11, %r1, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r12, %r1, 24, 8;
-; ENABLED-NEXT:    bfe.u32 %r13, %r2, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r14, %r2, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r15, %r2, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r16, %r2, 24, 8;
-; ENABLED-NEXT:    bfe.u32 %r17, %r3, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r18, %r3, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r19, %r3, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r20, %r3, 24, 8;
-; ENABLED-NEXT:    bfe.u32 %r21, %r4, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r22, %r4, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r23, %r4, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r24, %r4, 24, 8;
-; ENABLED-NEXT:    add.s32 %r25, %r9, %r10;
+; ENABLED-NEXT:    bfe.u32 %r5, %r1, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r6, %r1, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r8, %r1, 24, 8;
+; ENABLED-NEXT:    bfe.u32 %r9, %r2, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r10, %r2, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r11, %r2, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r12, %r2, 24, 8;
+; ENABLED-NEXT:    bfe.u32 %r13, %r3, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r14, %r3, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r15, %r3, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; ENABLED-NEXT:    bfe.u32 %r17, %r4, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r18, %r4, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r19, %r4, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r20, %r4, 24, 8;
+; ENABLED-NEXT:    add.s32 %r21, %r5, %r6;
+; ENABLED-NEXT:    add.s32 %r22, %r21, %r7;
+; ENABLED-NEXT:    add.s32 %r23, %r22, %r8;
+; ENABLED-NEXT:    add.s32 %r24, %r23, %r9;
+; ENABLED-NEXT:    add.s32 %r25, %r24, %r10;
 ; ENABLED-NEXT:    add.s32 %r26, %r25, %r11;
 ; ENABLED-NEXT:    add.s32 %r27, %r26, %r12;
 ; ENABLED-NEXT:    add.s32 %r28, %r27, %r13;
@@ -206,11 +210,7 @@ define void @combine_v16i8(ptr noundef align 16 %ptr1, ptr noundef align 16 %ptr
 ; ENABLED-NEXT:    add.s32 %r33, %r32, %r18;
 ; ENABLED-NEXT:    add.s32 %r34, %r33, %r19;
 ; ENABLED-NEXT:    add.s32 %r35, %r34, %r20;
-; ENABLED-NEXT:    add.s32 %r36, %r35, %r21;
-; ENABLED-NEXT:    add.s32 %r37, %r36, %r22;
-; ENABLED-NEXT:    add.s32 %r38, %r37, %r23;
-; ENABLED-NEXT:    add.s32 %r39, %r38, %r24;
-; ENABLED-NEXT:    st.u32 [%rd2], %r39;
+; ENABLED-NEXT:    st.u32 [%rd2], %r35;
 ; ENABLED-NEXT:    ret;
 ;
 ; DISABLED-LABEL: combine_v16i8(
@@ -328,27 +328,25 @@ define void @combine_v16i8_unaligned(ptr noundef align 8 %ptr1, ptr noundef alig
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
 ; ENABLED-NEXT:    ld.param.u64 %rd1, [combine_v16i8_unaligned_param_0];
-; ENABLED-NEXT:    ld.u32 %r1, [%rd1+4];
-; ENABLED-NEXT:    ld.u32 %r2, [%rd1];
+; ENABLED-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
 ; ENABLED-NEXT:    ld.param.u64 %rd2, [combine_v16i8_unaligned_param_1];
-; ENABLED-NEXT:    ld.u32 %r3, [%rd1+12];
-; ENABLED-NEXT:    ld.u32 %r4, [%rd1+8];
-; ENABLED-NEXT:    bfe.u32 %r5, %r2, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r6, %r2, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r7, %r2, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r8, %r2, 24, 8;
-; ENABLED-NEXT:    bfe.u32 %r9, %r1, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r10, %r1, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r11, %r1, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r12, %r1, 24, 8;
-; ENABLED-NEXT:    bfe.u32 %r13, %r4, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r14, %r4, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r15, %r4, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r16, %r4, 24, 8;
-; ENABLED-NEXT:    bfe.u32 %r17, %r3, 0, 8;
-; ENABLED-NEXT:    bfe.u32 %r18, %r3, 8, 8;
-; ENABLED-NEXT:    bfe.u32 %r19, %r3, 16, 8;
-; ENABLED-NEXT:    bfe.u32 %r20, %r3, 24, 8;
+; ENABLED-NEXT:    ld.v2.b32 {%r3, %r4}, [%rd1+8];
+; ENABLED-NEXT:    bfe.u32 %r5, %r1, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r6, %r1, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r8, %r1, 24, 8;
+; ENABLED-NEXT:    bfe.u32 %r9, %r2, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r10, %r2, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r11, %r2, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r12, %r2, 24, 8;
+; ENABLED-NEXT:    bfe.u32 %r13, %r3, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r14, %r3, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r15, %r3, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; ENABLED-NEXT:    bfe.u32 %r17, %r4, 0, 8;
+; ENABLED-NEXT:    bfe.u32 %r18, %r4, 8, 8;
+; ENABLED-NEXT:    bfe.u32 %r19, %r4, 16, 8;
+; ENABLED-NEXT:    bfe.u32 %r20, %r4, 24, 8;
 ; ENABLED-NEXT:    add.s32 %r21, %r5, %r6;
 ; ENABLED-NEXT:    add.s32 %r22, %r21, %r7;
 ; ENABLED-NEXT:    add.s32 %r23, %r22, %r8;

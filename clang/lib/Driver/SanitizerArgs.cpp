@@ -37,15 +37,15 @@ static const SanitizerMask NotAllowedWithMinimalRuntime = SanitizerKind::Vptr;
 static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
-    SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Thread |
-    SanitizerKind::Memory | SanitizerKind::DataFlow |
+    SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type |
+    SanitizerKind::Thread | SanitizerKind::Memory | SanitizerKind::DataFlow |
     SanitizerKind::NumericalStability;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
-    SanitizerKind::MemtagStack | SanitizerKind::MemtagHeap |
-    SanitizerKind::MemtagGlobals | SanitizerKind::Memory |
-    SanitizerKind::KernelMemory | SanitizerKind::Leak |
+    SanitizerKind::Type | SanitizerKind::MemtagStack |
+    SanitizerKind::MemtagHeap | SanitizerKind::MemtagGlobals |
+    SanitizerKind::Memory | SanitizerKind::KernelMemory | SanitizerKind::Leak |
     SanitizerKind::Undefined | SanitizerKind::Integer | SanitizerKind::Bounds |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
@@ -182,6 +182,7 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
                      {"msan_ignorelist.txt", SanitizerKind::Memory},
                      {"nsan_ignorelist.txt", SanitizerKind::NumericalStability},
                      {"tsan_ignorelist.txt", SanitizerKind::Thread},
+                     {"tysan_blacklist.txt", SanitizerKind::Type},
                      {"dfsan_abilist.txt", SanitizerKind::DataFlow},
                      {"cfi_ignorelist.txt", SanitizerKind::CFI},
                      {"ubsan_ignorelist.txt",
@@ -247,39 +248,77 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
   return Kinds;
 }
 
-static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
-                                           const llvm::opt::ArgList &Args,
-                                           bool DiagnoseErrors) {
-  SanitizerMask TrapRemove; // During the loop below, the accumulated set of
-                            // sanitizers disabled by the current sanitizer
-                            // argument or any argument after it.
-  SanitizerMask TrappingKinds;
-  SanitizerMask TrappingSupportedWithGroups = setGroupBits(TrappingSupported);
+// Computes the sanitizer mask as:
+//     Default + Arguments (in or out)
+// with arguments parsed from left to right.
+//
+// Error messages are printed if the AlwaysIn or AlwaysOut invariants are
+// violated, but the caller must enforce these invariants themselves.
+static SanitizerMask
+parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                  bool DiagnoseErrors, SanitizerMask Default,
+                  SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
+                  int OptOutID) {
+  assert(!(AlwaysIn & AlwaysOut) &&
+         "parseSanitizeArgs called with contradictory in/out requirements");
 
-  for (const llvm::opt::Arg *Arg : llvm::reverse(Args)) {
-    if (Arg->getOption().matches(options::OPT_fsanitize_trap_EQ)) {
-      Arg->claim();
-      SanitizerMask Add = parseArgValues(D, Arg, true);
-      Add &= ~TrapRemove;
-      SanitizerMask InvalidValues = Add & ~TrappingSupportedWithGroups;
-      if (InvalidValues && DiagnoseErrors) {
-        SanitizerSet S;
-        S.Mask = InvalidValues;
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << Arg->getSpelling() << toString(S);
+  SanitizerMask Output = Default;
+  // Keep track of which violations we have already reported, to avoid
+  // duplicate error messages.
+  SanitizerMask DiagnosedAlwaysInViolations;
+  SanitizerMask DiagnosedAlwaysOutViolations;
+  for (const auto *Arg : Args) {
+    if (Arg->getOption().matches(OptInID)) {
+      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
+      // Report error if user explicitly tries to opt-in to an always-out
+      // sanitizer.
+      if (SanitizerMask KindsToDiagnose =
+              Add & AlwaysOut & ~DiagnosedAlwaysOutViolations) {
+        if (DiagnoseErrors) {
+          SanitizerSet SetToDiagnose;
+          SetToDiagnose.Mask |= KindsToDiagnose;
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << Arg->getSpelling() << toString(SetToDiagnose);
+          DiagnosedAlwaysOutViolations |= KindsToDiagnose;
+        }
       }
-      TrappingKinds |= expandSanitizerGroups(Add) & ~TrapRemove;
-    } else if (Arg->getOption().matches(options::OPT_fno_sanitize_trap_EQ)) {
+      Output |= expandSanitizerGroups(Add);
       Arg->claim();
-      TrapRemove |=
-          expandSanitizerGroups(parseArgValues(D, Arg, DiagnoseErrors));
+    } else if (Arg->getOption().matches(OptOutID)) {
+      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
+      // Report error if user explicitly tries to opt-out of an always-in
+      // sanitizer.
+      if (SanitizerMask KindsToDiagnose =
+              Remove & AlwaysIn & ~DiagnosedAlwaysInViolations) {
+        if (DiagnoseErrors) {
+          SanitizerSet SetToDiagnose;
+          SetToDiagnose.Mask |= KindsToDiagnose;
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << Arg->getSpelling() << toString(SetToDiagnose);
+          DiagnosedAlwaysInViolations |= KindsToDiagnose;
+        }
+      }
+      Output &= ~expandSanitizerGroups(Remove);
+      Arg->claim();
     }
   }
 
-  // Apply default trapping behavior.
-  TrappingKinds |= TrappingDefault & ~TrapRemove;
+  return Output;
+}
 
-  return TrappingKinds;
+static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
+                                           const llvm::opt::ArgList &Args,
+                                           bool DiagnoseErrors) {
+  SanitizerMask AlwaysTrap; // Empty
+  SanitizerMask NeverTrap = ~(setGroupBits(TrappingSupported));
+
+  // N.B. We do *not* enforce NeverTrap. This maintains the behavior of
+  // '-fsanitize=undefined -fsanitize-trap=undefined'
+  // (clang/test/Driver/fsanitize.c ), which is that vptr is not enabled at all
+  // (not even in recover mode) in order to avoid the need for a ubsan runtime.
+  return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
+                           NeverTrap, options::OPT_fsanitize_trap_EQ,
+                           options::OPT_fno_sanitize_trap_EQ);
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
@@ -532,6 +571,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   std::pair<SanitizerMask, SanitizerMask> IncompatibleGroups[] = {
       std::make_pair(SanitizerKind::Address,
                      SanitizerKind::Thread | SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Type,
+                     SanitizerKind::Address | SanitizerKind::KernelAddress |
+                         SanitizerKind::Memory | SanitizerKind::Leak |
+                         SanitizerKind::Thread | SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
@@ -642,44 +685,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // default in ASan?
 
   // Parse -f(no-)?sanitize-recover flags.
-  SanitizerMask RecoverableKinds = RecoverableByDefault | AlwaysRecoverable;
-  SanitizerMask DiagnosedUnrecoverableKinds;
-  SanitizerMask DiagnosedAlwaysRecoverableKinds;
-  for (const auto *Arg : Args) {
-    if (Arg->getOption().matches(options::OPT_fsanitize_recover_EQ)) {
-      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
-      // Report error if user explicitly tries to recover from unrecoverable
-      // sanitizer.
-      if (SanitizerMask KindsToDiagnose =
-              Add & Unrecoverable & ~DiagnosedUnrecoverableKinds) {
-        SanitizerSet SetToDiagnose;
-        SetToDiagnose.Mask |= KindsToDiagnose;
-        if (DiagnoseErrors)
-          D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
-        DiagnosedUnrecoverableKinds |= KindsToDiagnose;
-      }
-      RecoverableKinds |= expandSanitizerGroups(Add);
-      Arg->claim();
-    } else if (Arg->getOption().matches(options::OPT_fno_sanitize_recover_EQ)) {
-      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
-      // Report error if user explicitly tries to disable recovery from
-      // always recoverable sanitizer.
-      if (SanitizerMask KindsToDiagnose =
-              Remove & AlwaysRecoverable & ~DiagnosedAlwaysRecoverableKinds) {
-        SanitizerSet SetToDiagnose;
-        SetToDiagnose.Mask |= KindsToDiagnose;
-        if (DiagnoseErrors)
-          D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
-        DiagnosedAlwaysRecoverableKinds |= KindsToDiagnose;
-      }
-      RecoverableKinds &= ~expandSanitizerGroups(Remove);
-      Arg->claim();
-    }
-  }
-  RecoverableKinds &= Kinds;
+  SanitizerMask RecoverableKinds = parseSanitizeArgs(
+      D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
+      Unrecoverable, options::OPT_fsanitize_recover_EQ,
+      options::OPT_fno_sanitize_recover_EQ);
+  RecoverableKinds |= AlwaysRecoverable;
   RecoverableKinds &= ~Unrecoverable;
+  RecoverableKinds &= Kinds;
 
   TrappingKinds &= Kinds;
   RecoverableKinds &= ~TrappingKinds;
@@ -1086,10 +1098,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                    options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
 
   // Parse -link-cxx-sanitizer flag.
-  LinkCXXRuntimes = Args.hasArg(options::OPT_fsanitize_link_cxx_runtime,
-                                options::OPT_fno_sanitize_link_cxx_runtime,
-                                LinkCXXRuntimes) ||
-                    D.CCCIsCXX();
+  LinkCXXRuntimes =
+      D.CCCIsCXX() && !Args.hasArg(clang::driver::options::OPT_nostdlibxx);
+  LinkCXXRuntimes =
+      Args.hasFlag(options::OPT_fsanitize_link_cxx_runtime,
+                   options::OPT_fno_sanitize_link_cxx_runtime, LinkCXXRuntimes);
 
   NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
                                 options::OPT_fmemory_profile_EQ,

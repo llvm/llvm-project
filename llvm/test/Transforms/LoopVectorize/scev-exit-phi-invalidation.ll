@@ -72,10 +72,10 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[EXIT_2:%.*]], label [[SCALAR_PH3]]
 ; CHECK:       scalar.ph3:
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK2]] ], [ 0, [[EXIT_1]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK2]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[EXIT_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL5]], [[SCALAR_PH3]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL8]], [[SCALAR_PH3]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i8 [[IV_2]], 1
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i8 [[IV_2_NEXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_A]], align 1

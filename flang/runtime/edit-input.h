@@ -16,7 +16,7 @@
 namespace Fortran::runtime::io {
 
 RT_API_ATTRS bool EditIntegerInput(
-    IoStatementState &, const DataEdit &, void *, int kind);
+    IoStatementState &, const DataEdit &, void *, int kind, bool isSigned);
 
 template <int KIND>
 RT_API_ATTRS bool EditRealInput(IoStatementState &, const DataEdit &, void *);

@@ -21,6 +21,7 @@ void NormalFunc(int j, float f) {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'j' 'int'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: NullStmt
 
 }
@@ -39,6 +40,7 @@ void TemplFunc() {
 #pragma acc data default(none) if(T::SomeFloat < typename T::IntTy{})
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}} '<dependent type>' '<'
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
@@ -50,6 +52,8 @@ void TemplFunc() {
 #pragma acc enter data copyin(Global) if(typename T::IntTy{})
   ;
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}}enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: CXXUnresolvedConstructExpr{{.*}} 'typename T::IntTy' 'typename T::IntTy'
   // CHECK-NEXT: InitListExpr{{.*}} 'void'
@@ -58,6 +62,8 @@ void TemplFunc() {
 #pragma acc exit data copyout(Global) if(T::SomeFloat)
   ;
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
@@ -66,6 +72,8 @@ void TemplFunc() {
 #pragma acc host_data use_device(Global) if(T::BC)
   ;
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}}host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
@@ -79,6 +87,7 @@ void TemplFunc() {
   // CHECK-NEXT: CompoundStmt
 
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}} 'bool' '<'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float' <LValueToRValue>
@@ -90,6 +99,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}}enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <IntegralToBoolean>
   // CHECK-NEXT: CXXFunctionalCastExpr{{.*}}'typename InstTy::IntTy':'int' functional cast to typename struct InstTy::IntTy <NoOp>
@@ -97,6 +108,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
@@ -105,6 +118,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}}host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'bool' <UserDefinedConversion>
   // CHECK-NEXT: CXXMemberCallExpr{{.*}} 'bool'
