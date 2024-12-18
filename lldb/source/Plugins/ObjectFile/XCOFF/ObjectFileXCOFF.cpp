@@ -104,7 +104,6 @@ bool ObjectFileXCOFF::CreateBinary() {
                    "Failed to create binary for file ({1}): {0}", m_file);
     return false;
   }
-
   // Make sure we only handle XCOFF format.
   m_binary =
       llvm::unique_dyn_cast<llvm::object::XCOFFObjectFile>(std::move(*binary));
@@ -170,9 +169,8 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 bool ObjectFileXCOFF::ParseHeader() {
-  ModuleSP module_sp(GetModule());
   // Only 64-bit is supported for now
-  return module_sp && m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
+  return m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
 }
 
 ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
