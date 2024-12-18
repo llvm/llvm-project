@@ -170,11 +170,23 @@ Status MainLoopPosix::RunImpl::Poll() {
     read_fds.push_back(pfd);
   }
 
+#if defined(_AIX)
+  sigset_t origmask;
+  int timeout;
+
+  timeout = -1;
+  pthread_sigmask(SIG_SETMASK, nullptr, &origmask);
+  int ready = poll(read_fds.data(), read_fds.size(), timeout);
+  pthread_sigmask(SIG_SETMASK, &origmask, nullptr);
+  if (ready == -1 && errno != EINTR)
+    return Status(errno, eErrorTypePOSIX);
+#else
   if (ppoll(read_fds.data(), read_fds.size(),
             ToTimeSpec(loop.GetNextWakeupTime()),
             /*sigmask=*/nullptr) == -1 &&
       errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
+#endif
 
   return Status();
 }
@@ -226,13 +238,13 @@ MainLoopPosix::~MainLoopPosix() {
 #endif
   m_read_fds.erase(m_interrupt_pipe.GetReadFileDescriptor());
   m_interrupt_pipe.Close();
-  assert(m_read_fds.size() == 0); 
+  assert(m_read_fds.size() == 0);
   assert(m_signals.size() == 0);
 }
 
 MainLoopPosix::ReadHandleUP
 MainLoopPosix::RegisterReadObject(const IOObjectSP &object_sp,
-                                 const Callback &callback, Status &error) {
+                                  const Callback &callback, Status &error) {
   if (!object_sp || !object_sp->IsValid()) {
     error = Status::FromErrorString("IO object is not valid.");
     return nullptr;
