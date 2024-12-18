@@ -6978,6 +6978,7 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
   const MCContext::Environment Format = getContext().getObjectFileType();
   bool IsMachO = Format == MCContext::IsMachO;
   bool IsCOFF = Format == MCContext::IsCOFF;
+  bool IsELF = Format == MCContext::IsELF;
 
   auto IDVal = DirectiveID.getIdentifier().lower();
   SMLoc Loc = DirectiveID.getLoc();
@@ -7073,11 +7074,13 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHSaveAnyReg(Loc, true, true);
     else
       return true;
-  } else if (!IsMachO && !IsCOFF) {
+  } else if (IsELF) {
     if (IDVal == ".aeabi_subsection")
       parseDirectiveAeabiSubSectionHeader(Loc);
     else if (IDVal == ".aeabi_attribute")
       parseDirectiveAeabiAArch64Attr(Loc);
+    else
+     return true;
   } else
     return true;
   return false;
