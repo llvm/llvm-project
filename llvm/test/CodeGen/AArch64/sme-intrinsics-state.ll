@@ -2,32 +2,8 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -verify-machineinstrs < %s | FileCheck %s
 
 
-define i1 @streaming_mode_st_compatible() #0 {
+define i1 @streaming_mode_streaming_compatible() #0 {
 ; CHECK-LABEL: streaming_mode_st_compatible:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and w0, w0, #0x1
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %mode = tail call noundef i1 @llvm.aarch64.sme.in.streaming.mode()
-  ret i1 %mode
-}
-
-define i1 @streaming_mode_st_enabled() #1 {
-; CHECK-LABEL: streaming_mode_st_enabled:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and w0, w0, #0x1
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %mode = tail call noundef i1 @llvm.aarch64.sme.in.streaming.mode()
-  ret i1 %mode
-}
-
-define i1 @streaming_mode_st_disabled() #2 {
-; CHECK-LABEL: streaming_mode_st_disabled:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
@@ -40,5 +16,3 @@ define i1 @streaming_mode_st_disabled() #2 {
 
 
 attributes #0 = {nounwind memory(none) "aarch64_pstate_sm_compatible"}
-attributes #1 = {nounwind memory(none) "aarch64_pstate_sm_enabled"}
-attributes #2 = {nounwind memory(none)}
