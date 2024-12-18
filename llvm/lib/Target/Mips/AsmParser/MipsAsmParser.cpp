@@ -2108,6 +2108,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   if ((Opcode == Mips::JAL || Opcode == Mips::JAL_MM) && inPicMode()) {
     warnIfNoMacro(IDLoc);
 
+    if (!Inst.getOperand(0).isExpr()) {
+      return Error(IDLoc, "jal needs a symbolic expression in PIC mode");
+    }
+
     const MCExpr *JalExpr = Inst.getOperand(0).getExpr();
 
     // We can do this expansion if there's only 1 symbol in the argument
