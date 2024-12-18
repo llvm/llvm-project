@@ -683,6 +683,16 @@ Improvements to Clang's diagnostics
       views.push_back(std::string("123")); // warning
     }
 
+- Clang now emits a ``-Wtautological-compare`` diagnostic when a check for
+  pointer addition overflow is always true or false, because overflow would
+  be undefined behavior.
+
+  .. code-block:: c++
+
+    bool incorrect_overflow_check(const char *ptr, size_t index) {
+      return ptr + index < ptr; // warning
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
