@@ -115,21 +115,12 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     void write(StringRef KeyName, StringRef Value) override {
       writeHelper(KeyName, Value);
     }
-
-    void write(StringRef KeyName,
-               const std::map<std::string, std::string> &Value) override {
-      json::Object Inner;
-      for (auto KV : Value) {
-        Inner.try_emplace(KV.first, KV.second);
-      }
-      writeHelper(KeyName, json::Value(std::move(Inner)));
-    }
-    
+ 
     void beginObject(StringRef KeyName) override {
       Children.push_back(json::Object());
       ChildrenNames.push_back(KeyName.str());
     }
-
+    
     void endObject() override {
       assert(!Children.empty() && !ChildrenNames.empty());
       json::Value Val = json::Value(std::move(Children.back()));
@@ -139,8 +130,8 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       ChildrenNames.pop_back();
       writeHelper(Name, std::move(Val));
     }
-
-    llvm::Error finalize() override {
+    
+    Error finalize() override {
       if (!Started)
         return createStringError("Serializer not currently in use");
       Started = false;
@@ -165,9 +156,8 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   public:
   static std::unique_ptr<MyManager> createInstatnce(telemetry::Config *Config) {
     // If Telemetry is not enabled, then just return null;
-    if (!config->EnableTelemetry)
+    if (!Config->EnableTelemetry)
       return nullptr;
-
     return std::make_unique<MyManager>();
   }
   MyManager() = default;
@@ -259,4 +249,3 @@ Logging the tool init-process:
   Manager->logStartup(&Entry);
 
 Similar code can be used for logging the tool's exit.
-
