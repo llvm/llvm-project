@@ -1,13 +1,20 @@
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t -- -- -std=c23
+// RUN: %check_clang_tidy -check-suffix=TO-BOOL-FALSE %s readability-implicit-bool-conversion %t -- \
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: false, \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: true \
+// RUN:     }}' -- -std=c23
+// RUN: %check_clang_tidy -check-suffix=FROM-BOOL-FALSE %s readability-implicit-bool-conversion %t -- \
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: true, \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: false \
+// RUN:     }}' -- -std=c23
+// RUN: %check_clang_tidy -check-suffix=TO-AND-FROM-BOOL-FALSE %s readability-implicit-bool-conversion %t -- \
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: false, \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: false \
+// RUN:     }}' -- -std=c23
 
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t \
-// RUN: -- -config='{CheckOptions: [{key: readability-implicit-bool-conversion.CheckConversionsToBool, value: false}, {key: readability-implicit-bool-conversion.CheckConversionsFromBool, value: true}]}'
-
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t \
-// RUN: -- -config='{CheckOptions: [{key: readability-implicit-bool-conversion.CheckConversionsToBool, value: true}, {key: readability-implicit-bool-conversion.CheckConversionsFromBool, value: false}]}'
-
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t \
-// RUN: -- -config='{CheckOptions: [{key: readability-implicit-bool-conversion.CheckConversionsToBool, value: false}, {key: readability-implicit-bool-conversion.CheckConversionsFromBool, value: false}]}'
 
 // ==========================================================
 // Test Case: Conversions to bool (CheckConversionsToBool=true)
