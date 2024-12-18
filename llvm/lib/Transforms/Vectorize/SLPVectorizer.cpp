@@ -836,6 +836,8 @@ public:
     return getOpcode() == CheckedOpcode || getAltOpcode() == CheckedOpcode;
   }
 
+  bool valid() const { return MainOp != nullptr; }
+
   InstructionsState() = delete;
   InstructionsState(Instruction *MainOp, Instruction *AltOp)
       : MainOp(MainOp), AltOp(AltOp) {}
@@ -868,8 +870,8 @@ static bool areCompatibleCmpOps(Value *BaseOp0, Value *BaseOp1, Value *Op0,
          (!isa<Instruction>(BaseOp0) && !isa<Instruction>(Op0) &&
           !isa<Instruction>(BaseOp1) && !isa<Instruction>(Op1)) ||
          BaseOp0 == Op0 || BaseOp1 == Op1 ||
-         getSameOpcode({BaseOp0, Op0}, TLI).getMainOp() ||
-         getSameOpcode({BaseOp1, Op1}, TLI).getMainOp();
+         getSameOpcode({BaseOp0, Op0}, TLI).valid() ||
+         getSameOpcode({BaseOp1, Op1}, TLI).valid();
 }
 
 /// \returns true if a compare instruction \p CI has similar "look" and
@@ -2380,7 +2382,7 @@ public:
         // Use Boyer-Moore majority voting for finding the majority opcode and
         // the number of times it occurs.
         if (auto *I = dyn_cast<Instruction>(OpData.V)) {
-          if (!OpcodeI || !getSameOpcode({OpcodeI, I}, TLI).getMainOp() ||
+          if (!OpcodeI || !getSameOpcode({OpcodeI, I}, TLI).valid() ||
               I->getParent() != Parent) {
             if (NumOpsWithSameOpcodeParent == 0) {
               NumOpsWithSameOpcodeParent = 1;
@@ -2500,7 +2502,7 @@ public:
                 // next lane does not build same opcode sequence.
                 (Lns == 2 &&
                  !getSameOpcode({Op, getValue((OpI + 1) % OpE, Ln)}, TLI)
-                      .getMainOp() &&
+                      .valid() &&
                  isa<Constant>(Data.V)))) ||
               // 3. The operand in the current lane is loop invariant (can be
               // hoisted out) and another operand is also a loop invariant
@@ -2509,7 +2511,7 @@ public:
               // FIXME: need to teach the cost model about this case for better
               // estimation.
               (IsInvariant && !isa<Constant>(Data.V) &&
-               !getSameOpcode({Op, Data.V}, TLI).getMainOp() &&
+               !getSameOpcode({Op, Data.V}, TLI).valid() &&
                L->isLoopInvariant(Data.V))) {
             FoundCandidate = true;
             Data.IsUsed = Data.V == Op;
@@ -2539,7 +2541,7 @@ public:
                 return true;
               Value *OpILn = getValue(OpI, Ln);
               return (L && L->isLoopInvariant(OpILn)) ||
-                     (getSameOpcode({Op, OpILn}, TLI).getMainOp() &&
+                     (getSameOpcode({Op, OpILn}, TLI).valid() &&
                       allSameBlock({Op, OpILn}));
             }))
           return true;
@@ -4766,7 +4768,7 @@ static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
           !CompareOpcodes ||
           (GEP1 && GEP2 &&
            getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)
-               .getMainOp()));
+               .valid()));
 }
 
 /// Calculates minimal alignment as a common alignment.
@@ -7488,7 +7490,7 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                  [&](ArrayRef<Value *> Op) {
                    if (allConstant(Op) ||
                        (!isSplat(Op) && allSameBlock(Op) && allSameType(Op) &&
-                        getSameOpcode(Op, *TLI).getMainOp()))
+                        getSameOpcode(Op, *TLI).valid()))
                      return false;
                    DenseMap<Value *, unsigned> Uniques;
                    for (Value *V : Op) {
@@ -13223,7 +13225,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       Value *In1 = PHI1->getIncomingValue(I);
       if (isConstant(In) && isConstant(In1))
         continue;
-      if (!getSameOpcode({In, In1}, *TLI).getMainOp())
+      if (!getSameOpcode({In, In1}, *TLI).valid())
         return false;
       if (cast<Instruction>(In)->getParent() !=
           cast<Instruction>(In1)->getParent())
@@ -13251,7 +13253,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (It != UsedValuesEntry.end())
       UsedInSameVTE = It->second == UsedValuesEntry.find(V)->second;
     return V != V1 && MightBeIgnored(V1) && !UsedInSameVTE &&
-           getSameOpcode({V, V1}, *TLI).getMainOp() &&
+           getSameOpcode({V, V1}, *TLI).valid() &&
            cast<Instruction>(V)->getParent() ==
                cast<Instruction>(V1)->getParent() &&
            (!isa<PHINode>(V1) || AreCompatiblePHIs(V, V1));
@@ -21346,7 +21348,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             return false;
           if (I1->getParent() != I2->getParent())
             return false;
-          if (getSameOpcode({I1, I2}, *TLI).getMainOp())
+          if (getSameOpcode({I1, I2}, *TLI).valid())
             continue;
           return false;
         }
@@ -21700,7 +21702,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
                "Different nodes should have different DFS numbers");
         if (NodeI1 != NodeI2)
           return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
-        if (getSameOpcode({I1, I2}, *TLI).getMainOp())
+        if (getSameOpcode({I1, I2}, *TLI).valid())
           return false;
         return I1->getOpcode() < I2->getOpcode();
       }
@@ -21726,7 +21728,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
         if (I1->getParent() != I2->getParent())
           return false;
-        return getSameOpcode({I1, I2}, *TLI).getMainOp() != nullptr;
+        return getSameOpcode({I1, I2}, *TLI).valid();
       }
     if (isa<Constant>(V1->getValueOperand()) &&
         isa<Constant>(V2->getValueOperand()))
