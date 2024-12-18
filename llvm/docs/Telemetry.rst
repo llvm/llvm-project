@@ -111,6 +111,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     void write(StringRef KeyName, unsigned long long Value) override {
       writeHelper(KeyName, Value);
     }
+
     void write(StringRef KeyName, StringRef Value) override {
       writeHelper(KeyName, Value);
     }
