@@ -715,7 +715,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   Value *VecFNeg = Builder.CreateFNegFMF(SrcVec, FNeg);
   if (NeedLenChg) {
     // shuffle DestVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
-    Value *LenChgShuf = Builder.CreateShuffleVector(SrcVec, SrcMask);
+    Value *LenChgShuf = Builder.CreateShuffleVector(VecFNeg, SrcMask);
     NewShuf = Builder.CreateShuffleVector(DestVec, LenChgShuf, Mask);
   } else {
     // shuffle DestVec, (fneg SrcVec), Mask
