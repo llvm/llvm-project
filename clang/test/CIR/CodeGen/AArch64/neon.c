@@ -4270,132 +4270,207 @@ uint64x2_t test_vrshlq_u64(uint64x2_t a, int64x2_t b) {
 //   return vsliq_n_p64(a, b, 0);
 // }
 
-// NYI-LABEL: @test_vmax_s8(
-// NYI:   [[VMAX_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.smax.v8i8(<8 x i8> %a, <8 x i8> %b)
-// NYI:   ret <8 x i8> [[VMAX_I]]
-// int8x8_t test_vmax_s8(int8x8_t a, int8x8_t b) {
-//   return vmax_s8(a, b);
-// }
+int8x8_t test_vmax_s8(int8x8_t a, int8x8_t b) {
+  return vmax_s8(a, b);
 
-// NYI-LABEL: @test_vmax_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.smax.v4i16(<4 x i16> %a, <4 x i16> %b)
-// NYI:   ret <4 x i16> [[VMAX2_I]]
-// int16x4_t test_vmax_s16(int16x4_t a, int16x4_t b) {
-//   return vmax_s16(a, b);
-// }
+  // CIR-LABEL: vmax_s8
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!s8i x 8>
 
-// NYI-LABEL: @test_vmax_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.smax.v2i32(<2 x i32> %a, <2 x i32> %b)
-// NYI:   ret <2 x i32> [[VMAX2_I]]
-// int32x2_t test_vmax_s32(int32x2_t a, int32x2_t b) {
-//   return vmax_s32(a, b);
-// }
+  // LLVM-LABEL: test_vmax_s8
+  // LLVM-SAME: (<8 x i8> [[a:%.*]], <8 x i8> [[b:%.*]])
+  // LLVM:    [[VMAX_I:%.*]] = call <8 x i8> @llvm.smax.v8i8(<8 x i8> [[a]], <8 x i8> [[b]])
+  // LLVM:    ret <8 x i8> [[VMAX_I]]
+}
 
-// NYI-LABEL: @test_vmax_u8(
-// NYI:   [[VMAX_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8> %a, <8 x i8> %b)
-// NYI:   ret <8 x i8> [[VMAX_I]]
-// uint8x8_t test_vmax_u8(uint8x8_t a, uint8x8_t b) {
-//   return vmax_u8(a, b);
-// }
+int16x4_t test_vmax_s16(int16x4_t a, int16x4_t b) {
+  return vmax_s16(a, b);
 
-// NYI-LABEL: @test_vmax_u16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.umax.v4i16(<4 x i16> %a, <4 x i16> %b)
-// NYI:   ret <4 x i16> [[VMAX2_I]]
-// uint16x4_t test_vmax_u16(uint16x4_t a, uint16x4_t b) {
-//   return vmax_u16(a, b);
-// }
+  // CIR-LABEL: vmax_s16
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!s16i x 4>
 
-// NYI-LABEL: @test_vmax_u32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.umax.v2i32(<2 x i32> %a, <2 x i32> %b)
-// NYI:   ret <2 x i32> [[VMAX2_I]]
-// uint32x2_t test_vmax_u32(uint32x2_t a, uint32x2_t b) {
-//   return vmax_u32(a, b);
-// }
+  // LLVM-LABEL: test_vmax_s16
+  // LLVM-SAME: (<4 x i16> [[a:%.*]], <4 x i16> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i16> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i16> [[b]] to <8 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[a]], <4 x i16> [[b]])
+  // LLVM:   ret <4 x i16> [[VMAX2_I]]
+}
 
-// NYI-LABEL: @test_vmax_f32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x float> %b to <8 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmax.v2f32(<2 x float> %a, <2 x float> %b)
-// NYI:   ret <2 x float> [[VMAX2_I]]
-// float32x2_t test_vmax_f32(float32x2_t a, float32x2_t b) {
-//   return vmax_f32(a, b);
-// }
+int32x2_t test_vmax_s32(int32x2_t a, int32x2_t b) {
+  return vmax_s32(a, b);
 
-// NYI-LABEL: @test_vmaxq_s8(
-// NYI:   [[VMAX_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.smax.v16i8(<16 x i8> %a, <16 x i8> %b)
-// NYI:   ret <16 x i8> [[VMAX_I]]
-// int8x16_t test_vmaxq_s8(int8x16_t a, int8x16_t b) {
-//   return vmaxq_s8(a, b);
-// }
+  // CIR-LABEL: vmax_s32
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!s32i x 2>
 
-// NYI-LABEL: @test_vmaxq_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.smax.v8i16(<8 x i16> %a, <8 x i16> %b)
-// NYI:   ret <8 x i16> [[VMAX2_I]]
-// int16x8_t test_vmaxq_s16(int16x8_t a, int16x8_t b) {
-//   return vmaxq_s16(a, b);
-// }
+  // LLVM-LABEL: test_vmax_s32
+  // LLVM-SAME: (<2 x i32> [[a:%.*]], <2 x i32> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i32> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i32> [[b]] to <8 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[a]], <2 x i32> [[b]])
+  // LLVM:   ret <2 x i32> [[VMAX2_I]]
+}
 
-// NYI-LABEL: @test_vmaxq_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.smax.v4i32(<4 x i32> %a, <4 x i32> %b)
-// NYI:   ret <4 x i32> [[VMAX2_I]]
-// int32x4_t test_vmaxq_s32(int32x4_t a, int32x4_t b) {
-//   return vmaxq_s32(a, b);
-// }
+uint8x8_t test_vmax_u8(uint8x8_t a, uint8x8_t b) {
+  return vmax_u8(a, b);
 
-// NYI-LABEL: @test_vmaxq_u8(
-// NYI:   [[VMAX_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.umax.v16i8(<16 x i8> %a, <16 x i8> %b)
-// NYI:   ret <16 x i8> [[VMAX_I]]
-// uint8x16_t test_vmaxq_u8(uint8x16_t a, uint8x16_t b) {
-//   return vmaxq_u8(a, b);
-// }
+  // CIR-LABEL: vmax_u8
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!u8i x 8>
 
-// NYI-LABEL: @test_vmaxq_u16(
-// NYI:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.umax.v8i16(<8 x i16> %a, <8 x i16> %b)
-// NYI:   ret <8 x i16> [[VMAX2_I]]
-// uint16x8_t test_vmaxq_u16(uint16x8_t a, uint16x8_t b) {
-//   return vmaxq_u16(a, b);
-// }
+  // LLVM-LABEL: test_vmax_u8
+  // LLVM-SAME: (<8 x i8> [[a:%.*]], <8 x i8> [[b:%.*]])
+  // LLVM:    [[VMAX_I:%.*]] = call <8 x i8> @llvm.umax.v8i8(<8 x i8> [[a]], <8 x i8> [[b]])
+  // LLVM:    ret <8 x i8> [[VMAX_I]]
+}
 
-// NYI-LABEL: @test_vmaxq_u32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.umax.v4i32(<4 x i32> %a, <4 x i32> %b)
-// NYI:   ret <4 x i32> [[VMAX2_I]]
-// uint32x4_t test_vmaxq_u32(uint32x4_t a, uint32x4_t b) {
-//   return vmaxq_u32(a, b);
-// }
+uint16x4_t test_vmax_u16(uint16x4_t a, uint16x4_t b) {
+  return vmax_u16(a, b);
 
-// NYI-LABEL: @test_vmaxq_f32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x float> %b to <16 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmax.v4f32(<4 x float> %a, <4 x float> %b)
-// NYI:   ret <4 x float> [[VMAX2_I]]
-// float32x4_t test_vmaxq_f32(float32x4_t a, float32x4_t b) {
-//   return vmaxq_f32(a, b);
-// }
+  // CIR-LABEL: vmax_u16
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!u16i x 4>
 
-// NYI-LABEL: @test_vmaxq_f64(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x double> %b to <16 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <2 x double> @llvm.aarch64.neon.fmax.v2f64(<2 x double> %a, <2 x double> %b)
-// NYI:   ret <2 x double> [[VMAX2_I]]
-// float64x2_t test_vmaxq_f64(float64x2_t a, float64x2_t b) {
-//   return vmaxq_f64(a, b);
-// }
+  // LLVM-LABEL: test_vmax_u16
+  // LLVM-SAME: (<4 x i16> [[a:%.*]], <4 x i16> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i16> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i16> [[b]] to <8 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <4 x i16> @llvm.umax.v4i16(<4 x i16> [[a]], <4 x i16> [[b]])
+  // LLVM:   ret <4 x i16> [[VMAX2_I]]
+}
+
+uint32x2_t test_vmax_u32(uint32x2_t a, uint32x2_t b) {
+  return vmax_u32(a, b);
+
+  // CIR-LABEL: vmax_u32
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!u32i x 2>
+
+  // LLVM-LABEL: test_vmax_u32
+  // LLVM-SAME: (<2 x i32> [[a:%.*]], <2 x i32> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i32> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i32> [[b]] to <8 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[a]], <2 x i32> [[b]])
+  // LLVM:   ret <2 x i32> [[VMAX2_I]]
+}
+
+float32x2_t test_vmax_f32(float32x2_t a, float32x2_t b) {
+  return vmax_f32(a, b);
+
+  // CIR-LABEL: vmax_f32
+  // CIR: cir.fmaximum {{%.*}}, {{%.*}} : !cir.vector<!cir.float x 2>
+
+  // LLVM-LABEL: test_vmax_f32
+  // LLVM-SAME: (<2 x float> [[a:%.*]], <2 x float> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x float> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x float> [[b]] to <8 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <2 x float> @llvm.maximum.v2f32(<2 x float> [[a]], <2 x float> [[b]])
+  // LLVM:   ret <2 x float> [[VMAX2_I]]
+}
+
+int8x16_t test_vmaxq_s8(int8x16_t a, int8x16_t b) {
+  return vmaxq_s8(a, b);
+
+  // CIR-LABEL: vmaxq_s8
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!s8i x 16>
+
+  // LLVM-LABEL: test_vmaxq_s8
+  // LLVM-SAME: (<16 x i8> [[a:%.*]], <16 x i8> [[b:%.*]])
+  // LLVM:    [[VMAX_I:%.*]] = call <16 x i8> @llvm.smax.v16i8(<16 x i8> [[a]], <16 x i8> [[b]])
+  // LLVM:    ret <16 x i8> [[VMAX_I]]
+}
+
+int16x8_t test_vmaxq_s16(int16x8_t a, int16x8_t b) {
+  return vmaxq_s16(a, b);
+
+  // CIR-LABEL: vmaxq_s16
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!s16i x 8>
+
+  // LLVM-LABEL: test_vmaxq_s16
+  // LLVM-SAME: (<8 x i16> [[a:%.*]], <8 x i16> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <8 x i16> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i16> [[b]] to <16 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <8 x i16> @llvm.smax.v8i16(<8 x i16> [[a]], <8 x i16> [[b]])
+  // LLVM:   ret <8 x i16> [[VMAX2_I]]
+}
+
+int32x4_t test_vmaxq_s32(int32x4_t a, int32x4_t b) {
+  return vmaxq_s32(a, b);
+
+  // CIR-LABEL: vmaxq_s32
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!s32i x 4>
+
+  // LLVM-LABEL: test_vmaxq_s32
+  // LLVM-SAME: (<4 x i32> [[a:%.*]], <4 x i32> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i32> [[b]] to <16 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[a]], <4 x i32> [[b]])
+  // LLVM:   ret <4 x i32> [[VMAX2_I]]
+}
+
+uint8x16_t test_vmaxq_u8(uint8x16_t a, uint8x16_t b) {
+  return vmaxq_u8(a, b);
+
+  // CIR-LABEL: vmaxq_u8
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!u8i x 16>
+
+  // LLVM-LABEL: test_vmaxq_u8
+  // LLVM-SAME: (<16 x i8> [[a:%.*]], <16 x i8> [[b:%.*]])
+  // LLVM:    [[VMAX_I:%.*]] = call <16 x i8> @llvm.umax.v16i8(<16 x i8> [[a]], <16 x i8> [[b]])
+  // LLVM:    ret <16 x i8> [[VMAX_I]]
+}
+
+uint16x8_t test_vmaxq_u16(uint16x8_t a, uint16x8_t b) {
+  return vmaxq_u16(a, b);
+
+  // CIR-LABEL: vmaxq_u16
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!u16i x 8>
+
+  // LLVM-LABEL: test_vmaxq_u16
+  // LLVM-SAME: (<8 x i16> [[a:%.*]], <8 x i16> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <8 x i16> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i16> [[b]] to <16 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <8 x i16> @llvm.umax.v8i16(<8 x i16> [[a]], <8 x i16> [[b]])
+  // LLVM:   ret <8 x i16> [[VMAX2_I]]
+}
+
+uint32x4_t test_vmaxq_u32(uint32x4_t a, uint32x4_t b) {
+  return vmaxq_u32(a, b);
+
+  // CIR-LABEL: vmaxq_u32
+  // CIR: cir.binop(max, {{%.*}}, {{%.*}}) : !cir.vector<!u32i x 4>
+
+  // LLVM-LABEL: test_vmaxq_u32
+  // LLVM-SAME: (<4 x i32> [[a:%.*]], <4 x i32> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i32> [[b]] to <16 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[a]], <4 x i32> [[b]])
+  // LLVM:   ret <4 x i32> [[VMAX2_I]]
+}
+
+float32x4_t test_vmaxq_f32(float32x4_t a, float32x4_t b) {
+  return vmaxq_f32(a, b);
+
+  // CIR-LABEL: vmaxq_f32
+  // CIR: cir.fmaximum {{%.*}}, {{%.*}} : !cir.vector<!cir.float x 4>
+
+  // LLVM-LABEL: test_vmaxq_f32
+  // LLVM-SAME: (<4 x float> [[a:%.*]], <4 x float> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x float> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x float> [[b]] to <16 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <4 x float> @llvm.maximum.v4f32(<4 x float> [[a]], <4 x float> [[b]])
+  // LLVM:   ret <4 x float> [[VMAX2_I]]
+}
+
+float64x2_t test_vmaxq_f64(float64x2_t a, float64x2_t b) {
+  return vmaxq_f64(a, b);
+
+  // CIR-LABEL: vmaxq_f64
+  // CIR: cir.fmaximum {{%.*}}, {{%.*}} : !cir.vector<!cir.double x 2>
+
+  // LLVM-LABEL: test_vmaxq_f64
+  // LLVM-SAME: (<2 x double> [[a:%.*]], <2 x double> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x double> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x double> [[b]] to <16 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <2 x double> @llvm.maximum.v2f64(<2 x double> [[a]], <2 x double> [[b]])
+  // LLVM:   ret <2 x double> [[VMAX2_I]]
+}
 
 int8x8_t test_vmin_s8(int8x8_t a, int8x8_t b) {
   return vmin_s8(a, b);
@@ -18586,14 +18661,19 @@ float64_t test_vaddvq_f64(float64x2_t a) {
 //   return vabd_f64(a, b);
 // }
 
-// NYI-LABEL: @test_vmax_f64(
-// NYI:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <1 x double> %b to <8 x i8>
-// NYI:   [[VMAX2_I:%.*]] = call <1 x double> @llvm.aarch64.neon.fmax.v1f64(<1 x double> %a, <1 x double> %b)
-// NYI:   ret <1 x double> [[VMAX2_I]]
-// float64x1_t test_vmax_f64(float64x1_t a, float64x1_t b) {
-//   return vmax_f64(a, b);
-// }
+float64x1_t test_vmax_f64(float64x1_t a, float64x1_t b) {
+  return vmax_f64(a, b);
+
+  // CIR-LABEL: vmax_f64
+  // CIR: cir.fmaximum {{%.*}}, {{%.*}} : !cir.vector<!cir.double x 1>
+
+  // LLVM-LABEL: test_vmax_f64
+  // LLVM-SAME: (<1 x double> [[a:%.*]], <1 x double> [[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <1 x double> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <1 x double> [[b]] to <8 x i8>
+  // LLVM:   [[VMAX2_I:%.*]] = call <1 x double> @llvm.maximum.v1f64(<1 x double> [[a]], <1 x double> [[b]])
+  // LLVM:   ret <1 x double> [[VMAX2_I]]
+}
 
 // NYI-LABEL: @test_vmaxnm_f64(
 // NYI:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>

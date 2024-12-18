@@ -3928,8 +3928,15 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                         getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vmax_v:
-  case NEON::BI__builtin_neon_vmaxq_v:
-    llvm_unreachable("NEON::BI__builtin_neon_vmaxq_v NYI");
+  case NEON::BI__builtin_neon_vmaxq_v: {
+    mlir::Location loc = getLoc(E->getExprLoc());
+    Ops[0] = builder.createBitcast(Ops[0], ty);
+    Ops[1] = builder.createBitcast(Ops[1], ty);
+    if (cir::isFPOrFPVectorTy(ty)) {
+      return builder.create<cir::FMaximumOp>(loc, Ops[0], Ops[1]);
+    }
+    return builder.create<cir::BinOp>(loc, cir::BinOpKind::Max, Ops[0], Ops[1]);
+  }
   case NEON::BI__builtin_neon_vmaxh_f16: {
     llvm_unreachable("NEON::BI__builtin_neon_vmaxh_f16 NYI");
   }
