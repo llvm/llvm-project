@@ -182,7 +182,7 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   // Create new VPBB.
   StringRef Name = isHeaderBB(BB, TheLoop) ? "vector.body" : BB->getName();
   LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << Name << "\n");
-  VPBasicBlock *VPBB = new VPBasicBlock(Name);
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock(Name);
   BB2VPBB[BB] = VPBB;
 
   // Get or create a region for the loop containing BB.
@@ -204,7 +204,7 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   if (LoopOfBB == TheLoop) {
     RegionOfVPBB = Plan.getVectorLoopRegion();
   } else {
-    RegionOfVPBB = new VPRegionBlock(Name.str(), false /*isReplicator*/);
+    RegionOfVPBB = Plan.createVPRegionBlock(Name.str(), false /*isReplicator*/);
     RegionOfVPBB->setParent(Loop2Region[LoopOfBB->getParentLoop()]);
   }
   RegionOfVPBB->setEntry(VPBB);

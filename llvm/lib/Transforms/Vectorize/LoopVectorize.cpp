@@ -2477,7 +2477,7 @@ static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
     assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
     assert(PreVectorPH->getSuccessors()[0] == ScalarPH &&
            "Unexpected successor");
-    VPIRBasicBlock *CheckVPIRBB = VPIRBasicBlock::fromBasicBlock(CheckIRBB);
+    VPIRBasicBlock *CheckVPIRBB = Plan.createVPIRBasicBlock(CheckIRBB);
     VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckVPIRBB);
     PreVectorPH = CheckVPIRBB;
   }
@@ -8189,11 +8189,10 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   // A new entry block has been created for the epilogue VPlan. Hook it in, as
   // otherwise we would try to modify the entry to the main vector loop.
-  VPIRBasicBlock *NewEntry = VPIRBasicBlock::fromBasicBlock(Insert);
+  VPIRBasicBlock *NewEntry = Plan.createVPIRBasicBlock(Insert);
   VPBasicBlock *OldEntry = Plan.getEntry();
   VPBlockUtils::reassociateBlocks(OldEntry, NewEntry);
   Plan.setEntry(NewEntry);
-  delete OldEntry;
 
   introduceCheckBlockInVPlan(Plan, Insert);
   return Insert;
@@ -9463,7 +9462,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         VPBB->appendRecipe(Recipe);
     }
 
-    VPBlockUtils::insertBlockAfter(new VPBasicBlock(), VPBB);
+    VPBlockUtils::insertBlockAfter(Plan->createVPBasicBlock(""), VPBB);
     VPBB = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
   }
 

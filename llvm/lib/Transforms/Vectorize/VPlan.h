@@ -636,9 +636,6 @@ public:
   /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 
-  /// Delete all blocks reachable from a given VPBlockBase, inclusive.
-  static void deleteCFG(VPBlockBase *Entry);
-
   /// Return true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() {
     // There are currently no constraints that prevent an instruction to be
@@ -3638,12 +3635,7 @@ public:
 
   /// Clone the current block and it's recipes, without updating the operands of
   /// the cloned recipes.
-  VPBasicBlock *clone() override {
-    auto *NewBlock = new VPBasicBlock(getName());
-    for (VPRecipeBase &R : *this)
-      NewBlock->appendRecipe(R.clone());
-    return NewBlock;
-  }
+  VPBasicBlock *clone() override;
 
 protected:
   /// Execute the recipes in the IR basic block \p BB.
@@ -3679,20 +3671,11 @@ public:
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
 
-  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
-  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
-  static VPIRBasicBlock *fromBasicBlock(BasicBlock *IRBB);
-
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
-  VPIRBasicBlock *clone() override {
-    auto *NewBlock = new VPIRBasicBlock(IRBB);
-    for (VPRecipeBase &R : Recipes)
-      NewBlock->appendRecipe(R.clone());
-    return NewBlock;
-  }
+  VPIRBasicBlock *clone() override;
 
   BasicBlock *getIRBasicBlock() const { return IRBB; }
 };
@@ -3732,11 +3715,6 @@ public:
         IsReplicator(IsReplicator) {}
 
   ~VPRegionBlock() override {
-    if (Entry) {
-      VPValue DummyValue;
-      Entry->dropAllReferences(&DummyValue);
-      deleteCFG(Entry);
-    }
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -3862,6 +3840,8 @@ class VPlan {
   /// NOTE: This mapping is temporary and will be removed once all users have
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
+
+  SmallVector<VPBlockBase *> CreatedBlocks;
 
 public:
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
@@ -4079,6 +4059,32 @@ public:
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
+
+  VPBasicBlock *createVPBasicBlock(const Twine &Name,
+                                   VPRecipeBase *Recipe = nullptr) {
+    auto *VPB = new VPBasicBlock(Name, Recipe);
+    CreatedBlocks.push_back(VPB);
+    return VPB;
+  }
+
+  VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
+                                     const std::string &Name = "",
+                                     bool IsReplicator = false) {
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, IsReplicator);
+    CreatedBlocks.push_back(VPB);
+    return VPB;
+  }
+
+  VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
+                                     bool IsReplicator = false) {
+    auto *VPB = new VPRegionBlock(Name, IsReplicator);
+    CreatedBlocks.push_back(VPB);
+    return VPB;
+  }
+
+  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
+  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
+  VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
