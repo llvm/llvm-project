@@ -231,3 +231,21 @@ define ptr @test4() {
   %28 = tail call float @llvm.sqrt.f32(float %26)
   ret ptr null
 }
+
+define i32 @test5() {
+entry:
+  %div0 = fdiv <2 x double> zeroinitializer, zeroinitializer
+  %div1 = fdiv <2 x double> zeroinitializer, zeroinitializer
+  %add0 = fadd <2 x double> zeroinitializer, %div0
+  %add1 = fadd <2 x double> zeroinitializer, zeroinitializer
+  %add2 = fadd <2 x double> %div1, zeroinitializer
+  %add3 = fadd <2 x double> zeroinitializer, zeroinitializer
+  br label %for.end47
+
+for.end47:                                        ; preds = %entry
+  %add0.lcssa = phi <2 x double> [ %add0, %entry ]
+  %add1.lcssa = phi <2 x double> [ %add1, %entry ]
+  %add2.lcssa = phi <2 x double> [ %add2, %entry ]
+  %add3.lcssa = phi <2 x double> [ %add3, %entry ]
+  ret i32 0
+}
