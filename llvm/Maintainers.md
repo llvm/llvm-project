@@ -173,6 +173,7 @@ rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
 
 Tim Northover \
 t.p.northover@gmail.com (email), [TNorthover](https://github.com/TNorthover) (GitHub)
+.
 
 #### AMDGPU backend
 
