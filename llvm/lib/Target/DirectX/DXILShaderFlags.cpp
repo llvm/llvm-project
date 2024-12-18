@@ -49,8 +49,11 @@ static void updateFunctionFlags(ComputedShaderFlags &CSF,
 void ModuleShaderFlags::initialize(const Module &M) {
   // Collect shader flags for each of the functions
   for (const auto &F : M.getFunctionList()) {
-    if (F.isDeclaration())
+    if (F.isDeclaration()) {
+      assert(!F.getName().starts_with("dx.op.") &&
+             "DXIL Shader Flag analysis should not be run post-lowering.");
       continue;
+    }
     ComputedShaderFlags CSF;
     for (const auto &BB : F)
       for (const auto &I : BB)
