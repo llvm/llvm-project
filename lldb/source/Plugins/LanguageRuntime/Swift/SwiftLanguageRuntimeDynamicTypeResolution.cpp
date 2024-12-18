@@ -1842,35 +1842,44 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
       return false;
     }
   Log *log(GetLog(LLDBLog::Types));
-  ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-  if (!reflection_ctx)
-    return false;
+  // Scope reflection_ctx to minimize its lock scope.
+  {
+    ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+    if (!reflection_ctx)
+      return false;
 
-  const auto *typeref = reflection_ctx->ReadTypeFromInstance(
-      instance_ptr, ts->GetDescriptorFinder(), true);
+    const auto *typeref = reflection_ctx->ReadTypeFromInstance(
+        instance_ptr, ts->GetDescriptorFinder(), true);
 
-  // If we couldn't find the typeref from the instance, the best we can do is
-  // use the static type. This is a valid use case when the binary doesn't
-  // contain any metadata (for example, embedded Swift).
-  if (!typeref)
-    typeref = reflection_ctx->GetTypeRefOrNull(class_type.GetMangledTypeName(),
-                                               ts->GetDescriptorFinder());
+    // If we couldn't find the typeref from the instance, the best we can do is
+    // use the static type. This is a valid use case when the binary doesn't
+    // contain any metadata (for example, embedded Swift).
+    if (!typeref)
+      typeref = reflection_ctx->GetTypeRefOrNull(
+          class_type.GetMangledTypeName(), ts->GetDescriptorFinder());
 
-  if (!typeref) {
-    HEALTH_LOG("could not read typeref for type: {0} (instance_ptr = {0:x})",
-               class_type.GetMangledTypeName(), instance_ptr);
-    return false;
+    if (!typeref) {
+      HEALTH_LOG("could not read typeref for type: {0} (instance_ptr = {0:x})",
+                 class_type.GetMangledTypeName(), instance_ptr);
+      return false;
+    }
+    swift::Demangle::Demangler dem;
+    swift::Demangle::NodePointer node = typeref->getDemangling(dem);
+    CompilerType dynamic_type = ts->RemangleAsType(dem, node);
+    LLDB_LOG(log, "dynamic type of instance_ptr {0:x} is {1}", instance_ptr,
+             class_type.GetMangledTypeName());
+    class_type_or_name.SetCompilerType(dynamic_type);
+
+    auto flavor =
+        SwiftLanguageRuntime::GetManglingFlavor(class_type.GetMangledTypeName());
+
+    swift::Demangle::Demangler dem;
+    swift::Demangle::NodePointer node = typeref->getDemangling(dem);
+    CompilerType dynamic_type = ts->RemangleAsType(dem, node, flavor);
+    LLDB_LOG(log, "dynamic type of instance_ptr {0:x} is {1}", instance_ptr,
+             class_type.GetMangledTypeName());
+    class_type_or_name.SetCompilerType(dynamic_type);
   }
-
-  auto flavor =
-      SwiftLanguageRuntime::GetManglingFlavor(class_type.GetMangledTypeName());
-
-  swift::Demangle::Demangler dem;
-  swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-  CompilerType dynamic_type = ts->RemangleAsType(dem, node, flavor);
-  LLDB_LOG(log, "dynamic type of instance_ptr {0:x} is {1}", instance_ptr,
-           class_type.GetMangledTypeName());
-  class_type_or_name.SetCompilerType(dynamic_type);
 
 #ifndef NDEBUG
   if (ModuleList::GetGlobalModuleListProperties()
