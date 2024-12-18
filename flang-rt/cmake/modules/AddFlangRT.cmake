@@ -38,10 +38,10 @@ function (add_flangrt_library name)
     ${ARGN})
 
   if (ARG_INSTALL_WITH_TOOLCHAIN AND ARG_EXCLUDE_FROM_ALL)
-     message(SEND_ERROR "add_flangrt_library(${name} ...):
-       INSTALL_WITH_TOOLCHAIN and EXCLUDE_FROM_ALL are in conflict. When
-       installing an artifact it must have been built first in the 'all' target.
-     ")
+    message(SEND_ERROR "add_flangrt_library(${name} ...):
+        INSTALL_WITH_TOOLCHAIN and EXCLUDE_FROM_ALL are in conflict. When
+        installing an artifact it must have been built first in the 'all' target.
+      ")
   endif ()
 
   # Also add header files to IDEs to list as part of the library
@@ -110,7 +110,7 @@ function (add_flangrt_library name)
   # User applications can use #include <ISO_Fortran_binding.h>
   target_include_directories(${name} PRIVATE "${FLANG_SOURCE_DIR}/include")
 
-  # For flang-rt's configured config.h to be found
+  # For Flang-RT's configured config.h to be found
   target_include_directories(${name} PRIVATE "${FLANG_RT_BINARY_DIR}")
 
   # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
@@ -146,15 +146,15 @@ function (add_flangrt_library name)
   if (ARG_INSTALL_WITH_TOOLCHAIN)
     set_target_properties(${name}
       PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_LIB_DIR}"
-        ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_LIB_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_LIB_DIR}"
+        LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
+        ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
+        RUNTIME_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
       )
 
     install(TARGETS ${name}
-        LIBRARY DESTINATION "${FLANG_RT_INSTALL_LIB_DIR}"
-        ARCHIVE DESTINATION "${FLANG_RT_INSTALL_LIB_DIR}"
-        RUNTIME DESTINATION "${FLANG_RT_INSTALL_LIB_DIR}"
+        LIBRARY DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
+        ARCHIVE DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
+        RUNTIME DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
       )
   endif ()
 

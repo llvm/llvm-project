@@ -11,7 +11,14 @@
 #
 #===------------------------------------------------------------------------===#
 
-set(LLVM_SUBPROJECT_TITLE "Fortran Runtime")
+if (NOT LLVM_RUNTIMES_BUILD)
+  message(FATAL_ERROR "Use this CMakeLists.txt from LLVM's runtimes build system.
+      Example:
+        cmake <llvm-project>/runtimes -DLLVM_ENABLE_RUNTIMES=flang-rt
+    ")
+endif ()
+
+set(LLVM_SUBPROJECT_TITLE "Flang-RT")
 set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLANG_RT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
@@ -57,25 +64,31 @@ list(APPEND CMAKE_MODULE_PATH
     "${FLANG_SOURCE_DIR}/cmake/modules"
   )
 include(AddFlangRT)
+include(GetToolchainDirs)
 include(FlangCommon)
 include(HandleCompilerRT)
+include(ExtendPath)
+include(GNUInstallDirs)
 
 
 ############################
 # Build Mode Introspection #
 ############################
 
-# Setting these variables from an LLVM build is sufficient that flang-rt can
-# construct the output paths, so it can behave as if it was in-tree here.
+# Determine whether we are in the runtimes/runtimes-bins directory of a
+# bootstrap build.
 set(LLVM_TREE_AVAILABLE OFF)
 if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
-  # This is a bootstap build
   set(LLVM_TREE_AVAILABLE ON)
 endif()
 
 # Path to LLVM development tools (FileCheck, llvm-lit, not, ...)
 set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin")
 
+# Determine build and install paths.
+# The build path is absolute, but the install dir is relative, CMake's install
+# command has to apply CMAKE_INSTALL_PREFIX itself.
+get_toolchain_library_subdir(toolchain_lib_subdir)
 if (LLVM_TREE_AVAILABLE)
   # In a bootstrap build emit the libraries into a default search path in the
   # build directory of the just-built compiler. This allows using the
@@ -84,25 +97,31 @@ if (LLVM_TREE_AVAILABLE)
   # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
   # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
-  get_clang_resource_dir(FLANG_RT_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
-  get_clang_resource_dir(FLANG_RT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command finds the install prefix itself
+  get_clang_resource_dir(FLANG_RT_OUTPUT_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
+  get_clang_resource_dir(FLANG_RT_INSTALL_PATH)
+
+  extend_path(FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR "${FLANG_RT_OUTPUT_DIR}" "${toolchain_lib_subdir}")
 else ()
-  # In a runtimes build never write into LLVM's build dir. It might be reused
-  # for mutliple Flang-RT builds (e.g. Debug/Release). Instead create our own
-  # library directory.
-  #
-  # TODO: Support multi-config generators
-  set(FLANG_RT_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
-  set(FLANG_RT_INSTALL_LIB_DIR "lib${LLVM_LIBDIR_SUFFIX}")
+  # In a standalone runtimes build, do not write into LLVM_BINARY_DIR. It may be
+  # read-only and/or shared by multiple runtimes with different build
+  # configurations (e.g. Debug/Release). Use the runtime's own lib dir like any
+  # non-toolchain library.
+  # For the install prefix, still use the resource dir assuming that Flang will
+  # be installed there using the same prefix. This is to not have a difference
+ # between bootstrap and standalone runtimes builds.
+  set(FLANG_RT_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+  set(FLANG_RT_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}/clang/${LLVM_VERSION_MAJOR}")
+
+  extend_path(FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR "${FLANG_RT_OUTPUT_DIR}" "${CMAKE_INSTALL_DIR}")
 endif ()
 
-if (DEFINED WIN32)
-  set(FLANG_RT_BUILD_LIB_DIR "${FLANG_RT_BUILD_LIB_DIR}/windows")
-  set(FLANG_RT_INSTALL_LIB_DIR "${FLANG_RT_INSTALL_LIB_DIR}/windows")
-elseif (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-  set(FLANG_RT_BUILD_LIB_DIR "${FLANG_RT_BUILD_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
-  set(FLANG_RT_INSTALL_LIB_DIR "${FLANG_RT_INSTALL_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
-endif ()
+# Apply the arch-specific library dir with the resource dir.
+extend_path(FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR "${FLANG_RT_INSTALL_PATH}" "${toolchain_lib_subdir}")
+
+cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_DIR)
+cmake_path(NORMAL_PATH FLANG_RT_INSTALL_PATH)
+cmake_path(NORMAL_PATH FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR)
+cmake_path(NORMAL_PATH FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR)
 
 
 #################
