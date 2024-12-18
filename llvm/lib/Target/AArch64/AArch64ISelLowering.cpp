@@ -27296,9 +27296,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::aarch64_sme_in_streaming_mode: {
-      auto DL = SDLoc(N);
+      SDLoc DL(N);
       SDValue Chain = DAG.getEntryNode();
-      auto RuntimePStateSM =
+      SDValue RuntimePStateSM =
           getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
       Results.push_back(
           DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
