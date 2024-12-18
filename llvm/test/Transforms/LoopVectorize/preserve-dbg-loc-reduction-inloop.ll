@@ -9,8 +9,8 @@ define i32 @reduction_sum(ptr %A, ptr %B) {
 ; DEBUGLOC:   = load <4 x i32>, ptr %{{.+}}, align 4, !dbg ![[LOADLOC:[0-9]+]]
 ; DEBUGLOC:   = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %{{.+}}), !dbg ![[REDLOC:[0-9]+]]
 ; DEBUGLOC: loop:
-; DEBUGLOC:   = load i32, ptr %{{.+}}, align 4, !dbg ![[LOADLOC]]
-; DEBUGLOC:   = add i32 %{{.+}}, %{{.+}}, !dbg ![[REDLOC]]
+; DEBUGLOC:   %[[LOAD:.+]] = load i32, ptr %{{.+}}, align 4, !dbg ![[LOADLOC]]
+; DEBUGLOC:   = add i32 %{{.+}}, %[[LOAD]], !dbg ![[REDLOC]]
 ;
 entry:
   br label %loop
