@@ -23,16 +23,14 @@ define i32 @add_positive_low_bound_reject(i32 %a) nounwind {
 define i32 @add_positive_low_bound_accept(i32 %a) nounwind {
 ; RV32I-LABEL: add_positive_low_bound_accept:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 1
-; RV32I-NEXT:    slli a1, a1, 11
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add_positive_low_bound_accept:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 1
-; RV64I-NEXT:    slli a1, a1, 11
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    addi a0, a0, 1
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, 2048
   ret i32 %1
@@ -41,16 +39,14 @@ define i32 @add_positive_low_bound_accept(i32 %a) nounwind {
 define i32 @add_positive_high_bound_accept(i32 %a) nounwind {
 ; RV32I-LABEL: add_positive_high_bound_accept:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, -2
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add_positive_high_bound_accept:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -2
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    addi a0, a0, 2047
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, 4094
   ret i32 %1
@@ -91,16 +87,14 @@ define i32 @add_negative_high_bound_reject(i32 %a) nounwind {
 define i32 @add_negative_high_bound_accept(i32 %a) nounwind {
 ; RV32I-LABEL: add_negative_high_bound_accept:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1048575
-; RV32I-NEXT:    addi a1, a1, 2047
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, -2048
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add_negative_high_bound_accept:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1048575
-; RV64I-NEXT:    addiw a1, a1, 2047
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, -2048
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, -2049
   ret i32 %1
@@ -109,14 +103,14 @@ define i32 @add_negative_high_bound_accept(i32 %a) nounwind {
 define i32 @add_negative_low_bound_accept(i32 %a) nounwind {
 ; RV32I-LABEL: add_negative_low_bound_accept:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1048575
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, -2048
+; RV32I-NEXT:    addi a0, a0, -2048
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add_negative_low_bound_accept:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1048575
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, -2048
+; RV64I-NEXT:    addi a0, a0, -2048
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, -4096
   ret i32 %1
@@ -143,16 +137,14 @@ define i32 @add_negative_low_bound_reject(i32 %a) nounwind {
 define i32 @add32_accept(i32 %a) nounwind {
 ; RV32I-LABEL: add32_accept:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, -1097
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    addi a0, a0, 952
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add32_accept:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -1097
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    addi a0, a0, 952
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, 2999
   ret i32 %1
@@ -161,16 +153,14 @@ define i32 @add32_accept(i32 %a) nounwind {
 define signext i32 @add32_sext_accept(i32 signext %a) nounwind {
 ; RV32I-LABEL: add32_sext_accept:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, -1097
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    addi a0, a0, 952
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add32_sext_accept:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addi a1, a1, -1097
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    addiw a0, a0, 952
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, 2999
   ret i32 %1
@@ -180,20 +170,18 @@ define signext i32 @add32_sext_accept(i32 signext %a) nounwind {
 define signext i32 @add32_sext_reject_on_rv64(i32 signext %a) nounwind {
 ; RV32I-LABEL: add32_sext_reject_on_rv64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, -1096
-; RV32I-NEXT:    lui a2, %hi(gv0)
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    sw a0, %lo(gv0)(a2)
+; RV32I-NEXT:    lui a1, %hi(gv0)
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    addi a0, a0, 953
+; RV32I-NEXT:    sw a0, %lo(gv0)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add32_sext_reject_on_rv64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addi a1, a1, -1096
-; RV64I-NEXT:    lui a2, %hi(gv0)
-; RV64I-NEXT:    addw a0, a0, a1
-; RV64I-NEXT:    sw a0, %lo(gv0)(a2)
+; RV64I-NEXT:    lui a1, %hi(gv0)
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    addiw a0, a0, 953
+; RV64I-NEXT:    sw a0, %lo(gv0)(a1)
 ; RV64I-NEXT:    ret
   %b = add nsw i32 %a, 3000
   store i32 %b, ptr @gv0, align 4
@@ -212,9 +200,8 @@ define i64 @add64_accept(i64 %a) nounwind {
 ;
 ; RV64I-LABEL: add64_accept:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -1097
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    addi a0, a0, 952
 ; RV64I-NEXT:    ret
   %1 = add i64 %a, 2999
   ret i64 %1
