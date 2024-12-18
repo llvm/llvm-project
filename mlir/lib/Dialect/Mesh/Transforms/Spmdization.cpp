@@ -275,8 +275,7 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, mesh, targetSharding);
   TypedValue<ShapedType> targetShard =
-      builder
-          .create<tensor::CastOp>(targetShape, allGatherResult)
+      builder.create<tensor::CastOp>(targetShape, allGatherResult)
           .getResultOfType<ShapedType>();
   return {targetShard, targetSharding};
 }
@@ -410,8 +409,7 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, mesh, targetSharding);
   TypedValue<ShapedType> targetShard =
-      builder
-          .create<tensor::CastOp>(targetShape, allToAllResult)
+      builder.create<tensor::CastOp>(targetShape, allToAllResult)
           .getResultOfType<ShapedType>();
   return {targetShard, targetSharding};
 }

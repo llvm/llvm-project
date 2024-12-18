@@ -212,8 +212,7 @@ struct ReinterpretCastOpInterface
                                    Location loc) const {
     auto reinterpretCast = cast<ReinterpretCastOp>(op);
     auto baseMemref = reinterpretCast.getSource();
-    auto resultMemref =
-        reinterpretCast.getResultOfType<BaseMemRefType>();
+    auto resultMemref = reinterpretCast.getResultOfType<BaseMemRefType>();
 
     builder.setInsertionPointAfter(op);
 
