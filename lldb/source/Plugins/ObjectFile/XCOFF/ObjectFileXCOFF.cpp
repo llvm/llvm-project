@@ -95,7 +95,7 @@ bool ObjectFileXCOFF::CreateBinary() {
 
   Log *log = GetLog(LLDBLog::Object);
 
-  auto binary = llvm::object::XCOFFObjectFile::createObjectFile(
+  auto binary = llvm::object::ObjectFile::createObjectFile(
       llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
                             m_file.GetFilename().GetStringRef()),
       file_magic::xcoff_object_64);
