@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
 
 //===----------------------------------------------------------------------===//
 // A VOPD instruction can use one or more literals,

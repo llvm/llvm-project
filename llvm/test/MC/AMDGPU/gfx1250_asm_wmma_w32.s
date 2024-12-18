@@ -1,6 +1,6 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=WAVESIZE-ERR --implicit-check-not=error: --strict-whitespace %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=WAVESIZE-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 v_wmma_f32_16x16x4_f32 v[4:11], v[0:1], v[2:3], v[4:11]
 // GFX1250: v_wmma_f32_16x16x4_f32 v[4:11], v[0:1], v[2:3], v[4:11] ; encoding: [0x04,0x40,0x5d,0xcc,0x00,0x05,0x12,0x1c]

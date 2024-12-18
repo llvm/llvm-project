@@ -1,4 +1,4 @@
-# RUN: llvm-mc -disassemble -arch=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
+# RUN: llvm-mc -disassemble -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
 
 # GFX1250: ds_load_tr16_b128 v[2:5], v0            ; encoding: [0x00,0x00,0xf0,0xdb,0x00,0x00,0x00,0x02]
 0x00,0x00,0xf0,0xdb,0x00,0x00,0x00,0x02

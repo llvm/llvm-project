@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
 
 global_load_tr_b64 v[2:3], v0, s[0:1]
 // GFX1250: global_load_tr8_b64 v[2:3], v0, s[0:1]  ; encoding: [0x00,0x00,0x16,0xee,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00]

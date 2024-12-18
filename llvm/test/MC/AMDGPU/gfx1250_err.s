@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX1250-ERR --implicit-check-not=error: -strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX1250-ERR --implicit-check-not=error: -strict-whitespace %s
 
 s_set_vgpr_msb -1
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: s_set_vgpr_msb accepts values in range [0..255]

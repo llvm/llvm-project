@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
 
 v_cmpx_class_f16_e64 v1, v2
 // GFX1250: v_cmpx_class_f16_e64 v1, v2             ; encoding: [0x7e,0x00,0xfd,0xd4,0x01,0x05,0x02,0x00]
