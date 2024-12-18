@@ -269,13 +269,16 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
   if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>())
     N = FlatWGS->getMax()->EvaluateKnownConstInt(M.getContext()).getExtValue();
 
+  // We encode the maximum flat WG size in the first component of the 3D
+  // max_work_group_size attribute, which will get reverse translated into the
+  // original AMDGPU attribute when targeting AMDGPU.
   auto Int32Ty = llvm::IntegerType::getInt32Ty(M.getLLVMContext());
   llvm::Metadata *AttrMDArgs[] = {
       llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, N)),
       llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1)),
       llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1))};
 
-  F->setMetadata("reqd_work_group_size",
+  F->setMetadata("max_work_group_size",
                  llvm::MDNode::get(M.getLLVMContext(), AttrMDArgs));
 }
 

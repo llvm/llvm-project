@@ -24,14 +24,14 @@
 
 __global__ void flat_work_group_size_default() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z28flat_work_group_size_defaultv() [[FLAT_WORK_GROUP_SIZE_DEFAULT:#[0-9]+]]
-// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z28flat_work_group_size_defaultv(){{.*}} !reqd_work_group_size [[REQD_WORK_GROUP_SIZE_DEFAULT:![0-9]+]]
+// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z28flat_work_group_size_defaultv(){{.*}} !max_work_group_size [[MAX_WORK_GROUP_SIZE_DEFAULT:![0-9]+]]
 // NOUB: define{{.*}} void @_Z28flat_work_group_size_defaultv() [[NOUB:#[0-9]+]]
 }
 
 __attribute__((amdgpu_flat_work_group_size(32, 64))) // expected-no-diagnostics
 __global__ void flat_work_group_size_32_64() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z26flat_work_group_size_32_64v() [[FLAT_WORK_GROUP_SIZE_32_64:#[0-9]+]]
-// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z26flat_work_group_size_32_64v(){{.*}} !reqd_work_group_size [[REQD_WORK_GROUP_SIZE_64:![0-9]+]]
+// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z26flat_work_group_size_32_64v(){{.*}} !max_work_group_size [[MAX_WORK_GROUP_SIZE_64:![0-9]+]]
 }
 __attribute__((amdgpu_waves_per_eu(2))) // expected-no-diagnostics
 __global__ void waves_per_eu_2() {
@@ -87,9 +87,9 @@ template __global__ void template_32_4_a_max_num_work_groups<2>();
 
 // DEFAULT-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"{{.*}}"uniform-work-group-size"="true"
 // MAX1024-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"
-// MAX1024-SPIRV-DAG: [[REQD_WORK_GROUP_SIZE_DEFAULT]] = !{i32 1024, i32 1, i32 1}
+// MAX1024-SPIRV-DAG: [[MAX_WORK_GROUP_SIZE_DEFAULT]] = !{i32 1024, i32 1, i32 1}
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = {{.*}}"amdgpu-flat-work-group-size"="32,64"
-// CHECK-SPIRV-DAG: [[REQD_WORK_GROUP_SIZE_64]] = !{i32 64, i32 1, i32 1}
+// CHECK-SPIRV-DAG: [[MAX_WORK_GROUP_SIZE_64]] = !{i32 64, i32 1, i32 1}
 // CHECK-DAG: attributes [[WAVES_PER_EU_2]] = {{.*}}"amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[NUM_SGPR_32]] = {{.*}}"amdgpu-num-sgpr"="32"
 // CHECK-DAG: attributes [[NUM_VGPR_64]] = {{.*}}"amdgpu-num-vgpr"="64"
