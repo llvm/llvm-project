@@ -554,6 +554,14 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerGetPointer(Function &F) {
+    // These should have already been handled in DXILResourceAccess, so we can
+    // just clean up the dead prototype.
+    assert(F.user_empty() && "getpointer operations should have been removed");
+    F.eraseFromParent();
+    return false;
+  }
+
   [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -706,6 +714,9 @@ public:
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
         HasErrors |= lowerHandleFromBinding(F);
+        break;
+      case Intrinsic::dx_resource_getpointer:
+        HasErrors |= lowerGetPointer(F);
         break;
       case Intrinsic::dx_typedBufferLoad:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
