@@ -32,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 
 using namespace llvm;
@@ -232,6 +233,59 @@ static bool canEmitLibcall(const TargetMachine *TM, Function *F,
   return TLI->getLibcallName(LC) != nullptr;
 }
 
+// Return a value appropriate for use with the memset_pattern16 libcall, if
+// possible and if we know how. (Adapted from equivalent helper in
+// LoopIdiomRecognize).
+static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
+                                         const TargetLibraryInfo &TLI) {
+  // FIXME: This could check for UndefValue because it can be merged into any
+  // other valid pattern.
+
+  // Don't emit libcalls if a non-default address space is being used.
+  if (Inst->getRawDest()->getType()->getPointerAddressSpace() != 0)
+    return nullptr;
+
+  Value *V = Inst->getValue();
+  const DataLayout &DL = Inst->getDataLayout();
+  Module *M = Inst->getModule();
+
+  if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
+    return nullptr;
+
+  // If the value isn't a constant, we can't promote it to being in a constant
+  // array.  We could theoretically do a store to an alloca or something, but
+  // that doesn't seem worthwhile.
+  Constant *C = dyn_cast<Constant>(V);
+  if (!C || isa<ConstantExpr>(C))
+    return nullptr;
+
+  // Only handle simple values that are a power of two bytes in size.
+  uint64_t Size = DL.getTypeSizeInBits(V->getType());
+  if (Size == 0 || (Size & 7) || (Size & (Size - 1)))
+    return nullptr;
+
+  // Don't care enough about darwin/ppc to implement this.
+  if (DL.isBigEndian())
+    return nullptr;
+
+  // Convert to size in bytes.
+  Size /= 8;
+
+  // TODO: If CI is larger than 16-bytes, we can try slicing it in half to see
+  // if the top and bottom are the same (e.g. for vectors and large integers).
+  if (Size > 16)
+    return nullptr;
+
+  // If the constant is exactly 16 bytes, just use it.
+  if (Size == 16)
+    return C;
+
+  // Otherwise, we'll use an array of the constants.
+  unsigned ArraySize = 16 / Size;
+  ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
+  return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
+}
+
 // TODO: Handle atomic memcpy and memcpy.inline
 // TODO: Pass ScalarEvolution
 bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
@@ -322,7 +376,41 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
     }
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
-      expandMemSetPatternAsLoop(Memset);
+      const TargetLibraryInfo &TLI = LookupTLI(*Memset->getFunction());
+      if (Constant *PatternValue = getMemSetPattern16Value(Memset, TLI)) {
+        // FIXME: There is currently no profitability calculation for emitting
+        // the libcall vs expanding the memset.pattern directly.
+        IRBuilder<> Builder(Inst);
+        Module *M = Memset->getModule();
+        const DataLayout &DL = Memset->getDataLayout();
+
+        StringRef FuncName = "memset_pattern16";
+        FunctionCallee MSP = getOrInsertLibFunc(
+            M, TLI, LibFunc_memset_pattern16, Builder.getVoidTy(),
+            Memset->getRawDest()->getType(), Builder.getPtrTy(),
+            Memset->getLength()->getType());
+        inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
+
+        // Otherwise we should form a memset_pattern16.  PatternValue is known
+        // to be an constant array of 16-bytes. Put the value into a mergable
+        // global.
+        GlobalVariable *GV = new GlobalVariable(
+            *M, PatternValue->getType(), true, GlobalValue::PrivateLinkage,
+            PatternValue, ".memset_pattern");
+        GV->setUnnamedAddr(
+            GlobalValue::UnnamedAddr::Global); // Ok to merge these.
+        GV->setAlignment(Align(16));
+        Value *PatternPtr = GV;
+        Value *NumBytes = Builder.CreateMul(
+            Builder.getInt64(
+                DL.getTypeSizeInBits(Memset->getValue()->getType()) / 8),
+            Memset->getLength());
+        CallInst *MemsetPattern16Call = Builder.CreateCall(
+            MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
+        MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
+      } else {
+        expandMemSetPatternAsLoop(Memset);
+      }
       Changed = true;
       Memset->eraseFromParent();
       break;
