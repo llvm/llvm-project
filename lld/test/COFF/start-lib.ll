@@ -153,7 +153,8 @@ define void @foo() {
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-; One undef from the lazy obj file before it, one from the one after it.
+; One undefined symbol from the lazy obj file before it,
+; one from the one after it.
 declare void @foo()
 declare void @baz()
 
