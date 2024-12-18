@@ -54,3 +54,57 @@ define <4 x float> @test_fmlalltt(<4 x float> %d, <16 x i8> %a, <16 x i8> %b) {
   %r = call <4 x float> @llvm.aarch64.neon.fp8.fmlalltt.v4f32(<4 x float> %d, <16 x i8> %a, <16 x i8> %b)
   ret <4 x float> %r
 }
+
+define <8 x half> @test_fmlalb_lane(<8 x half> %vd, <16 x i8> %vn, <16 x i8> %vm) {
+; CHECK-LABEL: test_fmlalb_lane:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmlalb v0.8h, v1.16b, v2.b[0]
+; CHECK-NEXT:    ret
+  %res = tail call <8 x half> @llvm.aarch64.neon.fp8.fmlalb.lane(<8 x half> %vd, <16 x i8> %vn, <16 x i8> %vm, i32 0)
+  ret <8 x half> %res
+}
+
+define <8 x half> @test_fmlalt_lane(<8 x half> %vd, <16 x i8> %vn, <16 x i8> %vm) {
+; CHECK-LABEL: test_fmlalt_lane:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmlalt v0.8h, v1.16b, v2.b[4]
+; CHECK-NEXT:    ret
+  %res = tail call <8 x half> @llvm.aarch64.neon.fp8.fmlalt.lane(<8 x half> %vd, <16 x i8> %vn, <16 x i8> %vm, i32 4)
+  ret <8 x half> %res
+}
+
+define <4 x float> @test_fmlallbb_lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm) {
+; CHECK-LABEL: test_fmlallbb_lane:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmlallbb v0.4s, v1.16b, v2.b[7]
+; CHECK-NEXT:    ret
+  %res = tail call <4 x float> @llvm.aarch64.neon.fp8.fmlallbb.lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm, i32 7)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_fmlallbt_lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm) {
+; CHECK-LABEL: test_fmlallbt_lane:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmlallbt v0.4s, v1.16b, v2.b[10]
+; CHECK-NEXT:    ret
+  %res = tail call <4 x float> @llvm.aarch64.neon.fp8.fmlallbt.lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm, i32 10)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_fmlalltb_lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm) {
+; CHECK-LABEL: test_fmlalltb_lane:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmlalltb v0.4s, v1.16b, v2.b[13]
+; CHECK-NEXT:    ret
+  %res = tail call <4 x float> @llvm.aarch64.neon.fp8.fmlalltb.lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm, i32 13)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_fmlalltt_lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm) {
+; CHECK-LABEL: test_fmlalltt_lane:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmlalltt v0.4s, v1.16b, v2.b[15]
+; CHECK-NEXT:    ret
+  %res = tail call <4 x float> @llvm.aarch64.neon.fp8.fmlalltt.lane(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm, i32 15)
+  ret <4 x float> %res
+}
