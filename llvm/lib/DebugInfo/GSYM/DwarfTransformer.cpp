@@ -543,6 +543,11 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
           FI.Inline = std::nullopt;
         }
       }
+
+      // If dwarf-callsites flag is set, parse DW_TAG_call_site DIEs.
+      if (LoadDwarfCallSites)
+        parseCallSiteInfoFromDwarf(CUI, Die, FI);
+
       Gsym.addFunctionInfo(std::move(FI));
     }
   } break;
@@ -551,6 +556,63 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
   }
   for (DWARFDie ChildDie : Die.children())
     handleDie(Out, CUI, ChildDie);
+}
+
+void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
+                                                  FunctionInfo &FI) {
+  // Parse all DW_TAG_call_site DIEs that are children of this subprogram DIE.
+  // DWARF specification:
+  // - DW_TAG_call_site can have DW_AT_call_return_pc for return address offset.
+  // - DW_AT_call_origin might point to a DIE of the function being called.
+  // For simplicity, we will just extract return_offset and possibly target name
+  // if available.
+
+  CallSiteInfoCollection CSIC;
+
+  for (DWARFDie Child : Die.children()) {
+    if (Child.getTag() != dwarf::DW_TAG_call_site)
+      continue;
+
+    CallSiteInfo CSI;
+    // DW_AT_call_return_pc: the return PC (address). We'll convert it to
+    // offset relative to FI's start.
+    auto ReturnPC =
+        dwarf::toAddress(Child.findRecursively(dwarf::DW_AT_call_return_pc));
+    if (!ReturnPC || !FI.Range.contains(*ReturnPC))
+      continue;
+
+    CSI.ReturnOffset = *ReturnPC - FI.startAddress();
+
+    // Attempt to get function name from DW_AT_call_origin. If present, we can
+    // insert it as a match regex.
+    if (DWARFDie OriginDie =
+            Child.getAttributeValueAsReferencedDie(dwarf::DW_AT_call_origin)) {
+
+      // Include the full unmangled name if available, otherwise the short name.
+      if (const char *LinkName = OriginDie.getLinkageName()) {
+        uint32_t LinkNameOff = Gsym.insertString(LinkName, /*Copy=*/false);
+        CSI.MatchRegex.push_back(LinkNameOff);
+      } else if (const char *ShortName = OriginDie.getShortName()) {
+        uint32_t ShortNameOff = Gsym.insertString(ShortName, /*Copy=*/false);
+        CSI.MatchRegex.push_back(ShortNameOff);
+      }
+    }
+
+    // For now, we won't attempt to deduce InternalCall/ExternalCall flags
+    // from DWARF.
+    CSI.Flags = CallSiteInfo::Flags::None;
+
+    CSIC.CallSites.push_back(CSI);
+  }
+
+  if (!CSIC.CallSites.empty()) {
+    if (!FI.CallSites)
+      FI.CallSites = CallSiteInfoCollection();
+    // Append parsed DWARF callsites:
+    FI.CallSites->CallSites.insert(FI.CallSites->CallSites.end(),
+                                   CSIC.CallSites.begin(),
+                                   CSIC.CallSites.end());
+  }
 }
 
 Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {

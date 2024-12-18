@@ -1405,6 +1405,19 @@ void SBDebugger::SetTerminalWidth(uint32_t term_width) {
     m_opaque_sp->SetTerminalWidth(term_width);
 }
 
+uint32_t SBDebugger::GetTerminalHeight() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return (m_opaque_sp ? m_opaque_sp->GetTerminalWidth() : 0);
+}
+
+void SBDebugger::SetTerminalHeight(uint32_t term_height) {
+  LLDB_INSTRUMENT_VA(this, term_height);
+
+  if (m_opaque_sp)
+    m_opaque_sp->SetTerminalHeight(term_height);
+}
+
 const char *SBDebugger::GetPrompt() const {
   LLDB_INSTRUMENT_VA(this);
 
