@@ -1086,7 +1086,6 @@ static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
                     emitHelper.emitErrorPrefix(), prop.name,
                     prop.prop.getSummary());
   }
-  body.unindent();
 }
 
 /// Include declarations specified on NativeTrait
