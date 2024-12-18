@@ -125,20 +125,20 @@ allocator for LLVM-libc.
    $> cd build
    $> SYSROOT=/path/to/sysroot # Remember to set this!
    $> cmake ../llvm  \
-   -G Ninja  \
-   -DLLVM_ENABLE_PROJECTS="clang;lld"   \
-   -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt" \
-   -DCMAKE_BUILD_TYPE=Release  \
-   -DCMAKE_C_COMPILER=clang \
-   -DCMAKE_CXX_COMPILER=clang++ \
-   -DLLVM_LIBC_FULL_BUILD=ON \
-   -DLLVM_LIBC_INCLUDE_SCUDO=ON \
-   -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
-   -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
-   -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
-   -DCLANG_DEFAULT_LINKER=lld \
-   -DCLANG_DEFAULT_RTLIB=compiler-rt \
-   -DCMAKE_INSTALL_PREFIX=$SYSROOT
+      -G Ninja  \
+      -DLLVM_ENABLE_PROJECTS="clang;lld"   \
+      -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt" \
+      -DCMAKE_BUILD_TYPE=Release  \
+      -DCMAKE_C_COMPILER=clang \
+      -DCMAKE_CXX_COMPILER=clang++ \
+      -DLLVM_LIBC_FULL_BUILD=ON \
+      -DLLVM_LIBC_INCLUDE_SCUDO=ON \
+      -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
+      -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
+      -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
+      -DCLANG_DEFAULT_LINKER=lld \
+      -DCLANG_DEFAULT_RTLIB=compiler-rt \
+      -DCMAKE_INSTALL_PREFIX=$SYSROOT
 
 Build and install
 =================
