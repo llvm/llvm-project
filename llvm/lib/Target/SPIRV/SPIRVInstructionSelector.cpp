@@ -3220,7 +3220,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
                    // Per the spec, repeat the vector if only one vec is needed
                    .addUse(SrcReg);
 
-    for (unsigned J = 0; J < LeftComponentCount; J++)
+    for (unsigned J = 0; J < LeftComponentCount; ++J)
       MIB.addImm(J);
 
     if (!MIB.constrainAllUses(TII, TRI, RBI))
@@ -3243,7 +3243,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
                  // Per the spec, repeat the vector if only one vec is needed
                  .addUse(SrcReg);
 
-  for (unsigned J = LeftComponentCount; J < ComponentCount; J++)
+  for (unsigned J = LeftComponentCount; J < ComponentCount; ++J)
     MIB.addImm(J);
 
   if (!MIB.constrainAllUses(TII, TRI, RBI))
