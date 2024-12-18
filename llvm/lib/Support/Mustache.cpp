@@ -573,9 +573,9 @@ void toMustacheString(const Value &Data, raw_ostream &OS) {
     return;
   case Value::Number: {
     auto Num = *Data.getAsNumber();
-    std::ostringstream Oss;
-    Oss << Num;
-    OS << Oss.str();
+    std::ostringstream SS;
+    SS << Num;
+    OS << SS.str();
     return;
   }
   case Value::String: {
