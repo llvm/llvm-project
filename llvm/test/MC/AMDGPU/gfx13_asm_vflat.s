@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding < %s | FileCheck -check-prefixes=GFX13,GFX13-W32 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -show-encoding < %s | FileCheck -check-prefix=GFX13 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -show-encoding < %s 2>&1 | FileCheck -check-prefix=GFX13-W64-ERR -implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --strict-whitespace %s
 
 cluster_load_async_to_lds_b8 v1, v[2:3], off
 // GFX13: encoding: [0x7c,0x00,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]

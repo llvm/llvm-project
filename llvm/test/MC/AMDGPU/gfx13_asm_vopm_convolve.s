@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
 
 v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:11], v12, v13, v14 aux_data:512 clamp
 // GFX13: v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:11], v12, v13, v14 aux_data:512 clamp ; encoding: [0x02,0x90,0x79,0xdf,0x02,0x84,0x80,0x0c,0x0c,0x80,0x08,0x00,0x0d,0xe0,0x00,0x00]

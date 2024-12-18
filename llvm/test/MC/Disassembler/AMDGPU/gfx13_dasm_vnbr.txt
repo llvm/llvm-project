@@ -1,4 +1,4 @@
-# RUN: llvm-mc -disassemble -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --strict-whitespace --check-prefix=GFX13 %s
+# RUN: llvm-mc -disassemble -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --strict-whitespace --check-prefix=GFX13 %s
 
 // GFX13: v_send_vgpr_next_b32 v1, v2, v3 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:0
 [0x01,0x00,0x00,0xfa,0x03,0x04,0x20,0x00]

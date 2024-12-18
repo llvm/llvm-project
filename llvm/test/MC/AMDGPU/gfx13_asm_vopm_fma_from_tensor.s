@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
 
 v_fma_from_tensor_bf16_bf16 v[2:3], v[10:11], v12, v14, v16 aux_data:1024
 // GFX13: v_fma_from_tensor_bf16_bf16 v[2:3], v[10:11], v12, v14, v16 aux_data:1024 ; encoding: [0x02,0x80,0x33,0xde,0x0a,0x84,0x81,0x08,0x0e,0x00,0x01,0x7c,0x10,0x00,0x00,0x00]
