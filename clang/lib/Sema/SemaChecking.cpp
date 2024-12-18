@@ -5325,7 +5325,6 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
           << TheCall->getSourceRange();
       return true;
     }
-    /// In-place updation of FirstArg by checkBuiltinArgument is ignored.
     TheCall->setArg(0, FirstArgResult.get());
   }
 
