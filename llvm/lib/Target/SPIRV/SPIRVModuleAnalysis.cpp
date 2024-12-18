@@ -252,59 +252,6 @@ static InstrSignature instrToSignature(const MachineInstr &MI,
   return Signature;
 }
 
-void SPIRVModuleAnalysis::collectGlobalEntities(
-    const std::vector<SPIRV::DTSortableEntry *> &DepsGraph,
-    SPIRV::ModuleSectionType MSType,
-    std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
-    bool UsePreOrder = false) {
-  DenseSet<const SPIRV::DTSortableEntry *> Visited;
-  for (const auto *E : DepsGraph) {
-    std::function<void(const SPIRV::DTSortableEntry *)> RecHoistUtil;
-    // NOTE: here we prefer recursive approach over iterative because
-    // we don't expect depchains long enough to cause SO.
-    RecHoistUtil = [MSType, UsePreOrder, &Visited, &Pred,
-                    &RecHoistUtil](const SPIRV::DTSortableEntry *E) {
-      if (Visited.count(E) || !Pred(E))
-        return;
-      Visited.insert(E);
-
-      // Traversing deps graph in post-order allows us to get rid of
-      // register aliases preprocessing.
-      // But pre-order is required for correct processing of function
-      // declaration and arguments processing.
-      if (!UsePreOrder)
-        for (auto *S : E->getDeps())
-          RecHoistUtil(S);
-
-      Register GlobalReg = Register::index2VirtReg(MAI.getNextID());
-      bool IsFirst = true;
-      for (auto &U : *E) {
-        const MachineFunction *MF = U.first;
-        const MachineRegisterInfo &MRI = MF->getRegInfo();
-        Register Reg = U.second;
-        MAI.setRegisterAlias(MF, Reg, GlobalReg);
-        MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
-        // dbgs() << "----- ";
-        // DefMI->print(dbgs());
-        // dbgs() << " -----\n";
-        if (!DefMI)
-          continue;
-        MAI.setSkipEmission(DefMI);
-        if (IsFirst)
-          MAI.MS[MSType].push_back(DefMI);
-        IsFirst = false;
-        if (E->getIsGV())
-          MAI.GlobalVarList.push_back(DefMI);
-      }
-
-      if (UsePreOrder)
-        for (auto *S : E->getDeps())
-          RecHoistUtil(S);
-    };
-    RecHoistUtil(E);
-  }
-}
-
 bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
                                         const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
@@ -626,7 +573,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
 
 // Number registers in all functions globally from 0 onwards and store
 // the result in global register alias table. Some registers are already
-// numbered in collectGlobalEntities.
+// numbered.
 void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     if ((*F).isDeclaration())
@@ -1996,7 +1943,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
-  //processDefInstrs(M);
   collectDeclarations(M);
 
   // Number rest of registers from N+1 onwards.
