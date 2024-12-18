@@ -15,7 +15,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
 ; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -28,10 +28,8 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
@@ -99,7 +97,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
 ; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -112,10 +110,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
@@ -176,7 +172,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
 ; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -189,10 +185,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>

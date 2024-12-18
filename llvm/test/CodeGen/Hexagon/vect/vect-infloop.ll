@@ -1,5 +1,5 @@
 ; Extracted from test/CodeGen/Generic/vector-casts.ll: used to loop indefinitely.
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: convert_df2w
 
 define void @a(ptr %p, ptr %q) {

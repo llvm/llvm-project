@@ -9,10 +9,9 @@ declare <vscale x 8 x i7> @llvm.vp.sadd.sat.nxv8i7(<vscale x 8 x i7>, <vscale x 
 define <vscale x 8 x i7> @vsadd_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: vsadd_vx_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vsra.vi v8, v8, 1
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vadd.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t

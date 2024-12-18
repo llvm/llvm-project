@@ -61,8 +61,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
         VPValue *Step =
             vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-        NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step,
-                                                      &Plan->getVF(), *II);
+        NewRecipe = new VPWidenIntOrFpInductionRecipe(
+            Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
@@ -377,7 +377,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
       continue;
     auto *PredVPBB =
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
-    if (!PredVPBB || PredVPBB->getNumSuccessors() != 1)
+    if (!PredVPBB || PredVPBB->getNumSuccessors() != 1 ||
+        isa<VPIRBasicBlock>(PredVPBB))
       continue;
     WorkList.push_back(VPBB);
   }
@@ -1059,6 +1060,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
+
+  if (match(&R, m_Not(m_Not(m_VPValue(A)))))
+    return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
@@ -1451,6 +1455,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       R->setOperand(1, &EVL);
   }
 
+  SmallVector<VPRecipeBase *> ToErase;
+
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
@@ -1501,24 +1507,23 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                         CInst->getDebugLoc());
                   })
               .Case<VPWidenCastRecipe>(
-                  [&](VPWidenCastRecipe *CInst) -> VPRecipeBase * {
-                    auto *CI = dyn_cast<CastInst>(CInst->getUnderlyingInstr());
+                  [&](VPWidenCastRecipe *CastR) -> VPRecipeBase * {
                     Intrinsic::ID VPID =
-                        VPIntrinsic::getForOpcode(CI->getOpcode());
+                        VPIntrinsic::getForOpcode(CastR->getOpcode());
                     assert(VPID != Intrinsic::not_intrinsic &&
                            "Expected vp.casts Instrinsic");
 
-                    SmallVector<VPValue *> Ops(CInst->operands());
+                    SmallVector<VPValue *> Ops(CastR->operands());
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
+                    VPValue *Mask =
+                        Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
                     Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
-                        VPID, Ops, TypeInfo.inferScalarType(CInst),
-                        CInst->getDebugLoc());
+                        VPID, Ops, TypeInfo.inferScalarType(CastR),
+                        CastR->getDebugLoc());
                   })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
@@ -1561,9 +1566,17 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       }
-      CurRecipe->eraseFromParent();
+      // Defer erasing recipes till the end so that we don't invalidate the
+      // VPTypeAnalysis cache.
+      ToErase.push_back(CurRecipe);
     }
-    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
+
+  for (VPRecipeBase *R : reverse(ToErase)) {
+    SmallVector<VPValue *> PossiblyDead(R->operands());
+    R->eraseFromParent();
+    for (VPValue *Op : PossiblyDead)
+      recursivelyDeleteDeadRecipes(Op);
   }
 }
 
@@ -1687,8 +1700,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // instruction. Widen memory instructions involved in address computation
       // will lead to gather/scatter instructions, which don't need to be
       // handled.
-      if (isa<VPWidenMemoryRecipe>(CurRec) || isa<VPInterleaveRecipe>(CurRec) ||
-          isa<VPScalarIVStepsRecipe>(CurRec) || isa<VPHeaderPHIRecipe>(CurRec))
+      if (isa<VPWidenMemoryRecipe, VPInterleaveRecipe, VPScalarIVStepsRecipe,
+              VPHeaderPHIRecipe>(CurRec))
         continue;
 
       // This recipe contributes to the address computation of a widen

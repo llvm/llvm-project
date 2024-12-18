@@ -15,52 +15,52 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section
+    - POSIX Docs
   * - bcmp
     - |check|
     -
-    - removed in POSIX.1-2008
+    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/bcmp.html>`__
   * - bcopy
     - |check|
     -
-    - removed in POSIX.1-2008
+    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/bcopy.html>`__
   * - bzero
     - |check|
     -
-    - removed in POSIX.1-2008
+    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/bzero.html>`__
   * - ffs
     -
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffs.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffs.html>`__
   * - ffsl
     -
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffsl.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffsl.html>`__
   * - ffsll
     -
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffsll.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffsll.html>`__
   * - index
     - |check|
     -
-    - removed in POSIX.1-2008
+    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/index.html>`__
   * - rindex
     - |check|
     -
-    - removed in POSIX.1-2008
+    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/rindex.html>`__
   * - strcasecmp
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/strcasecmp.html>`__
   * - strcasecmp_l
     -
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/strcasecmp_l.html>`__
   * - strncasecmp
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html>`__
   * - strncasecmp_l
     -
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp_l.html>`__

@@ -2489,7 +2489,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
 
 // Can actual be argument associated with dummy?
 static bool CheckCompatibleArgument(bool isElemental,
-    const ActualArgument &actual, const characteristics::DummyArgument &dummy) {
+    const ActualArgument &actual, const characteristics::DummyArgument &dummy,
+    FoldingContext &foldingContext) {
   const auto *expr{actual.UnwrapExpr()};
   return common::visit(
       common::visitors{
@@ -2509,8 +2510,26 @@ static bool CheckCompatibleArgument(bool isElemental,
             }
             return false;
           },
-          [&](const characteristics::DummyProcedure &) {
-            return expr && IsProcedurePointerTarget(*expr);
+          [&](const characteristics::DummyProcedure &dummy) {
+            if (!expr || !IsProcedurePointerTarget(*expr)) {
+              return false;
+            }
+            if (auto actualProc{characteristics::Procedure::Characterize(
+                    *expr, foldingContext)}) {
+              const auto &dummyResult{dummy.procedure.value().functionResult};
+              const auto *dummyTypeAndShape{
+                  dummyResult ? dummyResult->GetTypeAndShape() : nullptr};
+              const auto &actualResult{actualProc->functionResult};
+              const auto *actualTypeAndShape{
+                  actualResult ? actualResult->GetTypeAndShape() : nullptr};
+              if (dummyTypeAndShape && actualTypeAndShape) {
+                // Return false when the function results' types are both
+                // known and not compatible.
+                return actualTypeAndShape->type().IsTkCompatibleWith(
+                    dummyTypeAndShape->type());
+              }
+            }
+            return true;
           },
           [&](const characteristics::AlternateReturn &) {
             return actual.isAlternateReturn();
@@ -2521,15 +2540,16 @@ static bool CheckCompatibleArgument(bool isElemental,
 
 // Are the actual arguments compatible with the dummy arguments of procedure?
 static bool CheckCompatibleArguments(
-    const characteristics::Procedure &procedure,
-    const ActualArguments &actuals) {
+    const characteristics::Procedure &procedure, const ActualArguments &actuals,
+    FoldingContext &foldingContext) {
   bool isElemental{procedure.IsElemental()};
   const auto &dummies{procedure.dummyArguments};
   CHECK(dummies.size() == actuals.size());
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
-    if (actual && !CheckCompatibleArgument(isElemental, *actual, dummy)) {
+    if (actual &&
+        !CheckCompatibleArgument(isElemental, *actual, dummy, foldingContext)) {
       return false;
     }
   }
@@ -2726,7 +2746,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
         }
         if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
                 context_, false /* no integer conversions */) &&
-            CheckCompatibleArguments(*procedure, localActuals)) {
+            CheckCompatibleArguments(
+                *procedure, localActuals, foldingContext_)) {
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
             int d{ComputeCudaMatchingDistance(

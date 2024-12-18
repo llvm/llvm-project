@@ -73,11 +73,6 @@ using DataFunc =
     }                                                                          \
   } while (0)
 
-static void swapBytes(std::byte *M, size_t N) {
-  for (size_t I = 0; I != (N / 2); ++I)
-    std::swap(M[I], M[N - 1 - I]);
-}
-
 /// We use this to recursively iterate over all fields and elements of a pointer
 /// and extract relevant data for a bitcast.
 static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
@@ -259,8 +254,10 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
   return true;
 }
 
-static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
-                                BitcastBuffer &Buffer, bool ReturnOnUninit) {
+bool clang::interp::readPointerToBuffer(const Context &Ctx,
+                                        const Pointer &FromPtr,
+                                        BitcastBuffer &Buffer,
+                                        bool ReturnOnUninit) {
   const ASTContext &ASTCtx = Ctx.getASTContext();
   Endian TargetEndianness =
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
