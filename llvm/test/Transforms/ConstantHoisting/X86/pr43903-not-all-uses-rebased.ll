@@ -8,12 +8,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @a = external global [2 x i16], align 1
 
-define void @c() {
+define void @c(i1 %arg) {
 ; CHECK-LABEL: @c(
 ; CHECK-NEXT:  for.cond:
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY2:%.*]], label [[FOR_END4:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY2:%.*]], label [[FOR_END4:%.*]]
 ; CHECK:       for.body2:
-; CHECK-NEXT:    br i1 undef, label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       land.end:
@@ -27,10 +27,10 @@ define void @c() {
 ; CHECK-NEXT:    ret void
 ;
 for.cond:
-  br i1 undef, label %for.body2, label %for.end4
+  br i1 %arg, label %for.body2, label %for.end4
 
 for.body2:                                        ; preds = %for.cond
-  br i1 undef, label %land.rhs, label %land.end
+  br i1 %arg, label %land.rhs, label %land.end
 
 land.rhs:                                         ; preds = %for.body2
   unreachable

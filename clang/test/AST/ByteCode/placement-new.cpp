@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
 
 namespace std {
@@ -14,7 +14,9 @@ namespace std {
   template<typename T, typename ...Args>
   constexpr void construct_at(void *p, Args &&...args) {
     new (p) T((Args&&)args...); // both-note {{in call to}} \
-                                // both-note {{placement new would change type of storage from 'int' to 'float'}}
+                                // both-note {{placement new would change type of storage from 'int' to 'float'}} \
+                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}}
+
   }
 }
 
@@ -284,6 +286,18 @@ namespace ConstructAt {
   static_assert(bad_construct_at_type()); // both-error {{not an integral constant expression}} \
                                           // both-note {{in call}}
 
+  constexpr bool bad_construct_at_subobject() {
+    struct X { int a, b; };
+    union A {
+      int a;
+      X x;
+    };
+    A a = {1};
+    std::construct_at<int>(&a.x.a, 1); // both-note {{in call}}
+    return true;
+  }
+  static_assert(bad_construct_at_subobject()); // both-error{{not an integral constant expression}} \
+                                               // both-note {{in call}}
 }
 
 namespace UsedToCrash {
@@ -324,3 +338,17 @@ namespace PR48606 {
   }
   static_assert(f());
 }
+
+#ifdef BYTECODE
+constexpr int N = [] // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
+                     // expected-note {{in call to}}
+{
+    struct S {
+        int a[1];
+    };
+    S s;
+    ::new (s.a) int[1][2][3][4]();
+    return s.a[0];
+}();
+#endif

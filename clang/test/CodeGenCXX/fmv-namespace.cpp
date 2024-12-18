@@ -55,19 +55,19 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN3Foo3barEv.default(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN3Foo3barEv._Mmops(
-// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN4Name3fooEv.default(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 0
 //
@@ -76,8 +76,8 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1073741824
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1073741824
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1073807616
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1073807616
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:

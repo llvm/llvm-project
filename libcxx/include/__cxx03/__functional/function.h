@@ -7,46 +7,46 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_FUNCTION_H
-#define _LIBCPP___FUNCTIONAL_FUNCTION_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_FUNCTION_H
+#define _LIBCPP___CXX03___FUNCTIONAL_FUNCTION_H
 
-#include <__assert>
-#include <__config>
-#include <__exception/exception.h>
-#include <__functional/binary_function.h>
-#include <__functional/invoke.h>
-#include <__functional/unary_function.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/addressof.h>
-#include <__memory/allocator.h>
-#include <__memory/allocator_destructor.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/builtin_new_allocator.h>
-#include <__memory/compressed_pair.h>
-#include <__memory/unique_ptr.h>
-#include <__type_traits/aligned_storage.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_core_convertible.h>
-#include <__type_traits/is_scalar.h>
-#include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/strip_signature.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/piecewise_construct.h>
-#include <__utility/swap.h>
-#include <__verbose_abort>
-#include <new>
-#include <tuple>
-#include <typeinfo>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__exception/exception.h>
+#include <__cxx03/__functional/binary_function.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/unary_function.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocator.h>
+#include <__cxx03/__memory/allocator_destructor.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__memory/builtin_new_allocator.h>
+#include <__cxx03/__memory/compressed_pair.h>
+#include <__cxx03/__memory/unique_ptr.h>
+#include <__cxx03/__type_traits/aligned_storage.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_core_convertible.h>
+#include <__cxx03/__type_traits/is_scalar.h>
+#include <__cxx03/__type_traits/is_trivially_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_destructible.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/strip_signature.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/piecewise_construct.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/__verbose_abort>
+#include <__cxx03/new>
+#include <__cxx03/tuple>
+#include <__cxx03/typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #ifndef _LIBCPP_CXX03_LANG
 
@@ -1045,4 +1045,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FUNCTIONAL_FUNCTION_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_FUNCTION_H

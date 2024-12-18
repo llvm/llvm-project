@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_SYSTEM_CLOCK_H
-#define _LIBCPP___CHRONO_SYSTEM_CLOCK_H
+#ifndef _LIBCPP___CXX03___CHRONO_SYSTEM_CLOCK_H
+#define _LIBCPP___CXX03___CHRONO_SYSTEM_CLOCK_H
 
-#include <__chrono/duration.h>
-#include <__chrono/time_point.h>
-#include <__config>
-#include <ctime>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__chrono/time_point.h>
+#include <__cxx03/__config>
+#include <__cxx03/ctime>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -49,4 +49,4 @@ using sys_days    = sys_time<days>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHRONO_SYSTEM_CLOCK_H
+#endif // _LIBCPP___CXX03___CHRONO_SYSTEM_CLOCK_H

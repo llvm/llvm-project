@@ -589,6 +589,8 @@ declare i32 @__kmpc_omp_task_with_deps(ptr, i32, ptr, i32, ptr, i32, ptr)
 
 declare void @__kmpc_omp_wait_deps(ptr, i32, i32, ptr, i32, ptr)
 
+declare void @__kmpc_omp_taskwait_deps_51(ptr, i32, i32, ptr, i32, ptr, i32)
+
 declare i32 @__kmpc_cancellationpoint(ptr, i32, i32)
 
 declare void @__kmpc_push_num_teams(ptr, i32, i32, i32)
@@ -2464,6 +2466,9 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 
 ; EXT: ; Function Attrs: convergent nounwind
 ; EXT-NEXT: declare void @__kmpc_omp_wait_deps(ptr, i32 signext, i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_omp_taskwait_deps_51(ptr, i32 signext, i32 signext, ptr, i32 signext, ptr, i32 signext)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare signext i32 @__kmpc_cancellationpoint(ptr, i32 signext, i32 signext)

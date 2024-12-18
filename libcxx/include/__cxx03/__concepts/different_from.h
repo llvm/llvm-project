@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_DIFFERENT_FROM_H
-#define _LIBCPP___CONCEPTS_DIFFERENT_FROM_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_DIFFERENT_FROM_H
+#define _LIBCPP___CXX03___CONCEPTS_DIFFERENT_FROM_H
 
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__type_traits/remove_cvref.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,4 +28,4 @@ concept __different_from = !same_as<remove_cvref_t<_Tp>, remove_cvref_t<_Up>>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_DIFFERENT_FROM_H
+#endif // _LIBCPP___CXX03___CONCEPTS_DIFFERENT_FROM_H

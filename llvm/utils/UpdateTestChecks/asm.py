@@ -222,6 +222,11 @@ ASM_FUNCTION_VE_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+ASM_FUNCTION_XTENSA_RE = re.compile(
+    r"^(?P<func>[^:]+): +# @(?P=func)\n(?P<body>.*?)\n\.Lfunc_end\d+:\n",
+    flags=(re.M | re.S),
+)
+
 ASM_FUNCTION_CSKY_RE = re.compile(
     r"^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?"
     r"(?P<body>^##?[ \t]+[^:]+:.*?)\s*"
@@ -492,6 +497,17 @@ def scrub_asm_ve(asm, args):
     return asm
 
 
+def scrub_asm_xtensa(asm, args):
+    # Scrub runs of whitespace out of the assembly, but leave the leading
+    # whitespace in place.
+    asm = common.SCRUB_WHITESPACE_RE.sub(r" ", asm)
+    # Expand the tabs used for indentation.
+    asm = string.expandtabs(asm, 2)
+    # Strip trailing whitespace.
+    asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r"", asm)
+    return asm
+
+
 def scrub_asm_csky(asm, args):
     # Scrub runs of whitespace out of the assembly, but leave the leading
     # whitespace in place.
@@ -576,6 +592,7 @@ def get_run_handler(triple):
         "wasm32": (scrub_asm_wasm, ASM_FUNCTION_WASM_RE),
         "wasm64": (scrub_asm_wasm, ASM_FUNCTION_WASM_RE),
         "ve": (scrub_asm_ve, ASM_FUNCTION_VE_RE),
+        "xtensa": (scrub_asm_xtensa, ASM_FUNCTION_XTENSA_RE),
         "csky": (scrub_asm_csky, ASM_FUNCTION_CSKY_RE),
         "nvptx": (scrub_asm_nvptx, ASM_FUNCTION_NVPTX_RE),
         "loongarch32": (scrub_asm_loongarch, ASM_FUNCTION_LOONGARCH_RE),

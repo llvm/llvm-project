@@ -55,10 +55,13 @@ attributes #2 = { "target-features"="+reference-types" }
 ; Features in function attributes:
 ; +atomics, +nontrapping-fptoint, +reference-types
 ; CHECK-LABEL: .custom_section.target_features,"",@
-; CHECK-NEXT: .int8  3
+; CHECK-NEXT: .int8  4
 ; CHECK-NEXT: .int8  43
 ; CHECK-NEXT: .int8  7
 ; CHECK-NEXT: .ascii  "atomics"
+; CHECK-NEXT: .int8  43
+; CHECK-NEXT: .int8  22
+; CHECK-NEXT: .ascii  "call-indirect-overlong"
 ; CHECK-NEXT: .int8  43
 ; CHECK-NEXT: .int8  19
 ; CHECK-NEXT: .ascii  "nontrapping-fptoint"
@@ -69,10 +72,13 @@ attributes #2 = { "target-features"="+reference-types" }
 ; Features in function attributes + features specified by -mattr= option:
 ; +atomics, +nontrapping-fptoint, +reference-types, +simd128
 ; SIMD128-LABEL: .custom_section.target_features,"",@
-; SIMD128-NEXT: .int8  4
+; SIMD128-NEXT: .int8  5
 ; SIMD128-NEXT: .int8  43
 ; SIMD128-NEXT: .int8  7
 ; SIMD128-NEXT: .ascii  "atomics"
+; SIMD128-NEXT: .int8  43
+; SIMD128-NEXT: .int8  22
+; SIMD128-NEXT: .ascii  "call-indirect-overlong"
 ; SIMD128-NEXT: .int8  43
 ; SIMD128-NEXT: .int8  19
 ; SIMD128-NEXT: .ascii  "nontrapping-fptoint"

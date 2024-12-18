@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_BOOLEAN_TESTABLE_H
-#define _LIBCPP___CONCEPTS_BOOLEAN_TESTABLE_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_BOOLEAN_TESTABLE_H
+#define _LIBCPP___CXX03___CONCEPTS_BOOLEAN_TESTABLE_H
 
-#include <__concepts/convertible_to.h>
-#include <__config>
-#include <__utility/forward.h>
+#include <__cxx03/__concepts/convertible_to.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,4 +35,4 @@ concept __boolean_testable = __boolean_testable_impl<_Tp> && requires(_Tp&& __t)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_BOOLEAN_TESTABLE_H
+#endif // _LIBCPP___CXX03___CONCEPTS_BOOLEAN_TESTABLE_H

@@ -192,7 +192,7 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
   // mechanism that may remove flags to increase the likelihood of CSE.
 
   Flavor = SPF_UNKNOWN;
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
 
   if (!match(Cond, m_ICmp(Pred, m_Specific(A), m_Specific(B)))) {
     // Check for commuted variants of min/max by swapping predicate.
@@ -279,7 +279,7 @@ static unsigned getHashValueImpl(SimpleValue Val) {
     // Hash general selects to allow matching commuted true/false operands.
 
     // If we do not have a compare as the condition, just hash in the condition.
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *X, *Y;
     if (!match(Cond, m_Cmp(Pred, m_Value(X), m_Value(Y))))
       return hash_combine(Inst->getOpcode(), Cond, A, B);
@@ -290,7 +290,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
       Pred = CmpInst::getInversePredicate(Pred);
       std::swap(A, B);
     }
-    return hash_combine(Inst->getOpcode(), Pred, X, Y, A, B);
+    return hash_combine(Inst->getOpcode(),
+                        static_cast<CmpInst::Predicate>(Pred), X, Y, A, B);
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(Inst))
@@ -451,7 +452,7 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     // this code, as we simplify the double-negation before hashing the second
     // select (and so still succeed at CSEing them).
     if (LHSA == RHSB && LHSB == RHSA) {
-      CmpInst::Predicate PredL, PredR;
+      CmpPredicate PredL, PredR;
       Value *X, *Y;
       if (match(CondL, m_Cmp(PredL, m_Value(X), m_Value(Y))) &&
           match(CondR, m_Cmp(PredR, m_Specific(X), m_Specific(Y))) &&
@@ -964,33 +965,26 @@ private:
   bool overridingStores(const ParseMemoryInst &Earlier,
                         const ParseMemoryInst &Later);
 
-  Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
-    // TODO: We could insert relevant casts on type mismatch here.
-    if (auto *LI = dyn_cast<LoadInst>(Inst))
-      return LI->getType() == ExpectedType ? LI : nullptr;
-    if (auto *SI = dyn_cast<StoreInst>(Inst)) {
-      Value *V = SI->getValueOperand();
-      return V->getType() == ExpectedType ? V : nullptr;
+  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType) const {
+    // TODO: We could insert relevant casts on type mismatch.
+    // The load or the store's first operand.
+    Value *V;
+    if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::masked_load:
+        V = II;
+        break;
+      case Intrinsic::masked_store:
+        V = II->getOperand(0);
+        break;
+      default:
+        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
+      }
+    } else {
+      V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
     }
-    assert(isa<IntrinsicInst>(Inst) && "Instruction not supported");
-    auto *II = cast<IntrinsicInst>(Inst);
-    if (isHandledNonTargetIntrinsic(II->getIntrinsicID()))
-      return getOrCreateResultNonTargetMemIntrinsic(II, ExpectedType);
-    return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
-  }
 
-  Value *getOrCreateResultNonTargetMemIntrinsic(IntrinsicInst *II,
-                                                Type *ExpectedType) const {
-    // TODO: We could insert relevant casts on type mismatch here.
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::masked_load:
-      return II->getType() == ExpectedType ? II : nullptr;
-    case Intrinsic::masked_store: {
-      Value *V = II->getOperand(0);
-      return V->getType() == ExpectedType ? V : nullptr;
-    }
-    }
-    return nullptr;
+    return V->getType() == ExpectedType ? V : nullptr;
   }
 
   /// Return true if the instruction is known to only operate on memory

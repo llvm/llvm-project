@@ -798,8 +798,6 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
     return;
 
   createMarker(Dest)->absorbDebugValues(*First->DebugMarker, InsertAtHead);
-
-  return;
 }
 
 void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,

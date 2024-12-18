@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LIBCPP___COROUTINE_TRIVIAL_AWAITABLES_H
-#define __LIBCPP___COROUTINE_TRIVIAL_AWAITABLES_H
+#ifndef __LIBCPP___CXX03___COROUTINE_TRIVIAL_AWAITABLES_H
+#define __LIBCPP___CXX03___COROUTINE_TRIVIAL_AWAITABLES_H
 
-#include <__config>
-#include <__coroutine/coroutine_handle.h>
+#include <__cxx03/__config>
+#include <__cxx03/__coroutine/coroutine_handle.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -37,4 +37,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // __LIBCPP_STD_VER >= 20
 
-#endif // __LIBCPP___COROUTINE_TRIVIAL_AWAITABLES_H
+#endif // __LIBCPP___CXX03___COROUTINE_TRIVIAL_AWAITABLES_H

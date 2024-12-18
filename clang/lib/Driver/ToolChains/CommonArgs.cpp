@@ -19,6 +19,7 @@
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
 #include "Arch/X86.h"
+#include "BareMetal.h"
 #include "HIPAMD.h"
 #include "Hexagon.h"
 #include "MSP430.h"
@@ -150,6 +151,9 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
       return false;
     }
   }
+
+  if (arm::isARMEABIBareMetal(Triple))
+    return false;
 
   return true;
 }
@@ -489,6 +493,39 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       TC.AddCCKextLibArgs(Args, CmdArgs);
     else
       A.renderAsInput(Args, CmdArgs);
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    const llvm::Triple &Triple = TC.getTriple();
+    StringRef V = A->getValue();
+    if (V == "ArmPL" && (Triple.isOSLinux() || Triple.isOSDarwin())) {
+      // To support -fveclib=ArmPL we need to link against libamath. Some of the
+      // libamath functions depend on libm, at the same time, libamath exports
+      // its own implementation of some of the libm functions. These are faster
+      // and potentially less accurate implementations, hence we need to be
+      // careful what is being linked in. Since here we are interested only in
+      // the subset of libamath functions that is covered by the veclib
+      // mappings, we need to prioritize libm functions by putting -lm before
+      // -lamath (and then -lm again, to fulfill libamath requirements).
+      //
+      // Therefore we need to do the following:
+      //
+      // 1. On Linux, link only when actually needed.
+      //
+      // 2. Prefer libm functions over libamath.
+      //
+      // 3. Link against libm to resolve libamath dependencies.
+      //
+      if (Triple.isOSLinux()) {
+        CmdArgs.push_back(Args.MakeArgString("--push-state"));
+        CmdArgs.push_back(Args.MakeArgString("--as-needed"));
+      }
+      CmdArgs.push_back(Args.MakeArgString("-lm"));
+      CmdArgs.push_back(Args.MakeArgString("-lamath"));
+      CmdArgs.push_back(Args.MakeArgString("-lm"));
+      if (Triple.isOSLinux())
+        CmdArgs.push_back(Args.MakeArgString("--pop-state"));
+      addArchSpecificRPath(TC, Args, CmdArgs);
+    }
   }
 }
 
@@ -1293,6 +1330,7 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     }
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
+    addArchSpecificRPath(TC, Args, CmdArgs);
   }
 
   // libomp needs libatomic for atomic operations if using libgcc
@@ -1442,6 +1480,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     }
     if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
+    if (SanArgs.needsTysanRt())
+      SharedRuntimes.push_back("tysan");
     if (SanArgs.needsHwasanRt()) {
       if (SanArgs.needsHwasanAliasesRt())
         SharedRuntimes.push_back("hwasan_aliases");
@@ -1514,6 +1554,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
   }
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTysanRt())
+    StaticRuntimes.push_back("tysan");
   if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("ubsan_minimal");
@@ -1762,18 +1804,13 @@ Arg *tools::getLastProfileUseArg(const ArgList &Args) {
 
 Arg *tools::getLastProfileSampleUseArg(const ArgList &Args) {
   auto *ProfileSampleUseArg = Args.getLastArg(
-      options::OPT_fprofile_sample_use, options::OPT_fprofile_sample_use_EQ,
-      options::OPT_fauto_profile, options::OPT_fauto_profile_EQ,
-      options::OPT_fno_profile_sample_use, options::OPT_fno_auto_profile);
+      options::OPT_fprofile_sample_use_EQ, options::OPT_fno_profile_sample_use);
 
-  if (ProfileSampleUseArg &&
-      (ProfileSampleUseArg->getOption().matches(
-           options::OPT_fno_profile_sample_use) ||
-       ProfileSampleUseArg->getOption().matches(options::OPT_fno_auto_profile)))
+  if (ProfileSampleUseArg && (ProfileSampleUseArg->getOption().matches(
+                                 options::OPT_fno_profile_sample_use)))
     return nullptr;
 
-  return Args.getLastArg(options::OPT_fprofile_sample_use_EQ,
-                         options::OPT_fauto_profile_EQ);
+  return Args.getLastArg(options::OPT_fprofile_sample_use_EQ);
 }
 
 const char *tools::RelocationModelName(llvm::Reloc::Model Model) {
@@ -2709,7 +2746,7 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
 
 unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
                                            const llvm::opt::ArgList &Args) {
-  unsigned CodeObjVer = 4; // default
+  unsigned CodeObjVer = 5; // default
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args))
     StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
   return CodeObjVer;

@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_VIEWS
-#define _LIBCPP___RANGES_VIEWS
+#ifndef _LIBCPP___CXX03___RANGES_VIEWS
+#define _LIBCPP___CXX03___RANGES_VIEWS
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -32,4 +32,4 @@ namespace views = ranges::views;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_VIEWS
+#endif // _LIBCPP___CXX03___RANGES_VIEWS

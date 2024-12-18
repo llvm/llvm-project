@@ -1,5 +1,5 @@
-; RUN: not llc -march=bpfel -mcpu=v1 < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=bpfeb -mcpu=v1 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=bpfel -mcpu=v1 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=bpfeb -mcpu=v1 < %s 2>&1 | FileCheck %s
 
 ; This file is generated with the source command and source
 ; $ clang -target bpf -O2 -g -S -emit-llvm t.c

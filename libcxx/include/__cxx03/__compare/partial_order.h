@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_PARTIAL_ORDER
-#define _LIBCPP___COMPARE_PARTIAL_ORDER
+#ifndef _LIBCPP___CXX03___COMPARE_PARTIAL_ORDER
+#define _LIBCPP___CXX03___COMPARE_PARTIAL_ORDER
 
-#include <__compare/compare_three_way.h>
-#include <__compare/ordering.h>
-#include <__compare/weak_order.h>
-#include <__config>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_same.h>
-#include <__utility/forward.h>
-#include <__utility/priority_tag.h>
+#include <__cxx03/__compare/compare_three_way.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/weak_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/priority_tag.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
@@ -74,4 +74,4 @@ inline constexpr auto partial_order = __partial_order::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_PARTIAL_ORDER
+#endif // _LIBCPP___CXX03___COMPARE_PARTIAL_ORDER

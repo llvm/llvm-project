@@ -618,3 +618,265 @@ func.func @test_mul_invalid_shift(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1
   %0 = tosa.mul %arg0, %arg1 {shift = 1 : i8} : (tensor<13x21x3xf32>, tensor<13x1x3xf32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
+
+// -----
+
+// CHECK-LABEL: test_unsupported_int64_data_type
+func.func @test_unsupported_int64_data_type(%arg0: tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64> {
+  // expected-error@+1 {{'tosa.argmax' op is not profile-aligned: element type 'i64' is not legal}}
+  %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64>
+  // expected-error@+1 {{'func.return' op is not profile-aligned: element type 'i64' is not legal}}
+  return %0 : tensor<1x13x13xi64>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_clamp
+func.func @test_mismatch_in_out_data_type_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.clamp' op requires the same element type for all operands and results}}
+  %0 = tosa.clamp %arg0 {min_fp = 0.0 : f32, max_fp = 1.0: f32, min_int = 0 : i64, max_int = 1 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_clamp
+func.func @test_mismatch_in_out_shape_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.clamp' op requires the same shape for all operands and results}}
+  %0 = tosa.clamp %arg0 {min_fp = 0.0 : f32, max_fp = 1.0: f32, min_int = 0 : i64, max_int = 1 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_erf
+func.func @test_mismatch_in_out_data_type_erf(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.erf' op requires the same element type for all operands and results}}
+  %0 = tosa.erf %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_erf
+func.func @test_mismatch_in_out_shape_erf(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.erf' op requires the same shape for all operands and results}}
+  %0 = tosa.erf %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_sigmoid
+func.func @test_mismatch_in_out_data_type_sigmoid(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.sigmoid' op requires the same element type for all operands and results}}
+  %0 = tosa.sigmoid %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_sigmoid
+func.func @test_mismatch_in_out_shape_sigmoid(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.sigmoid' op requires the same shape for all operands and results}}
+  %0 = tosa.sigmoid %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_tanh
+func.func @test_mismatch_in_out_data_type_tanh(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.tanh' op requires the same element type for all operands and results}}
+  %0 = tosa.tanh %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_tanh
+func.func @test_mismatch_in_out_shape_tanh(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.tanh' op requires the same shape for all operands and results}}
+  %0 = tosa.tanh %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_cos
+func.func @test_mismatch_in_out_data_type_cos(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.cos' op requires the same element type for all operands and results}}
+  %0 = tosa.cos %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_cos
+func.func @test_mismatch_in_out_shape_cos(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.cos' op requires the same shape for all operands and results}}
+  %0 = tosa.cos %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_sin
+func.func @test_mismatch_in_out_data_type_sin(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.sin' op requires the same element type for all operands and results}}
+  %0 = tosa.sin %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_sin
+func.func @test_mismatch_in_out_shape_sin(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.sin' op requires the same shape for all operands and results}}
+  %0 = tosa.sin %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_abs
+func.func @test_mismatch_in_out_data_type_abs(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.abs' op requires the same element type for all operands and results}}
+  %0 = tosa.abs %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_abs
+func.func @test_mismatch_in_out_shape_abs(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.abs' op requires the same shape for all operands and results}}
+  %0 = tosa.abs %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_bitwise_not
+func.func @test_mismatch_in_out_data_type_bitwise_not(%arg0: tensor<13x21x1xi32>) -> tensor<13x21x1xi16> {
+  // expected-error@+1 {{'tosa.bitwise_not' op requires the same element type for all operands and results}}
+  %0 = tosa.bitwise_not %arg0 : (tensor<13x21x1xi32>) -> tensor<13x21x1xi16>
+  return %0 : tensor<13x21x1xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_bitwise_not
+func.func @test_mismatch_in_out_shape_bitwise_not(%arg0: tensor<13x21x1xi32>) -> tensor<13x21x3xi32> {
+  // expected-error@+1 {{'tosa.bitwise_not' op requires the same shape for all operands and results}}
+  %0 = tosa.bitwise_not %arg0 : (tensor<13x21x1xi32>) -> tensor<13x21x3xi32>
+  return %0 : tensor<13x21x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_ceil
+func.func @test_mismatch_in_out_data_type_ceil(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.ceil' op requires the same element type for all operands and results}}
+  %0 = tosa.ceil %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_ceil
+func.func @test_mismatch_in_out_shape_ceil(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.ceil' op requires the same shape for all operands and results}}
+  %0 = tosa.ceil %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_data_type_clz
+func.func @test_mismatch_in_out_data_type_clz(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi16> {
+  // expected-error@+1 {{'tosa.clz' op requires the same element type for all operands and results}}
+  %0 = tosa.clz %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xi16>
+  return %0 : tensor<13x21x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_mismatch_in_out_shape_clz
+func.func @test_mismatch_in_out_shape_clz(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x1xi32> {
+  // expected-error@+1 {{'tosa.clz' op requires the same shape for all operands and results}}
+  %0 = tosa.clz %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x1xi32>
+  return %0 : tensor<13x21x1xi32>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_data_type_cos
+func.func @test_mismatch_in_out_data_type_cos(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.cos' op requires the same element type for all operands and results}}
+  %0 = tosa.cos %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_shape_cos
+func.func @test_mismatch_in_out_shape_cos(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.cos' op requires the same shape for all operands and results}}
+  %0 = tosa.cos %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_data_type_exp
+func.func @test_mismatch_in_out_data_type_exp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.exp' op requires the same element type for all operands and results}}
+  %0 = tosa.exp %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_shape_exp
+func.func @test_mismatch_in_out_shape_exp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.exp' op requires the same shape for all operands and results}}
+  %0 = tosa.exp %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_data_type_floor
+func.func @test_mismatch_in_out_data_type_floor(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.floor' op requires the same element type for all operands and results}}
+  %0 = tosa.floor %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_shape_floor
+func.func @test_mismatch_in_out_shape_floor(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.floor' op requires the same shape for all operands and results}}
+  %0 = tosa.floor %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_data_type_log
+func.func @test_mismatch_in_out_data_type_log(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
+  // expected-error@+1 {{'tosa.log' op requires the same element type for all operands and results}}
+  %0 = tosa.log %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  return %0 : tensor<13x21x3xf16>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_shape_log
+func.func @test_mismatch_in_out_shape_log(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
+  // expected-error@+1 {{'tosa.log' op requires the same shape for all operands and results}}
+  %0 = tosa.log %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  return %0 : tensor<13x21x1xf32>
+}
+
+// -----
+// CHECK-LABEL: test_mismatch_in_out_shape_logical_not
+func.func @test_mismatch_in_out_shape_logical_not(%arg0: tensor<1x21x3xi1>) -> tensor<13x21x3xi1> {
+  // expected-error@+1 {{'tosa.logical_not' op requires the same shape for all operands and results}}
+  %0 = tosa.logical_not %arg0 : (tensor<1x21x3xi1>) -> tensor<13x21x3xi1>
+  return %0 : tensor<13x21x3xi1>
+}

@@ -90,7 +90,6 @@
 //   could be done for some indirect branches, such as switch jump tables.
 //===----------------------------------------------------------------------===//
 
-#include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/BitVector.h"
@@ -101,11 +100,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_LOCALE_GUARD_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_LOCALE_GUARD_H
+#ifndef _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_LOCALE_GUARD_H
+#define _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_LOCALE_GUARD_H
 
-#include <__config>
-#include <__locale> // for locale_t
-#include <clocale>
+#include <__cxx03/__config>
+#include <__cxx03/__locale> // for locale_t
+#include <__cxx03/clocale>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -75,4 +75,4 @@ struct __libcpp_locale_guard {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_LOCALE_GUARD_H
+#endif // _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_LOCALE_GUARD_H

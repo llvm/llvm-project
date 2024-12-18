@@ -179,11 +179,11 @@ define i32 @foo4(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 7.900000e+00, double 7.900000e+00, double 7.900000e+00, double 7.900000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], splat (double 7.900000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 6.000000e+00, double 6.000000e+00, double 6.000000e+00, double 6.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], splat (double 6.000000e+00)
 ; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr [[A]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -280,10 +280,10 @@ return:                                           ; preds = %entry, %if.end
 
 @a = external global double, align 8
 
-define void @PR19646(ptr %this) {
+define void @PR19646(ptr %this, i1 %arg) {
 ; CHECK-LABEL: @PR19646(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_END13:%.*]], label [[IF_END13]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END13:%.*]], label [[IF_END13]]
 ; CHECK:       sw.epilog7:
 ; CHECK-NEXT:    [[DOTIN:%.*]] = getelementptr inbounds [[CLASS_B_53_55:%.*]], ptr [[THIS:%.*]], i64 0, i32 0, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[DOTIN]], align 8
@@ -294,7 +294,7 @@ define void @PR19646(ptr %this) {
 ; CHECK-NEXT:    [[_DY:%.*]] = getelementptr inbounds [[CLASS_B_53_55]], ptr [[THIS]], i64 0, i32 0, i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[_DY]], align 8
 ; CHECK-NEXT:    [[ADD10:%.*]] = fadd double [[ADD8]], [[TMP2]]
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN12:%.*]], label [[IF_END13]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN12:%.*]], label [[IF_END13]]
 ; CHECK:       if.then12:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    br label [[IF_END13]]
@@ -304,7 +304,7 @@ define void @PR19646(ptr %this) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  br i1 undef, label %if.end13, label %if.end13
+  br i1 %arg, label %if.end13, label %if.end13
 
 sw.epilog7:                                       ; No predecessors!
   %.in = getelementptr inbounds %class.B.53.55, ptr %this, i64 0, i32 0, i32 1
@@ -316,7 +316,7 @@ sw.epilog7:                                       ; No predecessors!
   %_dy = getelementptr inbounds %class.B.53.55, ptr %this, i64 0, i32 0, i32 2
   %2 = load double, ptr %_dy, align 8
   %add10 = fadd double %add8, %2
-  br i1 undef, label %if.then12, label %if.end13
+  br i1 %arg, label %if.then12, label %if.end13
 
 if.then12:                                        ; preds = %sw.epilog7
   %3 = load double, ptr undef, align 8
@@ -335,8 +335,8 @@ define void @cse_for_hoisted_instructions_in_preheader(ptr %dst, i32 %a, i1 %c) 
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> <i32 22, i32 22>, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP2]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> splat (i32 22), [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP2]], splat (i32 3)
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i32 [[A]], 3
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 10

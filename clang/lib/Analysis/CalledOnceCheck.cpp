@@ -11,11 +11,11 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -426,7 +426,7 @@ const Expr *getCondition(const Stmt *S) {
 /// of the AST will end up in the results.
 /// Results might have duplicate names, if this is a problem, convert to
 /// string sets afterwards.
-class NamesCollector : public RecursiveASTVisitor<NamesCollector> {
+class NamesCollector : public DynamicRecursiveASTVisitor {
 public:
   static constexpr unsigned EXPECTED_NUMBER_OF_NAMES = 5;
   using NameCollection =
@@ -438,12 +438,12 @@ public:
     return Impl.Result;
   }
 
-  bool VisitDeclRefExpr(const DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     Result.push_back(E->getDecl()->getName());
     return true;
   }
 
-  bool VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *E) {
+  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *E) override {
     llvm::StringRef Name;
 
     if (E->isImplicitProperty()) {

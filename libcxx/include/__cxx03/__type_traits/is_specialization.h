@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_SPECIALIZATION
-#define _LIBCPP___TYPE_TRAITS_IS_SPECIALIZATION
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_SPECIALIZATION
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_SPECIALIZATION
 
 // This contains parts of P2098R1 but is based on MSVC STL's implementation.
 //
@@ -22,7 +22,7 @@
 //
 // Note a cvref qualified _Tp is never considered a specialization.
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,4 +42,4 @@ inline constexpr bool __is_specialization_v<_Template<_Args...>, _Template> = tr
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_SPECIALIZATION
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_SPECIALIZATION

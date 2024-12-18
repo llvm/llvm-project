@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BIT_CAST_H
-#define _LIBCPP___BIT_BIT_CAST_H
+#ifndef _LIBCPP___CXX03___BIT_BIT_CAST_H
+#define _LIBCPP___CXX03___BIT_BIT_CAST_H
 
-#include <__config>
-#include <__type_traits/is_trivially_copyable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -41,4 +41,4 @@ template <class _ToType, class _FromType>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BIT_CAST_H
+#endif // _LIBCPP___CXX03___BIT_BIT_CAST_H

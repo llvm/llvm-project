@@ -78,16 +78,13 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <new>
 #include <string>
 #include <utility>
 #include <vector>
@@ -209,10 +206,10 @@ bool NVPTXAsmPrinter::lowerImageHandleOperand(const MachineInstr *MI,
 
 void NVPTXAsmPrinter::lowerImageHandleSymbol(unsigned Index, MCOperand &MCOp) {
   // Ewwww
-  LLVMTargetMachine &TM = const_cast<LLVMTargetMachine&>(MF->getTarget());
-  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine&>(TM);
+  TargetMachine &TM = const_cast<TargetMachine &>(MF->getTarget());
+  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine &>(TM);
   const NVPTXMachineFunctionInfo *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
-  const char *Sym = MFI->getImageHandleSymbol(Index);
+  StringRef Sym = MFI->getImageHandleSymbol(Index);
   StringRef SymName = nvTM.getStrPool().save(Sym);
   MCOp = GetSymbolRef(OutContext.getOrCreateSymbol(SymName));
 }
@@ -227,16 +224,13 @@ void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
     return;
   }
 
-  const NVPTXSubtarget &STI = MI->getMF()->getSubtarget<NVPTXSubtarget>();
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
 
     MCOperand MCOp;
-    if (!STI.hasImageHandles()) {
-      if (lowerImageHandleOperand(MI, i, MCOp)) {
-        OutMI.addOperand(MCOp);
-        continue;
-      }
+    if (lowerImageHandleOperand(MI, i, MCOp)) {
+      OutMI.addOperand(MCOp);
+      continue;
     }
 
     if (lowerOperand(MO, MCOp))
@@ -1512,13 +1506,14 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const AttributeList &PAL = F->getAttributes();
   const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
+  const NVPTXMachineFunctionInfo *MFI =
+      MF ? MF->getInfo<NVPTXMachineFunctionInfo>() : nullptr;
 
   Function::const_arg_iterator I, E;
   unsigned paramIndex = 0;
   bool first = true;
   bool isKernelFunc = isKernelFunction(*F);
   bool isABI = (STI.getSmVersion() >= 20);
-  bool hasImageHandles = STI.hasImageHandles();
 
   if (F->arg_empty() && !F->isVarArg()) {
     O << "()";
@@ -1536,25 +1531,30 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     first = false;
 
     // Handle image/sampler parameters
-    if (isKernelFunction(*F)) {
+    if (isKernelFunc) {
       if (isSampler(*I) || isImage(*I)) {
+        std::string ParamSym;
+        raw_string_ostream ParamStr(ParamSym);
+        ParamStr << F->getName() << "_param_" << paramIndex;
+        ParamStr.flush();
+        bool EmitImagePtr = !MFI || !MFI->checkImageHandleSymbol(ParamSym);
         if (isImage(*I)) {
           if (isImageWriteOnly(*I) || isImageReadWrite(*I)) {
-            if (hasImageHandles)
+            if (EmitImagePtr)
               O << "\t.param .u64 .ptr .surfref ";
             else
               O << "\t.param .surfref ";
             O << TLI->getParamName(F, paramIndex);
           }
           else { // Default image is read_only
-            if (hasImageHandles)
+            if (EmitImagePtr)
               O << "\t.param .u64 .ptr .texref ";
             else
               O << "\t.param .texref ";
             O << TLI->getParamName(F, paramIndex);
           }
         } else {
-          if (hasImageHandles)
+          if (EmitImagePtr)
             O << "\t.param .u64 .ptr .samplerref ";
           else
             O << "\t.param .samplerref ";
@@ -1600,30 +1600,27 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       if (isKernelFunc) {
         if (PTy) {
-          // Special handling for pointer arguments to kernel
-          O << "\t.param .u" << PTySizeInBits << " ";
+          O << "\t.param .u" << PTySizeInBits << " .ptr";
 
-          if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
-              NVPTX::CUDA) {
-            int addrSpace = PTy->getAddressSpace();
-            switch (addrSpace) {
-            default:
-              O << ".ptr ";
-              break;
-            case ADDRESS_SPACE_CONST:
-              O << ".ptr .const ";
-              break;
-            case ADDRESS_SPACE_SHARED:
-              O << ".ptr .shared ";
-              break;
-            case ADDRESS_SPACE_GLOBAL:
-              O << ".ptr .global ";
-              break;
-            }
-            Align ParamAlign = I->getParamAlign().valueOrOne();
-            O << ".align " << ParamAlign.value() << " ";
+          switch (PTy->getAddressSpace()) {
+          default:
+            break;
+          case ADDRESS_SPACE_GLOBAL:
+            O << " .global";
+            break;
+          case ADDRESS_SPACE_SHARED:
+            O << " .shared";
+            break;
+          case ADDRESS_SPACE_CONST:
+            O << " .const";
+            break;
+          case ADDRESS_SPACE_LOCAL:
+            O << " .local";
+            break;
           }
-          O << TLI->getParamName(F, paramIndex);
+
+          O << " .align " << I->getParamAlign().valueOrOne().value();
+          O << " " << TLI->getParamName(F, paramIndex);
           continue;
         }
 

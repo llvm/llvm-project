@@ -12,6 +12,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -382,6 +383,57 @@ TEST(VerifierTest, AtomicRMW) {
   EXPECT_TRUE(StringRef(Error).starts_with(
       "atomicrmw fadd operand must have floating-point or "
       "fixed vector of floating-point type!"))
+      << Error;
+}
+
+TEST(VerifierTest, GetElementPtrInst) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  ReturnInst *RI = ReturnInst::Create(C, Entry);
+
+  FixedVectorType *V2P1Ty = FixedVectorType::get(PointerType::get(C, 1), 2);
+  FixedVectorType *V2P2Ty = FixedVectorType::get(PointerType::get(C, 2), 2);
+
+  Instruction *GEPVec = GetElementPtrInst::Create(
+      Type::getInt8Ty(C), ConstantAggregateZero::get(V2P1Ty),
+      {ConstantVector::getSplat(ElementCount::getFixed(2),
+                                ConstantInt::get(Type::getInt64Ty(C), 0))},
+      Entry);
+
+  GEPVec->insertBefore(RI);
+
+  // Break the address space of the source value
+  GEPVec->getOperandUse(0).set(ConstantAggregateZero::get(V2P2Ty));
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("GEP address space doesn't match type"))
+      << Error;
+}
+
+TEST(VerifierTest, DetectTaggedGlobalInSection) {
+  LLVMContext C;
+  Module M("M", C);
+  GlobalVariable *GV = new GlobalVariable(
+      Type::getInt64Ty(C), false, GlobalValue::InternalLinkage,
+      ConstantInt::get(Type::getInt64Ty(C), 1));
+  GV->setDSOLocal(true);
+  GlobalValue::SanitizerMetadata MD{};
+  MD.Memtag = true;
+  GV->setSanitizerMetadata(MD);
+  GV->setSection("foo");
+  M.insertGlobalVariable(GV);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("tagged GlobalValue must not be in section"))
       << Error;
 }
 

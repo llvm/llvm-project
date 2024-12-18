@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_MSVCRT_LIKE)
 struct __locale_guard {
-  __locale_guard(locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+  __locale_guard(__locale::__locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
     // Setting the locale can be expensive even when the locale given is
     // already the current locale, so do an explicit check to see if the
     // current locale is already the one we want.

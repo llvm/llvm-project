@@ -37,7 +37,7 @@ spirv.module Logical GLSL450 {
   spirv.func @callee() "None" {
     %0 = spirv.mlir.addressof @data : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32> [0])>, StorageBuffer>
     %1 = spirv.Constant 0: i32
-    %2 = spirv.AccessChain %0[%1, %1] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32> [0])>, StorageBuffer>, i32, i32
+    %2 = spirv.AccessChain %0[%1, %1] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<i32, StorageBuffer>
     spirv.Branch ^next
 
   ^next:
@@ -196,7 +196,7 @@ spirv.module Logical GLSL450 {
     // CHECK: [[VAL:%.*]] = spirv.Load "StorageBuffer" [[LOADPTR]]
     %2 = spirv.mlir.addressof @arg_0 : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>
     %3 = spirv.mlir.addressof @arg_1 : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>
-    %4 = spirv.AccessChain %2[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32
+    %4 = spirv.AccessChain %2[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32 -> !spirv.ptr<i32, StorageBuffer>
     %5 = spirv.Load "StorageBuffer" %4 : i32
     %6 = spirv.SGreaterThan %5, %1 : i32
     // CHECK: spirv.mlir.selection
@@ -204,7 +204,7 @@ spirv.module Logical GLSL450 {
       spirv.BranchConditional %6, ^bb1, ^bb2
     ^bb1: // pred: ^bb0
       // CHECK: [[STOREPTR:%.*]] = spirv.AccessChain [[ADDRESS_ARG1]]
-      %7 = spirv.AccessChain %3[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32
+      %7 = spirv.AccessChain %3[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32 -> !spirv.ptr<i32, StorageBuffer>
       // CHECK-NOT: spirv.FunctionCall
       // CHECK: spirv.AtomicIAdd <Device> <AcquireRelease> [[STOREPTR]], [[VAL]]
       // CHECK: spirv.Branch

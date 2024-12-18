@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-unsafe-fp-math -enable-pipeliner \
+; RUN: llc -mtriple=hexagon -enable-unsafe-fp-math -enable-pipeliner \
 ; RUN:     -pipeliner-prune-deps=false -stats -o /dev/null < %s
 ; REQUIRES: asserts
 

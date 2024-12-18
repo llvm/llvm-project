@@ -94,14 +94,14 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
     transform::TransformState &state, TransformOpInterface transformOp,
     SmallVector<OpFoldResult> &result, ArrayRef<OpFoldResult> ofrs) {
   for (OpFoldResult ofr : ofrs) {
-    if (ofr.is<Attribute>()) {
-      if (!isa<IntegerAttr>(ofr.get<Attribute>()))
+    if (auto attr = dyn_cast<Attribute>(ofr)) {
+      if (!isa<IntegerAttr>(attr))
         return transformOp.emitDefiniteFailure() << "expected IntegerAttr";
       result.push_back(ofr);
       continue;
     }
 
-    Value transformValue = ofr.get<Value>();
+    Value transformValue = cast<Value>(ofr);
     if (isa<TransformParamTypeInterface>(transformValue.getType())) {
       ArrayRef<Attribute> params = state.getParams(transformValue);
       if (params.size() != 1)
@@ -180,12 +180,11 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     TransformState &state, TransformOpInterface &transformOp,
     ArrayRef<OpFoldResult> mixedResults, SmallVectorImpl<int64_t> &reified) {
   for (OpFoldResult paramOrHandle : mixedResults) {
-    if (isa<Attribute>(paramOrHandle)) {
-      reified.push_back(
-          cast<IntegerAttr>(paramOrHandle.get<Attribute>()).getInt());
+    if (auto attr = dyn_cast<Attribute>(paramOrHandle)) {
+      reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
-    } else if (isa<ParamType>(paramOrHandle.get<Value>().getType())) {
-      ArrayRef<Attribute> params = state.getParams(paramOrHandle.get<Value>());
+    } else if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+      ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
       reified.push_back(
@@ -193,7 +192,7 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
       continue;
     }
 
-    Value handle = paramOrHandle.get<Value>();
+    Value handle = cast<Value>(paramOrHandle);
     if (!isa<TransformHandleTypeInterface>(handle.getType()))
       return transformOp.emitSilenceableError() << "unexpected value handle";
     auto payload = state.getPayloadOps(handle);
@@ -229,6 +228,16 @@ void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
   linalg::populateEraseUnnecessaryInputsPatterns(patterns);
 }
 
+void transform::ApplyDecomposeTensorPackUnpackPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateDecomposePackUnpackPatterns(patterns);
+}
+
+void transform::ApplyDecomposeTensorPadPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateDecomposePadPatterns(patterns);
+}
+
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::ControlDropUnitDims options;
@@ -256,6 +265,7 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
 void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populatePadOpVectorizationPatterns(patterns);
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1165,7 +1175,9 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerPackResult> res = lowerPack(rewriter, target);
+  bool lowerPadLikeWithInsertSlice = getLowerPadLikeWithInsertSlice();
+  FailureOr<LowerPackResult> res =
+      lowerPack(rewriter, target, lowerPadLikeWithInsertSlice);
   if (failed(res)) {
     return mlir::emitSilenceableFailure(target->getLoc())
            << "cannot lower to pad + expand + transpose";
@@ -1185,7 +1197,9 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
+  bool lowerUnpadLikeWithExtractSlice = getLowerUnpadLikeWithExtractSlice();
+  FailureOr<LowerUnPackOpResult> res =
+      lowerUnPack(rewriter, target, lowerUnpadLikeWithExtractSlice);
   if (failed(res)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()
@@ -2362,10 +2376,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   };
 
+  SmallVector<Operation *> opList;
   if (isMultiwaySplit) {
 
     // Split a single target operation at multiple points.
-    SmallVector<Operation *> opList;
     TilingInterface head, tail;
     Operation *target = payload.front();
 
@@ -2405,8 +2419,6 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     // Append any leftover parts to the end of the result list.
     if (tail)
       opList.push_back(tail.getOperation());
-    results.set(cast<OpResult>(getFirst()), opList);
-    results.set(cast<OpResult>(getSecond()), {});
 
   } else {
     // Split each target operation.
@@ -2452,9 +2464,11 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
       return diag;
     }
 
-    results.set(cast<OpResult>(getFirst()), first);
-    results.set(cast<OpResult>(getSecond()), second);
+    opList.append(first);
+    if (second.size())
+      opList.append(second);
   }
+  results.set(cast<OpResult>(getSplitList()), opList);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2506,7 +2520,7 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(
       SplitOp::getStaticChunkSizesAttrName(result.name).getValue(),
       staticChunkSizes);
-  result.addTypes({targetType, targetType});
+  result.addTypes(targetType);
   return success();
 }
 
@@ -3482,8 +3496,16 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  if (getVectorizePadding())
+  // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
+
+  if (getVectorizePadding()) {
     linalg::populatePadOpVectorizationPatterns(patterns);
+    // This creates an alternative path for lowering tensor.pad - by
+    // decomposing it into e.g. linalg.fill.
+    linalg::populateDecomposePadPatterns(patterns);
+  }
+  vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
   GreedyRewriteConfig config;

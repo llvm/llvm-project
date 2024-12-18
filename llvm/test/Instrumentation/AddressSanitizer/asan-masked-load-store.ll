@@ -452,7 +452,7 @@ define <vscale x 4 x float> @scalable.expandload.nxv4f32(ptr align 4 %p, <vscale
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP12:%.*]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> splat (i1 true), i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP12]]
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <vscale x 4 x float>, ptr [[P:%.*]], i64 0, i64 [[IV]]
@@ -490,7 +490,7 @@ define void @scalable.compressstore.nxv4f32(ptr align 4 %p, <vscale x 4 x float>
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP12:%.*]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> splat (i1 true), i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP12]]
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <vscale x 4 x float>, ptr [[P:%.*]], i64 0, i64 [[IV]]

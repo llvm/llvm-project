@@ -272,6 +272,7 @@ cc_library(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
+        "//llvm:BitWriter",
         "//llvm:Core",
         "//llvm:Demangle",
         "//llvm:LTO",

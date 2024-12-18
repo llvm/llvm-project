@@ -56,6 +56,10 @@ set(aarch64_SOURCES
   xray_trampoline_AArch64.S
   )
 
+set(aarch64_DSO_SOURCES
+  xray_trampoline_AArch64.S
+  )
+
 set(loongarch64_SOURCES
   xray_loongarch64.cpp
   xray_trampoline_loongarch64.S
@@ -90,6 +94,16 @@ set(powerpc64le_SOURCES
 set(hexagon_SOURCES
   xray_hexagon.cpp
   xray_trampoline_hexagon.S
+  )
+
+set(riscv32_SOURCES
+  xray_riscv.cpp
+  xray_trampoline_riscv32.S
+  )
+
+set(riscv64_SOURCES
+  xray_riscv.cpp
+  xray_trampoline_riscv64.S
   )
 
 set(XRAY_SOURCE_ARCHS
@@ -152,6 +166,8 @@ set(XRAY_ALL_SOURCE_FILES
   ${mips64_SOURCES}
   ${mips64el_SOURCES}
   ${powerpc64le_SOURCES}
+  ${riscv32_SOURCES}
+  ${riscv64_SOURCES}
   ${XRAY_IMPL_HEADERS}
   )
 list(REMOVE_DUPLICATES XRAY_ALL_SOURCE_FILES)
@@ -241,7 +257,7 @@ if (APPLE)
     if (${arch} IN_LIST XRAY_DSO_SUPPORTED_ARCH)
       add_compiler_rt_object_libraries(RTXrayDSO_${arch}
         OS ${XRAY_SUPPORTED_OS}
-        ARCHS ${XRAY_DSO_SUPPORTED_ARCH}
+        ARCHS ${arch}
         SOURCES ${${arch}_DSO_SOURCES}
         ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
         CFLAGS ${XRAY_CFLAGS}
@@ -403,7 +419,6 @@ else() # not Apple
       PARENT_TARGET xray)
 
     if (${arch} IN_LIST XRAY_DSO_SUPPORTED_ARCH)
-      # TODO: Only implemented for X86 at the moment
       add_compiler_rt_object_libraries(RTXrayDSO
         ARCHS ${arch}
         SOURCES ${XRAY_DSO_SOURCES} ${${arch}_DSO_SOURCES} 
