@@ -146,8 +146,8 @@ exit:
 
 ; Negative test. Widening non-literal structs is not supported.
 ; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
-define void @test_named_struct_return(ptr noalias readonly %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
-; CHECK-LABEL: define void @test_named_struct_return
+define void @negative_named_struct_return(ptr noalias readonly %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+; CHECK-LABEL: define void @negative_named_struct_return
 ; CHECK-NOT:   vector.body:
 ; CHECK-NOT:   call {{.*}} @fixed_vec_bar
 entry:
