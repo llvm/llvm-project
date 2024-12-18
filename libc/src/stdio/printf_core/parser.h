@@ -235,11 +235,7 @@ public:
       case ('A'):
       case ('g'):
       case ('G'):
-        if (lm != LengthModifier::L) {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
-        } else {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
-        }
+        write_float_arg_val(section, lm, conv_index);
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -296,6 +292,14 @@ public:
     section.raw_string = {str + starting_pos, cur_pos - starting_pos};
     return section;
   }
+
+#ifdef LIBC_PRINTF_DEFINE_SPLIT
+  void write_float_arg_val(FormatSection &section, LengthModifier lm,
+                           size_t conv_index);
+#else
+  [[gnu::weak]] void write_float_arg_val(FormatSection &section, LengthModifier lm,
+                           size_t conv_index);
+#endif
 
 private:
   // parse_flags parses the flags inside a format string. It assumes that
@@ -679,6 +683,19 @@ private:
 
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 };
+
+#ifdef LIBC_PRINTF_DEFINE_SPLIT
+template <typename ArgParser>
+LIBC_PRINTF_SPLIT_FUNCTION void Parser<ArgParser>::write_float_arg_val(FormatSection &section,
+                                                        LengthModifier lm,
+                                                        size_t conv_index) {
+  if (lm != LengthModifier::L) {
+    WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
+  } else {
+    WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+  }
+}
+#endif
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
