@@ -4626,38 +4626,26 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
   uint64_t TSFlags = MII.get(Opc).TSFlags;
 
-  if (TSFlags & SIInstrFlags::IsDOT) {
-    // For all DOT instructions on GFX940, or VOP3P DOT instructions on all
-    // targets, i.e. v_dot2_*(except on pre-GFX940), v_dot4_* and v_dot8_*,
-    // op_sel must be 0 if present, and op_sel_hi cannot be present.
-    if (!isGFX10Plus() && !isGFX940())
-      if (Opc == AMDGPU::V_DOT2_F32_F16_vi ||
-          Opc == AMDGPU::V_DOT2_I32_I16_vi || Opc == AMDGPU::V_DOT2_U32_U16_vi)
-        return true;
-
-    if (isGFX940() || (TSFlags & SIInstrFlags::VOP3P)) {
-      int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
-      if (OpSelIdx != -1) {
-        if (Inst.getOperand(OpSelIdx).getImm() != 0)
-          return false;
-      }
-      int OpSelHiIdx =
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
-      if (OpSelHiIdx != -1) {
-        // -1 is the default value for op_sel_hi
-        if (Inst.getOperand(OpSelHiIdx).getImm() != -1)
-          return false;
-      }
-    }
-
-    // op_sel[0:1] must be 0 for v_dot2_bf16_bf16 and v_dot2_f16_f16 (VOP3 Dot).
-    if (isGFX11Plus() && (TSFlags & SIInstrFlags::VOP3) &&
-        !(TSFlags & SIInstrFlags::VOP3P)) {
-      int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
-      unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
-      if (OpSel & 3)
+  if (isGFX940() && (TSFlags & SIInstrFlags::IsDOT)) {
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    if (OpSelIdx != -1) {
+      if (Inst.getOperand(OpSelIdx).getImm() != 0)
         return false;
     }
+    int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
+    if (OpSelHiIdx != -1) {
+      if (Inst.getOperand(OpSelHiIdx).getImm() != -1)
+        return false;
+    }
+  }
+
+  // op_sel[0:1] must be 0 for v_dot2_bf16_bf16 and v_dot2_f16_f16 (VOP3 Dot).
+  if (isGFX11Plus() && (TSFlags & SIInstrFlags::IsDOT) &&
+      (TSFlags & SIInstrFlags::VOP3) && !(TSFlags & SIInstrFlags::VOP3P)) {
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+    if (OpSel & 3)
+      return false;
   }
 
   return true;
