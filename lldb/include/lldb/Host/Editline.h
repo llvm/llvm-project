@@ -240,6 +240,8 @@ public:
 
   size_t GetTerminalWidth() { return m_terminal_width; }
 
+  size_t GetTerminalHeight() { return m_terminal_height; }
+
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
   /// zero suppresses line number printing in the prompt.
@@ -373,6 +375,7 @@ private:
   std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
   int m_terminal_width = 0;
+  int m_terminal_height = 0;
   int m_base_line_number = 0;
   unsigned m_current_line_index = 0;
   int m_current_line_rows = -1;

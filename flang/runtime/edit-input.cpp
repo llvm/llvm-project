@@ -97,7 +97,6 @@ static RT_API_ATTRS bool EditBOZInput(
       return false;
     }
     if (digits++ == 0) {
-      significantBits = 4;
       if (ch >= '0' && ch <= '1') {
         significantBits = 1;
       } else if (ch >= '2' && ch <= '3') {
@@ -125,7 +124,11 @@ static RT_API_ATTRS bool EditBOZInput(
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
       (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
-  int shift{((digits - 1) * LOG2_BASE) & 7};
+  int bitsAfterFirstDigit{(digits - 1) * LOG2_BASE};
+  int shift{bitsAfterFirstDigit & 7};
+  if (shift + (significantBits - bitsAfterFirstDigit) > 8) {
+    shift = shift - 8; // misaligned octal
+  }
   while (digits > 0) {
     char32_t ch{*io.NextInField(remaining, edit)};
     int digit{0};
@@ -182,8 +185,8 @@ static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
   return sign;
 }
 
-RT_API_ATTRS bool EditIntegerInput(
-    IoStatementState &io, const DataEdit &edit, void *n, int kind) {
+RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
+    void *n, int kind, bool isSigned) {
   RUNTIME_CHECK(io.GetIoErrorHandler(), kind >= 1 && !(kind & (kind - 1)));
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
@@ -211,10 +214,15 @@ RT_API_ATTRS bool EditIntegerInput(
   Fortran::common::optional<int> remaining;
   Fortran::common::optional<char32_t> next;
   char sign{ScanNumericPrefix(io, edit, next, remaining)};
+  if (sign == '-' && !isSigned) {
+    io.GetIoErrorHandler().SignalError("Negative sign in UNSIGNED input field");
+    return false;
+  }
   common::UnsignedInt128 value{0};
   bool any{!!sign};
   bool overflow{false};
   const char32_t comma{GetSeparatorChar(edit)};
+  static constexpr auto maxu128{~common::UnsignedInt128{0}};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -248,7 +256,6 @@ RT_API_ATTRS bool EditIntegerInput(
           "Bad character '%lc' in INTEGER input field", ch);
       return false;
     }
-    static constexpr auto maxu128{~common::UnsignedInt128{0}};
     static constexpr auto maxu128OverTen{maxu128 / 10};
     static constexpr int maxLastDigit{
         static_cast<int>(maxu128 - (maxu128OverTen * 10))};
@@ -263,8 +270,13 @@ RT_API_ATTRS bool EditIntegerInput(
         "Integer value absent from NAMELIST or list-directed input");
     return false;
   }
-  auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
-  overflow |= value >= maxForKind && (value > maxForKind || sign != '-');
+  if (isSigned) {
+    auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
+    overflow |= value >= maxForKind && (value > maxForKind || sign != '-');
+  } else {
+    auto maxForKind{maxu128 >> (((16 - kind) * 8) + (isSigned ? 1 : 0))};
+    overflow |= value >= maxForKind;
+  }
   if (overflow) {
     io.GetIoErrorHandler().SignalError(IostatIntegerInputOverflow,
         "Decimal input overflows INTEGER(%d) variable", kind);

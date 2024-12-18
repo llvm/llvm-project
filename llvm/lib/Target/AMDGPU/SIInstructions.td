@@ -3377,15 +3377,22 @@ def : GCNPat <
 
 } // end foreach Ty
 
+} // End SubtargetPredicate = HasVOP3PInsts
 
 let AddedComplexity = 5 in {
-def : GCNPat <
+class PackB32Pat<Instruction inst> : GCNPat <
   (v2f16 (is_canonicalized_2<build_vector> (f16 (VOP3Mods (f16 VGPR_32:$src0), i32:$src0_mods)),
                                            (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
-  (V_PACK_B32_F16_e64 $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
+  (inst $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
 }
-} // End SubtargetPredicate = HasVOP3PInsts
+let SubtargetPredicate = isGFX9Plus in {
+let True16Predicate = NotHasTrue16BitInsts in
+  def : PackB32Pat<V_PACK_B32_F16_e64>;
+
+let True16Predicate = UseFakeTrue16Insts in
+  def : PackB32Pat<V_PACK_B32_F16_fake16_e64>;
+} // End SubtargetPredicate = isGFX9Plus
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
@@ -3659,7 +3666,10 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 defm : FPMed3Pat<f32, V_MED3_F32_e64>;
 
 let SubtargetPredicate = HasMed3_16 in {
+let True16Predicate = NotHasTrue16BitInsts in
 defm : FPMed3Pat<f16, V_MED3_F16_e64>;
+let True16Predicate = UseFakeTrue16Insts in
+defm : FPMed3Pat<f16, V_MED3_F16_fake16_e64>;
 }
 
 class

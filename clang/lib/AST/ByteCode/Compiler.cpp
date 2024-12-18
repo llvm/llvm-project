@@ -6483,14 +6483,6 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   QualType ToType = E->getType();
   std::optional<PrimType> ToT = classify(ToType);
 
-  // Bitcasting TO nullptr_t is always fine.
-  if (ToType->isNullPtrType()) {
-    if (!this->discard(SubExpr))
-      return false;
-
-    return this->emitNullPtr(0, nullptr, E);
-  }
-
   assert(!ToType->isReferenceType());
 
   // Prepare storage for the result in case we discard.
@@ -6523,8 +6515,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     return false;
   }
 
-  if (!ToT || ToT == PT_Ptr) {
-    if (!this->emitBitCastPtr(E))
+  if (!ToT) {
+    if (!this->emitBitCast(E))
       return false;
     return DiscardResult ? this->emitPopPtr(E) : true;
   }
@@ -6540,8 +6532,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
                         ToType->isSpecificBuiltinType(BuiltinType::Char_U));
   uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
 
-  if (!this->emitBitCast(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
-                         ResultBitWidth, TargetSemantics, E))
+  if (!this->emitBitCastPrim(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
+                             ResultBitWidth, TargetSemantics, E))
     return false;
 
   if (DiscardResult)

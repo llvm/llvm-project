@@ -272,6 +272,8 @@ C++23 Feature Support
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
   supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
+  
+- ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -320,6 +322,11 @@ Resolutions to C++ Defect Reports
 
 - Fix name lookup for a dependent base class that is the current instantiation.
   (`CWG591: When a dependent base class is the current instantiation <https://cplusplus.github.io/CWG/issues/591.html>`_).
+
+- Clang now allows calling explicit object member functions directly with prvalues
+  instead of always materializing a temporary, meaning by-value explicit object parameters
+  do not need to move from a temporary.
+  (`CWG2813: Class member access with prvalues <https://cplusplus.github.io/CWG/issues/2813.html>`_).
 
 C Language Changes
 ------------------
@@ -415,6 +422,12 @@ Non-comprehensive list of changes in this release
   ``__builtin_reduce_xor``, ``__builtin_elementwise_popcount``,
   ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
   ``__builtin_elementwise_sub_sat``.
+
+- Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
+  not a power of two, matching preexisting behaviour for vector types.
+
+- Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
+  which allows them to be stored in STL containers.
 
 New Compiler Flags
 ------------------
@@ -677,6 +690,16 @@ Improvements to Clang's diagnostics
       views.push_back(std::string("123")); // warning
     }
 
+- Clang now emits a ``-Wtautological-compare`` diagnostic when a check for
+  pointer addition overflow is always true or false, because overflow would
+  be undefined behavior.
+
+  .. code-block:: c++
+
+    bool incorrect_overflow_check(const char *ptr, size_t index) {
+      return ptr + index < ptr; // warning
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -816,6 +839,8 @@ Bug Fixes to C++ Support
   missing placeholder return type. (#GH78694)
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
+- Fixed an assertion failure caused by invalid default argument substitutions in non-defining
+  friend declarations. (#GH113324)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
 - Fixed a parser crash when using pack indexing as a nested name specifier. (#GH119072) 
 - Fixed a null pointer dereference issue when heuristically computing ``sizeof...(pack)`` expressions. (#GH81436)
@@ -1169,6 +1194,10 @@ Sanitizers
   "type" prefix within `Sanitizer Special Case Lists (SSCL)
   <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
   for examples.
+
+- Introduced an experimental Type Sanitizer, activated by using the
+  ``-fsanitize=type`` flag. This sanitizer detects violations of C/C++ type-based
+  aliasing rules.
 
 Python Binding Changes
 ----------------------

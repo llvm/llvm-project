@@ -55,7 +55,9 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fdefault_double_8,
                             options::OPT_flarge_sizes,
                             options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files});
+                            options::OPT_fhermetic_module_files,
+                            options::OPT_frealloc_lhs,
+                            options::OPT_fno_realloc_lhs});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -120,7 +122,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
-                   options::OPT_funderscoring, options::OPT_fno_underscoring});
+                   options::OPT_funderscoring, options::OPT_fno_underscoring,
+                   options::OPT_funsigned, options::OPT_fno_unsigned});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
