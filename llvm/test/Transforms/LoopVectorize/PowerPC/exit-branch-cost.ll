@@ -113,13 +113,12 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP52]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP52]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF24:%.*]] = urem i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_VEC25:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF24]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC25]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[VEC_EPILOG_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[DOTSPLAT]], <i64 0, i64 1>
 ; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
@@ -145,14 +144,14 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[CMP_N36:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC25]]
 ; CHECK-NEXT:    br i1 [[CMP_N36]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL26:%.*]] = phi i64 [ [[N_VEC25]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL28:%.*]] = phi ptr [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END27]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL35:%.*]] = phi i64 [ [[N_VEC25]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL36:%.*]] = phi ptr [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[START]], %[[ITER_CHECK]] ], [ [[IND_END27]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX37:%.*]] = phi i64 [ [[TMP54]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ], [ [[TMP52]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL26]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL35]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX37]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL28]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL36]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP53:%.*]] = load i8, ptr [[PTR_IV]], align 1
 ; CHECK-NEXT:    [[CONV3:%.*]] = zext i8 [[TMP53]] to i64
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[IV]], 1

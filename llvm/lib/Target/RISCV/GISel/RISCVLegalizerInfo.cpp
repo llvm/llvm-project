@@ -412,9 +412,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, sXLen})
+      .legalFor({p0, s32, sXLen})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, sXLen, sXLen);
+      .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
       .legalFor({p0});
@@ -481,6 +481,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZbb(), {sXLen})
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
+
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
@@ -590,19 +592,29 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}, {s128, s128}});
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
-  // FIXME: Legal with Zfa.
   getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
                                G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
                                G_INTRINSIC_ROUNDEVEN})
-      .libcallFor({s32, s64});
+      .legalFor(ST.hasStdExtZfa(), {s32})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {s16})
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128});
+
+  getActionDefinitionsBuilder({G_FMAXIMUM, G_FMINIMUM})
+      .legalFor(ST.hasStdExtZfa(), {s32})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {s16});
 
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
                                G_FTANH})
-      .libcallFor({s32, s64});
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
-      .libcallFor({{s32, s32}, {s64, s32}});
+      .libcallFor({{s32, s32}, {s64, s32}})
+      .libcallFor(ST.is64Bit(), {s128, s32});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 

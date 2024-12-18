@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_LOCALE
-#define _LIBCPP_LOCALE
+#ifndef _LIBCPP___CXX03_LOCALE
+#define _LIBCPP___CXX03_LOCALE
 
 /*
     locale synopsis
@@ -3764,4 +3764,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_LOCALE
+#endif // _LIBCPP___CXX03_LOCALE

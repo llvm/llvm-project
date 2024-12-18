@@ -55,7 +55,9 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fdefault_double_8,
                             options::OPT_flarge_sizes,
                             options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files});
+                            options::OPT_fhermetic_module_files,
+                            options::OPT_frealloc_lhs,
+                            options::OPT_fno_realloc_lhs});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -148,7 +150,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
-                            options::OPT_flang_experimental_integer_overflow,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -211,6 +212,14 @@ void Flang::AddLoongArch64TargetArgs(const ArgList &Args,
     StringRef V = A->getValue();
     if (V != "lp64d") {
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-mabi" << V;
+    }
+  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mannotate_tablejump,
+                                     options::OPT_mno_annotate_tablejump)) {
+    if (A->getOption().matches(options::OPT_mannotate_tablejump)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-loongarch-annotate-tablejump");
     }
   }
 }

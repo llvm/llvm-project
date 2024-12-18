@@ -528,7 +528,7 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
     Fatal(ctx) << this << ": invalid sh_info in symbol table";
 
   elfSyms = reinterpret_cast<const void *>(eSyms.data());
-  numELFSyms = uint32_t(eSyms.size());
+  numSymbols = eSyms.size();
   stringTable = CHECK2(obj.getStringTableForSymtab(*symtabSec, sections), this);
 }
 
@@ -1089,10 +1089,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
 template <class ELFT>
 void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
-  if (numSymbols == 0) {
-    numSymbols = eSyms.size();
+  if (!symbols)
     symbols = std::make_unique<Symbol *[]>(numSymbols);
-  }
 
   // Some entries have been filled by LazyObjFile.
   auto *symtab = ctx.symtab.get();
@@ -1219,7 +1217,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
 
     // Handle non-COMMON defined symbol below. !sym.file allows a symbol
     // assignment to redefine a symbol without an error.
-    if (!sym.file || !sym.isDefined() || secIdx == SHN_UNDEF)
+    if (!sym.isDefined() || secIdx == SHN_UNDEF)
       continue;
     if (LLVM_UNLIKELY(secIdx >= SHN_LORESERVE)) {
       if (secIdx == SHN_COMMON)
@@ -1431,6 +1429,7 @@ template <class ELFT> void SharedFile::parse() {
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
   const Elf_Shdr *verneedSec = nullptr;
+  symbols = std::make_unique<Symbol *[]>(numSymbols);
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &sec : sections) {
@@ -1453,7 +1452,7 @@ template <class ELFT> void SharedFile::parse() {
     }
   }
 
-  if (versymSec && numELFSyms == 0) {
+  if (versymSec && numSymbols == 0) {
     ErrAlways(ctx) << "SHT_GNU_versym should be associated with symbol table";
     return;
   }
@@ -1496,7 +1495,7 @@ template <class ELFT> void SharedFile::parse() {
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
   // VER_NDX_GLOBAL.
-  size_t size = numELFSyms - firstGlobal;
+  size_t size = numSymbols - firstGlobal;
   std::vector<uint16_t> versyms(size, VER_NDX_GLOBAL);
   if (versymSec) {
     ArrayRef<Elf_Versym> versym =
@@ -1710,7 +1709,6 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 }
 
 static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
-                                const std::vector<bool> &keptComdats,
                                 const lto::InputFile::Symbol &objSym,
                                 BitcodeFile &f) {
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
@@ -1727,8 +1725,7 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
     sym = ctx.symtab->insert(objSym.getName());
   }
 
-  int c = objSym.getComdatIndex();
-  if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
+  if (objSym.isUndefined()) {
     Undefined newSym(&f, StringRef(), binding, visibility, type);
     sym->resolve(ctx, newSym);
     sym->referenced = true;
@@ -1742,8 +1739,11 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   } else {
     Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
                    nullptr);
-    if (objSym.canBeOmittedFromSymbolTable())
-      newSym.exportDynamic = false;
+    // The definition can be omitted if all bitcode definitions satisfy
+    // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
+    // The latter condition is tested in Symbol::includeInDynsym.
+    sym->ltoCanOmit = objSym.canBeOmittedFromSymbolTable() &&
+                      (!sym->isDefined() || sym->ltoCanOmit);
     sym->resolve(ctx, newSym);
   }
 }
@@ -1764,10 +1764,10 @@ void BitcodeFile::parse() {
   // ObjFile<ELFT>::initializeSymbols.
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
 
   for (auto l : obj->getDependentLibraries())
     addDependentLibrary(ctx, l, this);

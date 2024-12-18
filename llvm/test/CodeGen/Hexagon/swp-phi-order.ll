@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 %s.0 = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, [49 x i8], [49 x i8], [25 x i8], [6 x i8], [29 x i8], i8, [6 x i8], [6 x i8] }

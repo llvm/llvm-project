@@ -670,6 +670,10 @@ void GotSection::addEntry(const Symbol &sym) {
   ctx.symAux.back().gotIdx = numEntries++;
 }
 
+void GotSection::addAuthEntry(const Symbol &sym) {
+  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, sym.isFunc()});
+}
+
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().tlsDescIdx = numEntries;
@@ -732,6 +736,21 @@ void GotSection::writeTo(uint8_t *buf) {
     return;
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
+  for (const AuthEntryInfo &authEntry : authEntries) {
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
+    //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
+    //   DA key for all other symbol types, with the address of the GOT entry as
+    //   the modifier. The static linker must encode the signing schema into the
+    //   GOT slot.
+    //
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
+    //   If address diversity is set and the discriminator
+    //   is 0 then modifier = Place
+    uint8_t *dest = buf + authEntry.offset;
+    uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
+    uint64_t addrDiversity = 1;
+    write64(ctx, dest, (addrDiversity << 63) | (key << 60));
+  }
 }
 
 static uint64_t getMipsPageAddr(uint64_t addr) {
@@ -2752,6 +2771,21 @@ bool IBTPltSection::isNeeded() const { return ctx.in.plt->getNumEntries() > 0; }
 RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
+
+RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
+                                                 OutputSection *parent)
+    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
+      size(size) {
+  this->parent = parent;
+}
+
+void RandomizePaddingSection::writeTo(uint8_t *buf) {
+  std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
+  uint8_t *end = buf + size;
+  for (; buf + 4 <= end; buf += 4)
+    memcpy(buf, &filler[0], 4);
+  memcpy(buf, &filler[0], end - buf);
+}
 
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {

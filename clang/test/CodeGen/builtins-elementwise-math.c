@@ -112,7 +112,7 @@ void test_builtin_elementwise_add_sat(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.sadd.sat.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_add_sat(int_as_one, b);
 
-  // CHECK: call i32 @llvm.sadd.sat.i32(i32 1, i32 97)
+  // CHECK: store i64 98, ptr %i1.addr, align 8
   i1 = __builtin_elementwise_add_sat(1, 'a');
 }
 
@@ -165,7 +165,7 @@ void test_builtin_elementwise_sub_sat(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.ssub.sat.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_sub_sat(int_as_one, b);
 
-  // CHECK: call i32 @llvm.ssub.sat.i32(i32 1, i32 97)
+  // CHECK: store i64 -96, ptr %i1.addr, align 8
   i1 = __builtin_elementwise_sub_sat(1, 'a');
 }
 

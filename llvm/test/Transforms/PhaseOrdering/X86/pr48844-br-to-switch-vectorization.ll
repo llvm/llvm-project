@@ -23,7 +23,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX-NEXT:    store i32 42, ptr [[PTR2]], align 4
 ; AVX-NEXT:    br label [[LATCH]]
 ; AVX:       latch:
-; AVX-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR2]], i64 4
+; AVX-NEXT:    [[PTR_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR2]], i64 4
 ; AVX-NEXT:    [[I11_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
 ; AVX-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB12]]
 ; AVX:       exit:
@@ -109,7 +109,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[CMP_N17:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC10]]
 ; AVX2-NEXT:    br i1 [[CMP_N17]], label [[EXIT]], label [[BB12_PREHEADER1]]
 ; AVX2:       bb12.preheader:
-; AVX2-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AVX2-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AVX2-NEXT:    br label [[BB13:%.*]]
 ; AVX2:       bb12:
 ; AVX2-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[PTR2_PH]], [[BB12_PREHEADER1]] ]
@@ -122,7 +122,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    store i32 42, ptr [[PTR2]], align 4
 ; AVX2-NEXT:    br label [[LATCH]]
 ; AVX2:       latch:
-; AVX2-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR2]], i64 4
+; AVX2-NEXT:    [[PTR_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR2]], i64 4
 ; AVX2-NEXT:    [[I11_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
 ; AVX2-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB13]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX2:       exit:

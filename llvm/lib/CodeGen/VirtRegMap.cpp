@@ -60,7 +60,7 @@ STATISTIC(NumIdCopies,   "Number of identity moves eliminated after rewriting");
 char VirtRegMapWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS(VirtRegMapWrapperLegacy, "virtregmap", "Virtual Register Map",
-                false, false)
+                false, true)
 
 void VirtRegMap::init(MachineFunction &mf) {
   MRI = &mf.getRegInfo();
@@ -88,7 +88,9 @@ void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
   assert(!Virt2PhysMap[virtReg] &&
          "attempt to assign physical register to already mapped "
          "virtual register");
-  assert(!getRegInfo().isReserved(physReg) &&
+  assert((!getRegInfo().isReserved(physReg) ||
+          MF->getProperties().hasProperty(
+              MachineFunctionProperties::Property::FailedRegAlloc)) &&
          "Attempt to map virtReg to a reserved physReg");
   Virt2PhysMap[virtReg] = physReg;
 }
@@ -253,7 +255,7 @@ INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
-INITIALIZE_PASS_DEPENDENCY(LiveStacks)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
                     "Virtual Register Rewriter", false, false)
@@ -265,8 +267,8 @@ void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveDebugVariablesWrapperLegacy>();
-  AU.addRequired<LiveStacks>();
-  AU.addPreserved<LiveStacks>();
+  AU.addRequired<LiveStacksWrapperLegacy>();
+  AU.addPreserved<LiveStacksWrapperLegacy>();
   AU.addRequired<VirtRegMapWrapperLegacy>();
   AU.addRequired<LiveRegMatrixWrapperLegacy>();
 
@@ -615,7 +617,10 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
+        assert((!MRI->isReserved(PhysReg) ||
+                MF->getProperties().hasProperty(
+                    MachineFunctionProperties::Property::FailedRegAlloc)) &&
+               "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();

@@ -164,9 +164,14 @@ public:
   }
 
   /// If there is a current 'active' loop construct with a 'gang' clause on a
-  /// 'kernel' construct, this will have the source location for it. This
-  /// permits us to implement the restriction of no further 'gang' clauses.
-  SourceLocation LoopGangClauseOnKernelLoc;
+  /// 'kernel' construct, this will have the source location for it, and the
+  /// 'kernel kind'. This permits us to implement the restriction of no further
+  /// 'gang' clauses.
+  struct LoopGangOnKernelTy {
+    SourceLocation Loc;
+    OpenACCDirectiveKind DirKind = OpenACCDirectiveKind::Invalid;
+  } LoopGangClauseOnKernel;
+
   /// If there is a current 'active' loop construct with a 'worker' clause on it
   /// (on any sort of construct), this has the source location for it.  This
   /// permits us to implement the restriction of no further 'gang' or 'worker'
@@ -394,6 +399,9 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
+              ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -530,6 +538,9 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
+              ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
@@ -566,6 +577,9 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
+              ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
@@ -648,7 +662,8 @@ public:
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
   /// happen before any associated declarations or statements have been parsed.
   /// This function is only called when we are parsing a 'statement' context.
-  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
 
   /// Called after the directive, including its clauses, have been parsed and
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
@@ -705,12 +720,15 @@ public:
   ExprResult CheckTileSizeExpr(Expr *SizeExpr);
 
   // Check a single expression on a gang clause.
-  ExprResult CheckGangExpr(OpenACCGangKind GK, Expr *E);
+  ExprResult CheckGangExpr(ArrayRef<const OpenACCClause *> ExistingClauses,
+                           OpenACCDirectiveKind DK, OpenACCGangKind GK,
+                           Expr *E);
 
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
   OpenACCClause *
-  CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+  CheckGangClause(OpenACCDirectiveKind DirKind,
+                  ArrayRef<const OpenACCClause *> ExistingClauses,
                   SourceLocation BeginLoc, SourceLocation LParenLoc,
                   ArrayRef<OpenACCGangKind> GangKinds,
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
@@ -771,7 +789,7 @@ public:
     SemaOpenACC &SemaRef;
     ComputeConstructInfo OldActiveComputeConstructInfo;
     OpenACCDirectiveKind DirKind;
-    SourceLocation OldLoopGangClauseOnKernelLoc;
+    LoopGangOnKernelTy OldLoopGangClauseOnKernel;
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
     LoopWithoutSeqCheckingInfo OldLoopWithoutSeqInfo;

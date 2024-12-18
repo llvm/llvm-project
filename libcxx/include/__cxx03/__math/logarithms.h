@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_LOGARITHMS_H
-#define _LIBCPP___MATH_LOGARITHMS_H
+#ifndef _LIBCPP___CXX03___MATH_LOGARITHMS_H
+#define _LIBCPP___CXX03___MATH_LOGARITHMS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -121,4 +121,4 @@ inline _LIBCPP_HIDE_FROM_ABI double logb(_A1 __x) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_LOGARITHMS_H
+#endif // _LIBCPP___CXX03___MATH_LOGARITHMS_H
