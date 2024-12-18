@@ -788,6 +788,8 @@ struct TargetX86_64Win : public GenericTarget<TargetX86_64Win> {
 //===----------------------------------------------------------------------===//
 
 namespace {
+// AArch64 procedure call standard:
+// https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#parameter-passing
 struct TargetAArch64 : public GenericTarget<TargetAArch64> {
   using GenericTarget::GenericTarget;
 
@@ -917,6 +919,8 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
         .Case<fir::LogicalType>([&](auto) { return NRegs{1, false}; })
         .Case<fir::CharacterType>([&](auto) { return NRegs{1, false}; })
         .Case<fir::SequenceType>([&](auto ty) {
+          assert(ty.getShape().size() == 1 &&
+                 "invalid array dimensions in BIND(C)");
           NRegs nregs = usedRegsForType(loc, ty.getEleTy());
           nregs.n *= ty.getShape()[0];
           return nregs;
@@ -970,8 +974,6 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     return marshal;
   }
 
-  // AArch64 procedure call ABI:
-  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#parameter-passing
   CodeGenSpecifics::Marshalling
   structType(mlir::Location loc, fir::RecordType type, bool isResult) const {
     NRegs nregs = usedRegsForRecordType(loc, type);
