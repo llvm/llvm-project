@@ -1,4 +1,3 @@
-# REQUIRES: rdar141363609
 # UNSUPPORTED: system-windows
 # RUN: %clang_host -Xclang -fbounds-safety -g -O0 %S/Inputs/boundsSafetyTrap.c -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
