@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=SVE   %s
 
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef double double4 __attribute__((ext_vector_type(4)));
 typedef short int si8 __attribute__((ext_vector_type(8)));
 typedef unsigned int u4 __attribute__((ext_vector_type(4)));
 
@@ -61,6 +62,16 @@ void test_builtin_reduce_min(float4 vf1, si8 vi1, u4 vu1) {
   unsigned long long r5 = __builtin_reduce_min(cvi1);
 }
 
+void test_builtin_reduce_addf(float4 vf4, double4 vd4) {          
+  // CHECK:      [[VF4:%.+]] = load <4 x float>, ptr %vf4.addr, align 16
+  // CHECK-NEXT: call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[VF4]])
+  float r2 = __builtin_reduce_add(vf4);
+
+  // CHECK:      [[VD4:%.+]] = load <4 x double>, ptr %vd4.addr, align 16
+  // CHECK-NEXT: call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[VD4]])
+  double r3 = __builtin_reduce_add(vd4);
+}
+
 void test_builtin_reduce_add(si8 vi1, u4 vu1) {
   // CHECK:      [[VI1:%.+]] = load <8 x i16>, ptr %vi1.addr, align 16
   // CHECK-NEXT: call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[VI1]])
@@ -81,6 +92,16 @@ void test_builtin_reduce_add(si8 vi1, u4 vu1) {
   // CHECK-NEXT: zext i32 [[RDX2]] to i64
   const u4 cvu1 = vu1;
   unsigned long long r5 = __builtin_reduce_add(cvu1);
+}
+
+void test_builtin_reduce_mulf(float4 vf4, double4 vd4) {          
+  // CHECK:      [[VF4:%.+]] = load <4 x float>, ptr %vf4.addr, align 16
+  // CHECK-NEXT: call float @llvm.vector.reduce.fmul.v4f32(float 0.000000e+00, <4 x float> [[VF4]])
+  float r2 = __builtin_reduce_mul(vf4);
+
+  // CHECK:      [[VD4:%.+]] = load <4 x double>, ptr %vd4.addr, align 16
+  // CHECK-NEXT: call double @llvm.vector.reduce.fmul.v4f64(double 0.000000e+00, <4 x double> [[VD4]])
+  double r3 = __builtin_reduce_mul(vd4);
 }
 
 void test_builtin_reduce_mul(si8 vi1, u4 vu1) {

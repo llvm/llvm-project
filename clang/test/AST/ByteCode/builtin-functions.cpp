@@ -1056,6 +1056,14 @@ namespace RecuceAdd {
   static_assert(__builtin_reduce_add((vector4uint){~0U, 0, 0, 1}) == 0);
   static_assert(__builtin_reduce_add((vector4ulong){~0ULL, 0, 0, 1}) == 0);
 
+  static_assert(__builtin_reduce_add((vector4float){}) == 0.0);
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  static_assert(__builtin_reduce_add((vector4float){1.1, 2.2, 3.3, 4.4}) == 11.0);
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  static_assert(__builtin_reduce_add((vector4double){100.1, 200.2, 300.3, 400.4}) == 1001.0);
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+
+
 
 #ifdef __SIZEOF_INT128__
   typedef __int128 v4i128 __attribute__((__vector_size__(128 * 2)));
@@ -1091,6 +1099,13 @@ namespace ReduceMul {
       (~0U - 1));
 #endif
   static_assert(__builtin_reduce_mul((vector4ulong){~0ULL, 1, 1, 2}) == ~0ULL - 1);
+
+    static_assert(__builtin_reduce_mul((vector4float){}) == 0.0);
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  static_assert(__builtin_reduce_mul((vector4float){1.0, 2.0, 3.0, 1.0}) == 6.0);
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  static_assert(__builtin_reduce_mul((vector4double){3.0, 4.0, 1.0, 1.0}) == 12.0);
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
 }
 
 namespace ReduceAnd {

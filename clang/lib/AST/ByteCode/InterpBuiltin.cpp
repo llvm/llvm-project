@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "../ExprConstShared.h"
 #include "Boolean.h"
+#include "ByteCode/Floating.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
@@ -1755,6 +1756,17 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   assert(Call->getType() == ElemType);
   PrimType ElemT = *S.getContext().classify(ElemType);
   unsigned NumElems = Arg.getNumElems();
+
+  if (ElemType->isRealFloatingType()) {
+    if (ID != Builtin::BI__builtin_reduce_add &&
+        ID != Builtin::BI__builtin_reduce_mul)
+      llvm_unreachable("Only reduce_add and reduce_mul are supported for "
+                       "floating-point types.");
+    // Floating-point arithmetic is not valid for constant expression
+    // initialization. Returning false defers checks to integral constant
+    // expression validation, preventing a bad deref of Floating as an integer.
+    return false;
+  }
 
   INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     T Result = Arg.atIndex(0).deref<T>();

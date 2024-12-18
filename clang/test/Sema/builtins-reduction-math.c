@@ -36,7 +36,7 @@ void test_builtin_reduce_min(int i, float4 v, int3 iv) {
   // expected-error@-1 {{1st argument must be a vector type (was 'int')}}
 }
 
-void test_builtin_reduce_add(int i, float4 v, int3 iv) {
+void test_builtin_reduce_add(int i, float f, int3 iv) {
   struct Foo s = __builtin_reduce_add(iv);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
 
@@ -47,13 +47,13 @@ void test_builtin_reduce_add(int i, float4 v, int3 iv) {
   // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
 
   i = __builtin_reduce_add(i);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'int')}}
+  // expected-error@-1 {{1st argument must be a vector of integers or floating points (was 'int')}}
 
-  i = __builtin_reduce_add(v);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+  f = __builtin_reduce_add(f);
+  // expected-error@-1 {{1st argument must be a vector of integers or floating points (was 'float')}}
 }
 
-void test_builtin_reduce_mul(int i, float4 v, int3 iv) {
+void test_builtin_reduce_mul(int i, float f, int3 iv) {
   struct Foo s = __builtin_reduce_mul(iv);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
 
@@ -64,10 +64,10 @@ void test_builtin_reduce_mul(int i, float4 v, int3 iv) {
   // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
 
   i = __builtin_reduce_mul(i);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'int')}}
+  // expected-error@-1 {{1st argument must be a vector of integers or floating points (was 'int')}}
 
-  i = __builtin_reduce_mul(v);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+  f = __builtin_reduce_mul(f);
+  // expected-error@-1 {{1st argument must be a vector of integers or floating points (was 'float')}}
 }
 
 void test_builtin_reduce_xor(int i, float4 v, int3 iv) {

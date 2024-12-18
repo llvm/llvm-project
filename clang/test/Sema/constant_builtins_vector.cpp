@@ -746,6 +746,12 @@ constexpr long long reduceAddLong2 = __builtin_reduce_add((vector4long){(1LL << 
 static_assert(__builtin_reduce_add((vector4uint){~0U, 0, 0, 1}) == 0);
 static_assert(__builtin_reduce_add((vector4ulong){~0ULL, 0, 0, 1}) == 0);
 
+constexpr float reduceAddFloat = __builtin_reduce_add((vector4float){1.0, 2.0, 3.0, 4.0});
+// expected-error@-1 {{must be initialized by a constant expression}}
+
+constexpr double reduceAddDouble = __builtin_reduce_add((vector4double){-1.0, 2.0, -3.0, 4.0});
+// expected-error@-1 {{must be initialized by a constant expression}}
+
 static_assert(__builtin_reduce_mul((vector4char){}) == 0);
 static_assert(__builtin_reduce_mul((vector4char){1, 2, 3, 4}) == 24);
 static_assert(__builtin_reduce_mul((vector4short){1, 2, 30, 40}) == 2400);
@@ -765,6 +771,12 @@ constexpr long long reduceMulLong2 = __builtin_reduce_mul((vector4long){(1LL << 
 // expected-note@-1 {{outside the range of representable values of type 'long long'}}
 static_assert(__builtin_reduce_mul((vector4uint){~0U, 1, 1, 2}) == ~0U - 1);
 static_assert(__builtin_reduce_mul((vector4ulong){~0ULL, 1, 1, 2}) == ~0ULL - 1);
+
+constexpr float reduceMulFloat = __builtin_reduce_mul((vector4float){1.0, 2.0, 3.0, 1.0});
+// expected-error@-1 {{must be initialized by a constant expression}}
+
+constexpr double reduceMulDouble = __builtin_reduce_mul((vector4double){3.0, 4.0, 1.0, 1.0});
+// expected-error@-1 {{must be initialized by a constant expression}}
 
 static_assert(__builtin_reduce_and((vector4char){}) == 0);
 static_assert(__builtin_reduce_and((vector4char){(char)0x11, (char)0x22, (char)0x44, (char)0x88}) == 0);

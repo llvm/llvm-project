@@ -4314,12 +4314,37 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         *this, E, GetIntrinsicID(E->getArg(0)->getType()), "rdx.min"));
   }
 
-  case Builtin::BI__builtin_reduce_add:
+  case Builtin::BI__builtin_reduce_add: {
+    // Note: vector_reduce_fadd takes two arguments a
+    // scalar start value and a vector. That would mean to
+    // correctly call it we would need emitBuiltinWithOneOverloadedType<2>
+    // To keep the  builtin sema behavior the same despite type we will
+    // popululate vector_reduce_fadd scalar value with a 0.
+    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
+      Value *X = EmitScalarExpr(E->getArg(0));
+      auto EltTy = X->getType()->getScalarType();
+      Value *Seed = ConstantFP::get(EltTy, 0);
+      return RValue::get(Builder.CreateIntrinsic(
+          /*ReturnType=*/EltTy, llvm::Intrinsic::vector_reduce_fadd,
+          ArrayRef<Value *>{Seed, X}, nullptr, "rdx.fadd"));
+    }
+    assert(E->getArg(0)->getType()->hasIntegerRepresentation());
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::vector_reduce_add, "rdx.add"));
-  case Builtin::BI__builtin_reduce_mul:
+  }
+  case Builtin::BI__builtin_reduce_mul: {
+    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
+      Value *X = EmitScalarExpr(E->getArg(0));
+      auto EltTy = X->getType()->getScalarType();
+      Value *Seed = ConstantFP::get(EltTy, 0);
+      return RValue::get(Builder.CreateIntrinsic(
+          /*ReturnType=*/EltTy, llvm::Intrinsic::vector_reduce_fmul,
+          ArrayRef<Value *>{Seed, X}, nullptr, "rdx.fmul"));
+    }
+    assert(E->getArg(0)->getType()->hasIntegerRepresentation());
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::vector_reduce_mul, "rdx.mul"));
+  }
   case Builtin::BI__builtin_reduce_xor:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::vector_reduce_xor, "rdx.xor"));

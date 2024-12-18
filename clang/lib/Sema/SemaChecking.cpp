@@ -2886,11 +2886,31 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(ElTy);
     break;
   }
+  case Builtin::BI__builtin_reduce_add:
+  case Builtin::BI__builtin_reduce_mul: {
+    if (PrepareBuiltinReduceMathOneArgCall(TheCall))
+      return ExprError();
+
+    const Expr *Arg = TheCall->getArg(0);
+    const auto *TyA = Arg->getType()->getAs<VectorType>();
+
+    QualType ElTy;
+    if (TyA)
+      ElTy = TyA->getElementType();
+    else if (Arg->getType()->isSizelessVectorType())
+      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
+
+    if (ElTy.isNull()) {
+      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of integers or floating points */ 10
+          << Arg->getType();
+      return ExprError();
+    }
+    TheCall->setType(ElTy);
+    break;
+  }
 
   // These builtins support vectors of integers only.
-  // TODO: ADD/MUL should support floating-point types.
-  case Builtin::BI__builtin_reduce_add:
-  case Builtin::BI__builtin_reduce_mul:
   case Builtin::BI__builtin_reduce_xor:
   case Builtin::BI__builtin_reduce_or:
   case Builtin::BI__builtin_reduce_and: {
