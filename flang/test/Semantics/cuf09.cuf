@@ -1,6 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
  integer :: m(100)
+ integer, parameter :: p(5) = [1,2,3,4,5]
  contains
   attributes(device) subroutine devsub
     !ERROR: Statement may not appear in device code
@@ -21,6 +22,12 @@ module m
     i = threadIdx%x
     !ERROR: Host array 'm' cannot be present in device context
     if (i .le. N) a(i) = m(i)
+  end subroutine
+
+  attributes(global) subroutine hostparameter(a)
+    integer :: a(*)
+    i = threadIdx%x
+    if (i .le. N) a(i) = p(i) ! ok. p is parameter
   end subroutine
 
   attributes(global) subroutine localarray()
