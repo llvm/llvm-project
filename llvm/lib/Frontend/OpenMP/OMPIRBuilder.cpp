@@ -7810,8 +7810,6 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
 
   SmallString<64> TyStr;
   raw_svector_ostream Out(TyStr);
-  if (FuncName == "")
-    FuncName = StringRef{createPlatformSpecificName({"omp_mapper"})};
   Function *MapperFn =
       Function::Create(FnTy, GlobalValue::InternalLinkage, FuncName, M);
   MapperFn->addFnAttr(Attribute::NoInline);
