@@ -706,9 +706,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       D, Args, DiagnoseErrors, NonMergedDefault, AlwaysNonMerged,
       NeverNonMerged, options::OPT_fsanitize_nonmerged_handlers_EQ,
       options::OPT_fno_sanitize_nonmerged_handlers_EQ);
-  RecoverableKinds |= AlwaysNonMerged;
-  RecoverableKinds &= ~NeverNonMerged;
-  RecoverableKinds &= Kinds;
+  NonMergedKinds |= AlwaysNonMerged;
+  NonMergedKinds &= ~NeverNonMerged;
+  NonMergedKinds &= Kinds;
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
