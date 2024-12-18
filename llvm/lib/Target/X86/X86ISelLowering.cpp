@@ -30058,7 +30058,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // Build a map of inrange constant amounts with element mask where they occur.
-  std::map<unsigned, APInt> UniqueCstAmt;
+  SmallDenseMap<unsigned, APInt, 16> UniqueCstAmt;
   if (ConstantAmt) {
     for (unsigned I = 0; I != NumElts; ++I) {
       SDValue A = Amt.getOperand(I);
