@@ -2782,15 +2782,15 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::TRUNCATE, MVT::v16i32, MVT::v16i64, 4}, // 4 x uzp1
 
       // Truncations on nxvmiN
-      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i8,  2},
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i8, 2},
       {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i16, 2},
       {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i32, 2},
       {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i64, 2},
-      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i8,  2},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i8, 2},
       {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i16, 2},
       {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i32, 2},
       {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i64, 5},
-      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i8,  2},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i8, 2},
       {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 2},
       {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 5},
       {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 11},
