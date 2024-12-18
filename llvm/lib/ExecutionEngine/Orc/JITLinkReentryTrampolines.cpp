@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 
 #include <memory>
@@ -86,12 +87,17 @@ JITLinkReentryTrampolines::Create(ObjectLinkingLayer &ObjLinkingLayer) {
 
   EmitTrampolineFn EmitTrampoline;
 
-  switch (ObjLinkingLayer.getExecutionSession().getTargetTriple().getArch()) {
+  const auto &TT = ObjLinkingLayer.getExecutionSession().getTargetTriple();
+  switch (TT.getArch()) {
   case Triple::aarch64:
     EmitTrampoline = aarch64::createAnonymousReentryTrampoline;
     break;
+  case Triple::x86_64:
+    EmitTrampoline = x86_64::createAnonymousReentryTrampoline;
+    break;
   default:
-    return make_error<StringError>("Architecture not supported",
+    return make_error<StringError>("JITLinkReentryTrampolines: architecture " +
+				   TT.getArchName() + " not supported",
                                    inconvertibleErrorCode());
   }
 

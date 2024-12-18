@@ -1226,9 +1226,9 @@ public:
     return {getSwappedPredicate(Pred), Pred.hasSameSign()};
   }
 
-  /// @returns the swapped predicate.
-  Predicate getSwappedCmpPredicate() const {
-    return getSwappedPredicate(getCmpPredicate());
+  /// @returns the swapped predicate along with samesign information.
+  CmpPredicate getSwappedCmpPredicate() const {
+    return getSwappedCmpPredicate(getCmpPredicate());
   }
 
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.

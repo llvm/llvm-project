@@ -149,7 +149,7 @@ struct FormatResourceDimension
     default: {
       OS << getTextureDimName(RK);
       if (Item.isMultiSample())
-        OS << Item.getMultiSample().Count;
+        OS << Item.getMultiSampleCount();
       break;
     }
     case dxil::ResourceKind::RawBuffer:
