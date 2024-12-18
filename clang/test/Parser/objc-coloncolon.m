@@ -8,6 +8,12 @@ int GV = 42;
 @end
 
 @implementation A
+- (void)performSelector:(SEL)selector {}
+- (void)double:(int)firstArg :(int)secondArg colon:(int)thirdArg {}
+- (void)test {
+  // The `::` below should not trigger an error.
+  [self performSelector:@selector(double::colon:)];
+}
 + (int) getGV { return ::GV; } // expected-error {{expected a type}}
 - (instancetype)init:(::A *) foo { return self; } // expected-error {{expected a type}}
 @end
