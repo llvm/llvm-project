@@ -90,8 +90,7 @@ class SPIRVGlobalRegistry {
   DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
 
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
-  DenseMap<std::pair<const MachineFunction *, Register>, const Value *>
-      Reg2GO;
+  DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -153,12 +152,6 @@ public:
 
   Register find(const Function *F, MachineFunction *MF) {
     return DT.find(F, MF);
-  }
-
-  void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
-                      const SPIRVInstrInfo *TII,
-                      MachineModuleInfo *MMI = nullptr) {
-    DT.buildDepsGraph(Graph, TII, MMI);
   }
 
   void setBound(unsigned V) { Bound = V; }

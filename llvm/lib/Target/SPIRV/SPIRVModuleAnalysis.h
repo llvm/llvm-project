@@ -225,18 +225,23 @@ private:
       SPIRV::ModuleSectionType MSType,
       std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
       bool UsePreOrder);
-  void processDefInstrs(const Module &M);
   void collectFuncNames(MachineInstr &MI, const Function *F);
   void processOtherInstrs(const Module &M);
   void numberRegistersGlobally(const Module &M);
-  void collectFuncPtrs();
-  void collectFuncPtrs(const MachineInstr *MI);
 
   // analyze dependencies to collect module scope definitions
   void collectDeclarations(const Module &M);
   void visitDecl(const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
                  std::map<const Value *, unsigned> &GlobalToGReg,
                  const MachineFunction *MF, const MachineInstr &MI);
+  Register handleVariable(const MachineFunction *MF, const MachineInstr &MI,
+                          std::map<const Value *, unsigned> &GlobalToGReg);
+  Register handleTypeDeclOrConstant(const MachineInstr &MI,
+                                    InstrGRegsMap &SignatureToGReg);
+  Register
+  handleFunctionOrParameter(const MachineFunction *MF, const MachineInstr &MI,
+                            std::map<const Value *, unsigned> &GlobalToGReg,
+                            bool &IsFunDef);
   void visitFunPtrUse(Register OpReg, InstrGRegsMap &SignatureToGReg,
                       std::map<const Value *, unsigned> &GlobalToGReg,
                       const MachineFunction *MF, const MachineInstr &MI);
