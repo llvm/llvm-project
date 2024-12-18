@@ -2855,16 +2855,6 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     return false;
 
   switch (getStmtClass()) {
-  /* TO_UPSTREAM(BoundsSafety) ON*/
-  case OpaqueValueExprClass: {
-    const auto *OVE = cast<OpaqueValueExpr>(this);
-    if (BoundExprs.find(OVE) != BoundExprs.end()) {
-      return OVE->getSourceExpr()->isUnusedResultAWarning(
-          WarnE, Loc, R1, R2, Ctx, BoundExprs);
-    }
-    LLVM_FALLTHROUGH;
-  }
-  /* TO_UPSTREAM(BoundsSafety) OFF*/
   default:
     if (getType()->isVoidType())
       return false;
@@ -3265,6 +3255,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case ExprWithCleanupsClass:
     return cast<ExprWithCleanups>(this)->getSubExpr()
                ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
+  case OpaqueValueExprClass:
+    return cast<OpaqueValueExpr>(this)->getSourceExpr()->isUnusedResultAWarning(
+        WarnE, Loc, R1, R2, Ctx, BoundExprs);
   }
 }
 
