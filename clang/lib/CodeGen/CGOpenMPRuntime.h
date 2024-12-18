@@ -559,15 +559,6 @@ protected:
                                 llvm::Value *Ctor, llvm::Value *CopyCtor,
                                 llvm::Value *Dtor, SourceLocation Loc);
 
-  /// Emit the array initialization or deletion portion for user-defined mapper
-  /// code generation.
-  void emitUDMapperArrayInitOrDel(CodeGenFunction &MapperCGF,
-                                  llvm::Value *Handle, llvm::Value *BasePtr,
-                                  llvm::Value *Ptr, llvm::Value *Size,
-                                  llvm::Value *MapType, llvm::Value *MapName,
-                                  CharUnits ElementSize,
-                                  llvm::BasicBlock *ExitBB, bool IsInit);
-
   struct TaskResultTy {
     llvm::Value *NewTask = nullptr;
     llvm::Function *TaskEntry = nullptr;
