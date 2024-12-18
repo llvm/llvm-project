@@ -343,30 +343,32 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
   }
 }
 
-lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
-                                                     bool &error) const {
-  error = false;
+llvm::Expected<lldb::addr_t>
+DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const uint8_t op = m_data.GetU8(&offset);
 
     if (op == DW_OP_addr)
       return m_data.GetAddress(&offset);
+
     if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
-      uint64_t index = m_data.GetULEB128(&offset);
+      const uint64_t index = m_data.GetULEB128(&offset);
       if (dwarf_cu)
         return dwarf_cu->ReadAddressFromDebugAddrSection(index);
-      error = true;
-      break;
+      return llvm::createStringError("cannot evaluate %s without a DWARF unit",
+                                     DW_OP_value_to_name(op));
     }
+
     const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
-    if (op_arg_size == LLDB_INVALID_OFFSET) {
-      error = true;
-      break;
-    }
+    if (op_arg_size == LLDB_INVALID_OFFSET)
+      return llvm::createStringError("cannot get opcode data size for %s",
+                                     DW_OP_value_to_name(op));
+
     offset += op_arg_size;
   }
+
   return LLDB_INVALID_ADDRESS;
 }
 

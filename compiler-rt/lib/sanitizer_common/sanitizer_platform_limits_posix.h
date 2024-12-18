@@ -601,7 +601,7 @@ struct __sanitizer_siginfo_pad {
 #if SANITIZER_LINUX
 # define SANITIZER_HAS_SIGINFO 1
 union __sanitizer_siginfo {
-  struct {
+  __extension__ struct {
     int si_signo;
 # if SANITIZER_MIPS
     int si_code;

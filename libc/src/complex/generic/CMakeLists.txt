@@ -1,4 +1,68 @@
 add_entrypoint_object(
+  cproj
+  SRCS
+    cproj.cpp
+  HDRS
+    ../cproj.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cprojf
+  SRCS
+    cprojf.cpp
+  HDRS
+    ../cprojf.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cprojl
+  SRCS
+    cprojl.cpp
+  HDRS
+    ../cprojl.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cprojf16
+  SRCS
+    cprojf16.cpp
+  HDRS
+    ../cprojf16.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cprojf128
+  SRCS
+    cprojf128.cpp
+  HDRS
+    ../cprojf128.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
   conj
   SRCS
     conj.cpp
@@ -7,7 +71,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
 )
 
@@ -20,7 +83,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
 )
 
@@ -33,7 +95,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
 )
 
@@ -46,7 +107,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
@@ -61,7 +121,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.CPP.bit
     libc.src.__support.complex_type
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
