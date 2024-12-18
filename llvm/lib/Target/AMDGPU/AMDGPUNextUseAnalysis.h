@@ -29,13 +29,14 @@ class NextUseResult {
   const MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   MachineLoopInfo *LI;
-  DenseMap<const SlotIndex *, DenseMap<Register, unsigned>> InstrCache;
 
   TimerGroup *TG;
   Timer *T1;
   Timer *T2;
   
   
+  DenseMap<const MachineInstr *, DenseMap<Register, unsigned>> InstrCache;
+
 public:
   using VRegDistances = DenseMap<Register, unsigned>;
 
@@ -160,6 +161,18 @@ public:
 
   void getSortedForInstruction(const MachineInstr &MI,
                                    SetVector<Register> &Regs) {
+    // auto SortByDist = [&](const Register LHS, const Register RHS) {
+    //   unsigned LDist = getNextUseDistance(MI, LHS);
+    //   unsigned RDist = getNextUseDistance(MI, RHS);
+    //   if (LDist == RDist) {
+    //     const TargetRegisterClass *LRC = TRI->getRegClassForReg(*MRI, LHS);
+    //     unsigned LSize = TRI->getRegClassWeight(LRC).RegWeight;
+    //     const TargetRegisterClass *RRC = TRI->getRegClassForReg(*MRI, RHS);
+    //     unsigned RSize = TRI->getRegClassWeight(RRC).RegWeight;
+    //     return LSize < RSize;
+    //   }
+    //   return LDist < RDist;
+    // };
     auto SortByDist = [&](const Register LHS, const Register RHS) {
       return getNextUseDistance(MI, LHS) < getNextUseDistance(MI, RHS);
     };
