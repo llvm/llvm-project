@@ -1915,7 +1915,7 @@ define i1 @pr120361(i8 %x, i8 %y) {
 define i1 @pr120361_v2(i32 %x) {
 ; CHECK-LABEL: @pr120361_v2(
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X:%.*]], -113
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign eq i32 [[AND2]], 15
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND2]], 15
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %and1 = and i32 %x, 15
