@@ -1766,8 +1766,12 @@ bool ComplexDeinterleavingGraph::checkNodes() {
 
   // We need a deinterleave node in order to guarantee that we're working with
   // complex numbers.
-  if (!FoundDeinterleaveNode)
+  if (!FoundDeinterleaveNode) {
+    LLVM_DEBUG(
+        dbgs() << "Couldn't find a deinterleave node within the graph, cannot "
+                  "guarantee safety during graph transformation.\n");
     return false;
+  }
 
   // Collect all instructions from roots to leaves
   SmallPtrSet<Instruction *, 16> AllInstructions;
