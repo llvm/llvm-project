@@ -413,7 +413,7 @@ class _makePropStorage<Property prop, string name> {
 ///   }
 ///
 /// and then appends `prefix` and `suffix`.
-class _makeStoragedWrapperPred<Property wrappedProp> {
+class _makeStorageWrapperPred<Property wrappedProp> {
   Pred ret =
     Concat<
       "[](" # "const " # wrappedProp.storageType
@@ -466,7 +466,7 @@ class ArrayProperty<Property elem = Property<>, string newSummary = ""> :
 
   let predicate = !if(!eq(elem.predicate, TruePred),
     TruePred,
-    Concat<"::llvm::all_of($_self, ", _makeStoragedWrapperPred<elem>.ret, ")">);
+    Concat<"::llvm::all_of($_self, ", _makeStorageWrapperPred<elem>.ret, ")">);
 
   defvar theParserBegin = [{
     auto& storage = $_storage;
