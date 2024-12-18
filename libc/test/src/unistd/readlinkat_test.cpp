@@ -15,7 +15,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 
 namespace cpp = LIBC_NAMESPACE::cpp;
 

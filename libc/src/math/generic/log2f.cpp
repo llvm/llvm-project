@@ -72,7 +72,7 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   // Exceptional inputs.
   if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval() ||
                     x_u > FPBits::max_normal().uintval())) {
-    if (xbits.is_zero()) {
+    if (x == 0.0f) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits::inf(Sign::NEG).get_val();

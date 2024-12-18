@@ -19,6 +19,7 @@ class AffineExpr;
 class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
+class FileLineColRange;
 class Type;
 class PrimitiveType;
 class IntegerType;
@@ -60,6 +61,9 @@ public:
                        Attribute metadata = Attribute());
 
   // Types.
+  FloatType getFloat4E2M1FNType();
+  FloatType getFloat6E2M3FNType();
+  FloatType getFloat6E3M2FNType();
   FloatType getFloat8E5M2Type();
   FloatType getFloat8E4M3Type();
   FloatType getFloat8E4M3FNType();
@@ -67,6 +71,7 @@ public:
   FloatType getFloat8E4M3FNUZType();
   FloatType getFloat8E4M3B11FNUZType();
   FloatType getFloat8E3M4Type();
+  FloatType getFloat8E8M0FNUType();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getTF32Type();
@@ -221,7 +226,7 @@ public:
   explicit OpBuilder(Region *region, Listener *listener = nullptr)
       : OpBuilder(region->getContext(), listener) {
     if (!region->empty())
-      setInsertionPoint(&region->front(), region->front().begin());
+      setInsertionPointToStart(&region->front());
   }
   explicit OpBuilder(Region &region, Listener *listener = nullptr)
       : OpBuilder(&region, listener) {}

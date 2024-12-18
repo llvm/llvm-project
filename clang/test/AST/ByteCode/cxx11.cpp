@@ -169,3 +169,8 @@ namespace FinalLtorDiags {
   A<q> c; // both-error {{non-type template argument of type 'int *' is not a constant expression}} \
           // both-note {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
 }
+
+void lambdas() {
+  int d;
+  int a9[1] = {[d = 0] = 1}; // both-error {{not an integral constant expression}}
+}

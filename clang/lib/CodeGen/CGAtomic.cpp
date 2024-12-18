@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Operator.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -389,6 +388,7 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
       Ptr, Expected, Desired, SuccessOrder, FailureOrder, Scope);
   Pair->setVolatile(E->isVolatile());
   Pair->setWeak(IsWeak);
+  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Pair, E);
 
   // Cmp holds the result of the compare-exchange operation: true on success,
   // false on failure.
@@ -727,7 +727,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   llvm::Value *LoadVal1 = CGF.Builder.CreateLoad(Val1);
   llvm::AtomicRMWInst *RMWI =
-      CGF.emitAtomicRMWInst(Op, Ptr, LoadVal1, Order, Scope);
+      CGF.emitAtomicRMWInst(Op, Ptr, LoadVal1, Order, Scope, E);
   RMWI->setVolatile(E->isVolatile());
 
   // For __atomic_*_fetch operations, perform the operation again to
@@ -766,8 +766,19 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
   // LLVM atomic instructions always have synch scope. If clang atomic
   // expression has no scope operand, use default LLVM synch scope.
   if (!ScopeModel) {
+    llvm::SyncScope::ID SS;
+    if (CGF.getLangOpts().OpenCL)
+      // OpenCL approach is: "The functions that do not have memory_scope
+      // argument have the same semantics as the corresponding functions with
+      // the memory_scope argument set to memory_scope_device." See ref.:
+      // https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#atomic-functions
+      SS = CGF.getTargetHooks().getLLVMSyncScopeID(CGF.getLangOpts(),
+                                                   SyncScope::OpenCLDevice,
+                                                   Order, CGF.getLLVMContext());
+    else
+      SS = llvm::SyncScope::System;
     EmitAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
-                 Order, CGF.CGM.getLLVMContext().getOrInsertSyncScopeID(""));
+                 Order, SS);
     return;
   }
 
@@ -2037,11 +2048,11 @@ std::pair<RValue, llvm::Value *> CodeGenFunction::EmitAtomicCompareExchange(
 llvm::AtomicRMWInst *
 CodeGenFunction::emitAtomicRMWInst(llvm::AtomicRMWInst::BinOp Op, Address Addr,
                                    llvm::Value *Val, llvm::AtomicOrdering Order,
-                                   llvm::SyncScope::ID SSID) {
-
+                                   llvm::SyncScope::ID SSID,
+                                   const AtomicExpr *AE) {
   llvm::AtomicRMWInst *RMW =
       Builder.CreateAtomicRMW(Op, Addr, Val, Order, SSID);
-  getTargetHooks().setTargetAtomicMetadata(*this, *RMW);
+  getTargetHooks().setTargetAtomicMetadata(*this, *RMW, AE);
   return RMW;
 }
 

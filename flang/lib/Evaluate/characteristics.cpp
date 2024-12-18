@@ -66,8 +66,9 @@ bool ShapesAreCompatible(const std::optional<Shape> &x,
 }
 
 bool TypeAndShape::operator==(const TypeAndShape &that) const {
-  return type_ == that.type_ && ShapesAreCompatible(shape_, that.shape_) &&
-      attrs_ == that.attrs_ && corank_ == that.corank_;
+  return type_.IsEquivalentTo(that.type_) &&
+      ShapesAreCompatible(shape_, that.shape_) && attrs_ == that.attrs_ &&
+      corank_ == that.corank_;
 }
 
 TypeAndShape &TypeAndShape::Rewrite(FoldingContext &context) {
@@ -370,7 +371,7 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   }
   if (!attrs.test(Attr::Value) &&
       !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
-          ignoreTKR,
+          ignoreTKR, warning,
           /*allowUnifiedMatchingRule=*/false)) {
     if (whyNot) {
       *whyNot = "incompatible CUDA data attributes";
@@ -730,11 +731,16 @@ static std::optional<Procedure> CharacterizeProcedure(
               return std::optional<Procedure>{};
             }
           },
-          [&](const semantics::EntityDetails &) {
+          [&](const semantics::EntityDetails &x) {
             CheckForNested(symbol);
             return std::optional<Procedure>{};
           },
           [&](const semantics::SubprogramNameDetails &) {
+            if (const semantics::Symbol *
+                ancestor{FindAncestorModuleProcedure(&symbol)}) {
+              return CharacterizeProcedure(
+                  *ancestor, context, seenProcs, emitError);
+            }
             CheckForNested(symbol);
             return std::optional<Procedure>{};
           },
@@ -1770,7 +1776,7 @@ bool DistinguishUtils::Distinguishable(
       x.intent != common::Intent::In) {
     return true;
   } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
-                 x.ignoreTKR | y.ignoreTKR,
+                 x.ignoreTKR | y.ignoreTKR, nullptr,
                  /*allowUnifiedMatchingRule=*/false)) {
     return true;
   } else if (features_.IsEnabled(

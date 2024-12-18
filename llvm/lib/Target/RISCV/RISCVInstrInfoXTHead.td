@@ -270,7 +270,7 @@ def TH_REVW : THRev_r<0b10010, 0b00, "th.revw">;
 
 let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "XTHeadBs",
     IsSignExtendingOpW = 1 in
-def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
+def TH_TST : THShift_ri<0b10001, 0b001, "th.tst">,
              Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 
 let Predicates = [HasVendorXTHeadCondMov] in {
@@ -769,7 +769,9 @@ defm : LdIdxPat<zextloadi16, TH_LRHU>;
 
 defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
 defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
+}
 
+let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : LdIdxPat<load, TH_LRW, i32>;
 defm : StIdxPat<store, TH_SRW, GPR, i32>;
 }

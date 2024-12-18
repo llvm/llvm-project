@@ -131,7 +131,7 @@ subroutine test_array_comp(t1, t2)
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_ptr_comp(
-! CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>{{.*}}, %[[VAL_1]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>{{.*}}) {
+! CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>{{.*}}, %[[VAL_1]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>{{.*}}) {
 subroutine test_ptr_comp(t1, t2)
   type t
      complex, pointer :: ptr(:)
@@ -139,16 +139,16 @@ subroutine test_ptr_comp(t1, t2)
   end type t
   type(t) :: t1, t2
 
-  ! CHECK:  %[[VAL_2:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  %[[VAL_6:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:  %[[VAL_6b:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_2:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  %[[VAL_6:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_6b:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
   ! CHECK:  fir.store %[[VAL_9]] to %[[VAL_8]] : !fir.ref<i32>
   t1 = t2

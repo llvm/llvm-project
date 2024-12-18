@@ -280,6 +280,10 @@ public:
 
   bool SetTerminalWidth(uint64_t term_width);
 
+  uint64_t GetTerminalHeight() const;
+
+  bool SetTerminalHeight(uint64_t term_height);
+
   llvm::StringRef GetPrompt() const;
 
   llvm::StringRef GetPromptAnsiPrefix() const;
@@ -363,6 +367,10 @@ public:
   bool GetNotifyVoid() const;
 
   const std::string &GetInstanceName() { return m_instance_name; }
+
+  bool GetShowInlineDiagnostics() const;
+
+  bool SetShowInlineDiagnostics(bool);
 
   bool LoadPlugin(const FileSpec &spec, Status &error);
 

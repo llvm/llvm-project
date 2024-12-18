@@ -164,15 +164,14 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
 
 bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
   const TargetLowering &TLI = getTargetLowering();
-  const DataLayout &DL = getDataLayout();
   LLVMContext &Ctx = getContext();
 
   switch (Opcode) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_ZEXT:
-    return TLI.isZExtFree(FromTy, ToTy, DL, Ctx);
+    return TLI.isZExtFree(FromTy, ToTy, Ctx);
   case TargetOpcode::G_TRUNC:
-    return TLI.isTruncateFree(FromTy, ToTy, DL, Ctx);
+    return TLI.isTruncateFree(FromTy, ToTy, Ctx);
   default:
     return false;
   }
@@ -312,4 +311,50 @@ bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
   };
 
   return true;
+}
+
+bool CombinerHelper::matchNarrowBinop(const MachineInstr &TruncMI,
+                                      const MachineInstr &BinopMI,
+                                      BuildFnTy &MatchInfo) {
+  const GTrunc *Trunc = cast<GTrunc>(&TruncMI);
+  const GBinOp *BinOp = cast<GBinOp>(&BinopMI);
+
+  if (!MRI.hasOneNonDBGUse(BinOp->getReg(0)))
+    return false;
+
+  Register Dst = Trunc->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+
+  // Is narrow binop legal?
+  if (!isLegalOrBeforeLegalizer({BinOp->getOpcode(), {DstTy}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto LHS = B.buildTrunc(DstTy, BinOp->getLHSReg());
+    auto RHS = B.buildTrunc(DstTy, BinOp->getRHSReg());
+    B.buildInstr(BinOp->getOpcode(), {Dst}, {LHS, RHS});
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
+                                        APInt &MatchInfo) {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+
+  APInt Input = getIConstantFromReg(Cast->getSrcReg(), MRI);
+
+  LLT DstTy = MRI.getType(Cast->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  switch (Cast->getOpcode()) {
+  case TargetOpcode::G_TRUNC: {
+    MatchInfo = Input.trunc(DstTy.getScalarSizeInBits());
+    return true;
+  }
+  default:
+    return false;
+  }
 }

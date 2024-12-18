@@ -6,7 +6,7 @@
 subroutine test_array_target_enter_data(dims)
     integer, intent(in) :: dims(2)
     double precision :: A(2, dims(2))
-    !$omp target enter data map(to: U)
+    !$omp target enter data map(to: A)
 
     A(2,2) = 1.0
     !$omp target

@@ -1,4 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.PointerSub -analyzer-output=text-minimal -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=security.PointerSub -analyzer-output=text-minimal -verify %s
+
+typedef int * Ptr;
 
 void f1(void) {
   int x, y, z[10];
@@ -10,6 +12,12 @@ void f1(void) {
   d = &x - (&x + 1); // no-warning
   d = (&x + 0) - &x; // no-warning
   d = (z + 10) - z; // no-warning
+  d = (long long)&y - (long long)&x; // no-warning
+  long long l = 1;
+  d = l - (long long)&y; // no-warning
+  Ptr p1 = &x;
+  Ptr p2 = &y;
+  d = p1 - p2; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
 }
 
 void f2(void) {
@@ -28,6 +36,10 @@ void f2(void) {
 
   d = (int *)((char *)(&a[4]) + sizeof(int)) - &a[4]; // no-warning (pointers into the same array data)
   d = (int *)((char *)(&a[4]) + 1) - &a[4]; // expected-warning{{Subtraction of two pointers that}}
+
+  long long a1 = (long long)&a[1];
+  long long b1 = (long long)&b[1];
+  d = a1 - b1;
 }
 
 void f3(void) {

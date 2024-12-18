@@ -19,29 +19,29 @@ main:
 # Test GOT32 handling.
 # 
 # We want to check both the offset to the GOT entry and its contents. 
-# jitlink-check: decode_operand(test_got, 4) = got_addr(elf_sm_pic_reloc_got.o, named_data1) - _GLOBAL_OFFSET_TABLE_
+# jitlink-check: decode_operand(test_got, 4) = got_addr(elf_sm_pic_reloc_got.o, named_data1) - _GLOBAL_OFFSET_TABLE_ + 42
 # jitlink-check: *{4}(got_addr(elf_sm_pic_reloc_got.o, named_data1)) = named_data1
 # 
-# jitlink-check: decode_operand(test_got+6, 4) = got_addr(elf_sm_pic_reloc_got.o, named_data2) - _GLOBAL_OFFSET_TABLE_
+# jitlink-check: decode_operand(test_got+6, 4) = got_addr(elf_sm_pic_reloc_got.o, named_data2) - _GLOBAL_OFFSET_TABLE_ + 5
 # jitlink-check: *{4}(got_addr(elf_sm_pic_reloc_got.o, named_data2)) = named_data2
 
         .globl test_got
         .p2align      4, 0x90
         .type   test_got,@function
 test_got:
-	leal    named_data1@GOT, %eax
-        leal    named_data2@GOT, %eax
+        leal    named_data1@GOT+42, %eax
+        leal    named_data2@GOT+5, %eax
         .size   test_got, .-test_got
 
 
 
 # Test GOTOFF64 handling.
-# jitlink-check: decode_operand(test_gotoff, 1) = named_func - _GLOBAL_OFFSET_TABLE_
+# jitlink-check: decode_operand(test_gotoff, 1) = named_func - _GLOBAL_OFFSET_TABLE_ + 99
         .globl test_gotoff
         .p2align     4, 0x90
         .type  test_gotoff,@function
 test_gotoff:
-        mov $named_func@GOTOFF, %eax
+        mov $named_func@GOTOFF+99, %eax
         .size   test_gotoff, .-test_gotoff
 
 

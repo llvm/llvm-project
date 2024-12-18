@@ -116,7 +116,7 @@ define void @multi_uses_sub(i32 %X, i32 %Y) {
 define void @multi_use_vec_add(<2 x i32> %X) {
 ; CHECK-LABEL: @multi_use_vec_add(
 ; CHECK-NEXT:    [[A1:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B1:%.*]] = add <2 x i32> [[X]], <i32 15, i32 15>
+; CHECK-NEXT:    [[B1:%.*]] = add <2 x i32> [[X]], splat (i32 15)
 ; CHECK-NEXT:    [[C1:%.*]] = mul <2 x i32> [[B1]], [[B1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @use32_vec(<2 x i32> [[C1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @use64_vec(<2 x i64> [[A1]])
@@ -135,7 +135,7 @@ define void @multi_use_vec_add(<2 x i32> %X) {
 define void @multi_use_vec_or(<2 x i32> %X) {
 ; CHECK-LABEL: @multi_use_vec_or(
 ; CHECK-NEXT:    [[A1:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B1:%.*]] = or <2 x i32> [[X]], <i32 15, i32 15>
+; CHECK-NEXT:    [[B1:%.*]] = or <2 x i32> [[X]], splat (i32 15)
 ; CHECK-NEXT:    [[C1:%.*]] = mul <2 x i32> [[B1]], [[B1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @use32_vec(<2 x i32> [[C1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @use64_vec(<2 x i64> [[A1]])
@@ -154,7 +154,7 @@ define void @multi_use_vec_or(<2 x i32> %X) {
 define void @multi_use_vec_xor(<2 x i32> %X) {
 ; CHECK-LABEL: @multi_use_vec_xor(
 ; CHECK-NEXT:    [[A1:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B1:%.*]] = xor <2 x i32> [[X]], <i32 15, i32 15>
+; CHECK-NEXT:    [[B1:%.*]] = xor <2 x i32> [[X]], splat (i32 15)
 ; CHECK-NEXT:    [[C1:%.*]] = mul <2 x i32> [[B1]], [[B1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @use32_vec(<2 x i32> [[C1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @use64_vec(<2 x i64> [[A1]])
@@ -173,7 +173,7 @@ define void @multi_use_vec_xor(<2 x i32> %X) {
 define void @multi_use_vec_and(<2 x i32> %X) {
 ; CHECK-LABEL: @multi_use_vec_and(
 ; CHECK-NEXT:    [[A1:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B1:%.*]] = and <2 x i32> [[X]], <i32 15, i32 15>
+; CHECK-NEXT:    [[B1:%.*]] = and <2 x i32> [[X]], splat (i32 15)
 ; CHECK-NEXT:    [[C1:%.*]] = mul <2 x i32> [[B1]], [[B1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @use32_vec(<2 x i32> [[C1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @use64_vec(<2 x i64> [[A1]])

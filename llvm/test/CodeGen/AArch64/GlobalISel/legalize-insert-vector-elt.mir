@@ -248,13 +248,10 @@ body:             |
   ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[UV2]](s16)
   ; CHECK-NEXT:   [[TRUNC4:%[0-9]+]]:_(s8) = G_TRUNC [[UV3]](s16)
   ; CHECK-NEXT:   [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[UV4]](s16)
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16), [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
-  ; CHECK-NEXT:   [[TRUNC6:%[0-9]+]]:_(s8) = G_TRUNC [[UV6]](s16)
-  ; CHECK-NEXT:   [[TRUNC7:%[0-9]+]]:_(s8) = G_TRUNC [[UV7]](s16)
-  ; CHECK-NEXT:   [[TRUNC8:%[0-9]+]]:_(s8) = G_TRUNC [[UV8]](s16)
-  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[TRUNC3]](s8), [[TRUNC4]](s8), [[TRUNC5]](s8), [[TRUNC6]](s8), [[TRUNC7]](s8), [[TRUNC8]](s8), [[TRUNC6]](s8), [[TRUNC7]](s8), [[TRUNC8]](s8), [[TRUNC6]](s8), [[TRUNC7]](s8), [[TRUNC8]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8)
-  ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[C]](s8), [[DEF]](s8), [[DEF]](s8), [[TRUNC6]](s8), [[TRUNC7]](s8), [[TRUNC8]](s8), [[TRUNC6]](s8), [[TRUNC7]](s8), [[TRUNC8]](s8), [[TRUNC6]](s8), [[TRUNC7]](s8), [[TRUNC8]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8)
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF2]](<4 x s8>)
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[TRUNC3]](s8), [[TRUNC4]](s8), [[TRUNC5]](s8), [[UV6]](s8), [[UV7]](s8), [[UV8]](s8), [[UV6]](s8), [[UV7]](s8), [[UV8]](s8), [[UV6]](s8), [[UV7]](s8), [[UV8]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8)
+  ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[C]](s8), [[DEF]](s8), [[DEF]](s8), [[UV6]](s8), [[UV7]](s8), [[UV8]](s8), [[UV6]](s8), [[UV7]](s8), [[UV8]](s8), [[UV6]](s8), [[UV7]](s8), [[UV8]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8)
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<16 x s8>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR1]](<16 x s8>), [[BUILD_VECTOR2]], shufflemask(0, 16, 16, 16, 1, 16, 16, 16, 2, 16, 16, 16, undef, undef, undef, undef)
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[SHUF]](<16 x s8>)
   ; CHECK-NEXT:   [[UITOFP:%[0-9]+]]:_(<4 x s32>) = G_UITOFP [[BITCAST]](<4 x s32>)

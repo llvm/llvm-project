@@ -53,18 +53,18 @@ struct std::char_traits<MyChar> {
 int main(int, char**) {
   test_library_hash_specializations_available();
   {
-    test_hash_enabled_for_type<std::string>();
+    test_hash_enabled<std::string>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test_hash_enabled_for_type<std::wstring>();
+    test_hash_enabled<std::wstring>();
 #endif
 #ifndef TEST_HAS_NO_CHAR8_T
-    test_hash_enabled_for_type<std::u8string>();
+    test_hash_enabled<std::u8string>();
 #endif
-    test_hash_enabled_for_type<std::u16string>();
-    test_hash_enabled_for_type<std::u32string>();
-    test_hash_enabled_for_type<std::basic_string<char, std::char_traits<char>, test_allocator<char>>>();
-    test_hash_disabled_for_type<std::basic_string<MyChar, std::char_traits<MyChar>, std::allocator<MyChar>>>();
-    test_hash_disabled_for_type<std::basic_string<char, constexpr_char_traits<char>, std::allocator<char>>>();
+    test_hash_enabled<std::u16string>();
+    test_hash_enabled<std::u32string>();
+    test_hash_enabled<std::basic_string<char, std::char_traits<char>, test_allocator<char>>>();
+    test_hash_disabled<std::basic_string<MyChar, std::char_traits<MyChar>, std::allocator<MyChar>>>();
+    test_hash_disabled<std::basic_string<char, constexpr_char_traits<char>, std::allocator<char>>>();
   }
 
   return 0;

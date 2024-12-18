@@ -95,7 +95,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
 
   const DataLayout &DL = F->getDataLayout();
   BranchInst *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
   AllocaInst *Alloca = new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca",
                                       Br->getIterator());
   ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
@@ -172,7 +172,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   Builder.SetInsertPoint(L);
   PHINode *Phi = Builder.CreatePHI(T_int64, 2);
   Value *Add = Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add");
-  Builder.CreateCondBr(UndefValue::get(T_int1), L, Post);
+  Builder.CreateCondBr(PoisonValue::get(T_int1), L, Post);
   Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
   Phi->addIncoming(Add, L);
 
@@ -952,6 +952,38 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
               cast<PointerType>(I.getType())->getAddressSpace());
     EXPECT_FALSE(verifyFunction(F, &errs()));
   });
+}
+
+TEST_F(ScalarEvolutionExpanderTest, GEPFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  StringRef ModStr = R"(
+  define void @f(ptr %p, i64 %x) {
+    %gep_inbounds = getelementptr inbounds i8, ptr %p, i64 %x
+    ret void
+  })";
+  std::unique_ptr<Module> M = parseAssemblyString(ModStr, Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  Function *F = M->getFunction("f");
+  ASSERT_NE(F, nullptr) << "Could not find function 'f'";
+  BasicBlock &Entry = F->getEntryBlock();
+  auto *GEP = cast<GetElementPtrInst>(&Entry.front());
+
+  ScalarEvolution SE = buildSE(*F);
+  const SCEV *Ptr = SE.getSCEV(F->getArg(0));
+  const SCEV *X = SE.getSCEV(F->getArg(1));
+  const SCEV *PtrX = SE.getAddExpr(Ptr, X);
+
+  SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+  auto *I = cast<Instruction>(
+      Exp.expandCodeFor(PtrX, nullptr, Entry.getTerminator()));
+  // Check that the GEP is reused, but the inbounds flag cleared. We don't
+  // know that the newly introduced use is inbounds.
+  EXPECT_EQ(I, GEP);
+  EXPECT_EQ(GEP->getNoWrapFlags(), GEPNoWrapFlags::none());
 }
 
 } // end namespace llvm

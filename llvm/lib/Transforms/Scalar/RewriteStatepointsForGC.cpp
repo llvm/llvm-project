@@ -64,7 +64,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -236,7 +235,7 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   if (!DeoptBundle) {
     assert(AllowStatepointWithNoDeoptInfo &&
            "Found non-leaf call without deopt info!");
-    return std::nullopt;
+    return {};
   }
 
   return DeoptBundle->Inputs;
@@ -578,8 +577,15 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
     return I;
   }
 
-  assert(!isa<AtomicRMWInst>(I) && "Xchg handled above, all others are "
-                                   "binary ops which don't apply to pointers");
+  if (isa<AtomicRMWInst>(I)) {
+    assert(cast<AtomicRMWInst>(I)->getOperation() == AtomicRMWInst::Xchg &&
+           "Only Xchg is allowed for pointer values");
+    // A RMW Xchg is a combined atomic load and store, so we can treat the
+    // loaded value as a base pointer.
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */ true, KnownBases);
+    return I;
+  }
 
   // The aggregate ops.  Aggregates can either be in the heap or on the
   // stack, but in either case, this is simply a field load.  As a result,
@@ -1525,8 +1531,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
-    return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
-                                     {NewTy});
+    return Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_gc_relocate, {NewTy});
   };
 
   // Lazily populated map from input types to the canonicalized form mentioned

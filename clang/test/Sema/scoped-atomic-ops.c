@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -x c -triple=amdgcn-amd-amdhsa -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=x86_64-pc-linux-gnu -verify -fsyntax-only %s
+// RUN: %clang_cc1 -x c -triple=spirv64-unknown-unknown -verify -fsyntax-only %s
 
 int fi1a(int *i) {
   int v;

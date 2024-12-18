@@ -87,7 +87,7 @@ public:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void mlir::populateFuncToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                        RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 

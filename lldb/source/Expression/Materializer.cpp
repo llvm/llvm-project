@@ -8,8 +8,6 @@
 
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
@@ -22,6 +20,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-forward.h"
 
 #include <memory>
@@ -462,7 +462,7 @@ public:
       return;
     }
 
-    Status valobj_error = valobj_sp->GetError();
+    Status valobj_error = valobj_sp->GetError().Clone();
 
     if (valobj_error.Fail()) {
       err = Status::FromErrorStringWithFormat(

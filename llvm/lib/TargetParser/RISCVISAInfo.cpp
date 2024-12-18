@@ -741,6 +741,8 @@ Error RISCVISAInfo::checkDependency() {
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
+  static constexpr StringLiteral XqciExts[] = {
+      {"xqcia"}, {"xqcics"}, {"xqcicsr"}, {"xqcilsm"}, {"xqcisls"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
@@ -751,17 +753,6 @@ Error RISCVISAInfo::checkDependency() {
   if (HasZvl && !HasVector)
     return getExtensionRequiresError("zvl*b", "v' or 'zve*");
 
-  if (!HasVector)
-    for (auto Ext :
-         {"zvbb", "zvbc32e", "zvkb", "zvkg", "zvkgs", "zvkned", "zvknha", "zvksed", "zvksh"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "v' or 'zve*");
-
-  if (!Exts.count("zve64x"))
-    for (auto Ext : {"zvknhb", "zvbc"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "v' or 'zve64*");
-
   if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
     return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
                     "' extension is incompatible with '" +
@@ -770,11 +761,6 @@ Error RISCVISAInfo::checkDependency() {
 
   if (XLen != 32 && Exts.count("zcf"))
     return getError("'zcf' is only supported for 'rv32'");
-
-  if (!(Exts.count("a") || Exts.count("zaamo")))
-    for (auto Ext : {"zacas", "zabha"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "a' or 'zaamo");
 
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)
@@ -786,6 +772,10 @@ Error RISCVISAInfo::checkDependency() {
     if (Exts.count("zcb") != 0)
       return getIncompatibleError("xwchc", "zcb");
   }
+
+  for (auto Ext : XqciExts)
+    if (Exts.count(Ext.str()) && (XLen != 32))
+      return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");
 
   return Error::success();
 }
@@ -1049,7 +1039,7 @@ constexpr static RISCVExtBit RISCVBitPositions[] = {
     {"zvksed", 0, 57},    {"zvksh", 0, 58},
     {"zvkt", 0, 59},      {"zve32x", 0, 60},
     {"zve32f", 0, 61},    {"zve64x", 0, 62},
-    {"zve64x", 0, 63},    {"zve64d", 1, 0},
+    {"zve64f", 0, 63},    {"zve64d", 1, 0},
     {"zimop", 1, 1},      {"zca", 1, 2},
     {"zcb", 1, 3},        {"zcd", 1, 4},
     {"zcf", 1, 5},        {"zcmop", 1, 6},

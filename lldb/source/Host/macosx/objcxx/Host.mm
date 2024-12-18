@@ -316,7 +316,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
       unix_socket_name, [&] { return AcceptPIDFromInferior(connect_url); });
 
   if (!accept_thread)
-    return Status(accept_thread.takeError());
+    return Status::FromError(accept_thread.takeError());
 
   [applescript executeAndReturnError:nil];
 
@@ -891,6 +891,10 @@ static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
   return flags;
 }
 
+static void finalize_xpc(void *xpc_object) {
+  xpc_release((xpc_object_t)xpc_object);
+}
+
 static Status LaunchProcessXPC(const char *exe_path,
                                ProcessLaunchInfo &launch_info,
                                lldb::pid_t &pid) {
@@ -956,7 +960,7 @@ static Status LaunchProcessXPC(const char *exe_path,
     }
   });
 
-  xpc_connection_set_finalizer_f(conn, xpc_finalizer_t(xpc_release));
+  xpc_connection_set_finalizer_f(conn, finalize_xpc);
   xpc_connection_resume(conn);
   xpc_object_t message = xpc_dictionary_create(nil, nil, 0);
 

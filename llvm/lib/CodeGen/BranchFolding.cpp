@@ -645,11 +645,8 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // we don't have to split a block.  At worst we will be introducing 1 new
   // branch instruction, which is likely to be smaller than the 2
   // instructions that would be deleted in the merge.
-  MachineFunction *MF = MBB1->getParent();
-  bool OptForSize =
-      MF->getFunction().hasOptSize() ||
-      (llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo) &&
-       llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo));
+  bool OptForSize = llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo) &&
+                    llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo);
   return EffectiveTailLen >= 2 && OptForSize &&
          (FullBlockTail1 || FullBlockTail2);
 }
@@ -894,19 +891,21 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
                                       unsigned MinCommonTailLength) {
   bool MadeChange = false;
 
-  LLVM_DEBUG(
-      dbgs() << "\nTryTailMergeBlocks: ";
-      for (unsigned i = 0, e = MergePotentials.size(); i != e; ++i) dbgs()
-      << printMBBReference(*MergePotentials[i].getBlock())
-      << (i == e - 1 ? "" : ", ");
-      dbgs() << "\n"; if (SuccBB) {
-        dbgs() << "  with successor " << printMBBReference(*SuccBB) << '\n';
-        if (PredBB)
-          dbgs() << "  which has fall-through from "
-                 << printMBBReference(*PredBB) << "\n";
-      } dbgs() << "Looking for common tails of at least "
-               << MinCommonTailLength << " instruction"
-               << (MinCommonTailLength == 1 ? "" : "s") << '\n';);
+  LLVM_DEBUG({
+    dbgs() << "\nTryTailMergeBlocks: ";
+    for (unsigned i = 0, e = MergePotentials.size(); i != e; ++i)
+      dbgs() << printMBBReference(*MergePotentials[i].getBlock())
+             << (i == e - 1 ? "" : ", ");
+    dbgs() << "\n";
+    if (SuccBB) {
+      dbgs() << "  with successor " << printMBBReference(*SuccBB) << '\n';
+      if (PredBB)
+        dbgs() << "  which has fall-through from " << printMBBReference(*PredBB)
+               << "\n";
+    }
+    dbgs() << "Looking for common tails of at least " << MinCommonTailLength
+           << " instruction" << (MinCommonTailLength == 1 ? "" : "s") << '\n';
+  });
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.

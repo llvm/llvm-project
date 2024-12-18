@@ -534,7 +534,8 @@ static Expr<Type<TypeCategory::Logical, KIND>> RewriteOutOfRange(
                   context.languageFeatures().ShouldWarn(
                       common::UsageWarning::OptionalMustBePresent)) {
                 if (auto source{args[2]->sourceLocation()}) {
-                  context.messages().Say(*source,
+                  context.messages().Say(
+                      common::UsageWarning::OptionalMustBePresent, *source,
                       "ROUND= argument to OUT_OF_RANGE() is an optional dummy argument that must be present at execution"_warn_en_US);
                 }
               }
@@ -889,8 +890,16 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
         IeeeFeature::Subnormal)};
   } else if (name == "__builtin_ieee_support_underflow_control") {
-    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
-        IeeeFeature::UnderflowControl)};
+    // Setting kind=0 checks subnormal flushing control across all type kinds.
+    if (args[0]) {
+      return Expr<T>{
+          context.targetCharacteristics().hasSubnormalFlushingControl(
+              args[0]->GetType().value().kind())};
+    } else {
+      return Expr<T>{
+          context.targetCharacteristics().hasSubnormalFlushingControl(
+              /*any=*/false)};
+    }
   }
   return Expr<T>{std::move(funcRef)};
 }

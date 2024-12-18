@@ -17,8 +17,8 @@
 // CHECK:      "modules": [
 // CHECK-NEXT:   {
 // CHECK:          "file-deps": [
-// CHECK-NEXT:       "{{.*}}A.h",
-// CHECK-NEXT:       "{{.*}}module.modulemap"
+// CHECK-NEXT:       "{{.*}}module.modulemap",
+// CHECK-NEXT:       "{{.*}}A.h"
 // CHECK-NEXT:     ],
 // CHECK-NEXT:     "link-libraries": [],
 // CHECK-NEXT:     "name": "A"

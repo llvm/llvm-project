@@ -34,6 +34,7 @@ add_clang_unittest(ASTTests
   NamedDeclPrinterTest.cpp
   ProfilingTest.cpp
   RandstructTest.cpp
+  RawCommentForDeclTest.cpp
   RecursiveASTVisitorTest.cpp
   SizelessTypesTest.cpp
   SourceLocationTest.cpp

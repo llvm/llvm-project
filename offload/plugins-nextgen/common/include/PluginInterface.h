@@ -124,6 +124,7 @@ enum InfoLevelKind { InfoLevel1 = 1, InfoLevel2, InfoLevel3 };
 /// we use the level to determine the indentation of the key-value property at
 /// printing time. See the enum InfoLevelKind for the list of accepted levels.
 class InfoQueueTy {
+public:
   struct InfoQueueEntryTy {
     std::string Key;
     std::string Value;
@@ -131,6 +132,7 @@ class InfoQueueTy {
     uint64_t Level;
   };
 
+private:
   std::deque<InfoQueueEntryTy> Queue;
 
 public:
@@ -152,6 +154,8 @@ public:
     else
       Queue.push_back({Key, Value, Units, L});
   }
+
+  const std::deque<InfoQueueEntryTy> &getQueue() const { return Queue; }
 
   /// Print all info entries added to the queue.
   void print() const {
@@ -232,7 +236,7 @@ public:
 
   /// Get the image size.
   size_t getSize() const {
-    return getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
+    return utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
   }
 
   /// Get a memory buffer reference to the whole image.
@@ -265,8 +269,9 @@ struct GenericKernelTy {
   Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
-  virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                           uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+  virtual Error launchImpl(GenericDeviceTy &GenericDevice,
+                           uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                           KernelArgsTy &KernelArgs,
                            KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
@@ -316,15 +321,15 @@ protected:
 
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
-                        KernelArgsTy &KernelArgs, uint32_t NumThreads,
-                        uint64_t NumBlocks) const;
+                        KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
+                        uint32_t NumBlocks[3]) const;
 
   /// Prints plugin-specific kernel launch information after generic kernel
   /// launch information
   virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
-                                       uint32_t NumThreads,
-                                       uint64_t NumBlocks) const;
+                                       uint32_t NumThreads[3],
+                                       uint32_t NumBlocks[3]) const;
 
 private:
   /// Prepare the arguments before launching the kernel.
@@ -343,7 +348,7 @@ private:
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-  uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
+  uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
 
@@ -539,7 +544,7 @@ class PinnedAllocationMapTy {
     --It;
 
     // The buffer is not contained in the pinned allocation.
-    if (advanceVoidPtr(It->HstPtr, It->Size) > HstPtr)
+    if (utils::advancePtr(It->HstPtr, It->Size) > HstPtr)
       return &(*It);
 
     // None found.
@@ -566,15 +571,15 @@ class PinnedAllocationMapTy {
 
   /// Indicate whether the first range A fully contains the second range B.
   static bool contains(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrB >= PtrA && EndB <= EndA);
   }
 
   /// Indicate whether the first range A intersects with the second range B.
   static bool intersects(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrA < EndB && PtrB < EndA);
   }
 
@@ -656,8 +661,8 @@ public:
     if (!Entry)
       return nullptr;
 
-    return advanceVoidPtr(Entry->DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry->HstPtr));
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   /// Check whether a buffer belongs to a registered host pinned allocation.
@@ -944,7 +949,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
     for (auto &It : *AllocationTraceMap) {
       if (It.first <= DevicePtr &&
-          advanceVoidPtr(It.first, It.second->Size) > DevicePtr)
+          utils::advancePtr(It.first, It.second->Size) > DevicePtr)
         return It.second;
     }
     return nullptr;
@@ -1579,9 +1584,6 @@ protected:
   /// The actual resource pool.
   std::deque<ResourceRef> ResourcePool;
 };
-
-/// A static check on whether or not we support RPC in libomptarget.
-bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

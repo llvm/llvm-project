@@ -84,7 +84,7 @@ subroutine pass_complex_to_real(cmplx)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpass_complex_to_real(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}Ecmplx
-! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.ref<!fir.complex<4>>) -> !fir.ref<f64>
+! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.ref<complex<f32>>) -> !fir.ref<f64>
 ! CHECK:  fir.call @_QPtakes_real(%[[VAL_2]]) {{.*}}: (!fir.ref<f64>) -> ()
 
 subroutine takes_char_proc(c)

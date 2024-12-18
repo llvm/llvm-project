@@ -1368,7 +1368,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA64-LABEL: atomicrmw_umax_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammax_db.wu $a2, $a1, $a0
+; LA64-NEXT:    ammax.wu $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i32 %b monotonic
@@ -1378,7 +1378,7 @@ define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 define i64 @atomicrmw_umax_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; LA64-LABEL: atomicrmw_umax_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammax_db.du $a2, $a1, $a0
+; LA64-NEXT:    ammax.du $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b monotonic
@@ -1445,7 +1445,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA64-LABEL: atomicrmw_umin_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammin_db.wu $a2, $a1, $a0
+; LA64-NEXT:    ammin.wu $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i32 %b monotonic
@@ -1455,7 +1455,7 @@ define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 define i64 @atomicrmw_umin_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; LA64-LABEL: atomicrmw_umin_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammin_db.du $a2, $a1, $a0
+; LA64-NEXT:    ammin.du $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b monotonic
@@ -1531,7 +1531,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA64-LABEL: atomicrmw_max_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammax_db.w $a2, $a1, $a0
+; LA64-NEXT:    ammax.w $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw max ptr %a, i32 %b monotonic
@@ -1541,7 +1541,7 @@ define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 define i64 @atomicrmw_max_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; LA64-LABEL: atomicrmw_max_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammax_db.d $a2, $a1, $a0
+; LA64-NEXT:    ammax.d $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b monotonic
@@ -1617,7 +1617,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA64-LABEL: atomicrmw_min_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammin_db.w $a2, $a1, $a0
+; LA64-NEXT:    ammin.w $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw min ptr %a, i32 %b monotonic
@@ -1627,7 +1627,7 @@ define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 define i64 @atomicrmw_min_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; LA64-LABEL: atomicrmw_min_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ammin_db.d $a2, $a1, $a0
+; LA64-NEXT:    ammin.d $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b monotonic

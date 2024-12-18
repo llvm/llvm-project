@@ -28,6 +28,7 @@ namespace ISD {
   private:
     unsigned IsZExt : 1;     ///< Zero extended
     unsigned IsSExt : 1;     ///< Sign extended
+    unsigned IsNoExt : 1;    ///< No extension
     unsigned IsInReg : 1;    ///< Passed in register
     unsigned IsSRet : 1;     ///< Hidden struct-ret ptr
     unsigned IsByVal : 1;    ///< Struct passed by value
@@ -60,8 +61,8 @@ namespace ISD {
 
   public:
     ArgFlagsTy()
-        : IsZExt(0), IsSExt(0), IsInReg(0), IsSRet(0), IsByVal(0), IsByRef(0),
-          IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
+        : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsSRet(0), IsByVal(0),
+          IsByRef(0), IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
           IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
           IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
@@ -75,6 +76,9 @@ namespace ISD {
 
     bool isSExt() const { return IsSExt; }
     void setSExt() { IsSExt = 1; }
+
+    bool isNoExt() const { return IsNoExt; }
+    void setNoExt() { IsNoExt = 1; }
 
     bool isInReg() const { return IsInReg; }
     void setInReg() { IsInReg = 1; }

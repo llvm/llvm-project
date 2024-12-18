@@ -15,7 +15,7 @@ define void @test0_yes(ptr %p) nounwind {
   ret void
 }
 
-; CHECK: define void @test0_no(ptr nocapture writeonly %p) #1 {
+; CHECK: define void @test0_no(ptr nocapture writeonly initializes((0, 4)) %p) #1 {
 define void @test0_no(ptr %p) nounwind {
   store i32 0, ptr %p, !tbaa !2
   ret void

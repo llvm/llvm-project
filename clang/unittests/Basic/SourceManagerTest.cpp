@@ -549,7 +549,7 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   // These are different than normal includes since predefines buffer doesn't
   // have a valid insertion location.
   PP.setPredefines("#include \"/implicit-header.h\"");
-  FileMgr.getVirtualFile("/implicit-header.h", 0, 0);
+  FileMgr.getVirtualFileRef("/implicit-header.h", 0, 0);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 

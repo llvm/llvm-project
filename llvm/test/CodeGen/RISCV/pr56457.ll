@@ -10,41 +10,41 @@ define i15 @foo(i15 %x) nounwind {
 ; CHECK-NEXT:    beqz a1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    srli a1, a1, 50
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    slli a1, a0, 49
-; CHECK-NEXT:    srli a1, a1, 51
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    slli a1, a0, 49
-; CHECK-NEXT:    srli a1, a1, 53
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    slli a1, a0, 49
-; CHECK-NEXT:    srli a1, a1, 57
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    addiw a2, a2, 1365
-; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    lui a3, 209715
+; CHECK-NEXT:    lui a4, 61681
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    addiw a1, a2, 1365
+; CHECK-NEXT:    addiw a2, a3, 819
+; CHECK-NEXT:    addiw a3, a4, -241
+; CHECK-NEXT:    slli a4, a2, 32
+; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    slli a4, a3, 32
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    slli a4, a0, 49
+; CHECK-NEXT:    srli a4, a4, 51
+; CHECK-NEXT:    or a0, a0, a4
+; CHECK-NEXT:    slli a4, a0, 49
+; CHECK-NEXT:    srli a4, a4, 53
+; CHECK-NEXT:    or a0, a0, a4
+; CHECK-NEXT:    slli a4, a0, 49
+; CHECK-NEXT:    srli a4, a4, 57
+; CHECK-NEXT:    or a0, a0, a4
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    srli a4, a0, 1
+; CHECK-NEXT:    and a1, a4, a1
 ; CHECK-NEXT:    slli a0, a0, 49
 ; CHECK-NEXT:    srli a0, a0, 49
 ; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    lui a1, 209715
-; CHECK-NEXT:    addiw a1, a1, 819
-; CHECK-NEXT:    slli a2, a1, 32
-; CHECK-NEXT:    add a1, a1, a2
-; CHECK-NEXT:    and a2, a0, a1
+; CHECK-NEXT:    and a1, a0, a2
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    srli a1, a0, 4
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    lui a1, 61681
-; CHECK-NEXT:    addiw a1, a1, -241
-; CHECK-NEXT:    slli a2, a1, 32
-; CHECK-NEXT:    add a1, a1, a2
-; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    lui a1, 4112
 ; CHECK-NEXT:    addiw a1, a1, 257
+; CHECK-NEXT:    and a0, a0, a3
 ; CHECK-NEXT:    slli a2, a1, 32
 ; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    mul a0, a0, a1

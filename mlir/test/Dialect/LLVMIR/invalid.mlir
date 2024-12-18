@@ -91,14 +91,14 @@ func.func @alloca_non_integer_alignment() {
 // -----
 
 func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (), i64
 }
 
 // -----
 
 func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (!llvm.ptr), i64
 }
 
@@ -218,7 +218,7 @@ func.func @store_unaligned_atomic(%val : f32, %ptr : !llvm.ptr) {
 
 func.func @invalid_call() {
   // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
-  "llvm.call"() : () -> ()
+  "llvm.call"() {op_bundle_sizes = array<i32>} : () -> ()
   llvm.return
 }
 
@@ -286,7 +286,7 @@ func.func @call_non_llvm() {
 
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
-  "llvm.call"(%arg0) : (tensor<*xi32>) -> ()
+  "llvm.call"(%arg0) {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (tensor<*xi32>) -> ()
   llvm.return
 }
 
@@ -638,6 +638,21 @@ func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
 func.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{expected LLVM IR floating point type}}
   %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.ptr, i32
+  llvm.return
+}
+
+// -----
+
+func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32>) {
+  // expected-error@+1 {{'val' must be floating point LLVM type or LLVM pointer type or signless integer or LLVM dialect-compatible fixed-length vector type}}
+  %0 = llvm.atomicrmw fadd %ptr, %f32_vec unordered : !llvm.ptr, vector<[2]xf32>
+  llvm.return
+}
+// -----
+
+func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
+  // expected-error@+1 {{expected LLVM IR floating point type for vector element}}
+  %0 = llvm.atomicrmw fadd %ptr, %i32_vec unordered : !llvm.ptr, vector<3xi32>
   llvm.return
 }
 
@@ -1588,7 +1603,7 @@ llvm.func @variadic(...)
 
 llvm.func @invalid_variadic_call(%arg: i32)  {
   // expected-error@+1 {{missing var_callee_type attribute for vararg call}}
-  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  "llvm.call"(%arg) <{callee = @variadic}> {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (i32) -> ()
   llvm.return
 }
 
@@ -1598,7 +1613,7 @@ llvm.func @variadic(...)
 
 llvm.func @invalid_variadic_call(%arg: i32)  {
   // expected-error@+1 {{missing var_callee_type attribute for vararg call}}
-  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  "llvm.call"(%arg) <{callee = @variadic}> {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (i32) -> ()
   llvm.return
 }
 
@@ -1653,5 +1668,30 @@ llvm.func @alwaysinline_noinline() attributes { always_inline, no_inline } {
 
 // expected-error @below {{'llvm.func' op with optimize_none must also be no_inline}}
 llvm.func @optnone_requires_noinline() attributes { optimize_none } {
+  llvm.return
+}
+
+// -----
+
+llvm.func @foo()
+llvm.func @wrong_number_of_bundle_types() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // expected-error@+1 {{expected 1 types for operand bundle operands for operand bundle #0, but actually got 2}}
+  llvm.call @foo() ["tag"(%0 : i32, i32)] : () -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @foo()
+llvm.func @wrong_number_of_bundle_tags() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // expected-error@+1 {{expected 2 operand bundle tags, but actually got 1}}
+  "llvm.call"(%0, %1) <{ op_bundle_tags = ["tag"] }> {
+    callee = @foo,
+    operandSegmentSizes = array<i32: 0, 2>,
+    op_bundle_sizes = array<i32: 1, 1>
+  } : (i32, i32) -> ()
   llvm.return
 }

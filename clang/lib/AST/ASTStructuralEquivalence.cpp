@@ -86,7 +86,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -645,6 +644,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
      // It is sufficient to check value of getAsTemplateDecl.
      break;
 
+   case TemplateName::DeducedTemplate:
+     // FIXME: We can't reach here.
+     llvm_unreachable("unimplemented");
   }
 
   return true;
@@ -797,16 +799,6 @@ static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
   }
 
   return true;
-}
-
-// Determine structural equivalence of two instances of
-// HLSLAttributedResourceType::Attributes
-static bool
-IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                         const HLSLAttributedResourceType::Attributes &Attrs1,
-                         const HLSLAttributedResourceType::Attributes &Attrs2) {
-  return std::tie(Attrs1.ResourceClass, Attrs1.IsROV) ==
-         std::tie(Attrs2.ResourceClass, Attrs2.IsROV);
 }
 
 /// Determine structural equivalence of two types.
@@ -1112,9 +1104,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
             cast<HLSLAttributedResourceType>(T2)->getContainedType()))
       return false;
-    if (!IsStructurallyEquivalent(
-            Context, cast<HLSLAttributedResourceType>(T1)->getAttrs(),
-            cast<HLSLAttributedResourceType>(T2)->getAttrs()))
+    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
+        cast<HLSLAttributedResourceType>(T2)->getAttrs())
       return false;
     break;
 
@@ -2311,7 +2302,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Check whether we already know that these two declarations are not
   // structurally equivalent.
-  if (Context.NonEquivalentDecls.count(P))
+  if (Context.NonEquivalentDecls.count(
+          std::make_tuple(D1, D2, Context.IgnoreTemplateParmDepth)))
     return false;
 
   // Check if a check for these declarations is already pending.
@@ -2519,7 +2511,8 @@ bool StructuralEquivalenceContext::Finish() {
     if (!Equivalent) {
       // Note that these two declarations are not equivalent (and we already
       // know about it).
-      NonEquivalentDecls.insert(P);
+      NonEquivalentDecls.insert(
+          std::make_tuple(D1, D2, IgnoreTemplateParmDepth));
 
       return true;
     }

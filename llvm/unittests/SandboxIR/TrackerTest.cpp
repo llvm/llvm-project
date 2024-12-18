@@ -11,7 +11,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -526,9 +527,9 @@ define void @foo(ptr %ptr) {
 
   Ctx.save();
   // Check create(InsertBefore) with tracking enabled.
-  sandboxir::LoadInst *NewLd =
-      sandboxir::LoadInst::create(Ld->getType(), Ptr, Align(8),
-                                  /*InsertBefore=*/Ld, Ctx, "NewLd");
+  sandboxir::LoadInst *NewLd = sandboxir::LoadInst::create(
+      Ld->getType(), Ptr, Align(8),
+      /*InsertBefore=*/Ld->getIterator(), Ctx, "NewLd");
   It = BB->begin();
   EXPECT_EQ(&*It++, NewLd);
   EXPECT_EQ(&*It++, Ld);
@@ -962,6 +963,114 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getNumCases(), 2u);
   EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
+}
+
+TEST_F(TrackerTest, SwitchInstPreservesSuccesorOrder) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0) {
+  entry:
+    switch i32 %cond0, label %default [ i32 0, label %bb0
+                                        i32 1, label %bb1
+                                        i32 2, label %bb2 ]
+  bb0:
+    ret void
+  bb1:
+    ret void
+  bb2:
+    ret void
+  default:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMEntry = getBasicBlockByName(LLVMF, "entry");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Entry = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMEntry));
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto *Switch = cast<sandboxir::SwitchInst>(&*Entry->begin());
+
+  auto *DefaultDest = Switch->getDefaultDest();
+  auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  auto *One = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 1);
+  auto *Two = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 2);
+
+  // Check that we can properly revert a removeCase multiple positions apart
+  // from the end of the operand list.
+  Ctx.save();
+  Switch->removeCase(Switch->findCaseValue(Zero));
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 3u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  EXPECT_EQ(Switch->findCaseDest(BB2), Two);
+  EXPECT_EQ(Switch->getSuccessor(0), DefaultDest);
+  EXPECT_EQ(Switch->getSuccessor(1), BB0);
+  EXPECT_EQ(Switch->getSuccessor(2), BB1);
+  EXPECT_EQ(Switch->getSuccessor(3), BB2);
+
+  // Check that we can properly revert a removeCase of the last case.
+  Ctx.save();
+  Switch->removeCase(Switch->findCaseValue(Two));
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 3u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  EXPECT_EQ(Switch->findCaseDest(BB2), Two);
+  EXPECT_EQ(Switch->getSuccessor(0), DefaultDest);
+  EXPECT_EQ(Switch->getSuccessor(1), BB0);
+  EXPECT_EQ(Switch->getSuccessor(2), BB1);
+  EXPECT_EQ(Switch->getSuccessor(3), BB2);
+
+  // Check order is preserved after reverting multiple removeCase invocations.
+  Ctx.save();
+  Switch->removeCase(Switch->findCaseValue(One));
+  Switch->removeCase(Switch->findCaseValue(Zero));
+  Switch->removeCase(Switch->findCaseValue(Two));
+  EXPECT_EQ(Switch->getNumCases(), 0u);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 3u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  EXPECT_EQ(Switch->findCaseDest(BB2), Two);
+  EXPECT_EQ(Switch->getSuccessor(0), DefaultDest);
+  EXPECT_EQ(Switch->getSuccessor(1), BB0);
+  EXPECT_EQ(Switch->getSuccessor(2), BB1);
+  EXPECT_EQ(Switch->getSuccessor(3), BB2);
+}
+
+TEST_F(TrackerTest, SelectInst) {
+  parseIR(C, R"IR(
+define void @foo(i1 %c0, i8 %v0, i8 %v1) {
+  %sel = select i1 %c0, i8 %v0, i8 %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *V0 = F->getArg(1);
+  auto *V1 = F->getArg(2);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Select = cast<sandboxir::SelectInst>(&*It++);
+
+  // Check tracking for swapValues.
+  Ctx.save();
+  Select->swapValues();
+  EXPECT_EQ(Select->getTrueValue(), V1);
+  EXPECT_EQ(Select->getFalseValue(), V0);
+  Ctx.revert();
+  EXPECT_EQ(Select->getTrueValue(), V0);
+  EXPECT_EQ(Select->getFalseValue(), V1);
 }
 
 TEST_F(TrackerTest, ShuffleVectorInst) {
@@ -1495,6 +1604,154 @@ define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
   checkCmpInst(Ctx, ICmp);
 }
 
+TEST_F(TrackerTest, GlobalValueSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void @foo()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto *Call = cast<sandboxir::CallInst>(&*BB->begin());
+
+  auto *GV = cast<sandboxir::GlobalValue>(Call->getCalledOperand());
+  // Check setUnnamedAddr().
+  auto OrigUnnamedAddr = GV->getUnnamedAddr();
+  auto NewUnnamedAddr = sandboxir::GlobalValue::UnnamedAddr::Global;
+  EXPECT_NE(NewUnnamedAddr, OrigUnnamedAddr);
+  Ctx.save();
+  GV->setUnnamedAddr(NewUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), NewUnnamedAddr);
+  Ctx.revert();
+  EXPECT_EQ(GV->getUnnamedAddr(), OrigUnnamedAddr);
+
+  // Check setVisibility().
+  auto OrigVisibility = GV->getVisibility();
+  auto NewVisibility =
+      sandboxir::GlobalValue::VisibilityTypes::ProtectedVisibility;
+  EXPECT_NE(NewVisibility, OrigVisibility);
+  Ctx.save();
+  GV->setVisibility(NewVisibility);
+  EXPECT_EQ(GV->getVisibility(), NewVisibility);
+  Ctx.revert();
+  EXPECT_EQ(GV->getVisibility(), OrigVisibility);
+}
+
+TEST_F(TrackerTest, GlobalIFuncSetters) {
+  parseIR(C, R"IR(
+declare external void @bar()
+@ifunc = ifunc void(), ptr @foo
+define void @foo() {
+  call void @ifunc()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *IFunc = cast<sandboxir::GlobalIFunc>(Call0->getCalledOperand());
+  auto *Bar = cast<sandboxir::Function>(Call1->getCalledOperand());
+  // Check setResolver().
+  auto *OrigResolver = IFunc->getResolver();
+  auto *NewResolver = Bar;
+  EXPECT_NE(NewResolver, OrigResolver);
+  Ctx.save();
+  IFunc->setResolver(NewResolver);
+  EXPECT_EQ(IFunc->getResolver(), NewResolver);
+  Ctx.revert();
+  EXPECT_EQ(IFunc->getResolver(), OrigResolver);
+}
+
+TEST_F(TrackerTest, GlobalVariableSetters) {
+  parseIR(C, R"IR(
+@glob0 = global i32 42
+@glob1 = global i32 43
+define void @foo() {
+  %ld0 = load i32, ptr @glob0
+  %ld1 = load i32, ptr @glob1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  // Check classof(), creation.
+  auto *GV0 = cast<sandboxir::GlobalVariable>(Ld0->getPointerOperand());
+  auto *GV1 = cast<sandboxir::GlobalVariable>(Ld1->getPointerOperand());
+  // Check setInitializer().
+  auto *OrigInitializer = GV0->getInitializer();
+  auto *NewInitializer = GV1->getInitializer();
+  EXPECT_NE(NewInitializer, OrigInitializer);
+  Ctx.save();
+  GV0->setInitializer(NewInitializer);
+  EXPECT_EQ(GV0->getInitializer(), NewInitializer);
+  Ctx.revert();
+  EXPECT_EQ(GV0->getInitializer(), OrigInitializer);
+  // Check setConstant().
+  bool OrigIsConstant = GV0->isConstant();
+  bool NewIsConstant = !OrigIsConstant;
+  Ctx.save();
+  GV0->setConstant(NewIsConstant);
+  EXPECT_EQ(GV0->isConstant(), NewIsConstant);
+  Ctx.revert();
+  EXPECT_EQ(GV0->isConstant(), OrigIsConstant);
+  // Check setExternallyInitialized().
+  bool OrigIsExtInit = GV0->isExternallyInitialized();
+  bool NewIsExtInit = !OrigIsExtInit;
+  Ctx.save();
+  GV0->setExternallyInitialized(NewIsExtInit);
+  EXPECT_EQ(GV0->isExternallyInitialized(), NewIsExtInit);
+  Ctx.revert();
+  EXPECT_EQ(GV0->isExternallyInitialized(), OrigIsExtInit);
+}
+
+TEST_F(TrackerTest, GlobalAliasSetters) {
+  parseIR(C, R"IR(
+@alias = dso_local alias void(), ptr @foo
+declare void @bar();
+define void @foo() {
+  call void @alias()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  auto *Callee1 = cast<sandboxir::Constant>(Call1->getCalledOperand());
+  auto *Alias = cast<sandboxir::GlobalAlias>(Call0->getCalledOperand());
+  // Check setAliasee().
+  auto *OrigAliasee = Alias->getAliasee();
+  auto *NewAliasee = Callee1;
+  EXPECT_NE(NewAliasee, OrigAliasee);
+  Ctx.save();
+  Alias->setAliasee(NewAliasee);
+  EXPECT_EQ(Alias->getAliasee(), NewAliasee);
+  Ctx.revert();
+  EXPECT_EQ(Alias->getAliasee(), OrigAliasee);
+}
+
 TEST_F(TrackerTest, SetVolatile) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, i8 %val) {
@@ -1587,3 +1844,71 @@ define void @foo(i32 %arg, float %farg) {
   Ctx.revert();
   EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
 }
+
+// IRSnapshotChecker is only defined in debug mode.
+#ifndef NDEBUG
+
+TEST_F(TrackerTest, IRSnapshotCheckerNoChanges) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  ret i32 %add0
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  [[maybe_unused]] auto *F = Ctx.createFunction(&LLVMF);
+  sandboxir::IRSnapshotChecker Checker(Ctx);
+  Checker.save();
+  Checker.expectNoDiff();
+}
+
+TEST_F(TrackerTest, IRSnapshotCheckerDiesWithUnexpectedChanges) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  %add1 = add i32 %add0, %arg
+  ret i32 %add1
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::IRSnapshotChecker Checker(Ctx);
+  Checker.save();
+  Add1->setOperand(1, Add0);
+  EXPECT_DEATH(Checker.expectNoDiff(), "Found IR difference");
+}
+
+TEST_F(TrackerTest, IRSnapshotCheckerSaveMultipleTimes) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  %add1 = add i32 %add0, %arg
+  ret i32 %add1
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Add1 = &*It++;
+  sandboxir::IRSnapshotChecker Checker(Ctx);
+  Checker.save();
+  Add1->setOperand(1, Add0);
+  // Now IR differs from the last snapshot. Let's take a new snapshot.
+  Checker.save();
+  // The new snapshot should have replaced the old one, so this should succeed.
+  Checker.expectNoDiff();
+}
+
+#endif // NDEBUG

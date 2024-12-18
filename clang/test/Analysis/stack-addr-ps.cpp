@@ -1,9 +1,22 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s -Wno-undefined-bool-conversion
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=core,debug.ExprInspection \
+// RUN:   -verify %s \
+// RUN:   -Wno-undefined-bool-conversion
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=core,debug.ExprInspection,unix.Malloc \
+// RUN:   -verify %s \
+// RUN:   -Wno-undefined-bool-conversion
+// unix.Malloc is necessary to model __builtin_alloca,
+// which could trigger an "unexpected region" bug in StackAddrEscapeChecker.
 
 typedef __INTPTR_TYPE__ intptr_t;
 
 template <typename T>
 void clang_analyzer_dump(T x);
+
+using size_t = decltype(sizeof(int));
+void * malloc(size_t size);
+void free(void*);
 
 const int& g() {
   int s;
@@ -846,3 +859,21 @@ void top(char **p) {
   foo(); // no-warning FIXME: p binding is reclaimed before the function end
 }
 } // namespace early_reclaim_dead_limitation
+
+namespace alloca_region_pointer {
+void callee(char **pptr) {
+  char local;
+  *pptr = &local;
+} // no crash
+
+void top_alloca_no_crash_fn() {
+  char **pptr = (char**)__builtin_alloca(sizeof(char*));
+  callee(pptr);
+}
+
+void top_malloc_no_crash_fn() {
+  char **pptr = (char**)malloc(sizeof(char*));
+  callee(pptr);
+  free(pptr);
+}
+} // namespace alloca_region_pointer

@@ -10,11 +10,11 @@ add_llvm_component_library(LLVMInstrumentation
   MemorySanitizer.cpp
   NumericalStabilitySanitizer.cpp
   IndirectCallPromotion.cpp
-  Instrumentation.cpp
   InstrOrderFile.cpp
   InstrProfiling.cpp
   KCFI.cpp
   LowerAllowCheckPass.cpp
+  PGOCtxProfFlattening.cpp
   PGOCtxProfLowering.cpp
   PGOForceFunctionAttrs.cpp
   PGOInstrumentation.cpp
@@ -24,6 +24,7 @@ add_llvm_component_library(LLVMInstrumentation
   SanitizerBinaryMetadata.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
+  TypeSanitizer.cpp
   HWAddressSanitizer.cpp
   RealtimeSanitizer.cpp
 

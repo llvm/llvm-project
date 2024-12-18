@@ -19,7 +19,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include <optional>
 
@@ -1134,7 +1133,6 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
       *CGM.getCoverageMapping(), CGM.getContext().getSourceManager(),
       CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCState.get());
   MappingGen.emitCounterMapping(D, OS);
-  OS.flush();
 
   if (CoverageMapping.empty())
     return;
@@ -1155,7 +1153,6 @@ CodeGenPGO::emitEmptyCounterMapping(const Decl *D, StringRef Name,
                                 CGM.getContext().getSourceManager(),
                                 CGM.getLangOpts());
   MappingGen.emitEmptyMapping(D, OS);
-  OS.flush();
 
   if (CoverageMapping.empty())
     return;
@@ -1208,14 +1205,12 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
   if (llvm::EnableSingleByteCoverage)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
-  else {
-    if (!StepV)
-      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
-                         ArrayRef(Args, 4));
-    else
-      Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
-  }
+  else if (!StepV)
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
+                       ArrayRef(Args, 4));
+  else
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
 }
 
 bool CodeGenPGO::canEmitMCDCCoverage(const CGBuilderTy &Builder) {

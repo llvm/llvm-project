@@ -309,9 +309,9 @@ void test_omp_all_memory()
 // CHECK1-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP30]], i32 0, i32 2
 // CHECK1-NEXT:    store i8 1, ptr [[TMP33]], align 8
 // CHECK1-NEXT:    [[TMP34:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK1-NEXT:    [[TMP35:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP35]]
+// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP35]]
 // CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr i32, ptr [[ARRAYIDX2]], i32 1
 // CHECK1-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[TMP36]] to i64
@@ -346,13 +346,13 @@ void test_omp_all_memory()
 // CHECK1-NEXT:    [[TMP58:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-NEXT:    [[TMP59:%.*]] = sext i8 [[TMP58]] to i64
 // CHECK1-NEXT:    [[TMP60:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP60]]
-// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
+// CHECK1-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP60]]
+// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
 // CHECK1-NEXT:    [[TMP61:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-NEXT:    [[TMP62:%.*]] = sext i8 [[TMP61]] to i64
 // CHECK1-NEXT:    [[TMP63:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP63]]
-// CHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
+// CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP63]]
+// CHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
 // CHECK1-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ARRAYIDX10]], i32 1
 // CHECK1-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[ARRAYIDX8]] to i64
 // CHECK1-NEXT:    [[TMP66:%.*]] = ptrtoint ptr [[TMP64]] to i64
@@ -384,13 +384,13 @@ void test_omp_all_memory()
 // CHECK1-NEXT:    [[TMP83:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-NEXT:    [[TMP84:%.*]] = sext i8 [[TMP83]] to i64
 // CHECK1-NEXT:    [[TMP85:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP85]]
-// CHECK1-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
+// CHECK1-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP85]]
+// CHECK1-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
 // CHECK1-NEXT:    [[TMP86:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-NEXT:    [[TMP87:%.*]] = sext i8 [[TMP86]] to i64
 // CHECK1-NEXT:    [[TMP88:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP88]]
-// CHECK1-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
+// CHECK1-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP88]]
+// CHECK1-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
 // CHECK1-NEXT:    [[TMP89:%.*]] = getelementptr i32, ptr [[ARRAYIDX18]], i32 1
 // CHECK1-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[ARRAYIDX16]] to i64
 // CHECK1-NEXT:    [[TMP91:%.*]] = ptrtoint ptr [[TMP89]] to i64
@@ -427,8 +427,8 @@ void test_omp_all_memory()
 // CHECK1-NEXT:    [[TMP111:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP108]], i32 0, i32 2
 // CHECK1-NEXT:    store i8 3, ptr [[TMP111]], align 8
 // CHECK1-NEXT:    [[TMP112:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP112]]
-// CHECK1-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 3
+// CHECK1-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP112]]
+// CHECK1-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 3
 // CHECK1-NEXT:    [[TMP113:%.*]] = load i32, ptr @a, align 4
 // CHECK1-NEXT:    [[TMP114:%.*]] = sext i32 [[TMP113]] to i64
 // CHECK1-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP114]], 1
@@ -436,8 +436,8 @@ void test_omp_all_memory()
 // CHECK1-NEXT:    [[TMP116:%.*]] = sext i32 [[TMP115]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP116]]
 // CHECK1-NEXT:    [[TMP117:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP2]]
-// CHECK1-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP117]]
-// CHECK1-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
+// CHECK1-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP117]]
+// CHECK1-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
 // CHECK1-NEXT:    [[TMP118:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK1-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK1-NEXT:    [[TMP120:%.*]] = ptrtoint ptr [[TMP118]] to i64
@@ -1432,9 +1432,9 @@ void test_omp_all_memory()
 // CHECK1-51-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP30]], i32 0, i32 2
 // CHECK1-51-NEXT:    store i8 1, ptr [[TMP33]], align 8
 // CHECK1-51-NEXT:    [[TMP34:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK1-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK1-51-NEXT:    [[TMP35:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP35]]
+// CHECK1-51-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP35]]
 // CHECK1-51-NEXT:    [[TMP36:%.*]] = getelementptr i32, ptr [[ARRAYIDX2]], i32 1
 // CHECK1-51-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK1-51-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[TMP36]] to i64
@@ -1469,13 +1469,13 @@ void test_omp_all_memory()
 // CHECK1-51-NEXT:    [[TMP58:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-51-NEXT:    [[TMP59:%.*]] = sext i8 [[TMP58]] to i64
 // CHECK1-51-NEXT:    [[TMP60:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP60]]
-// CHECK1-51-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
+// CHECK1-51-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP60]]
+// CHECK1-51-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
 // CHECK1-51-NEXT:    [[TMP61:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-51-NEXT:    [[TMP62:%.*]] = sext i8 [[TMP61]] to i64
 // CHECK1-51-NEXT:    [[TMP63:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP63]]
-// CHECK1-51-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
+// CHECK1-51-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP63]]
+// CHECK1-51-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
 // CHECK1-51-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ARRAYIDX10]], i32 1
 // CHECK1-51-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[ARRAYIDX8]] to i64
 // CHECK1-51-NEXT:    [[TMP66:%.*]] = ptrtoint ptr [[TMP64]] to i64
@@ -1507,13 +1507,13 @@ void test_omp_all_memory()
 // CHECK1-51-NEXT:    [[TMP83:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-51-NEXT:    [[TMP84:%.*]] = sext i8 [[TMP83]] to i64
 // CHECK1-51-NEXT:    [[TMP85:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP85]]
-// CHECK1-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
+// CHECK1-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP85]]
+// CHECK1-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
 // CHECK1-51-NEXT:    [[TMP86:%.*]] = load i8, ptr [[B]], align 1
 // CHECK1-51-NEXT:    [[TMP87:%.*]] = sext i8 [[TMP86]] to i64
 // CHECK1-51-NEXT:    [[TMP88:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP88]]
-// CHECK1-51-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
+// CHECK1-51-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP88]]
+// CHECK1-51-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
 // CHECK1-51-NEXT:    [[TMP89:%.*]] = getelementptr i32, ptr [[ARRAYIDX18]], i32 1
 // CHECK1-51-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[ARRAYIDX16]] to i64
 // CHECK1-51-NEXT:    [[TMP91:%.*]] = ptrtoint ptr [[TMP89]] to i64
@@ -1550,8 +1550,8 @@ void test_omp_all_memory()
 // CHECK1-51-NEXT:    [[TMP111:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP108]], i32 0, i32 2
 // CHECK1-51-NEXT:    store i8 3, ptr [[TMP111]], align 8
 // CHECK1-51-NEXT:    [[TMP112:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP112]]
-// CHECK1-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 3
+// CHECK1-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP112]]
+// CHECK1-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 3
 // CHECK1-51-NEXT:    [[TMP113:%.*]] = load i32, ptr @a, align 4
 // CHECK1-51-NEXT:    [[TMP114:%.*]] = sext i32 [[TMP113]] to i64
 // CHECK1-51-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP114]], 1
@@ -1559,8 +1559,8 @@ void test_omp_all_memory()
 // CHECK1-51-NEXT:    [[TMP116:%.*]] = sext i32 [[TMP115]] to i64
 // CHECK1-51-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP116]]
 // CHECK1-51-NEXT:    [[TMP117:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP117]]
-// CHECK1-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
+// CHECK1-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP117]]
+// CHECK1-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
 // CHECK1-51-NEXT:    [[TMP118:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK1-51-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK1-51-NEXT:    [[TMP120:%.*]] = ptrtoint ptr [[TMP118]] to i64
@@ -1595,8 +1595,8 @@ void test_omp_all_memory()
 // CHECK1-51-NEXT:    [[TMP139:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP136]], i32 0, i32 2
 // CHECK1-51-NEXT:    store i8 8, ptr [[TMP139]], align 8
 // CHECK1-51-NEXT:    [[TMP140:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP140]]
-// CHECK1-51-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX31]], i64 3
+// CHECK1-51-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP140]]
+// CHECK1-51-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX31]], i64 3
 // CHECK1-51-NEXT:    [[TMP141:%.*]] = load i32, ptr @a, align 4
 // CHECK1-51-NEXT:    [[TMP142:%.*]] = sext i32 [[TMP141]] to i64
 // CHECK1-51-NEXT:    [[LEN_SUB_133:%.*]] = sub nsw i64 [[TMP142]], 1
@@ -1604,8 +1604,8 @@ void test_omp_all_memory()
 // CHECK1-51-NEXT:    [[TMP144:%.*]] = sext i32 [[TMP143]] to i64
 // CHECK1-51-NEXT:    [[LB_ADD_LEN34:%.*]] = add nsw i64 -1, [[TMP144]]
 // CHECK1-51-NEXT:    [[TMP145:%.*]] = mul nsw i64 [[LB_ADD_LEN34]], [[TMP2]]
-// CHECK1-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP145]]
-// CHECK1-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_133]]
+// CHECK1-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP145]]
+// CHECK1-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_133]]
 // CHECK1-51-NEXT:    [[TMP146:%.*]] = getelementptr i32, ptr [[ARRAYIDX36]], i32 1
 // CHECK1-51-NEXT:    [[TMP147:%.*]] = ptrtoint ptr [[ARRAYIDX32]] to i64
 // CHECK1-51-NEXT:    [[TMP148:%.*]] = ptrtoint ptr [[TMP146]] to i64
@@ -3040,9 +3040,9 @@ void test_omp_all_memory()
 // CHECK2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP30]], i32 0, i32 2
 // CHECK2-NEXT:    store i8 1, ptr [[TMP33]], align 8
 // CHECK2-NEXT:    [[TMP34:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK2-NEXT:    [[TMP35:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP35]]
+// CHECK2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP35]]
 // CHECK2-NEXT:    [[TMP36:%.*]] = getelementptr i32, ptr [[ARRAYIDX2]], i32 1
 // CHECK2-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK2-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[TMP36]] to i64
@@ -3077,13 +3077,13 @@ void test_omp_all_memory()
 // CHECK2-NEXT:    [[TMP58:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-NEXT:    [[TMP59:%.*]] = sext i8 [[TMP58]] to i64
 // CHECK2-NEXT:    [[TMP60:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP60]]
-// CHECK2-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
+// CHECK2-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP60]]
+// CHECK2-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
 // CHECK2-NEXT:    [[TMP61:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-NEXT:    [[TMP62:%.*]] = sext i8 [[TMP61]] to i64
 // CHECK2-NEXT:    [[TMP63:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP63]]
-// CHECK2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
+// CHECK2-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP63]]
+// CHECK2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
 // CHECK2-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ARRAYIDX10]], i32 1
 // CHECK2-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[ARRAYIDX8]] to i64
 // CHECK2-NEXT:    [[TMP66:%.*]] = ptrtoint ptr [[TMP64]] to i64
@@ -3115,13 +3115,13 @@ void test_omp_all_memory()
 // CHECK2-NEXT:    [[TMP83:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-NEXT:    [[TMP84:%.*]] = sext i8 [[TMP83]] to i64
 // CHECK2-NEXT:    [[TMP85:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP85]]
-// CHECK2-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
+// CHECK2-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP85]]
+// CHECK2-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
 // CHECK2-NEXT:    [[TMP86:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-NEXT:    [[TMP87:%.*]] = sext i8 [[TMP86]] to i64
 // CHECK2-NEXT:    [[TMP88:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP88]]
-// CHECK2-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
+// CHECK2-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP88]]
+// CHECK2-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
 // CHECK2-NEXT:    [[TMP89:%.*]] = getelementptr i32, ptr [[ARRAYIDX18]], i32 1
 // CHECK2-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[ARRAYIDX16]] to i64
 // CHECK2-NEXT:    [[TMP91:%.*]] = ptrtoint ptr [[TMP89]] to i64
@@ -3158,8 +3158,8 @@ void test_omp_all_memory()
 // CHECK2-NEXT:    [[TMP111:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP108]], i32 0, i32 2
 // CHECK2-NEXT:    store i8 3, ptr [[TMP111]], align 8
 // CHECK2-NEXT:    [[TMP112:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP112]]
-// CHECK2-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 3
+// CHECK2-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP112]]
+// CHECK2-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 3
 // CHECK2-NEXT:    [[TMP113:%.*]] = load i32, ptr @a, align 4
 // CHECK2-NEXT:    [[TMP114:%.*]] = sext i32 [[TMP113]] to i64
 // CHECK2-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP114]], 1
@@ -3167,8 +3167,8 @@ void test_omp_all_memory()
 // CHECK2-NEXT:    [[TMP116:%.*]] = sext i32 [[TMP115]] to i64
 // CHECK2-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP116]]
 // CHECK2-NEXT:    [[TMP117:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP2]]
-// CHECK2-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP117]]
-// CHECK2-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
+// CHECK2-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP117]]
+// CHECK2-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
 // CHECK2-NEXT:    [[TMP118:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK2-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK2-NEXT:    [[TMP120:%.*]] = ptrtoint ptr [[TMP118]] to i64
@@ -4163,9 +4163,9 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP30]], i32 0, i32 2
 // CHECK2-51-NEXT:    store i8 1, ptr [[TMP33]], align 8
 // CHECK2-51-NEXT:    [[TMP34:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK2-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK2-51-NEXT:    [[TMP35:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP35]]
+// CHECK2-51-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP35]]
 // CHECK2-51-NEXT:    [[TMP36:%.*]] = getelementptr i32, ptr [[ARRAYIDX2]], i32 1
 // CHECK2-51-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK2-51-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[TMP36]] to i64
@@ -4200,13 +4200,13 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[TMP58:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-51-NEXT:    [[TMP59:%.*]] = sext i8 [[TMP58]] to i64
 // CHECK2-51-NEXT:    [[TMP60:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP60]]
-// CHECK2-51-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
+// CHECK2-51-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP60]]
+// CHECK2-51-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX7]], i64 [[TMP59]]
 // CHECK2-51-NEXT:    [[TMP61:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-51-NEXT:    [[TMP62:%.*]] = sext i8 [[TMP61]] to i64
 // CHECK2-51-NEXT:    [[TMP63:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP63]]
-// CHECK2-51-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
+// CHECK2-51-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP63]]
+// CHECK2-51-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX9]], i64 [[TMP62]]
 // CHECK2-51-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ARRAYIDX10]], i32 1
 // CHECK2-51-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[ARRAYIDX8]] to i64
 // CHECK2-51-NEXT:    [[TMP66:%.*]] = ptrtoint ptr [[TMP64]] to i64
@@ -4238,13 +4238,13 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[TMP83:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-51-NEXT:    [[TMP84:%.*]] = sext i8 [[TMP83]] to i64
 // CHECK2-51-NEXT:    [[TMP85:%.*]] = mul nsw i64 4, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP85]]
-// CHECK2-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
+// CHECK2-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP85]]
+// CHECK2-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP84]]
 // CHECK2-51-NEXT:    [[TMP86:%.*]] = load i8, ptr [[B]], align 1
 // CHECK2-51-NEXT:    [[TMP87:%.*]] = sext i8 [[TMP86]] to i64
 // CHECK2-51-NEXT:    [[TMP88:%.*]] = mul nsw i64 9, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP88]]
-// CHECK2-51-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
+// CHECK2-51-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP88]]
+// CHECK2-51-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX17]], i64 [[TMP87]]
 // CHECK2-51-NEXT:    [[TMP89:%.*]] = getelementptr i32, ptr [[ARRAYIDX18]], i32 1
 // CHECK2-51-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[ARRAYIDX16]] to i64
 // CHECK2-51-NEXT:    [[TMP91:%.*]] = ptrtoint ptr [[TMP89]] to i64
@@ -4281,8 +4281,8 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[TMP111:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP108]], i32 0, i32 2
 // CHECK2-51-NEXT:    store i8 3, ptr [[TMP111]], align 8
 // CHECK2-51-NEXT:    [[TMP112:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP112]]
-// CHECK2-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 3
+// CHECK2-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP112]]
+// CHECK2-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 3
 // CHECK2-51-NEXT:    [[TMP113:%.*]] = load i32, ptr @a, align 4
 // CHECK2-51-NEXT:    [[TMP114:%.*]] = sext i32 [[TMP113]] to i64
 // CHECK2-51-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP114]], 1
@@ -4290,8 +4290,8 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[TMP116:%.*]] = sext i32 [[TMP115]] to i64
 // CHECK2-51-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP116]]
 // CHECK2-51-NEXT:    [[TMP117:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP117]]
-// CHECK2-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
+// CHECK2-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP117]]
+// CHECK2-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[LEN_SUB_1]]
 // CHECK2-51-NEXT:    [[TMP118:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK2-51-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK2-51-NEXT:    [[TMP120:%.*]] = ptrtoint ptr [[TMP118]] to i64
@@ -4326,8 +4326,8 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[TMP139:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP136]], i32 0, i32 2
 // CHECK2-51-NEXT:    store i8 8, ptr [[TMP139]], align 8
 // CHECK2-51-NEXT:    [[TMP140:%.*]] = mul nsw i64 0, [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP140]]
-// CHECK2-51-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX31]], i64 3
+// CHECK2-51-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP140]]
+// CHECK2-51-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX31]], i64 3
 // CHECK2-51-NEXT:    [[TMP141:%.*]] = load i32, ptr @a, align 4
 // CHECK2-51-NEXT:    [[TMP142:%.*]] = sext i32 [[TMP141]] to i64
 // CHECK2-51-NEXT:    [[LEN_SUB_133:%.*]] = sub nsw i64 [[TMP142]], 1
@@ -4335,8 +4335,8 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[TMP144:%.*]] = sext i32 [[TMP143]] to i64
 // CHECK2-51-NEXT:    [[LB_ADD_LEN34:%.*]] = add nsw i64 -1, [[TMP144]]
 // CHECK2-51-NEXT:    [[TMP145:%.*]] = mul nsw i64 [[LB_ADD_LEN34]], [[TMP2]]
-// CHECK2-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP145]]
-// CHECK2-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_133]]
+// CHECK2-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP145]]
+// CHECK2-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_133]]
 // CHECK2-51-NEXT:    [[TMP146:%.*]] = getelementptr i32, ptr [[ARRAYIDX36]], i32 1
 // CHECK2-51-NEXT:    [[TMP147:%.*]] = ptrtoint ptr [[ARRAYIDX32]] to i64
 // CHECK2-51-NEXT:    [[TMP148:%.*]] = ptrtoint ptr [[TMP146]] to i64
@@ -5773,9 +5773,9 @@ void test_omp_all_memory()
 // CHECK3-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP29]], i32 0, i32 2
 // CHECK3-NEXT:    store i8 1, ptr [[TMP32]], align 8
 // CHECK3-NEXT:    [[TMP33:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP33]]
+// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP33]]
 // CHECK3-NEXT:    [[TMP34:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK3-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK3-NEXT:    [[TMP35:%.*]] = getelementptr i32, ptr [[ARRAYIDX4]], i32 1
 // CHECK3-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK3-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP35]] to i64
@@ -5814,13 +5814,13 @@ void test_omp_all_memory()
 // CHECK3-NEXT:    [[TMP57:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-NEXT:    [[TMP58:%.*]] = sext i8 [[TMP57]] to i64
 // CHECK3-NEXT:    [[TMP59:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP59]]
-// CHECK3-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
+// CHECK3-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP59]]
+// CHECK3-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
 // CHECK3-NEXT:    [[TMP60:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-NEXT:    [[TMP61:%.*]] = sext i8 [[TMP60]] to i64
 // CHECK3-NEXT:    [[TMP62:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP62]]
-// CHECK3-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
+// CHECK3-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP62]]
+// CHECK3-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
 // CHECK3-NEXT:    [[TMP63:%.*]] = getelementptr i32, ptr [[ARRAYIDX16]], i32 1
 // CHECK3-NEXT:    [[TMP64:%.*]] = ptrtoint ptr [[ARRAYIDX14]] to i64
 // CHECK3-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[TMP63]] to i64
@@ -5854,13 +5854,13 @@ void test_omp_all_memory()
 // CHECK3-NEXT:    [[TMP82:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-NEXT:    [[TMP83:%.*]] = sext i8 [[TMP82]] to i64
 // CHECK3-NEXT:    [[TMP84:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP84]]
-// CHECK3-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
+// CHECK3-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP84]]
+// CHECK3-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
 // CHECK3-NEXT:    [[TMP85:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-NEXT:    [[TMP86:%.*]] = sext i8 [[TMP85]] to i64
 // CHECK3-NEXT:    [[TMP87:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP87]]
-// CHECK3-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
+// CHECK3-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP87]]
+// CHECK3-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
 // CHECK3-NEXT:    [[TMP88:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK3-NEXT:    [[TMP89:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK3-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[TMP88]] to i64
@@ -5899,8 +5899,8 @@ void test_omp_all_memory()
 // CHECK3-NEXT:    [[TMP110:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP107]], i32 0, i32 2
 // CHECK3-NEXT:    store i8 3, ptr [[TMP110]], align 8
 // CHECK3-NEXT:    [[TMP111:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP111]]
-// CHECK3-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX33]], i64 3
+// CHECK3-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP111]]
+// CHECK3-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX33]], i64 3
 // CHECK3-NEXT:    [[TMP112:%.*]] = load i32, ptr @a, align 4
 // CHECK3-NEXT:    [[TMP113:%.*]] = sext i32 [[TMP112]] to i64
 // CHECK3-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP113]], 1
@@ -5908,8 +5908,8 @@ void test_omp_all_memory()
 // CHECK3-NEXT:    [[TMP115:%.*]] = sext i32 [[TMP114]] to i64
 // CHECK3-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP115]]
 // CHECK3-NEXT:    [[TMP116:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP1]]
-// CHECK3-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP116]]
-// CHECK3-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
+// CHECK3-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP116]]
+// CHECK3-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
 // CHECK3-NEXT:    [[TMP117:%.*]] = getelementptr i32, ptr [[ARRAYIDX36]], i32 1
 // CHECK3-NEXT:    [[TMP118:%.*]] = ptrtoint ptr [[ARRAYIDX34]] to i64
 // CHECK3-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[TMP117]] to i64
@@ -6789,9 +6789,9 @@ void test_omp_all_memory()
 // CHECK4-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP29]], i32 0, i32 2
 // CHECK4-NEXT:    store i8 1, ptr [[TMP32]], align 8
 // CHECK4-NEXT:    [[TMP33:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP33]]
+// CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP33]]
 // CHECK4-NEXT:    [[TMP34:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK4-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK4-NEXT:    [[TMP35:%.*]] = getelementptr i32, ptr [[ARRAYIDX4]], i32 1
 // CHECK4-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK4-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP35]] to i64
@@ -6830,13 +6830,13 @@ void test_omp_all_memory()
 // CHECK4-NEXT:    [[TMP57:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-NEXT:    [[TMP58:%.*]] = sext i8 [[TMP57]] to i64
 // CHECK4-NEXT:    [[TMP59:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP59]]
-// CHECK4-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
+// CHECK4-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP59]]
+// CHECK4-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
 // CHECK4-NEXT:    [[TMP60:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-NEXT:    [[TMP61:%.*]] = sext i8 [[TMP60]] to i64
 // CHECK4-NEXT:    [[TMP62:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP62]]
-// CHECK4-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
+// CHECK4-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP62]]
+// CHECK4-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
 // CHECK4-NEXT:    [[TMP63:%.*]] = getelementptr i32, ptr [[ARRAYIDX16]], i32 1
 // CHECK4-NEXT:    [[TMP64:%.*]] = ptrtoint ptr [[ARRAYIDX14]] to i64
 // CHECK4-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[TMP63]] to i64
@@ -6870,13 +6870,13 @@ void test_omp_all_memory()
 // CHECK4-NEXT:    [[TMP82:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-NEXT:    [[TMP83:%.*]] = sext i8 [[TMP82]] to i64
 // CHECK4-NEXT:    [[TMP84:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP84]]
-// CHECK4-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
+// CHECK4-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP84]]
+// CHECK4-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
 // CHECK4-NEXT:    [[TMP85:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-NEXT:    [[TMP86:%.*]] = sext i8 [[TMP85]] to i64
 // CHECK4-NEXT:    [[TMP87:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP87]]
-// CHECK4-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
+// CHECK4-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP87]]
+// CHECK4-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
 // CHECK4-NEXT:    [[TMP88:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK4-NEXT:    [[TMP89:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK4-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[TMP88]] to i64
@@ -6915,8 +6915,8 @@ void test_omp_all_memory()
 // CHECK4-NEXT:    [[TMP110:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP107]], i32 0, i32 2
 // CHECK4-NEXT:    store i8 3, ptr [[TMP110]], align 8
 // CHECK4-NEXT:    [[TMP111:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP111]]
-// CHECK4-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX33]], i64 3
+// CHECK4-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP111]]
+// CHECK4-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX33]], i64 3
 // CHECK4-NEXT:    [[TMP112:%.*]] = load i32, ptr @a, align 4
 // CHECK4-NEXT:    [[TMP113:%.*]] = sext i32 [[TMP112]] to i64
 // CHECK4-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP113]], 1
@@ -6924,8 +6924,8 @@ void test_omp_all_memory()
 // CHECK4-NEXT:    [[TMP115:%.*]] = sext i32 [[TMP114]] to i64
 // CHECK4-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP115]]
 // CHECK4-NEXT:    [[TMP116:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP1]]
-// CHECK4-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP116]]
-// CHECK4-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
+// CHECK4-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP116]]
+// CHECK4-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
 // CHECK4-NEXT:    [[TMP117:%.*]] = getelementptr i32, ptr [[ARRAYIDX36]], i32 1
 // CHECK4-NEXT:    [[TMP118:%.*]] = ptrtoint ptr [[ARRAYIDX34]] to i64
 // CHECK4-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[TMP117]] to i64
@@ -7808,9 +7808,9 @@ void test_omp_all_memory()
 // CHECK3-51-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP29]], i32 0, i32 2
 // CHECK3-51-NEXT:    store i8 1, ptr [[TMP32]], align 8
 // CHECK3-51-NEXT:    [[TMP33:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP33]]
+// CHECK3-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP33]]
 // CHECK3-51-NEXT:    [[TMP34:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK3-51-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK3-51-NEXT:    [[TMP35:%.*]] = getelementptr i32, ptr [[ARRAYIDX4]], i32 1
 // CHECK3-51-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK3-51-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP35]] to i64
@@ -7849,13 +7849,13 @@ void test_omp_all_memory()
 // CHECK3-51-NEXT:    [[TMP57:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-51-NEXT:    [[TMP58:%.*]] = sext i8 [[TMP57]] to i64
 // CHECK3-51-NEXT:    [[TMP59:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP59]]
-// CHECK3-51-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
+// CHECK3-51-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP59]]
+// CHECK3-51-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
 // CHECK3-51-NEXT:    [[TMP60:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-51-NEXT:    [[TMP61:%.*]] = sext i8 [[TMP60]] to i64
 // CHECK3-51-NEXT:    [[TMP62:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP62]]
-// CHECK3-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
+// CHECK3-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP62]]
+// CHECK3-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
 // CHECK3-51-NEXT:    [[TMP63:%.*]] = getelementptr i32, ptr [[ARRAYIDX16]], i32 1
 // CHECK3-51-NEXT:    [[TMP64:%.*]] = ptrtoint ptr [[ARRAYIDX14]] to i64
 // CHECK3-51-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[TMP63]] to i64
@@ -7889,13 +7889,13 @@ void test_omp_all_memory()
 // CHECK3-51-NEXT:    [[TMP82:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-51-NEXT:    [[TMP83:%.*]] = sext i8 [[TMP82]] to i64
 // CHECK3-51-NEXT:    [[TMP84:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP84]]
-// CHECK3-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
+// CHECK3-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP84]]
+// CHECK3-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
 // CHECK3-51-NEXT:    [[TMP85:%.*]] = load i8, ptr [[B]], align 1
 // CHECK3-51-NEXT:    [[TMP86:%.*]] = sext i8 [[TMP85]] to i64
 // CHECK3-51-NEXT:    [[TMP87:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP87]]
-// CHECK3-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
+// CHECK3-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP87]]
+// CHECK3-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
 // CHECK3-51-NEXT:    [[TMP88:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK3-51-NEXT:    [[TMP89:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK3-51-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[TMP88]] to i64
@@ -7934,8 +7934,8 @@ void test_omp_all_memory()
 // CHECK3-51-NEXT:    [[TMP110:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP107]], i32 0, i32 2
 // CHECK3-51-NEXT:    store i8 3, ptr [[TMP110]], align 8
 // CHECK3-51-NEXT:    [[TMP111:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP111]]
-// CHECK3-51-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX33]], i64 3
+// CHECK3-51-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP111]]
+// CHECK3-51-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX33]], i64 3
 // CHECK3-51-NEXT:    [[TMP112:%.*]] = load i32, ptr @a, align 4
 // CHECK3-51-NEXT:    [[TMP113:%.*]] = sext i32 [[TMP112]] to i64
 // CHECK3-51-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP113]], 1
@@ -7943,8 +7943,8 @@ void test_omp_all_memory()
 // CHECK3-51-NEXT:    [[TMP115:%.*]] = sext i32 [[TMP114]] to i64
 // CHECK3-51-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP115]]
 // CHECK3-51-NEXT:    [[TMP116:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP116]]
-// CHECK3-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
+// CHECK3-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP116]]
+// CHECK3-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
 // CHECK3-51-NEXT:    [[TMP117:%.*]] = getelementptr i32, ptr [[ARRAYIDX36]], i32 1
 // CHECK3-51-NEXT:    [[TMP118:%.*]] = ptrtoint ptr [[ARRAYIDX34]] to i64
 // CHECK3-51-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[TMP117]] to i64
@@ -7981,8 +7981,8 @@ void test_omp_all_memory()
 // CHECK3-51-NEXT:    [[TMP138:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP135]], i32 0, i32 2
 // CHECK3-51-NEXT:    store i8 8, ptr [[TMP138]], align 8
 // CHECK3-51-NEXT:    [[TMP139:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX43:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP139]]
-// CHECK3-51-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX43]], i64 3
+// CHECK3-51-NEXT:    [[ARRAYIDX43:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP139]]
+// CHECK3-51-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX43]], i64 3
 // CHECK3-51-NEXT:    [[TMP140:%.*]] = load i32, ptr @a, align 4
 // CHECK3-51-NEXT:    [[TMP141:%.*]] = sext i32 [[TMP140]] to i64
 // CHECK3-51-NEXT:    [[LEN_SUB_145:%.*]] = sub nsw i64 [[TMP141]], 1
@@ -7990,8 +7990,8 @@ void test_omp_all_memory()
 // CHECK3-51-NEXT:    [[TMP143:%.*]] = sext i32 [[TMP142]] to i64
 // CHECK3-51-NEXT:    [[LB_ADD_LEN46:%.*]] = add nsw i64 -1, [[TMP143]]
 // CHECK3-51-NEXT:    [[TMP144:%.*]] = mul nsw i64 [[LB_ADD_LEN46]], [[TMP1]]
-// CHECK3-51-NEXT:    [[ARRAYIDX47:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP144]]
-// CHECK3-51-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX47]], i64 [[LEN_SUB_145]]
+// CHECK3-51-NEXT:    [[ARRAYIDX47:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP144]]
+// CHECK3-51-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX47]], i64 [[LEN_SUB_145]]
 // CHECK3-51-NEXT:    [[TMP145:%.*]] = getelementptr i32, ptr [[ARRAYIDX48]], i32 1
 // CHECK3-51-NEXT:    [[TMP146:%.*]] = ptrtoint ptr [[ARRAYIDX44]] to i64
 // CHECK3-51-NEXT:    [[TMP147:%.*]] = ptrtoint ptr [[TMP145]] to i64
@@ -9323,9 +9323,9 @@ void test_omp_all_memory()
 // CHECK4-51-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP29]], i32 0, i32 2
 // CHECK4-51-NEXT:    store i8 1, ptr [[TMP32]], align 8
 // CHECK4-51-NEXT:    [[TMP33:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP33]]
+// CHECK4-51-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP33]]
 // CHECK4-51-NEXT:    [[TMP34:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP34]]
+// CHECK4-51-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP34]]
 // CHECK4-51-NEXT:    [[TMP35:%.*]] = getelementptr i32, ptr [[ARRAYIDX4]], i32 1
 // CHECK4-51-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // CHECK4-51-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP35]] to i64
@@ -9364,13 +9364,13 @@ void test_omp_all_memory()
 // CHECK4-51-NEXT:    [[TMP57:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-51-NEXT:    [[TMP58:%.*]] = sext i8 [[TMP57]] to i64
 // CHECK4-51-NEXT:    [[TMP59:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP59]]
-// CHECK4-51-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
+// CHECK4-51-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP59]]
+// CHECK4-51-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX13]], i64 [[TMP58]]
 // CHECK4-51-NEXT:    [[TMP60:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-51-NEXT:    [[TMP61:%.*]] = sext i8 [[TMP60]] to i64
 // CHECK4-51-NEXT:    [[TMP62:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP62]]
-// CHECK4-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
+// CHECK4-51-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP62]]
+// CHECK4-51-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX15]], i64 [[TMP61]]
 // CHECK4-51-NEXT:    [[TMP63:%.*]] = getelementptr i32, ptr [[ARRAYIDX16]], i32 1
 // CHECK4-51-NEXT:    [[TMP64:%.*]] = ptrtoint ptr [[ARRAYIDX14]] to i64
 // CHECK4-51-NEXT:    [[TMP65:%.*]] = ptrtoint ptr [[TMP63]] to i64
@@ -9404,13 +9404,13 @@ void test_omp_all_memory()
 // CHECK4-51-NEXT:    [[TMP82:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-51-NEXT:    [[TMP83:%.*]] = sext i8 [[TMP82]] to i64
 // CHECK4-51-NEXT:    [[TMP84:%.*]] = mul nsw i64 4, [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP84]]
-// CHECK4-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
+// CHECK4-51-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP84]]
+// CHECK4-51-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX23]], i64 [[TMP83]]
 // CHECK4-51-NEXT:    [[TMP85:%.*]] = load i8, ptr [[B]], align 1
 // CHECK4-51-NEXT:    [[TMP86:%.*]] = sext i8 [[TMP85]] to i64
 // CHECK4-51-NEXT:    [[TMP87:%.*]] = mul nsw i64 9, [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP87]]
-// CHECK4-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
+// CHECK4-51-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP87]]
+// CHECK4-51-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX25]], i64 [[TMP86]]
 // CHECK4-51-NEXT:    [[TMP88:%.*]] = getelementptr i32, ptr [[ARRAYIDX26]], i32 1
 // CHECK4-51-NEXT:    [[TMP89:%.*]] = ptrtoint ptr [[ARRAYIDX24]] to i64
 // CHECK4-51-NEXT:    [[TMP90:%.*]] = ptrtoint ptr [[TMP88]] to i64
@@ -9449,8 +9449,8 @@ void test_omp_all_memory()
 // CHECK4-51-NEXT:    [[TMP110:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP107]], i32 0, i32 2
 // CHECK4-51-NEXT:    store i8 3, ptr [[TMP110]], align 8
 // CHECK4-51-NEXT:    [[TMP111:%.*]] = mul nsw i64 0, [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP111]]
-// CHECK4-51-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX33]], i64 3
+// CHECK4-51-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP111]]
+// CHECK4-51-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX33]], i64 3
 // CHECK4-51-NEXT:    [[TMP112:%.*]] = load i32, ptr @a, align 4
 // CHECK4-51-NEXT:    [[TMP113:%.*]] = sext i32 [[TMP112]] to i64
 // CHECK4-51-NEXT:    [[LEN_SUB_1:%.*]] = sub nsw i64 [[TMP113]], 1
@@ -9458,8 +9458,8 @@ void test_omp_all_memory()
 // CHECK4-51-NEXT:    [[TMP115:%.*]] = sext i32 [[TMP114]] to i64
 // CHECK4-51-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP115]]
 // CHECK4-51-NEXT:    [[TMP116:%.*]] = mul nsw i64 [[LB_ADD_LEN]], [[TMP1]]
-// CHECK4-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i32, ptr [[VLA]], i64 [[TMP116]]
-// CHECK4-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
+// CHECK4-51-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw i32, ptr [[VLA]], i64 [[TMP116]]
+// CHECK4-51-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX35]], i64 [[LEN_SUB_1]]
 // CHECK4-51-NEXT:    [[TMP117:%.*]] = getelementptr i32, ptr [[ARRAYIDX36]], i32 1
 // CHECK4-51-NEXT:    [[TMP118:%.*]] = ptrtoint ptr [[ARRAYIDX34]] to i64
 // CHECK4-51-NEXT:    [[TMP119:%.*]] = ptrtoint ptr [[TMP117]] to i64

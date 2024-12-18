@@ -15,8 +15,10 @@
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -29,6 +31,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -209,7 +212,15 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
-    Value newOp = rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type());
+    LLVM::ConstantRangeAttr bounds = nullptr;
+    if (std::optional<APInt> upperBound = op.getUpperBound())
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/0, upperBound->getZExtValue());
+    else
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/0, /*upper=*/kWarpSize);
+    Value newOp =
+        rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type(), bounds);
     // Truncate or extend the result depending on the index bitwidth specified
     // by the LLVMTypeConverter options.
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
@@ -265,29 +276,7 @@ struct LowerGpuOpsToNVVMOpsPass
     }
 
     LLVMTypeConverter converter(m.getContext(), options);
-    // NVVM uses alloca in the default address space to represent private
-    // memory allocations, so drop private annotations. NVVM uses address
-    // space 3 for shared memory. NVVM uses the default address space to
-    // represent global memory.
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) -> unsigned {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return static_cast<unsigned>(
-                NVVM::NVVMMemorySpace::kGlobalMemorySpace);
-          case gpu::AddressSpace::Workgroup:
-            return static_cast<unsigned>(
-                NVVM::NVVMMemorySpace::kSharedMemorySpace);
-          case gpu::AddressSpace::Private:
-            return 0;
-          }
-          llvm_unreachable("unknown address space enum value");
-          return 0;
-        });
-    // Lowering for MMAMatrixType.
-    converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
-      return convertMMAToLLVMType(type);
-    });
+    configureGpuToNVVMTypeConverter(converter);
     RewritePatternSet llvmPatterns(m.getContext());
 
     arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
@@ -323,44 +312,84 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
 }
 
+void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
+  // NVVM uses alloca in the default address space to represent private
+  // memory allocations, so drop private annotations. NVVM uses address
+  // space 3 for shared memory. NVVM uses the default address space to
+  // represent global memory.
+  populateGpuMemorySpaceAttributeConversions(
+      converter, [](gpu::AddressSpace space) -> unsigned {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+        case gpu::AddressSpace::Workgroup:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+        case gpu::AddressSpace::Private:
+          return 0;
+        }
+        llvm_unreachable("unknown address space enum value");
+        return 0;
+      });
+  // Lowering for MMAMatrixType.
+  converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
+    return convertMMAToLLVMType(type);
+  });
+}
+
 template <typename OpTy>
-static void populateOpPatterns(LLVMTypeConverter &converter,
+static void populateOpPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
-                               StringRef f64Func,
-                               StringRef f32ApproxFunc = "") {
+                               StringRef f64Func, StringRef f32ApproxFunc = "",
+                               StringRef f16Func = "") {
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
   patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func,
-                                           f32ApproxFunc);
+                                           f32ApproxFunc, f16Func);
 }
 
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<GPUSubgroupReduceOpLowering>(converter);
 }
 
-void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                               RewritePatternSet &patterns) {
+void mlir::populateGpuToNVVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+  using gpu::index_lowering::IndexKind;
+  using gpu::index_lowering::IntrType;
   populateWithGenerated(patterns);
   patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
-                                      NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
+                                      NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>>(
+      converter, IndexKind::Block, IntrType::Id);
+  patterns.add<
       gpu::index_lowering::OpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
-                                      NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
+                                      NVVM::BlockDimYOp, NVVM::BlockDimZOp>>(
+      converter, IndexKind::Block, IntrType::Dim);
+  patterns.add<
       gpu::index_lowering::OpLowering<gpu::ClusterIdOp, NVVM::ClusterIdXOp,
-                                      NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>,
-      gpu::index_lowering::OpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
-                                      NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
-      gpu::index_lowering::OpLowering<
-          gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
-          NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>,
-      gpu::index_lowering::OpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
-                                      NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
-      gpu::index_lowering::OpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
-                                      NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
-      gpu::index_lowering::OpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
-                                      NVVM::GridDimYOp, NVVM::GridDimZOp>,
-      GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+                                      NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>>(
+      converter, IndexKind::Other, IntrType::Id);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::ClusterDimOp, NVVM::ClusterDimXOp, NVVM::ClusterDimYOp,
+      NVVM::ClusterDimZOp>>(converter, IndexKind::Other, IntrType::Dim);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
+      NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>>(
+      converter, IndexKind::Other, IntrType::Id);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::ClusterDimBlocksOp, NVVM::ClusterDimBlocksXOp,
+      NVVM::ClusterDimBlocksYOp, NVVM::ClusterDimBlocksZOp>>(
+      converter, IndexKind::Other, IntrType::Dim);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::BlockIdOp, NVVM::BlockIdXOp, NVVM::BlockIdYOp, NVVM::BlockIdZOp>>(
+      converter, IndexKind::Grid, IntrType::Id);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
+      converter, IndexKind::Grid, IntrType::Dim);
+  patterns.add<GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
+      converter);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit);
@@ -443,4 +472,35 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                   "__nv_fast_tanf");
   populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
                                    "__nv_tanh");
+}
+
+//===----------------------------------------------------------------------===//
+// NVVMTargetAttr convert to LLVM attr interface
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct NVVMTargetConvertToLLVMAttrInterface
+    : public ConvertToLLVMAttrInterface::ExternalModel<
+          NVVMTargetConvertToLLVMAttrInterface, NVVM::NVVMTargetAttr> {
+  /// Configure GPU to NVVM.
+  void populateConvertToLLVMConversionPatterns(
+      Attribute attr, ConversionTarget &target,
+      LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) const;
+};
+} // namespace
+
+void NVVMTargetConvertToLLVMAttrInterface::
+    populateConvertToLLVMConversionPatterns(Attribute attr,
+                                            ConversionTarget &target,
+                                            LLVMTypeConverter &typeConverter,
+                                            RewritePatternSet &patterns) const {
+  configureGpuToNVVMConversionLegality(target);
+  configureGpuToNVVMTypeConverter(typeConverter);
+  populateGpuToNVVMConversionPatterns(typeConverter, patterns);
+}
+
+void mlir::NVVM::registerConvertGpuToNVVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, NVVMDialect *dialect) {
+    NVVMTargetAttr::attachInterface<NVVMTargetConvertToLLVMAttrInterface>(*ctx);
+  });
 }

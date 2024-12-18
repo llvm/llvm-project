@@ -1,4 +1,4 @@
-# RUN: llc -filetype=obj -start-after=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | llvm-dwarfdump - | FileCheck %s
+# RUN: llc -filetype=obj -start-after=livedebugvalues -verify-machineinstrs -o - %s | llvm-dwarfdump - | FileCheck %s
 # CHECK: DW_OP_entry_value(DW_OP_reg5 RDI), DW_OP_stack_value, DW_OP_piece 0x2, DW_OP_breg5 RDI+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_lit16, DW_OP_shr, DW_OP_piece 0x2
 --- |
   ; ModuleID = '/tmp/e.c'

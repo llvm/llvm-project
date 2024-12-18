@@ -9,6 +9,7 @@ add_mlir_library(MLIRRewrite
 
   DEPENDS
   mlir-generic-headers
+  MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

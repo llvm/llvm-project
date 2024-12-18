@@ -248,9 +248,8 @@ SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
 }
 
 SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFileSP objfile_sp)
-    : SymbolFileCommon(std::move(objfile_sp)), m_flags(), m_compile_unit_infos(),
-      m_func_indexes(), m_glob_indexes(),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
+    : SymbolFileCommon(std::move(objfile_sp)), m_flags(),
+      m_compile_unit_infos(), m_func_indexes(), m_glob_indexes() {}
 
 SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() = default;
 
@@ -1157,22 +1156,6 @@ DWARFDIE SymbolFileDWARFDebugMap::FindDefinitionDIE(const DWARFDIE &die) {
   return result;
 }
 
-bool SymbolFileDWARFDebugMap::Supports_DW_AT_APPLE_objc_complete_type(
-    SymbolFileDWARF *skip_dwarf_oso) {
-  if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolCalculate) {
-    m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolNo;
-    ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-      if (skip_dwarf_oso != oso_dwarf &&
-          oso_dwarf->Supports_DW_AT_APPLE_objc_complete_type(nullptr)) {
-        m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-        return IterationAction::Stop;
-      }
-      return IterationAction::Continue;
-    });
-  }
-  return m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolYes;
-}
-
 TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
     const DWARFDIE &die, ConstString type_name,
     bool must_be_implementation) {
@@ -1574,7 +1557,7 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
             // we weren't able to open the .o file. Display an appropriate
             // error
             if (comp_unit_info->oso_load_error.Fail())
-              return comp_unit_info->oso_load_error;
+              return comp_unit_info->oso_load_error.Clone();
             else
               return Status::FromErrorStringWithFormat(
                   "unable to load debug map object file \"%s\" "

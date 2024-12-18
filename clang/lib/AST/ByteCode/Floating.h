@@ -135,6 +135,11 @@ public:
     return Floating(APFloat(Sem, API));
   }
 
+  void bitcastToMemory(std::byte *Buff) const {
+    llvm::APInt API = F.bitcastToAPInt();
+    llvm::StoreIntToMemory(API, (uint8_t *)Buff, bitWidth() / 8);
+  }
+
   // === Serialization support ===
   size_t bytesToSerialize() const {
     return sizeof(llvm::fltSemantics *) +

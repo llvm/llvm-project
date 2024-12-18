@@ -13,18 +13,19 @@
 #include "llvm/Support/MemoryBufferRef.h"
 
 namespace lld::elf {
+struct Ctx;
 
 // Parses a linker script. Calling this function updates
 // lld::elf::config and lld::elf::script.
-void readLinkerScript(MemoryBufferRef mb);
+void readLinkerScript(Ctx &ctx, MemoryBufferRef mb);
 
 // Parses a version script.
-void readVersionScript(MemoryBufferRef mb);
+void readVersionScript(Ctx &ctx, MemoryBufferRef mb);
 
-void readDynamicList(MemoryBufferRef mb);
+void readDynamicList(Ctx &ctx, MemoryBufferRef mb);
 
 // Parses the defsym expression.
-void readDefsym(MemoryBufferRef mb);
+void readDefsym(Ctx &ctx, MemoryBufferRef mb);
 
 bool hasWildcard(StringRef s);
 

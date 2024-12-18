@@ -210,8 +210,9 @@ const Symbol *GenericDetails::CheckSpecific() const {
 }
 Symbol *GenericDetails::CheckSpecific() {
   if (specific_ && !specific_->has<UseErrorDetails>()) {
+    const Symbol &ultimate{specific_->GetUltimate()};
     for (const Symbol &proc : specificProcs_) {
-      if (&proc == specific_) {
+      if (&proc.GetUltimate() == &ultimate) {
         return nullptr;
       }
     }

@@ -37,9 +37,6 @@ end:
 ; CHECK-SPIRV:      %[[#CASE3]] = OpLabel
 ; CHECK-SPIRV:      OpBranch %[[#END:]]
 
-; CHECK-SPIRV:      %[[#END]] = OpLabel
-; CHECK-SPIRV:                  OpReturnValue
-
 ; CHECK-SPIRV:      %[[#CASE2]] = OpLabel
 ; CHECK-SPIRV:      OpBranch %[[#END]]
 
@@ -48,4 +45,7 @@ end:
 
 ; CHECK-SPIRV:      %[[#DEFAULT]] = OpLabel
 ; CHECK-SPIRV:      OpBranch %[[#END]]
+
+; CHECK-SPIRV:      %[[#END]] = OpLabel
+; CHECK-SPIRV:                  OpReturnValue
 }

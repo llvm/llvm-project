@@ -162,7 +162,7 @@ template <int Constant>
 struct TailClobberer {
   constexpr TailClobberer() noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, Constant, sizeof(*this));
+      std::memset(static_cast<void*>(this), Constant, sizeof(*this));
     }
     // Always set `b` itself to `false` so that the comparison works.
     b = false;
@@ -245,7 +245,7 @@ struct BoolWithPadding {
   constexpr explicit BoolWithPadding() noexcept : BoolWithPadding(false) {}
   constexpr BoolWithPadding(bool val) noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, 0, sizeof(*this));
+      std::memset(static_cast<void*>(this), 0, sizeof(*this));
     }
     val_ = val;
   }
@@ -268,7 +268,7 @@ struct IntWithoutPadding {
   constexpr explicit IntWithoutPadding() noexcept : IntWithoutPadding(0) {}
   constexpr IntWithoutPadding(int val) noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, 0, sizeof(*this));
+      std::memset(static_cast<void*>(this), 0, sizeof(*this));
     }
     val_ = val;
   }

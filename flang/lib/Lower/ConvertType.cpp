@@ -96,10 +96,7 @@ static mlir::Type genCharacterType(
 }
 
 static mlir::Type genComplexType(mlir::MLIRContext *context, int KIND) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
-          Fortran::common::TypeCategory::Complex, KIND))
-    return fir::ComplexType::get(context, KIND);
-  return {};
+  return mlir::ComplexType::get(genRealType(context, KIND));
 }
 
 static mlir::Type

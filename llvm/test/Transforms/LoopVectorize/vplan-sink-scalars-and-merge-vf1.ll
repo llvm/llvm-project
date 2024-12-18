@@ -12,6 +12,9 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: ir<0> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -49,10 +52,16 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.end>:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:  Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.body>:
+; CHECK-NEXT:    IR   %tmp0 = phi i64 [ %tmp6, %for.inc ], [ 0, %entry ]
+; CHECK-NEXT:    IR   %tmp1 = phi i64 [ %tmp7, %for.inc ], [ 0, %entry ]
+; CHECK:         IR   %tmp5 = trunc i32 %tmp4 to i8
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:  ir-bb<for.end>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;

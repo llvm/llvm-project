@@ -189,6 +189,21 @@ TEST(ASTMatchersTestCUDA, HasAttrCUDA) {
                                   hasAttr(clang::attr::CUDAGlobal)));
 }
 
+TEST_P(ASTMatchersTest, ExportDecl) {
+  if (!GetParam().isCXX20OrLater()) {
+    return;
+  }
+  const std::string moduleHeader = "module;export module ast_matcher_test;";
+  EXPECT_TRUE(matches(moduleHeader + "export void foo();",
+                      exportDecl(has(functionDecl()))));
+  EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
+                      exportDecl(has(functionDecl()))));
+  EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
+                      exportDecl(has(varDecl()))));
+  EXPECT_TRUE(matches(moduleHeader + "export namespace aa { void foo(); }",
+                      exportDecl(has(namespaceDecl()))));
+}
+
 TEST_P(ASTMatchersTest, ValueDecl) {
   if (!GetParam().isCXX()) {
     // FIXME: Fix this test in non-C++ language modes.
@@ -1224,7 +1239,7 @@ TEST_P(ASTMatchersTest, CastExpression_MatchesImplicitCasts) {
 }
 
 TEST_P(ASTMatchersTest, CastExpr_DoesNotMatchNonCasts) {
-  if (GetParam().Language == Lang_C89 || GetParam().Language == Lang_C99) {
+  if (GetParam().isC()) {
     // This does have a cast in C
     EXPECT_TRUE(matches("char c = '0';", implicitCastExpr()));
   } else {
@@ -1678,7 +1693,7 @@ TEST_P(ASTMatchersTest, FunctionProtoType) {
 }
 
 TEST_P(ASTMatchersTest, FunctionProtoType_C) {
-  if (!GetParam().isC()) {
+  if (!GetParam().isCOrEarlier(17)) {
     return;
   }
   EXPECT_TRUE(notMatches("void f();", functionProtoType()));
@@ -2030,8 +2045,6 @@ TEST_P(ASTMatchersTest,
 template <typename T>
 class VerifyAncestorHasChildIsEqual : public BoundNodesCallback {
 public:
-  bool run(const BoundNodes *Nodes) override { return false; }
-
   bool run(const BoundNodes *Nodes, ASTContext *Context) override {
     const T *Node = Nodes->getNodeAs<T>("");
     return verify(*Nodes, *Context, Node);
@@ -2745,8 +2758,11 @@ TEST(MatchFinderAPI, MatchesDynamic) {
 
 static std::vector<TestClangConfig> allTestClangConfigs() {
   std::vector<TestClangConfig> all_configs;
-  for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
-                            Lang_CXX14, Lang_CXX17, Lang_CXX20, Lang_CXX23}) {
+  for (TestLanguage lang : {
+#define TESTLANGUAGE(lang, version, std_flag, version_index)                   \
+  Lang_##lang##version,
+#include "clang/Testing/TestLanguage.def"
+       }) {
     TestClangConfig config;
     config.Language = lang;
 
@@ -2770,8 +2786,11 @@ static std::vector<TestClangConfig> allTestClangConfigs() {
   return all_configs;
 }
 
-INSTANTIATE_TEST_SUITE_P(ASTMatchersTests, ASTMatchersTest,
-                         testing::ValuesIn(allTestClangConfigs()));
+INSTANTIATE_TEST_SUITE_P(
+    ASTMatchersTests, ASTMatchersTest, testing::ValuesIn(allTestClangConfigs()),
+    [](const testing::TestParamInfo<TestClangConfig> &Info) {
+      return Info.param.toShortString();
+    });
 
 } // namespace ast_matchers
 } // namespace clang

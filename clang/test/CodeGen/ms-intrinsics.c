@@ -156,7 +156,7 @@ unsigned char test_BitScanForward(unsigned long *Index, unsigned long Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr %Index, {{i64|i32}} 4
+// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds nuw i8, ptr %Index, {{i64|i32}} 4
 // CHECK:   [[INDEX:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 %Mask, i1 true)
 // CHECK:   store i32 [[INDEX]], ptr [[IDXGEP]], align 4
 // CHECK:   br label %[[END_LABEL]]
@@ -171,7 +171,7 @@ unsigned char test_BitScanReverse(unsigned long *Index, unsigned long Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr %Index, {{i64|i32}} 4
+// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds nuw i8, ptr %Index, {{i64|i32}} 4
 // CHECK:   [[REVINDEX:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %Mask, i1 true)
 // CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[REVINDEX]], 31
 // CHECK:   store i32 [[INDEX]], ptr [[IDXGEP]], align 4
@@ -221,6 +221,41 @@ void *test_InterlockedExchangePointer(void * volatile *Target, void *Value) {
 // CHECK:   ret ptr %[[RESULT]]
 // CHECK: }
 
+#if defined(__arm__) || defined(__aarch64__)
+void *test_InterlockedExchangePointer_acq(void * volatile *Target, void *Value) {
+  return _InterlockedExchangePointer_acq(Target, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedExchangePointer_acq(ptr {{[a-z_ ]*}}%Target, ptr {{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64:   %[[VALUE:[0-9]+]] = ptrtoint ptr %Value to [[iPTR:i[0-9]+]]
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = atomicrmw xchg ptr %Target, [[iPTR]] %[[VALUE]] acquire, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXCHANGE]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT]]
+// CHECK-ARM-ARM64: }
+
+void *test_InterlockedExchangePointer_nf(void * volatile *Target, void *Value) {
+  return _InterlockedExchangePointer_nf(Target, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedExchangePointer_nf(ptr {{[a-z_ ]*}}%Target, ptr {{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64:   %[[VALUE:[0-9]+]] = ptrtoint ptr %Value to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = atomicrmw xchg ptr %Target, [[iPTR]] %[[VALUE]] monotonic, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXCHANGE]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT]]
+// CHECK-ARM-ARM64: }
+
+void *test_InterlockedExchangePointer_rel(void * volatile *Target, void *Value) {
+  return _InterlockedExchangePointer_rel(Target, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedExchangePointer_rel(ptr {{[a-z_ ]*}}%Target, ptr {{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64:   %[[VALUE:[0-9]+]] = ptrtoint ptr %Value to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = atomicrmw xchg ptr %Target, [[iPTR]] %[[VALUE]] release, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXCHANGE]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT]]
+// CHECK-ARM-ARM64: }
+#endif
+
 void *test_InterlockedCompareExchangePointer(void * volatile *Destination,
                                              void *Exchange, void *Comparand) {
   return _InterlockedCompareExchangePointer(Destination, Exchange, Comparand);
@@ -248,6 +283,37 @@ void *test_InterlockedCompareExchangePointer_nf(void * volatile *Destination,
 // CHECK:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
 // CHECK:   ret ptr %[[RESULT:[0-9]+]]
 // CHECK: }
+
+#if defined(__arm__) || defined(__aarch64__)
+void *test_InterlockedCompareExchangePointer_acq(void * volatile *Destination,
+                                             void *Exchange, void *Comparand) {
+  return _InterlockedCompareExchangePointer_acq(Destination, Exchange, Comparand);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedCompareExchangePointer_acq(ptr {{[a-z_ ]*}}%Destination, ptr {{[a-z_ ]*}}%Exchange, ptr {{[a-z_ ]*}}%Comparand){{.*}}{
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = ptrtoint ptr %Exchange to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[COMPARAND:[0-9]+]] = ptrtoint ptr %Comparand to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[XCHG:[0-9]+]] = cmpxchg volatile ptr %[[DEST:.+]], [[iPTR]] %[[COMPARAND:[0-9]+]], [[iPTR]] %[[EXCHANGE:[0-9]+]] acquire acquire, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[EXTRACT:[0-9]+]] = extractvalue { [[iPTR]], i1 } %[[XCHG]], 0
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT:[0-9]+]]
+// CHECK-ARM-ARM64: }
+
+
+void *test_InterlockedCompareExchangePointer_rel(void * volatile *Destination,
+                                             void *Exchange, void *Comparand) {
+  return _InterlockedCompareExchangePointer_rel(Destination, Exchange, Comparand);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedCompareExchangePointer_rel(ptr {{[a-z_ ]*}}%Destination, ptr {{[a-z_ ]*}}%Exchange, ptr {{[a-z_ ]*}}%Comparand){{.*}}{
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = ptrtoint ptr %Exchange to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[COMPARAND:[0-9]+]] = ptrtoint ptr %Comparand to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[XCHG:[0-9]+]] = cmpxchg volatile ptr %[[DEST:.+]], [[iPTR]] %[[COMPARAND:[0-9]+]], [[iPTR]] %[[EXCHANGE:[0-9]+]] release monotonic, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[EXTRACT:[0-9]+]] = extractvalue { [[iPTR]], i1 } %[[XCHG]], 0
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT:[0-9]+]]
+// CHECK-ARM-ARM64: }
+#endif
 
 char test_InterlockedExchange8(char volatile *value, char mask) {
   return _InterlockedExchange8(value, mask);
@@ -437,10 +503,10 @@ unsigned char test_InterlockedCompareExchange128(
                                         ++ExchangeLow, ++ComparandResult);
 }
 // CHECK-64: define{{.*}}i8 @test_InterlockedCompareExchange128(ptr{{[a-z_ ]*}}%Destination, i64{{[a-z_ ]*}}%ExchangeHigh, i64{{[a-z_ ]*}}%ExchangeLow, ptr{{[a-z_ ]*}}%ComparandResult){{.*}}{
-// CHECK-64: %incdec.ptr = getelementptr inbounds i8, ptr %Destination, i64 8
+// CHECK-64: %incdec.ptr = getelementptr inbounds nuw i8, ptr %Destination, i64 8
 // CHECK-64: %inc = add nsw i64 %ExchangeHigh, 1
 // CHECK-64: %inc1 = add nsw i64 %ExchangeLow, 1
-// CHECK-64: %incdec.ptr2 = getelementptr inbounds i8, ptr %ComparandResult, i64 8
+// CHECK-64: %incdec.ptr2 = getelementptr inbounds nuw i8, ptr %ComparandResult, i64 8
 // CHECK-64: [[EH:%[0-9]+]] = zext i64 %inc to i128
 // CHECK-64: [[EL:%[0-9]+]] = zext i64 %inc1 to i128
 // CHECK-64: [[EHS:%[0-9]+]] = shl nuw i128 [[EH]], 64
@@ -486,7 +552,7 @@ short test_InterlockedIncrement16(short volatile *Addend) {
   return _InterlockedIncrement16(++Addend);
 }
 // CHECK: define{{.*}}i16 @test_InterlockedIncrement16(ptr{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: %incdec.ptr = getelementptr inbounds i8, ptr %Addend, {{i64|i32}} 2
+// CHECK: %incdec.ptr = getelementptr inbounds nuw i8, ptr %Addend, {{i64|i32}} 2
 // CHECK: [[TMP:%[0-9]+]] = atomicrmw add ptr %incdec.ptr, i16 1 seq_cst, align 2
 // CHECK: [[RESULT:%[0-9]+]] = add i16 [[TMP]], 1
 // CHECK: ret i16 [[RESULT]]
@@ -496,7 +562,7 @@ long test_InterlockedIncrement(long volatile *Addend) {
   return _InterlockedIncrement(++Addend);
 }
 // CHECK: define{{.*}}i32 @test_InterlockedIncrement(ptr{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: %incdec.ptr = getelementptr inbounds i8, ptr %Addend, {{i64|i32}} 4
+// CHECK: %incdec.ptr = getelementptr inbounds nuw i8, ptr %Addend, {{i64|i32}} 4
 // CHECK: [[TMP:%[0-9]+]] = atomicrmw add ptr %incdec.ptr, i32 1 seq_cst, align 4
 // CHECK: [[RESULT:%[0-9]+]] = add i32 [[TMP]], 1
 // CHECK: ret i32 [[RESULT]]

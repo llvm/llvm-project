@@ -165,7 +165,7 @@ void CrtpConstructorAccessibilityCheck::check(
 
     WithFriendHintIfNeeded(
         diag(Ctor->getLocation(),
-             "%0 contructor allows the CRTP to be %select{inherited "
+             "%0 constructor allows the CRTP to be %select{inherited "
              "from|constructed}1 as a regular template class; consider making "
              "it private%select{| and declaring the derived class as friend}2")
             << Access << IsPublic << NeedsFriend

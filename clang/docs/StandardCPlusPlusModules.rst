@@ -462,6 +462,37 @@ Currently, Clang accepts the above example, though it may produce surprising
 results if the debugging code depends on consistent use of ``NDEBUG`` in other
 translation units.
 
+Source Files Consistency
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang may open the input files\ :sup:`1`` of a BMI during the compilation. This implies that
+when Clang consumes a BMI, all the input files need to be present in the original path
+and with the original contents.
+
+To overcome these requirements and simplify cases like distributed builds and sandboxed
+builds, users can use the ``-fmodules-embed-all-files`` flag to embed all input files
+into the BMI so that Clang does not need to open the corresponding file on disk.
+
+When the ``-fmodules-embed-all-files`` flag are enabled, Clang explicitly emits the source
+code into the BMI file, the contents of the BMI file contain a sufficiently verbose
+representation to reproduce the original source file.
+
+:sup:`1`` Input files: The source files which took part in the compilation of the BMI.
+For example:
+
+.. code-block:: c++
+
+  // M.cppm
+  module;
+  #include "foo.h"
+  export module M;
+
+  // foo.h
+  #pragma once
+  #include "bar.h"
+
+The ``M.cppm``, ``foo.h`` and ``bar.h`` are input files for the BMI of ``M.cppm``.
+
 Object definition consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -483,6 +514,13 @@ fragment is disabled by default. These checks can be enabled by specifying
 ``-Xclang -fno-skip-odr-check-in-gmf`` when compiling. If the check is enabled
 and you encounter incorrect or missing diagnostics, please report them via the
 `community issue tracker <https://github.com/llvm/llvm-project/issues/>`_.
+
+Privacy Issue
+-------------
+
+BMIs are not and should not be treated as an information hiding mechanism.
+They should always be assumed to contain all the information that was used to
+create them, in a recoverable form.
 
 ABI Impacts
 -----------
@@ -564,16 +602,16 @@ unnecessary dependencies for the BMI. To mitigate the problem, Clang has a
 compiler option to reduce the information contained in the BMI. These two
 formats are known as Full BMI and Reduced BMI, respectively.
 
-Users can use the ``-fexperimental-modules-reduced-bmi`` option to produce a
+Users can use the ``-fmodules-reduced-bmi`` option to produce a
 Reduced BMI.
 
 For the one-phase compilation model (CMake implements this model), with
-``-fexperimental-modules-reduced-bmi``, the generated BMI will be a Reduced
+``-fmodules-reduced-bmi``, the generated BMI will be a Reduced
 BMI automatically. (The output path of the BMI is specified by
 ``-fmodule-output=`` as usual with the one-phase compilation model).
 
 It is also possible to produce a Reduced BMI with the two-phase compilation
-model. When ``-fexperimental-modules-reduced-bmi``, ``--precompile``, and
+model. When ``-fmodules-reduced-bmi``, ``--precompile``, and
 ``-fmodule-output=`` are specified, the generated BMI specified by ``-o`` will
 be a full BMI and the BMI specified by ``-fmodule-output=`` will be a Reduced
 BMI. The dependency graph in this case would look like:
@@ -587,7 +625,7 @@ BMI. The dependency graph in this case would look like:
                                                -> ...
                                                -> consumer_n.cpp
 
-Clang does not emit diagnostics when ``-fexperimental-modules-reduced-bmi`` is
+Clang does not emit diagnostics when ``-fmodules-reduced-bmi`` is
 used with a non-module unit. This design permits users of the one-phase
 compilation model to try using reduced BMIs without needing to modify the build
 system. The two-phase compilation module requires build system support.
@@ -653,11 +691,10 @@ ensure it is reachable, e.g. ``using N::g;``.
 Support for Reduced BMIs is still experimental, but it may become the default
 in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
 
-1. ``-fexperimental-modules-reduced-bmi`` is opt-in for 1~2 releases. The period depends
+1. ``-fexperimental-modules-reduced-bmi`` was introduced in v19.x
+2. For v20.x, ``-fmodules-reduced-bmi`` is introduced as an equivalent non-experimental
+   option. It is expected to stay opt-in for 1~2 releases, though the period depends
    on user feedback and may be extended.
-2. Announce that Reduced BMIs are no longer experimental and introduce
-   ``-fmodules-reduced-bmi`` as a new option, and recommend use of the new
-   option. This transition is expected to take 1~2 additional releases as well.
 3. Finally, ``-fmodules-reduced-bmi`` will be the default. When that time
    comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
    be meaningful to build systems which elect to support two-phase compilation.
@@ -776,8 +813,8 @@ With reduced BMI, non-cascading changes can be more powerful. For example,
 
 .. code-block:: console
 
-  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
-  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fmodules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fmodules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
   $ md5sum B.pcm
   6c2bd452ca32ab418bf35cd141b060b9  B.pcm
 
@@ -793,8 +830,8 @@ and recompile the example:
 
 .. code-block:: console
 
-  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
-  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fmodules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fmodules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
   $ md5sum B.pcm
   6c2bd452ca32ab418bf35cd141b060b9  B.pcm
 

@@ -572,7 +572,6 @@ void Writer::finalizeSections() {
 
 void Writer::populateTargetFeatures() {
   StringMap<std::string> used;
-  StringMap<std::string> required;
   StringMap<std::string> disallowed;
   SmallSet<std::string, 8> &allowed = out.targetFeaturesSec->features;
   bool tlsUsed = false;
@@ -599,17 +598,13 @@ void Writer::populateTargetFeatures() {
       goto done;
   }
 
-  // Find the sets of used, required, and disallowed features
+  // Find the sets of used and disallowed features
   for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     for (auto &feature : file->getWasmObj()->getTargetFeatures()) {
       switch (feature.Prefix) {
       case WASM_FEATURE_PREFIX_USED:
         used.insert({feature.Name, std::string(fileName)});
-        break;
-      case WASM_FEATURE_PREFIX_REQUIRED:
-        used.insert({feature.Name, std::string(fileName)});
-        required.insert({feature.Name, std::string(fileName)});
         break;
       case WASM_FEATURE_PREFIX_DISALLOWED:
         disallowed.insert({feature.Name, std::string(fileName)});
@@ -662,7 +657,7 @@ void Writer::populateTargetFeatures() {
     }
   }
 
-  // Validate the required and disallowed constraints for each file
+  // Validate the disallowed constraints for each file
   for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     SmallSet<std::string, 8> objectFeatures;
@@ -673,12 +668,6 @@ void Writer::populateTargetFeatures() {
       if (disallowed.count(feature.Name))
         error(Twine("Target feature '") + feature.Name + "' used in " +
               fileName + " is disallowed by " + disallowed[feature.Name] +
-              ". Use --no-check-features to suppress.");
-    }
-    for (const auto &feature : required.keys()) {
-      if (!objectFeatures.count(std::string(feature)))
-        error(Twine("Missing target feature '") + feature + "' in " + fileName +
-              ", required by " + required[feature] +
               ". Use --no-check-features to suppress.");
     }
   }
@@ -1145,6 +1134,8 @@ void Writer::createSyntheticInitFunctions() {
 
   static WasmSignature nullSignature = {{}, {}};
 
+  createApplyDataRelocationsFunction();
+
   // Passive segments are used to avoid memory being reinitialized on each
   // thread's instantiation. These passive segments are initialized and
   // dropped in __wasm_init_memory, which is registered as the start function
@@ -1467,15 +1458,29 @@ void Writer::createApplyDataRelocationsFunction() {
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
+    bool generated = false;
     for (const OutputSegment *seg : segments)
       if (!config->sharedMemory || !seg->isTLS())
         for (const InputChunk *inSeg : seg->inputSegments)
-          inSeg->generateRelocationCode(os);
+          generated |= inSeg->generateRelocationCode(os);
 
+    if (!generated) {
+      LLVM_DEBUG(dbgs() << "skipping empty __wasm_apply_data_relocs\n");
+      return;
+    }
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
-  createFunction(WasmSym::applyDataRelocs, bodyContent);
+  // __wasm_apply_data_relocs
+  // Function that applies relocations to data segment post-instantiation.
+  static WasmSignature nullSignature = {{}, {}};
+  auto def = symtab->addSyntheticFunction(
+      "__wasm_apply_data_relocs",
+      WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
+      make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
+  def->markLive();
+
+  createFunction(def, bodyContent);
 }
 
 void Writer::createApplyTLSRelocationsFunction() {
@@ -1771,8 +1776,6 @@ void Writer::run() {
 
   if (!config->relocatable) {
     // Create linker synthesized functions
-    if (WasmSym::applyDataRelocs)
-      createApplyDataRelocationsFunction();
     if (WasmSym::applyGlobalRelocs)
       createApplyGlobalRelocationsFunction();
     if (WasmSym::applyTLSRelocs)
@@ -1875,7 +1878,6 @@ void Writer::createHeader() {
   raw_string_ostream os(header);
   writeBytes(os, WasmMagic, sizeof(WasmMagic), "wasm magic");
   writeU32(os, WasmVersion, "wasm version");
-  os.flush();
   fileSize += header.size();
 }
 

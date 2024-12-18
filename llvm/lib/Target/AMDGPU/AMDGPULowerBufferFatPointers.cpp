@@ -1154,6 +1154,9 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       break;
     case AtomicRMWInst::BAD_BINOP:
       llvm_unreachable("Not sure how we got a bad binop");
+    case AtomicRMWInst::USubCond:
+    case AtomicRMWInst::USubSat:
+      break;
     }
   }
 
@@ -1253,7 +1256,8 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
   const DataLayout &DL = GEP.getDataLayout();
-  bool InBounds = GEP.isInBounds();
+  bool IsNUW = GEP.hasNoUnsignedWrap();
+  bool IsNUSW = GEP.hasNoUnsignedSignedWrap();
 
   // In order to call emitGEPOffset() and thus not have to reimplement it,
   // we need the GEP result to have ptr addrspace(7) type.
@@ -1277,7 +1281,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     NewOff = OffAccum;
   } else {
     NewOff = IRB.CreateAdd(Off, OffAccum, "",
-                           /*hasNUW=*/InBounds && HasNonNegativeOff,
+                           /*hasNUW=*/IsNUW || (IsNUSW && HasNonNegativeOff),
                            /*hasNSW=*/false);
   }
   copyMetadata(NewOff, &GEP);

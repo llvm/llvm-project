@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
@@ -45,6 +46,7 @@ struct ConvertVectorToLLVMPass
     registry.insert<LLVM::LLVMDialect>();
     registry.insert<arith::ArithDialect>();
     registry.insert<memref::MemRefDialect>();
+    registry.insert<tensor::TensorDialect>();
     if (armNeon)
       registry.insert<arm_neon::ArmNeonDialect>();
     if (armSVE)
@@ -59,8 +61,9 @@ struct ConvertVectorToLLVMPass
 } // namespace
 
 void ConvertVectorToLLVMPass::runOnOperation() {
-  // Perform progressive lowering of operations on slices and
-  // all contraction operations. Also applies folding and DCE.
+  // Perform progressive lowering of operations on slices and all contraction
+  // operations. Also materializes masks, lowers vector.step, rank-reduces FMA,
+  // applies folding and DCE.
   {
     RewritePatternSet patterns(&getContext());
     populateVectorToVectorCanonicalizationPatterns(patterns);
@@ -74,6 +77,11 @@ void ConvertVectorToLLVMPass::runOnOperation() {
                                             VectorTransformsOptions());
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
+    populateVectorMaskMaterializationPatterns(patterns,
+                                              force32BitVectorIndices);
+    populateVectorInsertExtractStridedSliceTransforms(patterns);
+    populateVectorStepLoweringPatterns(patterns);
+    populateVectorRankReducingFMAPattern(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 
@@ -81,7 +89,6 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   LowerToLLVMOptions options(&getContext());
   LLVMTypeConverter converter(&getContext(), options);
   RewritePatternSet patterns(&getContext());
-  populateVectorMaskMaterializationPatterns(patterns, force32BitVectorIndices);
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(

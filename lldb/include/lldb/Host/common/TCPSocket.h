@@ -13,13 +13,14 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
 #include <map>
+#include <string>
+#include <vector>
 
 namespace lldb_private {
 class TCPSocket : public Socket {
 public:
-  TCPSocket(bool should_close, bool child_processes_inherit);
-  TCPSocket(NativeSocket socket, bool should_close,
-            bool child_processes_inherit);
+  explicit TCPSocket(bool should_close);
+  TCPSocket(NativeSocket socket, bool should_close);
   ~TCPSocket() override;
 
   // returns port number or 0 if error
@@ -42,22 +43,18 @@ public:
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
 
-  // Use the provided main loop instance to accept new connections. The callback
-  // will be called (from MainLoop::Run) for each new connection. This function
-  // does not block.
+  using Socket::Accept;
   llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
   Accept(MainLoopBase &loop,
-         std::function<void(std::unique_ptr<TCPSocket> socket)> sock_cb);
-
-  // Accept a single connection and "return" it in the pointer argument. This
-  // function blocks until the connection arrives.
-  Status Accept(Socket *&conn_socket) override;
+         std::function<void(std::unique_ptr<Socket> socket)> sock_cb) override;
 
   Status CreateSocket(int domain);
 
   bool IsValid() const override;
 
   std::string GetRemoteConnectionURI() const override;
+
+  std::vector<std::string> GetListeningConnectionURI() const override;
 
 private:
   TCPSocket(NativeSocket socket, const TCPSocket &listen_socket);

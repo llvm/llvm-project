@@ -96,6 +96,9 @@ def note_constexpr_pointer_constant_comparison : Note<
   "at runtime">;
 def note_constexpr_literal_comparison : Note<
   "comparison of addresses of literals has unspecified value">;
+def note_constexpr_opaque_call_comparison : Note<
+  "comparison against opaque constant address '%0' can only be performed at "
+  "runtime">;
 def note_constexpr_pointer_weak_comparison : Note<
   "comparison against address of weak declaration '%0' can only be performed "
   "at runtime">;
@@ -779,8 +782,8 @@ def err_module_odr_violation_field : Error<
   "%select{"
   "field %4|"
   "field %4 with type %5|"
-  "%select{non-|}5bitfield %4|"
-  "bitfield %4 with one width expression|"
+  "%select{non-|}5bit-field %4|"
+  "bit-field %4 with one width expression|"
   "%select{non-|}5mutable field %4|"
   "field %4 with %select{no|an}5 initializer|"
   "field %4 with an initializer"
@@ -790,8 +793,8 @@ def note_module_odr_violation_field : Note<
   "%select{"
   "field %3|"
   "field %3 with type %4|"
-  "%select{non-|}4bitfield %3|"
-  "bitfield %3 with different width expression|"
+  "%select{non-|}4bit-field %3|"
+  "bit-field %3 with different width expression|"
   "%select{non-|}4mutable field %3|"
   "field %3 with %select{no|an}4 initializer|"
   "field %3 with a different initializer"

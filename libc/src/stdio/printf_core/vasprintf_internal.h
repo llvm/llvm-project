@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
-#include <stdlib.h> // malloc, realloc, free
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
@@ -40,7 +42,7 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 200;
 
-LIBC_INLINE int vasprintf_internal(char **ret, const char *format,
+LIBC_INLINE int vasprintf_internal(char **ret, const char *__restrict format,
                                    internal::ArgList args) {
   char init_buff_on_stack[DEFAULT_BUFFER_SIZE];
   printf_core::WriteBuffer wb(init_buff_on_stack, DEFAULT_BUFFER_SIZE,
@@ -64,4 +66,4 @@ LIBC_INLINE int vasprintf_internal(char **ret, const char *format,
   return ret_val;
 }
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

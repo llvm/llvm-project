@@ -584,7 +584,7 @@ void llvm_reset_counters(void) {
   }
 }
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__wasm__)
 COMPILER_RT_VISIBILITY
 pid_t __gcov_fork() {
   pid_t parent_pid = getpid();
@@ -623,6 +623,25 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr rfn) {
 #endif
   }
 }
+
+#if defined(_AIX)
+COMPILER_RT_VISIBILITY __attribute__((constructor)) void
+__llvm_profile_gcov_initialize() {
+  const __llvm_gcov_init_func_struct *InitFuncStart =
+      __llvm_profile_begin_covinit();
+  const __llvm_gcov_init_func_struct *InitFuncEnd =
+      __llvm_profile_end_covinit();
+
+  for (const __llvm_gcov_init_func_struct *Ptr = InitFuncStart;
+       Ptr != InitFuncEnd; ++Ptr) {
+    fn_ptr wfn = (fn_ptr)Ptr->WriteoutFunction;
+    fn_ptr rfn = (fn_ptr)Ptr->ResetFunction;
+    if (!(wfn && rfn))
+      continue;
+    llvm_gcov_init(wfn, rfn);
+  }
+}
+#endif
 
 void __gcov_dump(void) {
   for (struct fn_node *f = writeout_fn_list.head; f; f = f->next)

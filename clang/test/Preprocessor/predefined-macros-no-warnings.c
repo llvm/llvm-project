@@ -179,8 +179,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm64-wasi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm64-emscripten
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple dxil
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple renderscript32
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple renderscript64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ve
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple csky
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple csky-linux

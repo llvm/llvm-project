@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
-#include <algorithm>
 
 using namespace llvm;
 
@@ -146,7 +145,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PN.setIncomingValueForBlock(NewPreHeader, NewPN);
       else
         PN.addIncoming(NewPN, PrologExit);
-      SE.forgetValue(&PN);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PN);
     }
   }
 
@@ -583,7 +582,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    const TargetTransformInfo *TTI, bool PreserveLCSSA, Loop **ResultLoop) {
+    const TargetTransformInfo *TTI, bool PreserveLCSSA,
+    unsigned SCEVExpansionBudget, Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -673,8 +673,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   const DataLayout &DL = Header->getDataLayout();
   SCEVExpander Expander(*SE, DL, "loop-unroll");
   if (!AllowExpensiveTripCount &&
-      Expander.isHighCostExpansion(TripCountSC, L, SCEVCheapExpansionBudget,
-                                   TTI, PreHeaderBR)) {
+      Expander.isHighCostExpansion(TripCountSC, L, SCEVExpansionBudget, TTI,
+                                   PreHeaderBR)) {
     LLVM_DEBUG(dbgs() << "High cost for expanding trip count scev!\n");
     return false;
   }

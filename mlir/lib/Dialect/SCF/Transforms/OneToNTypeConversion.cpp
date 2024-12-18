@@ -198,8 +198,8 @@ public:
 namespace mlir {
 namespace scf {
 
-void populateSCFStructuralOneToNTypeConversions(TypeConverter &typeConverter,
-                                                RewritePatternSet &patterns) {
+void populateSCFStructuralOneToNTypeConversions(
+    const TypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<
       // clang-format off
       ConvertTypesInSCFConditionOp,

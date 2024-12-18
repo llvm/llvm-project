@@ -130,7 +130,7 @@ void OutlinedHashTreeRecord::convertToStableData(
     auto Id = P.second;
     HashNodeStable NodeStable;
     NodeStable.Hash = Node->Hash;
-    NodeStable.Terminals = Node->Terminals ? *Node->Terminals : 0;
+    NodeStable.Terminals = Node->Terminals.value_or(0);
     for (auto &P : Node->Successors)
       NodeStable.SuccessorIds.push_back(NodeIdMap[P.second.get()]);
     IdNodeStableMap[Id] = NodeStable;

@@ -105,7 +105,7 @@ public:
   std::optional<StringRef> getDefaultValue() const;
 
   /// Return the underlying def of this parameter.
-  llvm::Init *getDef() const;
+  const llvm::Init *getDef() const;
 
   /// The parameter is pointer-comparable.
   bool operator==(const AttrOrTypeParameter &other) const {

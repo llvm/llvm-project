@@ -238,6 +238,8 @@ TEST(VPInstructionTest, releaseOperandsAtDeletion) {
   delete VPV2;
 }
 TEST(VPBasicBlockTest, getPlan) {
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
   {
     VPBasicBlock *VPPH = new VPBasicBlock("ph");
     VPBasicBlock *VPBB1 = new VPBasicBlock();
@@ -256,7 +258,10 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBlockUtils::connectBlocks(VPBB3, VPBB4);
 
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(VPBB4, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB1);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
 
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, VPBB2->getPlan());
@@ -276,7 +281,10 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB1);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
 
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, R1->getPlan());
@@ -306,7 +314,10 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBlockUtils::connectBlocks(R2, VPBB2);
 
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(R2, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB1);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
 
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, R1->getPlan());
@@ -317,9 +328,12 @@ TEST(VPBasicBlockTest, getPlan) {
     EXPECT_EQ(&Plan, R2BB2->getPlan());
     EXPECT_EQ(&Plan, VPBB2->getPlan());
   }
+  delete ScalarHeader;
 }
 
 TEST(VPBasicBlockTest, TraversingIteratorTest) {
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
   {
     // VPBasicBlocks only
     //     VPBB1
@@ -347,7 +361,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Use Plan to properly clean up created blocks.
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(VPBB4, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB1);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
   }
 
   {
@@ -447,7 +464,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Use Plan to properly clean up created blocks.
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB0);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(R2, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB0);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
   }
 
   {
@@ -530,7 +550,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Use Plan to properly clean up created blocks.
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB1);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
   }
 
   {
@@ -578,7 +601,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Use Plan to properly clean up created blocks.
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB1);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
   }
 
   {
@@ -670,8 +696,12 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Use Plan to properly clean up created blocks.
     auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
+    VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+    VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
+    VPBlockUtils::connectBlocks(VPPH, VPBB1);
+    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
   }
+  delete ScalarHeader;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -705,11 +735,15 @@ TEST(VPBasicBlockTest, print) {
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
     I3->print(OS, "", SlotTracker);
-    OS.flush();
     EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
   }
 
-  VPlan Plan(VPBB0, TC, VPBB1);
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "scalar.header");
+  auto * ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
+  VPlan Plan(VPBB0, TC, ScalarHeaderVPBB);
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan.printDOT(OS);
@@ -722,8 +756,9 @@ compound=true
   N0 [label =
     "preheader:\l" +
     "  EMIT vp\<%1\> = add\l" +
-    "No successors\l"
+    "Successor(s): bb1\l"
   ]
+  N0 -> N1 [ label=""]
   N1 [label =
     "bb1:\l" +
     "  EMIT vp\<%2\> = add\l" +
@@ -736,6 +771,11 @@ compound=true
     "bb2:\l" +
     "  EMIT vp\<%5\> = mul vp\<%3\>, vp\<%2\>\l" +
     "  EMIT ret vp\<%5\>\l" +
+    "Successor(s): ir-bb\<scalar.header\>\l"
+  ]
+  N2 -> N3 [ label=""]
+  N3 [label =
+    "ir-bb\<scalar.header\>:\l" +
     "No successors\l"
   ]
 }
@@ -757,7 +797,7 @@ Successor(s): bb2
   const char *ExpectedBlock2Str = R"(bb2:
   EMIT vp<%5> = mul vp<%3>, vp<%2>
   EMIT ret vp<%5>
-No successors
+Successor(s): ir-bb<scalar.header>
 )";
   std::string Block2Dump;
   raw_string_ostream OS2(Block2Dump);
@@ -769,7 +809,6 @@ No successors
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
-    OS.flush();
     EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
   }
 
@@ -777,9 +816,9 @@ No successors
     std::string I4Dump;
     raw_string_ostream OS(I4Dump);
     OS << *I4;
-    OS.flush();
     EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
   }
+  delete ScalarHeader;
 }
 
 TEST(VPBasicBlockTest, printPlanWithVFsAndUFs) {
@@ -793,7 +832,12 @@ TEST(VPBasicBlockTest, printPlanWithVFsAndUFs) {
   VPBB1->appendRecipe(I1);
   VPBB1->setName("bb1");
 
-  VPlan Plan(VPBB0, TC, VPBB1);
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
+  VPlan Plan(VPBB0, TC, ScalarHeaderVPBB);
   Plan.setName("TestPlan");
   Plan.addVF(ElementCount::getFixed(4));
 
@@ -807,10 +851,13 @@ vp<%1> = original trip-count
 
 preheader:
   EMIT vp<%1> = sub
-No successors
+Successor(s): bb1
 
 bb1:
   EMIT vp<%2> = add
+Successor(s): ir-bb<>
+
+ir-bb<>:
 No successors
 }
 )";
@@ -828,10 +875,13 @@ vp<%1> = original trip-count
 
 preheader:
   EMIT vp<%1> = sub
-No successors
+Successor(s): bb1
 
 bb1:
   EMIT vp<%2> = add
+Successor(s): ir-bb<>
+
+ir-bb<>:
 No successors
 }
 )";
@@ -849,15 +899,19 @@ vp<%1> = original trip-count
 
 preheader:
   EMIT vp<%1> = sub
-No successors
+Successor(s): bb1
 
 bb1:
   EMIT vp<%2> = add
+Successor(s): ir-bb<>
+
+ir-bb<>:
 No successors
 }
 )";
     EXPECT_EQ(ExpectedStr, FullDump);
   }
+  delete ScalarHeader;
 }
 #endif
 
@@ -904,7 +958,7 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   Args.push_back(&Op1);
   Args.push_back(&Op2);
   Args.push_back(&CalledFn);
-  VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
+  VPWidenCallRecipe Recipe(Call, Fn, Args);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1185,7 +1239,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(&Op1);
     Args.push_back(&Op2);
     Args.push_back(&CalledFn);
-    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
+    VPWidenCallRecipe Recipe(Call, Fn, Args);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1198,7 +1252,8 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     // Test for a call to a function without side-effects.
     LLVMContext C;
     Module M("", C);
-    Function *TheFn = Intrinsic::getDeclaration(&M, Intrinsic::thread_pointer);
+    Function *TheFn =
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::thread_pointer);
 
     auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
     VPValue Op1;
@@ -1208,7 +1263,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(&Op1);
     Args.push_back(&Op2);
     Args.push_back(&CalledFn);
-    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
+    VPWidenCallRecipe Recipe(Call, TheFn, Args);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1233,9 +1288,9 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue Op2;
     VPInstruction VPInst(Instruction::Add, {&Op1, &Op2});
     VPRecipeBase &Recipe = VPInst;
-    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
-    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
   }
   {
@@ -1252,9 +1307,12 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
 TEST(VPRecipeTest, dumpRecipeInPlan) {
   VPBasicBlock *VPBB0 = new VPBasicBlock("preheader");
   VPBasicBlock *VPBB1 = new VPBasicBlock();
-  VPlan Plan(VPBB0, VPBB1);
-
   LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
+  VPlan Plan(VPBB0, ScalarHeaderVPBB);
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
@@ -1281,6 +1339,21 @@ TEST(VPRecipeTest, dumpRecipeInPlan) {
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
 
+    VPDef *Def = WidenR;
+    EXPECT_EXIT(
+        {
+          Def->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+    EXPECT_EXIT(
+        {
+          WidenR->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
     // Test VPRecipeBase::dump().
     VPRecipeBase *R = WidenR;
     EXPECT_EXIT(
@@ -1301,14 +1374,18 @@ TEST(VPRecipeTest, dumpRecipeInPlan) {
   }
 
   delete AI;
+  delete ScalarHeader;
 }
 
 TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
   VPBasicBlock *VPBB0 = new VPBasicBlock("preheader");
   VPBasicBlock *VPBB1 = new VPBasicBlock();
-  VPlan Plan(VPBB0, VPBB1);
-
   LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(VPBB1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
+  VPlan Plan(VPBB0, ScalarHeaderVPBB);
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
@@ -1387,6 +1464,7 @@ TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
         testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
   }
   delete AI;
+  delete ScalarHeader;
 }
 
 TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {

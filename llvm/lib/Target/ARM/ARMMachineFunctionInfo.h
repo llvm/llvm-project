@@ -81,7 +81,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// Some may be spilled after the stack has been realigned.
   unsigned GPRCS1Offset = 0;
   unsigned GPRCS2Offset = 0;
-  unsigned DPRCSOffset = 0;
+  unsigned DPRCS1Offset = 0;
 
   /// GPRCS1Size, GPRCS2Size, DPRCSSize - Sizes of callee saved register spills
   /// areas.
@@ -90,7 +90,8 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   unsigned GPRCS1Size = 0;
   unsigned GPRCS2Size = 0;
   unsigned DPRCSAlignGapSize = 0;
-  unsigned DPRCSSize = 0;
+  unsigned DPRCS1Size = 0;
+  unsigned GPRCS3Size = 0;
 
   /// NumAlignedDPRCS2Regs - The number of callee-saved DPRs that are saved in
   /// the aligned portion of the stack frame.  This is always a contiguous
@@ -194,25 +195,27 @@ public:
 
   unsigned getGPRCalleeSavedArea1Offset() const { return GPRCS1Offset; }
   unsigned getGPRCalleeSavedArea2Offset() const { return GPRCS2Offset; }
-  unsigned getDPRCalleeSavedAreaOffset()  const { return DPRCSOffset; }
+  unsigned getDPRCalleeSavedArea1Offset() const { return DPRCS1Offset; }
 
   void setGPRCalleeSavedArea1Offset(unsigned o) { GPRCS1Offset = o; }
   void setGPRCalleeSavedArea2Offset(unsigned o) { GPRCS2Offset = o; }
-  void setDPRCalleeSavedAreaOffset(unsigned o)  { DPRCSOffset = o; }
+  void setDPRCalleeSavedArea1Offset(unsigned o) { DPRCS1Offset = o; }
 
   unsigned getFPCXTSaveAreaSize() const       { return FPCXTSaveSize; }
   unsigned getFrameRecordSavedAreaSize() const { return FRSaveSize; }
   unsigned getGPRCalleeSavedArea1Size() const { return GPRCS1Size; }
   unsigned getGPRCalleeSavedArea2Size() const { return GPRCS2Size; }
   unsigned getDPRCalleeSavedGapSize() const   { return DPRCSAlignGapSize; }
-  unsigned getDPRCalleeSavedAreaSize()  const { return DPRCSSize; }
+  unsigned getDPRCalleeSavedArea1Size() const { return DPRCS1Size; }
+  unsigned getGPRCalleeSavedArea3Size() const { return GPRCS3Size; }
 
   void setFPCXTSaveAreaSize(unsigned s)       { FPCXTSaveSize = s; }
   void setFrameRecordSavedAreaSize(unsigned s) { FRSaveSize = s; }
   void setGPRCalleeSavedArea1Size(unsigned s) { GPRCS1Size = s; }
   void setGPRCalleeSavedArea2Size(unsigned s) { GPRCS2Size = s; }
   void setDPRCalleeSavedGapSize(unsigned s)   { DPRCSAlignGapSize = s; }
-  void setDPRCalleeSavedAreaSize(unsigned s)  { DPRCSSize = s; }
+  void setDPRCalleeSavedArea1Size(unsigned s) { DPRCS1Size = s; }
+  void setGPRCalleeSavedArea3Size(unsigned s) { GPRCS3Size = s; }
 
   unsigned getArgumentStackSize() const { return ArgumentStackSize; }
   void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
@@ -254,13 +257,9 @@ public:
       return -1U;
   }
 
-  DenseMap<const MachineBasicBlock*, unsigned>::iterator getCoalescedWeight(
-                                                  MachineBasicBlock* MBB) {
-    auto It = CoalescedWeights.find(MBB);
-    if (It == CoalescedWeights.end()) {
-      It = CoalescedWeights.insert(std::make_pair(MBB, 0)).first;
-    }
-    return It;
+  DenseMap<const MachineBasicBlock *, unsigned>::iterator
+  getCoalescedWeight(MachineBasicBlock *MBB) {
+    return CoalescedWeights.try_emplace(MBB, 0).first;
   }
 
   /// Indicate to the backend that \c GV has had its storage changed to inside

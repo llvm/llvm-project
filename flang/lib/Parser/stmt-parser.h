@@ -90,7 +90,6 @@ constexpr auto executionPartErrorRecovery{stmtErrorRecoveryStart >>
 // END statement error recovery
 constexpr auto missingOptionalName{pure<std::optional<Name>>()};
 constexpr auto noNameEnd{"END" >> missingOptionalName};
-constexpr auto bareEnd{noNameEnd / recovery(atEndOfStmt, SkipTo<'\n'>{})};
 
 // For unrecognizable construct END statements.  Be sure to not consume
 // a program unit's END statement.

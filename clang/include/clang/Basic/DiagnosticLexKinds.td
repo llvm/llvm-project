@@ -486,14 +486,14 @@ def ext_embedded_directive : Extension<
   InGroup<DiagGroup<"embedded-directive">>;
 def ext_c_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
-  "a C23 extension">, InGroup<C23>;
+  "a C23 extension">, InGroup<VariadicMacroArgumentsOmitted>;
 def ext_cxx_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
-  "a C++20 extension">, InGroup<CXX20>;
+  "a C++20 extension">, InGroup<VariadicMacroArgumentsOmitted>;
 def warn_c17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
+  InGroup<VariadicMacroArgumentsOmitted>, DefaultIgnore;
 def warn_cxx17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C++ standards before C++20">,
@@ -508,6 +508,8 @@ def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 
 def ext_pp_opencl_variadic_macros : Extension<
   "variadic macros are a Clang extension in OpenCL">;
+def err_opencl_logical_exclusive_or : Error<
+  "^^ is a reserved operator in OpenCL">;
 
 def ext_pp_gnu_line_directive : Extension<
   "this style of line directive is a GNU extension">,

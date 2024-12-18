@@ -7,12 +7,10 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare float @__expf_finite(float) #0
-
+define void @exp_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f32
 ; CHECK: <4 x float> @amd_vrs4_expf
 ; CHECK: ret
-define void @exp_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
@@ -25,23 +23,16 @@ for.body:                                         ; preds = %for.body, %entry
   store float %call, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!1 = distinct !{!1, !2, !3}
-!2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-
-declare double @__exp_finite(double) #0
-
+define void @exp_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f64
 ; CHECK: <4 x double> @amd_vrd4_exp
 ; CHECK: ret
-define void @exp_f64(ptr nocapture %varray) {
 entry:
   br label %for.body
 
@@ -54,25 +45,16 @@ for.body:                                         ; preds = %for.body, %entry
   store double %call, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !11
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!11 = distinct !{!11, !12, !13}
-!12 = !{!"llvm.loop.vectorize.width", i32 4}
-!13 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-
-
-
-declare float @__logf_finite(float) #0
-
+define void @log_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f32
 ; CHECK: <4 x float> @amd_vrs4_logf
 ; CHECK: ret
-define void @log_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
@@ -85,23 +67,16 @@ for.body:                                         ; preds = %for.body, %entry
   store float %call, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!21 = distinct !{!21, !22, !23}
-!22 = !{!"llvm.loop.vectorize.width", i32 4}
-!23 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-
-declare double @__log_finite(double) #0
-
+define void @log_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f64
 ; CHECK: <4 x double> @amd_vrd4_log
 ; CHECK: ret
-define void @log_f64(ptr nocapture %varray) {
 entry:
   br label %for.body
 
@@ -114,23 +89,16 @@ for.body:                                         ; preds = %for.body, %entry
   store double %call, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !31
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!31 = distinct !{!31, !32, !33}
-!32 = !{!"llvm.loop.vectorize.width", i32 4}
-!33 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-
-declare float @__powf_finite(float, float) #0
-
+define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f32
 ; CHECK: <4 x float> @amd_vrs4_powf
 ; CHECK: ret
-define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 entry:
   br label %for.body
 
@@ -145,23 +113,16 @@ for.body:                                         ; preds = %for.body, %entry
   store float %tmp2, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !41
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!41 = distinct !{!41, !42, !43}
-!42 = !{!"llvm.loop.vectorize.width", i32 4}
-!43 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-
-declare double @__pow_finite(double, double) #0
-
+define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f64
 ; CHECK: <4 x double> @amd_vrd4_pow
 ; CHECK: ret
-define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 entry:
   br label %for.body
 
@@ -176,17 +137,11 @@ for.body:                                         ; preds = %for.body, %entry
   store double %tmp2, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !51
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
-
-!51 = distinct !{!51, !52, !53}
-!52 = !{!"llvm.loop.vectorize.width", i32 4}
-!53 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-declare float @__exp2f_finite(float) #0
 
 define void @exp2f_finite(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp2f_finite(
@@ -205,17 +160,11 @@ for.body:
   store float %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !61
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:
   ret void
 }
-
-!61 = distinct !{!61, !62, !63}
-!62 = !{!"llvm.loop.vectorize.width", i32 4}
-!63 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-declare double @__exp2_finite(double) #0
 
 define void @exp2_finite(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp2_finite(
@@ -234,22 +183,16 @@ for.body:
   store double %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !71
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:
   ret void
 }
 
-!71 = distinct !{!71, !72, !73}
-!72 = !{!"llvm.loop.vectorize.width", i32 4}
-!73 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-declare float @__log2f_finite(float) #0
-
+define void @log2_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log2_f32
 ; CHECK: <4 x float> @amd_vrs4_log2f
 ; CHECK: ret
-define void @log2_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
@@ -262,23 +205,16 @@ for.body:                                         ; preds = %for.body, %entry
   store float %call, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!81 = distinct !{!21, !22, !23}
-!82 = !{!"llvm.loop.vectorize.width", i32 4}
-!83 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-
-declare double @__log2_finite(double) #0
-
+define void @log2_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @log2_f64
 ; CHECK: <4 x double> @amd_vrd4_log2
 ; CHECK: ret
-define void @log2_f64(ptr nocapture %varray) {
 entry:
   br label %for.body
 
@@ -291,22 +227,16 @@ for.body:                                         ; preds = %for.body, %entry
   store double %call, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !31
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!91 = distinct !{!31, !32, !33}
-!92 = !{!"llvm.loop.vectorize.width", i32 4}
-!93 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-declare float @__log10f_finite(float) #0
-
+define void @log10_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log10_f32
 ; CHECK: <4 x float> @amd_vrs4_log10f
 ; CHECK: ret
-define void @log10_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
@@ -319,14 +249,173 @@ for.body:                                         ; preds = %for.body, %entry
   store float %call, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
 for.end:                                          ; preds = %for.body
   ret void
 }
 
-!101 = distinct !{!21, !22, !23}
-!102 = !{!"llvm.loop.vectorize.width", i32 4}
-!103 = !{!"llvm.loop.vectorize.enable", i1 true}
+define void @log10_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @log10_finite(
+; CHECK:    call <2 x double> @amd_vrd2_log10(<2 x double> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
 
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__log10_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
 
+for.end:
+  ret void
+}
+
+define void @exp10_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @exp10_finite(
+; CHECK:    call <2 x double> @amd_vrd2_exp10(<2 x double> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__exp10_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret void
+}
+
+define void @exp10_f32(ptr nocapture %varray) {
+; CHECK-LABEL: @exp10_f32
+; CHECK: <4 x float> @amd_vrs4_exp10f
+; CHECK: ret
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__exp10f_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+define void @asin_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @asin_finite(
+; CHECK:    call <8 x double> @amd_vrd8_asin(<8 x double> {{.*}})
+; CHECK:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @__asin_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !7
+
+for.end:
+  ret void
+}
+
+define void @asinf_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @asinf_finite
+; CHECK: <4 x float> @amd_vrs4_asinf
+; CHECK: ret
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__asinf_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+define void @acosf_finite(ptr nocapture %varray) {
+; CHECK-LABEL: @acosf_finite
+; CHECK: <4 x float> @amd_vrs4_acosf
+; CHECK: ret
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__acosf_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+!1 = distinct !{!1, !2, !3}
+!2 = !{!"llvm.loop.vectorize.width", i32 2}
+!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+!4 = distinct !{!4, !5, !6}
+!5 = !{!"llvm.loop.vectorize.width", i32 4}
+!6 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+!7 = distinct !{!7, !8, !9}
+!8 = !{!"llvm.loop.vectorize.width", i32 8}
+!9 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+declare float @__expf_finite(float) #0
+declare double @__exp_finite(double) #0
+declare double @__log_finite(double) #0
+declare float @__logf_finite(float) #0
+declare float @__powf_finite(float, float) #0
+declare double @__pow_finite(double, double) #0
+declare float @__exp2f_finite(float) #0
+declare double @__exp2_finite(double) #0
+declare float @__log2f_finite(float) #0
+declare double @__log2_finite(double) #0
+declare float @__log10f_finite(float) #0
+declare double @__log10_finite(double) #0
+declare double @__exp10_finite(double) #0
+declare float @__exp10f_finite(float) #0
+declare double @__asin_finite(double) #0
+declare float @__asinf_finite(float) #0
+declare float @__acosf_finite(float) #0

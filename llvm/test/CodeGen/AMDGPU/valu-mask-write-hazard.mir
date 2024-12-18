@@ -12,7 +12,6 @@
   define amdgpu_gs void @mask_hazard_cndmask_dpp1() { ret void }
   define amdgpu_gs void @mask_hazard_cndmask_dpp2() { ret void }
   define amdgpu_gs void @mask_hazard_cndmask_dpp3() { ret void }
-  define amdgpu_gs void @mask_hazard_cndmask_dpp4() { ret void }
   define amdgpu_gs void @mask_hazard_addc1() { ret void }
   define amdgpu_gs void @mask_hazard_addc2() { ret void }
   define amdgpu_gs void @mask_hazard_addc3() { ret void }
@@ -156,16 +155,16 @@ body:            |
 ...
 
 ---
-name:            mask_hazard_cndmask_dpp4
+name:            mask_hazard_cndmask_dpp3
 body:            |
   bb.0:
-    ; GFX11-LABEL: name: mask_hazard_cndmask_dpp4
+    ; GFX11-LABEL: name: mask_hazard_cndmask_dpp3
     ; GFX11: $vgpr0 = V_CNDMASK_B16_e64_dpp $vgpr0, 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, 1, 15, 15, 1, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
     ; GFX11-NEXT: S_ENDPGM 0
     ;
-    ; GFX12-LABEL: name: mask_hazard_cndmask_dpp4
+    ; GFX12-LABEL: name: mask_hazard_cndmask_dpp3
     ; GFX12: $vgpr0 = V_CNDMASK_B16_e64_dpp $vgpr0, 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, 1, 15, 15, 1, implicit $exec
     ; GFX12-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
     ; GFX12-NEXT: S_ENDPGM 0

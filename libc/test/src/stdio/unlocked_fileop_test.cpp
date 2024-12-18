@@ -18,7 +18,6 @@
 #include "test/UnitTest/Test.h"
 
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   constexpr char fNAME[] = "testdata/unlocked_read_and_write.test";

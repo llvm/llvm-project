@@ -322,7 +322,8 @@ public:
 
     // Create the compiler's actual diagnostics engine.
     sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
-    ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+    ScanInstance.createDiagnostics(DriverFileMgr->getVirtualFileSystem(),
+                                   DiagConsumer, /*ShouldOwnClient=*/false);
     if (!ScanInstance.hasDiagnostics())
       return false;
 
@@ -335,7 +336,9 @@ public:
 
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
-    ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
+    // This will prevent us compiling individual modules asynchronously since
+    // FileManager is not thread-safe, but it does improve performance for now.
+    ScanInstance.getFrontendOpts().ModulesShareFileManager = true;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(OptimizeArgs & ScanningOptimizations::VFS);
@@ -420,6 +423,7 @@ public:
     // TODO: Implement diagnostic bucketing to reduce the impact of strict
     // context hashing.
     ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSerializeOnlyPreprocessor = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
@@ -430,7 +434,9 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (ModuleName)
+    if (Format == ScanningOutputFormat::P1689)
+      Action = std::make_unique<PreprocessOnlyAction>();
+    else if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
@@ -498,6 +504,9 @@ DependencyScanningWorker::DependencyScanningWorker(
       std::make_unique<ObjectFilePCHContainerReader>());
   // The scanner itself writes only raw ast files.
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
+
+  if (Service.shouldTraceVFS())
+    FS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(FS));
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:
@@ -642,7 +651,7 @@ bool DependencyScanningWorker::computeDependencies(
   auto DiagOpts = CreateAndPopulateDiagOpts(FinalCCommandLine);
   sanitizeDiagOpts(*DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(DiagOpts.release(), &DC,
+      CompilerInstance::createDiagnostics(*FinalFS, DiagOpts.release(), &DC,
                                           /*ShouldOwnClient=*/false);
 
   // Although `Diagnostics` are used only for command-line parsing, the

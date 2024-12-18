@@ -18,6 +18,7 @@
 namespace opts {
 
 extern bool HeatmapMode;
+extern bool BinaryAnalysisMode;
 
 extern llvm::cl::OptionCategory BoltCategory;
 extern llvm::cl::OptionCategory BoltDiffCategory;
@@ -27,6 +28,7 @@ extern llvm::cl::OptionCategory BoltOutputCategory;
 extern llvm::cl::OptionCategory AggregatorCategory;
 extern llvm::cl::OptionCategory BoltInstrCategory;
 extern llvm::cl::OptionCategory HeatmapCategory;
+extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
@@ -55,6 +57,7 @@ extern llvm::cl::opt<bool> PrintSections;
 enum ProfileFormatKind { PF_Fdata, PF_YAML };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
+extern llvm::cl::opt<bool> ShowDensity;
 extern llvm::cl::opt<bool> SplitEH;
 extern llvm::cl::opt<bool> StrictMode;
 extern llvm::cl::opt<bool> TimeOpts;

@@ -989,3 +989,44 @@ void Test() {
 }
 
 #endif
+
+
+namespace GH67134 {
+template <int loc = std::source_location::current().line()>
+constexpr auto f(std::source_location loc2 = std::source_location::current()) { return loc; }
+
+int g = []() -> decltype(f()) { return 0; }();
+
+int call() {
+#if __cplusplus >= 202002L
+  return []<decltype(f()) = 0>() -> decltype(f()) { return  0; }();
+#endif
+  return []() -> decltype(f()) { return  0; }();
+}
+
+#if __cplusplus >= 202002L
+template<typename T>
+int Var = requires { []() -> decltype(f()){}; };
+int h = Var<int>;
+#endif
+
+
+}
+
+namespace GH119129 {
+struct X{
+  constexpr int foo(std::source_location loc = std::source_location::current()) {
+    return loc.line();
+  }
+};
+static_assert(X{}.foo() == __LINE__);
+static_assert(X{}.
+                foo() == __LINE__);
+static_assert(X{}.
+
+
+                foo() == __LINE__);
+#line 10000
+static_assert(X{}.
+                foo() == 10001);
+}

@@ -584,13 +584,13 @@ public:
 
   /// Return true if this instruction implicitly
   /// uses the specified physical register.
-  bool hasImplicitUseOfPhysReg(unsigned Reg) const {
+  bool hasImplicitUseOfPhysReg(MCRegister Reg) const {
     return is_contained(implicit_uses(), Reg);
   }
 
   /// Return true if this instruction implicitly
   /// defines the specified physical register.
-  bool hasImplicitDefOfPhysReg(unsigned Reg,
+  bool hasImplicitDefOfPhysReg(MCRegister Reg,
                                const MCRegisterInfo *MRI = nullptr) const;
 
   /// Return the scheduling class for this instruction.  The
@@ -617,7 +617,7 @@ public:
 
   /// Return true if this instruction defines the specified physical
   /// register, either explicitly or implicitly.
-  bool hasDefOfPhysReg(const MCInst &MI, unsigned Reg,
+  bool hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
                        const MCRegisterInfo &RI) const;
 };
 

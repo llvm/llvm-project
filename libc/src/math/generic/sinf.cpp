@@ -19,8 +19,6 @@
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#include <errno.h>
-
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
 #include "range_reduction_fma.h"
 #else

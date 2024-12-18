@@ -529,7 +529,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
 
       // Remove any incompatible attributes for the argument.
       AttrBuilder ArgAttrs(Ctx, CallerPAL.getParamAttrs(ArgNo));
-      ArgAttrs.remove(AttributeFuncs::typeIncompatible(FormalTy));
+      ArgAttrs.remove(AttributeFuncs::typeIncompatible(
+          FormalTy, CallerPAL.getParamAttrs(ArgNo)));
 
       // We may have a different byval/inalloca type.
       if (ArgAttrs.getByValType())
@@ -549,7 +550,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
   AttrBuilder RAttrs(Ctx, CallerPAL.getRetAttrs());
   if (!CallSiteRetTy->isVoidTy() && CallSiteRetTy != CalleeRetTy) {
     createRetBitCast(CB, CallSiteRetTy, RetBitCast);
-    RAttrs.remove(AttributeFuncs::typeIncompatible(CalleeRetTy));
+    RAttrs.remove(
+        AttributeFuncs::typeIncompatible(CalleeRetTy, CallerPAL.getRetAttrs()));
     AttributeChanged = true;
   }
 
@@ -623,36 +625,39 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
     // All the ctx-es belonging to a function must have the same size counters.
     Ctx.resizeCounters(NewCountersSize);
 
-    // Maybe in this context, the indirect callsite wasn't observed at all
+    // Maybe in this context, the indirect callsite wasn't observed at all. That
+    // would make both direct and indirect BBs cold - which is what we already
+    // have from resising the counters.
     if (!Ctx.hasCallsite(CSIndex))
       return;
     auto &CSData = Ctx.callsite(CSIndex);
-    auto It = CSData.find(CalleeGUID);
 
-    // Maybe we did notice the indirect callsite, but to other targets.
-    if (It == CSData.end())
-      return;
-
-    assert(CalleeGUID == It->second.guid());
-
-    uint32_t DirectCount = It->second.getEntrycount();
-    uint32_t TotalCount = 0;
+    uint64_t TotalCount = 0;
     for (const auto &[_, V] : CSData)
       TotalCount += V.getEntrycount();
+    uint64_t DirectCount = 0;
+    // If we called the direct target, update the DirectCount. If we didn't, we
+    // still want to update the indirect BB (to which the TotalCount goes, in
+    // that case).
+    if (auto It = CSData.find(CalleeGUID); It != CSData.end()) {
+      assert(CalleeGUID == It->second.guid());
+      DirectCount = It->second.getEntrycount();
+      // This direct target needs to be moved to this caller under the
+      // newly-allocated callsite index.
+      assert(Ctx.callsites().count(NewCSID) == 0);
+      Ctx.ingestContext(NewCSID, std::move(It->second));
+      CSData.erase(CalleeGUID);
+    }
+
     assert(TotalCount >= DirectCount);
-    uint32_t IndirectCount = TotalCount - DirectCount;
+    uint64_t IndirectCount = TotalCount - DirectCount;
     // The ICP's effect is as-if the direct BB would have been taken DirectCount
     // times, and the indirect BB, IndirectCount times
     Ctx.counters()[DirectID] = DirectCount;
     Ctx.counters()[IndirectID] = IndirectCount;
 
-    // This particular indirect target needs to be moved to this caller under
-    // the newly-allocated callsite index.
-    assert(Ctx.callsites().count(NewCSID) == 0);
-    Ctx.ingestContext(NewCSID, std::move(It->second));
-    CSData.erase(CalleeGUID);
   };
-  CtxProf.update(ProfileUpdater, &Caller);
+  CtxProf.update(ProfileUpdater, Caller);
   return &DirectCall;
 }
 
@@ -687,14 +692,14 @@ bool llvm::tryPromoteCall(CallBase &CB) {
   if (!VTableEntryLoad)
     return false; // Not a vtable entry load.
   Value *VTableEntryPtr = VTableEntryLoad->getPointerOperand();
-  APInt VTableOffset(DL.getTypeSizeInBits(VTableEntryPtr->getType()), 0);
+  APInt VTableOffset(DL.getIndexTypeSizeInBits(VTableEntryPtr->getType()), 0);
   Value *VTableBasePtr = VTableEntryPtr->stripAndAccumulateConstantOffsets(
       DL, VTableOffset, /* AllowNonInbounds */ true);
   LoadInst *VTablePtrLoad = dyn_cast<LoadInst>(VTableBasePtr);
   if (!VTablePtrLoad)
     return false; // Not a vtable load.
   Value *Object = VTablePtrLoad->getPointerOperand();
-  APInt ObjectOffset(DL.getTypeSizeInBits(Object->getType()), 0);
+  APInt ObjectOffset(DL.getIndexTypeSizeInBits(Object->getType()), 0);
   Value *ObjectBase = Object->stripAndAccumulateConstantOffsets(
       DL, ObjectOffset, /* AllowNonInbounds */ true);
   if (!(isa<AllocaInst>(ObjectBase) && ObjectOffset == 0))
@@ -705,9 +710,9 @@ bool llvm::tryPromoteCall(CallBase &CB) {
   BasicBlock::iterator BBI(VTablePtrLoad);
   Value *VTablePtr = FindAvailableLoadedValue(
       VTablePtrLoad, VTablePtrLoad->getParent(), BBI, 0, nullptr, nullptr);
-  if (!VTablePtr)
+  if (!VTablePtr || !VTablePtr->getType()->isPointerTy())
     return false; // No vtable found.
-  APInt VTableOffsetGVBase(DL.getTypeSizeInBits(VTablePtr->getType()), 0);
+  APInt VTableOffsetGVBase(DL.getIndexTypeSizeInBits(VTablePtr->getType()), 0);
   Value *VTableGVBase = VTablePtr->stripAndAccumulateConstantOffsets(
       DL, VTableOffsetGVBase, /* AllowNonInbounds */ true);
   GlobalVariable *GV = dyn_cast<GlobalVariable>(VTableGVBase);

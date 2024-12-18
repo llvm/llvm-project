@@ -12,8 +12,9 @@
 
 // void remove_suffix(size_type _n)
 
-#include <string_view>
 #include <cassert>
+#include <cstddef>
+#include <string_view>
 
 #include "test_macros.h"
 
