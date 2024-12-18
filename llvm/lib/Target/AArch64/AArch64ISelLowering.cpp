@@ -20762,13 +20762,19 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
     assert((VT == MVT::i32 && N0.getValueType() == MVT::i64) &&
            "Unexpected legalisation result!");
 
-    MVT CastVT;
     EVT SrcVectorType = Op.getValueType();
-    assert(SrcVectorType.getScalarType() == MVT::i64);
+    // We also assume that SrcVectorType cannot be a V64 (see LowerEXTRACT_VECTOR_ELT).
+    assert((SrcVectorType.getScalarType() == MVT::i64 &&
+            SrcVectorType != MVT::v1i64) && "Unexpected legalisation result!");
+
+    // If the i64 we are extacting has uses other than this truncation, the upper half
+    // of this value must still be live so we prefer to extract it all at once.
+    if(!N0.hasOneUse())
+      return SDValue();
+
     unsigned ExtractIndex =
         cast<ConstantSDNode>(ExtractIndexNode)->getZExtValue();
-
-    CastVT = SrcVectorType.isScalableVector() ? MVT::nxv4i32 : MVT::v4i32;
+    MVT CastVT = SrcVectorType.isScalableVector() ? MVT::nxv4i32 : MVT::v4i32;
 
     Op = DAG.getNode(AArch64ISD::NVCAST, DL, CastVT, Op);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op,
