@@ -19,7 +19,7 @@ __attribute__((noinline, no_sanitize("memory"))) int test(char i) {
   init(&a);
   S b;
   init(&b);
-  return ((int*)(&a))[i];
+  return ((int *)(&a))[i];
 }
 
 int main(int argc, char **argv) {
