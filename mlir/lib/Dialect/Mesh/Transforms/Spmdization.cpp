@@ -85,13 +85,13 @@ handlePartialAxesDuringResharding(OpBuilder &builder,
   }
 
   builder.setInsertionPointAfterValue(sourceShard);
-  TypedValue<ShapedType> resultValue = cast<TypedValue<ShapedType>>(
+  TypedValue<ShapedType> resultValue =
       builder
           .create<AllReduceOp>(sourceShard.getLoc(), sourceShard.getType(),
                                sourceSharding.getMeshAttr().getLeafReference(),
                                allReduceMeshAxes, sourceShard,
                                sourceSharding.getPartialType())
-          .getResult());
+          .getResultOfType<ShapedType>();
 
   llvm::SmallVector<MeshAxis> remainingPartialAxes;
   llvm::copy_if(sourceShardingPartialAxesSet,
@@ -133,12 +133,12 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                           MeshSharding sourceSharding,
                           TypedValue<ShapedType> sourceShard, MeshOp mesh,
                           int64_t splitTensorAxis, MeshAxis splitMeshAxis) {
-  TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
+  TypedValue<ShapedType> targetShard =
       builder
           .create<AllSliceOp>(sourceShard, mesh,
                               ArrayRef<MeshAxis>(splitMeshAxis),
                               splitTensorAxis)
-          .getResult());
+          .getResultOfType<ShapedType>();
   MeshSharding targetSharding = targetShardingInSplitLastAxis(
       builder.getContext(), sourceSharding, splitTensorAxis, splitMeshAxis);
   return {targetShard, targetSharding};
@@ -274,8 +274,10 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
       APInt(64, splitTensorAxis));
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, mesh, targetSharding);
-  TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      builder.create<tensor::CastOp>(targetShape, allGatherResult).getResult());
+  TypedValue<ShapedType> targetShard =
+      builder
+          .create<tensor::CastOp>(targetShape, allGatherResult)
+          .getResultOfType<ShapedType>();
   return {targetShard, targetSharding};
 }
 
@@ -407,8 +409,10 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
       APInt(64, targetTensorAxis), APInt(64, sourceTensorAxis));
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, mesh, targetSharding);
-  TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      builder.create<tensor::CastOp>(targetShape, allToAllResult).getResult());
+  TypedValue<ShapedType> targetShard =
+      builder
+          .create<tensor::CastOp>(targetShape, allToAllResult)
+          .getResultOfType<ShapedType>();
   return {targetShard, targetSharding};
 }
 

@@ -694,9 +694,14 @@ public:
   class Impl
       : public TraitBase<ConcreteType, OneTypedResult<ResultType>::Impl> {
   public:
-    mlir::TypedValue<ResultType> getResult() {
-      return cast<mlir::TypedValue<ResultType>>(
+    template <typename ValTy>
+    mlir::TypedValue<ValTy> getResultOfType() {
+      return mlir::cast<mlir::TypedValue<ValTy>>(
           this->getOperation()->getResult(0));
+    }
+
+    mlir::TypedValue<ResultType> getResult() {
+      return getResultOfType<ResultType>();
     }
 
     /// If the operation returns a single value, then the Op can be implicitly

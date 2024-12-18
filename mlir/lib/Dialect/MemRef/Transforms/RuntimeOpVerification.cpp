@@ -213,7 +213,7 @@ struct ReinterpretCastOpInterface
     auto reinterpretCast = cast<ReinterpretCastOp>(op);
     auto baseMemref = reinterpretCast.getSource();
     auto resultMemref =
-        cast<TypedValue<BaseMemRefType>>(reinterpretCast.getResult());
+        reinterpretCast.getResultOfType<BaseMemRefType>();
 
     builder.setInsertionPointAfter(op);
 
