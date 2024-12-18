@@ -590,15 +590,16 @@ def bolt_optimize(args):
         process = subprocess.run(
             [
                 bolt,
-                opts.input, "-o",
+                opts.input,
+                "-o",
                 opts.instrumented_output,
                 "-instrument",
                 "--instrumentation-file-append-pid",
-                f'--instrumentation-file={opts.fdata}'
+                f'--instrumentation-file={opts.fdata}',
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
 
         print(process.args)
@@ -610,7 +611,7 @@ def bolt_optimize(args):
         [
             sys.executable,
             lit,
-            os.path.join(opts.perf_training_binary_dir, "bolt-fdata")
+            os.path.join(opts.perf_training_binary_dir, "bolt-fdata"),
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -631,7 +632,7 @@ def bolt_optimize(args):
 
     process = subprocess.run(
         [
-            bolt, 
+            bolt,
             f"{opts.input}-prebolt",
             "-o",
             opts.input,
@@ -645,11 +646,11 @@ def bolt_optimize(args):
             "-dyno-stats",
             "-use-gnu-stack",
             "-update-debug-sections",
-            "-nl" if opts.method == "PERF" else ""
+            "-nl" if opts.method == "PERF" else "",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True
+        text=True,
     )
 
     print(process.args)
