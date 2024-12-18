@@ -23,7 +23,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'scalar' failed to satiisfy constraint: non-negative int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'scalar' failed to satisfy constraint: non-negative int64_t}}
 test.op_with_property_predicates <{
   scalar = -1 : i64,
   optional = [2 : i64],
@@ -37,7 +37,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'optional' failed to satiisfy constraint: optional non-negative int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'optional' failed to satisfy constraint: optional non-negative int64_t}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [-1 : i64],
@@ -51,7 +51,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'defaulted' failed to satiisfy constraint: non-negative int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'defaulted' failed to satisfy constraint: non-negative int64_t}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [2 : i64],
@@ -65,7 +65,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'more_constrained' failed to satiisfy constraint: between 0 and 5}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'more_constrained' failed to satisfy constraint: between 0 and 5}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [2 : i64],
@@ -79,7 +79,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'array' failed to satiisfy constraint: array of non-negative int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'array' failed to satisfy constraint: array of non-negative int64_t}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [2 : i64],
@@ -93,7 +93,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_unconstrained' failed to satiisfy constraint: non-empty array of int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_unconstrained' failed to satisfy constraint: non-empty array of int64_t}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [2 : i64],
@@ -107,7 +107,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_constrained' failed to satiisfy constraint: non-empty array of non-negative int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_constrained' failed to satisfy constraint: non-empty array of non-negative int64_t}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [2 : i64],
@@ -121,7 +121,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_constrained' failed to satiisfy constraint: non-empty array of non-negative int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_constrained' failed to satisfy constraint: non-empty array of non-negative int64_t}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [2 : i64],
@@ -135,7 +135,7 @@ test.op_with_property_predicates <{
 
 // -----
 
-// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_optional' failed to satiisfy constraint: optional non-empty array of non-negative int64_t}}
+// expected-error @+1 {{'test.op_with_property_predicates' op property 'non_empty_optional' failed to satisfy constraint: optional non-empty array of non-negative int64_t}}
 test.op_with_property_predicates <{
   scalar = 1 : i64,
   optional = [2 : i64],

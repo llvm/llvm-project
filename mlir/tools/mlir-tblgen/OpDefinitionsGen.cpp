@@ -1042,18 +1042,18 @@ static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
   // {1}: Property name, with the first letter capitalized, to find the getter.
   // {2}: Property interface type.
   const char *const fetchProperty = R"(
-  {2} {0} = this->get{1}(); (void){0};
+  [[maybe_unused]] {2} {0} = this->get{1}();
 )";
 
   // Code to verify that the predicate of a property holds. Embeds the
   // condition inline.
-  // {0}: Property condition code, pre-tgfmt()'d.
+  // {0}: Property condition code, with tgfmt() applied.
   // {1}: Emit error prefix.
   // {2}: Property name.
   // {3}: Property description.
   const char *const verifyProperty = R"(
   if (!({0}))
-    return {1}"property '{2}' failed to satiisfy constraint: {3}");
+    return {1}"property '{2}' failed to satisfy constraint: {3}");
 )";
 
   // Prefix variables with `tblgen_` to avoid hiding the attribute accessor.
@@ -1063,7 +1063,6 @@ static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
     return (tblgenNamePrefix + Twine(varName)).str();
   };
 
-  body.indent();
   for (const NamedProperty &prop : emitHelper.getOp().getProperties()) {
     Pred predicate = prop.prop.getPredicate();
     // Null predicate, nothing to verify.
@@ -1071,10 +1070,13 @@ static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
       continue;
 
     std::string rawCondition = predicate.getCondition();
+    if (rawCondition == "true")
+      continue;
     bool needsOp = StringRef(rawCondition).contains("$_op");
     if (needsOp && !emitHelper.isEmittingForOp())
       continue;
 
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
     std::string varName = getVarName(prop);
     std::string getterName =
         convertToCamelFromSnakeCase(prop.name, /*capitalizeFirst=*/true);

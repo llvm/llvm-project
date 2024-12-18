@@ -36,37 +36,38 @@ def OpWithPredicates : NS_Op<"op_with_predicates"> {
 }
 
 // CHECK-LABEL: OpWithPredicates::verifyInvariantsImpl()
-// CHECK: int64_t tblgen_scalar = this->getScalar(); (void)tblgen_scalar;
+// Note: for test readibility, we capture [[maybe_unused]] into the variable maybe_unused
+// CHECK: [[maybe_unused:\[\[maybe_unused\]\]]] int64_t tblgen_scalar = this->getScalar();
 // CHECK: if (!((tblgen_scalar >= 0)))
-// CHECK-NEXT:  return emitOpError("property 'scalar' failed to satiisfy constraint: non-negative int64_t");
+// CHECK-NEXT:  return emitOpError("property 'scalar' failed to satisfy constraint: non-negative int64_t");
 
-// CHECK: std::optional<int64_t> tblgen_optional = this->getOptional(); (void)tblgen_optional;
+// CHECK: [[maybe_unused]] std::optional<int64_t> tblgen_optional = this->getOptional();
 // CHECK: if (!(((!tblgen_optional.has_value())) || (((*(tblgen_optional)) >= 0))))
-// CHECK-NEXT:   return emitOpError("property 'optional' failed to satiisfy constraint: optional non-negative int64_t");
+// CHECK-NEXT:   return emitOpError("property 'optional' failed to satisfy constraint: optional non-negative int64_t");
 
-// CHECK: int64_t tblgen_defaulted = this->getDefaulted(); (void)tblgen_defaulted;
+// CHECK: [[maybe_unused]] int64_t tblgen_defaulted = this->getDefaulted();
 // CHECK: if (!((tblgen_defaulted >= 0)))
-// CHECK-NEXT:  return emitOpError("property 'defaulted' failed to satiisfy constraint: non-negative int64_t");
+// CHECK-NEXT:  return emitOpError("property 'defaulted' failed to satisfy constraint: non-negative int64_t");
 
-// CHECK: int64_t tblgen_moreConstrained = this->getMoreConstrained(); (void)tblgen_moreConstrained;
+// CHECK: [[maybe_unused]] int64_t tblgen_moreConstrained = this->getMoreConstrained();
 // CHECK: if (!(((tblgen_moreConstrained >= 0)) && ((tblgen_moreConstrained <= 5))))
-// CHECK-NEXT:  return emitOpError("property 'moreConstrained' failed to satiisfy constraint: between 0 and 5");
+// CHECK-NEXT:  return emitOpError("property 'moreConstrained' failed to satisfy constraint: between 0 and 5");
 
-// CHECK: ::llvm::ArrayRef<int64_t> tblgen_array = this->getArray(); (void)tblgen_array;
+// CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_array = this->getArray();
 // CHECK: if (!(::llvm::all_of(tblgen_array, [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })))
-// CHECK-NEXT: return emitOpError("property 'array' failed to satiisfy constraint: array of non-negative int64_t");
+// CHECK-NEXT: return emitOpError("property 'array' failed to satisfy constraint: array of non-negative int64_t");
 
-// CHECK: ::llvm::ArrayRef<int64_t> tblgen_nonEmptyUnconstrained = this->getNonEmptyUnconstrained(); (void)tblgen_nonEmptyUnconstrained;
+// CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_nonEmptyUnconstrained = this->getNonEmptyUnconstrained();
 // CHECK: if (!(!((tblgen_nonEmptyUnconstrained.empty()))))
-// CHECK-NEXT: return emitOpError("property 'non_empty_unconstrained' failed to satiisfy constraint: non-empty array of int64_t");
+// CHECK-NEXT: return emitOpError("property 'non_empty_unconstrained' failed to satisfy constraint: non-empty array of int64_t");
 
-// CHECK: ::llvm::ArrayRef<int64_t> tblgen_nonEmptyConstrained = this->getNonEmptyConstrained(); (void)tblgen_nonEmptyConstrained;
+// CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_nonEmptyConstrained = this->getNonEmptyConstrained();
 // CHECK: if (!((::llvm::all_of(tblgen_nonEmptyConstrained, [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })) && (!((tblgen_nonEmptyConstrained.empty())))))
-// CHECK-NEXT:   return emitOpError("property 'non_empty_constrained' failed to satiisfy constraint: non-empty array of non-negative int64_t");
+// CHECK-NEXT:   return emitOpError("property 'non_empty_constrained' failed to satisfy constraint: non-empty array of non-negative int64_t");
 
-// CHECK: std::optional<::llvm::ArrayRef<int64_t>> tblgen_nonEmptyOptional = this->getNonEmptyOptional(); (void)tblgen_nonEmptyOptional;
+// CHECK: [[maybe_unused]] std::optional<::llvm::ArrayRef<int64_t>> tblgen_nonEmptyOptional = this->getNonEmptyOptional();
 // CHECK: (!(((!tblgen_nonEmptyOptional.has_value())) || ((::llvm::all_of((*(tblgen_nonEmptyOptional)), [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })) && (!(((*(tblgen_nonEmptyOptional)).empty()))))))
-// CHECK-NEXT:   return emitOpError("property 'non_empty_optional' failed to satiisfy constraint: optional non-empty array of non-negative int64_t");
+// CHECK-NEXT:   return emitOpError("property 'non_empty_optional' failed to satisfy constraint: optional non-empty array of non-negative int64_t");
 
 // CHECK-NOT: int64_t tblgen_unconstrained
 // CHECK: return ::mlir::success();

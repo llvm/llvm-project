@@ -65,11 +65,12 @@ class Property<string storageTypeParam = "", string desc = ""> {
     return convertFromAttribute($_storage, $_attr, $_diag);
   }];
 
-  // The verification predicate for this property. Defaults to And<[]>,
-  // which is trivially true, since properties are always their expected type.
+  // The verification predicate for this property. Defaults to the true predicate,
+  // since properties are always their expected type.
   // Within the predicate, `$_self` is an instance of the **interface**
-  // type of the property.
-  Pred predicate = ?;
+  // type of the property. Setting this field to ? will also result in a
+  // true predicate but is not recommended, as it breaks composability.
+  Pred predicate = TruePred;
 
   // The call expression to hash the property.
   //
@@ -365,9 +366,12 @@ class DefaultValuedProperty<Property p, string default = "", string storageDefau
   let writeToMlirBytecode = p.writeToMlirBytecode;
 }
 
+/// Apply the predicate `pred` to the property `p`, ANDing it with any
+/// predicates it may already have. If `newSummary` is provided, replace the
+/// summary of `p` with `newSummary`.
 class ConfinedProperty<Property p, Pred pred, string newSummary = "">
     : Property<p.storageType, !if(!empty(newSummary), p.summary, newSummary)> {
-  let predicate = !if(!initialized(p.predicate), And<[p.predicate, pred]>, pred);
+  let predicate = !if(!ne(p.predicate, TruePred), And<[p.predicate, pred]>, pred);
   let baseProperty = p;
   // Keep up to date with `Property` above.
   let description = p.description;
@@ -409,17 +413,15 @@ class _makePropStorage<Property prop, string name> {
 ///   }
 ///
 /// and then appends `prefix` and `suffix`.
-class _makeChildWrapperPred<string prefix, Property wrappedProp, string suffix> {
+class _makeStoragedWrapperPred<Property wrappedProp> {
   Pred ret =
-    !if(!initialized(wrappedProp.predicate),
-      Concat<
-        prefix # "[]("
-          # "const " # wrappedProp.storageType # "& baseStore) -> bool { return []("
-          # wrappedProp.interfaceType # " baseIface) -> bool { return (",
-        SubstLeaves<"$_self", "baseIface", wrappedProp.predicate>,
-        "); }(" # !subst("$_storage", "baseStore", wrappedProp.convertFromStorage)
-          # "); }" # suffix
-      >, ?);
+    Concat<
+      "[](" # "const " # wrappedProp.storageType
+        # "& baseStore) -> bool { return []("
+        # wrappedProp.interfaceType # " baseIface) -> bool { return (",
+      SubstLeaves<"$_self", "baseIface", wrappedProp.predicate>,
+      "); }(" # !subst("$_storage", "baseStore", wrappedProp.convertFromStorage)
+        # "); }">;
 }
 
 /// The generic class for arrays of some other property, which is stored as a
@@ -462,7 +464,9 @@ class ArrayProperty<Property elem = Property<>, string newSummary = ""> :
     return ::mlir::ArrayAttr::get($_ctxt, elems);
   }];
 
-  let predicate = _makeChildWrapperPred<"::llvm::all_of($_self, ", elem, ")">.ret;
+  let predicate = !if(!eq(elem.predicate, TruePred),
+    TruePred,
+    Concat<"::llvm::all_of($_self, ", _makeStoragedWrapperPred<elem>.ret, ")">);
 
   defvar theParserBegin = [{
     auto& storage = $_storage;
@@ -633,10 +637,10 @@ class OptionalProperty<Property p, bit canDelegateParsing = 1>
     return ::mlir::ArrayAttr::get($_ctxt, {attr});
   }];
 
-  let predicate = !if(!initialized(p.predicate),
+  let predicate = !if(!ne(p.predicate, TruePred),
     Or<[CPred<"!$_self.has_value()">,
         SubstLeaves<"$_self", "(*($_self))", p.predicate>]>,
-    ?);
+    TruePred);
 
   defvar delegatedParserBegin = [{
     if (::mlir::succeeded($_parser.parseOptionalKeyword("none"))) {
