@@ -374,6 +374,7 @@ namespace call_with_adopt_ref {
     void method();
   };
 
+  // This is needed due to rdar://141692212.
   struct dummy {
     RefPtr<Obj> any;
   };
