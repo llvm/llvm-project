@@ -18596,8 +18596,11 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
     if (R.isDeleted(I))
       continue;
     for (Value *Op : I->operands())
-      if (auto *RootOp = dyn_cast<Instruction>(Op))
+      if (auto *RootOp = dyn_cast<Instruction>(Op)) {
         Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
+        if (R.isDeleted(I))
+          break;
+      }
   }
   // Try to vectorize operands as vector bundles.
   for (CmpInst *I : CmpInsts) {
