@@ -107,7 +107,7 @@ public:
           llvm::StringMap<SectionLambda> &SectionLambdas,
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
-        SectionLambdas(SectionLambdas), Escapes(Escapes), T(Type::Root),
+        SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Type::Root),
         ParentContext(nullptr) {};
 
   ASTNode(llvm::StringRef Body, ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
@@ -116,17 +116,17 @@ public:
           llvm::StringMap<SectionLambda> &SectionLambdas,
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
-        SectionLambdas(SectionLambdas), Escapes(Escapes), T(Type::Text),
+        SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Type::Text),
         Body(Body.str()), Parent(Parent), ParentContext(nullptr) {}
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable Nodes
-  ASTNode(Type T, Accessor Accessor, ASTNode *Parent,
+  ASTNode(Type Ty, Accessor Accessor, ASTNode *Parent,
           llvm::BumpPtrAllocator &Alloc, llvm::StringMap<ASTNode *> &Partials,
           llvm::StringMap<Lambda> &Lambdas,
           llvm::StringMap<SectionLambda> &SectionLambdas,
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
-        SectionLambdas(SectionLambdas), Escapes(Escapes), T(T),
+        SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Ty),
         Accessor(Accessor), Parent(Parent), ParentContext(nullptr) {}
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
@@ -156,7 +156,7 @@ private:
   StringMap<Lambda> &Lambdas;
   StringMap<SectionLambda> &SectionLambdas;
   DenseMap<char, std::string> &Escapes;
-  Type T;
+  Type Ty;
   size_t Indentation = 0;
   std::string RawBody;
   std::string Body;
@@ -601,10 +601,10 @@ void toMustacheString(const Value &Data, raw_ostream &OS) {
 
 void ASTNode::render(const Value &Data, raw_ostream &OS) {
   ParentContext = &Data;
-  const Value *ContextPtr = T == Root ? ParentContext : findContext();
+  const Value *ContextPtr = Ty == Root ? ParentContext : findContext();
   const Value &Context = ContextPtr ? *ContextPtr : nullptr;
 
-  switch (T) {
+  switch (Ty) {
   case Root:
     renderChild(Data, OS);
     return;
@@ -683,7 +683,7 @@ const Value *ASTNode::findContext() {
   ASTNode *CurrentParent = Parent;
 
   while (!CurrentContext || !CurrentContext->get(CurrentAccessor)) {
-    if (CurrentParent->T != Root) {
+    if (CurrentParent->Ty != Root) {
       CurrentContext = CurrentParent->ParentContext->getAsObject();
       CurrentParent = CurrentParent->Parent;
       continue;
@@ -727,7 +727,7 @@ void ASTNode::renderLambdas(const Value &Contexts, llvm::raw_ostream &OS,
       P.parse(Allocator, Partials, Lambdas, SectionLambdas, Escapes);
 
   EscapeStringStream ES(OS, Escapes);
-  if (T == Variable) {
+  if (Ty == Variable) {
     LambdaNode->render(Contexts, ES);
     return;
   }
