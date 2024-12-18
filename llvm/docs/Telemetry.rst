@@ -188,7 +188,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     return AllErrs;
   }
       
-  void addDestination(std::unique_ptr<Destination>&& Dest) override {
+  void addDestination(std::unique_ptr<Destination> Dest) override {
     destinations.push_back(std::move(Dest));
   }
   
