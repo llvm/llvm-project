@@ -529,7 +529,6 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
   if (kret != KERN_SUCCESS)
     return kret;
 
-
   size_t za_size = m_state.context.sme.svl_b * m_state.context.sme.svl_b;
   const size_t max_chunk_size = 4096;
   int n_chunks;
