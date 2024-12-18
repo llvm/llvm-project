@@ -2916,7 +2916,7 @@ public:
       function_ref<MapInfosTy &(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
                                 llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
-      llvm::Type *ElemTy, StringRef FuncName = {},
+      llvm::Type *ElemTy, StringRef FuncName,
       function_ref<bool(unsigned int, Function **)> CustomMapperCB = nullptr);
 
   /// Generator for '#omp target data'

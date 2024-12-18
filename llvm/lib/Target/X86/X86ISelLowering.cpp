@@ -30105,9 +30105,9 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         (VT == MVT::v4i32 || Subtarget.hasSSE41() || Opc != ISD::SHL ||
          canWidenShuffleElements(ShuffleMask))) {
       SDValue Shift1 =
-          getTargetVShiftByConstNode(X86OpcI, dl, VT, R, AmtA, DAG);
+          DAG.getNode(Opc, dl, VT, R, DAG.getConstant(AmtA, dl, VT));
       SDValue Shift2 =
-          getTargetVShiftByConstNode(X86OpcI, dl, VT, R, AmtB, DAG);
+          DAG.getNode(Opc, dl, VT, R, DAG.getConstant(AmtB, dl, VT));
       return DAG.getVectorShuffle(VT, dl, Shift1, Shift2, ShuffleMask);
     }
   }
