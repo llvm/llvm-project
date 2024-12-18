@@ -145,3 +145,40 @@ define <1 x i64> @atomic_vec1_i64_align(ptr %x) nounwind {
   %ret = load atomic <1 x i64>, ptr %x acquire, align 8
   ret <1 x i64> %ret
 }
+
+define <1 x half> @atomic_vec1_half(ptr %x) {
+; CHECK3-LABEL: atomic_vec1_half:
+; CHECK3:       ## %bb.0:
+; CHECK3-NEXT:    movzwl (%rdi), %eax
+; CHECK3-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK3-NEXT:    retq
+;
+; CHECK0-LABEL: atomic_vec1_half:
+; CHECK0:       ## %bb.0:
+; CHECK0-NEXT:    movw (%rdi), %cx
+; CHECK0-NEXT:    ## implicit-def: $eax
+; CHECK0-NEXT:    movw %cx, %ax
+; CHECK0-NEXT:    ## implicit-def: $xmm0
+; CHECK0-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK0-NEXT:    retq
+  %ret = load atomic <1 x half>, ptr %x acquire, align 2
+  ret <1 x half> %ret
+}
+
+define <1 x float> @atomic_vec1_float(ptr %x) {
+; CHECK-LABEL: atomic_vec1_float:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    retq
+  %ret = load atomic <1 x float>, ptr %x acquire, align 4
+  ret <1 x float> %ret
+}
+
+define <1 x double> @atomic_vec1_double_align(ptr %x) nounwind {
+; CHECK-LABEL: atomic_vec1_double_align:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    retq
+  %ret = load atomic <1 x double>, ptr %x acquire, align 8
+  ret <1 x double> %ret
+}
