@@ -65,7 +65,6 @@ public:
   friend bool findAndReplaceVectors(llvm::Module &M);
 
 private:
-  Value *createNewGetElementPtr(GetElementPtrInst &GEPI);
   GlobalVariable *lookupReplacementGlobal(Value *CurrOperand);
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
 };
@@ -95,14 +94,13 @@ bool DataScalarizerVisitor::visitLoadInst(LoadInst &LI) {
       GetElementPtrInst *OldGEP =
           cast<GetElementPtrInst>(CE->getAsInstruction());
       OldGEP->insertBefore(&LI);
-      Value *NewGEP = createNewGetElementPtr(*OldGEP);
       IRBuilder<> Builder(&LI);
       LoadInst *NewLoad =
-          Builder.CreateLoad(LI.getType(), NewGEP, LI.getName());
+          Builder.CreateLoad(LI.getType(), OldGEP, LI.getName());
       NewLoad->setAlignment(LI.getAlign());
       LI.replaceAllUsesWith(NewLoad);
       LI.eraseFromParent();
-      OldGEP->eraseFromParent();
+      visitGetElementPtrInst(*OldGEP);
       return true;
     }
     if (GlobalVariable *NewGlobal = lookupReplacementGlobal(CurrOpperand))
@@ -120,13 +118,12 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
       GetElementPtrInst *OldGEP =
           cast<GetElementPtrInst>(CE->getAsInstruction());
       OldGEP->insertBefore(&SI);
-      Value *NewGEP = createNewGetElementPtr(*OldGEP);
       IRBuilder<> Builder(&SI);
-      StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), NewGEP);
+      StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), OldGEP);
       NewStore->setAlignment(SI.getAlign());
       SI.replaceAllUsesWith(NewStore);
       SI.eraseFromParent();
-      OldGEP->eraseFromParent();
+      visitGetElementPtrInst(*OldGEP);
       return true;
     }
     if (GlobalVariable *NewGlobal = lookupReplacementGlobal(CurrOpperand))
@@ -135,7 +132,8 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   return false;
 }
 
-Value *DataScalarizerVisitor::createNewGetElementPtr(GetElementPtrInst &GEPI) {
+bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
+
   unsigned NumOperands = GEPI.getNumOperands();
   GlobalVariable *NewGlobal = nullptr;
   for (unsigned I = 0; I < NumOperands; ++I) {
@@ -145,21 +143,16 @@ Value *DataScalarizerVisitor::createNewGetElementPtr(GetElementPtrInst &GEPI) {
       break;
   }
   if (!NewGlobal)
-    return nullptr;
+    return false;
 
   IRBuilder<> Builder(&GEPI);
   SmallVector<Value *, MaxVecSize> Indices;
   for (auto &Index : GEPI.indices())
     Indices.push_back(Index);
 
-  return Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices,
-                           GEPI.getName(), GEPI.getNoWrapFlags());
-}
-
-bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  Value *NewGEP = createNewGetElementPtr(GEPI);
-  if (!NewGEP)
-    return false;
+  Value *NewGEP =
+      Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices,
+                        GEPI.getName(), GEPI.getNoWrapFlags());
   GEPI.replaceAllUsesWith(NewGEP);
   GEPI.eraseFromParent();
   return true;
