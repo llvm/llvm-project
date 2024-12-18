@@ -700,10 +700,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Parse -f(no-)?sanitize-nonmerged-handlers flags
   SanitizerMask AlwaysMerge; // Empty
   SanitizerMask NeverMerge;  // Empty
-  SanitizerMask MergeKinds = parseSanitizeArgs(
-      D, Args, DiagnoseErrors, MergeDefault, AlwaysMerge,
-      NeverMerge, options::OPT_fsanitize_merge_handlers_EQ,
-      options::OPT_fno_sanitize_merge_handlers_EQ);
+  SanitizerMask MergeKinds =
+      parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, AlwaysMerge,
+                        NeverMerge, options::OPT_fsanitize_merge_handlers_EQ,
+                        options::OPT_fno_sanitize_merge_handlers_EQ);
   MergeKinds |= AlwaysMerge; // No-op
   MergeKinds &= ~NeverMerge; // No-op
   MergeKinds &= Kinds;
@@ -1289,8 +1289,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
         Args.MakeArgString("-fsanitize-trap=" + toString(TrapSanitizers)));
 
   if (!MergeHandlers.empty())
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-merge=" +
-                                         toString(MergeHandlers)));
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-merge=" + toString(MergeHandlers)));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
