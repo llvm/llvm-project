@@ -58,6 +58,18 @@ std::int64_t RTDECL(SumInteger8)(const Descriptor &, const char *source,
 common::int128_t RTDECL(SumInteger16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
 #endif
+std::uint8_t RTDECL(SumUnsigned1)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint16_t RTDECL(SumUnsigned2)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint32_t RTDECL(SumUnsigned4)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint64_t RTDECL(SumUnsigned8)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
+common::uint128_t RTDECL(SumUnsigned16)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 
 // REAL/COMPLEX(2 & 3) return 32-bit float results for the caller to downconvert
 float RTDECL(SumReal2)(const Descriptor &, const char *source, int line,
@@ -116,6 +128,19 @@ std::int64_t RTDECL(ProductInteger8)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
 #ifdef __SIZEOF_INT128__
 common::int128_t RTDECL(ProductInteger16)(const Descriptor &,
+    const char *source, int line, int dim = 0,
+    const Descriptor *mask = nullptr);
+#endif
+std::uint8_t RTDECL(ProductUnsigned1)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint16_t RTDECL(ProductUnsigned2)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint32_t RTDECL(ProductUnsigned4)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint64_t RTDECL(ProductUnsigned8)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
+common::uint128_t RTDECL(ProductUnsigned16)(const Descriptor &,
     const char *source, int line, int dim = 0,
     const Descriptor *mask = nullptr);
 #endif
@@ -239,6 +264,21 @@ void RTDECL(MaxlocInteger8)(Descriptor &, const Descriptor &, int kind,
 void RTDECL(MaxlocInteger16)(Descriptor &, const Descriptor &, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
+void RTDECL(MaxlocUnsigned1)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MaxlocUnsigned2)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MaxlocUnsigned4)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MaxlocUnsigned8)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MaxlocUnsigned16)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
 void RTDECL(MaxlocReal4)(Descriptor &, const Descriptor &, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
@@ -272,6 +312,21 @@ void RTDECL(MinlocInteger8)(Descriptor &, const Descriptor &, int kind,
 void RTDECL(MinlocInteger16)(Descriptor &, const Descriptor &, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
+void RTDECL(MinlocUnsigned1)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MinlocUnsigned2)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MinlocUnsigned4)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MinlocUnsigned8)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTDECL(MinlocUnsigned16)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
 void RTDECL(MinlocReal4)(Descriptor &, const Descriptor &, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
@@ -300,6 +355,19 @@ std::int64_t RTDECL(MaxvalInteger8)(const Descriptor &, const char *source,
 #ifdef __SIZEOF_INT128__
 common::int128_t RTDECL(MaxvalInteger16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
+std::uint8_t RTDECL(MaxvalUnsigned1)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint16_t RTDECL(MaxvalUnsigned2)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint32_t RTDECL(MaxvalUnsigned4)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint64_t RTDECL(MaxvalUnsigned8)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
+common::uint128_t RTDECL(MaxvalUnsigned16)(const Descriptor &,
+    const char *source, int line, int dim = 0,
+    const Descriptor *mask = nullptr);
 #endif
 float RTDECL(MaxvalReal2)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
@@ -332,6 +400,19 @@ std::int64_t RTDECL(MinvalInteger8)(const Descriptor &, const char *source,
 #ifdef __SIZEOF_INT128__
 common::int128_t RTDECL(MinvalInteger16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
+std::uint8_t RTDECL(MinvalUnsigned1)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint16_t RTDECL(MinvalUnsigned2)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint32_t RTDECL(MinvalUnsigned4)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+std::uint64_t RTDECL(MinvalUnsigned8)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
+common::uint128_t RTDECL(MinvalUnsigned16)(const Descriptor &,
+    const char *source, int line, int dim = 0,
+    const Descriptor *mask = nullptr);
 #endif
 float RTDECL(MinvalReal2)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
@@ -407,6 +488,18 @@ std::int64_t RTDECL(DotProductInteger8)(const Descriptor &, const Descriptor &,
     const char *source = nullptr, int line = 0);
 #ifdef __SIZEOF_INT128__
 common::int128_t RTDECL(DotProductInteger16)(const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+#endif
+std::uint8_t RTDECL(DotProductUnsigned1)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+std::uint16_t RTDECL(DotProductUnsigned2)(const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+std::uint32_t RTDECL(DotProductUnsigned4)(const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+std::uint64_t RTDECL(DotProductUnsigned8)(const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+#ifdef __SIZEOF_INT128__
+common::uint128_t RTDECL(DotProductUnsigned16)(const Descriptor &,
     const Descriptor &, const char *source = nullptr, int line = 0);
 #endif
 float RTDECL(DotProductReal2)(const Descriptor &, const Descriptor &,
