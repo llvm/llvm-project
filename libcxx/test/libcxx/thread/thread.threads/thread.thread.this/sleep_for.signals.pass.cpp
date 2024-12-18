@@ -27,6 +27,7 @@
 #include <cstring> // for std::memset
 
 #include <signal.h>
+#include <time.h>
 #include <sys/time.h>
 
 #include "test_macros.h"
@@ -44,13 +45,21 @@ int main(int, char**)
   ec = sigaction(SIGALRM, &action, nullptr);
   assert(!ec);
 
-  struct itimerval it;
-  std::memset(&it, 0, sizeof(itimerval));
+  timer_t timer_id = 0;
+  struct sigevent _sev;
+  _sev.sigev_signo           = SIGALRM;
+  _sev.sigev_notify          = SIGEV_SIGNAL;
+  _sev.sigev_value.sival_ptr = &timer_id;
+  ec                         = timer_create(CLOCK_REALTIME, &_sev, &timer_id);
+  assert(!ec);
+
+  struct itimerspec it;
+  std::memset(&it, 0, sizeof(itimerspec));
   it.it_value.tv_sec = 0;
-  it.it_value.tv_usec = 250000;
+  it.it_value.tv_nsec = 250000000;
   // This will result in a SIGALRM getting fired resulting in the nanosleep
   // inside sleep_for getting EINTR.
-  ec = setitimer(ITIMER_REAL, &it, nullptr);
+  ec = timer_settime(timer_id, 0, &it, nullptr);
   assert(!ec);
 
   typedef std::chrono::system_clock Clock;
