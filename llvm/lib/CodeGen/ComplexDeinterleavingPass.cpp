@@ -1764,7 +1764,8 @@ bool ComplexDeinterleavingGraph::checkNodes() {
       FoundDeinterleaveNode = true;
   }
 
-  // We need a deinterleave node in order to guarantee that we're working with complex numbers.
+  // We need a deinterleave node in order to guarantee that we're working with
+  // complex numbers.
   if (!FoundDeinterleaveNode)
     return false;
 
