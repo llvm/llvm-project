@@ -3829,6 +3829,11 @@ public:
     TripCount = TC;
   }
 
+  /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
+  /// original preheader and scalar header of \p L, to be used as entry and
+  /// scalar header blocks of the new VPlan.
+  VPlan(Loop *L);
+
   ~VPlan();
 
   void setEntry(VPBasicBlock *VPBB) {
