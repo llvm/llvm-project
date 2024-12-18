@@ -67,7 +67,8 @@ namespace memprof {
 // Extract all calls from the IR.  Arrange them in a map from caller GUIDs to a
 // list of call sites, each of the form {LineLocation, CalleeGUID}.
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
-extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI);
+extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
+                   function_ref<bool(uint64_t)> IsPresentInProfile);
 
 struct LineLocationHash {
   uint64_t operator()(const LineLocation &Loc) const {
