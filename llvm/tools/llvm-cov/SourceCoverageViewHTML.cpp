@@ -1096,20 +1096,31 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
   if (getOptions().Debug)
     errs() << "Branch at line " << BRV.getLine() << '\n';
 
+  auto BranchCount = [&](StringRef Label, uint64_t Count, bool Folded,
+                         double Total) {
+    if (Folded)
+      return std::string{"Folded"};
+
+    std::string Str;
+    raw_string_ostream OS(Str);
+
+    OS << tag("span", Label, (Count ? "None" : "red branch")) << ": ";
+    if (getOptions().ShowBranchCounts)
+      OS << tag("span", formatCount(Count),
+                (Count ? "covered-line" : "uncovered-line"));
+    else
+      OS << format("%0.2f", (Total != 0 ? 100.0 * Count / Total : 0.0)) << "%";
+
+    return Str;
+  };
+
   OS << BeginExpansionDiv;
   OS << BeginPre;
   for (const auto &R : BRV.Regions) {
-    // Calculate TruePercent and False Percent.
-    double TruePercent = 0.0;
-    double FalsePercent = 0.0;
-    // FIXME: It may overflow when the data is too large, but I have not
-    // encountered it in actual use, and not sure whether to use __uint128_t.
-    uint64_t Total = R.ExecutionCount + R.FalseExecutionCount;
-
-    if (!getOptions().ShowBranchCounts && Total != 0) {
-      TruePercent = ((double)(R.ExecutionCount) / (double)Total) * 100.0;
-      FalsePercent = ((double)(R.FalseExecutionCount) / (double)Total) * 100.0;
-    }
+    // This can be `double` since it is only used as a denominator.
+    // FIXME: It is still inaccurate if Count is greater than (1LL << 53).
+    double Total =
+        static_cast<double>(R.ExecutionCount) + R.FalseExecutionCount;
 
     // Display Line + Column.
     std::string LineNoStr = utostr(uint64_t(R.LineStart));
@@ -1128,40 +1139,9 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
       continue;
     }
 
-    // Display TrueCount or TruePercent.
-    std::string TrueColor =
-        (R.TrueFolded || R.ExecutionCount ? "None" : "red branch");
-    std::string TrueCovClass =
-        (R.TrueFolded || R.ExecutionCount > 0 ? "covered-line"
-                                              : "uncovered-line");
-
-    if (R.TrueFolded)
-      OS << "Folded, ";
-    else {
-      OS << tag("span", "True", TrueColor) << ": ";
-      if (getOptions().ShowBranchCounts)
-        OS << tag("span", formatCount(R.ExecutionCount), TrueCovClass) << ", ";
-      else
-        OS << format("%0.2f", TruePercent) << "%, ";
-    }
-
-    // Display FalseCount or FalsePercent.
-    std::string FalseColor =
-        (R.FalseFolded || R.FalseExecutionCount ? "None" : "red branch");
-    std::string FalseCovClass =
-        (R.FalseFolded || R.FalseExecutionCount > 0 ? "covered-line"
-                                                    : "uncovered-line");
-
-    if (R.FalseFolded)
-      OS << "Folded]\n";
-    else {
-      OS << tag("span", "False", FalseColor) << ": ";
-      if (getOptions().ShowBranchCounts)
-        OS << tag("span", formatCount(R.FalseExecutionCount), FalseCovClass)
-           << "]\n";
-      else
-        OS << format("%0.2f", FalsePercent) << "%]\n";
-    }
+    OS << BranchCount("True", R.ExecutionCount, R.TrueFolded, Total) << ", "
+       << BranchCount("False", R.FalseExecutionCount, R.FalseFolded, Total)
+       << "]\n";
   }
   OS << EndPre;
   OS << EndExpansionDiv;
