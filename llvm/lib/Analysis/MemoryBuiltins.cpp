@@ -838,7 +838,11 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
 
   // We end up pointing on a location that's outside of the original object.
   if (ORT.knownBefore() && ORT.Before.isNegative()) {
-    // This is UB, and we'd rather return an empty location then.
+    // This means that we *may* be accessing memory before the allocation. It's
+    // unsure though, so bail out instead of returning a potentially misleading
+    // result.
+    // TODO: working with ranges instead of value would make it possible to take
+    // a better decision.
     if (Options.EvalMode == ObjectSizeOpts::Mode::Min ||
         Options.EvalMode == ObjectSizeOpts::Mode::Max) {
       return ObjectSizeOffsetVisitor::unknown();
