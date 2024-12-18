@@ -189,7 +189,9 @@ Ben Shi \
 #### BPF backend
 
 Yonghong Song \
-yhs@fb.com (email), [yonghong-song](https://github.com/yonghong-song) (GitHub)
+yhs@fb.com (email), [yonghong-song](https://github.com/yonghong-song) (GitHub) \
+Eduard Zingerman \
+eddyz87@gmail.com (email), [eddyz87](https://github.com/eddyz87) (GitHub)
 
 #### CSKY backend
 
