@@ -272,6 +272,7 @@ void ImplicitBoolConversionCheck::storeOptions(
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
+  if(CheckConversionFromBool || CheckConversionToBool){
   auto ExceptionCases =
       expr(anyOf(allOf(isMacroExpansion(), unless(isNULLMacroExpansion())),
                  has(ignoringImplicit(
@@ -280,23 +281,18 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                  expr(hasType(qualType().bind("type")),
                       hasParent(initListExpr(hasParent(explicitCastExpr(
                           hasType(qualType(equalsBoundNode("type"))))))))));
-  auto ImplicitCastFromBool = implicitCastExpr(
-      anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
-            // Prior to C++11 cast from bool literal to pointer was allowed.
-            allOf(anyOf(hasCastKind(CK_NullToPointer),
-                        hasCastKind(CK_NullToMemberPointer)),
-                  hasSourceExpression(cxxBoolLiteral()))),
-      hasSourceExpression(expr(hasType(booleanType()))));
+    
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
+  auto IsInCompilerGeneratedFunction = hasAncestor(namedDecl(anyOf(
+      isImplicit(), functionDecl(isDefaulted()), functionTemplateDecl())));
+    
+  if(CheckConversionToBool){
   auto ComparisonInCall = allOf(
       hasParent(callExpr()),
       hasSourceExpression(binaryOperator(hasAnyOperatorName("==", "!="))));
-
-  auto IsInCompilerGeneratedFunction = hasAncestor(namedDecl(anyOf(
-      isImplicit(), functionDecl(isDefaulted()), functionTemplateDecl())));
-
+    
   Finder->addMatcher(
       traverse(TK_AsIs,
                implicitCastExpr(
@@ -322,21 +318,34 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                    // additional parens in replacement.
                    optionally(hasParent(stmt().bind("parentStmt"))),
                    unless(isInTemplateInstantiation()),
-                   unless(IsInCompilerGeneratedFunction),
-                   unless(!CheckConversionToBool)
+                   unless(IsInCompilerGeneratedFunction))
                    .bind("implicitCastToBool")),
       this);
+  }
 
+  if(CheckConversionFromBool){
+  auto ImplicitCastFromBool = implicitCastExpr(
+      anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
+            // Prior to C++11 cast from bool literal to pointer was allowed.
+            allOf(anyOf(hasCastKind(CK_NullToPointer),
+                        hasCastKind(CK_NullToMemberPointer)),
+                  hasSourceExpression(cxxBoolLiteral()))),
+      hasSourceExpression(expr(hasType(booleanType()))));
+  
   auto BoolComparison = binaryOperator(hasAnyOperatorName("==", "!="),
                                        hasLHS(ImplicitCastFromBool),
                                        hasRHS(ImplicitCastFromBool));
+  
   auto BoolOpAssignment = binaryOperator(hasAnyOperatorName("|=", "&="),
                                          hasLHS(expr(hasType(booleanType()))));
+  
   auto BitfieldAssignment = binaryOperator(
       hasLHS(memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1))))));
+  
   auto BitfieldConstruct = cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
       withInitializer(equalsBoundNode("implicitCastFromBool")),
       forField(hasBitWidth(1)))));
+  
   Finder->addMatcher(
       traverse(
           TK_AsIs,
@@ -349,15 +358,16 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               unless(hasParent(
                   binaryOperator(anyOf(BoolComparison, BoolXor,
                                        BoolOpAssignment, BitfieldAssignment)))),
+              implictCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
               anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
                     anything()),
               unless(isInTemplateInstantiation()),
-              unless(IsInCompilerGeneratedFunction),
-              unless(!CheckConversionFromBool))
-              .bind("implicitCastFromBool")),
+              unless(IsInCompilerGeneratedFunction))),
       this);
+  }
+  }
 }
 
 void ImplicitBoolConversionCheck::check(
