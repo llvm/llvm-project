@@ -716,6 +716,23 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
     return OperandInfo(MIVLMul, MILog2SEW);
   }
 
+  // Vector Reduction Operations
+  // Vector Single-Width Integer Reduction Instructions
+  // The Dest and VS1 only read element 0 of the vector register. Return unknown
+  // for these. VS2 has EEW=SEW and EMUL=LMUL.
+  case RISCV::VREDAND_VS:
+  case RISCV::VREDMAX_VS:
+  case RISCV::VREDMAXU_VS:
+  case RISCV::VREDMIN_VS:
+  case RISCV::VREDMINU_VS:
+  case RISCV::VREDOR_VS:
+  case RISCV::VREDSUM_VS:
+  case RISCV::VREDXOR_VS: {
+    if (MO.getOperandNo() == 2)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return {};
+  }
+
   default:
     return {};
   }
@@ -1041,11 +1058,28 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
 
     // Instructions like reductions may use a vector register as a scalar
     // register. In this case, we should treat it like a scalar register which
-    // does not impact the decision on whether to optimize VL.
-    // TODO: Treat it like a scalar register instead of bailing out.
+    // does not impact the decision on whether to optimize VL. But if there is
+    // another user of MI and it has VL=0, we need to be sure not to reduce the
+    // VL of MI to zero when the VLOp of UserOp is may be non-zero.
     if (isVectorOpUsedAsScalarOp(UserOp)) {
-      CanReduceVL = false;
-      break;
+      [[maybe_unused]] Register R = UserOp.getReg();
+      [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
+      assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
+             "Expect LMUL 1 register class for vector as scalar operands!");
+      LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
+      const MCInstrDesc &Desc = UserMI.getDesc();
+      unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
+      const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
+      if ((VLOp.isReg() && VLOp.getReg() != RISCV::X0) ||
+          (VLOp.isImm() && VLOp.getImm() != 0)) {
+        if (!CommonVL) {
+          CommonVL = &VLOp;
+          continue;
+        } else if (!CommonVL->isIdenticalTo(VLOp)) {
+          CanReduceVL = false;
+          break;
+        }
+      }
     }
 
     if (mayReadPastVL(UserMI)) {
