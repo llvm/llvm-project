@@ -6979,7 +6979,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
 
   auto &P = RPTracker.getPressure().MaxSetPressure;
   for (unsigned I = 0, E = P.size(); I < E; ++I)
-    if (P[I] > TRI->getRegPressureSetLimit(*MF, I)) {
+    if (P[I] > RegClassInfo.getRegPressureSetLimit(I)) {
       return true;
     }
   return false;
