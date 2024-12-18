@@ -2548,6 +2548,13 @@ def fsanitize_trap_EQ : CommaJoined<["-"], "fsanitize-trap=">, Group<f_clang_Gro
 def fno_sanitize_trap_EQ : CommaJoined<["-"], "fno-sanitize-trap=">, Group<f_clang_Group>,
                            Visibility<[ClangOption, CLOption]>,
                            HelpText<"Disable trapping for specified sanitizers">;
+def fsanitize_trap : Flag<["-"], "fsanitize-trap">, Group<f_clang_Group>,
+                     Alias<fsanitize_trap_EQ>, AliasArgs<["all"]>,
+                     HelpText<"Enable trapping for all sanitizers">;
+def fno_sanitize_trap : Flag<["-"], "fno-sanitize-trap">, Group<f_clang_Group>,
+                        Alias<fno_sanitize_trap_EQ>, AliasArgs<["all"]>,
+                        Visibility<[ClangOption, CLOption]>,
+                        HelpText<"Disable trapping for all sanitizers">;
 def fsanitize_merge_handlers_EQ
     : CommaJoined<["-"], "fsanitize-merge=">,
       Group<f_clang_Group>,
@@ -2556,13 +2563,13 @@ def fno_sanitize_merge_handlers_EQ
     : CommaJoined<["-"], "fno-sanitize-merge=">,
       Group<f_clang_Group>,
       HelpText<"Do not allow compiler to merge handlers for specified sanitizers">;
-def fsanitize_trap : Flag<["-"], "fsanitize-trap">, Group<f_clang_Group>,
-                     Alias<fsanitize_trap_EQ>, AliasArgs<["all"]>,
-                     HelpText<"Enable trapping for all sanitizers">;
-def fno_sanitize_trap : Flag<["-"], "fno-sanitize-trap">, Group<f_clang_Group>,
-                        Alias<fno_sanitize_trap_EQ>, AliasArgs<["all"]>,
+def fsanitize_merge_handlers : Flag<["-"], "fsanitize-merge">, Group<f_clang_Group>,
+                     Alias<fsanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
+                     HelpText<"Allow compiler to merge handlers for all sanitizers">;
+def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_clang_Group>,
+                        Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
                         Visibility<[ClangOption, CLOption]>,
-                        HelpText<"Disable trapping for all sanitizers">;
+                        HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
 def fsanitize_undefined_trap_on_error
     : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fsanitize_trap_EQ>, AliasArgs<["undefined"]>;
