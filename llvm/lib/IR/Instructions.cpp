@@ -644,17 +644,23 @@ bool CallBase::hasFloatingPointBundles() const {
          getOperandBundle(LLVMContext::OB_fpe_except);
 }
 
+MemoryEffects CallBase::getMemoryEffectsForBundles() const {
+  MemoryEffects ME = MemoryEffects::none();
+  if (hasFloatingPointBundles())
+    ME |= MemoryEffects::inaccessibleMemOnly();
+  if (hasReadingOperandBundles())
+    ME |= MemoryEffects::readOnly();
+  if (hasClobberingOperandBundles())
+    ME |= MemoryEffects::writeOnly();
+  return ME;
+}
+
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {
     MemoryEffects FnME = Fn->getMemoryEffects();
-    if (hasOperandBundles()) {
-      // TODO: Add a method to get memory effects for operand bundles instead.
-      if (hasReadingOperandBundles())
-        FnME |= MemoryEffects::readOnly();
-      if (hasClobberingOperandBundles())
-        FnME |= MemoryEffects::writeOnly();
-    }
+    if (hasOperandBundles())
+      FnME |= getMemoryEffectsForBundles();
     ME &= FnME;
   }
   return ME;

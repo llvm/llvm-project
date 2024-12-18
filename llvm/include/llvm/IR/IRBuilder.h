@@ -380,6 +380,8 @@ public:
   void setConstrainedFPCallAttr(CallBase *I) {
     I->addFnAttr(Attribute::StrictFP);
     MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+    if (I->getAttributes().hasFnAttr(Attribute::Memory))
+      ME |= I->getAttributes().getMemoryEffects();
     auto A = Attribute::getWithMemoryEffects(getContext(), ME);
     I->addFnAttr(A);
   }

@@ -1158,6 +1158,8 @@ protected:
   /// number of extra operands.
   unsigned getNumSubclassExtraOperandsDynamic() const;
 
+  MemoryEffects getMemoryEffectsForBundles() const;
+
 public:
   using Instruction::getContext;
 
