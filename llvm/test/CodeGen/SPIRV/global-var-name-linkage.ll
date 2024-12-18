@@ -18,6 +18,7 @@
 ; CHECK-DAG: OpName %[[#id36:]] "y.z"
 ; CHECK-DAG: OpName %[[#id38:]] "x"
 
+; CHECK-NOT: OpDecorate %[[#id18]] LinkageAttributes
 ; CHECK-DAG: OpDecorate %[[#id18]] Constant
 ; CHECK-DAG: OpDecorate %[[#id22]] Alignment 4
 ; CHECK-DAG: OpDecorate %[[#id22]] LinkageAttributes "g1" Export
