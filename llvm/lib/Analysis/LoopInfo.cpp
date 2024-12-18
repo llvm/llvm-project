@@ -999,6 +999,18 @@ void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
     return;
   }
 
+  if (forcePrintFuncIR()) {
+    // handling -print-loop-func-scope.
+    // -print-module-scope overrides this.
+    OS << Banner << " (loop: ";
+    L.getHeader()->printAsOperand(OS, false);
+    OS << ")\n";
+
+    // printing whole function.
+    OS << *L.getHeader()->getParent();
+    return;
+  }
+
   OS << Banner;
 
   auto *PreHeader = L.getLoopPreheader();
