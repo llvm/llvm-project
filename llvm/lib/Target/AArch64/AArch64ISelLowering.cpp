@@ -27295,11 +27295,13 @@ void AArch64TargetLowering::ReplaceNodeResults(
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
       return;
     }
-      case Intrinsic::aarch64_sme_in_streaming_mode: {
+    case Intrinsic::aarch64_sme_in_streaming_mode: {
       auto DL = SDLoc(N);
       SDValue Chain = DAG.getEntryNode();
-      auto RuntimePStateSM = getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
+      auto RuntimePStateSM =
+          getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
       return;
     }
     case Intrinsic::experimental_vector_match:
