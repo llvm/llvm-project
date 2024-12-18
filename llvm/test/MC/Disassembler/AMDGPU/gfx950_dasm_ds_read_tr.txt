@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx950 -disassemble -show-encoding  %s | FileCheck -check-prefix=GFX950 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -disassemble -show-encoding  %s | FileCheck -check-prefix=GFX950 %s
 
 # GFX950: ds_read_b64_tr_b4 v[0:1], v0            ; encoding: [0x00,0x00,0xc0,0xd9,0x00,0x00,0x00,0x00]
 0x00,0x00,0xc0,0xd9,0x00,0x00,0x00,0x00
