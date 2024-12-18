@@ -205,14 +205,27 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     llvm::MDNode *AnyPtr = createScalarTypeNode("any pointer", getChar(), Size);
     if (!CodeGenOpts.PointerTBAA)
       return AnyPtr;
-    // Compute the depth of the pointer and generate a tag of the form "p<depth>
-    // <base type tag>".
+    // C++ [basic.lval]p11 permits objects to accessed through an l-value of
+    // similar type. Two types are similar under C++ [conv.qual]p2 if the
+    // decomposition of the types into pointers, member pointers, and arrays has
+    // the same structure when ignoring cv-qualifiers at each level of the
+    // decomposition. Meanwhile, C makes T(*)[] and T(*)[N] compatible, which
+    // would really complicate any attempt to distinguish pointers to arrays by
+    // their bounds. It's simpler, and much easier to explain to users, to
+    // simply treat all pointers to arrays as pointers to their element type for
+    // aliasing purposes. So when creating a TBAA tag for a pointer type, we
+    // recursively ignore both qualifiers and array types when decomposing the
+    // pointee type. The only meaningful remaining structure is the number of
+    // pointer types we encountered along the way, so we just produce the tag
+    // "p<depth> <base type tag>". If we do find a member pointer type, for now
+    // we just conservatively bail out with AnyPtr (below) rather than trying to
+    // create a tag that honors the similar-type rules while still
+    // distinguishing different kinds of member pointer.
     unsigned PtrDepth = 0;
     do {
       PtrDepth++;
-      Ty = Ty->getPointeeType().getTypePtr();
+      Ty = Ty->getPointeeType()->getBaseElementTypeUnsafe();
     } while (Ty->isPointerType());
-    Ty = Context.getBaseElementType(QualType(Ty, 0)).getTypePtr();
     assert(!isa<VariableArrayType>(Ty));
     // When the underlying type is a builtin type, we compute the pointee type
     // string recursively, which is implicitly more forgiving than the standards
@@ -230,6 +243,27 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
               ->getString();
       TyName = Name;
     } else {
+      // Be conservative if the type isn't a RecordType. We are specifically
+      // required to do this for member pointers until we implement the
+      // similar-types rule.
+      const auto *RT = Ty->getAs<RecordType>();
+      if (!RT)
+        return AnyPtr;
+
+      // For unnamed structs or unions C's compatible types rule applies. Two
+      // compatible types in different compilation units can have different
+      // mangled names, meaning the metadata emitted below would incorrectly
+      // mark them as no-alias. Use AnyPtr for such types in both C and C++, as
+      // C and C++ types may be visible when doing LTO.
+      //
+      // Note that using AnyPtr is overly conservative. We could summarize the
+      // members of the type, as per the C compatibility rule in the future.
+      // This also covers anonymous structs and unions, which have a different
+      // compatibility rule, but it doesn't matter because you can never have a
+      // pointer to an anonymous struct or union.
+      if (!RT->getDecl()->getDeclName())
+        return AnyPtr;
+
       // For non-builtin types use the mangled name of the canonical type.
       llvm::raw_svector_ostream TyOut(TyName);
       MangleCtx->mangleCanonicalTypeName(QualType(Ty, 0), TyOut);
@@ -280,8 +314,10 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
 }
 
 llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
-  // At -O0 or relaxed aliasing, TBAA is not emitted for regular types.
-  if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
+  // At -O0 or relaxed aliasing, TBAA is not emitted for regular types (unless
+  // we're running TypeSanitizer).
+  if (!Features.Sanitize.has(SanitizerKind::Type) &&
+      (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing))
     return nullptr;
 
   // If the type has the may_alias attribute (even on a typedef), it is

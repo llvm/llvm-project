@@ -280,7 +280,7 @@ def SPbpicc : SDNode<"SPISD::BPICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbpxcc : SDNode<"SPISD::BPXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfcc : SDNode<"SPISD::BRFCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfccv9 : SDNode<"SPISD::BRFCC_V9", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
-def SPbrreg : SDNode<"SPISD::BR_REG", SDTSPbrreg, [SDNPHasChain, SDNPInGlue]>;
+def SPbrreg : SDNode<"SPISD::BR_REG", SDTSPbrreg, [SDNPHasChain]>;
 
 def SPhi    : SDNode<"SPISD::Hi", SDTIntUnaryOp>;
 def SPlo    : SDNode<"SPISD::Lo", SDTIntUnaryOp>;
@@ -293,7 +293,7 @@ def SPxtof  : SDNode<"SPISD::XTOF", SDTSPXTOF>;
 def SPselecticc : SDNode<"SPISD::SELECT_ICC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
-def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg, [SDNPInGlue]>;
+def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
 
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
@@ -1036,6 +1036,17 @@ let Uses = [O6],
     let Inst{29-0} = disp;
   }
 
+  // call with trailing imm argument.
+  // The imm argument is discarded.
+  let isAsmParserOnly = 1 in {
+    def CALLi : InstSP<(outs), (ins calltarget:$disp, i32imm:$imm),
+                    "call $disp, $imm", []> {
+      bits<30> disp;
+      let op = 1;
+      let Inst{29-0} = disp;
+    }
+  }
+
   // indirect calls: special cases of JMPL.
   let isCodeGenOnly = 1, rd = 15 in {
     def CALLrr : F3_1<2, 0b111000,
@@ -1048,6 +1059,15 @@ let Uses = [O6],
                       "call $addr",
                       [(call ADDRri:$addr)],
                       IIC_jmp_or_call>;
+  }
+
+  let isAsmParserOnly = 1, rd = 15 in {
+    def CALLrri : F3_1<2, 0b111000,
+                      (outs), (ins (MEMrr $rs1, $rs2):$addr, i32imm:$imm),
+                      "call $addr, $imm", []>;
+    def CALLrii : F3_2<2, 0b111000,
+                      (outs), (ins (MEMri $rs1, $simm13):$addr, i32imm:$imm),
+                      "call $addr, $imm", []>;
   }
 }
 

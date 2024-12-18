@@ -288,10 +288,10 @@ static void writeSequence(Ctx &ctx, const char *prefix, int from,
   // The full section content has the extent of [begin, end). We drop unused
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
-      ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 4,
+      ctx.internalFile, ".text", SHT_PROGBITS, SHF_ALLOC, /*addralign=*/4,
+      /*entsize=*/0,
       ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
-               4 * (buf.size() - first)),
-      ".text");
+               4 * (buf.size() - first)));
   ctx.inputSections.push_back(sec);
   for (Defined *sym : defined) {
     sym->section = sec;
@@ -695,7 +695,7 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (pcRelInsn == UINT64_C(-1)) {
       Err(ctx)
           << "unrecognized instruction for R_PPC64_PCREL_OPT relaxation: 0x"
-          << Twine::utohexstr(accessInsn);
+          << utohexstr(accessInsn, true);
       break;
     }
 
@@ -1029,12 +1029,12 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
   case R_PPC64_TOC16_HA:
   case R_PPC64_TOC16_LO_DS:
-    return ctx.arg.tocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
+    return ctx.arg.tocOptimize ? RE_PPC64_RELAX_TOC : R_GOTREL;
   case R_PPC64_TOC:
-    return R_PPC64_TOCBASE;
+    return RE_PPC64_TOCBASE;
   case R_PPC64_REL14:
   case R_PPC64_REL24:
-    return R_PPC64_CALL_PLT;
+    return RE_PPC64_CALL_PLT;
   case R_PPC64_REL24_NOTOC:
     return R_PLT_PC;
   case R_PPC64_REL16_LO:
@@ -1337,7 +1337,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       if (isInstructionUpdateForm(insn))
         Err(ctx) << getErrorLoc(ctx, loc)
                  << "can't toc-optimize an update instruction: 0x"
-                 << utohexstr(insn);
+                 << utohexstr(insn, true);
       writeFromHalf16(ctx, loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
     } else {
       write16(ctx, loc, lo(val));
@@ -1356,8 +1356,8 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       // pointer register r2, as the base register.
       if (isInstructionUpdateForm(insn))
         Err(ctx) << getErrorLoc(ctx, loc)
-                 << "Can't toc-optimize an update instruction: 0x"
-                 << Twine::utohexstr(insn);
+                 << "can't toc-optimize an update instruction: 0x"
+                 << utohexstr(insn, true);
       insn &= 0xffe00000 | mask;
       writeFromHalf16(ctx, loc, insn | 0x00020000 | lo(val));
     } else {
@@ -1452,7 +1452,7 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
 
   // If the offset exceeds the range of the branch type then it will need
   // a range-extending thunk.
-  // See the comment in getRelocTargetVA() about R_PPC64_CALL.
+  // See the comment in getRelocTargetVA() about RE_PPC64_CALL.
   return !inBranchRange(
       type, branchAddr,
       s.getVA(ctx, a) + getPPC64GlobalEntryToLocalEntryOffset(ctx, s.stOther));
@@ -1490,7 +1490,7 @@ RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
     // It only makes sense to optimize pld since paddi means that the address
     // of the object in the GOT is required rather than the object itself.
     if ((readPrefixedInst(ctx, loc) & 0xfc000000) == 0xe4000000)
-      return R_PPC64_RELAX_GOT_PC;
+      return RE_PPC64_RELAX_GOT_PC;
   }
   return R_GOT_PC;
 }
@@ -1574,7 +1574,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
     switch (rel.expr) {
-    case R_PPC64_RELAX_GOT_PC: {
+    case RE_PPC64_RELAX_GOT_PC: {
       // The R_PPC64_PCREL_OPT relocation must appear immediately after
       // R_PPC64_GOT_PCREL34 in the relocations table at the same offset.
       // We can only relax R_PPC64_PCREL_OPT if we have also relaxed
@@ -1588,7 +1588,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       relaxGot(loc, rel, val);
       break;
     }
-    case R_PPC64_RELAX_TOC:
+    case RE_PPC64_RELAX_TOC:
       // rel.sym refers to the STT_SECTION symbol associated to the .toc input
       // section. If an R_PPC64_TOC16_LO (.toc + addend) references the TOC
       // entry, there may be R_PPC64_TOC16_HA not paired with
@@ -1598,7 +1598,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           !tryRelaxPPC64TocIndirection(ctx, rel, loc))
         relocate(loc, rel, val);
       break;
-    case R_PPC64_CALL:
+    case RE_PPC64_CALL:
       // If this is a call to __tls_get_addr, it may be part of a TLS
       // sequence that has been relaxed and turned into a nop. In this
       // case, we don't want to handle it as a call.

@@ -35,7 +35,7 @@ define <vscale x 8 x i16> @or-load-scalable-vector(ptr %p1) {
 ; CHECK-NEXT:    [[L2:%.*]] = load <vscale x 8 x i8>, ptr [[P2]], align 1
 ; CHECK-NEXT:    [[E1:%.*]] = zext <vscale x 8 x i8> [[L1]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    [[E2:%.*]] = zext <vscale x 8 x i8> [[L2]] to <vscale x 8 x i16>
-; CHECK-NEXT:    [[S2:%.*]] = shl <vscale x 8 x i16> [[E2]], shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 8, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[S2:%.*]] = shl <vscale x 8 x i16> [[E2]], splat (i16 8)
 ; CHECK-NEXT:    [[OR:%.*]] = or <vscale x 8 x i16> [[E1]], [[S2]]
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[OR]]
 ;

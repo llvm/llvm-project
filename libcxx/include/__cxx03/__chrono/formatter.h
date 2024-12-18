@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_FORMATTER_H
-#define _LIBCPP___CHRONO_FORMATTER_H
+#ifndef _LIBCPP___CXX03___CHRONO_FORMATTER_H
+#define _LIBCPP___CXX03___CHRONO_FORMATTER_H
 
 #include <__cxx03/__algorithm/ranges_copy.h>
 #include <__cxx03/__chrono/calendar.h>
@@ -350,7 +350,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
 
       case _CharT('Y'):
         // Depending on the platform's libc the range of supported years is
-        // limited. Intead of of testing all conditions use the internal
+        // limited. Instead of of testing all conditions use the internal
         // implementation unconditionally.
         __formatter::__format_year(__sstr, __t.tm_year + 1900);
         break;
@@ -987,4 +987,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif //  _LIBCPP___CHRONO_FORMATTER_H
+#endif //  _LIBCPP___CXX03___CHRONO_FORMATTER_H

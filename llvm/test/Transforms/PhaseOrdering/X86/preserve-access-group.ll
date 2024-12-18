@@ -14,101 +14,56 @@ define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %f
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[NFACE]] to i64
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[TMP0]]
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 3
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[FACE_CELL]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[NFACE]], 4
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:.*]], label %[[FOR_BODY_PREHEADER_NEW:.*]]
-; CHECK:       [[FOR_BODY_PREHEADER_NEW]]:
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_BODY_PREHEADER14:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP0]], 2147483644
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_EPIL]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4, !tbaa [[TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_EPIL]]
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[Y]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[WIDE_LOAD12]] to <4 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[X]], <4 x i64> [[TMP5]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[TMP4]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[TBAA5:![0-9]+]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER13:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[TMP6]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fcmp fast olt <4 x double> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER13]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x double> [[WIDE_MASKED_GATHER13]], <4 x double> [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP8]], <4 x ptr> [[TMP4]], i32 8, <4 x i1> splat (i1 true)), !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV_EPIL]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UNROLL_ITER]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY_PREHEADER14]]
+; CHECK:       [[FOR_BODY_PREHEADER14]]:
+; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[UNROLL_ITER]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]:
-; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT_3:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY_EPIL:.*]]
-; CHECK:       [[FOR_BODY_EPIL]]:
-; CHECK-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], %[[FOR_BODY_EPIL]] ], [ [[INDVARS_IV_UNR]], %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[EPIL_ITER_NEXT:%.*]], %[[FOR_BODY_EPIL]] ], [ 0, %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_EPIL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4, !tbaa [[TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
-; CHECK-NEXT:    [[GEP_EPIL:%.*]] = getelementptr inbounds i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_EPIL]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_EPIL]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[IDXPROM3_EPIL:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[ARRAYIDX4_EPIL:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[IDXPROM3_EPIL]]
-; CHECK-NEXT:    [[IDXPROM5_EPIL:%.*]] = sext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[ARRAYIDX6_EPIL:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[IDXPROM5_EPIL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARRAYIDX4_EPIL]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX6_EPIL]], align 8
-; CHECK-NEXT:    [[CMP_I_EPIL:%.*]] = fcmp fast olt double [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[CMP_I_EPIL]], double [[TMP5]], double [[TMP4]]
-; CHECK-NEXT:    store double [[TMP6]], ptr [[ARRAYIDX4_EPIL]], align 8, !tbaa [[TBAA5:![0-9]+]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_EPIL]] = add nuw nsw i64 [[INDVARS_IV_EPIL]], 1
-; CHECK-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
-; CHECK-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
-; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY_EPIL]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_3]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_3:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[GEP]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[IDXPROM3:%.*]] = sext i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[IDXPROM3]]
-; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[ARRAYIDX6]], align 8
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[CMP_I]], double [[TMP10]], double [[TMP9]]
-; CHECK-NEXT:    store double [[TMP11]], ptr [[ARRAYIDX4]], align 8, !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[GEP_1]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[IDXPROM3_1:%.*]] = sext i32 [[TMP12]] to i64
-; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[IDXPROM3_1]]
-; CHECK-NEXT:    [[IDXPROM5_1:%.*]] = sext i32 [[TMP13]] to i64
-; CHECK-NEXT:    [[ARRAYIDX6_1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[IDXPROM5_1]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX4_1]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[ARRAYIDX6_1]], align 8
-; CHECK-NEXT:    [[CMP_I_1:%.*]] = fcmp fast olt double [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[CMP_I_1]], double [[TMP15]], double [[TMP14]]
-; CHECK-NEXT:    store double [[TMP16]], ptr [[ARRAYIDX4_1]], align 8, !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_NEXT_1]]
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_NEXT_1]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[GEP_2]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[IDXPROM3_2:%.*]] = sext i32 [[TMP17]] to i64
-; CHECK-NEXT:    [[ARRAYIDX4_2:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[IDXPROM3_2]]
-; CHECK-NEXT:    [[IDXPROM5_2:%.*]] = sext i32 [[TMP18]] to i64
-; CHECK-NEXT:    [[ARRAYIDX6_2:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[IDXPROM5_2]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[ARRAYIDX4_2]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[ARRAYIDX6_2]], align 8
-; CHECK-NEXT:    [[CMP_I_2:%.*]] = fcmp fast olt double [[TMP19]], [[TMP20]]
-; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[CMP_I_2]], double [[TMP20]], double [[TMP19]]
-; CHECK-NEXT:    store double [[TMP21]], ptr [[ARRAYIDX4_2]], align 8, !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_NEXT_2]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_NEXT_2]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[GEP_3]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[INDVARS_IV_PH]], %[[FOR_BODY_PREHEADER14]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[GEP]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; CHECK-NEXT:    [[IDXPROM3_3:%.*]] = sext i32 [[TMP22]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX4_3:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[IDXPROM3_3]]
 ; CHECK-NEXT:    [[IDXPROM5_3:%.*]] = sext i32 [[TMP23]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX6_3:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[IDXPROM5_3]]
-; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr [[ARRAYIDX4_3]], align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr [[ARRAYIDX6_3]], align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr [[ARRAYIDX4_3]], align 8, !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr [[ARRAYIDX6_3]], align 8, !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
 ; CHECK-NEXT:    [[CMP_I_3:%.*]] = fcmp fast olt double [[TMP24]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = select i1 [[CMP_I_3]], double [[TMP25]], double [[TMP24]]
 ; CHECK-NEXT:    store double [[TMP26]], ptr [[ARRAYIDX4_3]], align 8, !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
-; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ;
 entry:
   %nface.addr = alloca i32, align 4
@@ -242,10 +197,10 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 ; CHECK: [[ACC_GRP4]] = distinct !{}
 ; CHECK: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
 ; CHECK: [[META6]] = !{!"double", [[META2]], i64 0}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
-; CHECK: [[META10]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META11]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP4]]}
-; CHECK: [[META12]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
+; CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[META9]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP4]]}
+; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META9]], [[META11]], [[META10]]}
 ;.

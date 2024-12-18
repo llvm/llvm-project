@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STOP_TOKEN
-#define _LIBCPP_STOP_TOKEN
+#ifndef _LIBCPP___CXX03_STOP_TOKEN
+#define _LIBCPP___CXX03_STOP_TOKEN
 
 /*
 
@@ -53,4 +53,4 @@ namespace std {
 #  include <__cxx03/iosfwd>
 #endif
 
-#endif // _LIBCPP_STOP_TOKEN
+#endif // _LIBCPP___CXX03_STOP_TOKEN

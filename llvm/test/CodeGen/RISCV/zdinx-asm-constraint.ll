@@ -46,6 +46,42 @@ entry:
   ret void
 }
 
+define dso_local void @zdinx_asm_inout(ptr nocapture noundef writeonly %a, double noundef %b) nounwind {
+; CHECK-LABEL: zdinx_asm_inout:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mv a3, a2
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    fmv.d a2, a2
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    sw a2, 8(a0)
+; CHECK-NEXT:    sw a3, 12(a0)
+; CHECK-NEXT:    ret
+entry:
+  %arrayidx = getelementptr inbounds double, ptr %a, i32 1
+  %0 = tail call double asm "fsgnj.d $0, $1, $1", "=r,0"(double %b)
+  store double %0, ptr %arrayidx, align 8
+  ret void
+}
+
+define dso_local void @zdinx_asm_Pr_inout(ptr nocapture noundef writeonly %a, double noundef %b) nounwind {
+; CHECK-LABEL: zdinx_asm_Pr_inout:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mv a3, a2
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    fabs.d a2, a2
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    sw a2, 8(a0)
+; CHECK-NEXT:    sw a3, 12(a0)
+; CHECK-NEXT:    ret
+entry:
+  %arrayidx = getelementptr inbounds double, ptr %a, i32 1
+  %0 = tail call double asm "fsgnjx.d $0, $1, $1", "=R,0"(double %b)
+  store double %0, ptr %arrayidx, align 8
+  ret void
+}
+
 define dso_local void @zfinx_asm(ptr nocapture noundef writeonly %a, float noundef %b, float noundef %c) nounwind {
 ; CHECK-LABEL: zfinx_asm:
 ; CHECK:       # %bb.0: # %entry

@@ -27,6 +27,8 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/StructuralHash.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -93,13 +95,19 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     return 0;
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
-    if (!GV->hasName()) {
-      ++StableHashBailingGlobalAddress;
-      return 0;
+    stable_hash GVHash = 0;
+    if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+      GVHash = StructuralHash(*GVar);
+    if (!GVHash) {
+      if (!GV->hasName()) {
+        ++StableHashBailingGlobalAddress;
+        return 0;
+      }
+      GVHash = stable_hash_name(GV->getName());
     }
-    auto Name = GV->getName();
-    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               stable_hash_name(Name), MO.getOffset());
+
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(), GVHash,
+                               MO.getOffset());
   }
 
   case MachineOperand::MO_TargetIndex: {

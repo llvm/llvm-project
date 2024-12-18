@@ -56,9 +56,9 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i32 [[N_VEC]] to i8
-; CHECK-NEXT:    br label [[VECTOR_BODY7:%.*]]
-; CHECK:       vector.body6:
-; CHECK-NEXT:    [[INDEX8:%.*]] = phi i32 [ 0, [[VECTOR_PH4]] ], [ [[INDEX_NEXT9:%.*]], [[VECTOR_BODY7]] ]
+; CHECK-NEXT:    br label [[VECTOR_BODY5:%.*]]
+; CHECK:       vector.body5:
+; CHECK-NEXT:    [[INDEX8:%.*]] = phi i32 [ 0, [[VECTOR_PH4]] ], [ [[INDEX_NEXT9:%.*]], [[VECTOR_BODY5]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX8]] to i8
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i8 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 1
@@ -67,15 +67,15 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP17]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i32 [[INDEX8]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT9]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK2:%.*]], label [[VECTOR_BODY7]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK2:%.*]], label [[VECTOR_BODY5]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block2:
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[EXIT_2:%.*]], label [[SCALAR_PH3]]
 ; CHECK:       scalar.ph3:
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK2]] ], [ 0, [[EXIT_1]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK2]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[EXIT_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL5]], [[SCALAR_PH3]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL8]], [[SCALAR_PH3]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i8 [[IV_2]], 1
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i8 [[IV_2_NEXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_A]], align 1

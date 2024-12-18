@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -747,8 +748,11 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
       MadeChange |= ProcessBlock(MBB);
 
     // If we have anything we marked as toSplit, split it now.
+    MachineDomTreeUpdater MDTU(DT, PDT,
+                               MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
-      auto NewSucc = Pair.first->SplitCriticalEdge(Pair.second, *this);
+      auto NewSucc =
+          Pair.first->SplitCriticalEdge(Pair.second, *this, nullptr, &MDTU);
       if (NewSucc != nullptr) {
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
                           << printMBBReference(*Pair.first) << " -- "
@@ -958,7 +962,9 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
     }
   }
 
-  return false;
+  // Let the target decide if it's worth breaking this
+  // critical edge for a "cheap" instruction.
+  return TII->shouldBreakCriticalEdgeToSink(MI);
 }
 
 bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
@@ -1092,7 +1098,7 @@ bool MachineSinking::registerPressureSetExceedsLimit(
   std::vector<unsigned> BBRegisterPressure = getBBRegisterPressure(MBB);
   for (; *PS != -1; PS++)
     if (Weight + BBRegisterPressure[*PS] >=
-        TRI->getRegPressureSetLimit(*MBB.getParent(), *PS))
+        RegClassInfo.getRegPressureSetLimit(*PS))
       return true;
   return false;
 }
@@ -1227,7 +1233,8 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
       AllSuccs, [&](const MachineBasicBlock *L, const MachineBasicBlock *R) {
         uint64_t LHSFreq = MBFI ? MBFI->getBlockFreq(L).getFrequency() : 0;
         uint64_t RHSFreq = MBFI ? MBFI->getBlockFreq(R).getFrequency() : 0;
-        if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI) || !LHSFreq || !RHSFreq)
+        if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI) ||
+            (!LHSFreq && !RHSFreq))
           return CI->getCycleDepth(L) < CI->getCycleDepth(R);
         return LHSFreq < RHSFreq;
       });

@@ -3510,8 +3510,7 @@ void LLVMDialect::initialize() {
            LLVMPPCFP128Type,
            LLVMTokenType,
            LLVMLabelType,
-           LLVMMetadataType,
-           LLVMStructType>();
+           LLVMMetadataType>();
   // clang-format on
   registerTypes();
 
