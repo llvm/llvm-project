@@ -1756,10 +1756,17 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 
 bool ComplexDeinterleavingGraph::checkNodes() {
 
+  bool FoundDeinterleaveNode = false;
   for (NodePtr N : CompositeNodes) {
     if (!N->areOperandsValid())
       return false;
+    if (N->Operation == ComplexDeinterleavingOperation::Deinterleave)
+      FoundDeinterleaveNode = true;
   }
+
+  // We need a deinterleave node in order to guarantee that we're working with complex numbers.
+  if (!FoundDeinterleaveNode)
+    return false;
 
   // Collect all instructions from roots to leaves
   SmallPtrSet<Instruction *, 16> AllInstructions;
