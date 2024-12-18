@@ -1,10 +1,10 @@
-; RUN: opt -S -disable-output -passes="print<dxil-resource>" < %s 2>&1 | FileCheck %s
+; RUN: opt -S -disable-output -passes="print<dxil-resource-binding>" < %s 2>&1 | FileCheck %s
 
 @G = external constant <4 x float>, align 4
 
 define void @test_typedbuffer() {
   ; ByteAddressBuffer Buf : register(t8, space1)
-  %srv0 = call target("dx.RawBuffer", i8, 0, 0)
+  %srv0 = call target("dx.RawBuffer", void, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
           i32 1, i32 8, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[SRV0:[0-9]+]]:

@@ -15928,17 +15928,32 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
       return getVectorBitwiseReduce(Opcode, HalfVec, VT, DL, DAG);
     }
 
-    // Vectors that are less than 64 bits get widened to neatly fit a 64 bit
-    // register, so e.g. <4 x i1> gets lowered to <4 x i16>. Sign extending to
-    // this element size leads to the best codegen, since e.g. setcc results
-    // might need to be truncated otherwise.
-    EVT ExtendedVT = MVT::getIntegerVT(std::max(64u / NumElems, 8u));
+    // Results of setcc operations get widened to 128 bits if their input
+    // operands are 128 bits wide, otherwise vectors that are less than 64 bits
+    // get widened to neatly fit a 64 bit register, so e.g. <4 x i1> gets
+    // lowered to either <4 x i16> or <4 x i32>. Sign extending to this element
+    // size leads to the best codegen, since e.g. setcc results might need to be
+    // truncated otherwise.
+    unsigned ExtendedWidth = 64;
+    if (Vec.getOpcode() == ISD::SETCC &&
+        Vec.getOperand(0).getValueSizeInBits() >= 128) {
+      ExtendedWidth = 128;
+    }
+    EVT ExtendedVT = MVT::getIntegerVT(std::max(ExtendedWidth / NumElems, 8u));
 
     // any_ext doesn't work with umin/umax, so only use it for uadd.
     unsigned ExtendOp =
         ScalarOpcode == ISD::XOR ? ISD::ANY_EXTEND : ISD::SIGN_EXTEND;
     SDValue Extended = DAG.getNode(
         ExtendOp, DL, VecVT.changeVectorElementType(ExtendedVT), Vec);
+    // The uminp/uminv and umaxp/umaxv instructions don't have .2d variants, so
+    // in that case we bitcast the sign extended values from v2i64 to v4i32
+    // before reduction for optimal code generation.
+    if ((ScalarOpcode == ISD::AND || ScalarOpcode == ISD::OR) &&
+        NumElems == 2 && ExtendedWidth == 128) {
+      Extended = DAG.getBitcast(MVT::v4i32, Extended);
+      ExtendedVT = MVT::i32;
+    }
     switch (ScalarOpcode) {
     case ISD::AND:
       Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
