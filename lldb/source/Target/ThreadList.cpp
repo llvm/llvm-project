@@ -518,30 +518,7 @@ bool ThreadList::WillResume() {
 
   collection::iterator pos, end = m_threads.end();
 
-  // See if any thread wants to run stopping others.  If it does, then we won't
-  // setup the other threads for resume, since they aren't going to get a
-  // chance to run.  This is necessary because the SetupForResume might add
-  // "StopOthers" plans which would then get to be part of the who-gets-to-run
-  // negotiation, but they're coming in after the fact, and the threads that
-  // are already set up should take priority.
-
-  bool wants_solo_run = false;
-
-  for (pos = m_threads.begin(); pos != end; ++pos) {
-    ThreadSP thread_sp(*pos);
-    lldbassert(thread_sp->GetCurrentPlan() &&
-               "thread should not have null thread plan");
-    if (thread_sp->GetResumeState() != eStateSuspended &&
-        thread_sp->GetCurrentPlan()->StopOthers()) {
-      if (thread_sp->IsOperatingSystemPluginThread() &&
-          !thread_sp->GetBackingThread())
-        continue;
-      wants_solo_run = true;
-      break;
-    }
-  }
-
-  // Now go through the threads and see if any thread wants to run just itself.
+  // Go through the threads and see if any thread wants to run just itself.
   // if so then pick one and run it.
 
   ThreadList run_me_only_list(m_process);
@@ -583,8 +560,15 @@ bool ThreadList::WillResume() {
   // state before we negotiate who is actually going to get a chance to run...
   // Don't set to resume suspended threads, and if any thread wanted to stop
   // others, only call setup on the threads that request StopOthers...
+  bool wants_solo_run = run_me_only_list.GetSize(false) > 0;
   for (pos = m_threads.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
+    // See if any thread wants to run stopping others.  If it does, then we
+    // won't setup the other threads for resume, since they aren't going to get
+    // a chance to run.  This is necessary because the SetupForResume might add
+    // "StopOthers" plans which would then get to be part of the who-gets-to-run
+    // negotiation, but they're coming in after the fact, and the threads that
+    // are already set up should take priority.
     if (thread_sp->GetResumeState() != eStateSuspended &&
         (!wants_solo_run || thread_sp->GetCurrentPlan()->StopOthers())) {
       if (thread_sp->IsOperatingSystemPluginThread() &&
