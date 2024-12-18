@@ -1793,8 +1793,8 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fsanitize_trap_EQ, Sanitizer);
 
   for (StringRef Sanitizer :
-       serializeSanitizerKinds(Opts.SanitizeNonMergedHandlers))
-    GenerateArg(Consumer, OPT_fsanitize_nonmerged_handlers_EQ, Sanitizer);
+       serializeSanitizerKinds(Opts.SanitizeMergeHandlers))
+    GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2273,9 +2273,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   parseSanitizerKinds("-fsanitize-trap=",
                       Args.getAllArgValues(OPT_fsanitize_trap_EQ), Diags,
                       Opts.SanitizeTrap);
-  parseSanitizerKinds("-fsanitize-nonmerged-handlers=",
-                      Args.getAllArgValues(OPT_fsanitize_nonmerged_handlers_EQ),
-                      Diags, Opts.SanitizeNonMergedHandlers);
+  parseSanitizerKinds("-fsanitize-merge=",
+                      Args.getAllArgValues(OPT_fsanitize_merge_handlers_EQ),
+                      Diags, Opts.SanitizeMergeHandlers);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

@@ -2548,14 +2548,14 @@ def fsanitize_trap_EQ : CommaJoined<["-"], "fsanitize-trap=">, Group<f_clang_Gro
 def fno_sanitize_trap_EQ : CommaJoined<["-"], "fno-sanitize-trap=">, Group<f_clang_Group>,
                            Visibility<[ClangOption, CLOption]>,
                            HelpText<"Disable trapping for specified sanitizers">;
-def fsanitize_nonmerged_handlers_EQ
-    : CommaJoined<["-"], "fsanitize-nonmerged-handlers=">,
+def fsanitize_merge_handlers_EQ
+    : CommaJoined<["-"], "fsanitize-merge=">,
       Group<f_clang_Group>,
-      HelpText<"Enable non-merged handlers for specified sanitizers">;
-def fno_sanitize_nonmerged_handlers_EQ
-    : CommaJoined<["-"], "fno-sanitize-nonmerged-handlers=">,
+      HelpText<"Allow compiler to merge handlers for specified sanitizers">;
+def fno_sanitize_merge_handlers_EQ
+    : CommaJoined<["-"], "fno-sanitize-merge=">,
       Group<f_clang_Group>,
-      HelpText<"Disable non-merged handlers for specified sanitizers">;
+      HelpText<"Do not allow compiler to merge handlers for specified sanitizers">;
 def fsanitize_trap : Flag<["-"], "fsanitize-trap">, Group<f_clang_Group>,
                      Alias<fsanitize_trap_EQ>, AliasArgs<["all"]>,
                      HelpText<"Enable trapping for all sanitizers">;

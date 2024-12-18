@@ -25,7 +25,7 @@ class SanitizerArgs {
   SanitizerSet Sanitizers;
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;
-  SanitizerSet NonMergedHandlers;
+  SanitizerSet MergeHandlers;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;

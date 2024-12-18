@@ -3619,7 +3619,7 @@ void CodeGenFunction::EmitCheck(
                   : FatalCond;
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
 
-    if (CGM.getCodeGenOpts().SanitizeNonMergedHandlers.has(Checked[i].second))
+    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Checked[i].second))
       NoMerge = true;
   }
 

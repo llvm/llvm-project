@@ -68,8 +68,8 @@ static const SanitizerMask TrappingSupported =
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::LocalBounds | SanitizerKind::CFI |
     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
-static const SanitizerMask NonMergedDefault;
-static const SanitizerMask NonMergedSupported = SanitizerKind::Undefined;
+static const SanitizerMask MergeDefault = SanitizerKind::Undefined;
+static const SanitizerMask MergeSupported = SanitizerKind::Undefined;
 static const SanitizerMask TrappingDefault = SanitizerKind::CFI;
 static const SanitizerMask CFIClasses =
     SanitizerKind::CFIVCall | SanitizerKind::CFINVCall |
@@ -699,15 +699,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   RecoverableKinds &= ~TrappingKinds;
 
   // Parse -f(no-)?sanitize-nonmerged-handlers flags
-  SanitizerMask AlwaysNonMerged; // Empty
-  SanitizerMask NeverNonMerged = ~(setGroupBits(NonMergedSupported));
-  SanitizerMask NonMergedKinds = parseSanitizeArgs(
-      D, Args, DiagnoseErrors, NonMergedDefault, AlwaysNonMerged,
-      NeverNonMerged, options::OPT_fsanitize_nonmerged_handlers_EQ,
-      options::OPT_fno_sanitize_nonmerged_handlers_EQ);
-  NonMergedKinds |= AlwaysNonMerged;
-  NonMergedKinds &= ~NeverNonMerged;
-  NonMergedKinds &= Kinds;
+  SanitizerMask AlwaysMerge; // Empty
+  SanitizerMask NeverMerge = ~(setGroupBits(MergeSupported));
+  SanitizerMask MergeKinds = parseSanitizeArgs(
+      D, Args, DiagnoseErrors, MergeDefault, AlwaysMerge,
+      NeverMerge, options::OPT_fsanitize_merge_handlers_EQ,
+      options::OPT_fno_sanitize_merge_handlers_EQ);
+  MergeKinds |= AlwaysMerge;
+  MergeKinds &= ~NeverMerge;
+  MergeKinds &= Kinds;
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
@@ -1127,7 +1127,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   assert(!(RecoverableKinds & TrappingKinds) &&
          "Overlap between recoverable and trapping sanitizers");
 
-  NonMergedHandlers.Mask |= NonMergedKinds;
+  MergeHandlers.Mask |= MergeKinds;
 }
 
 static std::string toString(const clang::SanitizerSet &Sanitizers) {
@@ -1289,9 +1289,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-trap=" + toString(TrapSanitizers)));
 
-  if (!NonMergedHandlers.empty())
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-nonmerged-handlers=" +
-                                         toString(NonMergedHandlers)));
+  if (!MergeHandlers.empty())
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-merge=" +
+                                         toString(MergeHandlers)));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
@@ -1467,9 +1467,8 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
        A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
        A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
        A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
-       A->getOption().matches(options::OPT_fsanitize_nonmerged_handlers_EQ) ||
-       A->getOption().matches(
-           options::OPT_fno_sanitize_nonmerged_handlers_EQ)) &&
+       A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ)) &&
       "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
