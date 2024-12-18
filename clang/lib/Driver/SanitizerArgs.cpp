@@ -69,7 +69,6 @@ static const SanitizerMask TrappingSupported =
     SanitizerKind::LocalBounds | SanitizerKind::CFI |
     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask MergeDefault = SanitizerKind::Undefined;
-static const SanitizerMask MergeSupported = SanitizerKind::Undefined;
 static const SanitizerMask TrappingDefault = SanitizerKind::CFI;
 static const SanitizerMask CFIClasses =
     SanitizerKind::CFIVCall | SanitizerKind::CFINVCall |
@@ -700,13 +699,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // Parse -f(no-)?sanitize-nonmerged-handlers flags
   SanitizerMask AlwaysMerge; // Empty
-  SanitizerMask NeverMerge = ~(setGroupBits(MergeSupported));
+  SanitizerMask NeverMerge; // Empty
   SanitizerMask MergeKinds = parseSanitizeArgs(
       D, Args, DiagnoseErrors, MergeDefault, AlwaysMerge,
       NeverMerge, options::OPT_fsanitize_merge_handlers_EQ,
       options::OPT_fno_sanitize_merge_handlers_EQ);
-  MergeKinds |= AlwaysMerge;
-  MergeKinds &= ~NeverMerge;
+  MergeKinds |= AlwaysMerge; // No-op
+  MergeKinds &= ~NeverMerge; // No-op
   MergeKinds &= Kinds;
 
   // Setup ignorelist files.
