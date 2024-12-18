@@ -9,7 +9,6 @@ The LLVM Security Response Group has the following goals:
 3. Allow distributors time to investigate and deploy fixes before wide dissemination of vulnerabilities or mitigation shortcomings.
 4. Ensure timely notification and release to vendors who package and distribute LLVM-based toolchains and projects.
 5. Ensure timely notification to users of LLVM-based toolchains whose compiled code is security-sensitive, through the `CVE process`_.
-6. Strive to improve security over time, for example by adding additional testing, fuzzing, and hardening after fixing issues.
 
 *Note*: these goals ensure timely action, provide disclosure timing when issues are reported, and respect vendors' / packagers' / users' constraints.
 
