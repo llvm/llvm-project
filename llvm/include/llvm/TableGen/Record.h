@@ -860,6 +860,7 @@ public:
     LOG2,
     REPR,
     LISTFLATTEN,
+    INITIALIZED,
   };
 
 private:
