@@ -55,6 +55,9 @@ class Documentation {
   // When set, specifies that the attribute is deprecated and can optionally
   // specify a replacement attribute.
   DocDeprecated Deprecated;
+
+  // When set, specifies a label that can be used to reference the documentation.
+  string Label = "";
 }
 
 // Specifies that the attribute is explicitly omitted from the documentation,
@@ -4646,6 +4649,13 @@ def HLSLNumThreads: InheritableAttr {
   let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
   let Documentation = [NumThreadsDocs];
+}
+
+def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"SV_GroupThreadID">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_GroupThreadIDDocs];
 }
 
 def HLSLSV_GroupID: HLSLAnnotationAttr {

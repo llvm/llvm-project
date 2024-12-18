@@ -2675,7 +2675,7 @@ def s30_2ProperPred  : PatLeaf<(i32 imm), [{
 }]>;
 def RoundTo8 : SDNodeXForm<imm, [{
   int32_t Imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(Imm & -8, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(Imm & -8, SDLoc(N), MVT::i32);
 }]>;
 
 let AddedComplexity = 150 in
@@ -3384,6 +3384,7 @@ def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
+def: Pat<(debugtrap), (Y2_break)>;
 
 // Read cycle counter.
 def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;

@@ -67,9 +67,42 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_fadd:
     return true;
   }
   return false;
+}
+static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
+  assert(IntrinsicId == Intrinsic::vector_reduce_add ||
+         IntrinsicId == Intrinsic::vector_reduce_fadd);
+
+  IRBuilder<> Builder(Orig);
+  bool IsFAdd = (IntrinsicId == Intrinsic::vector_reduce_fadd);
+
+  Value *X = Orig->getOperand(IsFAdd ? 1 : 0);
+  Type *Ty = X->getType();
+  auto *XVec = dyn_cast<FixedVectorType>(Ty);
+  unsigned XVecSize = XVec->getNumElements();
+  Value *Sum = Builder.CreateExtractElement(X, static_cast<uint64_t>(0));
+
+  // Handle the initial start value for floating-point addition.
+  if (IsFAdd) {
+    Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
+    if (StartValue && !StartValue->isZeroValue())
+      Sum = Builder.CreateFAdd(Sum, StartValue);
+  }
+
+  // Accumulate the remaining vector elements.
+  for (unsigned I = 1; I < XVecSize; I++) {
+    Value *Elt = Builder.CreateExtractElement(X, I);
+    if (IsFAdd)
+      Sum = Builder.CreateFAdd(Sum, Elt);
+    else
+      Sum = Builder.CreateAdd(Sum, Elt);
+  }
+
+  return Sum;
 }
 
 static Value *expandAbs(CallInst *Orig) {
@@ -579,6 +612,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
+    break;
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_fadd:
+    Result = expandVecReduceAdd(Orig, IntrinsicId);
     break;
   }
   if (Result) {

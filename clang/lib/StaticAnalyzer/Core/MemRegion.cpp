@@ -65,6 +65,11 @@ using namespace ento;
 // MemRegion Construction.
 //===----------------------------------------------------------------------===//
 
+[[maybe_unused]] static bool isAReferenceTypedValueRegion(const MemRegion *R) {
+  const auto *TyReg = llvm::dyn_cast<TypedValueRegion>(R);
+  return TyReg && TyReg->getValueType()->isReferenceType();
+}
+
 template <typename RegionTy, typename SuperTy, typename Arg1Ty>
 RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
                                          const SuperTy *superRegion) {
@@ -76,6 +81,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
   if (!R) {
     R = new (A) RegionTy(arg1, superRegion);
     Regions.InsertNode(R, InsertPos);
+    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -92,6 +98,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, superRegion);
     Regions.InsertNode(R, InsertPos);
+    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -110,6 +117,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, arg3, superRegion);
     Regions.InsertNode(R, InsertPos);
+    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -1060,10 +1068,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     llvm::PointerUnion<const StackFrameContext *, const VarRegion *> V =
       getStackOrCaptureRegionForDeclContext(LC, DC, D);
 
-    if (V.is<const VarRegion*>())
-      return V.get<const VarRegion*>();
+    if (const auto *VR = dyn_cast_if_present<const VarRegion *>(V))
+      return VR;
 
-    const auto *STC = V.get<const StackFrameContext *>();
+    const auto *STC = cast<const StackFrameContext *>(V);
 
     if (!STC) {
       // FIXME: Assign a more sensible memory space to static locals

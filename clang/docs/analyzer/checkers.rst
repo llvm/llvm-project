@@ -2842,36 +2842,6 @@ Check for assignment of a fixed address to a pointer.
    p = (int *) 0x10000; // warn
  }
 
-.. _alpha-core-IdenticalExpr:
-
-alpha.core.IdenticalExpr (C, C++)
-"""""""""""""""""""""""""""""""""
-Warn about unintended use of identical expressions in operators.
-
-.. code-block:: cpp
-
- // C
- void test() {
-   int a = 5;
-   int b = a | 4 | a; // warn: identical expr on both sides
- }
-
- // C++
- bool f(void);
-
- void test(bool b) {
-   int i = 10;
-   if (f()) { // warn: true and false branches are identical
-     do {
-       i--;
-     } while (f());
-   } else {
-     do {
-       i--;
-     } while (f());
-   }
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
@@ -3467,6 +3437,31 @@ alpha.WebKit
 ^^^^^^^^^^^^
 
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
+
+alpha.webkit.MemoryUnsafeCastChecker
+""""""""""""""""""""""""""""""""""""""
+Check for all casts from a base type to its derived type as these might be memory-unsafe.
+
+Example:
+
+.. code-block:: cpp
+
+    class Base { };
+    class Derived : public Base { };
+
+    void f(Base* base) {
+        Derived* derived = static_cast<Derived*>(base); // ERROR
+    }
+
+For all cast operations (C-style casts, static_cast, reinterpret_cast, dynamic_cast), if the source type a `Base*` and the destination type is `Derived*`, where `Derived` inherits from `Base`, the static analyzer should signal an error.
+
+This applies to:
+
+- C structs, C++ structs and classes, and Objective-C classes and protocols.
+- Pointers and references.
+- Inside template instantiations and macro expansions that are visible to the compiler.
+
+For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
 
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""

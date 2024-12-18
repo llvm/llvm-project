@@ -1239,6 +1239,7 @@ def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 // NOPs
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, LSU, EndGroup], (instregex "NOP(R)?$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "NOP(R)?(Opt)?$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "J(G)?NOP$")>;
 }
 

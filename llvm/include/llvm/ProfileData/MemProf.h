@@ -416,7 +416,7 @@ struct IndexedMemProfRecord {
   // the last entry in the list with the same function GUID.
   llvm::SmallVector<CallStackId> CallSiteIds;
 
-  void clear() { AllocSites.clear(); }
+  void clear() { *this = IndexedMemProfRecord(); }
 
   void merge(const IndexedMemProfRecord &Other) {
     // TODO: Filter out duplicates which may occur if multiple memprof
@@ -488,19 +488,6 @@ struct MemProfRecord {
       }
     }
   }
-};
-
-// Helper struct for AllMemProfData.  In YAML, we treat the GUID and the fields
-// within MemProfRecord at the same level as if the GUID were part of
-// MemProfRecord.
-struct GUIDMemProfRecordPair {
-  GlobalValue::GUID GUID;
-  MemProfRecord Record;
-};
-
-// The top-level data structure, only used with YAML for now.
-struct AllMemProfData {
-  std::vector<GUIDMemProfRecordPair> HeapProfileRecords;
 };
 
 // Reads a memprof schema from a buffer. All entries in the buffer are
@@ -1022,6 +1009,24 @@ struct IndexedMemProfData {
 
   // A map to hold call stack id to call stacks.
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStacks;
+
+  FrameId addFrame(const Frame &F) {
+    const FrameId Id = F.hash();
+    Frames.try_emplace(Id, F);
+    return Id;
+  }
+
+  CallStackId addCallStack(ArrayRef<FrameId> CS) {
+    CallStackId CSId = hashCallStack(CS);
+    CallStacks.try_emplace(CSId, CS);
+    return CSId;
+  }
+
+  CallStackId addCallStack(SmallVector<FrameId> &&CS) {
+    CallStackId CSId = hashCallStack(CS);
+    CallStacks.try_emplace(CSId, std::move(CS));
+    return CSId;
+  }
 };
 
 struct FrameStat {

@@ -13,17 +13,24 @@
 
 namespace fir {
 
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
-                                          PassConstructor ctor) {
-  addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
+template <typename F>
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
                      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
+template <typename F>
+void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
+  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
+  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
+  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
+}
+
+template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled,
-    PassConstructor ctor) {
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
   if (!disabled)
-    addNestedPassToAllTopLevelOperations(pm, ctor);
+    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
 }
 
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
@@ -34,12 +41,11 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
 
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config) {
-  if (config.NSWOnLoopVarInc)
-    addNestedPassToAllTopLevelOperationsConditionally(
-        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
-  else
-    addNestedPassToAllTopLevelOperationsConditionally(pm, disableCfgConversion,
-                                                      fir::createCFGConversion);
+  fir::CFGConversionOptions options;
+  if (!config.NSWOnLoopVarInc)
+    options.setNSW = false;
+  addNestedPassToAllTopLevelOperationsConditionally(
+      pm, disableCfgConversion, [&]() { return createCFGConversion(options); });
 }
 
 void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
@@ -160,7 +166,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
-  addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel.isOptimizingForSpeed()) {
@@ -194,7 +201,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
-  addNestedPassToAllTopLevelOperations(pm, fir::createStackReclaim);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
   pm.addPass(mlir::createConvertSCFToCFPass());
@@ -216,15 +224,16 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
                                   llvm::OptimizationLevel optLevel) {
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    addNestedPassToAllTopLevelOperations(pm,
-                                         hlfir::createSimplifyHLFIRIntrinsics);
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createSimplifyHLFIRIntrinsics);
   }
-  addNestedPassToAllTopLevelOperations(pm, hlfir::createInlineElementals);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, hlfir::createInlineElementals);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
-    addNestedPassToAllTopLevelOperations(pm,
-                                         hlfir::createOptimizedBufferization);
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createOptimizedBufferization);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
@@ -264,7 +273,10 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
   fir::addBoxedProcedurePass(pm);
-  addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, fir::createAbstractResultOpt);
+  addPassToGPUModuleOperations<PassConstructor>(pm,
+                                                fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);

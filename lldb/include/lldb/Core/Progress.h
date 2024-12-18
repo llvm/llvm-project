@@ -10,6 +10,7 @@
 #define LLDB_CORE_PROGRESS_H
 
 #include "lldb/Host/Alarm.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringMap.h"
@@ -81,7 +82,8 @@ public:
   /// progress is to be reported only to specific debuggers.
   Progress(std::string title, std::string details = {},
            std::optional<uint64_t> total = std::nullopt,
-           lldb_private::Debugger *debugger = nullptr);
+           lldb_private::Debugger *debugger = nullptr,
+           Timeout<std::nano> minimum_report_time = std::nullopt);
 
   /// Destroy the progress object.
   ///
@@ -121,21 +123,32 @@ public:
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;
+
+  /// Total amount of work, use a std::nullopt in the constructor for non
+  /// deterministic progress.
+  const uint64_t m_total;
+
+  // Minimum amount of time between two progress reports.
+  const Timeout<std::nano> m_minimum_report_time;
+
+  /// Data needed by the debugger to broadcast a progress event.
+  const ProgressData m_progress_data;
+
+  /// How much work ([0...m_total]) that has been completed.
+  std::atomic<uint64_t> m_completed = 0;
+
+  /// Time (in nanoseconds since epoch) of the last progress report.
+  std::atomic<uint64_t> m_last_report_time_ns;
+
+  /// Guards non-const non-atomic members of the class.
+  std::mutex m_mutex;
+
   /// More specific information about the current file being displayed in the
   /// report.
   std::string m_details;
-  /// How much work ([0...m_total]) that has been completed.
-  uint64_t m_completed;
-  /// Total amount of work, use a std::nullopt in the constructor for non
-  /// deterministic progress.
-  uint64_t m_total;
-  std::mutex m_mutex;
-  /// Set to true when progress has been reported where m_completed == m_total
-  /// to ensure that we don't send progress updates after progress has
-  /// completed.
-  bool m_complete = false;
-  /// Data needed by the debugger to broadcast a progress event.
-  ProgressData m_progress_data;
+
+  /// The "completed" value of the last reported event.
+  std::optional<uint64_t> m_prev_completed;
 };
 
 /// A class used to group progress reports by category. This is done by using a

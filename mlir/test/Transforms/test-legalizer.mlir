@@ -472,3 +472,14 @@ func.func @circular_mapping() {
   %0 = "test.erase_op"() : () -> (i64)
   "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
 }
+
+// -----
+
+func.func @test_1_to_n_block_signature_conversion() {
+  "test.duplicate_block_args"() ({
+  ^bb0(%arg0: i64):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
+  }) {} : () -> ()
+  "test.return"() : () -> ()
+}
+
