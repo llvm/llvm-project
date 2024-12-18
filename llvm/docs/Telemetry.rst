@@ -108,6 +108,22 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       writeHelper(KeyName, Value);
     }
 
+    void write(StringRef KeyName, unsigned int Value) override {
+      writeHelper(KeyName, Value);
+    }
+
+    void write(StringRef KeyName, unsigned long Value) override {
+      writeHelper(KeyName, Value);
+    }
+
+    void write(StringRef KeyName, long Value) override {
+      writeHelper(KeyName, Value);
+    }
+
+    void write(StringRef KeyName, long long Value ) override {
+      writeHelper(KeyName, Value);
+    }
+
     void write(StringRef KeyName, unsigned long long Value) override {
       writeHelper(KeyName, Value);
     }
@@ -172,7 +188,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     return AllErrs;
   }
       
-  void addDestination(std::unique_ptr<Destination> Dest) override {
+  void addDestination(std::unique_ptr<Destination>&& Dest) override {
     destinations.push_back(std::move(Dest));
   }
   

@@ -31,28 +31,33 @@ public:
   virtual Error init() = 0;
   virtual void write(StringRef KeyName, bool Value) = 0;
   virtual void write(StringRef KeyName, int Value) = 0;
+  virtual void write(StringRef KeyName, unsigned int Value) = 0;
+  virtual void write(StringRef KeyName, unsigned long Value) = 0;
+  virtual void write(StringRef KeyName, long Value) = 0;
+  virtual void write(StringRef KeyName, long long Value) = 0;
   virtual void write(StringRef KeyName, unsigned long long Value) = 0;
   virtual void write(StringRef KeyName, StringRef Value) = 0;
   virtual void beginObject(StringRef KeyName) = 0;
   virtual void endObject() = 0;
 
-
   template <typename T>
-  using Is_DenseMap = std::is_same<T, DenseMap<typename T::key_type, typename T::mapped_type>>;
+  using Is_DenseMap =
+      std::is_same<T, DenseMap<typename T::key_type, typename T::mapped_type>>;
   template <typename T>
-  using Is_StdMap = std::is_same<T, std::map<typename T::key_type, typename T::mapped_type>>;
+  using Is_StdMap =
+      std::is_same<T, std::map<typename T::key_type, typename T::mapped_type>>;
   template <typename T>
-      using Enable_If_Map = std::enable_if_t<Is_DenseMap<T>::value || Is_StdMap<T>::value>;
+  using Enable_If_Map =
+      std::enable_if_t<Is_DenseMap<T>::value || Is_StdMap<T>::value>;
 
-
-  template <typename T,
-      typename = Enable_If_Map<T>>
+  template <typename T, typename = Enable_If_Map<T>>
   void write(StringRef KeyName, const T &Map) {
     beginObject(KeyName);
     for (const auto &KeyVal : Map)
       write(KeyVal.first, KeyVal.second);
     endObject();
   }
+
   virtual Error finalize() = 0;
 };
 
@@ -142,7 +147,7 @@ public:
   virtual Error dispatch(TelemetryInfo *Entry) = 0;
 
   // Register a Destination.
-  virtual void addDestination(std::unique_ptr<Destination> Destination) = 0;
+  virtual void addDestination(std::unique_ptr<Destination> &&Destination) = 0;
 };
 
 } // namespace telemetry
