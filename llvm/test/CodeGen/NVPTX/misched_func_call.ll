@@ -16,7 +16,7 @@ define ptx_kernel void @wombat(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ld.param.u32 %r3, [wombat_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r2, [wombat_param_0];
 ; CHECK-NEXT:    mov.b32 %r10, 0;
-; CHECK-NEXT:    mov.u64 %rd1, 0;
+; CHECK-NEXT:    mov.b64 %rd1, 0;
 ; CHECK-NEXT:    mov.b32 %r6, 1;
 ; CHECK-NEXT:  $L__BB0_1: // %bb3
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

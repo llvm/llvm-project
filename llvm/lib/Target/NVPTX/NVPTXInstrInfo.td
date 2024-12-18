@@ -1994,22 +1994,15 @@ let IsSimpleMove=1, hasSideEffects=0 in {
 def IMOV1ri : NVPTXInst<(outs Int1Regs:$dst), (ins i1imm:$src),
                         "mov.pred \t$dst, $src;",
                         [(set i1:$dst, imm:$src)]>;
-def IMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
-                         "mov.u16 \t$dst, $src;",
-                         [(set i16:$dst, imm:$src)]>;
-def IMOV32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
-                         "mov.u32 \t$dst, $src;",
-                         [(set i32:$dst, imm:$src)]>;
-def IMOV64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
-                        "mov.u64 \t$dst, $src;",
-                        [(set i64:$dst, imm:$src)]>;
-
 def IMOVB16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
-                         "mov.b16 \t$dst, $src;", []>;
+                         "mov.b16 \t$dst, $src;",
+                         [(set i16:$dst, imm:$src)]>;
 def IMOVB32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
-                         "mov.b32 \t$dst, $src;", []>;
+                         "mov.b32 \t$dst, $src;",
+                         [(set i32:$dst, imm:$src)]>;
 def IMOVB64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
-                        "mov.b64 \t$dst, $src;", []>;
+                        "mov.b64 \t$dst, $src;",
+                        [(set i64:$dst, imm:$src)]>;
 
 def FMOV32ri : NVPTXInst<(outs Float32Regs:$dst), (ins f32imm:$src),
                          "mov.f32 \t$dst, $src;",
@@ -2018,8 +2011,8 @@ def FMOV64ri : NVPTXInst<(outs Float64Regs:$dst), (ins f64imm:$src),
                          "mov.f64 \t$dst, $src;",
                          [(set f64:$dst, fpimm:$src)]>;
 
-def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32ri texternalsym:$dst)>;
-def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64ri texternalsym:$dst)>;
+def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOVB32ri texternalsym:$dst)>;
+def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOVB64ri texternalsym:$dst)>;
 
 //---- Copy Frame Index ----
 def LEA_ADDRi :   NVPTXInst<(outs Int32Regs:$dst), (ins MEMri:$addr),
@@ -3104,21 +3097,17 @@ def: Pat<(f32 (bitconvert vt:$a)),
          (BITCONVERT_32_I2F Int32Regs:$a)>;
 }
 foreach vt = [f16, bf16] in {
-def: Pat<(vt (bitconvert (i16 UInt16Const:$a))),
-         (IMOVB16ri UInt16Const:$a)>;
-def: Pat<(vt (bitconvert i16:$a)),
-         (ProxyRegI16 Int16Regs:$a)>;
-def: Pat<(i16 (bitconvert vt:$a)),
-         (ProxyRegI16 Int16Regs:$a)>;
+  def: Pat<(vt (bitconvert i16:$a)),
+           (vt Int16Regs:$a)>;
+  def: Pat<(i16 (bitconvert vt:$a)),
+           (i16 Int16Regs:$a)>;
 }
 
 foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
-  def: Pat<(ta (bitconvert (i32 UInt32Const:$a))),
-           (IMOVB32ri UInt32Const:$a)>;
   foreach tb = [v2f16, v2bf16, v2i16, v4i8, i32] in {
     if !ne(ta, tb) then {
-      def: Pat<(ta (bitconvert (tb Int32Regs:$a))),
-             (ProxyRegI32 Int32Regs:$a)>;
+      def: Pat<(ta (bitconvert tb:$a)),
+               (ta Int32Regs:$a)>;
     }
   }
 }
