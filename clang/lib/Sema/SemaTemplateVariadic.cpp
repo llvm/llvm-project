@@ -780,7 +780,7 @@ bool Sema::CheckParameterPacksForExpansion(
     }
 
     // Determine the size of this argument pack.
-    unsigned NewPackSize;
+    unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
       typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
@@ -808,7 +808,25 @@ bool Sema::CheckParameterPacksForExpansion(
       }
 
       // Determine the size of the argument pack.
-      NewPackSize = TemplateArgs(Depth, Index).pack_size();
+      ArrayRef<TemplateArgument> Pack =
+          TemplateArgs(Depth, Index).getPackAsArray();
+      NewPackSize = Pack.size();
+      PendingPackExpansionSize =
+          llvm::count_if(Pack, [](const TemplateArgument &TA) {
+            if (!TA.isPackExpansion())
+              return false;
+
+            if (TA.getKind() == TemplateArgument::Type)
+              return !TA.getAsType()
+                          ->getAs<PackExpansionType>()
+                          ->getNumExpansions();
+
+            if (TA.getKind() == TemplateArgument::Expression)
+              return !cast<PackExpansionExpr>(TA.getAsExpr())
+                          ->getNumExpansions();
+
+            return !TA.getNumTemplateExpansions();
+          });
     }
 
     // C++0x [temp.arg.explicit]p9:
@@ -831,7 +849,7 @@ bool Sema::CheckParameterPacksForExpansion(
     }
 
     if (!NumExpansions) {
-      // The is the first pack we've seen for which we have an argument.
+      // This is the first pack we've seen for which we have an argument.
       // Record it.
       NumExpansions = NewPackSize;
       FirstPack.first = Name;
@@ -841,17 +859,23 @@ bool Sema::CheckParameterPacksForExpansion(
     }
 
     if (NewPackSize != *NumExpansions) {
+      unsigned LeastNewPackSize = NewPackSize - PendingPackExpansionSize;
+      if (PendingPackExpansionSize && LeastNewPackSize <= *NumExpansions) {
+        ShouldExpand = false;
+        continue;
+      }
       // C++0x [temp.variadic]p5:
       //   All of the parameter packs expanded by a pack expansion shall have
       //   the same number of arguments specified.
       if (HaveFirstPack)
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict)
-            << FirstPack.first << Name << *NumExpansions << NewPackSize
+            << FirstPack.first << Name << *NumExpansions
+            << (LeastNewPackSize != NewPackSize) << LeastNewPackSize
             << SourceRange(FirstPack.second) << SourceRange(ParmPack.second);
       else
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_multilevel)
-            << Name << *NumExpansions << NewPackSize
-            << SourceRange(ParmPack.second);
+            << Name << *NumExpansions << (LeastNewPackSize != NewPackSize)
+            << LeastNewPackSize << SourceRange(ParmPack.second);
       return true;
     }
   }
