@@ -123,6 +123,30 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ORCState &E) {
 
 namespace {
 
+/// Extension to DataExtractor that supports reading addresses stored in
+/// PC-relative format.
+class AddressExtractor : public DataExtractor {
+  uint64_t DataAddress;
+
+public:
+  AddressExtractor(StringRef Data, uint64_t DataAddress, bool IsLittleEndian,
+                   uint8_t AddressSize)
+      : DataExtractor(Data, IsLittleEndian, AddressSize),
+        DataAddress(DataAddress) {}
+
+  /// Extract 32-bit PC-relative address/pointer.
+  uint64_t getPCRelAddress32(Cursor &C) {
+    const uint64_t Base = DataAddress + C.tell();
+    return Base + (int32_t)getU32(C);
+  }
+
+  /// Extract 64-bit PC-relative address/pointer.
+  uint64_t getPCRelAddress64(Cursor &C) {
+    const uint64_t Base = DataAddress + C.tell();
+    return Base + (int64_t)getU64(C);
+  }
+};
+
 class LinuxKernelRewriter final : public MetadataRewriter {
   /// Information required for updating metadata referencing an instruction.
   struct InstructionFixup {
@@ -423,13 +447,13 @@ Error LinuxKernelRewriter::processSMPLocks() {
     return createStringError(errc::executable_format_error,
                              "bad size of .smp_locks section");
 
-  DataExtractor DE = DataExtractor(SMPLocksSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(0);
+  AddressExtractor AE(SMPLocksSection->getContents(), SectionAddress,
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   while (Cursor && Cursor.tell() < SectionSize) {
     const uint64_t Offset = Cursor.tell();
-    const uint64_t IP = SectionAddress + Offset + (int32_t)DE.getU32(Cursor);
+    const uint64_t IP = AE.getPCRelAddress32(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -499,20 +523,17 @@ Error LinuxKernelRewriter::readORCTables() {
     return createStringError(errc::executable_format_error,
                              "ORC entries number mismatch detected");
 
-  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
-  DataExtractor OrcDE = DataExtractor(ORCUnwindSection->getContents(),
-                                      BC.AsmInfo->isLittleEndian(),
-                                      BC.AsmInfo->getCodePointerSize());
-  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getContents(),
-                                     BC.AsmInfo->isLittleEndian(),
-                                     BC.AsmInfo->getCodePointerSize());
+  DataExtractor OrcDE(ORCUnwindSection->getContents(),
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor IPAE(
+      ORCUnwindIPSection->getContents(), ORCUnwindIPSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
   DataExtractor::Cursor ORCCursor(0);
   DataExtractor::Cursor IPCursor(0);
   uint64_t PrevIP = 0;
   for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
-    const uint64_t IP =
-        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
-
+    const uint64_t IP = IPAE.getPCRelAddress32(IPCursor);
     // Consume the status of the cursor.
     if (!IPCursor)
       return createStringError(errc::executable_format_error,
@@ -856,15 +877,13 @@ Error LinuxKernelRewriter::validateORCTables() {
   if (!ORCUnwindIPSection)
     return Error::success();
 
-  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
-  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getOutputContents(),
-                                     BC.AsmInfo->isLittleEndian(),
-                                     BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor IPCursor(0);
+  AddressExtractor IPAE(
+      ORCUnwindIPSection->getOutputContents(), ORCUnwindIPSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor IPCursor(0);
   uint64_t PrevIP = 0;
   for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
-    const uint64_t IP =
-        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
+    const uint64_t IP = IPAE.getPCRelAddress32(IPCursor);
     if (!IPCursor)
       return createStringError(errc::executable_format_error,
                                "out of bounds while reading ORC IP table: %s",
@@ -916,16 +935,14 @@ Error LinuxKernelRewriter::readStaticCalls() {
                              "static call table size error");
 
   const uint64_t SectionAddress = StaticCallSection->getAddress();
-  DataExtractor DE(StaticCallSection->getContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(StaticCallTableAddress - SectionAddress);
+  AddressExtractor AE(StaticCallSection->getContents(), SectionAddress,
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(StaticCallTableAddress - SectionAddress);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
-    const uint64_t CallAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t KeyAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t CallAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t KeyAddress = AE.getPCRelAddress32(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1027,18 +1044,15 @@ Error LinuxKernelRewriter::readExceptionTable() {
     return createStringError(errc::executable_format_error,
                              "exception table size error");
 
-  const uint64_t SectionAddress = ExceptionsSection->getAddress();
-  DataExtractor DE(ExceptionsSection->getContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(0);
+  AddressExtractor AE(
+      ExceptionsSection->getContents(), ExceptionsSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < ExceptionsSection->getSize()) {
-    const uint64_t InstAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t FixupAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t Data = DE.getU32(Cursor);
+    const uint64_t InstAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t FixupAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t Data = AE.getU32(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1134,9 +1148,9 @@ Error LinuxKernelRewriter::readParaInstructions() {
   if (!ParavirtualPatchSection)
     return Error::success();
 
-  DataExtractor DE = DataExtractor(ParavirtualPatchSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE(ParavirtualPatchSection->getContents(),
+                   BC.AsmInfo->isLittleEndian(),
+                   BC.AsmInfo->getCodePointerSize());
   uint32_t EntryID = 0;
   DataExtractor::Cursor Cursor(0);
   while (Cursor && !DE.eof(Cursor)) {
@@ -1235,15 +1249,14 @@ Error LinuxKernelRewriter::readBugTable() {
     return createStringError(errc::executable_format_error,
                              "bug table size error");
 
-  const uint64_t SectionAddress = BugTableSection->getAddress();
-  DataExtractor DE(BugTableSection->getContents(), BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(0);
+  AddressExtractor AE(
+      BugTableSection->getContents(), BugTableSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < BugTableSection->getSize()) {
     const uint64_t Pos = Cursor.tell();
-    const uint64_t InstAddress =
-        SectionAddress + Pos + (int32_t)DE.getU32(Cursor);
+    const uint64_t InstAddress = AE.getPCRelAddress32(Cursor);
     Cursor.seek(Pos + BUG_TABLE_ENTRY_SIZE);
 
     if (!Cursor)
@@ -1402,23 +1415,20 @@ Error LinuxKernelRewriter::readAltInstructions() {
 Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
                                                   bool AltInstHasPadLen,
                                                   bool ParseOnly) {
-  const uint64_t Address = AltInstrSection->getAddress();
-  DataExtractor DE = DataExtractor(AltInstrSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  AddressExtractor AE(
+      AltInstrSection->getContents(), AltInstrSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint64_t EntryID = 0;
-  DataExtractor::Cursor Cursor(0);
-  while (Cursor && !DE.eof(Cursor)) {
-    const uint64_t OrgInstAddress =
-        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t AltInstAddress =
-        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t Feature = DE.getUnsigned(Cursor, AltInstFeatureSize);
-    const uint8_t OrgSize = DE.getU8(Cursor);
-    const uint8_t AltSize = DE.getU8(Cursor);
+  while (Cursor && !AE.eof(Cursor)) {
+    const uint64_t OrgInstAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t AltInstAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t Feature = AE.getUnsigned(Cursor, AltInstFeatureSize);
+    const uint8_t OrgSize = AE.getU8(Cursor);
+    const uint8_t AltSize = AE.getU8(Cursor);
 
     // Older kernels may have the padlen field.
-    const uint8_t PadLen = AltInstHasPadLen ? DE.getU8(Cursor) : 0;
+    const uint8_t PadLen = AltInstHasPadLen ? AE.getU8(Cursor) : 0;
 
     if (!Cursor)
       return createStringError(
@@ -1537,19 +1547,17 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
     return createStringError(errc::executable_format_error,
                              "PCI fixup table size error");
 
-  const uint64_t Address = PCIFixupSection->getAddress();
-  DataExtractor DE = DataExtractor(PCIFixupSection->getContents(),
-                                   BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  AddressExtractor AE(
+      PCIFixupSection->getContents(), PCIFixupSection->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
   uint64_t EntryID = 0;
-  DataExtractor::Cursor Cursor(0);
-  while (Cursor && !DE.eof(Cursor)) {
-    const uint16_t Vendor = DE.getU16(Cursor);
-    const uint16_t Device = DE.getU16(Cursor);
-    const uint32_t Class = DE.getU32(Cursor);
-    const uint32_t ClassShift = DE.getU32(Cursor);
-    const uint64_t HookAddress =
-        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+  while (Cursor && !AE.eof(Cursor)) {
+    const uint16_t Vendor = AE.getU16(Cursor);
+    const uint16_t Device = AE.getU16(Cursor);
+    const uint32_t Class = AE.getU32(Cursor);
+    const uint32_t ClassShift = AE.getU32(Cursor);
+    const uint64_t HookAddress = AE.getPCRelAddress32(Cursor);
 
     if (!Cursor)
       return createStringError(errc::executable_format_error,
@@ -1654,18 +1662,15 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
                              "static keys jump table size error");
 
   const uint64_t SectionAddress = StaticKeysJumpSection->getAddress();
-  DataExtractor DE(StaticKeysJumpSection->getContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
+  AddressExtractor AE(StaticKeysJumpSection->getContents(), SectionAddress,
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
-    const uint64_t JumpAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t TargetAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t KeyAddress =
-        SectionAddress + Cursor.tell() + (int64_t)DE.getU64(Cursor);
+    const uint64_t JumpAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t TargetAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t KeyAddress = AE.getPCRelAddress64(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1859,21 +1864,18 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
     return Error::success();
 
   const uint64_t SectionAddress = StaticKeysJumpSection->getAddress();
-  DataExtractor DE(StaticKeysJumpSection->getOutputContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
-  DataExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
+  AddressExtractor AE(StaticKeysJumpSection->getOutputContents(),
+                      SectionAddress, BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
   const BinaryData *Stop = BC.getBinaryDataByName("__stop___jump_table");
   uint32_t EntryID = 0;
   uint64_t NumShort = 0;
   uint64_t NumLong = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
-    const uint64_t JumpAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t TargetAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t KeyAddress =
-        SectionAddress + Cursor.tell() + (int64_t)DE.getU64(Cursor);
+    const uint64_t JumpAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t TargetAddress = AE.getPCRelAddress32(Cursor);
+    const uint64_t KeyAddress = AE.getPCRelAddress64(Cursor);
 
     // Consume the status of the cursor.
     if (!Cursor)
