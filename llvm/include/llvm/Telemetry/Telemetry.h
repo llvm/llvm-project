@@ -147,7 +147,7 @@ public:
   virtual Error dispatch(TelemetryInfo *Entry) = 0;
 
   // Register a Destination.
-  virtual void addDestination(std::unique_ptr<Destination> &&Destination) = 0;
+  virtual void addDestination(std::unique_ptr<Destination> Destination) = 0;
 };
 
 } // namespace telemetry
