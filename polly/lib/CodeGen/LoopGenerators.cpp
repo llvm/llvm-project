@@ -14,7 +14,6 @@
 #include "polly/CodeGen/LoopGenerators.h"
 #include "polly/Options.h"
 #include "polly/ScopDetection.h"
-#include "polly/ScopInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -36,7 +35,10 @@ static cl::opt<int, true>
                      cl::Hidden, cl::location(polly::PollyNumThreads),
                      cl::init(0), cl::cat(PollyCategory));
 
-extern cl::opt<bool> PollyVectorizeMetadata;
+cl::opt<bool> PollyVectorizeMetadata(
+    "polly-annotate-metadata-vectorize",
+    cl::desc("Append vectorize enable/disable metadata from polly"),
+    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",
@@ -168,13 +170,12 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
   // when LoopVectDisabled is true. Otherwise we annotate the vectorize metadata
   // to true.
   if (Annotator) {
-    if (!LoopVectDisabled && !PollyVectorizeMetadata)
-      Annotator->annotateLoopLatch(B, Parallel);
-    else
-      Annotator->annotateLoopLatch(
-          B, Parallel,
-          /*EnableVectorizeMetadata*/ !LoopVectDisabled &&
-              PollyVectorizeMetadata);
+    std::optional<bool> EnableVectorizeMetadata;
+    if (LoopVectDisabled)
+      EnableVectorizeMetadata = false;
+    else if (PollyVectorizeMetadata)
+      EnableVectorizeMetadata = true;
+    Annotator->annotateLoopLatch(B, Parallel, EnableVectorizeMetadata);
   }
 
   IV->addIncoming(IncrementedIV, HeaderBB);

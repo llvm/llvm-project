@@ -128,9 +128,9 @@ void ScopAnnotator::popLoop(bool IsParallel) {
   LoopAttrEnv.pop_back();
 }
 
-void ScopAnnotator::addVectorizeMetadata(LLVMContext &Ctx,
+static void addVectorizeMetadata(LLVMContext &Ctx,
                                          SmallVector<Metadata *, 3> *Args,
-                                         bool EnableLoopVectorizer) const {
+                                         bool EnableLoopVectorizer) {
   MDString *PropName = MDString::get(Ctx, "llvm.loop.vectorize.enable");
   ConstantInt *Value =
       ConstantInt::get(Type::getInt1Ty(Ctx), EnableLoopVectorizer);
@@ -145,8 +145,6 @@ void addParallelMetadata(LLVMContext &Ctx, SmallVector<Metadata *, 3> *Args,
   Args->push_back(MDNode::get(Ctx, {PropName, AccGroup}));
 }
 
-// Last argument is optional, if no value is passed, we don't annotate
-// any vectorize metadata.
 void ScopAnnotator::annotateLoopLatch(
     BranchInst *B, bool IsParallel,
     std::optional<bool> EnableVectorizeMetadata) const {
