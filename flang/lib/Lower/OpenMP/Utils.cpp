@@ -13,10 +13,10 @@
 #include "Utils.h"
 
 #include "Clauses.h"
-#include <DirectivesCommon.h>
 
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
+#include <flang/Lower/DirectivesCommon.h>
 #include <flang/Lower/PFTBuilder.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
