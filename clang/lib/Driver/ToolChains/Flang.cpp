@@ -857,6 +857,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       // is experimental.
       D.Diag(diag::warn_openmp_experimental);
 
+      if (Args.hasArg((options::OPT_fopenmp_default_none)))
+        CmdArgs.push_back("-fopenmp-default-none");
+
       // FIXME: Clang supports a whole bunch more flags here.
       break;
     default:

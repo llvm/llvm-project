@@ -54,7 +54,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes)
+    IgnoreIrrelevantAttributes, OpenMPDefaultNone)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,

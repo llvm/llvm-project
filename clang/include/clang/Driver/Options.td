@@ -3651,6 +3651,9 @@ def fopenmp_cuda_blocks_per_sm_EQ : Joined<["-"], "fopenmp-cuda-blocks-per-sm=">
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams-reduction-recs-num=">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+def fopenmp_default_none : Flag<["-"], "fopenmp-default-none">, Group<f_Group>,
+  Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Add DEFAULT(NONE) to all OpenMP directives that allow data-sharing clauses.">;
 
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options
