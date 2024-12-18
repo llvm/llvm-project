@@ -2905,8 +2905,17 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
     }
   }
 
-  assert((MissingVals.empty() || OrigLoop->getUniqueExitBlock()) &&
-         "Expected a single exit block for escaping values");
+  assert((MissingVals.empty() ||
+          all_of(MissingVals,
+                 [MiddleBlock, this](const std::pair<Value *, Value *> &P) {
+                   return all_of(
+                       predecessors(cast<Instruction>(P.first)->getParent()),
+                       [MiddleBlock, this](BasicBlock *Pred) {
+                         return Pred == MiddleBlock ||
+                                Pred == OrigLoop->getLoopLatch();
+                       });
+                 })) &&
+         "Expected escaping values from latch/middle.block only");
 
   for (auto &I : MissingVals) {
     PHINode *PHI = cast<PHINode>(I.first);
@@ -3039,6 +3048,22 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   PSE.getSE()->forgetLoop(OrigLoop);
   PSE.getSE()->forgetBlockAndLoopDispositions();
 
+  // When dealing with uncountable early exits we create middle.split blocks
+  // between the vector loop region and the exit block. These blocks need
+  // adding to any outer loop.
+  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
+  Loop *OuterLoop = OrigLoop->getParentLoop();
+  if (Legal->hasUncountableEarlyExit() && OuterLoop) {
+    VPBasicBlock *MiddleVPBB = State.Plan->getMiddleBlock();
+    VPBlockBase *PredVPBB = MiddleVPBB->getSinglePredecessor();
+    while (PredVPBB && PredVPBB != VectorRegion) {
+      BasicBlock *MiddleSplitBB =
+          State.CFG.VPBB2IRBB[cast<VPBasicBlock>(PredVPBB)];
+      OuterLoop->addBasicBlockToLoop(MiddleSplitBB, *LI);
+      PredVPBB = PredVPBB->getSinglePredecessor();
+    }
+  }
+
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
   // looked through single-entry phis.
@@ -3069,7 +3094,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
-  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = VectorRegion->getEntryBasicBlock();
   BasicBlock *HeaderBB = State.CFG.VPBB2IRBB[HeaderVPBB];
 
@@ -4776,6 +4800,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // Epilogue vectorization code has not been auditted to ensure it handles
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
+  // TODO: Add support for loops with an early exit.
   if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return false;
 
@@ -5022,6 +5047,12 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
 
   // We used the distance for the interleave count.
   if (!Legal->isSafeForAnyVectorWidth())
+    return 1;
+
+  // We don't attempt to perform interleaving for loops with uncountable early
+  // exits because the VPInstruction::AnyOf code cannot currently handle
+  // multiple parts.
+  if (Legal->hasUncountableEarlyExit())
     return 1;
 
   auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop);
@@ -7837,6 +7868,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2.5 When vectorizing the epilogue, fix reduction and induction resume
   // values from the additional bypass block.
   if (VectorizingEpilogue) {
+    assert(!ILV.Legal->hasUncountableEarlyExit() &&
+           "Epilogue vectorisation not yet supported with early exits");
     BasicBlock *BypassBlock = ILV.getAdditionalBypassBlock();
     for (VPRecipeBase &R : *ExitVPBB) {
       fixReductionScalarResumeWhenVectorizingEpilog(
@@ -9025,22 +9058,23 @@ addUsersInExitBlocks(VPlan &Plan,
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-    VPValue *V = ExitIRI->getOperand(0);
-    // Pass live-in values used by exit phis directly through to their users in
-    // the exit block.
-    if (V->isLiveIn())
-      continue;
+    for (const auto &[Idx, Op] : enumerate(ExitIRI->operands())) {
+      // Pass live-in values used by exit phis directly through to their users
+      // in the exit block.
+      if (Op->isLiveIn())
+        continue;
 
-    // Currently only live-ins can be used by exit values from blocks not
-    // exiting via the vector latch through to the middle block.
-    if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
-      return false;
+      // Currently only live-ins can be used by exit values from blocks not
+      // exiting via the vector latch through to the middle block.
+      if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
+        return false;
 
-    LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
-    VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
-                                  {V, Plan.getOrAddLiveIn(ConstantInt::get(
-                                          IntegerType::get(Ctx, 32), 1))});
-    ExitIRI->setOperand(0, Ext);
+      LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
+      VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
+                                    {Op, Plan.getOrAddLiveIn(ConstantInt::get(
+                                             IntegerType::get(Ctx, 32), 1))});
+      ExitIRI->setOperand(Idx, Ext);
+    }
   }
   return true;
 }
@@ -10205,8 +10239,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
     reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                "early exit is not enabled",
-                               "Auto-vectorization of loops with uncountable "
-                               "early exit is not enabled",
                                "UncountableEarlyExitLoopsDisabled", ORE, L);
     return false;
   }
@@ -10232,6 +10264,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Analyze interleaved memory accesses.
   if (UseInterleaved)
     IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
+
+  if (LVL.hasUncountableEarlyExit()) {
+    BasicBlock *LoopLatch = L->getLoopLatch();
+    if (IAI.requiresScalarEpilogue() ||
+        any_of(LVL.getCountableExitingBlocks(),
+               [LoopLatch](BasicBlock *BB) { return BB != LoopLatch; })) {
+      reportVectorizationFailure("Auto-vectorization of early exit loops "
+                                 "requiring a scalar epilogue is unsupported",
+                                 "UncountableEarlyExitUnsupported", ORE, L);
+      return false;
+    }
+  }
 
   // Check the function attributes and profiles to find out if this function
   // should be optimized for size.
