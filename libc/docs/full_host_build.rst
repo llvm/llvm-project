@@ -156,7 +156,13 @@ install the toolchain with
 
 .. code-block:: sh
 
-   $> ninja all
+   $> ninja install-clang install-builtins install-compiler-rt  \
+      install-core-resource-headers install-libc install-lld
+
+or
+
+.. code-block:: sh
+
    $> ninja install
 
 Once the above command completes successfully, the ``$SYSROOT`` directory you
@@ -201,6 +207,7 @@ that aren't yet supported by the system toolchain, such as fixed point. The
 following is an example program that demonstrates the difference:
 
 .. code-block:: C
+   // $ $SYSROOT/bin/clang example.c -static -ffixed-point --sysroot=$SYSROOT
 
    #include <stdio.h>
    int main() {
