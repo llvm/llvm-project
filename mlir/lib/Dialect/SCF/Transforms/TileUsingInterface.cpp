@@ -656,6 +656,9 @@ getResultTilePosition(RewriterBase &rewriter, int64_t index, Value tiledResult,
                                     resultOffset, resultSize);
   case scf::SCFTilingOptions::ReductionTilingStrategy::
       PartialReductionOuterReduction: {
+    // TODO: This does not work for non identity accesses to the result tile.
+    // The proper fix is to add a getPartialResultTilePosition method to
+    // PartialReductionOpInterface.
     resultOffset =
         SmallVector<OpFoldResult>(offsets.size(), rewriter.getIndexAttr(0));
     for (size_t i = 0; i < offsets.size(); i++) {
