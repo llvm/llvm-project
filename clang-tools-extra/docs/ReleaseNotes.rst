@@ -332,6 +332,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check to
   validate ``namespace`` aliases.
 
+-Improved :doc: `readability-implicit-bool-conversion
+ <clang-tidy/checks/readability/implicit-bool-conversion>`
+  - `CheckConversionsToBool`: Allows enabling or disabling warnings for implicit conversions to `bool` (default) : true .
+  - `CheckConversionsFromBool`: Allows enabling or disabling warnings for implicit conversions from `bool` (default) : true.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
