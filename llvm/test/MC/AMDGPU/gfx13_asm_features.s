@@ -22,22 +22,22 @@ image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SYS cfs:CFS_1
 // GFX13: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x00,0x01,0x40,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0xc1,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS cfs:CFS_128B scope:SCOPE_SYS
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0xc1,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D cfs:CFS_128B th:TH_LOAD_BYPASS scope:SCOPE_SYS
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0xc1,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D cfs:CFS_128B scope:SCOPE_SYS th:TH_LOAD_BYPASS
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0xc1,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D scope:SCOPE_SYS th:TH_LOAD_BYPASS cfs:CFS_128B
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0xc1,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D scope:SCOPE_SYS cfs:CFS_128B th:TH_LOAD_BYPASS
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0xc1,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
 // GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]
@@ -108,16 +108,16 @@ image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:S
 // GFX13: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x00,0x03,0x40,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:0
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x02,0xc0,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x02,0x00,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:1
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0xc1,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x02,0x01,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:2
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B ; encoding: [0x02,0xc2,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B ; encoding: [0x02,0x02,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:3
-// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x02,0xc3,0x46,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
+// GFX13: image_sample v[29:30], [v31, v32, v33], s[32:39], s[68:71] dmask:0x5 dim:SQ_RSRC_IMG_3D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x02,0x03,0x48,0xe5,0x1d,0x40,0x3c,0x22,0x1f,0x20,0x21,0x00]
 
 global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:0
 // GFX13: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x02,0x00,0x12,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0xfc,0xff]

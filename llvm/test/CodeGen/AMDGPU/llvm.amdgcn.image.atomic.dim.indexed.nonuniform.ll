@@ -4,7 +4,7 @@
 define amdgpu_ps float @atomic_swap_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_swap_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_swap v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0x42,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_swap v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -18,7 +18,7 @@ define amdgpu_ps <2 x float> @atomic_swap_1d_i64(i32 %rsrc, i64 %data, i32 %s) {
 ; GFX13-LABEL: atomic_swap_1d_i64:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x04,0x05]
-; GFX13-NEXT:    image_atomic_swap v[4:5], v3, v0 dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0xc2,0xd0,0x04,0x00,0x12,0x00,0x03,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_swap v[4:5], v3, v0 dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0xc3,0xd0,0x04,0x00,0x12,0x00,0x03,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) ; encoding: [0x01,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5 ; encoding: [0x04,0x01,0x10,0xca,0x05,0x01,0x00,0x00]
@@ -32,7 +32,7 @@ main_body:
 define amdgpu_ps float @atomic_add_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_add_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -45,7 +45,7 @@ main_body:
 define amdgpu_ps float @atomic_sub_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_sub_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_sub_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x40,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_sub_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -58,7 +58,7 @@ main_body:
 define amdgpu_ps float @atomic_smin_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_smin_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_min_int v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_min_int v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0x45,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -71,7 +71,7 @@ main_body:
 define amdgpu_ps float @atomic_umin_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_umin_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_min_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_min_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x40,0x45,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -84,7 +84,7 @@ main_body:
 define amdgpu_ps float @atomic_smax_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_smax_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_max_int v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_max_int v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0x45,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -97,7 +97,7 @@ main_body:
 define amdgpu_ps float @atomic_umax_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_umax_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_max_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_max_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0x45,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -110,7 +110,7 @@ main_body:
 define amdgpu_ps float @atomic_and_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_and_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_and v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_and v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0x46,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -123,7 +123,7 @@ main_body:
 define amdgpu_ps float @atomic_or_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_or_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_or v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_or v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x40,0x46,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -136,7 +136,7 @@ main_body:
 define amdgpu_ps float @atomic_xor_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_xor_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_xor v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0x45,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_xor v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0x46,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -149,7 +149,7 @@ main_body:
 define amdgpu_ps float @atomic_inc_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_inc_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_inc_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x40,0x45,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_inc_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0x46,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -162,7 +162,7 @@ main_body:
 define amdgpu_ps float @atomic_dec_1d(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_dec_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_dec_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x80,0x45,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_dec_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0x47,0xd0,0x01,0x00,0x12,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -176,7 +176,7 @@ define amdgpu_ps float @atomic_cmpswap_1d(i32 %rsrc, i32 %cmp, i32 %swap, i32 %s
 ; GFX13-LABEL: atomic_cmpswap_1d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x04,0x05]
-; GFX13-NEXT:    image_atomic_cmpswap v[4:5], v3, v0 dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0xc2,0xd0,0x04,0x00,0x12,0x00,0x03,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_cmpswap v[4:5], v3, v0 dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0xc4,0xd0,0x04,0x00,0x12,0x00,0x03,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) ; encoding: [0x01,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v4 ; encoding: [0x04,0x03,0x00,0x7e]
@@ -192,7 +192,7 @@ define amdgpu_ps <2 x float> @atomic_cmpswap_1d_64(i32 %rsrc, i64 %cmp, i64 %swa
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3 ; encoding: [0x04,0x01,0x10,0xca,0x03,0x01,0x08,0x09]
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x07]
-; GFX13-NEXT:    image_atomic_cmpswap v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0xc0,0xc2,0xd3,0x06,0x00,0x12,0x00,0x05,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_cmpswap v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN ; encoding: [0x00,0x00,0xc4,0xd3,0x06,0x00,0x12,0x00,0x05,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) ; encoding: [0x01,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7 ; encoding: [0x06,0x01,0x10,0xca,0x07,0x01,0x00,0x00]
@@ -206,7 +206,7 @@ main_body:
 define amdgpu_ps float @atomic_add_2d(i32 %rsrc, i32 %data, i32 %s, i32 %t) {
 ; GFX13-LABEL: atomic_add_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D th:TH_ATOMIC_RETURN ; encoding: [0x01,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x00,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D th:TH_ATOMIC_RETURN ; encoding: [0x01,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -219,7 +219,7 @@ main_body:
 define amdgpu_ps float @atomic_add_3d(i32 %rsrc, i32 %data, i32 %s, i32 %t, i32 %r) {
 ; GFX13-LABEL: atomic_add_3d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_3D th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_3D th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -232,7 +232,7 @@ main_body:
 define amdgpu_ps float @atomic_add_cube(i32 %rsrc, i32 %data, i32 %s, i32 %t, i32 %face) {
 ; GFX13-LABEL: atomic_add_cube:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_CUBE th:TH_ATOMIC_RETURN ; encoding: [0x03,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_CUBE th:TH_ATOMIC_RETURN ; encoding: [0x03,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -245,7 +245,7 @@ main_body:
 define amdgpu_ps float @atomic_add_1darray(i32 %rsrc, i32 %data, i32 %s, i32 %slice) {
 ; GFX13-LABEL: atomic_add_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3], v0 dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY th:TH_ATOMIC_RETURN ; encoding: [0x04,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x00,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3], v0 dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY th:TH_ATOMIC_RETURN ; encoding: [0x04,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -258,7 +258,7 @@ main_body:
 define amdgpu_ps float @atomic_add_2darray(i32 %rsrc, i32 %data, i32 %s, i32 %t, i32 %slice) {
 ; GFX13-LABEL: atomic_add_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY th:TH_ATOMIC_RETURN ; encoding: [0x05,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY th:TH_ATOMIC_RETURN ; encoding: [0x05,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -271,7 +271,7 @@ main_body:
 define amdgpu_ps float @atomic_add_2dmsaa(i32 %rsrc, i32 %data, i32 %s, i32 %t, i32 %fragid) {
 ; GFX13-LABEL: atomic_add_2dmsaa:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA th:TH_ATOMIC_RETURN ; encoding: [0x06,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA th:TH_ATOMIC_RETURN ; encoding: [0x06,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -284,7 +284,7 @@ main_body:
 define amdgpu_ps float @atomic_add_2darraymsaa(i32 %rsrc, i32 %data, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
 ; GFX13-LABEL: atomic_add_2darraymsaa:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4, v5], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY th:TH_ATOMIC_RETURN ; encoding: [0x07,0x00,0x43,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x05]
+; GFX13-NEXT:    image_atomic_add_uint v1, [v2, v3, v4, v5], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY th:TH_ATOMIC_RETURN ; encoding: [0x07,0x40,0x44,0xd0,0x01,0x00,0x12,0x00,0x02,0x03,0x04,0x05]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
@@ -297,7 +297,7 @@ main_body:
 define amdgpu_ps float @atomic_add_1d_slc(i32 %rsrc, i32 %data, i32 %s) {
 ; GFX13-LABEL: atomic_add_1d_slc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_atomic_add_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT_RETURN ; encoding: [0x00,0x00,0x43,0xd0,0x01,0x00,0x32,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_atomic_add_uint v1, v2, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT_RETURN ; encoding: [0x00,0x40,0x44,0xd0,0x01,0x00,0x32,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX13-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
 ; GFX13-NEXT:    ; return to shader part epilog
