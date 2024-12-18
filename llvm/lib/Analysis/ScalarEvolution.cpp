@@ -15753,6 +15753,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // predecessors that can be found that have unique successors leading to the
   // original header.
   // TODO: share this logic with isLoopEntryGuardedByCond.
+  unsigned NumCollectedConditions = 0;
   std::pair<const BasicBlock *, const BasicBlock *> Pair(Pred, Block);
   for (; Pair.first;
        Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
@@ -15767,7 +15768,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
     // If we are recursively collecting guards stop after 2
     // predecessors to limit compile-time impact for now.
-    if (Depth > 0 && Terms.size() == 2)
+    if (Depth > 0 && ++NumCollectedConditions == 2)
       break;
   }
   // Finally, if we stopped climbing the predecessor chain because
