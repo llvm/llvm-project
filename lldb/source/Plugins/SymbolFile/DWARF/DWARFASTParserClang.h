@@ -421,7 +421,6 @@ private:
       const lldb_private::CompilerType &class_clang_type);
 
   bool CompleteRecordType(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                          lldb_private::Type *type,
                           const lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                         lldb_private::Type *type,
