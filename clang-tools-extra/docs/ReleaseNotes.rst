@@ -319,8 +319,9 @@ Changes in existing checks
   diagnostic.
 
 - Improved :doc:`readability-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check by adding 
-   the options: 
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by adding the
+   options:
+
    - `UseUpperCaseLiteralSuffix`: to select the case of the literal suffix in 
       fixes and fixing false positive for implicit conversion of comparison 
       result in C23.
