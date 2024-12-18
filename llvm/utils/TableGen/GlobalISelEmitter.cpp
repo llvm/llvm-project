@@ -416,7 +416,7 @@ private:
   Expected<action_iterator>
   importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
                             BuildMIAction &DstMIBuilder,
-                            const TreePatternNode &DstChild);
+                            const TreePatternNode &Dst);
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
                                       const DAGDefaultOperand &DefaultOp) const;
@@ -1198,23 +1198,22 @@ Error GlobalISelEmitter::importChildMatcher(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &DstChild) {
+    const TreePatternNode &Dst) {
 
-  const auto &SubOperand = Rule.getComplexSubOperand(DstChild.getName());
+  const auto &SubOperand = Rule.getComplexSubOperand(Dst.getName());
   if (SubOperand) {
     DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
-        *std::get<0>(*SubOperand), DstChild.getName(), std::get<1>(*SubOperand),
+        *std::get<0>(*SubOperand), Dst.getName(), std::get<1>(*SubOperand),
         std::get<2>(*SubOperand));
     return InsertPt;
   }
 
-  if (!DstChild.isLeaf()) {
-    if (DstChild.getOperator()->isSubClassOf("SDNodeXForm")) {
-      auto &Child = DstChild.getChild(0);
-      auto I = SDNodeXFormEquivs.find(DstChild.getOperator());
+  if (!Dst.isLeaf()) {
+    if (Dst.getOperator()->isSubClassOf("SDNodeXForm")) {
+      auto &Child = Dst.getChild(0);
+      auto I = SDNodeXFormEquivs.find(Dst.getOperator());
       if (I != SDNodeXFormEquivs.end()) {
-        const Record *XFormOpc =
-            DstChild.getOperator()->getValueAsDef("Opcode");
+        const Record *XFormOpc = Dst.getOperator()->getValueAsDef("Opcode");
         if (XFormOpc->getName() == "timm") {
           // If this is a TargetConstant, there won't be a corresponding
           // instruction to transform. Instead, this will refer directly to an
@@ -1233,10 +1232,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
 
     // We accept 'bb' here. It's an operator because BasicBlockSDNode isn't
     // inline, but in MI it's just another operand.
-    if (DstChild.getOperator()->isSubClassOf("SDNode")) {
-      auto &ChildSDNI = CGP.getSDNodeInfo(DstChild.getOperator());
+    if (Dst.getOperator()->isSubClassOf("SDNode")) {
+      auto &ChildSDNI = CGP.getSDNodeInfo(Dst.getOperator());
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
-        DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+        DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
         return InsertPt;
       }
     }
@@ -1245,26 +1244,25 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     // rendered as operands.
     // FIXME: The target should be able to choose sign-extended when appropriate
     //        (e.g. on Mips).
-    if (DstChild.getOperator()->getName() == "timm") {
-      DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+    if (Dst.getOperator()->getName() == "timm") {
+      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
       return InsertPt;
     }
-    if (DstChild.getOperator()->getName() == "tframeindex") {
-      DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+    if (Dst.getOperator()->getName() == "tframeindex") {
+      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
       return InsertPt;
     }
-    if (DstChild.getOperator()->getName() == "imm") {
-      DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(DstChild.getName());
+    if (Dst.getOperator()->getName() == "imm") {
+      DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(Dst.getName());
       return InsertPt;
     }
-    if (DstChild.getOperator()->getName() == "fpimm") {
-      DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(
-          DstChild.getName());
+    if (Dst.getOperator()->getName() == "fpimm") {
+      DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(Dst.getName());
       return InsertPt;
     }
 
-    if (DstChild.getOperator()->isSubClassOf("Instruction")) {
-      auto OpTy = getInstResultType(DstChild, Target);
+    if (Dst.getOperator()->isSubClassOf("Instruction")) {
+      auto OpTy = getInstResultType(Dst, Target);
       if (!OpTy)
         return OpTy.takeError();
 
@@ -1274,29 +1272,28 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
-          ++InsertPt, Rule, DstChild, TempRegID);
+          ++InsertPt, Rule, Dst, TempRegID);
       if (auto Error = InsertPtOrError.takeError())
         return std::move(Error);
       return InsertPtOrError.get();
     }
 
     return failedImport("Dst pattern child isn't a leaf node or an MBB" +
-                        llvm::to_string(DstChild));
+                        llvm::to_string(Dst));
   }
 
   // It could be a specific immediate in which case we should just check for
   // that immediate.
-  if (const IntInit *ChildIntInit =
-          dyn_cast<IntInit>(DstChild.getLeafValue())) {
+  if (const IntInit *ChildIntInit = dyn_cast<IntInit>(Dst.getLeafValue())) {
     DstMIBuilder.addRenderer<ImmRenderer>(ChildIntInit->getValue());
     return InsertPt;
   }
 
   // Otherwise, we're looking for a bog-standard RegisterClass operand.
-  if (auto *ChildDefInit = dyn_cast<DefInit>(DstChild.getLeafValue())) {
+  if (auto *ChildDefInit = dyn_cast<DefInit>(Dst.getLeafValue())) {
     auto *ChildRec = ChildDefInit->getDef();
 
-    ArrayRef<TypeSetByHwMode> ChildTypes = DstChild.getExtTypes();
+    ArrayRef<TypeSetByHwMode> ChildTypes = Dst.getExtTypes();
     if (ChildTypes.size() != 1)
       return failedImport("Dst pattern child has multiple results");
 
@@ -1317,11 +1314,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       if (ChildRec->isSubClassOf("RegisterOperand") &&
           !ChildRec->isValueUnset("GIZeroRegister")) {
         DstMIBuilder.addRenderer<CopyOrAddZeroRegRenderer>(
-            DstChild.getName(), ChildRec->getValueAsDef("GIZeroRegister"));
+            Dst.getName(), ChildRec->getValueAsDef("GIZeroRegister"));
         return InsertPt;
       }
 
-      DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
       return InsertPt;
     }
 
@@ -1337,9 +1334,9 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
         return failedImport(
             "SelectionDAG ComplexPattern not mapped to GlobalISel");
 
-      const OperandMatcher &OM = Rule.getOperandMatcher(DstChild.getName());
+      const OperandMatcher &OM = Rule.getOperandMatcher(Dst.getName());
       DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
-          *ComplexPattern->second, DstChild.getName(),
+          *ComplexPattern->second, Dst.getName(),
           OM.getAllocatedTemporariesBaseID());
       return InsertPt;
     }
@@ -1350,9 +1347,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
 
   // Handle the case where the MVT/register class is omitted in the dest pattern
   // but MVT exists in the source pattern.
-  if (isa<UnsetInit>(DstChild.getLeafValue()) &&
-      Rule.hasOperand(DstChild.getName())) {
-    DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+  if (isa<UnsetInit>(Dst.getLeafValue()) && Rule.hasOperand(Dst.getName())) {
+    DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
     return InsertPt;
   }
   return failedImport("Dst pattern child is an unsupported kind");
