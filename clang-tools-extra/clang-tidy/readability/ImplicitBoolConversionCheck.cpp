@@ -376,16 +376,14 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
 void ImplicitBoolConversionCheck::check(
     const MatchFinder::MatchResult &Result) {
 
-  if (CheckConversionsToBool &&
-      (const auto *CastToBool =
-           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool"))) {
+  if (const auto *CastToBool =
+          Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
     return handleCastToBool(CastToBool, Parent, *Result.Context);
   }
 
-  if (CheckConversionsFromBool &&
-      (const auto *CastFromBool =
-           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool"))) {
+  if (const auto *CastFromBool =
+          Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool")) {
     const auto *NextImplicitCast =
         Result.Nodes.getNodeAs<ImplicitCastExpr>("furtherImplicitCast");
     return handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
