@@ -8,13 +8,37 @@
 ## (4) early calls to a dylib stub use a thunk, and later calls the stub
 ##     directly
 ## (5) Thunks are created for all sections in the text segment with branches.
+## (6) Thunks are in the linker map file.
 ## Notes:
 ## 0x4000000 = 64 Mi = half the magnitude of the forward-branch range
 
 # RUN: rm -rf %t; mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/input.o
-# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -o %t/thunk %t/input.o
+# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
+
+## Check that the thunks appear in the map file and that everything is sorted by address
+# MAP: [[ADDR2:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _b [[#ADDR2 > #ADDR1]]
+# MAP: [[ADDR3:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _c [[#ADDR3 > #ADDR2]]
+# MAP: [[ADDR4:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _d.thunk.0 [[#ADDR4 > #ADDR3]]
+# MAP: [[ADDR5:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _e.thunk.0 [[#ADDR5 > #ADDR4]]
+# MAP: [[ADDR6:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _f.thunk.0 [[#ADDR6 > #ADDR5]]
+# MAP: [[ADDR7:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _g.thunk.0 [[#ADDR7 > #ADDR6]]
+# MAP: [[ADDR8:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _h.thunk.0 [[#ADDR8 > #ADDR7]]
+# MAP: [[ADDR9:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] ___nan.thunk.0 [[#ADDR9 > #ADDR8]]
+# MAP: [[ADDR10:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _d [[#ADDR10 > #ADDR9]]
+# MAP: [[ADDR11:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _e [[#ADDR11 > #ADDR10]]
+# MAP: [[ADDR12:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _f [[#ADDR12 > #ADDR11]]
+# MAP: [[ADDR13:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _g [[#ADDR13 > #ADDR12]]
+# MAP: [[ADDR14:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _a.thunk.0 [[#ADDR14 > #ADDR13]]
+# MAP: [[ADDR15:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _b.thunk.0 [[#ADDR15 > #ADDR14]]
+# MAP: [[ADDR16:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _h [[#ADDR16 > #ADDR15]]
+# MAP: [[ADDR17:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _main [[#ADDR17 > #ADDR16]]
+# MAP: [[ADDR18:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _c.thunk.0 [[#ADDR18 > #ADDR17]]
+# MAP: [[ADDR19:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _d.thunk.1 [[#ADDR19 > #ADDR18]]
+# MAP: [[ADDR20:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _e.thunk.1 [[#ADDR20 > #ADDR19]]
+# MAP: [[ADDR21:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _f.thunk.1 [[#ADDR21 > #ADDR20]]
+# MAP: [[ADDR22:0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _z [[#ADDR22 > #ADDR21]]
 
 # CHECK: Disassembly of section __TEXT,__text:
 
