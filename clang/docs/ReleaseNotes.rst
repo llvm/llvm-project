@@ -853,6 +853,7 @@ Bug Fixes to AST Handling
 - Clang now uses the location of the begin of the member expression for ``CallExpr``
   involving deduced ``this``. (#GH116928)
 - Fixed printout of AST that uses pack indexing expression. (#GH116486)
+- Fixed type deduction of an statement expression (a GCC extension) ending with an atomic type. (#GH106576)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
