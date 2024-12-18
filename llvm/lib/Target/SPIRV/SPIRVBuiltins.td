@@ -1444,9 +1444,13 @@ defm : DemangledNativeBuiltin<"__spirv_ConvertUToPtr", OpenCL_std, Convert, 1, 1
 
 // cl_khr_extended_bit_ops / SPV_KHR_bit_instructions
 defm : DemangledNativeBuiltin<"bitfield_insert", OpenCL_std, ExtendedBitOps, 4, 4, OpBitFieldInsert>;
+defm : DemangledNativeBuiltin<"__spirv_BitFieldInsert", OpenCL_std, ExtendedBitOps, 4, 4, OpBitFieldInsert>;
 defm : DemangledNativeBuiltin<"bitfield_extract_signed", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldSExtract>;
+defm : DemangledNativeBuiltin<"__spirv_BitFieldSExtract", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldSExtract>;
 defm : DemangledNativeBuiltin<"bitfield_extract_unsigned", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldUExtract>;
+defm : DemangledNativeBuiltin<"__spirv_BitFieldUExtract", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldUExtract>;
 defm : DemangledNativeBuiltin<"bit_reverse", OpenCL_std, ExtendedBitOps, 1, 1, OpBitReverse>;
+defm : DemangledNativeBuiltin<"__spirv_BitReverse", OpenCL_std, ExtendedBitOps, 1, 1, OpBitReverse>;
 
 // cl_intel_bfloat16_conversions / SPV_INTEL_bfloat16_conversion
 // Multiclass used to define at the same time both a demangled builtin records
