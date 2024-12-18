@@ -33,3 +33,69 @@ body: |
     %y:vr = PseudoVREDSUM_VS_M1_E64 $noreg, %x, $noreg, -1, 6 /* e64 */, 0 /* tu, mu */
     %z:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0 /* tu, mu */
 ...
+name: vop_nonundef_passthru_tu_vlmax
+body: |
+  bb.0:
+    liveins: $v8
+    ; CHECK-LABEL: name: vop_nonundef_passthru_tu
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = COPY $v8
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = COPY $v8
+    %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0
+...
+---
+name: vop_nonundef_passthru_tu_nonvlmax
+body: |
+  bb.0:
+    liveins: $v8
+    ; CHECK-LABEL: name: vop_nonundef_passthru_tu_nonvlmax
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = COPY $v8
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 2, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = COPY $v8
+    %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 2, 3 /* e8 */, 0
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0
+...
+---
+name: vop_nonundef_passthru_ta
+body: |
+  bb.0:
+    liveins: $v8
+    ; CHECK-LABEL: name: vop_nonundef_passthru_ta
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = COPY $v8
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 1 /* ta, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = COPY $v8
+    %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, -1, 3 /* e8 */, 1
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0
+...
+
+---
+name: vop_nonundef_passthru_tu_user
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vop_nonundef_passthru_tu_user
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VV_M1 %x, %x, $noreg, 1, 3 /* e8 */, 0
+...
+---
+name: vop_nonundef_passthru_ta_user
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vop_nonundef_passthru_ta_user
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, %x, $noreg, 1, 3 /* e8 */, 1 /* ta, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VV_M1 %x, %x, $noreg, 1, 3 /* e8 */, 1
+...
+

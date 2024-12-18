@@ -177,6 +177,19 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   Denom = MILMULIsFractional ? Denom * MILMUL / GCD : Denom / GCD;
   return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
 }
+
+// Returns true if MI uses a TA policy, false otherwise.
+static bool usesTAPolicy(const MachineInstr &MI) {
+  const MCInstrDesc &Desc = MI.getDesc();
+  if (RISCVII::hasVecPolicyOp(Desc.TSFlags)) {
+    unsigned PolicyOpNum = RISCVII::getVecPolicyOpNum(Desc);
+    const MachineOperand &PolicyOp = MI.getOperand(PolicyOpNum);
+    uint64_t Policy = PolicyOp.getImm();
+    return (Policy & RISCVII::TAIL_AGNOSTIC) == RISCVII::TAIL_AGNOSTIC;
+  }
+  return false;
+}
+
 } // end namespace RISCVVType
 } // end namespace llvm
 
@@ -227,14 +240,6 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
 
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
-
-  // We bail out early for instructions that have passthru with non NoRegister,
-  // which means they are using TU policy. We are not interested in these
-  // since they must preserve the entire register content.
-  if (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs() &&
-      (MO.getReg() != RISCV::NoRegister))
-    return {};
-
   bool IsMODef = MO.getOperandNo() == 0;
 
   // All mask operands have EEW=1, EMUL=(EEW/SEW)*LMUL
@@ -868,6 +873,15 @@ static bool mayReadPastVL(const MachineInstr &MI) {
   }
 }
 
+static bool isTUWithNonUndefPassthru(const MachineInstr &MI) {
+  assert(RISCVII::isFirstDefTiedToFirstUse(MI.getDesc()) &&
+         "Expected MI to have a passthru");
+  unsigned PassthruOpIdx = MI.getNumExplicitDefs();
+  const MachineOperand &Passthru = MI.getOperand(PassthruOpIdx);
+  return !RISCVVType::usesTAPolicy(MI) &&
+         Passthru.getReg() != RISCV::NoRegister;
+}
+
 bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
@@ -879,22 +893,14 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // TA/TU when there is a non-undef Passthru. But when we are using VLMAX, it
   // does not matter whether we are using TA/TU with a non-undef Passthru, since
   // there are no tail elements to be preserved.
-  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-  const MachineOperand &VLOp = MI.getOperand(VLOpNum);
-  if (VLOp.isReg() || VLOp.getImm() != RISCV::VLMaxSentinel) {
-    // If MI has a non-undef passthru, we will not try to optimize it since
-    // that requires us to preserve tail elements according to TA/TU.
-    // Otherwise, The MI has an undef Passthru, so it doesn't matter whether we
-    // are using TA/TU.
-    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
-    unsigned PassthruOpIdx = MI.getNumExplicitDefs();
-    if (HasPassthru &&
-        MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister) {
-      LLVM_DEBUG(
-          dbgs() << "  Not a candidate because it uses non-undef passthru"
-                    " with non-VLMAX VL\n");
-      return false;
-    }
+  const MachineOperand &VLOp = MI.getOperand(RISCVII::getVLOpNum(Desc));
+  bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
+  bool MayBeNonVLMAX = VLOp.isReg() || VLOp.getImm() != RISCV::VLMaxSentinel;
+  if (MayBeNonVLMAX && HasPassthru && isTUWithNonUndefPassthru(MI)) {
+    LLVM_DEBUG(
+        dbgs() << "  Not a candidate because it uses tail-undisturbed policy"
+                  " with non-undef passthru with non-VLMAX VL\n");
+    return false;
   }
 
   // If the VL is 1, then there is no need to reduce it. This is an
@@ -951,9 +957,12 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
       break;
     }
 
-    // Tied operands might pass through.
-    if (UserOp.isTied()) {
-      LLVM_DEBUG(dbgs() << "    Abort because user used as tied operand\n");
+    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc());
+    unsigned PassthruOpIdx = MI.getNumExplicitDefs();
+    bool IsPassthruOp = PassthruOpIdx == UserOp.getOperandNo();
+    if (HasPassthru && IsPassthruOp && isTUWithNonUndefPassthru(UserMI)) {
+      LLVM_DEBUG(dbgs() << "    Abort because user used as tail-undisturbed "
+                           "with non-undef passthru\n");
       CanReduceVL = false;
       break;
     }
