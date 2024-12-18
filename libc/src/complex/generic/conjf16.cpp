@@ -9,7 +9,6 @@
 #include "src/complex/conjf16.h"
 #if defined(LIBC_TYPES_HAS_CFLOAT16)
 
-#include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
 
