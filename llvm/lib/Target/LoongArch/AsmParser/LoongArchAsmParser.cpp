@@ -1009,7 +1009,8 @@ void LoongArchAsmParser::emitLoadAddressPcrel(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(ADDI, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1083,7 +1084,8 @@ void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressGotLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1176,7 +1178,8 @@ void LoongArchAsmParser::emitLoadAddressTLSIE(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       LD, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSIELarge(MCInst &Inst, SMLoc IDLoc,
@@ -1248,7 +1251,8 @@ void LoongArchAsmParser::emitLoadAddressTLSLD(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSLDLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1320,7 +1324,8 @@ void LoongArchAsmParser::emitLoadAddressTLSGD(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1409,7 +1414,8 @@ void LoongArchAsmParser::emitLoadAddressTLSDesc(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSDescLarge(MCInst &Inst, SMLoc IDLoc,
