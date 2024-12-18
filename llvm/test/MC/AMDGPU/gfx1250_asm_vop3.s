@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
 
 v_bitop3_b32 v5, v1, v2, s3
 // GFX1250: v_bitop3_b32 v5, v1, v2, s3             ; encoding: [0x05,0x00,0x34,0xd6,0x01,0x05,0x0e,0x00]

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1250 %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1250 %s | FileCheck --check-prefix=GFX1250 %s
 
 s_mov_b64 s[2:3], 0x10abcdef12345678
 // GFX1250: s_mov_b64 s[2:3], 0x10abcdef12345678    ; encoding: [0xfe,0x01,0x82,0xbe,0x78,0x56,0x34,0x12,0xef,0xcd,0xab,0x10]
