@@ -22,6 +22,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include <algorithm>
+#include <fstream>
 #include <mutex>
 #include <unordered_map>
 
@@ -267,69 +268,68 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   std::optional<bool> BoltedCollection;
   std::optional<bool> NoLBRCollection;
   std::mutex BoltedCollectionMutex;
-  typedef StringMap<uint64_t> ProfileTy;
+  struct CounterTy {
+    uint64_t Exec{0};
+    uint64_t Mispred{0};
+    CounterTy &operator+=(const CounterTy &O) {
+      Exec += O.Exec;
+      Mispred += O.Mispred;
+      return *this;
+    }
+    CounterTy operator+(const CounterTy &O) { return *this += O; }
+  };
+  typedef StringMap<CounterTy> ProfileTy;
 
   auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
     const llvm::thread::id tid = llvm::this_thread::get_id();
 
     if (isYAML(Filename))
       report_error(Filename, "cannot mix YAML and legacy formats");
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(Filename);
-    if (std::error_code EC = MB.getError())
-      report_error(Filename, EC);
 
-    StringRef Buf = MB.get()->getBuffer();
+    std::ifstream FdataFile(Filename, std::ios::in);
+    std::string FdataLine;
+    std::getline(FdataFile, FdataLine);
+
+    auto checkMode = [&](const std::string &Key, std::optional<bool> &Flag) {
+      const bool KeyIsSet = FdataLine.rfind(Key, 0) == 0;
+
+      if (!Flag.has_value())
+        Flag = KeyIsSet;
+      else if (*Flag != KeyIsSet)
+        report_error(Filename, "cannot mix profile with and without " + Key);
+      if (KeyIsSet)
+        // Advance line
+        std::getline(FdataFile, FdataLine);
+    };
+
     ProfileTy *Profile;
     {
       std::lock_guard<std::mutex> Lock(BoltedCollectionMutex);
       // Check if the string "boltedcollection" is in the first line
-      if (Buf.starts_with("boltedcollection\n")) {
-        if (!BoltedCollection.value_or(true))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = true;
-        Buf = Buf.drop_front(17);
-      } else {
-        if (BoltedCollection.value_or(false))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = false;
-      }
+      checkMode("boltedcollection", BoltedCollection);
       // Check if the string "no_lbr" is in the first line
       // (or second line if BoltedCollection is true)
-      size_t CheckNoLBRPos = Buf.find('\n');
-      if (CheckNoLBRPos != StringRef::npos) {
-        StringRef FirstLine = Buf.substr(0, CheckNoLBRPos);
-        if (FirstLine.contains("no_lbr")) {
-          if (!NoLBRCollection.value_or(true))
-            report_error(Filename, "cannot mix 'no_lbr' and 'lbr' profiles");
-          NoLBRCollection = true;
-          Buf = Buf.drop_front(CheckNoLBRPos + 1);
-        } else {
-          if (NoLBRCollection.value_or(false))
-            report_error(Filename, "cannot mix 'no_lbr' and 'lbr' profiles");
-          NoLBRCollection = false;
-        }
-      }
+      checkMode("no_lbr", NoLBRCollection);
       Profile = &Profiles[tid];
     }
 
-    SmallVector<StringRef> Lines;
-    SplitString(Buf, Lines, "\n");
-    for (StringRef Line : Lines) {
-      size_t Pos = Line.rfind(" ");
-      if (Pos == StringRef::npos)
-        report_error(Filename, "Malformed / corrupted profile");
-      StringRef Signature = Line.substr(0, Pos);
-      uint64_t Count;
-      if (Line.substr(Pos + 1, Line.size() - Pos).getAsInteger(10, Count))
-        report_error(Filename, "Malformed / corrupted profile counter");
+    do {
+      StringRef Line(FdataLine);
+      CounterTy Count;
+      auto [Signature, ExecCount] = Line.rsplit(' ');
+      if (ExecCount.getAsInteger(10, Count.Exec))
+        report_error(Filename, "Malformed / corrupted execution count");
+      // Only LBR profile has misprediction field
+      if (!NoLBRCollection.value_or(false)) {
+        auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
+        Signature = SignatureLBR;
+        if (MispredCount.getAsInteger(10, Count.Mispred))
+          report_error(Filename, "Malformed / corrupted misprediction count");
+      }
+
       Count += Profile->lookup(Signature);
       Profile->insert_or_assign(Signature, Count);
-    }
+    } while (std::getline(FdataFile, FdataLine));
   };
 
   // The final reduction has non-trivial cost, make sure each thread has at
@@ -346,7 +346,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   ProfileTy MergedProfile;
   for (const auto &[Thread, Profile] : ParsedProfiles)
     for (const auto &[Key, Value] : Profile) {
-      uint64_t Count = MergedProfile.lookup(Key) + Value;
+      CounterTy Count = MergedProfile.lookup(Key) + Value;
       MergedProfile.insert_or_assign(Key, Count);
     }
 
@@ -354,8 +354,12 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     output() << "boltedcollection\n";
   if (NoLBRCollection.value_or(false))
     output() << "no_lbr\n";
-  for (const auto &[Key, Value] : MergedProfile)
-    output() << Key << " " << Value << "\n";
+  for (const auto &[Key, Value] : MergedProfile) {
+    output() << Key << " ";
+    if (!NoLBRCollection.value_or(false))
+      output() << Value.Mispred << " ";
+    output() << Value.Exec << "\n";
+  }
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }

@@ -2406,11 +2406,52 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
+static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
+  Constant *Initializer = G->getInitializer();
+  uint64_t SizeInBytes =
+      M.getDataLayout().getTypeAllocSize(Initializer->getType());
+
+  uint64_t NewSize = alignTo(SizeInBytes, 16);
+  if (SizeInBytes != NewSize) {
+    // Pad the initializer out to the next multiple of 16 bytes.
+    llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
+    Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
+    Initializer = ConstantStruct::getAnon({Initializer, Padding});
+    auto *NewGV = new GlobalVariable(
+        M, Initializer->getType(), G->isConstant(), G->getLinkage(),
+        Initializer, "", G, G->getThreadLocalMode(), G->getAddressSpace());
+    NewGV->copyAttributesFrom(G);
+    NewGV->setComdat(G->getComdat());
+    NewGV->copyMetadata(G, 0);
+
+    NewGV->takeName(G);
+    G->replaceAllUsesWith(NewGV);
+    G->eraseFromParent();
+    G = NewGV;
+  }
+
+  if (G->getAlign().valueOrOne() < 16)
+    G->setAlignment(Align(16));
+
+  // Ensure that tagged globals don't get merged by ICF - as they should have
+  // different tags at runtime.
+  G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
+
+  std::vector<GlobalVariable *> GlobalsToTag;
+  for (GlobalVariable &G : M.globals()) {
+    if (G.isDeclaration() || !G.isTagged())
+      continue;
+    GlobalsToTag.push_back(&G);
+  }
+  for (GlobalVariable *G : GlobalsToTag)
+    tagGlobalDefinition(M, G);
 
   // Gather all GOT equivalent globals in the module. We really need two
   // passes over the globals: one to compute and another to avoid its emission
@@ -3602,10 +3643,11 @@ static void emitGlobalConstantArray(const DataLayout &DL,
 
 static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
 
-static void emitGlobalConstantVector(const DataLayout &DL,
-                                     const ConstantVector *CV, AsmPrinter &AP,
+static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
+                                     AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
-  Type *ElementType = CV->getType()->getElementType();
+  auto *VTy = cast<FixedVectorType>(CV->getType());
+  Type *ElementType = VTy->getElementType();
   uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
   uint64_t ElementAllocSizeInBits = DL.getTypeAllocSizeInBits(ElementType);
   uint64_t EmittedSize;
@@ -3618,7 +3660,7 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     Type *IntT =
         IntegerType::get(CV->getContext(), DL.getTypeSizeInBits(CV->getType()));
     ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
-        ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT), DL));
+        ConstantExpr::getBitCast(const_cast<Constant *>(CV), IntT), DL));
     if (!CI) {
       report_fatal_error(
           "Cannot lower vector global with unusual element type");
@@ -3627,12 +3669,11 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     emitGlobalConstantLargeInt(CI, AP);
     EmittedSize = DL.getTypeStoreSize(CV->getType());
   } else {
-    for (unsigned I = 0, E = CV->getType()->getNumElements(); I != E; ++I) {
+    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
       emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
-      emitGlobalConstantImpl(DL, CV->getOperand(I), AP);
+      emitGlobalConstantImpl(DL, CV->getAggregateElement(I), AP);
     }
-    EmittedSize =
-        DL.getTypeAllocSize(ElementType) * CV->getType()->getNumElements();
+    EmittedSize = DL.getTypeAllocSize(ElementType) * VTy->getNumElements();
   }
 
   unsigned Size = DL.getTypeAllocSize(CV->getType());
@@ -3902,8 +3943,10 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
+    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
     if (StoreSize <= 8) {
       if (AP.isVerbose())
         AP.OutStreamer->getCommentOS()
@@ -3920,8 +3963,12 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return;
   }
 
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV))
-    return emitGlobalConstantFP(CFP, AP);
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
+    else
+      return emitGlobalConstantFP(CFP, AP);
+  }
 
   if (isa<ConstantPointerNull>(CV)) {
     AP.OutStreamer->emitIntValue(0, Size);
@@ -3953,8 +4000,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     }
   }
 
-  if (const ConstantVector *V = dyn_cast<ConstantVector>(CV))
-    return emitGlobalConstantVector(DL, V, AP, AliasList);
+  if (isa<ConstantVector>(CV))
+    return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.

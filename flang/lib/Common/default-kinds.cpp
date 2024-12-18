@@ -68,6 +68,7 @@ IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_defaultLogicalKind(
 int IntrinsicTypeDefaultKinds::GetDefaultKind(TypeCategory category) const {
   switch (category) {
   case TypeCategory::Integer:
+  case TypeCategory::Unsigned:
     return defaultIntegerKind_;
   case TypeCategory::Real:
   case TypeCategory::Complex:

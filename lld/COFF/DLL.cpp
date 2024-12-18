@@ -160,13 +160,14 @@ public:
   void writeTo(uint8_t *buf) const override {
     uint64_t impchkVA = 0;
     if (file->impchkThunk)
-      impchkVA = file->impchkThunk->getRVA() + file->ctx.config.imageBase;
+      impchkVA =
+          file->impchkThunk->getRVA() + file->symtab.ctx.config.imageBase;
     write64le(buf, impchkVA);
   }
 
   void getBaserels(std::vector<Baserel> *res) override {
     if (file->impchkThunk)
-      res->emplace_back(rva, file->ctx.config.machine);
+      res->emplace_back(rva, file->symtab.machine);
   }
 
 private:
