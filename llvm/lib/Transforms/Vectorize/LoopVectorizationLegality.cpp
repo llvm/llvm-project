@@ -1753,8 +1753,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
     if (!canVectorizeOuterLoop()) {
       reportVectorizationFailure("Unsupported outer loop",
-                                 "UnsupportedOuterLoop",
-                                 ORE, TheLoop);
+                                 "UnsupportedOuterLoop", ORE, TheLoop);
       // TODO: Implement DoExtraAnalysis when subsequent legal checks support
       // outer loops.
       return false;
