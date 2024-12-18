@@ -699,8 +699,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // Parse -f(no-)?sanitize-nonmerged-handlers flags
   SanitizerMask MergeKinds =
-      parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, {},
-                        {}, options::OPT_fsanitize_merge_handlers_EQ,
+      parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, {}, {},
+                        options::OPT_fsanitize_merge_handlers_EQ,
                         options::OPT_fno_sanitize_merge_handlers_EQ);
   MergeKinds &= Kinds;
 
