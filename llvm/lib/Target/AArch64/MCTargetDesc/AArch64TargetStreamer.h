@@ -97,11 +97,13 @@ public:
   /// Build attributes implementation
   virtual void emitSubsection(unsigned VendorID,
                               ARMBuildAttrs::SubsectionOptional IsOptional,
-                              ARMBuildAttrs::SubsectionType ParameterType) {}
+                              ARMBuildAttrs::SubsectionType ParameterType);
   virtual void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
-                             bool Override) {}
-  virtual void activateSubsection(StringRef VendorName) {}
-  virtual StringRef getActiveSubsection() { return ""; }
+                             bool Override);
+  void activateSubsection(StringRef VendorName);
+  StringRef getActiveSubsection();
+
+  SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -112,7 +114,6 @@ private:
   AArch64ELFStreamer &getStreamer();
 
   MCSection *AttributeSection = nullptr;
-  SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
   /// Build attributes implementation
   void emitSubsection(unsigned VendorID,
@@ -120,8 +121,6 @@ private:
                       ARMBuildAttrs::SubsectionType ParameterType) override;
   void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
                      bool Override = false) override;
-  void activateSubsection(StringRef VendorName) override;
-  StringRef getActiveSubsection() override;
 
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;

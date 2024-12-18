@@ -151,3 +151,81 @@ llvm::createAArch64ObjectTargetStreamer(MCStreamer &S,
 MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
   return new AArch64TargetStreamer(S);
 }
+
+void AArch64TargetStreamer::emitSubsection(
+    unsigned VendorID, ARMBuildAttrs::SubsectionOptional IsOptional,
+    ARMBuildAttrs::SubsectionType ParameterType) {
+  StringRef VendorName = ARMBuildAttrs::getVendorName(VendorID);
+
+  // If exists, return.
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (VendorName == SubSection.VendorName) {
+      activateSubsection(VendorName);
+      return;
+    }
+  }
+  // else, add the subsection
+  MCELFStreamer::AttributeSubSection AttSubSection;
+  AttSubSection.VendorName = VendorName;
+  AttSubSection.IsOptional = IsOptional;
+  AttSubSection.ParameterType = ParameterType;
+  AttributeSubSections.push_back(AttSubSection);
+  activateSubsection(VendorName);
+}
+
+StringRef AArch64TargetStreamer::getActiveSubsection() {
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (SubSection.IsActive) {
+      return SubSection.VendorName;
+    }
+  }
+  return "";
+}
+
+void AArch64TargetStreamer::emitAttribute(unsigned VendorID, unsigned Tag,
+                                          unsigned Value, bool Override) {
+  StringRef VendorName = ARMBuildAttrs::getVendorName(VendorID);
+
+  if (AttributeSubSections.size() == 0) {
+    assert(0 &&
+           "Can not add AArch64 build attribute: no AArch64 subsection exists");
+    return;
+  }
+
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (VendorName == SubSection.VendorName) {
+      if (!SubSection.IsActive) {
+        assert(0 &&
+               "Can not add AArch64 build attribute: subsection is not active");
+        return;
+      }
+      for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
+        if (Item.Tag == Tag) {
+          if (!Override) {
+            if (Item.IntValue != Value) {
+              assert(0 &&
+                     "Can not add AArch64 build attribute: An attribute with "
+                     "the same tag and a different value allready exists");
+              return;
+            }
+          }
+        }
+      }
+      SubSection.Content.push_back(MCELFStreamer::AttributeItem(
+          MCELFStreamer::AttributeItem::NumericAttribute, Tag, Value, ""));
+      return;
+    }
+  }
+  assert(0 && "Can not add AArch64 build attribute: required subsection does "
+              "not exists");
+}
+
+void AArch64TargetStreamer::activateSubsection(StringRef VendorName) {
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (VendorName == SubSection.VendorName) {
+      SubSection.IsActive = true;
+    } else {
+      SubSection.IsActive = false;
+    }
+  }
+}

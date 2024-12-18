@@ -170,18 +170,23 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
            << ARMBuildAttrs::getFeatureAndBitsTagsStr(
                   ARMBuildAttrs::TAG_FEATURE_BTI)
            << ", " << Value;
+        // Keep the data structure consistent with the case of ELF emission
+        // (important for llvm-mc asm parsing)
+        AArch64TargetStreamer::emitAttribute(VendorID, Tag, Value, Override);
         break;
       case ARMBuildAttrs::TAG_FEATURE_GCS:
         OS << "\t." << ARMBuildAttrs::getAttrTag() << "\t"
            << ARMBuildAttrs::getFeatureAndBitsTagsStr(
                   ARMBuildAttrs::TAG_FEATURE_GCS)
            << ", " << Value;
+        AArch64TargetStreamer::emitAttribute(VendorID, Tag, Value, Override);
         break;
       case ARMBuildAttrs::TAG_FEATURE_PAC:
         OS << "\t." << ARMBuildAttrs::getAttrTag() << "\t"
            << ARMBuildAttrs::getFeatureAndBitsTagsStr(
                   ARMBuildAttrs::TAG_FEATURE_PAC)
            << ", " << Value;
+        AArch64TargetStreamer::emitAttribute(VendorID, Tag, Value, Override);
         break;
       }
       break;
@@ -196,26 +201,26 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
            << ARMBuildAttrs::getPauthABITagsStr(
                   ARMBuildAttrs::TAG_PAUTH_PLATFORM)
            << ", " << Value;
+        AArch64TargetStreamer::emitAttribute(VendorID, Tag, Value, Override);
         break;
       case ARMBuildAttrs::TAG_PAUTH_SCHEMA:
         OS << "\t." << ARMBuildAttrs::getAttrTag() << "\t"
            << ARMBuildAttrs::getPauthABITagsStr(ARMBuildAttrs::TAG_PAUTH_SCHEMA)
            << ", " << Value;
-        break;
+        AArch64TargetStreamer::emitAttribute(VendorID, Tag, Value, Override);
         break;
       }
     }
     OS << "\n";
   }
 
-  void emitSubsection(unsigned SubsectionName,
+  void emitSubsection(unsigned Subsection,
                       ARMBuildAttrs::SubsectionOptional Optional,
                       ARMBuildAttrs::SubsectionType ParameterType) override {
     // The AArch64 build attributes assembly subsection header format:
     // ".aeabi_subsection name, optional, parameter type"
     // optional: required (0) optional (1)
     // parameter type: uleb128 or ULEB128 (0) ntbs or NTBS (1)
-
     assert((0 == Optional || 1 == Optional) &&
            ARMBuildAttrs::getSubsectionOptionalUnknownError().data());
     assert((0 == ParameterType || 1 == ParameterType) &&
@@ -225,7 +230,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     StringRef OptionalStr = getOptionalStr(Optional);
     StringRef ParameterStr = getTypeStr(ParameterType);
 
-    switch (SubsectionName) {
+    switch (Subsection) {
     default: {
       assert(0 && ARMBuildAttrs::getSubsectionUnknownError().data());
       break;
@@ -240,6 +245,10 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       StringRef SubsectionName = getVendorName(ARMBuildAttrs::AEABI_PAUTHABI);
       OS << "\t" << SubsectionTag << "\t" << SubsectionName << ", "
          << OptionalStr << ", " << ParameterStr;
+      // Keep the data structure consistent with the case of ELF emission
+      // (important for llvm-mc asm parsing)
+      AArch64TargetStreamer::emitSubsection(Subsection, Optional,
+                                            ParameterType);
       break;
     }
     case ARMBuildAttrs::AEABI_FEATURE_AND_BITS: {
@@ -253,6 +262,8 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
           getVendorName(ARMBuildAttrs::AEABI_FEATURE_AND_BITS);
       OS << "\t" << SubsectionTag << "\t" << SubsectionName << ", "
          << OptionalStr << ", " << ParameterStr;
+      AArch64TargetStreamer::emitSubsection(Subsection, Optional,
+                                            ParameterType);
       break;
     }
     }
@@ -406,84 +417,15 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
   return static_cast<AArch64ELFStreamer &>(Streamer);
 }
 
-void AArch64TargetELFStreamer::activateSubsection(StringRef VendorName) {
-  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
-    if (VendorName == SubSection.VendorName) {
-      SubSection.IsActive = true;
-    } else {
-      SubSection.IsActive = false;
-    }
-  }
-}
-
 void AArch64TargetELFStreamer::emitSubsection(
     unsigned VendorID, ARMBuildAttrs::SubsectionOptional IsOptional,
     ARMBuildAttrs::SubsectionType ParameterType) {
-  StringRef VendorName = ARMBuildAttrs::getVendorName(VendorID);
-
-  // If exists, return.
-  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
-    if (VendorName == SubSection.VendorName) {
-      // This path might be reached when an assembly directive switches
-      // attribute subsection.
-      activateSubsection(VendorName);
-      return;
-    }
-  }
-  // else, add the subsection
-  MCELFStreamer::AttributeSubSection AttSubSection;
-  AttSubSection.VendorName = VendorName;
-  AttSubSection.IsOptional = IsOptional;
-  AttSubSection.ParameterType = ParameterType;
-  AttributeSubSections.push_back(AttSubSection);
-  activateSubsection(VendorName);
+  AArch64TargetStreamer::emitSubsection(VendorID, IsOptional, ParameterType);
 }
 
 void AArch64TargetELFStreamer::emitAttribute(unsigned VendorID, unsigned Tag,
                                              unsigned Value, bool Override) {
-  StringRef VendorName = ARMBuildAttrs::getVendorName(VendorID);
-
-  if (AttributeSubSections.size() == 0) {
-    assert(0 &&
-           "Can not add AArch64 build attribute: no AArch64 subsection exists");
-    return;
-  }
-
-  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
-    if (VendorName == SubSection.VendorName) {
-      if (!SubSection.IsActive) {
-        assert(0 &&
-               "Can not add AArch64 build attribute: subsection is not active");
-        return;
-      }
-      for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
-        if (Item.Tag == Tag) {
-          if (!Override) {
-            if (Item.IntValue != Value) {
-              assert(0 &&
-                     "Can not add AArch64 build attribute: An attribute with "
-                     "the same tag and a different value allready exists");
-              return;
-            }
-          }
-        }
-      }
-      SubSection.Content.push_back(MCELFStreamer::AttributeItem(
-          MCELFStreamer::AttributeItem::NumericAttribute, Tag, Value, ""));
-      return;
-    }
-  }
-  assert(0 && "Can not add AArch64 build attribute: required subsection does "
-              "not exists");
-}
-
-StringRef AArch64TargetELFStreamer::getActiveSubsection() {
-  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
-    if (SubSection.IsActive) {
-      return SubSection.VendorName;
-    }
-  }
-  return "";
+  AArch64TargetStreamer::emitAttribute(VendorID, Tag, Value, Override);
 }
 
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
