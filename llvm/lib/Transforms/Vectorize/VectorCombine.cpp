@@ -1713,7 +1713,12 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
-  if (NewCost >= OldCost)
+
+  // If either shuffle will constant fold away, then fold for the same cost as
+  // we will reduce the instruction count.
+  bool ReducedInstCount = (isa<Constant>(X) && isa<Constant>(Z)) ||
+                          (isa<Constant>(Y) && isa<Constant>(W));
+  if (ReducedInstCount ? (NewCost > OldCost) : (NewCost >= OldCost))
     return false;
 
   Value *Shuf0 = Builder.CreateShuffleVector(X, Z, NewMask0);
