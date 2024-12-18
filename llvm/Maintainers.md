@@ -463,7 +463,7 @@ Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- A
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
-Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast) -- BPF backend \
+Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
 ### Former maintainers of removed components
