@@ -514,9 +514,12 @@ public:
 
 class ConcreteInt : public Loc {
 public:
-  explicit ConcreteInt(const llvm::APSInt &V) : Loc(ConcreteIntKind, &V) {}
+  explicit ConcreteInt(APSIntPtr V) : Loc(ConcreteIntKind, V.get()) {}
 
-  const llvm::APSInt &getValue() const { return *castDataAs<llvm::APSInt>(); }
+  APSIntPtr getValue() const {
+    // This is safe because in the ctor we take a safe APSIntPtr.
+    return APSIntPtr::unsafeConstructor(castDataAs<llvm::APSInt>());
+  }
 
   static bool classof(SVal V) { return V.getKind() == ConcreteIntKind; }
 };
