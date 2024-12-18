@@ -103,7 +103,7 @@ void testit_one(int dnum) {
   #pragma omp dispatch depend(in:b) depend(in:a)
   output = disp_call();
 
-  // expected-warning@+1 {{only 'novariants' clause is supported when 'novariants' & 'nocontext' clauses occur on the same dispatch construct}}
+  // expected-warning@+1 {{'nocontext' clause is ignored, only 'novariants' clause is applied}}
   #pragma omp dispatch nocontext(c1) novariants(c2) depend(inout:a)
   disp_call();
 }
