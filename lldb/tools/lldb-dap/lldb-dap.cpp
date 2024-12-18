@@ -13,11 +13,11 @@
 #include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1881,8 +1881,10 @@ void request_initialize(DAP &dap, const llvm::json::Object &request) {
   // Do not source init files until in/out/err are configured.
   dap.debugger = lldb::SBDebugger::Create(false);
   dap.debugger.SetInputFile(dap.in);
-  dap.debugger.SetOutputFile(lldb::SBFile(dap.pout.GetWriteFileDescriptor(), "w", false));
-  dap.debugger.SetErrorFile(lldb::SBFile(dap.perr.GetWriteFileDescriptor(), "w", false));
+  dap.debugger.SetOutputFile(
+      lldb::SBFile(dap.pout.GetWriteFileDescriptor(), "w", false));
+  dap.debugger.SetErrorFile(
+      lldb::SBFile(dap.perr.GetWriteFileDescriptor(), "w", false));
 
   auto interp = dap.debugger.GetCommandInterpreter();
 
