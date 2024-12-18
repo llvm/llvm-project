@@ -16,7 +16,7 @@ def TTAscalonD8Model : SchedMachineModel {
 
   let CompleteModel = 0;
 
-  // TODO supported, but haven't added scheduling info yet
+  // TODO: supported, but haven't added scheduling info yet.
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
                              HasStdExtZknh, HasStdExtZksed, HasStdExtZksh,
@@ -35,7 +35,7 @@ let BufferSize = 16 in {
   def AscalonFXC : ProcResource<2>; // ALU, BR
   def AscalonFXD : ProcResource<2>; // ALU
   def AscalonFP : ProcResource<2>;
-  // TODO two vector units with vector scheduling model
+  // TODO: two vector units with vector scheduling model.
 }
 
 def AscalonFX : ProcResGroup<[AscalonFXA, AscalonFXB, AscalonFXC, AscalonFXD]>;
