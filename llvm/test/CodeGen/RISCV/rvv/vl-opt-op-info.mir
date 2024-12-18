@@ -933,7 +933,7 @@ body: |
     %y:vr = PseudoVIOTA_M_M1 $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
-name: viota_m_mask_incompatible_eew
+name: viota_m_mask_incompatible_emul_from_sew
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_mask_incompatible_eew
@@ -943,7 +943,7 @@ body: |
     %y:vr = PseudoVIOTA_M_M1 $noreg, %x, 1, 4 /* e16 */, 0
 ...
 ---
-name: viota_m_mask_incompatible_emul
+name: viota_m_mask_incompatible_emul_from_lmul
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_mask_incompatible_emul
@@ -952,4 +952,3 @@ body: |
     %x:vr = PseudoVMAND_MM_B1 $noreg, $noreg, -1, 0
     %y:vr = PseudoVIOTA_M_MF2 $noreg, %x, 1, 3 /* e8 */, 0
 ...
-
