@@ -49,12 +49,11 @@
 // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
 #ifdef LIBC_COPT_PRINTF_SPLIT
-// Split printf function definitions must be strong and non-inline.
-#define LIBC_PRINTF_SPLIT_FUNCTION
+#define LIBC_PRINTF_SPLIT_DECL [[gnu::weak]]
+#define LIBC_PRINTF_SPLIT_DEFN
 #else
-// Function definitions that could be split but are not must be inline in
-// headers.
-#define LIBC_PRINTF_SPLIT_FUNCTION LIBC_INLINE
+#define LIBC_PRINTF_SPLIT_DECL
+#define LIBC_PRINTF_SPLIT_DEFN LIBC_INLINE
 #define LIBC_PRINTF_DEFINE_SPLIT
 #endif
 

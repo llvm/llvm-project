@@ -25,9 +25,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
+LIBC_PRINTF_SPLIT_DECL int convert_float_hex_exp(Writer *writer,
+                                                 const FormatSection &to_conv);
+
 #ifdef LIBC_PRINTF_DEFINE_SPLIT
-LIBC_PRINTF_SPLIT_FUNCTION int
-convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
+LIBC_PRINTF_SPLIT_DEFN int convert_float_hex_exp(Writer *writer,
+                                                 const FormatSection &to_conv) {
   using LDBits = fputil::FPBits<long double>;
   using StorageType = LDBits::StorageType;
 
@@ -254,9 +257,6 @@ convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
   }
   return WRITE_OK;
 }
-#else
-[[gnu::weak]] int convert_float_hex_exp(Writer *writer,
-                                        const FormatSection &to_conv);
 #endif
 
 } // namespace printf_core

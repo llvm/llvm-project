@@ -1106,9 +1106,16 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   }
 }
 
+LIBC_PRINTF_SPLIT_DECL int convert_float_decimal(Writer *writer,
+                                                 const FormatSection &to_conv);
+LIBC_PRINTF_SPLIT_DECL int convert_float_dec_exp(Writer *writer,
+                                                 const FormatSection &to_conv);
+LIBC_PRINTF_SPLIT_DECL int convert_float_dec_auto(Writer *writer,
+                                                  const FormatSection &to_conv);
+
 #ifdef LIBC_PRINTF_DEFINE_SPLIT
 // TODO: unify the float converters to remove the duplicated checks for inf/nan.
-LIBC_PRINTF_SPLIT_FUNCTION int
+LIBC_PRINTF_SPLIT_DEFN int
 convert_float_decimal(Writer *writer, const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
@@ -1129,7 +1136,7 @@ convert_float_decimal(Writer *writer, const FormatSection &to_conv) {
   return convert_inf_nan(writer, to_conv);
 }
 
-LIBC_PRINTF_SPLIT_FUNCTION int
+LIBC_PRINTF_SPLIT_DEFN int
 convert_float_dec_exp(Writer *writer, const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
@@ -1150,7 +1157,7 @@ convert_float_dec_exp(Writer *writer, const FormatSection &to_conv) {
   return convert_inf_nan(writer, to_conv);
 }
 
-LIBC_PRINTF_SPLIT_FUNCTION int
+LIBC_PRINTF_SPLIT_DEFN int
 convert_float_dec_auto(Writer *writer, const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
@@ -1170,13 +1177,6 @@ convert_float_dec_auto(Writer *writer, const FormatSection &to_conv) {
 
   return convert_inf_nan(writer, to_conv);
 }
-#else
-[[gnu::weak]] int convert_float_decimal(Writer *writer,
-                                        const FormatSection &to_conv);
-[[gnu::weak]] int convert_float_dec_exp(Writer *writer,
-                                        const FormatSection &to_conv);
-[[gnu::weak]] int convert_float_dec_auto(Writer *writer,
-                                         const FormatSection &to_conv);
 #endif
 
 } // namespace printf_core

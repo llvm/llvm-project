@@ -293,13 +293,7 @@ public:
     return section;
   }
 
-#ifdef LIBC_PRINTF_DEFINE_SPLIT
-  void write_float_arg_val(FormatSection &section, LengthModifier lm,
-                           size_t conv_index);
-#else
-  [[gnu::weak]] void write_float_arg_val(FormatSection &section, LengthModifier lm,
-                           size_t conv_index);
-#endif
+  LIBC_PRINTF_SPLIT_DECL void write_float_arg_val(FormatSection &section, LengthModifier lm, size_t conv_index);
 
 private:
   // parse_flags parses the flags inside a format string. It assumes that
@@ -686,7 +680,7 @@ private:
 
 #ifdef LIBC_PRINTF_DEFINE_SPLIT
 template <typename ArgParser>
-LIBC_PRINTF_SPLIT_FUNCTION void Parser<ArgParser>::write_float_arg_val(FormatSection &section,
+LIBC_PRINTF_SPLIT_DEFN void Parser<ArgParser>::write_float_arg_val(FormatSection &section,
                                                         LengthModifier lm,
                                                         size_t conv_index) {
   if (lm != LengthModifier::L) {
