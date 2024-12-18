@@ -48,27 +48,32 @@ extern cl::opt<unsigned> ForceTargetInstructionCost;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+static bool opcodeMayReadOrWriteFromMemory(unsigned Opcode) {
+  if (Instruction::isBinaryOp(Opcode))
+    return false;
+  switch (Opcode) {
+  case Instruction::Or:
+  case Instruction::ICmp:
+  case Instruction::Select:
+  case VPInstruction::AnyOf:
+  case VPInstruction::Not:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExtractFromEnd:
+  case VPInstruction::FirstOrderRecurrenceSplice:
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::PtrAdd:
+    return false;
+  default:
+    return true;
+  }
+}
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInstructionSC:
-    if (Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode()))
-      return false;
-    switch (cast<VPInstruction>(this)->getOpcode()) {
-    case Instruction::Or:
-    case Instruction::ICmp:
-    case Instruction::Select:
-    case VPInstruction::AnyOf:
-    case VPInstruction::Not:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::ExtractFromEnd:
-    case VPInstruction::FirstOrderRecurrenceSplice:
-    case VPInstruction::LogicalAnd:
-    case VPInstruction::PtrAdd:
-      return false;
-    default:
-      return true;
-    }
+    return opcodeMayReadOrWriteFromMemory(
+        cast<VPInstruction>(this)->getOpcode());
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -116,24 +121,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
   case VPInstructionSC:
-    if (Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode()))
-      return false;
-    switch (cast<VPInstruction>(this)->getOpcode()) {
-    case Instruction::Or:
-    case Instruction::ICmp:
-    case Instruction::Select:
-    case VPInstruction::AnyOf:
-    case VPInstruction::Not:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::ExtractFromEnd:
-    case VPInstruction::FirstOrderRecurrenceSplice:
-    case VPInstruction::LogicalAnd:
-    case VPInstruction::PtrAdd:
-      return false;
-    default:
-      return true;
-    }
+    return opcodeMayReadOrWriteFromMemory(
+        cast<VPInstruction>(this)->getOpcode());
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
