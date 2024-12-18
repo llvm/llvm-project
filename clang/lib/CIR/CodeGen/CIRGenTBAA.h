@@ -104,6 +104,10 @@ class CIRGenTBAA {
   [[maybe_unused]] const clang::CodeGenOptions &codeGenOpts;
   [[maybe_unused]] const clang::LangOptions &features;
 
+  llvm::DenseMap<const Type *, cir::TBAAAttr> metadataCache;
+
+  cir::TBAAAttr getChar();
+
 public:
   CIRGenTBAA(mlir::MLIRContext *mlirContext, clang::ASTContext &astContext,
              CIRGenTypes &types, mlir::ModuleOp moduleOp,
@@ -129,7 +133,7 @@ public:
   cir::TBAAAttr getBaseTypeInfo(clang::QualType qty);
 
   /// Get TBAA tag for a given memory access.
-  mlir::ArrayAttr getAccessTagInfo(TBAAAccessInfo tbaaInfo);
+  cir::TBAAAttr getAccessTagInfo(TBAAAccessInfo tbaaInfo);
 
   /// Get merged TBAA information for the purpose of type casts.
   TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo sourceInfo,

@@ -66,8 +66,8 @@ int local_const_load_store() {
 
 // LLVM-LABEL: @_Z22local_const_load_storev
 //      LLVM: %[[#INIT:]] = call i32 @_Z11produce_intv()
-// LLVM-NEXT: store i32 %[[#INIT]], ptr %[[#SLOT:]], align 4, !invariant.group !{{.+}}
-// LLVM-NEXT: %{{.+}} = load i32, ptr %[[#SLOT]], align 4, !invariant.group !{{.+}}
+// LLVM-NEXT: store i32 %[[#INIT]], ptr %[[#SLOT:]], align 4, !tbaa !{{.*}}, !invariant.group !{{.+}}
+// LLVM-NEXT: %{{.+}} = load i32, ptr %[[#SLOT]], align 4, !tbaa !{{.*}}, !invariant.group !{{.+}}
 // LLVM: }
 
 int local_const_optimize() {
@@ -80,7 +80,7 @@ int local_const_optimize() {
 // LLVM-LABEL: @_Z20local_const_optimizev()
 // LLVM-NEXT:    %[[#slot:]] = alloca i32, align 4
 // LLVM-NEXT:    %[[#init:]] = tail call i32 @_Z11produce_intv()
-// LLVM-NEXT:    store i32 %[[#init]], ptr %[[#slot]], align 4, !invariant.group !{{.+}}
+// LLVM-NEXT:    store i32 %[[#init]], ptr %[[#slot]], align 4, !tbaa !{{.*}}, !invariant.group !{{.+}}
 // LLVM-NEXT:    call void @_Z8blackboxRKi(ptr nonnull %[[#slot]])
 // LLVM-NEXT:    call void @_Z8blackboxRKi(ptr nonnull %[[#slot]])
 // LLVM-NEXT:    ret i32 %[[#init]]
