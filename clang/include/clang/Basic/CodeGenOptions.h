@@ -380,6 +380,10 @@ public:
   /// Set of sanitizer checks that trap rather than diagnose.
   SanitizerSet SanitizeTrap;
 
+  /// Set of sanitizer checks that have non-merged handlers (better
+  /// debuggability at the expense of code size).
+  SanitizerSet SanitizeNonMergedHandlers;
+
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
