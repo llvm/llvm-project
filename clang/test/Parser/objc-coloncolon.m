@@ -1,5 +1,13 @@
-// RUN: %clang_cc1 -x objective-c -fsyntax-only -verify %s
+// RUN: %clang_cc1 -x objective-c -fsyntax-only -Wno-objc-root-class -verify %s
+
+int GV = 42;
 
 @interface A
-- (instancetype)init:(::A *) foo; // expected-error {{expected a type}} 
++ (int) getGV;
+- (instancetype)init:(::A *) foo; // expected-error {{expected a type}}
+@end
+
+@implementation A
++ (int) getGV { return ::GV; } // expected-error {{expected a type}}
+- (instancetype)init:(::A *) foo { return self; } // expected-error {{expected a type}}
 @end

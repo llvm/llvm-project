@@ -675,6 +675,9 @@ Improvements to Clang's diagnostics
       views.push_back(std::string("123")); // warning
     }
 
+- Fixed a bug where Clang hangs on unsupported optional scope specifier ``::`` when parsing
+  Objective-C. Clang now emits a diagnostic message instead of hanging.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
