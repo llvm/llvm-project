@@ -924,6 +924,14 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let stages = [Stages<DXIL1_6, [all_stages]>];
 }
 
+def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
+  let Doc = "returns true if the expression is true in all of the active lanes in the current wave";
+  let intrinsics = [ IntrinSelect<int_dx_wave_all> ];
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let Doc = "returns true if the expression is true in any of the active lanes in the current wave";
   let intrinsics = [ IntrinSelect<int_dx_wave_any> ];

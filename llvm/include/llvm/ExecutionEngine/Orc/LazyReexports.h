@@ -173,7 +173,7 @@ lazyReexports(LazyCallThroughManager &LCTManager,
       LCTManager, RSManager, SourceJD, std::move(CallableAliases), SrcJDLoc);
 }
 
-class LazyReexportsManager {
+class LazyReexportsManager : public ResourceManager {
 
   friend std::unique_ptr<MaterializationUnit>
   lazyReexports(LazyReexportsManager &, SymbolAliasMap);
@@ -193,6 +193,10 @@ public:
 
   LazyReexportsManager(LazyReexportsManager &&) = delete;
   LazyReexportsManager &operator=(LazyReexportsManager &&) = delete;
+
+  Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
+  void handleTransferResources(JITDylib &JD, ResourceKey DstK,
+                               ResourceKey SrcK) override;
 
 private:
   struct CallThroughInfo {
@@ -222,10 +226,11 @@ private:
       Expected<std::vector<ExecutorSymbolDef>> ReentryPoints);
   void resolve(ResolveSendResultFn SendResult, ExecutorAddr ReentryStubAddr);
 
+  ExecutionSession &ES;
   EmitTrampolinesFn EmitTrampolines;
   RedirectableSymbolManager &RSMgr;
 
-  std::mutex M;
+  DenseMap<ResourceKey, std::vector<ExecutorAddr>> KeyToReentryAddr;
   DenseMap<ExecutorAddr, CallThroughInfo> CallThroughs;
 };
 

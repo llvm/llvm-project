@@ -225,6 +225,7 @@
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
@@ -1281,9 +1282,31 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
   return Opts;
 }
 
-Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
-  RealtimeSanitizerOptions Result;
-  return Result;
+Expected<BoundsCheckingPass::ReportingMode>
+parseBoundsCheckingOptions(StringRef Params) {
+  BoundsCheckingPass::ReportingMode Mode =
+      BoundsCheckingPass::ReportingMode::Trap;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    if (ParamName == "trap") {
+      Mode = BoundsCheckingPass::ReportingMode::Trap;
+    } else if (ParamName == "rt") {
+      Mode = BoundsCheckingPass::ReportingMode::FullRuntime;
+    } else if (ParamName == "rt-abort") {
+      Mode = BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+    } else if (ParamName == "min-rt") {
+      Mode = BoundsCheckingPass::ReportingMode::MinRuntime;
+    } else if (ParamName == "min-rt-abort") {
+      Mode = BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Mode;
 }
 
 } // namespace

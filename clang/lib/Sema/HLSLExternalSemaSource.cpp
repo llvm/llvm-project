@@ -191,6 +191,19 @@ public:
     return *this;
   }
 
+  BuiltinTypeDeclBuilder &addLoadMethods() {
+    if (Record->isCompleteDefinition())
+      return *this;
+
+    ASTContext &AST = Record->getASTContext();
+    IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
+    DeclarationName Load(&II);
+    // TODO: We also need versions with status for CheckAccessFullyMapped.
+    addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+
+    return *this;
+  }
+
   FieldDecl *getResourceHandleField() {
     auto I = Fields.find("__handle");
     assert(I != Fields.end() &&
@@ -325,9 +338,9 @@ struct TemplateParameterListBuilder {
         Context,                          // AST context
         Builder.Record->getDeclContext(), // DeclContext
         SourceLocation(), SourceLocation(),
-        /*depth=*/0,                // Depth in the template parameter list
-        /*position=*/0,             // Position in the template parameter list
-        /*id=*/nullptr,             // Identifier for 'T'
+        /*D=*/0,                    // Depth in the template parameter list
+        /*P=*/0,                    // Position in the template parameter list
+        /*Id=*/nullptr,             // Identifier for 'T'
         /*Typename=*/true,          // Indicates this is a 'typename' or 'class'
         /*ParameterPack=*/false,    // Not a parameter pack
         /*HasTypeConstraint=*/false // Has no type constraint
@@ -545,6 +558,10 @@ private:
 
 public:
   ~BuiltinTypeMethodBuilder() { finalizeMethod(); }
+
+  BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
+  BuiltinTypeMethodBuilder &
+  operator=(const BuiltinTypeMethodBuilder &Other) = delete;
 
   Expr *getResourceHandleExpr() {
     // The first statement added to a method or access to 'this' creates the
@@ -851,7 +868,7 @@ static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                                 TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
 
-  // Obtain the QualType for 'unsigned long'
+  // Obtain the QualType for 'bool'
   QualType BoolTy = Context.BoolTy;
 
   // Create a QualType that points to this TemplateTypeParmDecl
@@ -877,9 +894,9 @@ static ConceptDecl *constructTypedBufferConceptDecl(Sema &S,
   IdentifierInfo &ElementTypeII = Context.Idents.get("element_type");
   TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
       Context, NSD->getDeclContext(), DeclLoc, DeclLoc,
-      /*depth=*/0,
-      /*position=*/0,
-      /*id=*/&ElementTypeII,
+      /*D=*/0,
+      /*P=*/0,
+      /*Id=*/&ElementTypeII,
       /*Typename=*/true,
       /*ParameterPack=*/false);
 
@@ -921,6 +938,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     ResourceKind::TypedBuffer, /*IsROV=*/false,
                     /*RawBuffer=*/false)
         .addArraySubscriptOperators()
+        .addLoadMethods()
         .completeDefinition();
   });
 
@@ -933,6 +951,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     ResourceKind::TypedBuffer, /*IsROV=*/true,
                     /*RawBuffer=*/false)
         .addArraySubscriptOperators()
+        .addLoadMethods()
         .completeDefinition();
   });
 

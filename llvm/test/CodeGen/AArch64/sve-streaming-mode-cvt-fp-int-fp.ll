@@ -49,14 +49,6 @@ define half @t3(half %x)  {
 ; CHECK-NEXT:    scvtf s0, w8
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ret
-;
-; USE-NEON-NO-GPRS-LABEL: t3:
-; USE-NEON-NO-GPRS:       // %bb.0: // %entry
-; USE-NEON-NO-GPRS-NEXT:    fcvt s0, h0
-; USE-NEON-NO-GPRS-NEXT:    fcvtzs s0, s0
-; USE-NEON-NO-GPRS-NEXT:    scvtf s0, s0
-; USE-NEON-NO-GPRS-NEXT:    fcvt h0, s0
-; USE-NEON-NO-GPRS-NEXT:    ret
 entry:
   %conv = fptosi half %x to i32
   %conv1 = sitofp i32 %conv to half
@@ -107,14 +99,6 @@ define half @t6(half %x)  {
 ; CHECK-NEXT:    ucvtf s0, w8
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ret
-;
-; USE-NEON-NO-GPRS-LABEL: t6:
-; USE-NEON-NO-GPRS:       // %bb.0: // %entry
-; USE-NEON-NO-GPRS-NEXT:    fcvt s0, h0
-; USE-NEON-NO-GPRS-NEXT:    fcvtzu s0, s0
-; USE-NEON-NO-GPRS-NEXT:    ucvtf s0, s0
-; USE-NEON-NO-GPRS-NEXT:    fcvt h0, s0
-; USE-NEON-NO-GPRS-NEXT:    ret
 entry:
   %conv = fptoui half %x to i32
   %conv1 = uitofp i32 %conv to half

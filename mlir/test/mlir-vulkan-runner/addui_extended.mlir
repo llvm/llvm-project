@@ -1,13 +1,15 @@
 // Make sure that addition with carry produces expected results
 // with and without expansion to primitive add/cmp ops for WebGPU.
 
-// RUN: mlir-vulkan-runner %s \
-// RUN:  --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
-// RUN:  --entry-point-result=void | FileCheck %s
+// RUN: mlir-opt %s -test-vulkan-runner-pipeline \
+// RUN:   | mlir-vulkan-runner - \
+// RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
+// RUN:     --entry-point-result=void | FileCheck %s
 
-// RUN: mlir-vulkan-runner %s --vulkan-runner-spirv-webgpu-prepare \
-// RUN:  --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
-// RUN:  --entry-point-result=void | FileCheck %s
+// RUN: mlir-opt %s -test-vulkan-runner-pipeline -spirv-webgpu-prepare \
+// RUN:   | mlir-vulkan-runner - \
+// RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
+// RUN:     --entry-point-result=void | FileCheck %s
 
 // CHECK: [0, 42, 0, 42]
 // CHECK: [1, 0, 1, 1]
