@@ -1903,7 +1903,7 @@ define i1 @masked_icmps_bmask_notmixed_not_subset_notoptimized(i32 %A) {
 
 define i1 @pr120361(i8 %x, i8 %y) {
 ; CHECK-LABEL: @pr120361(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp1 = icmp samesign eq i8 %x, -1
