@@ -1056,6 +1056,21 @@ TEST_F(EpollTest, EpollPWaitDiesWhenRealtime) {
 }
 #endif // SANITIZER_INTERCEPT_EPOLL
 
+#if SANITIZER_INTERCEPT_PPOLL
+TEST(TestRtsanInterceptors, PpollDiesWhenRealtime) {
+  struct pollfd fds[1];
+  fds[0].fd = 0;
+  fds[0].events = POLLIN;
+
+  timespec ts = {0};
+
+  auto Func = [&fds, &ts]() { ppoll(fds, 1, &ts, nullptr); };
+
+  ExpectRealtimeDeath(Func, "ppoll");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 #if SANITIZER_INTERCEPT_KQUEUE
 TEST(TestRtsanInterceptors, KqueueDiesWhenRealtime) {
   auto Func = []() { kqueue(); };
