@@ -70,11 +70,12 @@ define <vscale x 4 x i32> @insertelement_shufflevector_inline_to_ret() {
 
 ; extractelement
 
-define i32 @extractelement_idx_poison(<vscale x 4 x i32> %a) {
-; CHECK-LABEL: @extractelement_idx_poison(
-; CHECK-NEXT:    ret i32 poison
+define i32 @extractelement_idx_undef(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: @extractelement_idx_undef(
+; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[A:%.*]], i64 undef
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = extractelement <vscale x 4 x i32> %a, i64 poison
+  %r = extractelement <vscale x 4 x i32> %a, i64 undef
   ret i32 %r
 }
 

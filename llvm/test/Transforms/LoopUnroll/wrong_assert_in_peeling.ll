@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @test(i32 %x, i8 %y) {
+define i32 @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -13,17 +13,17 @@ define i32 @test(i32 %x, i8 %y) {
 ; CHECK:       bb2.peel.begin:
 ; CHECK-NEXT:    br label [[BB2_PEEL:%.*]]
 ; CHECK:       bb2.peel:
-; CHECK-NEXT:    [[TMP4_PEEL:%.*]] = add nsw i32 [[X:%.*]], [[TMP]]
+; CHECK-NEXT:    [[TMP4_PEEL:%.*]] = add nsw i32 undef, [[TMP]]
 ; CHECK-NEXT:    br label [[BB5_PEEL:%.*]]
 ; CHECK:       bb5.peel:
-; CHECK-NEXT:    [[TMP6_PEEL:%.*]] = icmp eq i32 [[X]], 33
+; CHECK-NEXT:    [[TMP6_PEEL:%.*]] = icmp eq i32 undef, 33
 ; CHECK-NEXT:    br i1 [[TMP6_PEEL]], label [[BB7_PEEL:%.*]], label [[BB15_LOOPEXIT2:%.*]]
 ; CHECK:       bb7.peel:
-; CHECK-NEXT:    [[TMP8_PEEL:%.*]] = sub nsw i32 [[X]], [[X]]
+; CHECK-NEXT:    [[TMP8_PEEL:%.*]] = sub nsw i32 undef, undef
 ; CHECK-NEXT:    [[TMP9_PEEL:%.*]] = icmp eq i32 [[TMP8_PEEL]], 0
 ; CHECK-NEXT:    br i1 [[TMP9_PEEL]], label [[BB10_PEEL:%.*]], label [[BB10_PEEL]]
 ; CHECK:       bb10.peel:
-; CHECK-NEXT:    [[TMP11_PEEL:%.*]] = icmp eq i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP11_PEEL:%.*]] = icmp eq i8 undef, 0
 ; CHECK-NEXT:    br i1 [[TMP11_PEEL]], label [[BB12_PEEL:%.*]], label [[BB17_LOOPEXIT3:%.*]]
 ; CHECK:       bb12.peel:
 ; CHECK-NEXT:    br i1 false, label [[BB13]], label [[BB2_PEEL_NEXT:%.*]]
@@ -38,15 +38,13 @@ define i32 @test(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP4]] = add nsw i32 [[TMP3]], [[TMP]]
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[X]], 33
-; CHECK-NEXT:    br i1 [[TMP6]], label [[BB7:%.*]], label [[BB15_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[BB15_LOOPEXIT:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw i32 [[TMP3]], [[X]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw i32 [[TMP3]], undef
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10:%.*]], label [[BB10]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i8 [[Y]], 0
-; CHECK-NEXT:    br i1 [[TMP11]], label [[BB12]], label [[BB17_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB12]], label [[BB17_LOOPEXIT:%.*]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    br i1 false, label [[BB13_LOOPEXIT:%.*]], label [[BB2]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       bb13.loopexit:
@@ -77,21 +75,21 @@ bb1:                                              ; preds = %bb13, %bb
   br label %bb2
 
 bb2:                                              ; preds = %bb12, %bb1
-  %tmp3 = phi i32 [ %x, %bb1 ], [ %tmp4, %bb12 ]
+  %tmp3 = phi i32 [ undef, %bb1 ], [ %tmp4, %bb12 ]
   %tmp4 = add nsw i32 %tmp3, %tmp
   br label %bb5
 
 bb5:                                              ; preds = %bb2
-  %tmp6 = icmp eq i32 %x, 33
+  %tmp6 = icmp eq i32 undef, 33
   br i1 %tmp6, label %bb7, label %bb15
 
 bb7:                                              ; preds = %bb5
-  %tmp8 = sub nsw i32 %tmp3, %x
+  %tmp8 = sub nsw i32 %tmp3, undef
   %tmp9 = icmp eq i32 %tmp8, 0
   br i1 %tmp9, label %bb10, label %bb10
 
 bb10:                                             ; preds = %bb7, %bb7
-  %tmp11 = icmp eq i8 %y, 0
+  %tmp11 = icmp eq i8 undef, 0
   br i1 %tmp11, label %bb12, label %bb17
 
 bb12:                                             ; preds = %bb10
