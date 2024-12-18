@@ -216,17 +216,40 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   }
 }
 
-// Collect MI which defines the register in the given machine function.
-static void collectDefInstr(Register Reg, const MachineFunction *MF,
-                            SPIRV::ModuleAnalysisInfo *MAI,
-                            SPIRV::ModuleSectionType MSType,
-                            bool DoInsert = true) {
-  assert(MAI->hasRegisterAlias(MF, Reg) && "Cannot find register alias");
-  MachineInstr *MI = MF->getRegInfo().getUniqueVRegDef(Reg);
-  assert(MI && "There should be an instruction that defines the register");
-  MAI->setSkipEmission(MI);
-  if (DoInsert)
-    MAI->MS[MSType].push_back(MI);
+// Returns a representation of an instruction as a vector of MachineOperand
+// hash values, see llvm::hash_value(const MachineOperand &MO) for details.
+// This creates a signature of the instruction with the same content
+// that MachineOperand::isIdenticalTo uses for comparison.
+static InstrSignature instrToSignature(const MachineInstr &MI,
+                                       SPIRV::ModuleAnalysisInfo &MAI,
+                                       bool UseDefReg) {
+  InstrSignature Signature{MI.getOpcode()};
+  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    size_t h;
+    if (MO.isReg()) {
+      if (!UseDefReg && MO.isDef())
+        continue;
+      Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
+      if (!RegAlias.isValid()) {
+        LLVM_DEBUG({
+          dbgs() << "Unexpectedly, no global id found for the operand ";
+          MO.print(dbgs());
+          dbgs() << "\nInstruction: ";
+          MI.print(dbgs());
+          dbgs() << "\n";
+        });
+        report_fatal_error("All v-regs must have been mapped to global id's");
+      }
+      // mimic llvm::hash_value(const MachineOperand &MO)
+      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
+                       MO.isDef());
+    } else {
+      h = hash_value(MO);
+    }
+    Signature.push_back(h);
+  }
+  return Signature;
 }
 
 void SPIRVModuleAnalysis::collectGlobalEntities(
@@ -257,14 +280,21 @@ void SPIRVModuleAnalysis::collectGlobalEntities(
       bool IsFirst = true;
       for (auto &U : *E) {
         const MachineFunction *MF = U.first;
+        const MachineRegisterInfo &MRI = MF->getRegInfo();
         Register Reg = U.second;
         MAI.setRegisterAlias(MF, Reg, GlobalReg);
-        if (!MF->getRegInfo().getUniqueVRegDef(Reg))
+        MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
+        // dbgs() << "----- ";
+        // DefMI->print(dbgs());
+        // dbgs() << " -----\n";
+        if (!DefMI)
           continue;
-        collectDefInstr(Reg, MF, &MAI, MSType, IsFirst);
+        MAI.setSkipEmission(DefMI);
+        if (IsFirst)
+          MAI.MS[MSType].push_back(DefMI);
         IsFirst = false;
         if (E->getIsGV())
-          MAI.GlobalVarList.push_back(MF->getRegInfo().getUniqueVRegDef(Reg));
+          MAI.GlobalVarList.push_back(DefMI);
       }
 
       if (UsePreOrder)
@@ -274,11 +304,253 @@ void SPIRVModuleAnalysis::collectGlobalEntities(
     RecHoistUtil(E);
   }
 }
+/*
+static bool isMIDecl(const SPIRVInstrInfo *TII, const MachineInstr &MI) {
+  static const DenseSet<unsigned> Decls = {
+      SPIRV::OpConstantTrue,
+      SPIRV::OpConstantFalse,
+      SPIRV::OpConstantI,
+      SPIRV::OpConstantF,
+      SPIRV::OpConstantComposite,
+      SPIRV::OpConstantSampler,
+      SPIRV::OpConstantNull,
+      SPIRV::OpUndef,
+      SPIRV::OpConstantFunctionPointerINTEL,
+      SPIRV::OpFunction,
+      SPIRV::OpFunctionParameter};
+  unsigned Opcode = MI.getOpcode();
+  if (Decls.contains(Opcode))
+    return true;
+  if (Opcode == SPIRV::OpTypeForwardPointer)
+    return false;
+  else if (Opcode == SPIRV::OpVariable)
+    return static_cast<SPIRV::StorageClass::StorageClass>(
+               MI.getOperand(2).getImm()) != SPIRV::StorageClass::Function;
+  return TII->isTypeDeclInstr(MI) || TII->isInlineAsmDefInstr(MI);
+}
+*/
 
-// The function initializes global register alias table for types, consts,
-// global vars and func decls and collects these instruction for output
-// at module level. Also it collects explicit OpExtension/OpCapability
-// instructions.
+bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
+                                        const MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  case SPIRV::OpTypeForwardPointer:
+    // omit now, collect later
+    return false;
+  case SPIRV::OpVariable:
+    return static_cast<SPIRV::StorageClass::StorageClass>(
+               MI.getOperand(2).getImm()) != SPIRV::StorageClass::Function;
+  case SPIRV::OpFunction:
+  case SPIRV::OpFunctionParameter:
+    return true;
+  }
+  if (GR->hasConstFunPtr() && Opcode == SPIRV::OpUndef) {
+    Register DefReg = MI.getOperand(0).getReg();
+    for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
+      if (UseMI.getOpcode() != SPIRV::OpConstantFunctionPointerINTEL)
+        continue;
+      // it's a dummy definition, FP constant refers to a function,
+      // and this is resolved in another way; let's skip this definition
+      assert(UseMI.getOperand(2).isReg() &&
+             UseMI.getOperand(2).getReg() == DefReg);
+      MAI.setSkipEmission(&MI);
+      return false;
+    }
+  }
+  return TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
+         TII->isInlineAsmDefInstr(MI);
+}
+
+// This is a special case of a function pointer refering to a possibly
+// forward function declaration. The operand is a dummy OpUndef that
+// requires a special treatment.
+void SPIRVModuleAnalysis::visitFunPtrUse(
+    Register OpReg, InstrGRegsMap &SignatureToGReg,
+    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
+    const MachineInstr &MI) {
+  const MachineOperand *OpFunDef =
+      GR->getFunctionDefinitionByUse(&MI.getOperand(2));
+  assert(OpFunDef && OpFunDef->isReg());
+  // find the actual function definition and number it globally in advance
+  const MachineInstr *OpDefMI = OpFunDef->getParent();
+  assert(OpDefMI && OpDefMI->getOpcode() == SPIRV::OpFunction);
+  const MachineFunction *FunDefMF = OpDefMI->getParent()->getParent();
+  const MachineRegisterInfo &FunDefMRI = FunDefMF->getRegInfo();
+  do {
+    visitDecl(FunDefMRI, SignatureToGReg, GlobalToGReg, FunDefMF, *OpDefMI);
+    OpDefMI = OpDefMI->getNextNode();
+  } while (OpDefMI && (OpDefMI->getOpcode() == SPIRV::OpFunction ||
+                       OpDefMI->getOpcode() == SPIRV::OpFunctionParameter));
+  // associate the function pointer with the newly assigned global number
+  Register GlobalFunDefReg = MAI.getRegisterAlias(FunDefMF, OpFunDef->getReg());
+  assert(GlobalFunDefReg.isValid() &&
+         "Function definition must refer to a global register");
+  MAI.setRegisterAlias(MF, OpReg, GlobalFunDefReg);
+}
+
+// Depth first recursive traversal of dependencies. Repeated visits are guarded
+// by MAI.hasRegisterAlias().
+void SPIRVModuleAnalysis::visitDecl(
+    const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
+    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
+    const MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
+  DenseSet<Register> Deps;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || MO.isDef())
+      continue;
+    Register OpReg = MO.getReg();
+    // function pointers special case
+    if (Opcode == SPIRV::OpConstantFunctionPointerINTEL &&
+        MRI.getRegClass(OpReg) == &SPIRV::pIDRegClass) {
+      visitFunPtrUse(OpReg, SignatureToGReg, GlobalToGReg, MF, MI);
+      continue;
+    }
+    // already processed
+    if (MAI.hasRegisterAlias(MF, MO.getReg()))
+      continue;
+    if (const MachineInstr *OpDefMI = MRI.getUniqueVRegDef(OpReg)) {
+      if (isDeclSection(MRI, *OpDefMI))
+        visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, *OpDefMI);
+      continue;
+    }
+    LLVM_DEBUG({
+      dbgs() << "Unexpectedly, no unique definition for the operand ";
+      MO.print(dbgs());
+      dbgs() << "\nInstruction: ";
+      MI.print(dbgs());
+      dbgs() << "\n";
+    });
+    report_fatal_error(
+        "No unique definition is found for the virtual register");
+  }
+
+  Register GReg;
+  bool IsFunDef = false;
+  if (TII->isSpecConstantInstr(MI)) {
+    GReg = Register::index2VirtReg(MAI.getNextID());
+    MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+  } else if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
+    const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
+    assert(GObj && "Unregistered global definition");
+    const Function *F = dyn_cast<Function>(GObj);
+    if (!F)
+      F = dyn_cast<Argument>(GObj)->getParent();
+    assert(F && "Expected a reference to a function or an argument");
+    IsFunDef = !F->isDeclaration();
+    auto It = GlobalToGReg.find(GObj);
+    if (It == GlobalToGReg.end()) {
+      GReg = Register::index2VirtReg(MAI.getNextID());
+      GlobalToGReg[GObj] = GReg;
+      if (!IsFunDef)
+        MAI.MS[SPIRV::MB_ExtFuncDecls].push_back(&MI);
+    } else {
+      GReg = It->second;
+    }
+  } else if (TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
+             TII->isInlineAsmDefInstr(MI)) {
+    // all dependencies are visited, we can calculate a signature now
+    InstrSignature MISign = instrToSignature(MI, MAI, false);
+    auto It = SignatureToGReg.find(MISign);
+    if (It == SignatureToGReg.end()) {
+      GReg = Register::index2VirtReg(MAI.getNextID());
+      SignatureToGReg[MISign] = GReg;
+      MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+    } else {
+      GReg = It->second;
+    }
+  } else if (Opcode == SPIRV::OpVariable) {
+    MAI.GlobalVarList.push_back(&MI);
+    const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
+    assert(GObj && "Unregistered global definition");
+    auto It = GlobalToGReg.find(GObj);
+    if (It == GlobalToGReg.end()) {
+      GReg = Register::index2VirtReg(MAI.getNextID());
+      GlobalToGReg[GObj] = GReg;
+      MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+    } else {
+      GReg = It->second;
+    }
+  } else {
+    LLVM_DEBUG({
+      dbgs() << "\nInstruction: ";
+      MI.print(dbgs());
+      dbgs() << "\n";
+    });
+    llvm_unreachable("Unexpected instruction is visited");
+  }
+  MAI.setRegisterAlias(MF, MI.getOperand(0).getReg(), GReg);
+  if (!IsFunDef)
+    MAI.setSkipEmission(&MI);
+}
+
+void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
+  InstrGRegsMap SignatureToGReg;
+  std::map<const Value *, unsigned> GlobalToGReg;
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    unsigned PastHeader = 0;
+    for (MachineBasicBlock &MBB : *MF) {
+      for (MachineInstr &MI : MBB) {
+        if (MI.getNumOperands() == 0)
+          continue;
+        unsigned Opcode = MI.getOpcode();
+        if (Opcode == SPIRV::OpFunction) {
+          if (PastHeader == 0) {
+            PastHeader = 1;
+            continue;
+          }
+        } else if (Opcode == SPIRV::OpFunctionParameter) {
+          if (PastHeader < 2)
+            continue;
+        } else if (PastHeader > 0) {
+          PastHeader = 2;
+        }
+
+        const MachineOperand &DefMO = MI.getOperand(0);
+        switch (Opcode) {
+        case SPIRV::OpExtension:
+          MAI.Reqs.addExtension(SPIRV::Extension::Extension(DefMO.getImm()));
+          MAI.setSkipEmission(&MI);
+          break;
+        case SPIRV::OpCapability:
+          MAI.Reqs.addCapability(SPIRV::Capability::Capability(DefMO.getImm()));
+          MAI.setSkipEmission(&MI);
+          if (PastHeader > 0)
+            PastHeader = 2;
+          break;
+        default:
+          if (DefMO.isReg() && isDeclSection(MRI, MI) &&
+              !MAI.hasRegisterAlias(MF, DefMO.getReg()))
+            visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, MI);
+        }
+      }
+    }
+  }
+  /*
+    // -- debug-print ---
+    dbgs() << "MB_TypeConstVars:\n";
+    for (const MachineInstr *MI : MAI.MS[SPIRV::MB_TypeConstVars])
+      MI->print(dbgs());
+
+    // -- debug-print ---
+    dbgs() << "MB_ExtFuncDecls:\n";
+    for (const MachineInstr *MI : MAI.MS[SPIRV::MB_ExtFuncDecls])
+      MI->print(dbgs());
+
+    // -- debug-print ---
+    dbgs() << "RegisterAliasTable:\n";
+    for (auto [K1, V1] : MAI.RegisterAliasTable) {
+      dbgs() << "Fun: " << K1->getName() << "\n";
+      for (auto [K2, V2] : V1)
+        dbgs() << K2 << " is " << V2 << "\n";
+    }
+  */
+}
+
 void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
   std::vector<SPIRV::DTSortableEntry *> DepsGraph;
 
@@ -287,7 +559,12 @@ void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
   collectGlobalEntities(
       DepsGraph, SPIRV::MB_TypeConstVars,
       [](const SPIRV::DTSortableEntry *E) { return !E->getIsFunc(); });
-
+  /*
+    // -- debug-print ---
+    dbgs() << "MB_TypeConstVars:\n";
+    for (const MachineInstr *MI : MAI.MS[SPIRV::MB_TypeConstVars])
+      MI->print(dbgs());
+  */
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     MachineFunction *MF = MMI->getMachineFunction(*F);
     if (!MF)
@@ -312,6 +589,20 @@ void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
   collectGlobalEntities(
       DepsGraph, SPIRV::MB_ExtFuncDecls,
       [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
+  /*
+    // -- debug-print ---
+    dbgs() << "MB_ExtFuncDecls:\n";
+    for (const MachineInstr *MI : MAI.MS[SPIRV::MB_ExtFuncDecls])
+      MI->print(dbgs());
+
+    // -- debug-print ---
+    dbgs() << "RegisterAliasTable:\n";
+    for (auto [K1, V1] : MAI.RegisterAliasTable) {
+      dbgs() << "Fun: " << K1->getName() << "\n";
+      for (auto [K2, V2] : V1)
+        dbgs() << K2 << " is " << V2 << "\n";
+    }
+  */
 }
 
 // Look for IDs declared with Import linkage, and map the corresponding function
@@ -352,7 +643,7 @@ void SPIRVModuleAnalysis::collectFuncPtrs() {
       collectFuncPtrs(MI);
 }
 
-void SPIRVModuleAnalysis::collectFuncPtrs(MachineInstr *MI) {
+void SPIRVModuleAnalysis::collectFuncPtrs(const MachineInstr *MI) {
   const MachineOperand *FunUse = &MI->getOperand(2);
   if (const MachineOperand *FunDef = GR->getFunctionDefinitionByUse(FunUse)) {
     const MachineInstr *FunDefMI = FunDef->getParent();
@@ -368,32 +659,6 @@ void SPIRVModuleAnalysis::collectFuncPtrs(MachineInstr *MI) {
   }
 }
 
-using InstrSignature = SmallVector<size_t>;
-using InstrTraces = std::set<InstrSignature>;
-
-// Returns a representation of an instruction as a vector of MachineOperand
-// hash values, see llvm::hash_value(const MachineOperand &MO) for details.
-// This creates a signature of the instruction with the same content
-// that MachineOperand::isIdenticalTo uses for comparison.
-static InstrSignature instrToSignature(MachineInstr &MI,
-                                       SPIRV::ModuleAnalysisInfo &MAI) {
-  InstrSignature Signature;
-  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
-    size_t h;
-    if (MO.isReg()) {
-      Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
-      // mimic llvm::hash_value(const MachineOperand &MO)
-      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
-                       MO.isDef());
-    } else {
-      h = hash_value(MO);
-    }
-    Signature.push_back(h);
-  }
-  return Signature;
-}
-
 // Collect the given instruction in the specified MS. We assume global register
 // numbering has already occurred by this point. We can directly compare reg
 // arguments when detecting duplicates.
@@ -401,7 +666,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
                               SPIRV::ModuleSectionType MSType, InstrTraces &IS,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
-  InstrSignature MISign = instrToSignature(MI, MAI);
+  InstrSignature MISign = instrToSignature(MI, MAI, true);
   auto FoundMI = IS.insert(MISign);
   if (!FoundMI.second)
     return; // insert failed, so we found a duplicate; don't add it to MAI.MS
@@ -1814,7 +2079,18 @@ void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<MachineModuleInfoWrapperPass>();
 }
-
+/*
+static void debugPrint(const Module &M, SPIRVGlobalRegistry *GR, const SPIRVInstrInfo &TII,
+                           MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
+                           SPIRV::ModuleAnalysisInfo &MAI) {
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    MF->print(dbgs());
+  }
+}
+*/
 bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   SPIRVTargetMachine &TM =
       getAnalysis<TargetPassConfig>().getTM<SPIRVTargetMachine>();
@@ -1830,19 +2106,25 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   addMBBNames(M, *TII, MMI, *ST, MAI);
   addDecorations(M, *TII, MMI, *ST, MAI);
-
+/*
+  // -- debug-print ---
+  debugPrint(M, GR, *TII, MMI, *ST, MAI);
+*/
   collectReqs(M, MAI, MMI, *ST);
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
-  processDefInstrs(M);
+  //processDefInstrs(M);
+  collectDeclarations(M);
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);
 
+/*
   // Update references to OpFunction instructions to use Global Registers
   if (GR->hasConstFunPtr())
     collectFuncPtrs();
+*/
 
   // Collect OpName, OpEntryPoint, OpDecorate etc, process other instructions.
   processOtherInstrs(M);
