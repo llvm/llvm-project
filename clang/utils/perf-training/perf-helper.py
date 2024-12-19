@@ -628,7 +628,7 @@ def bolt_optimize(args):
 
     process = subprocess.run(
         [
-            bolt,
+            opts.bolt,
             f"{opts.input}-prebolt",
             "-o",
             opts.input,
