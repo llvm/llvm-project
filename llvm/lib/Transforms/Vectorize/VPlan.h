@@ -2447,6 +2447,7 @@ public:
            "Unexpected operand order for partial reduction recipe");
   }
   ~VPPartialReductionRecipe() override = default;
+
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1));
   }

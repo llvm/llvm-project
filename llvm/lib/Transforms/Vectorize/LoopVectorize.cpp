@@ -7608,7 +7608,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
       // The VPlan-based cost model is more accurate for partial reduction and
       // comparing against the legacy cost isn't desirable.
-      if (dyn_cast<VPPartialReductionRecipe>(&R))
+      if (isa<VPPartialReductionRecipe>(&R))
         return true;
       if (Instruction *UI = GetInstructionForCost(&R))
         SeenInstrs.insert(UI);

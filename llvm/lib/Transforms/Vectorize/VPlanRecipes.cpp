@@ -337,7 +337,7 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   CallInst *V = Builder.CreateIntrinsic(
       RetTy, Intrinsic::experimental_vector_partial_reduce_add,
-      {PhiVal, BinOpVal}, nullptr, Twine("partial.reduce"));
+      {PhiVal, BinOpVal}, nullptr, "partial.reduce");
 
   State.set(this, V);
 }
