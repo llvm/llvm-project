@@ -498,6 +498,10 @@ public:
   void VisitInitListExpr(const InitListExpr *E, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
+  /// VisitAttributedStmt - Transfer function logic for AttributedStmt
+  void VisitAttributedStmt(const AttributedStmt *A, ExplodedNode *Pred,
+                           ExplodedNodeSet &Dst);
+
   /// VisitLogicalExpr - Transfer function logic for '&&', '||'
   void VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
