@@ -1097,7 +1097,7 @@ static bool isMemOPCandidate(SDNode *I, SDNode *U) {
   SDValue S1 = U->getOperand(1);
   SDValue SY = (S0.getNode() == I) ? S1 : S0;
 
-  SDNode *UUse = *U->use_begin();
+  SDNode *UUse = *U->user_begin();
   if (UUse->getNumValues() != 1)
     return false;
 
@@ -2431,7 +2431,7 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
       Worklist.push_back(N->getOperand(1).getNode());
 
       // Not a root if it has only one use and same opcode as its parent
-      if (N->hasOneUse() && Opcode == N->use_begin()->getOpcode())
+      if (N->hasOneUse() && Opcode == N->user_begin()->getOpcode())
         continue;
 
       // This root node has already been processed

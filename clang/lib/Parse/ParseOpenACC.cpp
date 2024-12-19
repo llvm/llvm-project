@@ -573,6 +573,7 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   default:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
+  case OpenACCDirectiveKind::Wait:
     return false;
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
@@ -604,6 +605,7 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::HostData:
+  case OpenACCDirectiveKind::Wait:
     return 0;
   case OpenACCDirectiveKind::Invalid:
     llvm_unreachable("Shouldn't be creating a scope for an invalid construct");
@@ -1288,7 +1290,8 @@ Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
       return Result;
     }
 
-    Result.QueueIdExprs.push_back(Res.first.get());
+    if (Res.first.isUsable())
+      Result.QueueIdExprs.push_back(Res.first.get());
   }
 
   return Result;
@@ -1422,6 +1425,7 @@ Parser::ParseOpenACCDirective() {
   SourceLocation StartLoc = ConsumeAnnotationToken();
   SourceLocation DirLoc = getCurToken().getLocation();
   OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(*this);
+  Parser::OpenACCWaitParseInfo WaitInfo;
 
   getActions().OpenACC().ActOnConstruct(DirKind, DirLoc);
 
@@ -1462,7 +1466,8 @@ Parser::ParseOpenACCDirective() {
       break;
     case OpenACCDirectiveKind::Wait:
       // OpenACC has an optional paren-wrapped 'wait-argument'.
-      if (ParseOpenACCWaitArgument(DirLoc, /*IsDirective=*/true).Failed)
+      WaitInfo = ParseOpenACCWaitArgument(DirLoc, /*IsDirective=*/true);
+      if (WaitInfo.Failed)
         T.skipToEnd();
       else
         T.consumeClose();
@@ -1476,8 +1481,14 @@ Parser::ParseOpenACCDirective() {
   }
 
   // Parses the list of clauses, if present, plus set up return value.
-  OpenACCDirectiveParseInfo ParseInfo{DirKind, StartLoc, DirLoc,
-                                      SourceLocation{},
+  OpenACCDirectiveParseInfo ParseInfo{DirKind,
+                                      StartLoc,
+                                      DirLoc,
+                                      T.getOpenLocation(),
+                                      T.getCloseLocation(),
+                                      /*EndLoc=*/SourceLocation{},
+                                      WaitInfo.QueuesLoc,
+                                      WaitInfo.getAllExprs(),
                                       ParseOpenACCClauseList(DirKind)};
 
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
@@ -1529,6 +1540,7 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   }
 
   return getActions().OpenACC().ActOnEndStmtDirective(
-      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.EndLoc,
+      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
+      DirInfo.MiscLoc, DirInfo.Exprs, DirInfo.RParenLoc, DirInfo.EndLoc,
       DirInfo.Clauses, AssocStmt);
 }
