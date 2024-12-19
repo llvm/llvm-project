@@ -4048,20 +4048,20 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   Chain = BaseAddr.getValue(1);
   Align StackAlign = TFL->getStackAlign();
   if (Alignment > StackAlign) {
-    auto ScaledAlignment = (uint64_t)Alignment.value()
-                           << Subtarget->getWavefrontSizeLog2();
-    auto StackAlignMask = ScaledAlignment - 1;
-    auto TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
-                               DAG.getConstant(StackAlignMask, dl, VT));
+    uint64_t ScaledAlignment = (uint64_t)Alignment.value()
+                               << Subtarget->getWavefrontSizeLog2();
+    uint64_t StackAlignMask = ScaledAlignment - 1;
+    SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
+                                  DAG.getConstant(StackAlignMask, dl, VT));
     BaseAddr = DAG.getNode(ISD::AND, dl, VT, TmpAddr,
-                           DAG.getConstant(ScaledAlignment, dl, VT));
+                           DAG.getSignedConstant(-ScaledAlignment, dl, VT));
   }
 
   SDValue ScaledSize = DAG.getNode(
       ISD::SHL, dl, VT, Size,
       DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
-  auto NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  SDValue NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
   Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
