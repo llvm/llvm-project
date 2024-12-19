@@ -98,30 +98,50 @@ GetDemangledTypeMangling(swift::Demangle::Demangler &dem,
 }
 
 /// Wrap node in Global/TypeMangling/Type.
-static swift::Demangle::NodePointer
-mangleType(swift::Demangle::Demangler &dem,
-           swift::Demangle::NodePointer typeNode) {
+inline swift::Demangle::NodePointer
+MangleType(swift::Demangle::Demangler &dem,
+           swift::Demangle::NodePointer type_node) {
   auto *global = dem.createNode(Node::Kind::Global);
-  auto *typeMangling = dem.createNode(Node::Kind::TypeMangling);
-  global->addChild(typeMangling, dem);
+  auto *type_mangling = dem.createNode(Node::Kind::TypeMangling);
+  global->addChild(type_mangling, dem);
   auto *type = dem.createNode(Node::Kind::Type);
-  typeMangling->addChild(type, dem);
-  type->addChild(typeNode, dem);
+  type_mangling->addChild(type, dem);
+  type->addChild(type_node, dem);
   return global;
 }
 
+/// Produce a type mangle tree for a nominal type.
+inline swift::Demangle::NodePointer
+CreateNominal(swift::Demangle::Demangler &dem, swift::Demangle::Node::Kind kind,
+              llvm::StringRef module_name, llvm::StringRef type_name) {
+  auto *nominal = dem.createNode(kind);
+  auto *m = dem.createNodeWithAllocatedText(Node::Kind::Module, module_name);
+  auto *id = dem.createNodeWithAllocatedText(Node::Kind::Identifier, type_name);
+  nominal->addChild(m, dem);
+  nominal->addChild(id, dem);
+  return nominal;
+}
+
 /// Produce a type mangling for a class.
-inline ManglingErrorOr<std::string>
-mangleClass(swift::Demangle::Demangler &dem, llvm::StringRef moduleName,
-            llvm::StringRef className, swift::Mangle::ManglingFlavor flavor) {
-  auto *classNode = dem.createNode(Node::Kind::Class);
-  auto *module =
-      dem.createNodeWithAllocatedText(Node::Kind::Module, moduleName);
-  auto *identifier =
-      dem.createNodeWithAllocatedText(Node::Kind::Identifier, className);
-  classNode->addChild(module, dem);
-  classNode->addChild(identifier, dem);
-  return mangleNode(mangleType(dem, classNode), flavor);
+inline ManglingErrorOr<std::string> MangleClass(swift::Demangle::Demangler &dem,
+                                                llvm::StringRef module_name,
+                                                llvm::StringRef class_name,
+                                                swift::Mangle::ManglingFlavor flavor) {
+  auto *node = CreateNominal(dem, Node::Kind::Class, module_name, class_name);
+  return mangleNode(MangleType(dem, node), flavor);
+}
+
+/// Create a mangled name for a type node.
+inline swift::Demangle::ManglingErrorOr<std::string>
+GetMangledName(swift::Demangle::Demangler &dem,
+               swift::Demangle::NodePointer node,
+               swift::Mangle::ManglingFlavor flavor) {
+  using namespace swift::Demangle;
+  auto global = dem.createNode(Node::Kind::Global);
+  auto type_mangling = dem.createNode(Node::Kind::TypeMangling);
+  global->addChild(type_mangling, dem);
+  type_mangling->addChild(node, dem);
+  return mangleNode(global, flavor);
 }
 
 } // namespace swift_demangle

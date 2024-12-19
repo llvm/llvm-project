@@ -337,6 +337,9 @@ public:
 
   bool IsStoredInlineInBuffer(CompilerType type) override;
 
+  /// Check if this type alias is listed in any witness tables and resolve it.
+  llvm::Expected<CompilerType> ResolveTypeAlias(CompilerType alias);
+
   /// Retrieve the offset of the named member variable within an instance
   /// of the given type.
   ///

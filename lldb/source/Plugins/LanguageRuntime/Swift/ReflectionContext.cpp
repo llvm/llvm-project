@@ -89,7 +89,7 @@ private:
 /// An implementation of the generic ReflectionContextInterface that
 /// is templatized on target pointer width and specialized to either
 /// 32-bit or 64-bit pointers, with and without ObjC interoperability.
-template <typename ReflectionContext>
+template <typename ReflectionContext, bool ObjCEnabled, unsigned PointerSize>
 class TargetReflectionContext : public ReflectionContextInterface {
   DescriptorFinderForwarder m_forwader;
   ReflectionContext m_reflection_ctx;
@@ -313,7 +313,7 @@ public:
   }
 
   std::optional<std::pair<const swift::reflection::TypeRef *,
-                           swift::reflection::RemoteAddress>>
+                          swift::reflection::RemoteAddress>>
   ProjectExistentialAndUnwrapClass(
       swift::reflection::RemoteAddress existential_address,
       const swift::reflection::TypeRef &existential_tr,
@@ -321,6 +321,19 @@ public:
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     return m_reflection_ctx.projectExistentialAndUnwrapClass(
         existential_address, existential_tr);
+  }
+
+  const swift::reflection::TypeRef *
+  LookupTypeWitness(const std::string &MangledTypeName,
+                    const std::string &Member, StringRef Protocol) override {
+    return m_type_converter.getBuilder().lookupTypeWitness(MangledTypeName,
+                                                           Member, Protocol);
+  }
+  swift::reflection::ConformanceCollectionResult GetAllConformances() override {
+    swift::reflection::TypeRefBuilder &b = m_type_converter.getBuilder();
+    if (ObjCEnabled)
+      return b.collectAllConformances<swift::WithObjCInterop, PointerSize>();
+    return b.collectAllConformances<swift::NoObjCInterop, PointerSize>();
   }
 
   const swift::reflection::TypeRef *
@@ -420,18 +433,22 @@ std::unique_ptr<ReflectionContextInterface>
 ReflectionContextInterface::CreateReflectionContext(
     uint8_t ptr_size, std::shared_ptr<swift::remote::MemoryReader> reader,
     bool ObjCInterop, SwiftMetadataCache *swift_metadata_cache) {
-  using ReflectionContext32ObjCInterop =
-      TargetReflectionContext<swift::reflection::ReflectionContext<
-          swift::External<swift::WithObjCInterop<swift::RuntimeTarget<4>>>>>;
-  using ReflectionContext32NoObjCInterop =
-      TargetReflectionContext<swift::reflection::ReflectionContext<
-          swift::External<swift::NoObjCInterop<swift::RuntimeTarget<4>>>>>;
-  using ReflectionContext64ObjCInterop =
-      TargetReflectionContext<swift::reflection::ReflectionContext<
-          swift::External<swift::WithObjCInterop<swift::RuntimeTarget<8>>>>>;
-  using ReflectionContext64NoObjCInterop =
-      TargetReflectionContext<swift::reflection::ReflectionContext<
-          swift::External<swift::NoObjCInterop<swift::RuntimeTarget<8>>>>>;
+  using ReflectionContext32ObjCInterop = TargetReflectionContext<
+      swift::reflection::ReflectionContext<
+          swift::External<swift::WithObjCInterop<swift::RuntimeTarget<4>>>>,
+      true, 4>;
+  using ReflectionContext32NoObjCInterop = TargetReflectionContext<
+      swift::reflection::ReflectionContext<
+          swift::External<swift::NoObjCInterop<swift::RuntimeTarget<4>>>>,
+      false, 4>;
+  using ReflectionContext64ObjCInterop = TargetReflectionContext<
+      swift::reflection::ReflectionContext<
+          swift::External<swift::WithObjCInterop<swift::RuntimeTarget<8>>>>,
+      true, 8>;
+  using ReflectionContext64NoObjCInterop = TargetReflectionContext<
+      swift::reflection::ReflectionContext<
+          swift::External<swift::NoObjCInterop<swift::RuntimeTarget<8>>>>,
+      false, 8>;
   if (ptr_size == 4) {
     if (ObjCInterop)
       return std::make_unique<ReflectionContext32ObjCInterop>(

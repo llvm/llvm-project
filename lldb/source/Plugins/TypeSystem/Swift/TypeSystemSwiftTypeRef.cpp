@@ -362,19 +362,6 @@ TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
   }
 }
 
-/// Create a mangled name for a type node.
-static swift::Demangle::ManglingErrorOr<std::string>
-GetMangledName(swift::Demangle::Demangler &dem,
-               swift::Demangle::NodePointer node,
-               swift::Mangle::ManglingFlavor flavor) {
-  using namespace swift::Demangle;
-  auto global = dem.createNode(Node::Kind::Global);
-  auto type_mangling = dem.createNode(Node::Kind::TypeMangling);
-  global->addChild(type_mangling, dem);
-  type_mangling->addChild(node, dem);
-  return mangleNode(global, flavor);
-}
-
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   // Make up a decl context for non-nested types.
@@ -996,7 +983,8 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
       return {};
 
     // Resolve the typedef within the Clang debug info.
-    auto clang_type = LookupClangForwardType(mangled.GetStringRef(), decl_context);
+    auto clang_type =
+        LookupClangForwardType(mangled.GetStringRef(), decl_context);
     if (!clang_type)
       return {};
 
@@ -1008,13 +996,26 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   if (!prefer_clang_types) {
     // First check if this type has already been parsed from DWARF.
     if (auto cached = m_swift_type_map.Lookup(mangled.AsCString()))
-    results.InsertUnique(cached);
+      results.InsertUnique(cached);
     else if (auto *M = GetModule())
       M->FindTypes(query, results);
-    else if (TargetSP target_sp = GetTargetWP().lock())
+    else if (TargetSP target_sp = GetTargetWP().lock()) {
+      // Look it up using the conformances in the reflection metadata.
+      if (auto *runtime =
+              SwiftLanguageRuntime::Get(target_sp->GetProcessSP())) {
+        auto ty =
+            runtime->ResolveTypeAlias(GetTypeFromMangledTypename(mangled));
+        if (ty)
+          return {GetDemangledType(dem, ty->GetMangledTypeName()), {}};
+        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ty.takeError(),
+                        "Could not resolve type alias {0}: {1}",
+                        mangled.AsCString());
+      }
+
+      // Do an even more expensive global search.
       target_sp->GetImages().FindTypes(/*search_first=*/nullptr, query,
                                        results);
-    else {
+    } else {
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "No module. Couldn't resolve type alias %s",
                 mangled.AsCString());

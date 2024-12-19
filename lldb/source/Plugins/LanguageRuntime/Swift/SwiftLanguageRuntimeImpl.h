@@ -102,6 +102,7 @@ public:
       llvm::ArrayRef<swift::reflection::FieldInfo> fields);
 
   bool IsStoredInlineInBuffer(CompilerType type);
+  llvm::Expected<CompilerType> ResolveTypeAlias(CompilerType alias);
 
   /// Ask Remote Mirrors for the size of a Swift type.
   std::optional<uint64_t> GetBitSize(CompilerType type,
@@ -357,6 +358,8 @@ protected:
 
   CompilerType m_box_metadata_type;
 
+  llvm::StringMap<std::vector<std::string>> m_conformances;
+
 private:
   /// Don't call these directly.
   /// \{
@@ -384,6 +387,9 @@ private:
   std::optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
 
   SwiftMetadataCache *GetSwiftMetadataCache();
+
+  /// Find all conformances for a nominal type in the reflection metadata.
+  std::vector<std::string> GetConformances(llvm::StringRef mangled_name);
 
   /// These members are used to track and toggle the state of the "dynamic
   /// exclusivity enforcement flag" in the swift runtime. This flag is set to
