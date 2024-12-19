@@ -97,3 +97,79 @@ define void @eager() {
 define i32 @ogre() {
   ret i32 1
 }
+
+
+; Check that lazy object files trigger loads correctly.
+; If the links succeed, that's enough, no additional tests needed.
+
+; RUN: llc -filetype=obj %t.dir/main2.ll -o %t-main2.obj
+; RUN: llc -filetype=obj %t.dir/foo.ll -o %t-foo.obj
+; RUN: llc -filetype=obj %t.dir/bar.ll -o %t-bar.obj
+; RUN: llc -filetype=obj %t.dir/baz.ll -o %t-baz.obj
+; RUN: opt -thinlto-bc %t.dir/main2.ll -o %t-main2.bc
+; RUN: opt -thinlto-bc %t.dir/foo.ll -o %t-foo.bc
+; RUN: opt -thinlto-bc %t.dir/bar.ll -o %t-bar.bc
+; RUN: opt -thinlto-bc %t.dir/baz.ll -o %t-baz.bc
+
+; RUN: lld-link -out:%t2.exe -entry:main \
+; RUN:     %t-main2.obj %t-foo.obj %t-bar.obj %t-baz.obj
+; RUN: lld-link -out:%t2.exe -entry:main \
+; RUN:     %t-main2.obj /start-lib %t-foo.obj %t-bar.obj %t-baz.obj /end-lib
+; RUN: lld-link -out:%t2.exe -entry:main \
+; RUN:     /start-lib %t-foo.obj %t-bar.obj %t-baz.obj /end-lib %t-main2.obj
+
+; RUN: lld-link -out:%t2.exe -entry:main \
+; RUN:     %t-main2.bc %t-foo.bc %t-bar.bc %t-baz.bc
+; RUN: lld-link -out:%t2.exe -entry:main \
+; RUN:     %t-main2.bc /start-lib %t-foo.bc %t-bar.bc %t-baz.bc /end-lib
+; RUN: lld-link -out:%t2.exe -entry:main \
+; RUN:     /start-lib %t-foo.bc %t-bar.bc %t-baz.bc /end-lib %t-main2.bc
+
+#--- main2.ll
+
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+declare void @bar()
+
+define void @main() {
+  call void () @bar()
+  ret void
+}
+
+
+#--- foo.ll
+
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+define void @foo() {
+  ret void
+}
+
+
+#--- bar.ll
+
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+; One undefined symbol from the lazy obj file before it,
+; one from the one after it.
+declare void @foo()
+declare void @baz()
+
+define void @bar() {
+  call void () @foo()
+  call void () @baz()
+  ret void
+}
+
+
+#--- baz.ll
+
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+define void @baz() {
+  ret void
+}

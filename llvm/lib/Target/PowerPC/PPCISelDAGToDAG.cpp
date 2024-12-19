@@ -954,22 +954,22 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
   // Cannot use range-based for loop here as we need the actual use (i.e. we
   // need the operand number corresponding to the use). A range-based for
   // will unbox the use and provide an SDNode*.
-  for (SDNode::use_iterator Use = N->use_begin(), UseEnd = N->use_end();
-       Use != UseEnd; ++Use) {
+  for (SDUse &Use : N->uses()) {
+    SDNode *User = Use.getUser();
     unsigned Opc =
-      Use->isMachineOpcode() ? Use->getMachineOpcode() : Use->getOpcode();
+        User->isMachineOpcode() ? User->getMachineOpcode() : User->getOpcode();
     switch (Opc) {
     default: return 0;
     case ISD::TRUNCATE:
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      MaxTruncation =
-        std::max(MaxTruncation, (unsigned)Use->getValueType(0).getSizeInBits());
+      MaxTruncation = std::max(MaxTruncation,
+                               (unsigned)User->getValueType(0).getSizeInBits());
       continue;
     case ISD::STORE: {
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      StoreSDNode *STN = cast<StoreSDNode>(*Use);
+      StoreSDNode *STN = cast<StoreSDNode>(User);
       unsigned MemVTSize = STN->getMemoryVT().getSizeInBits();
       if (MemVTSize == 64 || Use.getOperandNo() != 0)
         return 0;
