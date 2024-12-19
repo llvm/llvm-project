@@ -15,9 +15,13 @@
 #define LIBC_QSORT_QUICK_SORT 1
 #define LIBC_QSORT_HEAP_SORT 2
 
+#ifdef LIBC_OPTIMIZE_FOR_SIZE
+#define LIBC_QSORT_IMPL LIBC_QSORT_HEAP_SORT
+#else
 #ifndef LIBC_QSORT_IMPL
 #define LIBC_QSORT_IMPL LIBC_QSORT_QUICK_SORT
 #endif // LIBC_QSORT_IMPL
+#endif // LIBC_OPTIMIZE_FOR_SIZE
 
 #if (LIBC_QSORT_IMPL != LIBC_QSORT_QUICK_SORT &&                               \
      LIBC_QSORT_IMPL != LIBC_QSORT_HEAP_SORT)
@@ -27,45 +31,50 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-template <typename A, typename F> void sort_inst(A &array, const F &is_less) {
-#if LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT
-  quick_sort(array, is_less);
-#elif LIBC_QSORT_IMPL == LIBC_QSORT_HEAP_SORT
-  heap_sort(array, is_less);
-#endif
+template <bool USE_QUICKSORT, typename F>
+void unstable_sort_impl(void *array, size_t array_len, size_t elem_size,
+                        const F &is_less) {
+  if (array == nullptr || array_len == 0 || elem_size == 0)
+    return;
+
+  if constexpr (USE_QUICKSORT) {
+    switch (elem_size) {
+    case 4: {
+      auto arr_fixed_size = internal::ArrayFixedSize<4>(array, array_len);
+      quick_sort(arr_fixed_size, is_less);
+      return;
+    }
+    case 8: {
+      auto arr_fixed_size = internal::ArrayFixedSize<8>(array, array_len);
+      quick_sort(arr_fixed_size, is_less);
+      return;
+    }
+    case 16: {
+      auto arr_fixed_size = internal::ArrayFixedSize<16>(array, array_len);
+      quick_sort(arr_fixed_size, is_less);
+      return;
+    }
+    default:
+      auto arr_generic_size =
+          internal::ArrayGenericSize(array, array_len, elem_size);
+      quick_sort(arr_generic_size, is_less);
+      return;
+    }
+  } else {
+    auto arr_generic_size =
+        internal::ArrayGenericSize(array, array_len, elem_size);
+    heap_sort(arr_generic_size, is_less);
+  }
 }
 
 template <typename F>
 void unstable_sort(void *array, size_t array_len, size_t elem_size,
                    const F &is_less) {
-  if (array == nullptr || array_len == 0 || elem_size == 0) {
-    return;
-  }
-
-  uint8_t *array_base = reinterpret_cast<uint8_t *>(array);
-
-  switch (elem_size) {
-  case 4: {
-    auto arr_fixed_size = internal::ArrayFixedSize<4>(array_base, array_len);
-    sort_inst(arr_fixed_size, is_less);
-    return;
-  }
-  case 8: {
-    auto arr_fixed_size = internal::ArrayFixedSize<8>(array_base, array_len);
-    sort_inst(arr_fixed_size, is_less);
-    return;
-  }
-  case 16: {
-    auto arr_fixed_size = internal::ArrayFixedSize<16>(array_base, array_len);
-    sort_inst(arr_fixed_size, is_less);
-    return;
-  }
-  default:
-    auto arr_generic_size =
-        internal::ArrayGenericSize(array_base, array_len, elem_size);
-    sort_inst(arr_generic_size, is_less);
-    return;
-  }
+#if LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT
+  unstable_sort_impl<true, F>(array, array_len, elem_size, is_less);
+#elif LIBC_QSORT_IMPL == LIBC_QSORT_HEAP_SORT
+  unstable_sort_impl<false, F>(array, array_len, elem_size, is_less);
+#endif
 }
 
 } // namespace internal

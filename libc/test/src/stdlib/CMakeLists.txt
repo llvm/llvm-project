@@ -313,11 +313,11 @@ add_libc_test(
 )
 
 add_libc_test(
-  qsort_test
+  quick_sort_test
   SUITE
     libc-stdlib-tests
   SRCS
-    qsort_test.cpp
+    quick_sort_test.cpp
   HDRS
     SortingTest.h
   DEPENDS

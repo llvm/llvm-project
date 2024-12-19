@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 #define LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
-#include "src/__support/big_int.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_pivot.h"
 
@@ -90,7 +90,7 @@ size_t partition(const A &array, size_t pivot_index, const F &is_less) {
   size_t num_lt;
   if constexpr (A::has_fixed_size()) {
     // Branchless Lomuto avoid branch misprediction penalties, but
-    // it also swaps more often which only is faster if the swap a
+    // it also swaps more often which is only faster if the swap is a fast
     // constant operation.
     num_lt = partition_lomuto_branchless(array_without_pivot, pivot, is_less);
   } else {
@@ -130,7 +130,7 @@ void quick_sort_impl(A &array, const void *ancestor_pivot, size_t limit,
       if (!is_less(ancestor_pivot, array.get(pivot_index))) {
         const size_t num_lt =
             partition(array, pivot_index,
-                      [is_less](const void *a, const void *b) noexcept -> bool {
+                      [is_less](const void *a, const void *b) -> bool {
                         return !is_less(b, a);
                       });
 

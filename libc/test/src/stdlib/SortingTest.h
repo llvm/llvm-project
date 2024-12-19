@@ -10,10 +10,13 @@
 #include "src/stdlib/qsort.h"
 #include "test/UnitTest/Test.h"
 
+#include <iostream>
+
 class SortingTest : public LIBC_NAMESPACE::testing::Test {
 
-  using SortFn = void (*)(void *array, size_t array_size, size_t elem_size,
-                          int (*compare)(const void *, const void *));
+  using SortingRoutine = void (*)(void *array, size_t array_len,
+                                  size_t elem_size,
+                                  int (*compare)(const void *, const void *));
 
   static int int_compare(const void *l, const void *r) {
     int li = *reinterpret_cast<const int *>(l);
@@ -27,19 +30,19 @@ class SortingTest : public LIBC_NAMESPACE::testing::Test {
       return -1;
   }
 
-  static void int_sort(SortFn sort_fn, int *array, size_t array_len) {
-    sort_fn(reinterpret_cast<void *>(array), array_len, sizeof(int),
-            int_compare);
+  static void int_sort(SortingRoutine sort_func, int *array, size_t array_len) {
+    sort_func(reinterpret_cast<void *>(array), array_len, sizeof(int),
+              int_compare);
   }
 
 public:
-  void test_sorted_array(SortFn sort_fn) {
+  void test_sorted_array(SortingRoutine sort_func) {
     int array[25] = {10,   23,   33,   35,   55,   70,    71,   100,  110,
                      123,  133,  135,  155,  170,  171,   1100, 1110, 1123,
                      1133, 1135, 1155, 1170, 1171, 11100, 12310};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_LE(array[0], 10);
     ASSERT_LE(array[1], 23);
@@ -68,36 +71,36 @@ public:
     ASSERT_LE(array[24], 12310);
   }
 
-  void test_reversed_sorted_array(SortFn sort_fn) {
+  void test_reversed_sorted_array(SortingRoutine sort_func) {
     int array[] = {25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
                    12, 11, 10, 9,  8,  7,  6,  5,  4,  3,  2,  1};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     for (int i = 0; i < int(ARRAY_LEN - 1); ++i)
       ASSERT_EQ(array[i], i + 1);
   }
 
-  void test_all_equal_elements(SortFn sort_fn) {
+  void test_all_equal_elements(SortingRoutine sort_func) {
     int array[] = {100, 100, 100, 100, 100, 100, 100, 100, 100,
                    100, 100, 100, 100, 100, 100, 100, 100, 100,
                    100, 100, 100, 100, 100, 100, 100};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     for (size_t i = 0; i < ARRAY_LEN; ++i)
       ASSERT_EQ(array[i], 100);
   }
 
-  void test_unsorted_array_1(SortFn sort_fn) {
+  void test_unsorted_array_1(SortingRoutine sort_func) {
     int array[25] = {10,  23,  8,    35,   55,   45,  40,  100, 110,
                      123, 90,  80,   70,   60,   171, 11,  1,   -1,
                      -5,  -10, 1155, 1170, 1171, 12,  -100};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], -100);
     ASSERT_EQ(array[1], -10);
@@ -126,11 +129,11 @@ public:
     ASSERT_EQ(array[24], 1171);
   }
 
-  void test_unsorted_array_2(SortFn sort_fn) {
+  void test_unsorted_array_2(SortingRoutine sort_func) {
     int array[7] = {10, 40, 45, 55, 35, 23, 60};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 10);
     ASSERT_EQ(array[1], 23);
@@ -141,11 +144,11 @@ public:
     ASSERT_EQ(array[6], 60);
   }
 
-  void test_unsorted_array_duplicated_1(SortFn sort_fn) {
+  void test_unsorted_array_duplicated_1(SortingRoutine sort_func) {
     int array[6] = {10, 10, 20, 20, 5, 5};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 5);
     ASSERT_EQ(array[1], 5);
@@ -155,11 +158,11 @@ public:
     ASSERT_EQ(array[5], 20);
   }
 
-  void test_unsorted_array_duplicated_2(SortFn sort_fn) {
+  void test_unsorted_array_duplicated_2(SortingRoutine sort_func) {
     int array[10] = {20, 10, 10, 10, 10, 20, 21, 21, 21, 21};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 10);
     ASSERT_EQ(array[1], 10);
@@ -173,11 +176,11 @@ public:
     ASSERT_EQ(array[9], 21);
   }
 
-  void test_unsorted_array_duplicated_3(SortFn sort_fn) {
+  void test_unsorted_array_duplicated_3(SortingRoutine sort_func) {
     int array[10] = {20, 30, 30, 30, 30, 20, 21, 21, 21, 21};
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 20);
     ASSERT_EQ(array[1], 20);
@@ -191,95 +194,159 @@ public:
     ASSERT_EQ(array[9], 30);
   }
 
-  void test_unsorted_three_element_1(SortFn sort_fn) {
+  void test_unsorted_three_element_1(SortingRoutine sort_func) {
     int array[3] = {14999024, 0, 3};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 0);
     ASSERT_EQ(array[1], 3);
     ASSERT_EQ(array[2], 14999024);
   }
 
-  void test_unsorted_three_element_2(SortFn sort_fn) {
+  void test_unsorted_three_element_2(SortingRoutine sort_func) {
     int array[3] = {3, 14999024, 0};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 0);
     ASSERT_EQ(array[1], 3);
     ASSERT_EQ(array[2], 14999024);
   }
 
-  void test_unsorted_three_element_3(SortFn sort_fn) {
+  void test_unsorted_three_element_3(SortingRoutine sort_func) {
     int array[3] = {3, 0, 14999024};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 0);
     ASSERT_EQ(array[1], 3);
     ASSERT_EQ(array[2], 14999024);
   }
 
-  void test_same_three_element(SortFn sort_fn) {
+  void test_same_three_element(SortingRoutine sort_func) {
     int array[3] = {12345, 12345, 12345};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 12345);
     ASSERT_EQ(array[1], 12345);
     ASSERT_EQ(array[2], 12345);
   }
 
-  void test_unsorted_two_element_1(SortFn sort_fn) {
+  void test_unsorted_two_element_1(SortingRoutine sort_func) {
     int array[] = {14999024, 0};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 0);
     ASSERT_EQ(array[1], 14999024);
   }
 
-  void test_unsorted_two_element_2(SortFn sort_fn) {
+  void test_unsorted_two_element_2(SortingRoutine sort_func) {
     int array[] = {0, 14999024};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 0);
     ASSERT_EQ(array[1], 14999024);
   }
 
-  void test_same_two_element(SortFn sort_fn) {
+  void test_same_two_element(SortingRoutine sort_func) {
     int array[] = {12345, 12345};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 12345);
     ASSERT_EQ(array[1], 12345);
   }
 
-  void test_single_element(SortFn sort_fn) {
+  void test_single_element(SortingRoutine sort_func) {
     int array[] = {12345};
 
     constexpr size_t ARRAY_LEN = sizeof(array) / sizeof(int);
 
-    int_sort(sort_fn, array, ARRAY_LEN);
+    int_sort(sort_func, array, ARRAY_LEN);
 
     ASSERT_EQ(array[0], 12345);
+  }
+
+  void test_different_elem_size(SortingRoutine sort_func) {
+    // Random order of values [0,50) to avoid only testing pre-sorted handling.
+    // Long enough to reach interesting code.
+    constexpr uint8_t ARRAY_INITIAL_VALS[] = {
+        42, 13, 8,  4,  17, 28, 20, 32, 22, 29, 7,  2,  46, 37, 26, 49, 24,
+        38, 10, 18, 40, 36, 47, 15, 11, 48, 44, 33, 1,  5,  16, 35, 39, 41,
+        14, 23, 3,  9,  6,  27, 21, 25, 31, 45, 12, 43, 34, 30, 19, 0};
+
+    constexpr size_t ARRAY_LEN = sizeof(ARRAY_INITIAL_VALS);
+    constexpr size_t MAX_ELEM_SIZE = 150;
+    constexpr size_t BUF_SIZE = ARRAY_LEN * MAX_ELEM_SIZE;
+
+    static_assert(ARRAY_LEN < 256); // so we can encode the values.
+
+    // Minimum alignment to test implementation for bugs related to assuming
+    // incorrect association between alignment and element size.
+    alignas(1) uint8_t buf[BUF_SIZE];
+
+    const auto fill_buf = [&buf](size_t elem_size) {
+      for (size_t i = 0; i < BUF_SIZE; ++i) {
+        buf[i] = 0;
+      }
+
+      for (size_t elem_i = 0, buf_i = 0; elem_i < ARRAY_LEN; ++elem_i) {
+        const uint8_t elem_val = ARRAY_INITIAL_VALS[elem_i];
+        for (size_t elem_byte_i = 0; elem_byte_i < elem_size; ++elem_byte_i) {
+          buf[buf_i] = elem_val;
+          buf_i += 1;
+        }
+      }
+    };
+
+    for (size_t elem_size = 0; elem_size <= MAX_ELEM_SIZE; ++elem_size) {
+      // Fill all bytes with data to ensure mistakes in elem swap are noticed.
+      fill_buf(elem_size);
+
+      sort_func(reinterpret_cast<void *>(buf), ARRAY_LEN, elem_size,
+                [](const void *a, const void *b) -> int {
+                  const uint8_t a_val = *reinterpret_cast<const uint8_t *>(a);
+                  const uint8_t b_val = *reinterpret_cast<const uint8_t *>(b);
+
+                  if (a_val < b_val) {
+                    return -1;
+                  } else if (a_val > b_val) {
+                    return 1;
+                  } else {
+                    return 0;
+                  }
+                });
+
+      for (size_t elem_i = 0, buf_i = 0; elem_i < ARRAY_LEN; ++elem_i) {
+        const uint8_t expected_elem_val = static_cast<uint8_t>(elem_i);
+
+        for (size_t elem_byte_i = 0; elem_byte_i < elem_size; ++elem_byte_i) {
+          const uint8_t buf_val = buf[buf_i];
+          // Check that every byte in the element has the expected value.
+          ASSERT_EQ(buf_val, expected_elem_val)
+              << "elem_size: " << elem_size << " buf_i: " << buf_i << '\n';
+          buf_i += 1;
+        }
+      }
+    }
   }
 };
 
@@ -330,5 +397,8 @@ public:
   }                                                                            \
   TEST_F(LlvmLibc##Name##Test, SingleElementArray) {                           \
     test_single_element(Func);                                                 \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, DifferentElemSizeArray) {                       \
+    test_different_elem_size(Func);                                            \
   }                                                                            \
   static_assert(true)
