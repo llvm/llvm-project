@@ -9,10 +9,6 @@
 # - Simple ALU instructions test the p8700WriteEitherALU and p8700IssueAL2 resources.
 # - A jump instruction to test the CTI pipeline.
 
-  .text
-  .globl _start
-_start:
-
 # Integer division: a0 = a1 / a2
 # Exercises p8700GpDiv resource.
   div     a0, a1, a2
