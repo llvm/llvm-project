@@ -2536,6 +2536,15 @@ static bool CheckCompatibleArgument(bool isElemental,
             return false;
           },
           [&](const characteristics::DummyProcedure &dummy) {
+            if ((dummy.attrs.test(
+                     characteristics::DummyProcedure::Attr::Optional) ||
+                    dummy.attrs.test(
+                        characteristics::DummyProcedure::Attr::Pointer)) &&
+                IsBareNullPointer(expr)) {
+              // NULL() is compatible with any dummy pointer
+              // or optional dummy procedure.
+              return true;
+            }
             if (!expr || !IsProcedurePointerTarget(*expr)) {
               return false;
             }
