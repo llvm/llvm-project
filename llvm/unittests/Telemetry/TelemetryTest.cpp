@@ -289,7 +289,7 @@ private:
 
 } // namespace vendor
 
-std::shared_ptr<Config> GetTelemetryConfig(const TestContext &Ctxt) {
+std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
   if (Ctxt.HasVendorPlugin)
     return vendor::GetTelemetryConfig(Ctxt);
 
