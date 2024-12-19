@@ -1849,10 +1849,10 @@ static bool hasNonFlagsUse(SDValue Op) {
   for (SDNode::use_iterator UI = Op->use_begin(), UE = Op->use_end(); UI != UE;
        ++UI) {
     SDNode *User = UI->getUser();
-    unsigned UOpNo = UI.getOperandNo();
+    unsigned UOpNo = UI->getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
-      // Look pass truncate.
-      UOpNo = User->use_begin().getOperandNo();
+      // Look past truncate.
+      UOpNo = User->use_begin()->getOperandNo();
       User = User->use_begin()->getUser();
     }
 
