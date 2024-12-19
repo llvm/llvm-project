@@ -7,8 +7,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
-// Explicitly instantiate templates containing functions only defined in this file.
+// Explicitly instantiate templates containing functions only defined in this
+// file.
 template class Parser<internal::ArgList>;
+template class Parser<internal::DummyArgList<false>>;
+template class Parser<internal::DummyArgList<true>>;
+template class Parser<internal::StructArgList<false>>;
+template class Parser<internal::StructArgList<true>>;
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 
