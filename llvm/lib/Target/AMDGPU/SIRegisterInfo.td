@@ -811,7 +811,6 @@ def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16,
 
 def SGPR_NULL128 : SIReg<"null">;
 def SGPR_NULL256 : SIReg<"null">;
-def SGPR_NULL512 : SIReg<"null">;
 
 let GeneratePressureSet = 0 in {
 def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
@@ -885,7 +884,6 @@ def SReg_1 : SIRegisterClass<"AMDGPU", [i1], 32,
   let HasSGPR = 1;
 }
 
-
 multiclass SRegClass<int numRegs,
                      list<ValueType> regTypes,
                      SIRegisterTuples regList,
@@ -920,7 +918,7 @@ multiclass SRegClass<int numRegs,
     if hasNull then {
       def SReg_ # suffix :
         SIRegisterClass<"AMDGPU", regTypes, 32,
-                      !dag(add, [!cast<RegisterClass>("SReg_" # suffix # "_XNULL"), !cast<Register>("SGPR_NULL" # suffix)], ["", ""])> {
+                      !dag(add, [!cast<RegisterClass>("SReg_" # suffix # "_XNULL"), !cast<Register>("SGPR_NULL" # suffix)], ["RegClass", "NullReg"])> {
         let isAllocatable = 0;
         let BaseClassOrder = !mul(numRegs, 32);
       }
@@ -940,7 +938,7 @@ defm "" : SRegClass<11, [v11i32, v11f32], SGPR_352Regs, TTMP_352Regs>;
 defm "" : SRegClass<12, [v12i32, v12f32], SGPR_384Regs, TTMP_384Regs>;
 
 let GlobalPriority = true in {
-defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], SGPR_512Regs, TTMP_512Regs, /*hasNull*/ true>;
+defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], SGPR_512Regs, TTMP_512Regs>;
 defm "" : SRegClass<32, [v32i32, v32f32, v16i64, v16f64], SGPR_1024Regs>;
 }
 
