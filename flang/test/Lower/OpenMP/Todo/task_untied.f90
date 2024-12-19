@@ -5,7 +5,7 @@
 ! `untied` clause
 !===============================================================================
 
-! CHECK: not yet implemented: OpenMP Block construct clause
+! CHECK: not yet implemented: UNTIED clause is not implemented yet
 subroutine omp_task_untied()
   !$omp task untied
   call foo()

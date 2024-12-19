@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExternalASTSource.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -46,7 +47,7 @@ private:
 bool testExternalASTSource(ExternalASTSource *Source,
                            StringRef FileContents) {
   CompilerInstance Compiler;
-  Compiler.createDiagnostics();
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(

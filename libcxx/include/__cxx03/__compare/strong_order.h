@@ -6,30 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_STRONG_ORDER
-#define _LIBCPP___COMPARE_STRONG_ORDER
+#ifndef _LIBCPP___CXX03___COMPARE_STRONG_ORDER
+#define _LIBCPP___CXX03___COMPARE_STRONG_ORDER
 
-#include <__bit/bit_cast.h>
-#include <__compare/compare_three_way.h>
-#include <__compare/ordering.h>
-#include <__config>
-#include <__math/exponential_functions.h>
-#include <__math/traits.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_same.h>
-#include <__utility/forward.h>
-#include <__utility/priority_tag.h>
-#include <cstdint>
-#include <limits>
+#include <__cxx03/__bit/bit_cast.h>
+#include <__cxx03/__compare/compare_three_way.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__math/exponential_functions.h>
+#include <__cxx03/__math/traits.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/priority_tag.h>
+#include <__cxx03/cstdint>
+#include <__cxx03/limits>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -140,4 +140,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___COMPARE_STRONG_ORDER
+#endif // _LIBCPP___CXX03___COMPARE_STRONG_ORDER

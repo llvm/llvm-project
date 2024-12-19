@@ -777,7 +777,7 @@ def ADDIS8 : DForm_2<15, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s17imm64:$D),
 def LA8     : DForm_2<14, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s16imm64:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
                      [(set i64:$RST, (add i64:$RA,
-                                    (PPClo tglobaladdr:$D, 0)))]>;
+                                    (PPClo tglobaladdr:$D, 0)))]>, MemriOp;
 
 let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$RST), (ins g8rc:$RA, s16imm64:$D),
@@ -932,6 +932,14 @@ defm SLW8  : XForm_6r<31,  24, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                       "slw", "$RA, $RST, $RB", IIC_IntGeneral, []>, ZExt32To64;
 defm SRW8  : XForm_6r<31, 536, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                       "srw", "$RA, $RST, $RB", IIC_IntGeneral, []>, ZExt32To64;
+
+defm SRAW8 : XForm_6rc<31, 792, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
+                      "sraw", "$RA, $RST, $RB", IIC_IntShift,
+                      []>, SExt32To64;
+
+defm SRAWI8 : XForm_10rc<31, 824, (outs g8rc:$RA), (ins g8rc:$RST, u5imm:$RB),
+            "srawi", "$RA, $RST, $RB", IIC_IntShift, []>, SExt32To64;
+
 } // Interpretation64Bit
 
 // For fast-isel:

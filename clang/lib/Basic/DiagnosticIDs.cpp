@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include <map>
 #include <optional>
 using namespace clang;
@@ -575,6 +576,12 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       DiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
     Result = diag::Severity::Error;
 
+  // Rest of the mappings are only applicable for diagnostics associated with a
+  // SourceLocation, bail out early for others.
+  if (!Diag.hasSourceManager())
+    return Result;
+
+  const auto &SM = Diag.getSourceManager();
   // Custom diagnostics always are emitted in system headers.
   bool ShowInSystemHeader =
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
@@ -583,15 +590,18 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // because we also want to ignore extensions and warnings in -Werror and
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
   if (State->SuppressSystemWarnings && !ShowInSystemHeader && Loc.isValid() &&
-      Diag.getSourceManager().isInSystemHeader(
-          Diag.getSourceManager().getExpansionLoc(Loc)))
+      SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
     return diag::Severity::Ignored;
 
   // We also ignore warnings due to system macros
   bool ShowInSystemMacro =
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemMacro;
   if (State->SuppressSystemWarnings && !ShowInSystemMacro && Loc.isValid() &&
-      Diag.getSourceManager().isInSystemMacro(Loc))
+      SM.isInSystemMacro(Loc))
+    return diag::Severity::Ignored;
+
+  // Clang-diagnostics pragmas always take precedence over suppression mapping.
+  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
     return diag::Severity::Ignored;
 
   return Result;

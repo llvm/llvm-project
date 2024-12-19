@@ -47,7 +47,7 @@ module {
 
     // Call the kernel with an vector taken from global memory.
     %xbuf = memref.get_global @__constant_64xf64 : memref<64xf64>
-    %x = bufferization.to_tensor %xbuf restrict : memref<64xf64>
+    %x = bufferization.to_tensor %xbuf restrict : memref<64xf64> to tensor<64xf64>
     %0 = call @matvec(%A, %x, %y) : (tensor<1024x64xf64, #CSR>, tensor<64xf64>, tensor<1024xf64>) -> tensor<1024xf64>
 
     //

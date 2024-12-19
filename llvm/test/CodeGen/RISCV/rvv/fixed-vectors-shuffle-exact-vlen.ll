@@ -108,6 +108,7 @@ define <4 x i64> @m2_splat_into_identity(<4 x i64> %v1) vscale_range(2,2) {
 define <4 x i64> @m2_broadcast_i128(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_broadcast_i128:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -117,6 +118,7 @@ define <4 x i64> @m2_broadcast_i128(<4 x i64> %v1) vscale_range(2,2) {
 define <8 x i64> @m4_broadcast_i128(<8 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m4_broadcast_i128:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8

@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_TRANSFORM_EXCLUSIVE_SCAN_H
-#define _LIBCPP___NUMERIC_TRANSFORM_EXCLUSIVE_SCAN_H
+#ifndef _LIBCPP___CXX03___NUMERIC_TRANSFORM_EXCLUSIVE_SCAN_H
+#define _LIBCPP___CXX03___NUMERIC_TRANSFORM_EXCLUSIVE_SCAN_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -39,4 +39,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator transform_ex
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___NUMERIC_TRANSFORM_EXCLUSIVE_SCAN_H
+#endif // _LIBCPP___CXX03___NUMERIC_TRANSFORM_EXCLUSIVE_SCAN_H

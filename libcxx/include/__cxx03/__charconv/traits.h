@@ -7,25 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TRAITS
-#define _LIBCPP___CHARCONV_TRAITS
+#ifndef _LIBCPP___CXX03___CHARCONV_TRAITS
+#define _LIBCPP___CXX03___CHARCONV_TRAITS
 
-#include <__assert>
-#include <__bit/countl.h>
-#include <__charconv/tables.h>
-#include <__charconv/to_chars_base_10.h>
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_unsigned.h>
-#include <cstdint>
-#include <limits>
+#include <__cxx03/__assert>
+#include <__cxx03/__bit/countl.h>
+#include <__cxx03/__charconv/tables.h>
+#include <__cxx03/__charconv/to_chars_base_10.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_unsigned.h>
+#include <__cxx03/cstdint>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -197,4 +197,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHARCONV_TRAITS
+#endif // _LIBCPP___CXX03___CHARCONV_TRAITS

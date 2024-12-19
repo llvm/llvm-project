@@ -226,6 +226,8 @@ public:
 
   bool addressRangeContainsAddress(const uint64_t Address) const;
 
+  std::optional<uint64_t> getLanguage() const;
+
   Expected<DWARFLocationExpressionsVector>
   getLocations(dwarf::Attribute Attr) const;
 

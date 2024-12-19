@@ -524,18 +524,8 @@ bool TosaValidation::isValidElementType(Type type) {
     if (!isEnabledProfile(TosaProfileEnum::MainInference))
       return false;
     return type.isF32() || type.isF16() || type.isBF16();
-  }
-  if (auto intTy = dyn_cast<IntegerType>(type)) {
-    if (intTy.isUnsigned()) {
-      switch (intTy.getWidth()) {
-      case 8:
-      case 16:
-        return true;
-      default:
-        return false;
-      }
-    } else {
-      // Signless - treated as signed.
+  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+    if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
       case 4:
@@ -543,20 +533,20 @@ bool TosaValidation::isValidElementType(Type type) {
       case 16:
       case 32:
       case 48:
-      case 64:
         return true;
-      default:
-        return false;
       }
     }
-    return false;
   }
-  return true;
+  return false;
 }
 
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
   getOperation().walk([&](Operation *op) {
+    if (!op->getDialect() ||
+        op->getDialect()->getNamespace() != TosaDialect::getDialectNamespace())
+      return;
+
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {

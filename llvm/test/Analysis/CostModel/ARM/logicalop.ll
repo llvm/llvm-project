@@ -80,56 +80,56 @@ define void @vecop() {
 ; CHECK-MVE-RECIP-LABEL: 'vecop'
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-NEON-RECIP-LABEL: 'vecop'
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-THUMB1-RECIP-LABEL: 'vecop'
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-THUMB2-RECIP-LABEL: 'vecop'
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-MVE-SIZE-LABEL: 'vecop'
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-NEON-SIZE-LABEL: 'vecop'
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-THUMB1-SIZE-LABEL: 'vecop'
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-THUMB2-SIZE-LABEL: 'vecop'
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sand = select <4 x i1> undef, <4 x i1> undef, <4 x i1> zeroinitializer
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %band = and <4 x i1> undef, undef
-; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sor = select <4 x i1> undef, <4 x i1> splat (i1 true), <4 x i1> undef
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bor = or <4 x i1> undef, undef
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;

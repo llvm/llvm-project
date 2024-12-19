@@ -36,6 +36,8 @@ class RegScavenger;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
+constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
+
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
 /// on any path from the start of an entry function to this load.
 static const MachineMemOperand::Flags MONoClobber =
@@ -946,8 +948,8 @@ public:
            Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
            Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::DS_GWS_INIT ||
-           Opcode == AMDGPU::DS_GWS_BARRIER;
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
+           Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
@@ -1114,6 +1116,12 @@ public:
   bool usesConstantBus(const MachineRegisterInfo &MRI,
                        const MachineOperand &MO,
                        const MCOperandInfo &OpInfo) const;
+
+  bool usesConstantBus(const MachineRegisterInfo &MRI, const MachineInstr &MI,
+                       int OpIdx) const {
+    return usesConstantBus(MRI, MI.getOperand(OpIdx),
+                           MI.getDesc().operands()[OpIdx]);
+  }
 
   /// Return true if this instruction has any modifiers.
   ///  e.g. src[012]_mod, omod, clamp.
@@ -1561,6 +1569,11 @@ namespace AMDGPU {
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
   int getMFMAEarlyClobberOp(uint16_t Opcode);
+
+  /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
+  /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
+  LLVM_READONLY
+  int getMFMASrcCVDstAGPROp(uint16_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY

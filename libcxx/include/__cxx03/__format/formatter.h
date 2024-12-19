@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_H
-#define _LIBCPP___FORMAT_FORMATTER_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMATTER_H
+#define _LIBCPP___CXX03___FORMAT_FORMATTER_H
 
-#include <__config>
-#include <__fwd/format.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/format.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -50,4 +50,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __set_debug_format(_Tp& __formatter) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMATTER_H

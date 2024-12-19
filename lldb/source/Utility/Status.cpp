@@ -258,7 +258,11 @@ ErrorType Status::GetType() const {
     // Return the first only.
     if (result != eErrorTypeInvalid)
       return;
-    result = ErrorCodeToErrorType(error.convertToErrorCode());
+    if (error.isA<CloneableError>())
+      result = static_cast<const CloneableError &>(error).GetErrorType();
+    else
+      result = ErrorCodeToErrorType(error.convertToErrorCode());
+
   });
   return result;
 }

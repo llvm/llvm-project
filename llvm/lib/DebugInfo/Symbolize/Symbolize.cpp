@@ -31,7 +31,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include <algorithm>
 #include <cassert>
 #include <cstring>
 
@@ -748,7 +747,7 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 } // end anonymous namespace
 
 std::string
-LLVMSymbolizer::DemangleName(const std::string &Name,
+LLVMSymbolizer::DemangleName(StringRef Name,
                              const SymbolizableModule *DbiModuleDescriptor) {
   std::string Result;
   if (nonMicrosoftDemangle(Name, Result))
@@ -762,7 +761,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
         MSDemangleFlags(MSDF_NoAccessSpecifier | MSDF_NoCallingConvention |
                         MSDF_NoMemberType | MSDF_NoReturnType));
     if (status != 0)
-      return Name;
+      return std::string{Name};
     Result = DemangledName;
     free(DemangledName);
     return Result;
@@ -776,7 +775,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
       return Result;
     return DemangledCName;
   }
-  return Name;
+  return std::string{Name};
 }
 
 void LLVMSymbolizer::recordAccess(CachedBinary &Bin) {
