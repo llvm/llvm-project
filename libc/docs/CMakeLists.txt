@@ -43,6 +43,7 @@ if (SPHINX_FOUND)
       setjmp
       signal
       stdbit
+      stdio
       stdlib
       string
       strings
