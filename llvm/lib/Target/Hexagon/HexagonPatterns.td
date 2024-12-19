@@ -3384,6 +3384,7 @@ def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
+def: Pat<(debugtrap), (Y2_break)>;
 
 // Read cycle counter.
 def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;

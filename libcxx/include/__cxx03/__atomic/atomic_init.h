@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_INIT_H
-#define _LIBCPP___ATOMIC_ATOMIC_INIT_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_INIT_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_INIT_H
 
 #include <__cxx03/__config>
 
@@ -22,4 +22,4 @@
 #  pragma clang deprecated(ATOMIC_VAR_INIT)
 #endif
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_INIT_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_INIT_H

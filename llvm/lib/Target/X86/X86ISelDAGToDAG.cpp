@@ -370,7 +370,7 @@ namespace {
         return false;
 
       // Walk all the users of the immediate.
-      for (const SDNode *User : N->uses()) {
+      for (const SDNode *User : N->users()) {
         if (UseCount >= 2)
           break;
 
@@ -1095,7 +1095,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDNode *MaxLd = nullptr;
       SDValue Ptr = Ld->getBasePtr();
       SDValue Chain = Ld->getChain();
-      for (SDNode *User : Ptr->uses()) {
+      for (SDNode *User : Ptr->users()) {
         auto *UserLd = dyn_cast<LoadSDNode>(User);
         MVT UserVT = User->getSimpleValueType(0);
         if (User != N && UserLd && ISD::isNormalLoad(User) &&
@@ -2423,11 +2423,11 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
         auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
-        uint64_t Offset = (uint64_t)AddVal->getSExtValue();
-        if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
+        int64_t Offset = AddVal->getSExtValue();
+        if (!foldOffsetIntoAddress((uint64_t)Offset * AM.Scale, AM)) {
           SDLoc DL(N);
           SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
-          SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
+          SDValue ExtVal = CurDAG->getSignedConstant(Offset, DL, VT);
           SDValue ExtAdd = CurDAG->getNode(ISD::ADD, DL, VT, ExtSrc, ExtVal);
           insertDAGNode(*CurDAG, N, ExtSrc);
           insertDAGNode(*CurDAG, N, ExtVal);

@@ -242,6 +242,7 @@ ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
 ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
+ENUM(Prescriptiveness, Strict);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -643,7 +644,7 @@ struct FullT {
 // V5.2: [12.6.1] `grainsize` clause
 template <typename T, typename I, typename E> //
 struct GrainsizeT {
-  ENUM(Prescriptiveness, Strict);
+  using Prescriptiveness = type::Prescriptiveness;
   using GrainSize = E;
   using TupleTrait = std::true_type;
   std::tuple<OPT(Prescriptiveness), GrainSize> t;
@@ -757,15 +758,13 @@ template <typename T, typename I, typename E> //
 struct LinearT {
   // std::get<type> won't work here due to duplicate types in the tuple.
   using List = ObjectListT<I, E>;
-  using StepSimpleModifier = E;
+  // StepSimpleModifier is same as StepComplexModifier.
   using StepComplexModifier = E;
   ENUM(LinearModifier, Ref, Val, Uval);
 
   using TupleTrait = std::true_type;
   // Step == nullopt means 1.
-  std::tuple<OPT(StepSimpleModifier), OPT(StepComplexModifier),
-             OPT(LinearModifier), List>
-      t;
+  std::tuple<OPT(StepComplexModifier), OPT(LinearModifier), List> t;
 };
 
 // V5.2: [5.8.5] `link` clause
@@ -876,8 +875,8 @@ struct NowaitT {
 // V5.2: [12.6.2] `num_tasks` clause
 template <typename T, typename I, typename E> //
 struct NumTasksT {
+  using Prescriptiveness = type::Prescriptiveness;
   using NumTasks = E;
-  ENUM(Prescriptiveness, Strict);
   using TupleTrait = std::true_type;
   std::tuple<OPT(Prescriptiveness), NumTasks> t;
 };

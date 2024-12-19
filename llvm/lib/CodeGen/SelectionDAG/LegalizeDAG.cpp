@@ -1394,7 +1394,7 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
   Visited.insert(Op.getNode());
   Worklist.push_back(Idx.getNode());
   SDValue StackPtr, Ch;
-  for (SDNode *User : Vec.getNode()->uses()) {
+  for (SDNode *User : Vec.getNode()->users()) {
     if (StoreSDNode *ST = dyn_cast<StoreSDNode>(User)) {
       if (ST->isIndexed() || ST->isTruncatingStore() ||
           ST->getValue() != Vec)
@@ -2104,7 +2104,7 @@ std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall L
     InChain = TCChain;
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, isSigned);
+  bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, isSigned);
   CLI.setDebugLoc(SDLoc(Node))
       .setChain(InChain)
       .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
@@ -2135,7 +2135,7 @@ std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall L
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = Op;
     Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, isSigned);
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, isSigned);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }
@@ -2293,7 +2293,7 @@ static bool useSinCos(SDNode *Node) {
     ? ISD::FCOS : ISD::FSIN;
 
   SDValue Op0 = Node->getOperand(0);
-  for (const SDNode *User : Op0.getNode()->uses()) {
+  for (const SDNode *User : Op0.getNode()->users()) {
     if (User == Node)
       continue;
     // The other user might have been turned into sincos already.
@@ -4794,7 +4794,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue Op = DAG.getNode(Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
                              NVT, Node->getOperand(IsStrict ? 1 : 0));
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setSExt(Signed);
+    CallOptions.setIsSigned(Signed);
     std::pair<SDValue, SDValue> Tmp =
         TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, dl, Chain);
     Results.push_back(Tmp.first);

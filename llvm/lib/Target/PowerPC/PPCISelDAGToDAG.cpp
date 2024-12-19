@@ -750,7 +750,7 @@ static bool canOptimizeTLSDFormToXForm(SelectionDAG *CurDAG, SDValue Base) {
   // Base is expected to be an ADD_TLS node.
   if (Base.getOpcode() != PPCISD::ADD_TLS)
     return false;
-  for (auto *ADDTLSUse : Base.getNode()->uses()) {
+  for (auto *ADDTLSUse : Base.getNode()->users()) {
     // The optimization to convert the D-Form load/store into its X-Form
     // counterpart should only occur if the source value offset of the load/
     // store is 0. This also means that The offset should always be undefined.
@@ -3986,7 +3986,7 @@ static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
     return true;
   // We want the value in a GPR if it is being extended, used for a select, or
   // used in logical operations.
-  for (auto *CompareUse : Compare.getNode()->uses())
+  for (auto *CompareUse : Compare.getNode()->users())
     if (CompareUse->getOpcode() != ISD::SIGN_EXTEND &&
         CompareUse->getOpcode() != ISD::ZERO_EXTEND &&
         CompareUse->getOpcode() != ISD::SELECT &&
@@ -6610,7 +6610,7 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
   SDValue ConstFalse = CurDAG->getConstant(0, dl, VT);
 
   do {
-    SDNode *User = *N->use_begin();
+    SDNode *User = *N->user_begin();
     if (User->getNumOperands() != 2)
       break;
 
@@ -6701,7 +6701,7 @@ void PPCDAGToDAGISel::PostprocessISelDAG() {
 // be folded with the isel so that we don't need to materialize a register
 // containing zero.
 bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     if (!User->isMachineOpcode())
       return false;
     if (User->getMachineOpcode() != PPC::SELECT_I4 &&
@@ -6731,7 +6731,7 @@ bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
 
 void PPCDAGToDAGISel::SwapAllSelectUsers(SDNode *N) {
   SmallVector<SDNode *, 4> ToReplace;
-  for (SDNode *User : N->uses()) {
+  for (SDNode *User : N->users()) {
     assert((User->getMachineOpcode() == PPC::SELECT_I4 ||
             User->getMachineOpcode() == PPC::SELECT_I8) &&
            "Must have all select users");
@@ -7382,7 +7382,7 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
     // (except for the original INSERT_SUBREG), then abort the transformation.
     bool OutsideUse = false;
     for (SDNode *PN : ToPromote) {
-      for (SDNode *UN : PN->uses()) {
+      for (SDNode *UN : PN->users()) {
         if (!ToPromote.count(UN) && UN != ISR.getNode()) {
           OutsideUse = true;
           break;
@@ -7564,7 +7564,7 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
     while (V->isMachineOpcode() &&
            V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS) {
       // All values in the chain should have single use.
-      if (V->use_empty() || !V->use_begin()->isOnlyUserOf(V.getNode()))
+      if (V->use_empty() || !V->user_begin()->isOnlyUserOf(V.getNode()))
         return SDValue();
       V = V->getOperand(0);
     }

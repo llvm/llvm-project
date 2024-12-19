@@ -179,10 +179,14 @@ public:
   unsigned countLeadingZeros() const {
     if constexpr (!Signed)
       return llvm::countl_zero<ReprT>(V);
-    llvm_unreachable("Don't call countLeadingZeros() on signed types.");
+    if (isPositive())
+      return llvm::countl_zero<typename AsUnsigned::ReprT>(
+          static_cast<typename AsUnsigned::ReprT>(V));
+    llvm_unreachable("Don't call countLeadingZeros() on negative values.");
   }
 
   Integral truncate(unsigned TruncBits) const {
+    assert(TruncBits >= 1);
     if (TruncBits >= Bits)
       return *this;
     const ReprT BitMask = (ReprT(1) << ReprT(TruncBits)) - 1;
@@ -209,7 +213,7 @@ public:
     return Integral(Value.V);
   }
 
-  static Integral zero() { return from(0); }
+  static Integral zero(unsigned BitWidth = 0) { return from(0); }
 
   template <typename T> static Integral from(T Value, unsigned NumBits) {
     return Integral(Value);

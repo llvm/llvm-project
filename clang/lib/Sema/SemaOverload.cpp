@@ -2236,12 +2236,40 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
       return false;
     }
   }
-  // Lvalue-to-rvalue conversion (C++11 4.1):
-  //   A glvalue (3.10) of a non-function, non-array type T can
-  //   be converted to a prvalue.
+
   bool argIsLValue = From->isGLValue();
-  if (argIsLValue && !FromType->canDecayToPointerType() &&
-      S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
+  // To handle conversion from ArrayParameterType to ConstantArrayType
+  // this block must be above the one below because Array parameters
+  // do not decay and when handling HLSLOutArgExprs and
+  // the From expression is an LValue.
+  if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
+      ToType->isConstantArrayType()) {
+    // HLSL constant array parameters do not decay, so if the argument is a
+    // constant array and the parameter is an ArrayParameterType we have special
+    // handling here.
+    if (ToType->isArrayParameterType()) {
+      FromType = S.Context.getArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else if (FromType->isArrayParameterType()) {
+      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
+      FromType = APT->getConstantArrayType(S.Context);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else {
+      SCS.First = ICK_Identity;
+    }
+
+    if (S.Context.getCanonicalType(FromType) !=
+        S.Context.getCanonicalType(ToType))
+      return false;
+
+    SCS.setAllToTypes(ToType);
+    return true;
+  } else if (argIsLValue && !FromType->canDecayToPointerType() &&
+             S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
+    // Lvalue-to-rvalue conversion (C++11 4.1):
+    //   A glvalue (3.10) of a non-function, non-array type T can
+    //   be converted to a prvalue.
+
     SCS.First = ICK_Lvalue_To_Rvalue;
 
     // C11 6.3.2.1p2:
@@ -2255,24 +2283,6 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
-  } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-             ToType->isConstantArrayType()) {
-    // HLSL constant array parameters do not decay, so if the argument is a
-    // constant array and the parameter is an ArrayParameterType we have special
-    // handling here.
-    if (ToType->isArrayParameterType()) {
-      FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
-    }
-
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
-      return false;
-
-    SCS.setAllToTypes(ToType);
-    return true;
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
@@ -5923,7 +5933,9 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
     DestType = ImplicitParamRecordType;
     FromClassification = From->Classify(Context);
 
-    // When performing member access on a prvalue, materialize a temporary.
+    // CWG2813 [expr.call]p6:
+    //   If the function is an implicit object member function, the object
+    //   expression of the class member access shall be a glvalue [...]
     if (From->isPRValue()) {
       From = CreateMaterializeTemporaryExpr(FromRecordType, From,
                                             Method->getRefQualifier() !=
@@ -6453,11 +6465,6 @@ static Expr *GetExplicitObjectExpr(Sema &S, Expr *Obj,
     Obj = UnaryOperator::Create(S.getASTContext(), Obj, UO_Deref, ObjType,
                                 VK_LValue, OK_Ordinary, SourceLocation(),
                                 /*CanOverflow=*/false, FPOptionsOverride());
-  }
-  if (Obj->Classify(S.getASTContext()).isPRValue()) {
-    Obj = S.CreateMaterializeTemporaryExpr(
-        ObjType, Obj,
-        !Fun->getParamDecl(0)->getType()->isRValueReferenceType());
   }
   return Obj;
 }
@@ -15565,7 +15572,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     // Build the actual expression node.
     ExprResult FnExpr =
         CreateFunctionRefExpr(*this, Method, FoundDecl, MemExpr,
-                              HadMultipleCandidates, MemExpr->getBeginLoc());
+                              HadMultipleCandidates, MemExpr->getExprLoc());
     if (FnExpr.isInvalid())
       return ExprError();
 
@@ -15574,8 +15581,6 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                          CurFPFeatureOverrides(), Proto->getNumParams());
   } else {
     // Convert the object argument (for a non-static member function call).
-    // We only need to do this if there was actually an overload; otherwise
-    // it was done at lookup.
     ExprResult ObjectArg = PerformImplicitObjectArgumentInitialization(
         MemExpr->getBase(), Qualifier, FoundDecl, Method);
     if (ObjectArg.isInvalid())

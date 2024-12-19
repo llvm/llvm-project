@@ -1199,7 +1199,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         // If the token is not annotated, then it might be an expression pack
         // indexing
         if (!TryAnnotateTypeOrScopeToken() &&
-            Tok.is(tok::annot_pack_indexing_type))
+            Tok.isOneOf(tok::annot_pack_indexing_type, tok::annot_cxxscope))
           return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
                                      isVectorLiteral, NotPrimaryExpression);
       }

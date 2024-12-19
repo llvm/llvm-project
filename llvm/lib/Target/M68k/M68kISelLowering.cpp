@@ -1990,7 +1990,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   case ISD::XOR:
     // Due to the ISEL shortcoming noted above, be conservative if this op is
     // likely to be selected as part of a load-modify-store instruction.
-    for (const auto *U : Op.getNode()->uses())
+    for (const auto *U : Op.getNode()->users())
       if (U->getOpcode() == ISD::STORE)
         goto default_case;
 

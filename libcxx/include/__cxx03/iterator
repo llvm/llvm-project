@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_ITERATOR
-#define _LIBCPP_ITERATOR
+#ifndef _LIBCPP___CXX03_ITERATOR
+#define _LIBCPP___CXX03_ITERATOR
 
 /*
     iterator synopsis
@@ -751,4 +751,4 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_ITERATOR
+#endif // _LIBCPP___CXX03_ITERATOR

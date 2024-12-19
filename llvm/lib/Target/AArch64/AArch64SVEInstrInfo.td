@@ -4282,8 +4282,8 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm BFCVT_ZPzZ_StoH  : sve_fp_z2op_p_zd_bfcvt<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2>;
 
   // Floating-point convert to integer, zeroing predicate
-  defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;
-  defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu">;
+  defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs", "int_aarch64_sve_fcvtzs", AArch64fcvtzs_mt>;
+  defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu", "int_aarch64_sve_fcvtzu", AArch64fcvtzu_mt>;
   // Integer convert to floating-point, zeroing predicate
   defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf">;
   defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf">;
@@ -4369,20 +4369,21 @@ let Predicates = [HasNonStreamingSVE2p2orSME2p2] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2orSME2, HasFP8] in {
 // FP8 upconvert
-defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt">;
-defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt">;
-defm BF1CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b10, "bf1cvt">;
-defm BF2CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b11, "bf2cvt">;
-defm F1CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b00, "f1cvtlt">;
-defm F2CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b01, "f2cvtlt">;
-defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt">;
-defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt">;
+defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt",    nxv8f16,  int_aarch64_sve_fp8_cvt1>;
+defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt",    nxv8f16,  int_aarch64_sve_fp8_cvt2>;
+defm BF1CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b10, "bf1cvt",   nxv8bf16, int_aarch64_sve_fp8_cvt1>;
+defm BF2CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b11, "bf2cvt",   nxv8bf16, int_aarch64_sve_fp8_cvt2>;
+defm F1CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b00, "f1cvtlt",  nxv8f16,  int_aarch64_sve_fp8_cvtlt1>;
+defm F2CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b01, "f2cvtlt",  nxv8f16,  int_aarch64_sve_fp8_cvtlt2>;
+defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt", nxv8bf16, int_aarch64_sve_fp8_cvtlt1>;
+defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt", nxv8bf16, int_aarch64_sve_fp8_cvtlt2>;
 
 // FP8 downconvert
-defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn", ZZ_h_mul_r>;
-defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r>;
-defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r>;
-defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
+defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn",  ZZ_h_mul_r, nxv8f16,  int_aarch64_sve_fp8_cvtn>;
+defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnb>;
+defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r, nxv8bf16, int_aarch64_sve_fp8_cvtn>;
+
+defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single_top<0b11, "fcvtnt", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnt>;
 } // End HasSVE2orSME2, HasFP8
 
 let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
@@ -4395,21 +4396,21 @@ defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<AArch64famin_p>;
 
 let Predicates = [HasSSVE_FP8FMA] in {
 // FP8 Widening Multiply-Add Long - Indexed Group
-def FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb">;
-def FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt">;
+defm FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb", int_aarch64_sve_fp8_fmlalb_lane>;
+defm FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt", int_aarch64_sve_fp8_fmlalt_lane>;
 // FP8 Widening Multiply-Add Long Group
-def FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb">;
-def FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt">;
+defm FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb", nxv8f16, int_aarch64_sve_fp8_fmlalb>;
+defm FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt", nxv8f16, int_aarch64_sve_fp8_fmlalt>;
 // FP8 Widening Multiply-Add Long Long - Indexed Group
-def FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb">;
-def FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt">;
-def FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb">;
-def FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt">;
+defm FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb", int_aarch64_sve_fp8_fmlallbb_lane>;
+defm FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt", int_aarch64_sve_fp8_fmlallbt_lane>;
+defm FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb", int_aarch64_sve_fp8_fmlalltb_lane>;
+defm FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt", int_aarch64_sve_fp8_fmlalltt_lane>;
 // FP8 Widening Multiply-Add Long Long Group
-def FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb">;
-def FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt">;
-def FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb">;
-def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
+defm FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb", nxv4f32, int_aarch64_sve_fp8_fmlallbb>;
+defm FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt", nxv4f32, int_aarch64_sve_fp8_fmlallbt>;
+defm FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb", nxv4f32, int_aarch64_sve_fp8_fmlalltb>;
+defm FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt", nxv4f32, int_aarch64_sve_fp8_fmlalltt>;
 } // End HasSSVE_FP8FMA
 
 let Predicates = [HasSVE2, HasF8F32MM] in {
@@ -4422,18 +4423,17 @@ let Predicates = [HasSVE2, HasF8F16MM] in {
 
 let Predicates = [HasSSVE_FP8DOT2] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot">;
+defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-// TODO: Replace nxv16i8 by nxv16f8
-defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot">;
+defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot", nxv8f16, int_aarch64_sve_fp8_fdot>;
 }
 
 // TODO: Replace nxv16i8 by nxv16f8
 let Predicates = [HasSSVE_FP8DOT4] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot">;
+defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot">;
+defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot", nxv4f32, int_aarch64_sve_fp8_fdot>;
 }
 
 let Predicates = [HasSVE2orSME2, HasLUT] in {

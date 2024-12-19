@@ -129,6 +129,8 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 // Add an OpName instruction for the given target register.
 void buildOpName(Register Target, const StringRef &Name,
                  MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -147,6 +149,10 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
 MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
+
+// Return a valid position for the instruction at the end of the block before
+// terminators and debug instructions.
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB);
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
@@ -393,6 +399,19 @@ Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
 
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty);
+
+enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
+
+inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
+  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+      {"rte", FPDecorationId::RTE},
+      {"rtz", FPDecorationId::RTZ},
+      {"rtp", FPDecorationId::RTP},
+      {"rtn", FPDecorationId::RTN},
+      {"sat", FPDecorationId::SAT}};
+  auto It = Mapping.find(S);
+  return It == Mapping.end() ? FPDecorationId::NONE : It->second;
+}
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

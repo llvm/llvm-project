@@ -485,7 +485,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Gracemont:
     case 0xbe:
-      CPU = "gracement";
+      CPU = "gracemont";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;
       break;

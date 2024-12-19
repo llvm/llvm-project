@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "libc")
 
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  message(FATAL_ERROR "Builds rooted in the libc directory are not supported. "
+    "Builds should be rooted in the runtimes directory instead. "
+    "Please see the documentation at https://libc.llvm.org/usage_modes.html for more info.")
+endif()
+
 # Include LLVM's cmake policies.
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
+include(CheckCXXCompilerFlag)
 
 if (LIBC_CMAKE_VERBOSE_LOGGING)
   get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
@@ -50,52 +57,14 @@ set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-
-add_subdirectory(newhdrgen)
-
-
-if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
-  if(NOT LIBC_HDRGEN_EXE)
-    # We need to set up hdrgen first since other targets depend on it.
-    add_subdirectory(utils/LibcTableGenUtil)
-    add_subdirectory(utils/HdrGen)
-    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
-    # PARENT_SCOPE which get lost until saved in the cache.
-    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
-    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
-  else()
-    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
-  endif()
-endif()
 # We will build the GPU utilities if we are not doing a runtimes build.
 option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
-if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
+if(LIBC_BUILD_GPU_LOADER OR ((NOT LLVM_RUNTIMES_BUILD) AND LLVM_LIBC_GPU_BUILD))
   add_subdirectory(utils/gpu)
-endif()
-
-option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
-
-set(NEED_LIBC_HDRGEN FALSE)
-if(NOT LLVM_RUNTIMES_BUILD)
-  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
-    set(NEED_LIBC_HDRGEN TRUE)
-  else()
-    foreach(_name ${LLVM_RUNTIME_TARGETS})
-      if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-        set(NEED_LIBC_HDRGEN TRUE)
-        break()
-      endif()
-    endforeach()
-  endif()
-endif()
-option(LIBC_HDRGEN_ONLY "Only build the 'libc-hdrgen' executable" OFF)
-if(LIBC_HDRGEN_ONLY OR NEED_LIBC_HDRGEN)
-  # When libc is build as part of the runtimes/bootstrap build's CMake run, we
-  # only need to build the host tools to build the libc. So, we just do enough
-  # to build libc-hdrgen and return.
   return()
 endif()
-unset(NEED_LIBC_HDRGEN)
+
+add_subdirectory(hdrgen)
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
@@ -360,7 +329,6 @@ endif()
 
 option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
 
-include(CMakeParseArguments)
 include(LLVMLibCCheckCpuFeatures)
 include(CheckCompilerFeatures)
 include(LLVMLibCRules)
