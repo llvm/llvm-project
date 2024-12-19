@@ -119,7 +119,7 @@ define i64 @select_gep_oob_overapproximated_offsets(i1 %cond) {
   %base1 = alloca [288 x i8], align 16
   %select0 = select i1 %cond, i64 -4, i64 -64
   %select1 = select i1 %cond, i64 16, i64 64
-; This nevers actually goes oob, but because we approcimate each select
+; This never actually goes oob, but because we approximate each select
 ; independently, this actually ranges in [16 - 64 ; 64 - 4] instead of [64 - 64; 16 - 4]
   %gep0 = getelementptr inbounds nuw i8, ptr %base1, i64 %select1
   %gep1 = getelementptr inbounds i8, ptr %gep0, i64 %select0
