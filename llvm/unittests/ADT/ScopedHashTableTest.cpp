@@ -38,37 +38,45 @@ TEST_F(ScopedHashTableTest, AccessWithNoActiveScope) {
 }
 
 TEST_F(ScopedHashTableTest, AccessWithAScope) {
-  [[maybe_unused]] ScopedHashTableScope varScope(symbolTable);
+  [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> varScope(
+      symbolTable);
   EXPECT_EQ(symbolTable.count(kGlobalName), 1U);
 }
 
 TEST_F(ScopedHashTableTest, InsertInScope) {
-  [[maybe_unused]] ScopedHashTableScope varScope(symbolTable);
+  [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> varScope(
+      symbolTable);
   symbolTable.insert(kLocalName, kLocalValue);
   EXPECT_EQ(symbolTable.count(kLocalName), 1U);
 }
 
 TEST_F(ScopedHashTableTest, InsertInLinearSortedScope) {
-  [[maybe_unused]] ScopedHashTableScope varScope(symbolTable);
-  [[maybe_unused]] ScopedHashTableScope varScope2(symbolTable);
-  [[maybe_unused]] ScopedHashTableScope varScope3(symbolTable);
+  [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> varScope(
+      symbolTable);
+  [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> varScope2(
+      symbolTable);
+  [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> varScope3(
+      symbolTable);
   symbolTable.insert(kLocalName, kLocalValue);
   EXPECT_EQ(symbolTable.count(kLocalName), 1U);
 }
 
 TEST_F(ScopedHashTableTest, InsertInOutedScope) {
   {
-    [[maybe_unused]] ScopedHashTableScope varScope(symbolTable);
+    [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> varScope(
+        symbolTable);
     symbolTable.insert(kLocalName, kLocalValue);
   }
   EXPECT_EQ(symbolTable.count(kLocalName), 0U);
 }
 
 TEST_F(ScopedHashTableTest, OverrideInScope) {
-  [[maybe_unused]] ScopedHashTableScope funScope(symbolTable);
+  [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> funScope(
+      symbolTable);
   symbolTable.insert(kLocalName, kLocalValue);
   {
-    [[maybe_unused]] ScopedHashTableScope varScope(symbolTable);
+    [[maybe_unused]] ScopedHashTableScope<StringRef, StringRef> varScope(
+        symbolTable);
     symbolTable.insert(kLocalName, kLocalValue2);
     EXPECT_EQ(symbolTable.lookup(kLocalName), kLocalValue2);
   }
@@ -78,11 +86,11 @@ TEST_F(ScopedHashTableTest, OverrideInScope) {
 TEST_F(ScopedHashTableTest, GetCurScope) {
   EXPECT_EQ(symbolTable.getCurScope(), &globalScope);
   {
-    ScopedHashTableScope funScope(symbolTable);
-    ScopedHashTableScope funScope2(symbolTable);
+    ScopedHashTableScope<StringRef, StringRef> funScope(symbolTable);
+    ScopedHashTableScope<StringRef, StringRef> funScope2(symbolTable);
     EXPECT_EQ(symbolTable.getCurScope(), &funScope2);
     {
-      ScopedHashTableScope blockScope(symbolTable);
+      ScopedHashTableScope<StringRef, StringRef> blockScope(symbolTable);
       EXPECT_EQ(symbolTable.getCurScope(), &blockScope);
     }
     EXPECT_EQ(symbolTable.getCurScope(), &funScope2);
