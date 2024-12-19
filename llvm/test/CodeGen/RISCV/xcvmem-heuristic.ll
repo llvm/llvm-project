@@ -5,14 +5,15 @@
 define i32 @test_heuristic(ptr %b, i32 %e, i1 %0) {
 ; CHECK-LABEL: test_heuristic:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    add a3, a0, a1
 ; CHECK-NEXT:    andi a2, a2, 1
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    cv.lbu a1, (a3), 1
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    beqz a2, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    cv.lbu a0, a1(a3)
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 entry:
   %1 = getelementptr i8, ptr %b, i32 %e
