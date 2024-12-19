@@ -16,6 +16,7 @@
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -29,7 +30,6 @@
 
 using namespace clang;
 using namespace CodeGen;
-using namespace clang::hlsl;
 using namespace llvm;
 
 namespace {
@@ -60,97 +60,83 @@ void addDisableOptimizations(llvm::Module &M) {
   M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
 }
 
-// Creates the LLVM struct type representing the shape of the constant buffer,
-// which will be included in the LLVM target type, and calculates the memory
-// layout and constant buffer layout offsets of each constant.
-static void layoutBuffer(CGHLSLRuntime::Buffer &Buf, const DataLayout &DL) {
-  assert(!Buf.Constants.empty() &&
-         "empty constant buffer should not be created");
+// Creates resource handle representing the constant buffer.
+// For cbuffer declaration:
+//
+//   cbuffer MyConstants {
+//     float a;
+//   }
+//
+// creates a structure type MyConstants and then returns the resource handle
+// that would be spelled as:
+//
+//   __hlsl_resource_t [[hlsl::resource_class(CBuffer)]]
+//   [[contained_type(MyConstants)]]
+//
+static const clang::Type *getBufferHandleType(CGHLSLRuntime::Buffer &Buf) {
+  HLSLBufferDecl *BD = Buf.Decl;
+  ASTContext &AST = BD->getASTContext();
 
-  std::vector<llvm::Type *> EltTys;
-  unsigned MemOffset = 0, CBufOffset = 0, Size = 0;
-
-  for (auto &C : Buf.Constants) {
-    GlobalVariable *GV = C.GlobalVar;
-    llvm::Type *Ty = GV->getValueType();
-
-    assert(!Ty->isArrayTy() && !Ty->isStructTy() &&
-           "arrays and structs in cbuffer are not yet implemened");
-
-    // scalar type, vector or matrix
-    EltTys.emplace_back(Ty);
-    unsigned FieldSize = Ty->getScalarSizeInBits() / 8;
-    if (Ty->isVectorTy())
-      FieldSize *= cast<FixedVectorType>(Ty)->getNumElements();
-    assert(FieldSize <= 16 && "field side larger than constant buffer row");
-
-    // set memory layout offset (no padding)
-    C.MemOffset = MemOffset;
-    MemOffset += FieldSize;
-
-    // calculate cbuffer layout offset or update total cbuffer size from
-    // packoffset annotations
-    if (Buf.HasPackoffset) {
-      assert(C.CBufferOffset != UINT_MAX &&
-             "cbuffer offset should have been set from packoffset attribute");
-      unsigned OffsetAfterField = C.CBufferOffset + FieldSize;
-      if (Size < OffsetAfterField)
-        Size = OffsetAfterField;
-    } else {
-      // allign to the size of the field
-      CBufOffset = llvm::alignTo(CBufOffset, FieldSize);
-      C.CBufferOffset = CBufOffset;
-      CBufOffset += FieldSize;
-      Size = CBufOffset;
-    }
+  // create struct type for the constant buffer; filter out any declarations
+  // that are not a VarDecls or that are static
+  CXXRecordDecl *StructDecl = CXXRecordDecl::Create(
+      BD->getASTContext(), TagDecl::TagKind::Class, BD->getDeclContext(),
+      BD->getLocation(), BD->getLocation(), BD->getIdentifier());
+  StructDecl->startDefinition();
+  for (Decl *it : Buf.Decl->decls()) {
+    const VarDecl *VD = dyn_cast<VarDecl>(it);
+    if (!VD || VD->getStorageClass() == SC_Static)
+      continue;
+    auto *Field = FieldDecl::Create(
+        AST, StructDecl, VD->getLocation(), VD->getLocation(),
+        VD->getIdentifier(), VD->getType(), VD->getTypeSourceInfo(), nullptr,
+        false, InClassInitStyle::ICIS_NoInit);
+    Field->setAccess(AccessSpecifier::AS_private);
+    StructDecl->addDecl(Field);
   }
-  Buf.LayoutStruct = llvm::StructType::get(EltTys[0]->getContext(), EltTys);
-  Buf.Size = Size;
-}
+  StructDecl->completeDefinition();
+  assert(!StructDecl->fields().empty() && "empty cbuffer should not get here");
 
-// Creates LLVM target type target("dx.CBuffer",..) for the constant buffer.
-// The target type includes the LLVM struct type representing the shape
-// of the constant buffer, size, and a list of offsets for each fields
-// in cbuffer layout.
-static llvm::Type *getBufferTargetType(LLVMContext &Ctx,
-                                       CGHLSLRuntime::Buffer &Buf) {
-  assert(Buf.LayoutStruct != nullptr && Buf.Size != UINT_MAX &&
-         "the buffer layout has not been calculated yet");
-  llvm::SmallVector<unsigned> SizeAndOffsets;
-  SizeAndOffsets.reserve(Buf.Constants.size() + 1);
-  SizeAndOffsets.push_back(Buf.Size);
-  for (CGHLSLRuntime::BufferConstant &C : Buf.Constants) {
-    SizeAndOffsets.push_back(C.CBufferOffset);
-  }
-  return llvm::TargetExtType::get(Ctx, "dx.CBuffer", {Buf.LayoutStruct},
-                                  SizeAndOffsets);
+  // create the resource handle type
+  HLSLAttributedResourceType::Attributes ResAttrs(dxil::ResourceClass::CBuffer,
+                                                  false, false);
+  QualType ContainedTy = QualType(StructDecl->getTypeForDecl(), 0);
+  return AST
+      .getHLSLAttributedResourceType(AST.HLSLResourceTy, ContainedTy, ResAttrs)
+      .getTypePtr();
 }
 
 // Replaces all uses of the temporary constant buffer global variables with
-// buffer access intrinsic resource.getpointer.
+// buffer access intrinsic resource.getpointer and GEP.
 static void replaceBufferGlobals(CodeGenModule &CGM,
                                  CGHLSLRuntime::Buffer &Buf) {
   assert(Buf.IsCBuffer && "tbuffer codegen is not yet supported");
 
   GlobalVariable *BufGV = Buf.GlobalVar;
-  for (auto &Constant : Buf.Constants) {
-    GlobalVariable *ConstGV = Constant.GlobalVar;
+  llvm::Type *TargetTy = BufGV->getValueType();
+  llvm::Type *BufStructTy = cast<TargetExtType>(TargetTy)->getTypeParameter(0);
+  unsigned Index = 0;
+  for (auto ConstIt = Buf.Constants.begin(); ConstIt != Buf.Constants.end();
+       ++ConstIt, ++Index) {
+    GlobalVariable *ConstGV = *ConstIt;
 
     // TODO: Map to an hlsl_device address space.
     llvm::Type *RetTy = ConstGV->getType();
-    llvm::Type *TargetTy = BufGV->getValueType();
 
     // Replace all uses of GV with CBuffer access
     while (ConstGV->use_begin() != ConstGV->use_end()) {
       Use &U = *ConstGV->use_begin();
       if (Instruction *UserInstr = dyn_cast<Instruction>(U.getUser())) {
         IRBuilder<> Builder(UserInstr);
+        Value *Zero = Builder.getInt32(0);
         Value *Handle = Builder.CreateLoad(TargetTy, BufGV);
-        Value *ResGetPointer = Builder.CreateIntrinsic(
-            RetTy, Intrinsic::dx_resource_getpointer,
-            ArrayRef<llvm::Value *>{Handle,
-                                    Builder.getInt32(Constant.MemOffset)});
-        U.set(ResGetPointer);
+        Value *ResGetPointer =
+            Builder.CreateIntrinsic(RetTy, Intrinsic::dx_resource_getpointer,
+                                    ArrayRef<llvm::Value *>{Handle, Zero});
+        Value *GEP = Builder.CreateGEP(BufStructTy, ResGetPointer,
+                                       {Zero, Builder.getInt32(Index)},
+                                       ConstGV->getName());
+        U.set(GEP);
       } else {
         llvm_unreachable("unexpected use of constant value");
       }
@@ -162,11 +148,14 @@ static void replaceBufferGlobals(CodeGenModule &CGM,
 
 } // namespace
 
-llvm::Type *CGHLSLRuntime::convertHLSLSpecificType(const Type *T) {
+llvm::Type *
+CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
+                                       const HLSLBufferDecl *BufferDecl) {
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
-  if (llvm::Type *TargetTy = CGM.getTargetCodeGenInfo().getHLSLType(CGM, T))
+  if (llvm::Type *TargetTy =
+          CGM.getTargetCodeGenInfo().getHLSLType(CGM, T, BufferDecl))
     return TargetTy;
 
   llvm_unreachable("Generic handling of HLSL types is not supported.");
@@ -196,10 +185,8 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
 
   CB.Constants.emplace_back(GV);
 
-  if (HLSLPackOffsetAttr *PO = D->getAttr<HLSLPackOffsetAttr>()) {
+  if (HLSLPackOffsetAttr *PO = D->getAttr<HLSLPackOffsetAttr>())
     CB.HasPackoffset = true;
-    CB.Constants.back().CBufferOffset = PO->getOffsetInBytes();
-  }
 }
 
 void CGHLSLRuntime::addBufferDecls(const DeclContext *DC, Buffer &CB) {
@@ -217,15 +204,14 @@ void CGHLSLRuntime::addBufferDecls(const DeclContext *DC, Buffer &CB) {
 }
 
 // Creates temporary global variables for all declarations within the constant
-// buffer context, calculates the buffer layouts, and then creates a global
-// variable for the constant buffer and adds it to the module.
+// buffer context, creates a global variable for the constant buffer and adds
+// it to the module.
 // All uses of the temporary constant globals will be replaced with buffer
 // access intrinsic resource.getpointer in CGHLSLRuntime::finishCodeGen.
 // Later on in DXILResourceAccess pass these will be transtaled
 // to dx.op.cbufferLoadLegacy instructions.
-void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *D) {
+void CGHLSLRuntime::addBuffer(HLSLBufferDecl *D) {
   llvm::Module &M = CGM.getModule();
-  const DataLayout &DL = M.getDataLayout();
 
   assert(D->isCBuffer() && "tbuffer codegen is not supported yet");
 
@@ -236,10 +222,9 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *D) {
     Buffers.pop_back();
     return;
   }
-  layoutBuffer(Buf, DL);
-
   // Create global variable for CB.
-  llvm::Type *TargetTy = getBufferTargetType(CGM.getLLVMContext(), Buf);
+  llvm::Type *TargetTy = convertHLSLSpecificType(
+      getBufferHandleType(Buf), Buf.HasPackoffset ? Buf.Decl : nullptr);
   Buf.GlobalVar = new GlobalVariable(
       TargetTy, /*isConstant*/ true, GlobalValue::LinkageTypes::ExternalLinkage,
       nullptr, llvm::formatv("{0}{1}", Buf.Name, Buf.IsCBuffer ? ".cb" : ".tb"),
@@ -265,9 +250,9 @@ void CGHLSLRuntime::finishCodeGen() {
   }
 }
 
-CGHLSLRuntime::Buffer::Buffer(const HLSLBufferDecl *D)
+CGHLSLRuntime::Buffer::Buffer(HLSLBufferDecl *D)
     : Name(D->getName()), IsCBuffer(D->isCBuffer()), HasPackoffset(false),
-      LayoutStruct(nullptr), Decl(D), GlobalVar(nullptr) {}
+      Decl(D), GlobalVar(nullptr) {}
 
 void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
                                                 llvm::hlsl::ResourceClass RC,
