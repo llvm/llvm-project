@@ -95,12 +95,18 @@ template <typename T> struct RefPtr {
       t->ref();
   }
   RefPtr(Ref<T>&& o)
-    : t(o.leafkRef())
+    : t(o.leakRef())
   { }
   RefPtr(RefPtr&& o)
     : t(o.t)
   {
     o.t = nullptr;
+  }
+  RefPtr(const RefPtr& o)
+    : t(o.t)
+  {
+      if (t)
+          t->ref();
   }
   ~RefPtr() {
     if (t)
