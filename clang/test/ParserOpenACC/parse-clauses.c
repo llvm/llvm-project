@@ -816,10 +816,8 @@ void IntExprParsing() {
   // expected-note@+1{{to match this '('}}
 #pragma acc init device_num(5, 4)
 
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented, clause ignored}}
 #pragma acc init device_num(5)
 
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented, clause ignored}}
 #pragma acc init device_num(returns_int())
 
   // expected-error@+2{{expected '('}}

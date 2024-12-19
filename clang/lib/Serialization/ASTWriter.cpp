@@ -8347,6 +8347,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
       AddStmt(E);
     return;
   }
+  case OpenACCClauseKind::DeviceNum: {
+    const auto *DNC = cast<OpenACCDeviceNumClause>(C);
+    writeSourceLocation(DNC->getLParenLoc());
+    AddStmt(const_cast<Expr*>(DNC->getIntExpr()));
+    return;
+  }
   case OpenACCClauseKind::NumWorkers: {
     const auto *NWC = cast<OpenACCNumWorkersClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
@@ -8543,7 +8549,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

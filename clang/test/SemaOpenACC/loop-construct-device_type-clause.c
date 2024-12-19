@@ -170,8 +170,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) num_workers(1)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'device_num' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) device_num(1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'default_async' may not follow a 'device_type' clause in a 'loop' construct}}

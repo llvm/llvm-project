@@ -444,6 +444,17 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     }
   }
 
+  case OpenACCClauseKind::DeviceNum: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Init:
+    case OpenACCDirectiveKind::Shutdown:
+    case OpenACCDirectiveKind::Set:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   case OpenACCClauseKind::UseDevice: {
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::HostData:
@@ -942,6 +953,20 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
   return OpenACCAsyncClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
       Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr,
+      Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceNumClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // Restrictions only properly implemented on certain constructs, so skip/treat
+  // as unimplemented in those cases.
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
+    return isNotImplemented();
+
+  assert(Clause.getNumIntExprs() == 1 &&
+         "Invalid number of expressions for device_num");
+  return OpenACCDeviceNumClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getIntExprs()[0],
       Clause.getEndLoc());
 }
 
