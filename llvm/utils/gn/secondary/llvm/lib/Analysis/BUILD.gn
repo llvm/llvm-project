@@ -51,7 +51,6 @@ static_library("Analysis") {
     "DomPrinter.cpp",
     "DomTreeUpdater.cpp",
     "DominanceFrontier.cpp",
-    "DroppedVariableStats.cpp",
     "FunctionPropertiesAnalysis.cpp",
     "GlobalsModRef.cpp",
     "GuardUtils.cpp",
