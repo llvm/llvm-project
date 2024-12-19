@@ -193,7 +193,7 @@ struct VendorConfig : public Config {
   }
 };
 
-std::shared_ptr<Config> GetTelemetryConfig(const TestContext &Ctxt) {
+std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
   return std::make_shared<VendorConfig>(/*EnableTelemetry*/ true);
 }
 
