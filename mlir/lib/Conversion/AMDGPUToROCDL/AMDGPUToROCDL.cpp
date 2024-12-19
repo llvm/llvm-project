@@ -91,6 +91,13 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Type llvmI32 = this->typeConverter->convertType(i32);
     Type llvmI16 = this->typeConverter->convertType(rewriter.getI16Type());
 
+    auto toI32 = [&](Value val) -> Value {
+      if (val.getType() == llvmI32)
+        return val;
+
+      return rewriter.create<LLVM::TruncOp>(loc, llvmI32, val);
+    };
+
     int64_t elementByteWidth = memrefType.getElementTypeBitWidth() / 8;
     Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
 
@@ -166,22 +173,22 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value stride = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI16, rewriter.getI16IntegerAttr(0));
     Value numRecords;
-    if (memrefType.hasStaticShape()) {
+    if (memrefType.hasStaticShape() && memrefType.getLayout().isIdentity()) {
       numRecords = createI32Constant(
           rewriter, loc,
           static_cast<int32_t>(memrefType.getNumElements() * elementByteWidth));
     } else {
       Value maxIndex;
       for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
-        Value size = memrefDescriptor.size(rewriter, loc, i);
-        Value stride = memrefDescriptor.stride(rewriter, loc, i);
+        Value size = toI32(memrefDescriptor.size(rewriter, loc, i));
+        Value stride = toI32(memrefDescriptor.stride(rewriter, loc, i));
         stride = rewriter.create<LLVM::MulOp>(loc, stride, byteWidthConst);
         Value maxThisDim = rewriter.create<LLVM::MulOp>(loc, size, stride);
         maxIndex = maxIndex ? rewriter.create<LLVM::MaximumOp>(loc, maxIndex,
                                                                maxThisDim)
                             : maxThisDim;
       }
-      numRecords = rewriter.create<LLVM::TruncOp>(loc, llvmI32, maxIndex);
+      numRecords = maxIndex;
     }
 
     // Flag word:
@@ -218,7 +225,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       Value strideOp;
       if (ShapedType::isDynamic(strides[i])) {
         strideOp = rewriter.create<LLVM::MulOp>(
-            loc, memrefDescriptor.stride(rewriter, loc, i), byteWidthConst);
+            loc, toI32(memrefDescriptor.stride(rewriter, loc, i)),
+            byteWidthConst);
       } else {
         strideOp =
             createI32Constant(rewriter, loc, strides[i] * elementByteWidth);
@@ -240,7 +248,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       sgprOffset = createI32Constant(rewriter, loc, 0);
     if (ShapedType::isDynamic(offset))
       sgprOffset = rewriter.create<LLVM::AddOp>(
-          loc, memrefDescriptor.offset(rewriter, loc), sgprOffset);
+          loc, toI32(memrefDescriptor.offset(rewriter, loc)), sgprOffset);
     else if (offset > 0)
       sgprOffset = rewriter.create<LLVM::AddOp>(
           loc, sgprOffset, createI32Constant(rewriter, loc, offset));
