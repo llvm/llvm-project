@@ -320,8 +320,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by adding the
-   options:
-   `UseUpperCaseLiteralSuffix`,`CheckConversionsToBool`,`CheckConversionsFromBool`.
+   options: `UseUpperCaseLiteralSuffix`,`CheckConversionsToBool`,
+   `CheckConversionsFromBool`.
 
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
