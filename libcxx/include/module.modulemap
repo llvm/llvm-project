@@ -1527,7 +1527,7 @@ module std [system] {
     module allocation_guard                   { header "__memory/allocation_guard.h" }
     module allocator {
       header "__memory/allocator.h"
-      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export std.new.allocate // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
     }
     module allocator_arg_t                    { header "__memory/allocator_arg_t.h" }
     module allocator_destructor               { header "__memory/allocator_destructor.h" }
@@ -1569,6 +1569,7 @@ module std [system] {
       header "__memory/unique_temporary_buffer.h"
       export std.memory.unique_ptr
       export std_core.type_traits.is_constant_evaluated
+      export std.new.allocate // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
