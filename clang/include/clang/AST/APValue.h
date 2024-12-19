@@ -369,7 +369,8 @@ public:
   APValue(LValueBase B, const CharUnits &O, ArrayRef<LValuePathEntry> Path,
           bool OnePastTheEnd, bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(false) {
-    MakeLValue(); setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
+    MakeLValue();
+    setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
   }
 
   APValue(LValueBase B, ConstexprUnknown, const CharUnits &O,
@@ -392,7 +393,8 @@ public:
   /// \param UninitStruct Marker. Pass an empty UninitStruct.
   /// \param NumBases Number of bases.
   /// \param NumMembers Number of members.
-  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers) : Kind(None), AllowConstexprUnknown(false) {
+  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeStruct(NumBases, NumMembers);
   }
   /// Creates a new union APValue.
