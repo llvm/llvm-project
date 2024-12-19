@@ -448,3 +448,34 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 
   return Success;
 }
+
+bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
+                             const Pointer &SrcPtr, const Pointer &DestPtr,
+                             Bits Size) {
+  assert(SrcPtr.isBlockPointer());
+  assert(DestPtr.isBlockPointer());
+
+  unsigned SrcStartOffset = SrcPtr.getByteOffset();
+  unsigned DestStartOffset = DestPtr.getByteOffset();
+
+  enumeratePointerFields(SrcPtr, S.getContext(), Size,
+                         [&](const Pointer &P, PrimType T, Bits BitOffset,
+                             Bits FullBitWidth, bool PackedBools) -> bool {
+                           unsigned SrcOffsetDiff =
+                               P.getByteOffset() - SrcStartOffset;
+
+                           Pointer DestP =
+                               Pointer(DestPtr.asBlockPointer().Pointee,
+                                       DestPtr.asBlockPointer().Base,
+                                       DestStartOffset + SrcOffsetDiff);
+
+                           TYPE_SWITCH(T, {
+                             DestP.deref<T>() = P.deref<T>();
+                             DestP.initialize();
+                           });
+
+                           return true;
+                         });
+
+  return true;
+}
