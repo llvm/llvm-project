@@ -1398,6 +1398,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::HLSLOutArgExprClass:
   case Stmt::OpenACCEnterDataConstructClass:
   case Stmt::OpenACCExitDataConstructClass:
+  case Stmt::OpenACCWaitConstructClass:
     // These expressions can never throw.
     return CT_Cannot;
 

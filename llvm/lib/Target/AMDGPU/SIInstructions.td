@@ -3377,15 +3377,22 @@ def : GCNPat <
 
 } // end foreach Ty
 
+} // End SubtargetPredicate = HasVOP3PInsts
 
 let AddedComplexity = 5 in {
-def : GCNPat <
+class PackB32Pat<Instruction inst> : GCNPat <
   (v2f16 (is_canonicalized_2<build_vector> (f16 (VOP3Mods (f16 VGPR_32:$src0), i32:$src0_mods)),
                                            (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
-  (V_PACK_B32_F16_e64 $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
+  (inst $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
 }
-} // End SubtargetPredicate = HasVOP3PInsts
+let SubtargetPredicate = isGFX9Plus in {
+let True16Predicate = NotHasTrue16BitInsts in
+  def : PackB32Pat<V_PACK_B32_F16_e64>;
+
+let True16Predicate = UseFakeTrue16Insts in
+  def : PackB32Pat<V_PACK_B32_F16_fake16_e64>;
+} // End SubtargetPredicate = isGFX9Plus
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
@@ -3701,12 +3708,15 @@ def : IntMinMaxPat<V_MAXMIN_U32_e64, umin, umax_oneuse>;
 def : IntMinMaxPat<V_MINMAX_U32_e64, umax, umin_oneuse>;
 def : FPMinMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-def : FPMinMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
-def : FPMinMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-def : FPMinCanonMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
-def : FPMinCanonMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
+
+let True16Predicate = UseFakeTrue16Insts in {
+def : FPMinMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 }
 
 let OtherPredicates = [isGFX9Plus] in {

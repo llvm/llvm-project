@@ -316,6 +316,7 @@ def FeatureStdExtZfa
 def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
                    AssemblerPredicate<(all_of FeatureStdExtZfa),
                                       "'Zfa' (Additional Floating-Point)">;
+def NoStdExtZfa : Predicate<"!Subtarget->hasStdExtZfa()">;
 
 def FeatureStdExtZfinx
     : RISCVExtension<1, 0, "Float in Integer", [FeatureStdExtZicsr]>;
