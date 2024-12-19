@@ -11789,10 +11789,11 @@ static bool checkForArray(const Expr *E) {
 /// Detect patterns ptr + size >= ptr and ptr + size < ptr, where ptr is a
 /// pointer and size is an unsigned integer. Return whether the result is
 /// always true/false.
-static std::optional<bool> isTautologicalBoundsCheck(const Expr *LHS,
+static std::optional<bool> isTautologicalBoundsCheck(Sema &S, const Expr *LHS,
                                                      const Expr *RHS,
                                                      BinaryOperatorKind Opc) {
-  if (!LHS->getType()->isPointerType())
+  if (!LHS->getType()->isPointerType() ||
+      S.getLangOpts().isSignedOverflowDefined())
     return std::nullopt;
 
   // Canonicalize to >= or < predicate.
@@ -11940,7 +11941,7 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
                                 << 1 /*array comparison*/
                                 << Result);
     } else if (std::optional<bool> Res =
-                   isTautologicalBoundsCheck(LHS, RHS, Opc)) {
+                   isTautologicalBoundsCheck(S, LHS, RHS, Opc)) {
       S.DiagRuntimeBehavior(Loc, nullptr,
                             S.PDiag(diag::warn_comparison_always)
                                 << 2 /*pointer comparison*/

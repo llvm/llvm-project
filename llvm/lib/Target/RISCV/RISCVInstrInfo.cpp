@@ -4248,3 +4248,84 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
     return false;
   return LHS.getImm() <= RHS.getImm();
 }
+
+namespace {
+class RISCVPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
+  const MachineInstr *LHS;
+  const MachineInstr *RHS;
+  SmallVector<MachineOperand, 3> Cond;
+
+public:
+  RISCVPipelinerLoopInfo(const MachineInstr *LHS, const MachineInstr *RHS,
+                         const SmallVectorImpl<MachineOperand> &Cond)
+      : LHS(LHS), RHS(RHS), Cond(Cond.begin(), Cond.end()) {}
+
+  bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
+    // Make the instructions for loop control be placed in stage 0.
+    // The predecessors of LHS/RHS are considered by the caller.
+    if (LHS && MI == LHS)
+      return true;
+    if (RHS && MI == RHS)
+      return true;
+    return false;
+  }
+
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &CondParam) override {
+    // A branch instruction will be inserted as "if (Cond) goto epilogue".
+    // Cond is normalized for such use.
+    // The predecessors of the branch are assumed to have already been inserted.
+    CondParam = Cond;
+    return {};
+  }
+
+  void setPreheader(MachineBasicBlock *NewPreheader) override {}
+
+  void adjustTripCount(int TripCountAdjust) override {}
+
+  void disposed() override {}
+};
+} // namespace
+
+std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+RISCVInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return nullptr;
+
+  // Infinite loops are not supported
+  if (TBB == LoopBB && FBB == LoopBB)
+    return nullptr;
+
+  // Must be conditional branch
+  if (FBB == nullptr)
+    return nullptr;
+
+  assert((TBB == LoopBB || FBB == LoopBB) &&
+         "The Loop must be a single-basic-block loop");
+
+  // Normalization for createTripCountGreaterCondition()
+  if (TBB == LoopBB)
+    reverseBranchCondition(Cond);
+
+  const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+  auto FindRegDef = [&MRI](MachineOperand &Op) -> const MachineInstr * {
+    if (!Op.isReg())
+      return nullptr;
+    Register Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      return nullptr;
+    return MRI.getVRegDef(Reg);
+  };
+
+  const MachineInstr *LHS = FindRegDef(Cond[1]);
+  const MachineInstr *RHS = FindRegDef(Cond[2]);
+  if (LHS && LHS->isPHI())
+    return nullptr;
+  if (RHS && RHS->isPHI())
+    return nullptr;
+
+  return std::make_unique<RISCVPipelinerLoopInfo>(LHS, RHS, Cond);
+}
