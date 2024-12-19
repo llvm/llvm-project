@@ -914,6 +914,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FADD,
                        ISD::FSUB,
                        ISD::FDIV,
+                       ISD::FMUL,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
@@ -4040,17 +4041,15 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   Chain = SP.getValue(1);
   MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
-  unsigned Opc =
-      TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp
-          ? ISD::ADD
-          : ISD::SUB;
+  assert(TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
+         "Stack grows upwards for AMDGPU");
 
   SDValue ScaledSize = DAG.getNode(
       ISD::SHL, dl, VT, Size,
       DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
   Align StackAlign = TFL->getStackAlign();
-  Tmp1 = DAG.getNode(Opc, dl, VT, SP, ScaledSize); // Value
+  Tmp1 = DAG.getNode(ISD::ADD, dl, VT, SP, ScaledSize); // Value
   if (Alignment && *Alignment > StackAlign) {
     Tmp1 = DAG.getNode(
         ISD::AND, dl, VT, Tmp1,
@@ -12545,21 +12544,21 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
         return true;
 
       // If we have any non-vectorized use, then it is a candidate for v_perm
-      for (auto *VUse : OrUse->uses()) {
-        if (!VUse->getValueType(0).isVector())
+      for (auto *VUser : OrUse->users()) {
+        if (!VUser->getValueType(0).isVector())
           return true;
 
         // If the use of a vector is a store, then combining via a v_perm
         // is beneficial.
         // TODO -- whitelist more uses
         for (auto VectorwiseOp : {ISD::STORE, ISD::CopyToReg, ISD::CopyFromReg})
-          if (VUse->getOpcode() == VectorwiseOp)
+          if (VUser->getOpcode() == VectorwiseOp)
             return true;
       }
       return false;
     };
 
-    if (!any_of(N->uses(), usesCombinedOperand))
+    if (!any_of(N->users(), usesCombinedOperand))
       return SDValue();
 
     uint32_t LHSMask = getPermuteMask(LHS);
@@ -13896,10 +13895,10 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   // part of full-rate 64-bit ops).
   if (!Subtarget->hasFullRate64Ops()) {
     unsigned NumUsers = 0;
-    for (SDNode *Use : LHS->uses()) {
+    for (SDNode *User : LHS->users()) {
       // There is a use that does not feed into addition, so the multiply can't
       // be removed. We prefer MUL + ADD + ADDC over MAD + MUL.
-      if (Use->getOpcode() != ISD::ADD)
+      if (User->getOpcode() != ISD::ADD)
         return SDValue();
 
       // We prefer 2xMAD over MUL + 2xADD + 2xADDC (code density), and prefer
@@ -14629,13 +14628,73 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performFMulCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  EVT ScalarVT = VT.getScalarType();
+  EVT IntVT = VT.changeElementType(MVT::i32);
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // It is cheaper to realize i32 inline constants as compared against
+  // materializing f16 or f64 (or even non-inline f32) values,
+  // possible via ldexp usage, as shown below :
+  //
+  // Given : A = 2^a  &  B = 2^b ; where a and b are integers.
+  // fmul x, (select y, A, B)     -> ldexp( x, (select i32 y, a, b) )
+  // fmul x, (select y, -A, -B)   -> ldexp( (fneg x), (select i32 y, a, b) )
+  if ((ScalarVT == MVT::f64 || ScalarVT == MVT::f32 || ScalarVT == MVT::f16) &&
+      (RHS.hasOneUse() && RHS.getOpcode() == ISD::SELECT)) {
+    const ConstantFPSDNode *TrueNode = isConstOrConstSplatFP(RHS.getOperand(1));
+    if (!TrueNode)
+      return SDValue();
+    const ConstantFPSDNode *FalseNode =
+        isConstOrConstSplatFP(RHS.getOperand(2));
+    if (!FalseNode)
+      return SDValue();
+
+    if (TrueNode->isNegative() != FalseNode->isNegative())
+      return SDValue();
+
+    // For f32, only non-inline constants should be transformed.
+    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+    if (ScalarVT == MVT::f32 &&
+        TII->isInlineConstant(TrueNode->getValueAPF()) &&
+        TII->isInlineConstant(FalseNode->getValueAPF()))
+      return SDValue();
+
+    int TrueNodeExpVal = TrueNode->getValueAPF().getExactLog2Abs();
+    if (TrueNodeExpVal == INT_MIN)
+      return SDValue();
+    int FalseNodeExpVal = FalseNode->getValueAPF().getExactLog2Abs();
+    if (FalseNodeExpVal == INT_MIN)
+      return SDValue();
+
+    SDLoc SL(N);
+    SDValue SelectNode =
+        DAG.getNode(ISD::SELECT, SL, IntVT, RHS.getOperand(0),
+                    DAG.getSignedConstant(TrueNodeExpVal, SL, IntVT),
+                    DAG.getSignedConstant(FalseNodeExpVal, SL, IntVT));
+
+    LHS = TrueNode->isNegative()
+              ? DAG.getNode(ISD::FNEG, SL, VT, LHS, LHS->getFlags())
+              : LHS;
+
+    return DAG.getNode(ISD::FLDEXP, SL, VT, LHS, SelectNode, N->getFlags());
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performFMACombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
   SDLoc SL(N);
 
-  if (!Subtarget->hasDot7Insts() || VT != MVT::f32)
+  if (!Subtarget->hasDot10Insts() || VT != MVT::f32)
     return SDValue();
 
   // FMA((F32)S0.x, (F32)S1. x, FMA((F32)S0.y, (F32)S1.y, (F32)z)) ->
@@ -14915,6 +14974,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFSubCombine(N, DCI);
   case ISD::FDIV:
     return performFDivCombine(N, DCI);
+  case ISD::FMUL:
+    return performFMulCombine(N, DCI);
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::FMAXNUM:
@@ -16835,7 +16896,7 @@ bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
   // Check if we have a good chance to form the memory access pattern with the
   // base and offset
   return (DAG.isBaseWithConstantOffset(N0) &&
-          hasMemSDNodeUser(*N0->use_begin()));
+          hasMemSDNodeUser(*N0->user_begin()));
 }
 
 bool SITargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,

@@ -2585,6 +2585,13 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
                              : RTLIB::getLDEXP(N->getValueType(0));
 
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
+    // Scalarize vector FPOWI instead of promoting the type. This allows the
+    // scalar FPOWIs to be visited and converted to libcalls before promoting
+    // the type.
+    // FIXME: This should be done in LegalizeVectorOps/LegalizeDAG, but call
+    // lowering needs the unpromoted EVT.
+    if (IsPowI && N->getValueType(0).isVector())
+      return DAG.UnrollVectorOp(N);
     SmallVector<SDValue, 3> NewOps(N->ops());
     NewOps[1 + OpOffset] = SExtPromotedInteger(N->getOperand(1 + OpOffset));
     return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
@@ -2835,6 +2842,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::FREEZE:       SplitRes_FREEZE(N, Lo, Hi); break;
+  case ISD::SETCC:        ExpandIntRes_SETCC(N, Lo, Hi); break;
 
   case ISD::BITCAST:            ExpandRes_BITCAST(N, Lo, Hi); break;
   case ISD::BUILD_PAIR:         ExpandRes_BUILD_PAIR(N, Lo, Hi); break;
@@ -3314,6 +3322,20 @@ static std::pair<ISD::CondCode, ISD::NodeType> getExpandedMinMaxOps(int Op) {
     case ISD::UMIN:
       return std::make_pair(ISD::SETULT, ISD::UMIN);
   }
+}
+
+void DAGTypeLegalizer::ExpandIntRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDLoc DL(N);
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  EVT NewVT = getSetCCResultType(LHS.getValueType());
+
+  // Taking the same approach as ScalarizeVecRes_SETCC
+  SDValue Res = DAG.getNode(ISD::SETCC, DL, NewVT, LHS, RHS, N->getOperand(2));
+
+  Res = DAG.getBoolExtOrTrunc(Res, DL, N->getValueType(0), NewVT);
+  SplitInteger(Res, Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,

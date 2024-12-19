@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VARIANT_MONOSTATE_H
-#define _LIBCPP___VARIANT_MONOSTATE_H
+#ifndef _LIBCPP___CXX03___VARIANT_MONOSTATE_H
+#define _LIBCPP___CXX03___VARIANT_MONOSTATE_H
 
 #include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
@@ -61,4 +61,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<monostate> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VARIANT_MONOSTATE_H
+#endif // _LIBCPP___CXX03___VARIANT_MONOSTATE_H

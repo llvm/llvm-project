@@ -51,6 +51,8 @@ add_proxy_header_library(
   struct_flock
   HDRS
     struct_flock.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_flock
 )
@@ -59,6 +61,8 @@ add_proxy_header_library(
   struct_flock64
   HDRS
     struct_flock64.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_flock64
 )
@@ -67,6 +71,8 @@ add_proxy_header_library(
   struct_f_owner_ex
   HDRS
     struct_f_owner_ex.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_f_owner_ex
 )
@@ -85,6 +91,14 @@ add_proxy_header_library(
     size_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.size_t
+)
+
+add_proxy_header_library(
+  ssize_t
+  HDRS
+    ssize_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.ssize_t
 )
 
 add_proxy_header_library(
@@ -131,7 +145,6 @@ add_proxy_header_library(
     clockid_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.clockid_t
-    libc.include.sys_types
 )
 
 add_proxy_header_library(
@@ -167,7 +180,6 @@ add_proxy_header_library(
     pid_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.pid_t
-    libc.include.sys_types
 )
 
 add_proxy_header_library(
@@ -304,4 +316,12 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.wint_t
     libc.include.wchar
+)
+
+add_proxy_header_library(
+  uid_t
+  HDRS
+    uid_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.uid_t
 )

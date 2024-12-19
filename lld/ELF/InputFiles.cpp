@@ -1215,7 +1215,6 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
       Err(ctx) << "TLS attribute mismatch: " << &sym << "\n>>> in " << sym.file
                << "\n>>> in " << this;
 
-    hasVersionSyms |= sym.hasVersionSuffix;
     // Handle non-COMMON defined symbol below. !sym.file allows a symbol
     // assignment to redefine a symbol without an error.
     if (!sym.isDefined() || secIdx == SHN_UNDEF)
@@ -1591,8 +1590,6 @@ template <class ELFT> void SharedFile::parse() {
     s->dsoDefined = true;
     if (s->file == this)
       s->versionId = idx;
-    symbols[firstGlobal + i] = s;
-    hasVersionSyms = true;
   }
 }
 
@@ -1712,7 +1709,6 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 }
 
 static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
-                                const std::vector<bool> &keptComdats,
                                 const lto::InputFile::Symbol &objSym,
                                 BitcodeFile &f) {
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
@@ -1729,8 +1725,7 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
     sym = ctx.symtab->insert(objSym.getName());
   }
 
-  int c = objSym.getComdatIndex();
-  if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
+  if (objSym.isUndefined()) {
     Undefined newSym(&f, StringRef(), binding, visibility, type);
     sym->resolve(ctx, newSym);
     sym->referenced = true;
@@ -1769,10 +1764,10 @@ void BitcodeFile::parse() {
   // ObjFile<ELFT>::initializeSymbols.
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
 
   for (auto l : obj->getDependentLibraries())
     addDependentLibrary(ctx, l, this);

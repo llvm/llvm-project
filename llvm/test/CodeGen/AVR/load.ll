@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6,sram < %s -march=avr -verify-machineinstrs | FileCheck %s
+; RUN: llc -mattr=avr6,sram < %s -mtriple=avr -verify-machineinstrs | FileCheck %s
 
 define i8 @load8(ptr %x) {
 ; CHECK-LABEL: load8:

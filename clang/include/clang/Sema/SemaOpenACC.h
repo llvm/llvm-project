@@ -399,6 +399,9 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
+              ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -535,6 +538,9 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
+              ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
@@ -571,6 +577,9 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
+              ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
@@ -653,7 +662,8 @@ public:
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
   /// happen before any associated declarations or statements have been parsed.
   /// This function is only called when we are parsing a 'statement' context.
-  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
 
   /// Called after the directive, including its clauses, have been parsed and
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
@@ -669,12 +679,18 @@ public:
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  StmtResult ActOnEndStmtDirective(OpenACCDirectiveKind K,
-                                   SourceLocation StartLoc,
-                                   SourceLocation DirLoc,
-                                   SourceLocation EndLoc,
-                                   ArrayRef<OpenACCClause *> Clauses,
-                                   StmtResult AssocStmt);
+  /// LParenLoc: Location of the left paren, if it exists (not on all
+  /// constructs).
+  /// MiscLoc: First misc location, if necessary (not all constructs).
+  /// Exprs: List of expressions on the construct itself, if necessary (not all
+  /// constructs).
+  /// RParenLoc: Location of the right paren, if it exists (not on all
+  /// constructs).
+  StmtResult ActOnEndStmtDirective(
+      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+      SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
+      SourceLocation RParenLoc, SourceLocation EndLoc,
+      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
@@ -717,7 +733,8 @@ public:
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
   OpenACCClause *
-  CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+  CheckGangClause(OpenACCDirectiveKind DirKind,
+                  ArrayRef<const OpenACCClause *> ExistingClauses,
                   SourceLocation BeginLoc, SourceLocation LParenLoc,
                   ArrayRef<OpenACCGangKind> GangKinds,
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);

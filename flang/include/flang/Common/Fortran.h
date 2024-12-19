@@ -23,7 +23,8 @@ namespace Fortran::common {
 class LanguageFeatureControl;
 
 constexpr bool IsNumericTypeCategory(TypeCategory category) {
-  return category == TypeCategory::Integer || category == TypeCategory::Real ||
+  return category == TypeCategory::Integer ||
+      category == TypeCategory::Unsigned || category == TypeCategory::Real ||
       category == TypeCategory::Complex;
 }
 

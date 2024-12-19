@@ -136,6 +136,9 @@ mlir::Value genExprShape(mlir::OpBuilder &builder, const mlir::Location &loc,
 /// This has to be cleaned up, when HLFIR is the default.
 bool mayHaveAllocatableComponent(mlir::Type ty);
 
+/// Scalar integer or a sequence of integers (via boxed array or expr).
+bool isFortranIntegerScalarOrArrayObject(mlir::Type type);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H

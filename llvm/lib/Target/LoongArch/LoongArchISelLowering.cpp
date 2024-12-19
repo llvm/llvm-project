@@ -270,6 +270,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
     for (MVT VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64})
       setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
@@ -324,6 +326,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
     for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64})
       setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
@@ -440,8 +444,54 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::BITREVERSE:
+    return lowerBITREVERSE(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT ResTy = Op->getValueType(0);
+  SDValue Src = Op->getOperand(0);
+  SDLoc DL(Op);
+
+  EVT NewVT = ResTy.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
+  unsigned int OrigEltNum = ResTy.getVectorNumElements();
+  unsigned int NewEltNum = NewVT.getVectorNumElements();
+
+  SDValue NewSrc = DAG.getNode(ISD::BITCAST, DL, NewVT, Src);
+
+  SmallVector<SDValue, 8> Ops;
+  for (unsigned int i = 0; i < NewEltNum; i++) {
+    SDValue Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, NewSrc,
+                             DAG.getConstant(i, DL, MVT::i64));
+    SDValue RevOp = DAG.getNode((ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
+                                    ? LoongArchISD::BITREV_8B
+                                    : ISD::BITREVERSE,
+                                DL, MVT::i64, Op);
+    Ops.push_back(RevOp);
+  }
+  SDValue Res =
+      DAG.getNode(ISD::BITCAST, DL, ResTy, DAG.getBuildVector(NewVT, DL, Ops));
+
+  switch (ResTy.getSimpleVT().SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::v16i8:
+  case MVT::v32i8:
+    return Res;
+  case MVT::v8i16:
+  case MVT::v16i16:
+  case MVT::v4i32:
+  case MVT::v8i32: {
+    SmallVector<int, 32> Mask;
+    for (unsigned int i = 0; i < NewEltNum; i++)
+      for (int j = OrigEltNum / NewEltNum - 1; j >= 0; j--)
+        Mask.push_back(j + (OrigEltNum / NewEltNum) * i);
+    return DAG.getVectorShuffle(ResTy, DL, Res, DAG.getUNDEF(ResTy), Mask);
+  }
+  }
 }
 
 /// Determine whether a range fits a regular pattern of values.
@@ -4685,6 +4735,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(REVB_2H)
     NODE_NAME_CASE(REVB_2W)
     NODE_NAME_CASE(BITREV_4B)
+    NODE_NAME_CASE(BITREV_8B)
     NODE_NAME_CASE(BITREV_W)
     NODE_NAME_CASE(ROTR_W)
     NODE_NAME_CASE(ROTL_W)
@@ -5289,7 +5340,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
   if (!N->hasNUsesOfValue(1, 0))
     return false;
 
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() != ISD::CopyToReg)
     return false;
 
@@ -5300,7 +5351,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
 
   // The copy must be used by a LoongArchISD::RET, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != LoongArchISD::RET)
       return false;
     HasRet = true;
