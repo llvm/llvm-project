@@ -2179,6 +2179,15 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
+  void Unparse(const OmpInitClause::InteropTypes &x) { Walk(x.v, ","); }
+  void Unparse(const OmpInitClause::InteropModifier &x) { Walk(x.v, ","); }
+  void Unparse(const OmpInitClause &x) {
+    Walk("PREFER_TYPE(",
+        std::get<std::optional<OmpInitClause::InteropModifier>>(x.t), "),");
+    Walk(std::get<OmpInitClause::InteropTypes>(x.t));
+    Put(": ");
+    Walk(std::get<OmpInitClause::InteropVar>(x.t));
+  }
   void Unparse(const OmpMapClause &x) {
     using Modifier = OmpMapClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2740,6 +2749,15 @@ public:
     Put("\n");
     EndOpenMP();
   }
+
+  void Unparse(const OpenMPInteropConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP INTEROP");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
+
   void Unparse(const OpenMPDeclarativeAssumes &x) {
     BeginOpenMP();
     Word("!$OMP ASSUMES ");
@@ -3037,6 +3055,7 @@ public:
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
+  WALK_NESTED_ENUM(InteropType, Kind) // OMP InteropVar
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
   WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness

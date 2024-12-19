@@ -5638,6 +5638,91 @@ void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
   Base::Leave(x);
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
+  bool isDependClauseOccured{false};
+  int targetCount{0}, targetSyncCount{0};
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  std::list<std::string> ObjectNameList;
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_interop);
+  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
+  for (const auto &clause : clauseList.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::OmpClause::Init &InitClause) {
+              const auto &InteropTypeList{
+                  std::get<parser::OmpInitClause::InteropTypes>(
+                      InitClause.v.t)};
+              for (auto &InteropTypeVal : InteropTypeList.v) {
+                if (*(parser::Unwrap<parser::InteropType::Kind>(
+                        InteropTypeVal)) ==
+                    parser::InteropType::Kind::TargetSync) {
+                  ++targetSyncCount;
+                } else {
+                  ++targetCount;
+                }
+                if (targetCount > 1 || targetSyncCount > 1) {
+                  context_.Say(GetContext().directiveSource,
+                      "Each interop-type may be speciﬁed at most once."_err_en_US);
+                }
+              }
+              const auto &InteropVar{parser::Unwrap<parser::OmpObject>(
+                  std::get<parser::OmpInitClause::InteropVar>(InitClause.v.t))};
+              const auto *name{parser::Unwrap<parser::Name>(InteropVar)};
+              const auto ObjectName{name->ToString()};
+              if (ObjectNameList.end() !=
+                  std::find(ObjectNameList.begin(), ObjectNameList.end(),
+                      ObjectName)) {
+                context_.Say(GetContext().directiveSource,
+                    "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
+              } else {
+                ObjectNameList.push_back(ObjectName);
+              }
+            },
+            [&](const parser::OmpClause::Depend &DependClause) {
+              isDependClauseOccured = true;
+            },
+            [&](const parser::OmpClause::Destroy &DestroyClause) {
+              const auto &InteropVar{
+                  parser::Unwrap<parser::OmpObject>(DestroyClause.v)};
+              const auto *name{parser::Unwrap<parser::Name>(InteropVar)};
+              const auto ObjectName{name->ToString()};
+              if (ObjectNameList.end() !=
+                  std::find(ObjectNameList.begin(), ObjectNameList.end(),
+                      ObjectName)) {
+                context_.Say(GetContext().directiveSource,
+                    "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
+              } else {
+                ObjectNameList.push_back(ObjectName);
+              }
+            },
+            [&](const parser::OmpClause::Use &UseClause) {
+              const auto &InteropVar{
+                  parser::Unwrap<parser::OmpObject>(UseClause.v)};
+              const auto *name{parser::Unwrap<parser::Name>(InteropVar)};
+              const auto ObjectName{name->ToString()};
+              if (ObjectNameList.end() !=
+                  std::find(ObjectNameList.begin(), ObjectNameList.end(),
+                      ObjectName)) {
+                context_.Say(GetContext().directiveSource,
+                    "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
+              } else {
+                ObjectNameList.push_back(ObjectName);
+              }
+            },
+            [&](const auto &) {},
+        },
+        clause.u);
+  }
+  if (isDependClauseOccured && !targetSyncCount) {
+    context_.Say(GetContext().directiveSource,
+        "A depend clause can only appear on the directive if the interop-type includes targetsync"_err_en_US);
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPInteropConstruct &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
   CheckAllowedClause(clause);
 

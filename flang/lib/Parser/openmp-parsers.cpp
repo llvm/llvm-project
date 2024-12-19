@@ -757,6 +757,22 @@ TYPE_PARSER(
 // OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
 TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
+// InteropTypes
+TYPE_PARSER(construct<InteropType>(
+    "TARGETSYNC" >> pure(InteropType::Kind::TargetSync) ||
+    "TARGET" >> pure(InteropType::Kind::Target)))
+
+// InteropPreference
+TYPE_PARSER(construct<InteropPreference>(
+    construct<InteropPreference>(charLiteralConstant) ||
+    construct<InteropPreference>(scalarIntConstantExpr)))
+
+// init clause
+TYPE_PARSER(construct<OmpInitClause>(
+    maybe(verbatim("PREFER_TYPE"_tok) >>
+        parenthesized(nonemptyList(Parser<InteropPreference>{})) / ","),
+    nonemptyList(Parser<InteropType>{}) / ":", Parser<OmpObject>{}))
+
 // 2.8.1 ALIGNED (list: alignment)
 TYPE_PARSER(construct<OmpAlignedClause>(Parser<OmpObjectList>{},
     maybe(":" >> nonemptyList(Parser<OmpAlignedClause::Modifier>{}))))
@@ -896,6 +912,8 @@ TYPE_PARSER( //
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
+    "INIT" >> construct<OmpClause>(construct<OmpClause::Init>(
+                  parenthesized(Parser<OmpInitClause>{}))) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
     "INITIALIZER" >> construct<OmpClause>(construct<OmpClause::Initializer>(
@@ -985,6 +1003,8 @@ TYPE_PARSER( //
                           parenthesized(scalarIntExpr))) ||
     "TO" >> construct<OmpClause>(construct<OmpClause::To>(
                 parenthesized(Parser<OmpToClause>{}))) ||
+    "USE" >> construct<OmpClause>(construct<OmpClause::Use>(
+                 parenthesized(Parser<OmpObject>{}))) ||
     "USE_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::UseDevicePtr>(
                             parenthesized(Parser<OmpObjectList>{}))) ||
     "USE_DEVICE_ADDR" >>
@@ -1212,6 +1232,10 @@ TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(
 TYPE_PARSER(sourced(construct<OpenMPSimpleStandaloneConstruct>(
     Parser<OmpSimpleStandaloneDirective>{}, Parser<OmpClauseList>{})))
 
+// 14.1 Interop construct
+TYPE_PARSER(sourced(construct<OpenMPInteropConstruct>(
+    verbatim("INTEROP"_tok), sourced(Parser<OmpClauseList>{}))))
+
 // Standalone Constructs
 TYPE_PARSER(
     sourced(construct<OpenMPStandaloneConstruct>(
@@ -1223,7 +1247,9 @@ TYPE_PARSER(
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPCancelConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(
             Parser<OmpMetadirectiveDirective>{}) ||
-        construct<OpenMPStandaloneConstruct>(Parser<OpenMPDepobjConstruct>{})) /
+        construct<OpenMPStandaloneConstruct>(Parser<OpenMPDepobjConstruct>{}) ||
+        construct<OpenMPStandaloneConstruct>(
+            Parser<OpenMPInteropConstruct>{})) /
     endOfLine)
 
 // Directives enclosing structured-block
