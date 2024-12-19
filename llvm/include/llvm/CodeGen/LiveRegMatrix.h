@@ -48,7 +48,7 @@ class LiveRegMatrix {
   unsigned UserTag = 0;
 
   // The matrix is represented as a LiveIntervalUnion per register unit.
-  LiveIntervalUnion::Allocator LIUAlloc;
+  std::unique_ptr<LiveIntervalUnion::Allocator> LIUAlloc;
   LiveIntervalUnion::Array Matrix;
 
   // Cached queries per register unit.
@@ -59,15 +59,11 @@ class LiveRegMatrix {
   unsigned RegMaskVirtReg = 0;
   BitVector RegMaskUsable;
 
-  LiveRegMatrix() = default;
+  LiveRegMatrix() : LIUAlloc(new LiveIntervalUnion::Allocator()) {};
   void releaseMemory();
 
 public:
-  LiveRegMatrix(LiveRegMatrix &&Other)
-      : TRI(Other.TRI), LIS(Other.LIS), VRM(Other.VRM), UserTag(Other.UserTag),
-        Matrix(std::move(Other.Matrix)), Queries(std::move(Other.Queries)),
-        RegMaskTag(Other.RegMaskTag), RegMaskVirtReg(Other.RegMaskVirtReg),
-        RegMaskUsable(std::move(Other.RegMaskUsable)) {}
+  LiveRegMatrix(LiveRegMatrix &&Other) = default;
 
   void init(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM);
 
