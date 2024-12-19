@@ -185,9 +185,9 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
     isecEnd = alignToPowerOf2(isecEnd, isec->align) + isec->getSize();
   }
 
-  // Tally up any thunks that have already been placed that have address higher
-  // than the equivalent callIdx. We first find the index of the first thunk
-  // that is beyond the current inputs[callIdx].
+  // Tally up any thunks that have already been placed that have VA higher than
+  // inputs[callIdx]. First, find the index of the first thunk that is beyond
+  // the current inputs[callIdx].
   auto itPostcallIdxThunks = std::partition_point(
       thunks.begin(), thunks.end(),
       [isecVA](const ConcatInputSection *t) { return t->getVA() <= isecVA; });
@@ -206,18 +206,20 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   // Add the size of all the inputs, including the unprocessed ones.
   maxTextSize += isecEnd;
 
+  // Add the size of the thunks that have already been created that are ahead of
+  // inputs[callIdx]. These are already created thunks that will be interleaved
+  // with inputs[callIdx...end].
+  maxTextSize += existingForwardThunks * target->thunkSize;
+
   // Add the size of the thunks that may be created in the future. Since
   // 'maxPotentialThunks' overcounts, this is an estimate of the upper limit.
   maxTextSize += maxPotentialThunks * target->thunkSize;
-
-  // Add the size of the thunks that have already been created that are ahead
-  maxTextSize += existingForwardThunks * target->thunkSize;
 
   // Estimated maximum VA of last stub.
   uint64_t maxVAOfLastStub = maxTextSize + in.stubs->getSize();
 
   // Calculaate the first address that is gueranteed to not need a thunk to
-  // reach any stub.git
+  // reach any stub.
   uint64_t stubsInRangeVA = maxVAOfLastStub - forwardBranchRange;
 
   log("thunks = " + std::to_string(thunkMap.size()) +
