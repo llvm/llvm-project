@@ -87,6 +87,8 @@ private:
   SDValue lowerWaveIDInWavegroup(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
+  SDValue buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG, SDValue Op,
+                                           unsigned Dim) const;
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;

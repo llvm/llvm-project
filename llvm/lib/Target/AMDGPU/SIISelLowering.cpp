@@ -9475,6 +9475,11 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   if (MaxID == 0)
     return DAG.getConstant(0, SL, MVT::i32);
 
+  // Wavegroup launch mode needs to compute workitem id
+  if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
+    return buildWorkitemIdWavegroupModeISel(DAG, Op, Dim);
+  }
+
   SDValue Val = loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                                SDLoc(DAG.getEntryNode()), Arg);
 
@@ -9489,6 +9494,60 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_width(MaxID));
   return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Val,
                      DAG.getValueType(SmallVT));
+}
+
+SDValue SITargetLowering::buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG,
+                                                           SDValue Op,
+                                                           unsigned Dim) const {
+  /* See buildWorkitemIdWavegroupModeGISel for desc */
+  assert(((Dim == 0) || (Dim == 1) || (Dim == 2)) &&
+         "Unknown value for Dim. Expected 0, 1, or 2");
+  MachineFunction &MF = DAG.getMachineFunction();
+  unsigned MaxIDX = Subtarget->getMaxWorkitemID(MF.getFunction(), 0);
+  unsigned MaxIDY = Subtarget->getMaxWorkitemID(MF.getFunction(), 1);
+  unsigned MaxIDZ = Subtarget->getMaxWorkitemID(MF.getFunction(), 2);
+  assert((((MaxIDX + 1) * (MaxIDY + 1) * (MaxIDZ + 1)) % 128 == 0) &&
+         "Total threads per workgroup in wavegroup dispatch mode must be an "
+         "integer multiple of 128.");
+
+  SDLoc SL(Op);
+  auto VT32 = MVT::i32;
+
+  // calculate FlatWorkitemID
+  auto TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT32);
+  auto WaveIdInWorkgroup =
+      DAG.getNode(AMDGPUISD::BFE_U32, SL, VT32, TTMP8,
+                  DAG.getConstant(25, SL, VT32), DAG.getConstant(5, SL, VT32));
+  auto ShiftAmt = DAG.getConstant(5, SL, VT32);
+  auto ThreadOffset =
+      DAG.getNode(ISD::SHL, SL, VT32, WaveIdInWorkgroup, ShiftAmt);
+  auto AllOnes = DAG.getSignedTargetConstant(-1, SL, VT32);
+  auto LaneID = DAG.getConstant(0, SL, VT32);
+  LaneID =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, VT32,
+                  DAG.getTargetConstant(Intrinsic::amdgcn_mbcnt_lo, SL, VT32),
+                  AllOnes, LaneID);
+  auto FlatWorkitemID = DAG.getNode(ISD::ADD, SL, VT32, ThreadOffset, LaneID);
+
+  // compute WorkitemIDX = FlatWorkitemID % DimX
+  auto DimX = DAG.getConstant(MaxIDX, SL, VT32);
+  auto DivX = DAG.getNode(ISD::UDIVREM, SL, DAG.getVTList(VT32, VT32),
+                          FlatWorkitemID, DimX);
+  auto RemX = DivX.getValue(1);
+  if (Dim == 0) {
+    return RemX;
+  }
+
+  // compute WorkitemIDY or WorkitemIDY
+  auto DimY = DAG.getConstant(MaxIDY, SL, VT32);
+  auto DivY =
+      DAG.getNode(ISD::UDIVREM, SL, DAG.getVTList(VT32, VT32), DivX, DimY);
+  auto RemY = DivX.getValue(1);
+  if (Dim == 1) {
+    return RemY; // WorkitemIDY = (FlatWorkitemID / DimX) % DimY
+  } else if (Dim == 2) {
+    return DivY; // WorkitemIDY = (FlatWorkitemID / DimX) / DimY
+  }
 }
 
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
