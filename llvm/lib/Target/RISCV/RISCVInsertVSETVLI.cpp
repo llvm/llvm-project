@@ -219,12 +219,12 @@ struct DemandedFields {
   // What properties of SEW we need to preserve.
   enum : uint8_t {
     SEWEqual = 3,              // The exact value of SEW needs to be preserved.
-    SEWGreaterThanOrEqual = 2, // SEW can be changed as long as it's greater
-                               // than or equal to the original value.
     SEWGreaterThanOrEqualAndLessThan64 =
-        1,      // SEW can be changed as long as it's greater
+        2,      // SEW can be changed as long as it's greater
                 // than or equal to the original value, but must be less
                 // than 64.
+    SEWGreaterThanOrEqual = 1, // SEW can be changed as long as it's greater
+                               // than or equal to the original value.
     SEWNone = 0 // We don't need to preserve SEW at all.
   } SEW = SEWNone;
   enum : uint8_t {
