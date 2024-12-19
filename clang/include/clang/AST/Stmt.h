@@ -114,10 +114,9 @@ protected:
 #define STMT(CLASS, PARENT)
 #define STMT_RANGE(BASE, FIRST, LAST)
 #define LAST_STMT_RANGE(BASE, FIRST, LAST)                                     \
-  static_assert(                                                               \
-      llvm::isInt<NumStmtBits>(StmtClass::LAST##Class),                        \
-      "The number of 'StmtClass'es is strictly bounded under two to "          \
-      "the power of 'NumStmtBits'");
+  static_assert(llvm::isUInt<NumStmtBits>(StmtClass::LAST##Class),             \
+                "The number of 'StmtClass'es is strictly bound "               \
+                "by a bitfield of width NumStmtBits");
 #define ABSTRACT_STMT(STMT)
 #include "clang/AST/StmtNodes.inc"
 
