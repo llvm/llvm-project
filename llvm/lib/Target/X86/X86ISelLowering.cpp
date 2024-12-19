@@ -7397,7 +7397,7 @@ static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
 }
 
 static bool isFoldableUseOfShuffle(SDNode *N) {
-  for (auto *U : N->uses()) {
+  for (auto *U : N->users()) {
     unsigned Opc = U->getOpcode();
     // VPERMV/VPERMV3 shuffles can never fold their index operands.
     if (Opc == X86ISD::VPERMV && U->getOperand(0).getNode() == N)
@@ -16004,7 +16004,7 @@ static SDValue lowerShufflePairAsUNPCKAndPermute(const SDLoc &DL, MVT VT,
 
   // Find the intersection between shuffle users of V1 and V2.
   SmallVector<SDNode *, 2> Shuffles;
-  for (SDNode *User : V1->uses())
+  for (SDNode *User : V1->users())
     if (User->getOpcode() == ISD::VECTOR_SHUFFLE && User->getOperand(0) == V1 &&
         User->getOperand(1) == V2)
       Shuffles.push_back(User);
@@ -18280,7 +18280,7 @@ static APInt getExtractedDemandedElts(SDNode *N) {
   MVT VT = N->getSimpleValueType(0);
   unsigned NumElts = VT.getVectorNumElements();
   APInt DemandedElts = APInt::getZero(NumElts);
-  for (SDNode *User : N->uses()) {
+  for (SDNode *User : N->users()) {
     switch (User->getOpcode()) {
     case X86ISD::PEXTRB:
     case X86ISD::PEXTRW:
@@ -22143,7 +22143,7 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
   // If this is a FABS and it has an FNEG user, bail out to fold the combination
   // into an FNABS. We'll lower the FABS after that if it is still in use.
   if (IsFABS)
-    for (SDNode *User : Op->uses())
+    for (SDNode *User : Op->users())
       if (User->getOpcode() == ISD::FNEG)
         return Op;
 
@@ -22888,7 +22888,7 @@ static bool hasNonFlagsUse(SDValue Op) {
 // using an RMW op or only the flags are used. Otherwise, leave
 // the node alone and emit a 'cmp' or 'test' instruction.
 static bool isProfitableToUseFlagOp(SDValue Op) {
-  for (SDNode *U : Op->uses())
+  for (SDNode *U : Op->users())
     if (U->getOpcode() != ISD::CopyToReg &&
         U->getOpcode() != ISD::SETCC &&
         U->getOpcode() != ISD::STORE)
@@ -41712,7 +41712,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
     // Share broadcast with the longest vector and extract low subvector (free).
     // Ensure the same SDValue from the SDNode use is being used.
-    for (SDNode *User : Src->uses())
+    for (SDNode *User : Src->users())
       if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
           Src == User->getOperand(0) &&
           User->getValueSizeInBits(0).getFixedValue() >
@@ -42910,7 +42910,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     // If we reuse the shift amount just for sse shift amounts then we know that
     // only the bottom 64-bits are only ever used.
-    bool AssumeSingleUse = llvm::all_of(Amt->uses(), [&Amt](SDNode *Use) {
+    bool AssumeSingleUse = llvm::all_of(Amt->users(), [&Amt](SDNode *Use) {
       unsigned UseOpc = Use->getOpcode();
       return (UseOpc == X86ISD::VSHL || UseOpc == X86ISD::VSRL ||
               UseOpc == X86ISD::VSRA) &&
@@ -45670,7 +45670,7 @@ combineExtractFromVectorLoad(SDNode *N, EVT VecVT, SDValue SrcVec, uint64_t Idx,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = N->getValueType(0);
 
-  bool LikelyUsedAsVector = any_of(N->uses(), [](SDNode *Use) {
+  bool LikelyUsedAsVector = any_of(N->users(), [](SDNode *Use) {
     return Use->getOpcode() == ISD::STORE ||
            Use->getOpcode() == ISD::INSERT_VECTOR_ELT ||
            Use->getOpcode() == ISD::SCALAR_TO_VECTOR;
@@ -46338,7 +46338,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       return false;
     };
     // TODO: Can we drop the oneuse check for constant extracts?
-    if (all_of(InputVector->uses(), IsBoolExtract) &&
+    if (all_of(InputVector->users(), IsBoolExtract) &&
         (IsVar || BoolExtracts.size() > 1)) {
       EVT BCVT = EVT::getIntegerVT(*DAG.getContext(), NumSrcElts);
       if (SDValue BC =
@@ -46754,7 +46754,7 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
     // the generic VSELECT anymore. Otherwise, we may perform wrong
     // optimizations as we messed with the actual expectation for the vector
     // boolean values.
-    for (SDNode *U : Cond->uses()) {
+    for (SDNode *U : Cond->users()) {
       if (U->getOpcode() == X86ISD::BLENDV)
         continue;
 
@@ -49937,7 +49937,7 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
         (VT == MVT::f16 && Subtarget.hasFP16())) {
       bool ExpectingFlags = false;
       // Check for any users that want flags:
-      for (const SDNode *U : N->uses()) {
+      for (const SDNode *U : N->users()) {
         if (ExpectingFlags)
           break;
 
@@ -50765,7 +50765,7 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
     return SDValue();
 
   // Check the only user of flag is `brcond ne`.
-  SDNode *BrCond = *Flag->uses().begin();
+  SDNode *BrCond = *Flag->use_begin();
   if (BrCond->getOpcode() != X86ISD::BRCOND)
     return SDValue();
   unsigned CondNo = 2;
@@ -52179,7 +52179,7 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
 
   // Look through all other loads/broadcasts in the chain for another constant
   // pool entry.
-  for (SDNode *User : Chain->uses()) {
+  for (SDNode *User : Chain->users()) {
     auto *UserLd = dyn_cast<MemSDNode>(User);
     if (User != N && UserLd &&
         (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
@@ -52289,7 +52289,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
       (RegVT.is128BitVector() || RegVT.is256BitVector())) {
     SDValue Ptr = Ld->getBasePtr();
     SDValue Chain = Ld->getChain();
-    for (SDNode *User : Chain->uses()) {
+    for (SDNode *User : Chain->users()) {
       auto *UserLd = dyn_cast<MemSDNode>(User);
       if (User != N && UserLd &&
           User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
@@ -53150,8 +53150,8 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
     return User->getOpcode() == HOpcode && User->getValueType(0) == VT;
   };
   ForceHorizOp =
-      ForceHorizOp || (llvm::any_of(NewLHS->uses(), FoundHorizUser) &&
-                       llvm::any_of(NewRHS->uses(), FoundHorizUser));
+      ForceHorizOp || (llvm::any_of(NewLHS->users(), FoundHorizUser) &&
+                       llvm::any_of(NewRHS->users(), FoundHorizUser));
 
   // Assume a SingleSource HOP if we only shuffle one input and don't need to
   // shuffle the result.
@@ -54878,7 +54878,7 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
   // of single 'add' instructions, but the cost model for selecting an LEA
   // currently has a high threshold.
   bool HasLEAPotential = false;
-  for (auto *User : Ext->uses()) {
+  for (auto *User : Ext->users()) {
     if (User->getOpcode() == ISD::ADD || User->getOpcode() == ISD::SHL) {
       HasLEAPotential = true;
       break;
@@ -55066,10 +55066,11 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
   // Check if we can eliminate V. We assume if a value is only used in FMAs, we
   // can eliminate it. Since this function is invoked for each FMA with this
   // vector.
-  auto IsNotFMA = [](SDNode *Use) {
-    return Use->getOpcode() != ISD::FMA && Use->getOpcode() != ISD::STRICT_FMA;
+  auto IsNotFMA = [](SDNode *User) {
+    return User->getOpcode() != ISD::FMA &&
+           User->getOpcode() != ISD::STRICT_FMA;
   };
-  if (llvm::any_of(V->uses(), IsNotFMA))
+  if (llvm::any_of(V->users(), IsNotFMA))
     return SDValue();
 
   SmallVector<SDValue, 8> Ops;
@@ -55090,7 +55091,7 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
 
   // If an inverted version cannot be eliminated, choose it instead of the
   // original version.
-  if (llvm::any_of(NV->uses(), IsNotFMA))
+  if (llvm::any_of(NV->users(), IsNotFMA))
     return SDValue(NV, 0);
 
   // If the inverted version also can be eliminated, we have to consistently
@@ -56183,7 +56184,7 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
 static bool needCarryOrOverflowFlag(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (const SDNode *User : Flags->uses()) {
+  for (const SDNode *User : Flags->users()) {
     X86::CondCode CC;
     switch (User->getOpcode()) {
     default:
@@ -56218,7 +56219,7 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
 static bool onlyZeroFlagUsed(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (const SDNode *User : Flags->uses()) {
+  for (const SDNode *User : Flags->users()) {
     unsigned CCOpNo;
     switch (User->getOpcode()) {
     default:
@@ -56829,7 +56830,7 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
   // TODO: If target has "slow3OpsLEA", do this even without the trailing memop?
   if (OtherOp.getOpcode() == ISD::ADD && OtherOp.hasOneUse() &&
       !isa<ConstantSDNode>(OtherOp.getOperand(0)) &&
-      all_of(N->uses(), [&](SDNode *Use) {
+      all_of(N->users(), [&](SDNode *Use) {
         auto *MemNode = dyn_cast<MemSDNode>(Use);
         return MemNode && MemNode->getBasePtr().getNode() == N;
       })) {
@@ -58485,7 +58486,7 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG,
   // See if we're broadcasting the scalar value, in which case just reuse that.
   // Ensure the same SDValue from the SDNode use is being used.
   if (VT.getScalarType() == Src.getValueType())
-    for (SDNode *User : Src->uses())
+    for (SDNode *User : Src->users())
       if (User->getOpcode() == X86ISD::VBROADCAST &&
           Src == User->getOperand(0)) {
         unsigned SizeInBits = VT.getFixedSizeInBits();
@@ -58881,7 +58882,7 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
 
   // Look at other users of our base pointer and try to find a wider broadcast.
   // The input chain and the size of the memory VT must match.
-  for (SDNode *User : Ptr->uses())
+  for (SDNode *User : Ptr->users())
     if (User != N && User->getOpcode() == N->getOpcode() &&
         cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
         cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&

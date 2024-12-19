@@ -189,7 +189,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
 #ifndef NDEBUG
   // Checked that NewNodes are only used by other NewNodes.
   for (SDNode *N : NewNodes) {
-    for (SDNode *U : N->uses())
+    for (SDNode *U : N->users())
       assert(U->getNodeId() == NewNode && "NewNode used by non-NewNode!");
   }
 #endif
@@ -399,7 +399,7 @@ NodeDone:
     assert(N->getNodeId() == ReadyToProcess && "Node ID recalculated?");
     N->setNodeId(Processed);
 
-    for (SDNode *User : N->uses()) {
+    for (SDNode *User : N->users()) {
       int NodeId = User->getNodeId();
 
       // This node has two options: it can either be a new node or its Node ID
