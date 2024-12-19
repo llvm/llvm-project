@@ -574,12 +574,8 @@ def bolt_optimize(args):
 
     opts = parser.parse_args(args)
 
-    readelf = opts.readelf
-    bolt = opts.bolt
-    lit = opts.lit
-
     output = subprocess.check_output(
-        [readelf, "-WS", opts.input], universal_newlines=True
+        [opts.readelf, "-WS", opts.input], universal_newlines=True
     )
 
     # This binary has already been bolt-optimized, so skip further processing.
@@ -589,7 +585,7 @@ def bolt_optimize(args):
     if opts.method == "INSTRUMENT":
         process = subprocess.run(
             [
-                bolt,
+                opts.bolt,
                 opts.input,
                 "-o",
                 opts.instrumented_output,
@@ -610,7 +606,7 @@ def bolt_optimize(args):
     process = subprocess.run(
         [
             sys.executable,
-            lit,
+            opts.lit,
             os.path.join(opts.perf_training_binary_dir, "bolt-fdata"),
         ],
         stdout=subprocess.PIPE,
@@ -624,7 +620,7 @@ def bolt_optimize(args):
     process.check_returncode()
 
     if opts.method in ["PERF", "LBR"]:
-        perf2bolt([bolt, opts.perf_training_binary_dir, opts.input])
+        perf2bolt([opts.bolt, opts.perf_training_binary_dir, opts.input])
 
     merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
 
