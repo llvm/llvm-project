@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include <optional>
 
@@ -179,8 +180,7 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
     if (RHS == 0)
       isIdempotent = true;
     else if (RHS.isAllOnes()) {
-      const llvm::APSInt &Result = BasicVals.Convert(resultTy, RHS);
-      return nonloc::ConcreteInt(Result);
+      return nonloc::ConcreteInt(BasicVals.Convert(resultTy, RHS));
     }
     break;
   }
@@ -234,9 +234,10 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
 static bool isInRelation(BinaryOperator::Opcode Rel, SymbolRef Sym,
                          llvm::APSInt Bound, ProgramStateRef State) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  SVal Result =
-      SVB.evalBinOpNN(State, Rel, nonloc::SymbolVal(Sym),
-                      nonloc::ConcreteInt(Bound), SVB.getConditionType());
+  BasicValueFactory &BV = SVB.getBasicValueFactory();
+  SVal Result = SVB.evalBinOpNN(State, Rel, nonloc::SymbolVal(Sym),
+                                nonloc::ConcreteInt(BV.getValue(Bound)),
+                                SVB.getConditionType());
   if (auto DV = Result.getAs<DefinedSVal>()) {
     return !State->assume(*DV, false);
   }
@@ -273,14 +274,14 @@ static bool isWithinConstantOverflowBounds(llvm::APSInt I) {
   return (I <= Max) && (I >= -Max);
 }
 
-static std::pair<SymbolRef, llvm::APSInt>
-decomposeSymbol(SymbolRef Sym, BasicValueFactory &BV) {
+static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
+                                                       BasicValueFactory &BV) {
   if (const auto *SymInt = dyn_cast<SymIntExpr>(Sym))
     if (BinaryOperator::isAdditiveOp(SymInt->getOpcode()))
       return std::make_pair(SymInt->getLHS(),
-                            (SymInt->getOpcode() == BO_Add) ?
-                            (SymInt->getRHS()) :
-                            (-SymInt->getRHS()));
+                            (SymInt->getOpcode() == BO_Add)
+                                ? BV.getValue(SymInt->getRHS())
+                                : BV.getValue(-SymInt->getRHS()));
 
   // Fail to decompose: "reduce" the problem to the "$x + 0" case.
   return std::make_pair(Sym, BV.getValue(0, Sym->getType()));
@@ -314,8 +315,9 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
     llvm_unreachable("Operation not suitable for unchecked rearrangement!");
 
   if (LSym == RSym)
-    return SVB.evalBinOpNN(State, Op, nonloc::ConcreteInt(LInt),
-                           nonloc::ConcreteInt(RInt), ResultTy)
+    return SVB
+        .evalBinOpNN(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
+                     nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
         .castAs<NonLoc>();
 
   SymbolRef ResultSym = nullptr;
@@ -1211,7 +1213,7 @@ const llvm::APSInt *SimpleSValBuilder::getConcreteValue(SVal V) {
     return &X->getValue();
 
   if (std::optional<nonloc::ConcreteInt> X = V.getAs<nonloc::ConcreteInt>())
-    return &X->getValue();
+    return X->getValue().get();
 
   return nullptr;
 }
