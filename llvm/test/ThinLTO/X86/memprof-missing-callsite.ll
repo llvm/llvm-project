@@ -31,6 +31,7 @@
 ; RUN:  --check-prefix=SIZESUNHINTED
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --implicit-check-not "\"memprof\"=\"cold\""
 
+;; Check that we do hint with a sufficient -memprof-cloning-cold-threshold.
 ; RUN: opt -thinlto-bc -memprof-report-hinted-sizes %s >%t.o
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
 ; RUN:	-supports-hot-cold-new \
@@ -42,6 +43,8 @@
 ; RUN:  --check-prefix=SIZESHINTED
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IRHINTED
 
+;; Check again that we hint with a sufficient -memprof-cloning-cold-threshold,
+;; even if we don't specify -memprof-report-hinted-sizes.
 ; RUN: opt -thinlto-bc -memprof-report-hinted-sizes %s >%t.o
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
 ; RUN:	-supports-hot-cold-new \

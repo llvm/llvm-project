@@ -4477,6 +4477,9 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           // will still be none type or should have gotten the default NotCold.
           // Skip that after calling clone helper since that does some sanity
           // checks that confirm we haven't decided yet that we need cloning.
+          // We might have a single version that is cold due to the
+          // MinClonedColdBytePercent heuristic, make sure we don't skip in that
+          // case.
           if (AllocNode.Versions.size() == 1 &&
               (AllocationType)AllocNode.Versions[0] != AllocationType::Cold) {
             assert((AllocationType)AllocNode.Versions[0] ==
