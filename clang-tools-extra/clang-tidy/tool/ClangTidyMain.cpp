@@ -564,7 +564,7 @@ int clangTidyMain(int argc, const char **argv) {
           : llvm::cl::TokenizeGNUCommandLine;
   llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
   if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
-    llvm::WithColor::error() << Err << "\n";
+    llvm::WithColor::error() << llvm::toString(std::move(Err)) << "\n";
     return 1;
   }
   argc = static_cast<int>(Args.size());
