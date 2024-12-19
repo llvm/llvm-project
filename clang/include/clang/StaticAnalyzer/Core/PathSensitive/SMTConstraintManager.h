@@ -175,9 +175,9 @@ public:
       const llvm::APSInt *LHS, *RHS;
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
         LHS = getSymVal(State, SIE->getLHS());
-        RHS = &SIE->getRHS();
+        RHS = SIE->getRHS().get();
       } else if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
-        LHS = &ISE->getLHS();
+        LHS = ISE->getLHS().get();
         RHS = getSymVal(State, ISE->getRHS());
       } else if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
         // Early termination to avoid expensive call
