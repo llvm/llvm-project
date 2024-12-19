@@ -205,6 +205,13 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND_NEXT66]] = add <8 x i64> [[VEC_IND65]], splat (i64 16)
 ; CHECK-NEXT:    [[VEC_IND_NEXT71]] = add <8 x i64> [[VEC_IND70]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP55:%.*]] = icmp eq i64 [[INDEX_NEXT74]], [[N_VEC53]]
+; CHECK-NEXT:    br i1 [[TMP55]], label [[VEC_EPILOG_MIDDLE_BLOCK40:%.*]], label [[VEC_EPILOG_VECTOR_BODY50]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       vec.epilog.middle.block40:
+; CHECK-NEXT:    [[CMP_N65:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC53]]
+; CHECK-NEXT:    br i1 [[CMP_N65]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH41]]
+; CHECK:       vec.epilog.scalar.ph41:
+; CHECK-NEXT:    [[BC_RESUME_VAL56:%.*]] = phi i64 [ [[IND_END54]], [[VEC_EPILOG_MIDDLE_BLOCK40]] ], [ 8, [[ITER_CHECK27]] ], [ [[IND_END55]], [[VEC_EPILOG_ITER_CHECK43]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL67:%.*]] = phi i64 [ [[IND_END57]], [[VEC_EPILOG_MIDDLE_BLOCK40]] ], [ 0, [[ITER_CHECK27]] ], [ [[IND_END58]], [[VEC_EPILOG_ITER_CHECK43]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_US:%.*]]
 ; CHECK:       for.body.us:
 ; CHECK-NEXT:    [[INDVARS_IV78:%.*]] = phi i64 [ [[INDVARS_IV_NEXT79:%.*]], [[FOR_COND_CLEANUP4_US_LCSSA_US_US:%.*]] ], [ [[BC_RESUME_VAL56]], [[VEC_EPILOG_SCALAR_PH41]] ]
