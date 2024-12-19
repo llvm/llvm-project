@@ -356,7 +356,8 @@ public:
   APValue(LValueBase Base, const CharUnits &Offset, NoLValuePath,
           bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(false) {
-    MakeLValue(); setLValue(Base, Offset, NoLValuePath{}, IsNullPtr);
+    MakeLValue();
+    setLValue(Base, Offset, NoLValuePath{}, IsNullPtr);
   }
   /// Creates an lvalue APValue with an lvalue path.
   /// \param Base The base of the lvalue.
