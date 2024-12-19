@@ -12324,6 +12324,8 @@ def warn_noderef_to_dereferenceable_pointer : Warning<
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
+def err_builtin_assume_aligned_invalid_arg : Error<
+  "non-pointer argument to '__builtin_assume_aligned' is not allowed">;
 
 def err_builtin_is_within_lifetime_invalid_arg : Error<
   "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "

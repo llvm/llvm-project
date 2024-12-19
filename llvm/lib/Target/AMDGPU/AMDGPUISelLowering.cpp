@@ -1088,9 +1088,9 @@ bool AMDGPUTargetLowering::isDesirableToCommuteWithShift(
     return true;
 
   // If only user is a i32 right-shift, then don't destroy a BFE pattern.
-  if (N->getValueType(0) == MVT::i32 && N->use_size() == 1 &&
-      (N->use_begin()->getOpcode() == ISD::SRA ||
-       N->use_begin()->getOpcode() == ISD::SRL))
+  if (N->getValueType(0) == MVT::i32 && N->hasOneUse() &&
+      (N->user_begin()->getOpcode() == ISD::SRA ||
+       N->user_begin()->getOpcode() == ISD::SRL))
     return false;
 
   // Don't destroy or(shl(load_zext(),c), load_zext()) patterns.

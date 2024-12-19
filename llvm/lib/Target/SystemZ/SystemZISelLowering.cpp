@@ -7117,7 +7117,7 @@ static bool isI128MovedToParts(LoadSDNode *LD, SDNode *&LoPart,
     if (User->getOpcode() == ISD::SRL &&
         User->getOperand(1).getOpcode() == ISD::Constant &&
         User->getConstantOperandVal(1) == 64 && User->hasOneUse()) {
-      User = *User->use_begin();
+      User = *User->user_begin();
       IsLoPart = false;
     }
     if (User->getOpcode() != ISD::TRUNCATE || User->getValueType(0) != MVT::i64)
@@ -7674,7 +7674,7 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
           U->getConstantOperandVal(1) == 1) {
-        SDValue OtherRound = SDValue(*U->use_begin(), 0);
+        SDValue OtherRound = SDValue(*U->user_begin(), 0);
         if (OtherRound.getOpcode() == N->getOpcode() &&
             OtherRound.getOperand(OpNo) == SDValue(U, 0) &&
             OtherRound.getValueType() == MVT::f32) {
@@ -7738,7 +7738,7 @@ SDValue SystemZTargetLowering::combineFP_EXTEND(
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
           U->getConstantOperandVal(1) == 2) {
-        SDValue OtherExtend = SDValue(*U->use_begin(), 0);
+        SDValue OtherExtend = SDValue(*U->user_begin(), 0);
         if (OtherExtend.getOpcode() == N->getOpcode() &&
             OtherExtend.getOperand(OpNo) == SDValue(U, 0) &&
             OtherExtend.getValueType() == MVT::f64) {
