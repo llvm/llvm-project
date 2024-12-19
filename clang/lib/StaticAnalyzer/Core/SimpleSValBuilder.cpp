@@ -193,7 +193,7 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
 
   // If we reach this point, the expression cannot be simplified.
   // Make a SymbolVal for the entire expression, after converting the RHS.
-  const llvm::APSInt *ConvertedRHS = &RHS;
+  std::optional<APSIntPtr> ConvertedRHS = BasicVals.getValue(RHS);
   if (BinaryOperator::isComparisonOp(op)) {
     // We're looking for a type big enough to compare the symbolic value
     // with the given constant.
@@ -205,13 +205,13 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
 
     if (ValWidth < TypeWidth) {
       // If the value is too small, extend it.
-      ConvertedRHS = &BasicVals.Convert(SymbolType, RHS);
+      ConvertedRHS = BasicVals.Convert(SymbolType, RHS);
     } else if (ValWidth == TypeWidth) {
       // If the value is signed but the symbol is unsigned, do the comparison
       // in unsigned space. [C99 6.3.1.8]
       // (For the opposite case, the value is already unsigned.)
       if (RHS.isSigned() && !SymbolType->isSignedIntegerOrEnumerationType())
-        ConvertedRHS = &BasicVals.Convert(SymbolType, RHS);
+        ConvertedRHS = BasicVals.Convert(SymbolType, RHS);
     }
   } else if (BinaryOperator::isAdditiveOp(op) && RHS.isNegative()) {
     // Change a+(-N) into a-N, and a-(-N) into a+N
@@ -219,13 +219,13 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
     // subtraction/addition of the negated value.
     APSIntType resultIntTy = BasicVals.getAPSIntType(resultTy);
     if (isNegationValuePreserving(RHS, resultIntTy)) {
-      ConvertedRHS = &BasicVals.getValue(-resultIntTy.convert(RHS));
+      ConvertedRHS = BasicVals.getValue(-resultIntTy.convert(RHS));
       op = (op == BO_Add) ? BO_Sub : BO_Add;
     } else {
-      ConvertedRHS = &BasicVals.Convert(resultTy, RHS);
+      ConvertedRHS = BasicVals.Convert(resultTy, RHS);
     }
   } else
-    ConvertedRHS = &BasicVals.Convert(resultTy, RHS);
+    ConvertedRHS = BasicVals.Convert(resultTy, RHS);
 
   return makeNonLoc(LHS, op, *ConvertedRHS, resultTy);
 }
@@ -541,8 +541,8 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           IntType.apply(RHSValue);
         }
 
-        const llvm::APSInt *Result =
-          BasicVals.evalAPSInt(op, LHSValue, RHSValue);
+        std::optional<APSIntPtr> Result =
+            BasicVals.evalAPSInt(op, LHSValue, RHSValue);
         if (!Result) {
           if (op == BO_Shl || op == BO_Shr) {
             // FIXME: At this point the constant folding claims that the result
@@ -682,7 +682,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               // as consequence x+1U-10 produces x-9U, instead
               // of x+4294967287U, that would be produced without this
               // additional check.
-              const llvm::APSInt *newRHS;
+              std::optional<APSIntPtr> newRHS;
               if (lop == op) {
                 newRHS = BasicVals.evalAPSInt(BO_Add, first, second);
               } else if (first >= second) {
@@ -874,7 +874,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     if (std::optional<loc::ConcreteInt> rInt = rhs.getAs<loc::ConcreteInt>()) {
       assert(BinaryOperator::isComparisonOp(op) || op == BO_Sub);
 
-      if (const auto *ResultInt =
+      if (std::optional<APSIntPtr> ResultInt =
               BasicVals.evalAPSInt(op, L.getValue(), rInt->getValue()))
         return evalCast(nonloc::ConcreteInt(*ResultInt), resultTy, QualType{});
       return UnknownVal();
