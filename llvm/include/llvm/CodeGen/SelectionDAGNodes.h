@@ -310,6 +310,9 @@ public:
   /// Get the next SDUse in the use list.
   SDUse *getNext() const { return Next; }
 
+  /// Return the operand # of this use in its user.
+  inline unsigned getOperandNo() const;
+
   /// Convenience function for get().getNode().
   SDNode *getNode() const { return Val.getNode(); }
   /// Convenience function for get().getResNo().
@@ -824,12 +827,6 @@ public:
     }
 
     SDUse *operator->() const { return &operator*(); }
-
-    /// Retrieve the operand # of this use in its user.
-    unsigned getOperandNo() const {
-      assert(Op && "Cannot dereference end iterator!");
-      return (unsigned)(Op - Op->getUser()->OperandList);
-    }
   };
 
   class user_iterator {
@@ -1303,6 +1300,9 @@ inline void SDValue::dumpr(const SelectionDAG *G) const {
 }
 
 // Define inline functions from the SDUse class.
+inline unsigned SDUse::getOperandNo() const {
+  return this - getUser()->op_begin();
+}
 
 inline void SDUse::set(const SDValue &V) {
   if (Val.getNode()) removeFromList();

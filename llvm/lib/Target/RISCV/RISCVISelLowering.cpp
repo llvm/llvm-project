@@ -15688,14 +15688,12 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
     auto AppendUsersIfNeeded = [&Worklist, &Subtarget,
                                 &Inserted](const NodeExtensionHelper &Op) {
       if (Op.needToPromoteOtherUsers()) {
-        for (SDNode::use_iterator UI = Op.OrigOperand->use_begin(),
-                                  UE = Op.OrigOperand->use_end();
-             UI != UE; ++UI) {
-          SDNode *TheUser = UI->getUser();
+        for (SDUse &Use : Op.OrigOperand->uses()) {
+          SDNode *TheUser = Use.getUser();
           if (!NodeExtensionHelper::isSupportedRoot(TheUser, Subtarget))
             return false;
           // We only support the first 2 operands of FMA.
-          if (UI.getOperandNo() >= 2)
+          if (Use.getOperandNo() >= 2)
             return false;
           if (Inserted.insert(TheUser).second)
             Worklist.push_back(TheUser);

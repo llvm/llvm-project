@@ -16874,10 +16874,9 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
 }
 
 bool SITargetLowering::hasMemSDNodeUser(SDNode *N) const {
-  SDNode::use_iterator I = N->use_begin(), E = N->use_end();
-  for (; I != E; ++I) {
-    if (MemSDNode *M = dyn_cast<MemSDNode>(I->getUser())) {
-      if (getBasePtrIndex(M) == I.getOperandNo())
+  for (SDUse &Use : N->uses()) {
+    if (MemSDNode *M = dyn_cast<MemSDNode>(Use.getUser())) {
+      if (getBasePtrIndex(M) == Use.getOperandNo())
         return true;
     }
   }
