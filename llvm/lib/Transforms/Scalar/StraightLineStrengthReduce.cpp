@@ -271,10 +271,9 @@ FunctionPass *llvm::createStraightLineStrengthReducePass() {
 
 bool StraightLineStrengthReduce::isBasisFor(const Candidate &Basis,
                                             const Candidate &C) {
-  return (Basis.Ins !=
-              C.Ins && // skip the same instruction
-                       // They must have the same type too. Basis.Base == C.Base
-                       // doesn't guarantee their types are the same (PR23975).
+  return (Basis.Ins != C.Ins && // skip the same instruction
+          // They must have the same type too. Basis.Base == C.Base
+          // doesn't guarantee their types are the same (PR23975).
           Basis.Ins->getType() == C.Ins->getType() &&
           // Basis must dominate C in order to rewrite C with respect to Basis.
           DT->dominates(Basis.Ins->getParent(), C.Ins->getParent()) &&
