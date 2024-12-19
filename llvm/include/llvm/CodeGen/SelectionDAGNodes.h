@@ -844,6 +844,11 @@ public:
 
   static use_iterator use_end() { return use_iterator(nullptr); }
 
+  /// Provide iteration support to walk over all users of an SDNode.
+  /// For now, this should only be used to get a pointer to the first user.
+  /// FIXME: Rename use_iterator to user_iterator. Add user_end().
+  use_iterator user_begin() const { return use_iterator(UseList); }
+
   // Dereferencing use_iterator returns the user SDNode* making it closer to a
   // user_iterator thus this function is called users() to reflect that.
   // FIXME: Rename to user_iterator and introduce a use_iterator that returns
