@@ -1749,7 +1749,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     SmallPtrSet<const SDNode *, 32> Visited;
     SmallVector<const SDNode *, 16> Worklist;
     Worklist.push_back(N);
-    for (SDNode *U : Ptr.getNode()->uses())
+    for (SDNode *U : Ptr.getNode()->users())
       if (SDNode::hasPredecessorHelper(U, Visited, Worklist, /*Max=*/32,
                                        /*TopologicalPrune=*/true))
         return false;
