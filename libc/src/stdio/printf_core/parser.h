@@ -294,6 +294,7 @@ public:
   }
 
   LIBC_PRINTF_SPLIT_DECL void write_float_arg_val(FormatSection &section, LengthModifier lm, size_t conv_index);
+  LIBC_PRINTF_SPLIT_DECL TypeDesc float_type_desc(LengthModifier lm);
 
 private:
   // parse_flags parses the flags inside a format string. It assumes that
@@ -626,10 +627,7 @@ private:
         case ('A'):
         case ('g'):
         case ('G'):
-          if (lm != LengthModifier::L)
-            conv_size = type_desc_from_type<double>();
-          else
-            conv_size = type_desc_from_type<long double>();
+          return float_type_desc(lm);
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -680,14 +678,23 @@ private:
 
 #ifdef LIBC_PRINTF_DEFINE_SPLIT
 template <typename ArgParser>
-LIBC_PRINTF_SPLIT_DEFN void Parser<ArgParser>::write_float_arg_val(FormatSection &section,
-                                                        LengthModifier lm,
-                                                        size_t conv_index) {
+LIBC_PRINTF_SPLIT_DEFN void
+Parser<ArgParser>::write_float_arg_val(FormatSection &section,
+                                       LengthModifier lm, size_t conv_index) {
   if (lm != LengthModifier::L) {
     WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
   } else {
     WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
   }
+}
+
+template <typename ArgParser>
+LIBC_PRINTF_SPLIT_DEFN TypeDesc
+Parser<ArgParser>::float_type_desc(LengthModifier lm) {
+  if (lm != LengthModifier::L)
+    return type_desc_from_type<double>();
+  else
+    return type_desc_from_type<long double>();
 }
 #endif
 
