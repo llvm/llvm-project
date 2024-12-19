@@ -19,7 +19,7 @@ set(LIBCXX_ABI_NAMESPACE __ndk1 CACHE STRING "")
 # output path (the script clobbers the binary). Turn off the linker script.
 set(LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
 
-set(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY ON CACHE BOOL "")
+set(LIBCXX_CXX_ABI "merged-libcxxabi" CACHE STRING "")
 set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
 
 # Android uses its own unwinder library
