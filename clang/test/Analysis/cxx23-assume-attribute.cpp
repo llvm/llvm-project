@@ -1,7 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -verify %s \
-// RUN:   -analyzer-checker=unix,core,alpha.security.ArrayBoundV2,debug.ExprInspection
-
-// TODO: fix the checker arguments
+// RUN: %clang_analyze_cc1 -std=c++23 -analyzer-checker=core,debug.ExprInspection -verify %s
 
 template <typename T> void clang_analyzer_dump(T);
 template <typename T> void clang_analyzer_value(T);
