@@ -3467,7 +3467,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     SDNode *VMov = Copy;
     // f64 returned in a pair of GPRs.
     SmallPtrSet<SDNode*, 2> Copies;
-    for (SDNode *U : VMov->uses()) {
+    for (SDNode *U : VMov->users()) {
       if (U->getOpcode() != ISD::CopyToReg)
         return false;
       Copies.insert(U);
@@ -3475,7 +3475,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     if (Copies.size() > 2)
       return false;
 
-    for (SDNode *U : VMov->uses()) {
+    for (SDNode *U : VMov->users()) {
       SDValue UseChain = U->getOperand(0);
       if (Copies.count(UseChain.getNode()))
         // Second CopyToReg
@@ -3507,7 +3507,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
   }
 
   bool HasRet = false;
-  for (const SDNode *U : Copy->uses()) {
+  for (const SDNode *U : Copy->users()) {
     if (U->getOpcode() != ARMISD::RET_GLUE &&
         U->getOpcode() != ARMISD::INTRET_GLUE)
       return false;
@@ -7958,7 +7958,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // generate a vdup of the constant.
     if (ST->hasMVEIntegerOps() && VT.getScalarSizeInBits() == SplatBitSize &&
         (SplatBitSize == 8 || SplatBitSize == 16 || SplatBitSize == 32) &&
-        all_of(BVN->uses(),
+        all_of(BVN->users(),
                [BVN](const SDNode *U) { return IsQRMVEInstruction(U, BVN); })) {
       EVT DupVT = SplatBitSize == 32   ? MVT::v4i32
                   : SplatBitSize == 16 ? MVT::v8i16
@@ -13970,7 +13970,7 @@ static SDValue PerformSHLSimplify(SDNode *N,
     return SDValue();
 
   // Check that all the users could perform the shl themselves.
-  for (auto *U : N->uses()) {
+  for (auto *U : N->users()) {
     switch(U->getOpcode()) {
     default:
       return SDValue();
@@ -15574,13 +15574,13 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
 
   // Find another extract, of Lane + 1
-  auto OtherIt = find_if(Op0->uses(), [&](SDNode *V) {
+  auto OtherIt = find_if(Op0->users(), [&](SDNode *V) {
     return V->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
            isa<ConstantSDNode>(V->getOperand(1)) &&
            V->getConstantOperandVal(1) == Lane + 1 &&
            V->getOperand(0).getResNo() == ResNo;
   });
-  if (OtherIt == Op0->uses().end())
+  if (OtherIt == Op0->users().end())
     return SDValue();
 
   // For float extracts, we need to be converting to a i32 for both vector

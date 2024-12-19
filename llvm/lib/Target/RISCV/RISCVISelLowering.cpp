@@ -758,9 +758,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
-      setOperationAction(
-          {ISD::SELECT_CC, ISD::VSELECT, ISD::VP_MERGE, ISD::VP_SELECT}, VT,
-          Expand);
+      setOperationAction({ISD::SELECT_CC, ISD::VSELECT, ISD::VP_SELECT}, VT,
+                         Expand);
+      setOperationAction(ISD::VP_MERGE, VT, Custom);
 
       setOperationAction({ISD::VP_CTTZ_ELTS, ISD::VP_CTTZ_ELTS_ZERO_UNDEF}, VT,
                          Custom);
@@ -1236,6 +1236,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction({ISD::VP_FP_TO_SINT, ISD::VP_FP_TO_UINT,
                               ISD::VP_SETCC, ISD::VP_TRUNCATE},
                              VT, Custom);
+
+          setOperationAction(ISD::VP_MERGE, VT, Custom);
 
           setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
           setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -7492,8 +7494,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSET_ROUNDING(Op, DAG);
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
-  case ISD::VP_SELECT:
   case ISD::VP_MERGE:
+    if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
+      return lowerVPMergeMask(Op, DAG);
+    [[fallthrough]];
+  case ISD::VP_SELECT:
   case ISD::VP_ADD:
   case ISD::VP_SUB:
   case ISD::VP_MUL:
@@ -12078,6 +12083,65 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op,
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
 }
 
+SDValue RISCVTargetLowering::lowerVPMergeMask(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDValue Mask = Op.getOperand(0);
+  SDValue TrueVal = Op.getOperand(1);
+  SDValue FalseVal = Op.getOperand(2);
+  SDValue VL = Op.getOperand(3);
+
+  // Use default legalization if a vector of EVL type would be legal.
+  EVT EVLVecVT = EVT::getVectorVT(*DAG.getContext(), VL.getValueType(),
+                                  VT.getVectorElementCount());
+  if (isTypeLegal(EVLVecVT))
+    return SDValue();
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    Mask = convertToScalableVector(ContainerVT, Mask, DAG, Subtarget);
+    TrueVal = convertToScalableVector(ContainerVT, TrueVal, DAG, Subtarget);
+    FalseVal = convertToScalableVector(ContainerVT, FalseVal, DAG, Subtarget);
+  }
+
+  // Promote to a vector of i8.
+  MVT PromotedVT = ContainerVT.changeVectorElementType(MVT::i8);
+
+  // Promote TrueVal and FalseVal using VLMax.
+  // FIXME: Is there a better way to do this?
+  SDValue VLMax = DAG.getRegister(RISCV::X0, XLenVT);
+  SDValue SplatOne = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, PromotedVT,
+                                 DAG.getUNDEF(PromotedVT),
+                                 DAG.getConstant(1, DL, XLenVT), VLMax);
+  SDValue SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, PromotedVT,
+                                  DAG.getUNDEF(PromotedVT),
+                                  DAG.getConstant(0, DL, XLenVT), VLMax);
+  TrueVal = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, TrueVal, SplatOne,
+                        SplatZero, DAG.getUNDEF(PromotedVT), VL);
+  // Any element past VL uses FalseVal, so use VLMax
+  FalseVal = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, FalseVal,
+                         SplatOne, SplatZero, DAG.getUNDEF(PromotedVT), VLMax);
+
+  // VP_MERGE the two promoted values.
+  SDValue VPMerge = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, Mask,
+                                TrueVal, FalseVal, FalseVal, VL);
+
+  // Convert back to mask.
+  SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
+  SDValue Result = DAG.getNode(
+      RISCVISD::SETCC_VL, DL, ContainerVT,
+      {VPMerge, DAG.getConstant(0, DL, PromotedVT), DAG.getCondCode(ISD::SETNE),
+       DAG.getUNDEF(getMaskTypeFor(ContainerVT)), TrueMask, VLMax});
+
+  if (VT.isFixedLengthVector())
+    Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
+  return Result;
+}
+
 SDValue
 RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -16246,7 +16310,7 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
     // All users should be a shift by constant less than or equal to 32. This
     // ensures we'll do this optimization for each of them to produce an
     // add/sub+sext_inreg they can all share.
-    for (SDNode *U : N0->uses()) {
+    for (SDNode *U : N0->users()) {
       if (U->getOpcode() != ISD::SRA ||
           !isa<ConstantSDNode>(U->getOperand(1)) ||
           U->getConstantOperandVal(1) > 32)
@@ -18310,7 +18374,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   // LD/ST, it can still complete the folding optimization operation performed
   // above.
   auto isUsedByLdSt = [](const SDNode *X, const SDNode *User) {
-    for (SDNode *Use : X->uses()) {
+    for (SDNode *Use : X->users()) {
       // This use is the one we're on right now. Skip it
       if (Use == User || Use->getOpcode() == ISD::SELECT)
         continue;
@@ -20447,7 +20511,7 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
 
   // The copy must be used by a RISCVISD::RET_GLUE, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != RISCVISD::RET_GLUE)
       return false;
     HasRet = true;

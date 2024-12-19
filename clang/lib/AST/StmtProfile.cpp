@@ -2743,6 +2743,14 @@ void StmtProfiler::VisitOpenACCHostDataConstruct(
   P.VisitOpenACCClauseList(S->clauses());
 }
 
+void StmtProfiler::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
+  // VisitStmt covers 'children', so the exprs inside of it are covered.
+  VisitStmt(S);
+
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
 void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {
   VisitStmt(S);
 }

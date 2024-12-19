@@ -1890,7 +1890,7 @@ SystemZDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
     SDNode *CCRegUser = nullptr;
     if (CCUser->getOpcode() == ISD::CopyToReg ||
         cast<RegisterSDNode>(CCUser->getOperand(1))->getReg() == SystemZ::CC) {
-      for (auto *U : CCUser->uses()) {
+      for (auto *U : CCUser->users()) {
         if (CCRegUser == nullptr)
           CCRegUser = U;
         else if (CCRegUser != U)

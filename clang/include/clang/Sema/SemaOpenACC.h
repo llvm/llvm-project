@@ -679,12 +679,18 @@ public:
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  StmtResult ActOnEndStmtDirective(OpenACCDirectiveKind K,
-                                   SourceLocation StartLoc,
-                                   SourceLocation DirLoc,
-                                   SourceLocation EndLoc,
-                                   ArrayRef<OpenACCClause *> Clauses,
-                                   StmtResult AssocStmt);
+  /// LParenLoc: Location of the left paren, if it exists (not on all
+  /// constructs).
+  /// MiscLoc: First misc location, if necessary (not all constructs).
+  /// Exprs: List of expressions on the construct itself, if necessary (not all
+  /// constructs).
+  /// RParenLoc: Location of the right paren, if it exists (not on all
+  /// constructs).
+  StmtResult ActOnEndStmtDirective(
+      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+      SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
+      SourceLocation RParenLoc, SourceLocation EndLoc,
+      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.

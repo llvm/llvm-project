@@ -324,6 +324,10 @@ public:
 
   bool enableSubRegLiveness() const override;
 
+  bool enableMachinePipeliner() const override;
+
+  bool useDFAforSMS() const override { return false; }
+
   bool useAA() const override;
 
   unsigned getCacheLineSize() const override {
