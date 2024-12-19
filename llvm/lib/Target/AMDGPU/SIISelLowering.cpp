@@ -12544,21 +12544,21 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
         return true;
 
       // If we have any non-vectorized use, then it is a candidate for v_perm
-      for (auto *VUse : OrUse->uses()) {
-        if (!VUse->getValueType(0).isVector())
+      for (auto *VUser : OrUse->users()) {
+        if (!VUser->getValueType(0).isVector())
           return true;
 
         // If the use of a vector is a store, then combining via a v_perm
         // is beneficial.
         // TODO -- whitelist more uses
         for (auto VectorwiseOp : {ISD::STORE, ISD::CopyToReg, ISD::CopyFromReg})
-          if (VUse->getOpcode() == VectorwiseOp)
+          if (VUser->getOpcode() == VectorwiseOp)
             return true;
       }
       return false;
     };
 
-    if (!any_of(N->uses(), usesCombinedOperand))
+    if (!any_of(N->users(), usesCombinedOperand))
       return SDValue();
 
     uint32_t LHSMask = getPermuteMask(LHS);
@@ -13895,10 +13895,10 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   // part of full-rate 64-bit ops).
   if (!Subtarget->hasFullRate64Ops()) {
     unsigned NumUsers = 0;
-    for (SDNode *Use : LHS->uses()) {
+    for (SDNode *User : LHS->users()) {
       // There is a use that does not feed into addition, so the multiply can't
       // be removed. We prefer MUL + ADD + ADDC over MAD + MUL.
-      if (Use->getOpcode() != ISD::ADD)
+      if (User->getOpcode() != ISD::ADD)
         return SDValue();
 
       // We prefer 2xMAD over MUL + 2xADD + 2xADDC (code density), and prefer
@@ -16896,7 +16896,7 @@ bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
   // Check if we have a good chance to form the memory access pattern with the
   // base and offset
   return (DAG.isBaseWithConstantOffset(N0) &&
-          hasMemSDNodeUser(*N0->use_begin()));
+          hasMemSDNodeUser(*N0->user_begin()));
 }
 
 bool SITargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,

@@ -349,12 +349,12 @@ define void @good_load_order() {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP3]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 4
-; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
+; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX31]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
@@ -363,7 +363,7 @@ define void @good_load_order() {
 ; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP12]]
+; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13]] = load float, ptr [[ARRAYIDX41]], align 4
 ; CHECK-NEXT:    [[MUL45:%.*]] = fmul float [[TMP13]], [[TMP7]]
 ; CHECK-NEXT:    store float [[MUL45]], ptr [[ARRAYIDX31]], align 4
@@ -384,12 +384,12 @@ define void @good_load_order() {
 ; SSE2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY3]] ]
 ; SSE2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; SSE2-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
-; SSE2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP3]]
+; SSE2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP3]]
 ; SSE2-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; SSE2-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP4]]
+; SSE2-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP4]]
 ; SSE2-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; SSE2-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 4
-; SSE2-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
+; SSE2-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
 ; SSE2-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX31]], align 4
 ; SSE2-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; SSE2-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
@@ -398,7 +398,7 @@ define void @good_load_order() {
 ; SSE2-NEXT:    store <4 x float> [[TMP11]], ptr [[ARRAYIDX5]], align 4
 ; SSE2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; SSE2-NEXT:    [[TMP12:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; SSE2-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds nuw [32000 x float], ptr @a, i32 0, i32 [[TMP12]]
+; SSE2-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP12]]
 ; SSE2-NEXT:    [[TMP13]] = load float, ptr [[ARRAYIDX41]], align 4
 ; SSE2-NEXT:    [[MUL45:%.*]] = fmul float [[TMP13]], [[TMP7]]
 ; SSE2-NEXT:    store float [[MUL45]], ptr [[ARRAYIDX31]], align 4
