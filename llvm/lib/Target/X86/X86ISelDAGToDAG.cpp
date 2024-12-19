@@ -370,7 +370,7 @@ namespace {
         return false;
 
       // Walk all the users of the immediate.
-      for (const SDNode *User : N->uses()) {
+      for (const SDNode *User : N->users()) {
         if (UseCount >= 2)
           break;
 
@@ -1095,7 +1095,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDNode *MaxLd = nullptr;
       SDValue Ptr = Ld->getBasePtr();
       SDValue Chain = Ld->getChain();
-      for (SDNode *User : Ptr->uses()) {
+      for (SDNode *User : Ptr->users()) {
         auto *UserLd = dyn_cast<LoadSDNode>(User);
         MVT UserVT = User->getSimpleValueType(0);
         if (User != N && UserLd && ISD::isNormalLoad(User) &&

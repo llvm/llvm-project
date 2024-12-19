@@ -202,7 +202,7 @@ namespace {
     /// When an instruction is simplified, add all users of the instruction to
     /// the work lists because they might get more simplified now.
     void AddUsersToWorklist(SDNode *N) {
-      for (SDNode *Node : N->uses())
+      for (SDNode *Node : N->users())
         AddToWorklist(Node);
     }
 
@@ -1113,7 +1113,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
                                          : N1.getConstantOperandVal(1)));
     if (Opc == ISD::SUB)
       ScalableOffset = -ScalableOffset;
-    if (all_of(N->uses(), [&](SDNode *Node) {
+    if (all_of(N->users(), [&](SDNode *Node) {
           if (auto *LoadStore = dyn_cast<MemSDNode>(Node);
               LoadStore && LoadStore->getBasePtr().getNode() == N) {
             TargetLoweringBase::AddrMode AM;
@@ -1151,7 +1151,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
       return false;
     const int64_t CombinedValue = CombinedValueIntVal.getSExtValue();
 
-    for (SDNode *Node : N->uses()) {
+    for (SDNode *Node : N->users()) {
       if (auto *LoadStore = dyn_cast<MemSDNode>(Node)) {
         // Is x[offset2] already not a legal addressing mode? If so then
         // reassociating the constants breaks nothing (we test offset2 because
@@ -1176,7 +1176,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
       if (GA->getOpcode() == ISD::GlobalAddress && TLI.isOffsetFoldingLegal(GA))
         return false;
 
-    for (SDNode *Node : N->uses()) {
+    for (SDNode *Node : N->users()) {
       auto *LoadStore = dyn_cast<MemSDNode>(Node);
       if (!LoadStore)
         return false;
@@ -4720,7 +4720,7 @@ SDValue DAGCombiner::useDivRem(SDNode *Node) {
   SDValue Op0 = Node->getOperand(0);
   SDValue Op1 = Node->getOperand(1);
   SDValue combined;
-  for (SDNode *User : Op0->uses()) {
+  for (SDNode *User : Op0->users()) {
     if (User == Node || User->getOpcode() == ISD::DELETED_NODE ||
         User->use_empty())
       continue;
@@ -10369,7 +10369,7 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   unsigned MulLoHiOp = IsSignExt ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
   if (!ShiftOperand.hasOneUse() &&
       TLI.isOperationLegalOrCustom(MulLoHiOp, NarrowVT) &&
-      llvm::any_of(ShiftOperand->uses(), UserOfLowerBits)) {
+      llvm::any_of(ShiftOperand->users(), UserOfLowerBits)) {
     return SDValue();
   }
 
@@ -13570,7 +13570,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   if (NonNegZExt) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    for (SDNode *User : N0->uses()) {
+    for (SDNode *User : N0->users()) {
       if (User->getOpcode() == ISD::SETCC) {
         ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
         if (ISD::isSignedIntSetCC(CC)) {
@@ -17673,7 +17673,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   // Find all FDIV users of the same divisor.
   // Use a set because duplicates may be present in the user list.
   SetVector<SDNode *> Users;
-  for (auto *U : N1->uses()) {
+  for (auto *U : N1->users()) {
     if (U->getOpcode() == ISD::FDIV && U->getOperand(1) == N1) {
       // Skip X/sqrt(X) that has not been simplified to sqrt(X) yet.
       if (U->getOperand(1).getOpcode() == ISD::FSQRT &&
@@ -18965,15 +18965,15 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // Now check for #3 and #4.
   bool RealUse = false;
 
-  for (SDNode *Use : Ptr->uses()) {
-    if (Use == N)
+  for (SDNode *User : Ptr->users()) {
+    if (User == N)
       continue;
-    if (SDNode::hasPredecessorHelper(Use, Visited, Worklist, MaxSteps))
+    if (SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
       return false;
 
     // If Ptr may be folded in addressing mode of other use, then it's
     // not profitable to do this transformation.
-    if (!canFoldInAddressingMode(Ptr.getNode(), Use, DAG, TLI))
+    if (!canFoldInAddressingMode(Ptr.getNode(), User, DAG, TLI))
       RealUse = true;
   }
 
@@ -19089,19 +19089,19 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
 
   SmallPtrSet<const SDNode *, 32> Visited;
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  for (SDNode *Use : BasePtr->uses()) {
-    if (Use == Ptr.getNode())
+  for (SDNode *User : BasePtr->users()) {
+    if (User == Ptr.getNode())
       continue;
 
     // No if there's a later user which could perform the index instead.
-    if (isa<MemSDNode>(Use)) {
+    if (isa<MemSDNode>(User)) {
       bool IsLoad = true;
       bool IsMasked = false;
       SDValue OtherPtr;
-      if (getCombineLoadStoreParts(Use, ISD::POST_INC, ISD::POST_DEC, IsLoad,
+      if (getCombineLoadStoreParts(User, ISD::POST_INC, ISD::POST_DEC, IsLoad,
                                    IsMasked, OtherPtr, TLI)) {
         SmallVector<const SDNode *, 2> Worklist;
-        Worklist.push_back(Use);
+        Worklist.push_back(User);
         if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps))
           return false;
       }
@@ -19109,9 +19109,9 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
 
     // If all the uses are load / store addresses, then don't do the
     // transformation.
-    if (Use->getOpcode() == ISD::ADD || Use->getOpcode() == ISD::SUB) {
-      for (SDNode *UseUse : Use->uses())
-        if (canFoldInAddressingMode(Use, UseUse, DAG, TLI))
+    if (User->getOpcode() == ISD::ADD || User->getOpcode() == ISD::SUB) {
+      for (SDNode *UserUser : User->users())
+        if (canFoldInAddressingMode(User, UserUser, DAG, TLI))
           return false;
     }
   }
@@ -19136,7 +19136,7 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  for (SDNode *Op : Ptr->uses()) {
+  for (SDNode *Op : Ptr->users()) {
     // Check for #1.
     if (!shouldCombineToPostInc(N, Ptr, Op, BasePtr, Offset, AM, DAG, TLI))
       continue;
@@ -20515,24 +20515,24 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
     return true;
 
   // Walk all the users of the constant with which we're multiplying.
-  for (SDNode *Use : ConstNode->uses()) {
-    if (Use == MulNode) // This use is the one we're on right now. Skip it.
+  for (SDNode *User : ConstNode->users()) {
+    if (User == MulNode) // This use is the one we're on right now. Skip it.
       continue;
 
-    if (Use->getOpcode() == ISD::MUL) { // We have another multiply use.
+    if (User->getOpcode() == ISD::MUL) { // We have another multiply use.
       SDNode *OtherOp;
       SDNode *MulVar = AddNode.getOperand(0).getNode();
 
       // OtherOp is what we're multiplying against the constant.
-      if (Use->getOperand(0) == ConstNode)
-        OtherOp = Use->getOperand(1).getNode();
+      if (User->getOperand(0) == ConstNode)
+        OtherOp = User->getOperand(1).getNode();
       else
-        OtherOp = Use->getOperand(0).getNode();
+        OtherOp = User->getOperand(0).getNode();
 
       // Check to see if multiply is with the same operand of our "add".
       //
       //     ConstNode  = CONST
-      //     Use = ConstNode * A  <-- visiting Use. OtherOp is A.
+      //     User = ConstNode * A  <-- visiting User. OtherOp is A.
       //     ...
       //     AddNode  = (A + c1)  <-- MulVar is A.
       //         = AddNode * ConstNode   <-- current visiting instruction.
@@ -20550,7 +20550,7 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
       //     ...   = AddNode * ConstNode <-- current visiting instruction.
       //     ...
       //     OtherOp = (A + c2)
-      //     Use     = OtherOp * ConstNode <-- visiting Use.
+      //     User    = OtherOp * ConstNode <-- visiting User.
       //
       // If we make this transformation, we will have a common
       // multiply (CONST * A) after we also do the same transformation
@@ -22902,7 +22902,7 @@ bool DAGCombiner::refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(
     // Did we fail to model any of the users of the Producer?
     bool ProducerIsLeaf = false;
     // Look at each user of this Producer.
-    for (SDNode *User : E.Producer->uses()) {
+    for (SDNode *User : E.Producer->users()) {
       switch (User->getOpcode()) {
       // TODO: support ISD::BITCAST
       // TODO: support ISD::ANY_EXTEND
@@ -23176,14 +23176,14 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
 
   // If only EXTRACT_VECTOR_ELT nodes use the source vector we can
   // simplify it based on the (valid) extraction indices.
-  if (llvm::all_of(VecOp->uses(), [&](SDNode *Use) {
+  if (llvm::all_of(VecOp->users(), [&](SDNode *Use) {
         return Use->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
                Use->getOperand(0) == VecOp &&
                isa<ConstantSDNode>(Use->getOperand(1));
       })) {
     APInt DemandedElts = APInt::getZero(NumElts);
-    for (SDNode *Use : VecOp->uses()) {
-      auto *CstElt = cast<ConstantSDNode>(Use->getOperand(1));
+    for (SDNode *User : VecOp->users()) {
+      auto *CstElt = cast<ConstantSDNode>(User->getOperand(1));
       if (CstElt->getAPIntValue().ult(NumElts))
         DemandedElts.setBit(CstElt->getZExtValue());
     }
@@ -27302,7 +27302,7 @@ SDValue DAGCombiner::visitGET_FPENV_MEM(SDNode *N) {
   // Check if the memory, where FP state is written to, is used only in a single
   // load operation.
   LoadSDNode *LdNode = nullptr;
-  for (auto *U : Ptr->uses()) {
+  for (auto *U : Ptr->users()) {
     if (U == N)
       continue;
     if (auto *Ld = dyn_cast<LoadSDNode>(U)) {
@@ -27352,7 +27352,7 @@ SDValue DAGCombiner::visitSET_FPENV_MEM(SDNode *N) {
 
   // Check if the address of FP state is used also in a store operation only.
   StoreSDNode *StNode = nullptr;
-  for (auto *U : Ptr->uses()) {
+  for (auto *U : Ptr->users()) {
     if (U == N)
       continue;
     if (auto *St = dyn_cast<StoreSDNode>(U)) {
