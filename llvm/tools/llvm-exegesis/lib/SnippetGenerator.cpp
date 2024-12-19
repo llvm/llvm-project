@@ -73,6 +73,9 @@ Error SnippetGenerator::generateConfigurations(
     for (CodeTemplate &CT : Templates) {
       // TODO: Generate as many BenchmarkCode as needed.
       {
+        CT.ScratchSpacePointerInReg =
+            State.getExegesisTarget().getScratchMemoryRegister(
+                State.getTargetMachine().getTargetTriple());
         BenchmarkCode BC;
         BC.Info = CT.Info;
         BC.Key.Instructions.reserve(CT.Instructions.size());
@@ -108,6 +111,12 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
   BitVector DefinedRegs = State.getRATC().emptyRegisters();
+  // If target always expects a scratch memory register as live input,
+  // mark it as defined.
+  const ExegesisTarget &Target = State.getExegesisTarget();
+  unsigned ScratchMemoryReg = Target.getScratchMemoryRegister(
+      State.getTargetMachine().getTargetTriple());
+  DefinedRegs.set(ScratchMemoryReg);
   std::vector<RegisterValue> RIV;
   for (const InstructionTemplate &IT : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not
@@ -200,7 +209,8 @@ static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
   if (ROV.Op->isExplicit()) {
     auto &AssignedValue = IB.getValueFor(*ROV.Op);
     if (AssignedValue.isValid()) {
-      assert(AssignedValue.isReg() && AssignedValue.getReg() == ROV.Reg);
+      // TODO don't re-assign register operands which are already "locked"
+      //  by Target in corresponding InstructionTemplate
       return;
     }
     AssignedValue = MCOperand::createReg(ROV.Reg);
