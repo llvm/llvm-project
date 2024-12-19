@@ -165,21 +165,13 @@ static uint64_t getSymSizeForMap(Defined *sym) {
 // This approach creates a new (temporary) vector which is not ideal but the
 // ideal approach leads to a lot of code duplication.
 static std::vector<ConcatInputSection *>
-mergeOrderedInputs(const std::vector<ConcatInputSection *> &inputs1,
-                   const std::vector<ConcatInputSection *> &inputs2) {
-  std::vector<ConcatInputSection *> vec;
-  size_t i = 0, ie = inputs1.size();
-  size_t t = 0, te = inputs2.size();
-  while (i < ie || t < te) {
-    while (i < ie &&
-           (t == te || inputs1[i]->outSecOff <= inputs2[t]->outSecOff)) {
-      vec.push_back(inputs1[i++]);
-    }
-    while (t < te &&
-           (i == ie || inputs2[t]->outSecOff < inputs1[i]->outSecOff)) {
-      vec.push_back(inputs2[t++]);
-    }
-  }
+mergeOrderedInputs(ArrayRef<ConcatInputSection *> inputs1,
+                   ArrayRef<ConcatInputSection *> inputs2) {
+  std::vector<ConcatInputSection *> vec(inputs1.size() + inputs2.size());
+  std::merge(inputs1.begin(), inputs1.end(), inputs2.begin(), inputs2.end(),
+             vec.begin(), [](ConcatInputSection *a, ConcatInputSection *b) {
+               return a->outSecOff < b->outSecOff;
+             });
   return vec;
 }
 

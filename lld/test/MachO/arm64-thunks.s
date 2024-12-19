@@ -18,27 +18,34 @@
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
 
 ## Check that the thunks appear in the map file and that everything is sorted by address
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _b
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _c
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _d.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _e.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _f.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _g.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _h.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] ___nan.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _d
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _e
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _f
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _g
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _a.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _b.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _h
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _main
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _c.thunk.0
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _d.thunk.1
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _e.thunk.1
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _f.thunk.1
-# MAP: [[0x[0-9A-Fa-f]+]] 0x[0-9A-Fa-f]+ \[[0-9]+\] _z
+# Because of the `.space` instructions, there will end up being a lot of dead symbols in the linker map
+# so generate a version of the linker map without dead symbols.
+# RUN: awk '/# Dead Stripped Symbols:/ {exit} {print}' %t/thunk.map > %t/thunk_no_dead_syms.map
+
+# RUN: FileCheck %s --input-file %t/thunk_no_dead_syms.map --check-prefix=MAP
+ 
+# MAP:      [[ADDR1:0x[0-9A-Fa-f]+]] {{.*}} _b
+# MAP-NEXT: [[ADDR2:0x[0-9A-Fa-f]+]] {{.*}} _c
+# MAP-NEXT: [[ADDR3:0x[0-9A-Fa-f]+]] {{.*}} _d.thunk.0
+# MAP-NEXT: [[ADDR4:0x[0-9A-Fa-f]+]] {{.*}} _e.thunk.0
+# MAP-NEXT: [[ADDR5:0x[0-9A-Fa-f]+]] {{.*}} _f.thunk.0
+# MAP-NEXT: [[ADDR6:0x[0-9A-Fa-f]+]] {{.*}} _g.thunk.0
+# MAP-NEXT: [[ADDR7:0x[0-9A-Fa-f]+]] {{.*}} _h.thunk.0
+# MAP-NEXT: [[ADDR8:0x[0-9A-Fa-f]+]] {{.*}} ___nan.thunk.0
+# MAP-NEXT: [[ADDR9:0x[0-9A-Fa-f]+]] {{.*}} _d
+# MAP-NEXT: [[ADDR10:0x[0-9A-Fa-f]+]] {{.*}} _e
+# MAP-NEXT: [[ADDR11:0x[0-9A-Fa-f]+]] {{.*}} _f
+# MAP-NEXT: [[ADDR12:0x[0-9A-Fa-f]+]] {{.*}} _g
+# MAP-NEXT: [[ADDR13:0x[0-9A-Fa-f]+]] {{.*}} _a.thunk.0
+# MAP-NEXT: [[ADDR14:0x[0-9A-Fa-f]+]] {{.*}} _b.thunk.0
+# MAP-NEXT: [[ADDR15:0x[0-9A-Fa-f]+]] {{.*}} _h
+# MAP-NEXT: [[ADDR16:0x[0-9A-Fa-f]+]] {{.*}} _main
+# MAP-NEXT: [[ADDR17:0x[0-9A-Fa-f]+]] {{.*}} _c.thunk.0
+# MAP-NEXT: [[ADDR18:0x[0-9A-Fa-f]+]] {{.*}} _d.thunk.1
+# MAP-NEXT: [[ADDR19:0x[0-9A-Fa-f]+]] {{.*}} _e.thunk.1
+# MAP-NEXT: [[ADDR20:0x[0-9A-Fa-f]+]] {{.*}} _f.thunk.1
+# MAP-NEXT: [[ADDR21:0x[0-9A-Fa-f]+]] {{.*}} _z
+
 
 # CHECK: Disassembly of section __TEXT,__text:
 
