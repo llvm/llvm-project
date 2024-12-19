@@ -508,3 +508,21 @@ TEST_F(ProgressReportTest, TestExternalReportCreation) {
   EXPECT_FALSE(data->IsFinite());
   EXPECT_EQ(data->GetMessage(), "Progress report 1: Starting report 1");
 }
+
+TEST_F(ProgressReportTest, TestExternalReportNotReceived) {
+  ListenerSP listener_sp = CreateListenerFor(lldb::eBroadcastBitProgress);
+  EventSP event_sp;
+
+  // Scope this for RAII on the progress objects.
+  // Create progress reports and check that their respective events for having
+  // started and ended are broadcasted.
+  {
+    Progress progress1("External Progress report 1",
+                       "Starting external report 1",
+                       /*total=*/std::nullopt, /*debugger=*/nullptr,
+                       /*minimum_report_time=*/std::chrono::seconds(0),
+                       Progress::Origin::eExternal);
+  }
+
+  ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
+}
