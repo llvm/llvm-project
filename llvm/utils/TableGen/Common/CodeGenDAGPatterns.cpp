@@ -3508,9 +3508,8 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
         Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
       if (Dest->getName().empty())
         I.error("set destination must have a name!");
-      if (InstResults.count(Dest->getName()))
+      if (!InstResults.try_emplace(Dest->getName(), Dest).second)
         I.error("cannot set '" + Dest->getName() + "' multiple times");
-      InstResults[Dest->getName()] = Dest;
     } else if (Val->getDef()->isSubClassOf("Register")) {
       InstImpResults.push_back(Val->getDef());
     } else {
