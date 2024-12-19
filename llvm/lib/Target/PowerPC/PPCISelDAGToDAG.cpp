@@ -954,9 +954,8 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
   // Cannot use range-based for loop here as we need the actual use (i.e. we
   // need the operand number corresponding to the use). A range-based for
   // will unbox the use and provide an SDNode*.
-  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end(); UI != UE;
-       ++UI) {
-    SDNode *User = UI->getUser();
+  for (SDUse &Use : N->uses()) {
+    SDNode *User = Use.getUser();
     unsigned Opc =
         User->isMachineOpcode() ? User->getMachineOpcode() : User->getOpcode();
     switch (Opc) {
@@ -972,7 +971,7 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
         return 0;
       StoreSDNode *STN = cast<StoreSDNode>(User);
       unsigned MemVTSize = STN->getMemoryVT().getSizeInBits();
-      if (MemVTSize == 64 || UI.getOperandNo() != 0)
+      if (MemVTSize == 64 || Use.getOperandNo() != 0)
         return 0;
       MaxTruncation = std::max(MaxTruncation, MemVTSize);
       continue;
@@ -981,7 +980,7 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
     case PPC::STWX8:
     case PPC::STWU8:
     case PPC::STWUX8:
-      if (UI.getOperandNo() != 0)
+      if (Use.getOperandNo() != 0)
         return 0;
       MaxTruncation = std::max(MaxTruncation, 32u);
       continue;
@@ -989,7 +988,7 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
     case PPC::STHX8:
     case PPC::STHU8:
     case PPC::STHUX8:
-      if (UI.getOperandNo() != 0)
+      if (Use.getOperandNo() != 0)
         return 0;
       MaxTruncation = std::max(MaxTruncation, 16u);
       continue;
@@ -997,7 +996,7 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
     case PPC::STBX8:
     case PPC::STBU8:
     case PPC::STBUX8:
-      if (UI.getOperandNo() != 0)
+      if (Use.getOperandNo() != 0)
         return 0;
       MaxTruncation = std::max(MaxTruncation, 8u);
       continue;
