@@ -5,11 +5,8 @@ define i1 @compare_unsigned_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_unsigned_min(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP2]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 start:
   %cmp1 = icmp eq i8 %x, 0
@@ -23,11 +20,8 @@ define i1 @compare_signed_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_signed_min(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], -128
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], -128
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 start:
   %cmp1 = icmp eq i8 %x, -128
@@ -41,11 +35,8 @@ define i1 @compare_unsigned_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_unsigned_max(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 start:
   %cmp1 = icmp eq i8 %x, 255
@@ -59,11 +50,8 @@ define i1 @compare_signed_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_signed_max(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 127
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], 127
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 start:
   %cmp1 = icmp eq i8 %x, 127
@@ -77,11 +65,8 @@ define i1 @relational_cmp_unsigned_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @relational_cmp_unsigned_min(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 start:
   %cmp1 = icmp ule i8 %x, 0
@@ -95,11 +80,8 @@ define i1 @relational_cmp_signed_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @relational_cmp_signed_min(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], -128
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], -128
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 start:
   %cmp1 = icmp sle i8 %x, -128
@@ -113,11 +95,8 @@ define i1 @relational_cmp_unsigned_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @relational_cmp_unsigned_max(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 start:
   %cmp1 = icmp uge i8 %x, 255
@@ -131,11 +110,8 @@ define i1 @relational_cmp_signed_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @relational_cmp_signed_max(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 127
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], 127
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 start:
   %cmp1 = icmp sge i8 %x, 127
@@ -151,11 +127,9 @@ define i1 @compare_signed_max_multiuse(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_signed_max_multiuse(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 127
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], 127
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[TMP4]])
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP4]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 start:
@@ -171,10 +145,7 @@ define i1 @compare_signed_min_samesign(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_signed_min_samesign(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], -128
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], -128
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp samesign slt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[CMP3]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp slt i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 start:
@@ -189,10 +160,7 @@ define i1 @compare_flipped(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_flipped(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[CMP3]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp ult i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 start:
@@ -207,11 +175,8 @@ define i1 @compare_swapped(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_swapped(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT1:%.*]] = select i1 [[CMP1_NOT]], i1 [[CMP2]], i1 [[RESULT]]
-; CHECK-NEXT:    ret i1 [[RESULT1]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 start:
   %cmp1 = icmp ne i8 %x, 0
@@ -225,10 +190,7 @@ define i1 @compare_swapped_flipped_unsigned_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @compare_swapped_flipped_unsigned_max(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Y]], -1
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1_NOT]], i1 [[CMP2]], i1 [[CMP3]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp ugt i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 start:
@@ -243,11 +205,8 @@ define i1 @compare_unsigned_min_illegal_type(i9 %x, i9 %y) {
 ; CHECK-LABEL: define i1 @compare_unsigned_min_illegal_type(
 ; CHECK-SAME: i9 [[X:%.*]], i9 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i9 [[X]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i9 [[Y]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i9 [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 [[TMP2]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 start:
   %cmp1 = icmp eq i9 %x, 0
@@ -275,11 +234,8 @@ start:
 define <2 x i1> @compare_vector(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i1> @compare_vector(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i8> [[Y]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> [[TMP1]]
-; CHECK-NEXT:    ret <2 x i1> [[RESULT]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %cmp1 = icmp eq <2 x i8> %x, zeroinitializer
   %cmp2 = icmp ne <2 x i8> %y, zeroinitializer
