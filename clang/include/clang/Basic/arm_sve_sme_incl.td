@@ -101,6 +101,7 @@ include "arm_immcheck_incl.td"
 // [: svuint8_t
 // t: svint32_t
 // z: svuint32_t
+// #: svint64_t
 // g: svuint64_t
 // O: svfloat16_t
 // M: svfloat32_t
