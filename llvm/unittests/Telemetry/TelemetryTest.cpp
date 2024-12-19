@@ -33,7 +33,7 @@ struct TestContext {
   bool HasVendorPlugin = false;
 
   // These two fields contain data emitted by the framework for later
-  // verifications by the tests.
+  // verification by the tests.
   std::string Buffer = "";
   std::vector<json::Object> EmittedJsons;
 
