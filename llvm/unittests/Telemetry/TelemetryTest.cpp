@@ -11,13 +11,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-#include <chrono>
-#include <ctime>
+#include <optional>
 #include <vector>
-
-#include <iostream>
 
 namespace llvm {
 namespace telemetry {
@@ -45,7 +41,7 @@ class JsonSerializer : public Serializer {
 public:
   json::Object *getOutputObject() { return Out.get(); }
 
-  llvm::Error init() override {
+  Error init() override {
     if (Started)
       return createStringError("Serializer already in use");
     Started = true;
@@ -99,7 +95,7 @@ public:
     writeHelper(Name, std::move(Val));
   }
 
-  llvm::Error finalize() override {
+  Error finalize() override {
     if (!Started)
       return createStringError("Serializer not currently in use");
     Started = false;
@@ -124,7 +120,7 @@ class StringSerializer : public Serializer {
 public:
   const std::string &getString() { return Buffer; }
 
-  llvm::Error init() override {
+  Error init() override {
     if (Started)
       return createStringError("Serializer already in use");
     Started = true;
@@ -161,7 +157,7 @@ public:
     writeHelper(Name, ChildBuff);
   }
 
-  llvm::Error finalize() override {
+  Error finalize() override {
     assert(Children.empty() && ChildrenNames.empty());
     if (!Started)
       return createStringError("Serializer not currently in use");
@@ -173,9 +169,9 @@ private:
   template <typename T> void writeHelper(StringRef Name, T Value) {
     assert(Started && "serializer not started");
     if (Children.empty())
-      Buffer.append((Name + ":" + llvm::Twine(Value) + "\n").str());
+      Buffer.append((Name + ":" + Twine(Value) + "\n").str());
     else
-      Children.back().append((Name + ":" + llvm::Twine(Value) + "\n").str());
+      Children.back().append((Name + ":" + Twine(Value) + "\n").str());
   }
 
   bool Started = false;
@@ -187,7 +183,7 @@ private:
 namespace vendor {
 struct VendorConfig : public Config {
   VendorConfig(bool Enable) : Config(Enable) {}
-  std::string makeSessionId() override {
+  std::optional<std::string> makeSessionId() override {
     static int seed = 0;
     return std::to_string(seed++);
   }
@@ -215,7 +211,7 @@ public:
     return Error::success();
   }
 
-  llvm::StringLiteral name() const override { return "JsonDestination"; }
+  StringLiteral name() const override { return "JsonDestination"; }
 
 private:
   TestContext *CurrentContext;
@@ -247,7 +243,7 @@ public:
   createInstance(Config *Config, TestContext *CurrentContext) {
     if (!Config->EnableTelemetry)
       return nullptr;
-    CurrentContext->ExpectedUuid = Config->makeSessionId();
+    CurrentContext->ExpectedUuid = *(Config->makeSessionId());
     std::unique_ptr<TestManager> Ret = std::make_unique<TestManager>(
         CurrentContext, CurrentContext->ExpectedUuid);
 
@@ -276,10 +272,6 @@ public:
   }
 
   std::string getSessionId() { return SessionId; }
-
-  Error atStartup(StartupInfo *Info) { return dispatch(Info); }
-
-  Error atExit(ExitInfo *Info) { return dispatch(Info); }
 
 private:
   TestContext *CurrentContext;
@@ -312,7 +304,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
   vendor::StartupInfo S;
   S.ToolName = ToolName;
 
-  Error startupEmitStatus = Manager->atStartup(&S);
+  Error startupEmitStatus = Manager->dispatch(&S);
   EXPECT_FALSE(startupEmitStatus);
   const json::Object &StartupEntry = Context.EmittedJsons[0];
   json::Object ExpectedStartup(
@@ -322,7 +314,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
   vendor::ExitInfo E;
   E.ExitCode = 0;
   E.ExitDesc = "success";
-  Error exitEmitStatus = Manager->atExit(&E);
+  Error exitEmitStatus = Manager->dispatch(&E);
   EXPECT_FALSE(exitEmitStatus);
   const json::Object &ExitEntry = Context.EmittedJsons[1];
   json::Object ExpectedExit({{"SessionId", Context.ExpectedUuid},

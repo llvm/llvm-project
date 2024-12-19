@@ -14,6 +14,7 @@
 #ifndef LLVM_TELEMETRY_TELEMETRY_H
 #define LLVM_TELEMETRY_TELEMETRY_H
 
+#include "<optional>
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -73,7 +74,7 @@ struct Config {
   const bool EnableTelemetry;
   Config(bool E) : EnableTelemetry(E) {}
 
-  virtual std::string makeSessionId() { return "0"; }
+  virtual std::optional<std::string> makeSessionId() { return std::nullopt; }
 };
 
 /// For isa, dyn_cast, etc operations on TelemetryInfo.
