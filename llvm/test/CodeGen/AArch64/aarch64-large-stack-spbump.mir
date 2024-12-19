@@ -1,0 +1,55 @@
+# RUN: llc -mtriple=aarch64 -run-pass=prologepilog %s -o - | FileCheck %s
+--- |
+  ; ModuleID = 'bug.c'
+  source_filename = "bug.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  target triple = "aarch64-unknown-linux-gnu"
+ 
+  ; Function Attrs: mustprogress noinline optnone uwtable
+  define dso_local noundef i32 @_Z4funcv() #0 {
+  entry:
+    %array = alloca [1073741824 x i32], align 4
+    %arrayidx = getelementptr inbounds [1073741824 x i32], ptr %array, i64 0, i64 20
+    store i32 7, ptr %arrayidx, align 4
+    call void @_Z5func2v()
+    %arrayidx1 = getelementptr inbounds [1073741824 x i32], ptr %array, i64 0, i64 20
+    %0 = load i32, ptr %arrayidx1, align 4
+    ret i32 %0
+  }
+ 
+  declare void @_Z5func2v() #1
+ 
+  attributes #0 = { mustprogress noinline optnone uwtable "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,-fmv" }
+  attributes #1 = { "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,-fmv" }
+...
+---
+name:            _Z4funcv
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+frameInfo:
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, name: array, size: 4294967296, alignment: 4, local-offset: -4294967296 }
+machineFunctionInfo: {}
+body:             |
+  bb.1.entry:
+    renamable $w8 = MOVi32imm 7
+    STRWui killed renamable $w8, %stack.0.array, 20 :: (store (s32) into %ir.arrayidx)
+    ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    BL @_Z5func2v, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    renamable $w0 = LDRWui %stack.0.array, 20 :: (dereferenceable load (s32) from %ir.arrayidx1)
+    ; CHECK: early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp
+    RET_ReallyLR implicit killed $w0
+
+...
