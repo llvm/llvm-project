@@ -8006,7 +8006,6 @@ void CodeGenFunction::EmitOMPMaskedTaskLoopDirective(
   CGM.getOpenMPRuntime().emitMaskedRegion(*this, CodeGen, S.getBeginLoc());
 }
 
-
 void CodeGenFunction::EmitOMPMasterTaskLoopSimdDirective(
     const OMPMasterTaskLoopSimdDirective &S) {
   auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -8030,7 +8029,6 @@ void CodeGenFunction::EmitOMPMaskedTaskLoopSimdDirective(
   OMPLexicalScope Scope(*this, S);
   CGM.getOpenMPRuntime().emitMaskedRegion(*this, CodeGen, S.getBeginLoc());
 }
-
 
 void CodeGenFunction::EmitOMPParallelMasterTaskLoopDirective(
     const OMPParallelMasterTaskLoopDirective &S) {
@@ -8068,7 +8066,6 @@ void CodeGenFunction::EmitOMPParallelMaskedTaskLoopDirective(
                                  emitEmptyBoundParameters);
 }
 
-
 void CodeGenFunction::EmitOMPParallelMasterTaskLoopSimdDirective(
     const OMPParallelMasterTaskLoopSimdDirective &S) {
   auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -8104,7 +8101,6 @@ void CodeGenFunction::EmitOMPParallelMaskedTaskLoopSimdDirective(
   emitCommonOMPParallelDirective(*this, S, OMPD_masked_taskloop_simd, CodeGen,
                                  emitEmptyBoundParameters);
 }
-
 
 // Generate the instructions for '#pragma omp target update' directive.
 void CodeGenFunction::EmitOMPTargetUpdateDirective(
