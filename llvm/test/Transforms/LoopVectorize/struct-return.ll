@@ -143,6 +143,30 @@ exit:
   ret void
 }
 
+; TODO: Support vectorization in this case.
+; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
+define void @struct_return_i32_three_results_widen(ptr noalias %in, ptr noalias writeonly %out_a) {
+; CHECK-LABEL: define void @struct_return_i32_three_results_widen
+; CHECK-NOT:   vector.body:
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %in, i64 %iv
+  %in_val = load i32, ptr %arrayidx, align 4
+  %call = tail call { i32, i32, i32 } @qux(i32 %in_val) #5
+  %extract_a = extractvalue { i32, i32, i32 } %call, 0
+  %arrayidx2 = getelementptr inbounds i32, ptr %out_a, i64 %iv
+  store i32 %extract_a, ptr %arrayidx2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 ; Negative test. Widening structs with mixed element types is not supported.
 ; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
 define void @negative_mixed_element_type_struct_return(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -221,6 +245,30 @@ for.body:
   store float %extract_a, ptr %arrayidx2, align 4
   %arrayidx4 = getelementptr inbounds float, ptr %out_b, i64 %iv
   store float %extract_b, ptr %arrayidx4, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Negative test. The second element of the struct cannot be widened.
+; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
+define void @negative_non_widenable_element(ptr noalias %in, ptr noalias writeonly %out_a) {
+; CHECK-LABEL: define void @negative_non_widenable_element
+; CHECK-NOT:   vector.body:
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
+  %in_val = load float, ptr %arrayidx, align 4
+  %call = tail call { float, [1 x float] } @foo_one_non_widenable_element(float %in_val) #0
+  %extract_a = extractvalue { float, [1 x float] } %call, 0
+  %arrayidx2 = getelementptr inbounds float, ptr %out_a, i64 %iv
+  store float %extract_a, ptr %arrayidx2, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %for.body
@@ -312,10 +360,13 @@ declare { float, i32 } @baz(float)
 declare %named_struct @bar_named(double)
 declare { { float, float } } @foo_nested_struct(float)
 declare { [2 x float] } @foo_arrays(float)
+declare { float, [1 x float] } @foo_one_non_widenable_element(float)
+declare { i32, i32, i32 } @qux(i32)
 
 declare { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float>)
 declare { <2 x double>, <2 x double> } @fixed_vec_bar(<2 x double>)
 declare { <2 x float>, <2 x i32> } @fixed_vec_baz(<2 x float>)
+declare { <2 x i32>, <2 x i32>, <2 x i32> } @fixed_vec_qux(<2 x i32>)
 
 declare { <vscale x 4 x float>, <vscale x 4 x float> } @scalable_vec_masked_foo(<vscale x 4 x float>, <vscale x 4 x i1>)
 
@@ -324,3 +375,4 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_bar(fixed_vec
 attributes #2 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_baz(fixed_vec_baz)" }
 attributes #3 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(scalable_vec_masked_foo)" }
 attributes #4 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_bar_named(fixed_vec_bar)" }
+attributes #5 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_qux(fixed_vec_qux)" }
