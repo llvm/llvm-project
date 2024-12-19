@@ -1020,7 +1020,7 @@ defm V_PERMLANE64_B32        : VOP1Only_Real_gfx11_gfx12<0x067>;
 defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x01c, "v_mov_b16">;
 defm V_NOT_B16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x069, "v_not_b16">;
 defm V_CVT_I32_I16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x06a, "v_cvt_i32_i16">;
-defm V_CVT_U32_U16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x06b, "v_cvt_u32_u16">;
+defm V_CVT_U32_U16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x06b, "v_cvt_u32_u16">;
 
 defm V_CVT_F16_U16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x050, "v_cvt_f16_u16">;
 defm V_CVT_F16_I16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x051, "v_cvt_f16_i16">;
