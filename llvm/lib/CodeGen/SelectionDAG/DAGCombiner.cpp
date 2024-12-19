@@ -13229,12 +13229,11 @@ static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
                                     const TargetLowering &TLI) {
   bool HasCopyToRegUses = false;
   bool isTruncFree = TLI.isTruncateFree(VT, N0.getValueType());
-  for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end(); UI != UE;
-       ++UI) {
-    SDNode *User = *UI;
+  for (SDUse &Use : N0->uses()) {
+    SDNode *User = Use.getUser();
     if (User == N)
       continue;
-    if (UI.getUse().getResNo() != N0.getResNo())
+    if (Use.getResNo() != N0.getResNo())
       continue;
     // FIXME: Only extend SETCC N, N and SETCC N, c for now.
     if (ExtOpc != ISD::ANY_EXTEND && User->getOpcode() == ISD::SETCC) {
@@ -13266,9 +13265,7 @@ static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
 
   if (HasCopyToRegUses) {
     bool BothLiveOut = false;
-    for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
-         UI != UE; ++UI) {
-      SDUse &Use = UI.getUse();
+    for (SDUse &Use : N->uses()) {
       if (Use.getResNo() == 0 && Use.getUser()->getOpcode() == ISD::CopyToReg) {
         BothLiveOut = true;
         break;
@@ -13780,11 +13777,10 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
 
         // Non-chain users of this value must either be the setcc in this
         // sequence or extends that can be folded into the new {z/s}ext-load.
-        for (SDNode::use_iterator UI = V->use_begin(), UE = V->use_end();
-             UI != UE; ++UI) {
+        for (SDUse &Use : V->uses()) {
           // Skip uses of the chain and the setcc.
-          SDNode *User = *UI;
-          if (UI.getUse().getResNo() != 0 || User == N0.getNode())
+          SDNode *User = Use.getUser();
+          if (Use.getResNo() != 0 || User == N0.getNode())
             continue;
           // Extra users must have exactly the same cast we are about to create.
           // TODO: This restriction could be eased if ExtendUsesToFormExtLoad()
@@ -18925,10 +18921,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   SmallVector<SDNode *, 16> OtherUses;
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
-    for (SDNode::use_iterator UI = BasePtr->use_begin(),
-                              UE = BasePtr->use_end();
-         UI != UE; ++UI) {
-      SDUse &Use = UI.getUse();
+    for (SDUse &Use : BasePtr->uses()) {
       // Skip the use that is Ptr and uses of other results from BasePtr's
       // node (important for nodes that return multiple results).
       if (Use.getUser() == Ptr.getNode() || Use != BasePtr)
@@ -18944,7 +18937,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
         break;
       }
 
-      SDValue Op1 = Use.getUser()->getOperand((UI.getOperandNo() + 1) & 1);
+      SDValue Op1 = Use.getUser()->getOperand((Use.getOperandNo() + 1) & 1);
       if (!isa<ConstantSDNode>(Op1)) {
         OtherUses.clear();
         break;
@@ -20056,13 +20049,12 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
   // Check if this load is used as several smaller chunks of bits.
   // Basically, look for uses in trunc or trunc(lshr) and record a new chain
   // of computation for each trunc.
-  for (SDNode::use_iterator UI = LD->use_begin(), UIEnd = LD->use_end();
-       UI != UIEnd; ++UI) {
+  for (SDUse &U : LD->uses()) {
     // Skip the uses of the chain.
-    if (UI.getUse().getResNo() != 0)
+    if (U.getResNo() != 0)
       continue;
 
-    SDNode *User = *UI;
+    SDNode *User = U.getUser();
     unsigned Shift = 0;
 
     // Check if this is a trunc(lshr).
@@ -20936,11 +20928,11 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
            RootCount->second.second > StoreMergeDependenceLimit;
   };
 
-  auto TryToAddCandidate = [&](SDNode::use_iterator UseIter) {
+  auto TryToAddCandidate = [&](SDUse &Use) {
     // This must be a chain use.
-    if (UseIter.getOperandNo() != 0)
+    if (Use.getOperandNo() != 0)
       return;
-    if (auto *OtherStore = dyn_cast<StoreSDNode>(*UseIter)) {
+    if (auto *OtherStore = dyn_cast<StoreSDNode>(Use.getUser())) {
       BaseIndexOffset Ptr;
       int64_t PtrDiff;
       if (CandidateMatch(OtherStore, Ptr, PtrDiff) &&
@@ -20958,19 +20950,20 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
       return nullptr;
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored) {
-      if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) { // walk down chain
-        for (auto I2 = (*I)->use_begin(), E2 = (*I)->use_end(); I2 != E2; ++I2)
-          TryToAddCandidate(I2);
+      SDNode *User = I->getUser();
+      if (I->getOperandNo() == 0 && isa<LoadSDNode>(User)) { // walk down chain
+        for (SDUse &U2 : User->uses())
+          TryToAddCandidate(U2);
       }
       // Check stores that depend on the root (e.g. Store 3 in the chart above).
-      if (I.getOperandNo() == 0 && isa<StoreSDNode>(*I)) {
-        TryToAddCandidate(I);
+      if (I->getOperandNo() == 0 && isa<StoreSDNode>(User)) {
+        TryToAddCandidate(*I);
       }
     }
   } else {
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored)
-      TryToAddCandidate(I);
+      TryToAddCandidate(*I);
   }
 
   return RootNode;
@@ -27320,8 +27313,7 @@ SDValue DAGCombiner::visitGET_FPENV_MEM(SDNode *N) {
 
   // Check if the loaded value is used only in a store operation.
   StoreSDNode *StNode = nullptr;
-  for (auto I = LdNode->use_begin(), E = LdNode->use_end(); I != E; ++I) {
-    SDUse &U = I.getUse();
+  for (SDUse &U : LdNode->uses()) {
     if (U.getResNo() == 0) {
       if (auto *St = dyn_cast<StoreSDNode>(U.getUser())) {
         if (StNode)

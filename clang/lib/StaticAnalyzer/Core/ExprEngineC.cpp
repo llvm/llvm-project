@@ -794,10 +794,9 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
 
   // Find the predecessor block.
   ProgramStateRef SrcState = state;
-
   for (const ExplodedNode *N = Pred ; N ; N = *N->pred_begin()) {
-    auto Edge = N->getLocationAs<BlockEdge>();
-    if (!Edge.has_value()) {
+    ProgramPoint PP = N->getLocation();
+    if (PP.getAs<PreStmtPurgeDeadSymbols>() || PP.getAs<BlockEntrance>()) {
       // If the state N has multiple predecessors P, it means that successors
       // of P are all equivalent.
       // In turn, that means that all nodes at P are equivalent in terms
@@ -805,7 +804,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
       // FIXME: a more robust solution which does not walk up the tree.
       continue;
     }
-    SrcBlock = Edge->getSrc();
+    SrcBlock = PP.castAs<BlockEdge>().getSrc();
     SrcState = N->getState();
     break;
   }

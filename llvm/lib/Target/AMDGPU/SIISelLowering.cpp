@@ -6566,15 +6566,12 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
 /// Helper function for LowerBRCOND
 static SDNode *findUser(SDValue Value, unsigned Opcode) {
 
-  SDNode *Parent = Value.getNode();
-  for (SDNode::use_iterator I = Parent->use_begin(), E = Parent->use_end();
-       I != E; ++I) {
-
-    if (I.getUse().get() != Value)
+  for (SDUse &U : Value->uses()) {
+    if (U.get() != Value)
       continue;
 
-    if (I->getOpcode() == Opcode)
-      return *I;
+    if (U.getUser()->getOpcode() == Opcode)
+      return U.getUser();
   }
   return nullptr;
 }
@@ -15142,29 +15139,30 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   }
 
   // Try to figure out the used register components
-  for (SDNode::use_iterator I = Node->use_begin(), E = Node->use_end(); I != E;
-       ++I) {
+  for (SDUse &Use : Node->uses()) {
 
     // Don't look at users of the chain.
-    if (I.getUse().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
+    SDNode *User = Use.getUser();
+
     // Abort if we can't understand the usage
-    if (!I->isMachineOpcode() ||
-        I->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
+    if (!User->isMachineOpcode() ||
+        User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return Node;
 
     // Lane means which subreg of %vgpra_vgprb_vgprc_vgprd is used.
     // Note that subregs are packed, i.e. Lane==0 is the first bit set
     // in OldDmask, so it can be any of X,Y,Z,W; Lane==1 is the second bit
     // set, etc.
-    Lane = SubIdx2Lane(I->getConstantOperandVal(1));
+    Lane = SubIdx2Lane(User->getConstantOperandVal(1));
     if (Lane == ~0u)
       return Node;
 
     // Check if the use is for the TFE/LWE generated result at VGPRn+1.
     if (UsesTFC && Lane == TFCLane) {
-      Users[Lane] = *I;
+      Users[Lane] = User;
     } else {
       // Set which texture component corresponds to the lane.
       unsigned Comp;
@@ -15177,7 +15175,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
       if (Users[Lane])
         return Node;
 
-      Users[Lane] = *I;
+      Users[Lane] = User;
       NewDmask |= 1 << Comp;
     }
   }
@@ -16876,10 +16874,9 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
 }
 
 bool SITargetLowering::hasMemSDNodeUser(SDNode *N) const {
-  SDNode::use_iterator I = N->use_begin(), E = N->use_end();
-  for (; I != E; ++I) {
-    if (MemSDNode *M = dyn_cast<MemSDNode>(*I)) {
-      if (getBasePtrIndex(M) == I.getOperandNo())
+  for (SDUse &Use : N->uses()) {
+    if (MemSDNode *M = dyn_cast<MemSDNode>(Use.getUser())) {
+      if (getBasePtrIndex(M) == Use.getOperandNo())
         return true;
     }
   }
