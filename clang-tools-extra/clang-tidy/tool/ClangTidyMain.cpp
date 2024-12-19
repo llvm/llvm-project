@@ -557,6 +557,7 @@ int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
   SmallVector<const char *> Args{argv, argv + argc};
 
+  // expand parameters file to argc and argv.
   llvm::BumpPtrAllocator Alloc;
   llvm::cl::TokenizerCallback Tokenizer =
       llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
