@@ -1330,6 +1330,7 @@ Register ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case ARM::tSTRspi:
   case ARM::VSTRD:
   case ARM::VSTRS:
+  case ARM::VSTRH:
   case ARM::VSTR_P0_off:
   case ARM::VSTR_FPSCR_NZCVQC_off:
   case ARM::MVE_VSTRWU32:
@@ -1588,6 +1589,7 @@ Register ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case ARM::tLDRspi:
   case ARM::VLDRD:
   case ARM::VLDRS:
+  case ARM::VLDRH:
   case ARM::VLDR_P0_off:
   case ARM::VLDR_FPSCR_NZCVQC_off:
   case ARM::MVE_VLDRWU32:
