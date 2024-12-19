@@ -82,6 +82,10 @@ struct DeviceExprChecker
           }
         }
       }
+      // c_devloc is inlined in lowering.
+      if (x.GetName().compare("c_devloc") == 0) {
+        return {};
+      }
     } else if (x.GetSpecificIntrinsic()) {
       // TODO(CUDA): Check for unsupported intrinsics here
       return {};
@@ -350,6 +354,9 @@ private:
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::StopStmt> &) {
+              return;
+            },
             [&](const common::Indirection<parser::PrintStmt> &) {},
             [&](const common::Indirection<parser::WriteStmt> &x) {
               if (x.value().format) { // Formatted write to '*' or '6'
