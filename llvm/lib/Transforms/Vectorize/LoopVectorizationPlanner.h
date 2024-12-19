@@ -231,12 +231,15 @@ public:
         new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
   }
 
+  /// Convert the input value \p Current to the corresponding value of an
+  /// induction with different start and step values, using Start + Current *
+  /// Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPValue *CanonicalIV, VPValue *Step,
+                                     VPValue *Current, VPValue *Step,
                                      const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step, Name));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
