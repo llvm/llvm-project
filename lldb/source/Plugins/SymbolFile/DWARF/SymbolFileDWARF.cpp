@@ -1594,7 +1594,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   if (!dwarf_ast)
     return false;
   Type *type = decl_die.GetDWARF()->GetDIEToType().lookup(decl_die.GetDIE());
-  assert (type);
+  assert(type);
 
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
