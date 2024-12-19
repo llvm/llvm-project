@@ -295,6 +295,7 @@ public:
 
   LIBC_PRINTF_SPLIT_DECL void write_float_arg_val(FormatSection &section, LengthModifier lm, size_t conv_index);
   LIBC_PRINTF_SPLIT_DECL TypeDesc float_type_desc(LengthModifier lm);
+  LIBC_PRINTF_SPLIT_DECL bool advance_arg_if_float(TypeDesc cur_type_desc);
 
 private:
   // parse_flags parses the flags inside a format string. It assumes that
@@ -471,10 +472,8 @@ private:
         args_cur.template next_var<uint64_t>();
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
       // Floating point numbers are stored separately from the other arguments.
-      else if (cur_type_desc == type_desc_from_type<double>())
-        args_cur.template next_var<double>();
-      else if (cur_type_desc == type_desc_from_type<long double>())
-        args_cur.template next_var<long double>();
+      else if (advance_arg_if_float(cur_type_desc))
+        ;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // Floating point numbers may be stored separately from the other
@@ -695,6 +694,18 @@ Parser<ArgParser>::float_type_desc(LengthModifier lm) {
     return type_desc_from_type<double>();
   else
     return type_desc_from_type<long double>();
+}
+
+template <typename ArgParser>
+LIBC_PRINTF_SPLIT_DEFN bool
+Parser<ArgParser>::advance_arg_if_float(TypeDesc cur_type_desc) {
+  if (cur_type_desc == type_desc_from_type<double>())
+      args_cur.template next_var<double>();
+  else if (cur_type_desc == type_desc_from_type<long double>())
+      args_cur.template next_var<long double>();
+  else
+    return false;
+  return true;
 }
 #endif
 
