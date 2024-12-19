@@ -562,13 +562,14 @@ SwiftLanguageRuntimeImpl::GetConformances(llvm::StringRef mangled_name) {
 void SwiftLanguageRuntimeImpl::SetupReflection() {
   LLDB_SCOPED_TIMER();
 
-
   std::lock_guard<std::recursive_mutex> lock(m_reflection_ctx_mutex);
   if (m_initialized_reflection_ctx)
     return;
 
   // The global ABI bit is read by the Swift runtime library.
   SetupABIBit();
+  SetupExclusivity();
+  SetupSwiftError();
 
   auto &target = m_process.GetTarget();
   auto exe_module = target.GetExecutableModule();
@@ -647,9 +648,6 @@ void SwiftLanguageRuntimeImpl::SetupABIBit() {
 
 SwiftLanguageRuntimeImpl::SwiftLanguageRuntimeImpl(Process &process)
     : m_process(process) {
-  // The global ABI bit is read by the Swift runtime library.
-  SetupExclusivity();
-  SetupSwiftError();
   Target &target = m_process.GetTarget();
   m_modules_to_add.Append(target.GetImages());
   RegisterSwiftFrameRecognizers(m_process);
