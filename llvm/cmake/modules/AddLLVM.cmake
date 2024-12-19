@@ -1446,6 +1446,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-strings
     llvm-strip
     llvm-profdata
+    llvm-profgen
     llvm-symbolizer
     # symlink version of some of above tools that are enabled by
     # LLVM_INSTALL_BINUTILS_SYMLINKS.
