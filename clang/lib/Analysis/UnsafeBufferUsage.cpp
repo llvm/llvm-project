@@ -838,12 +838,12 @@ bool isCountAttributedPointerArgumentSafe(ASTContext &Context,
 // following forms:
 //   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
 //   2. `std::span<T>{new T, 1}`
-//   3. `std::span<T>{&var, 1}`
+//   3. `std::span<T>{&var, 1}` or `std::span<T>{std::addressof(...), 1}`
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
-//   6. `std::span<T>{std::addressof(...), 1}`
-//   7. `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
+//   6. `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
+//   pointer OR `std::span<char>{(char*)p, n}`, where `p` is a __sized_by(`n`)
 //   pointer.
 
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
@@ -914,9 +914,28 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   }
 
   // Check form 6:
+  bool isArg0CastToBytePtrType = false;
+
+  if (auto *CE = dyn_cast<CastExpr>(Arg0)) {
+    if (auto DestTySize = Finder->getASTContext().getTypeSizeInCharsIfKnown(
+            Arg0Ty->getPointeeType())) {
+      if (!DestTySize->isOne())
+        return false; // If the destination pointee type is NOT of one byte
+                      // size, pattern match fails.
+      Arg0 = CE->getSubExpr()->IgnoreParenImpCasts();
+      Arg0Ty = Arg0->getType();
+      isArg0CastToBytePtrType = true;
+    }
+  }
+  // Check pointer and count/size with respect to the count-attribute:
   if (const auto *CAT = Arg0Ty->getAs<CountAttributedType>()) {
-    // Accept __sized_by() if the size of the pointee type is 1.
-    if (CAT->isCountInBytes()) {
+    // For the pattern of `std::span<char>{(char *) p, n}`, p must NOT be a
+    // __counted_by pointer.
+    if (!CAT->isCountInBytes() && isArg0CastToBytePtrType)
+      return false;
+    // If `Arg0` is not a cast and is a sized_by pointer, its pointee type size
+    // must be one byte:
+    if (CAT->isCountInBytes() && !isArg0CastToBytePtrType) {
       std::optional<CharUnits> SizeOpt =
           Finder->getASTContext().getTypeSizeInCharsIfKnown(
               CAT->getPointeeType());

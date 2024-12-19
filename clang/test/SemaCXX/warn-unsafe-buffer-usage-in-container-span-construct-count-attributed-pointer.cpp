@@ -102,6 +102,32 @@ void span_from_sb_int(sb_int *i, sb_char *c) {
   std::span<char>{c->p, c->size};
 }
 
+void span_from_sb_void(void * __sized_by(n) p, size_t n) {
+  std::span<char>{(char *) p, n};
+  std::span<unsigned char>{(unsigned char *) p, n};
+  std::span<int>{(int *) p, n}; // expected-warning{{the two-parameter std::span construction is unsafe}}
+  std::span<char>{(char *) p, n+1}; // expected-warning{{the two-parameter std::span construction is unsafe}}
+}
+
+class SpanFromSbVoidMemberTest {
+  void * __sized_by(n) p;
+  size_t n;
+
+  void test() {
+    std::span<char>{(char *) p, n};
+    std::span<unsigned char>{(unsigned char *) p, n};
+    std::span<int>{(int *) p, n}; // expected-warning{{the two-parameter std::span construction is unsafe}}
+    std::span<char>{(char *) p, n+1}; // expected-warning{{the two-parameter std::span construction is unsafe}}
+  }
+
+  void test(SpanFromSbVoidMemberTest t) {
+    std::span<char>{(char *) t.p, t.n};
+    std::span<unsigned char>{(unsigned char *) t.p, t.n};
+    std::span<int>{(int *) t.p, t.n}; // expected-warning{{the two-parameter std::span construction is unsafe}}
+    std::span<char>{(char *) t.p, t.n+1}; // expected-warning{{the two-parameter std::span construction is unsafe}}
+  }
+};
+
 void span_from_output_parm(int * __counted_by(n)  *cb_p, size_t n,
                            int * __counted_by(*m) *cb_q, size_t *m,
                            int * __counted_by(*l) cb_z,  size_t *l,
