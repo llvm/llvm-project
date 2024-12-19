@@ -530,7 +530,7 @@ private:
 
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
-    uptr NumReleaseAttempted;
+    uptr NumReleasesAttempted;
     uptr LastReleasedBytes;
     // The minimum size of pushed blocks to trigger page release.
     uptr TryReleaseThreshold;
@@ -1144,12 +1144,12 @@ private:
     Str->append(
         "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
         "inuse: %6zu total: %6zu releases: %6zu last "
-        "release attempted: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
+        "releases attempted: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
         "(0x%zx)\n",
         Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
         Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
         Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
-        Region->ReleaseInfo.NumReleaseAttempted,
+        Region->ReleaseInfo.NumReleasesAttempted,
         Region->ReleaseInfo.LastReleasedBytes >> 10,
         RegionPushedBytesDelta >> 10, Region->RegionBeg,
         getRegionBaseByClassId(ClassId));

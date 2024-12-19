@@ -882,7 +882,7 @@ private:
     const uptr AvailableChunks = Sci->AllocatedUser / BlockSize;
     Str->append(
         "  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-        "inuse: %6zu avail: %6zu release attempted: %6zu last released: %6zuK "
+        "inuse: %6zu avail: %6zu releases attempted: %6zu last released: %6zuK "
         "latest pushed bytes: %6zuK\n",
         ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
         Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks, InUse,
