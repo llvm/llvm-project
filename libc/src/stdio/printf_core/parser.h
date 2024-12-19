@@ -293,7 +293,9 @@ public:
     return section;
   }
 
-  LIBC_PRINTF_SPLIT_DECL void write_float_arg_val(FormatSection &section, LengthModifier lm, size_t conv_index);
+  LIBC_PRINTF_SPLIT_DECL void write_float_arg_val(FormatSection &section,
+                                                  LengthModifier lm,
+                                                  size_t conv_index);
   LIBC_PRINTF_SPLIT_DECL TypeDesc float_type_desc(LengthModifier lm);
   LIBC_PRINTF_SPLIT_DECL bool advance_arg_if_float(TypeDesc cur_type_desc);
 
@@ -701,9 +703,9 @@ template <typename ArgParser>
 LIBC_PRINTF_SPLIT_DEFN bool
 Parser<ArgParser>::advance_arg_if_float(TypeDesc cur_type_desc) {
   if (cur_type_desc == type_desc_from_type<double>())
-      args_cur.template next_var<double>();
+    args_cur.template next_var<double>();
   else if (cur_type_desc == type_desc_from_type<long double>())
-      args_cur.template next_var<long double>();
+    args_cur.template next_var<long double>();
   else
     return false;
   return true;
