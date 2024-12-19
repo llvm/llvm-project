@@ -109,7 +109,7 @@ class IndirectCallPromotion : public BinaryFunctionPass {
     explicit Location(MCSymbol *Sym) : Sym(Sym) {}
     explicit Location(uint64_t Addr) : Addr(Addr) {}
     bool operator==(const Location &O) {
-      return Sym == O.Sym || Addr == O.Addr;
+      return Sym ? Sym == O.Sym : Addr == O.Addr;
     }
   };
 
