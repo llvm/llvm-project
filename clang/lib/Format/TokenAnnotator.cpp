@@ -493,7 +493,7 @@ private:
             (CurrentToken->Next->is(tok::l_paren) ||
              (CurrentToken->Next->is(tok::l_square) &&
               (Line.MustBeDeclaration ||
-               PrevNonComment->isTypeName(LangOpts))))) {
+               (PrevNonComment && PrevNonComment->isTypeName(LangOpts)))))) {
           OpeningParen.setType(OpeningParen.Next->is(tok::caret)
                                    ? TT_ObjCBlockLParen
                                    : TT_FunctionTypeLParen);
