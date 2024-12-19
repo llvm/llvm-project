@@ -984,16 +984,16 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
 }
 
 /// Helper function for building extended bit operations.
-static bool buildExtendedBitOpsInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
-                             MachineIRBuilder &MIRBuilder,
-                             SPIRVGlobalRegistry *GR) {
+static bool buildExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
+                                    unsigned Opcode,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRVGlobalRegistry *GR) {
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   const auto *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   if ((Opcode == SPIRV::OpBitFieldInsert ||
        Opcode == SPIRV::OpBitFieldSExtract ||
-       Opcode == SPIRV::OpBitFieldUExtract ||
-       Opcode == SPIRV::OpBitReverse) &&
+       Opcode == SPIRV::OpBitFieldUExtract || Opcode == SPIRV::OpBitReverse) &&
       !ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions)) {
     std::string DiagMsg = std::string(Builtin->Name) +
                           ": the builtin requires the following SPIR-V "
@@ -1007,8 +1007,8 @@ static bool buildExtendedBitOpsInst(const SPIRV::IncomingCall *Call, unsigned Op
 
   // Generate the instruction.
   auto MIB = MIRBuilder.buildInstr(Opcode)
-      .addDef(Call->ReturnRegister)
-      .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
   for (unsigned i = 0; i < Call->Arguments.size(); ++i)
     MIB.addUse(Call->Arguments[i]);
 
@@ -2074,8 +2074,8 @@ static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
 }
 
 static bool generateExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
-                                MachineIRBuilder &MIRBuilder,
-                                SPIRVGlobalRegistry *GR) {
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
   // Lookup the instruction opcode in the TableGen records.
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   unsigned Opcode =
