@@ -30,7 +30,7 @@ bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType type) {
   // certain circumstances have been reached.
   assert(!type->getAs<MemberPointerType>() && "NYI");
 
-  // If this isn't a tagged type, we can convert it!
+  // If this isn't a tag type, we can convert it.
   const TagType *tagType = type->getAs<TagType>();
   if (!tagType)
     return true;
@@ -171,9 +171,15 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.BFloat16Ty;
       break;
     case BuiltinType::Float:
+      assert(&astContext.getFloatTypeSemantics(type) ==
+                 &llvm::APFloat::IEEEsingle() &&
+             "ClangIR only supports float as IEEE 32-bit");
       resultType = cgm.FloatTy;
       break;
     case BuiltinType::Double:
+      assert(&astContext.getFloatTypeSemantics(type) ==
+                 &llvm::APFloat::IEEEdouble() &&
+             "ClangIR only supports double as IEEE 64-bit");
       resultType = cgm.DoubleTy;
       break;
     case BuiltinType::LongDouble:
