@@ -433,7 +433,7 @@ class reverse_children {
   ArrayRef<Stmt *> children;
 
 public:
-  reverse_children(Stmt *S, ASTContext *astContext = nullptr);
+  reverse_children(Stmt *S, ASTContext &Ctx);
 
   using iterator = ArrayRef<Stmt *>::reverse_iterator;
 
@@ -443,61 +443,47 @@ public:
 
 } // namespace
 
-reverse_children::reverse_children(Stmt *S, ASTContext *AstC) {
-  if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
-    children = CE->getRawSubExprs();
+reverse_children::reverse_children(Stmt *S, ASTContext &Ctx) {
+  switch (S->getStmtClass()) {
+  case Stmt::CallExprClass: {
+    children = cast<CallExpr>(S)->getRawSubExprs();
     return;
   }
-  switch (S->getStmtClass()) {
-    // Note: Fill in this switch with more cases we want to optimize.
-    case Stmt::InitListExprClass: {
-      InitListExpr *IE = cast<InitListExpr>(S);
-      children = llvm::ArrayRef(reinterpret_cast<Stmt **>(IE->getInits()),
-                                IE->getNumInits());
-      return;
-    }
-    case Stmt::AttributedStmtClass: {
-      assert(S->getStmtClass() == Stmt::AttributedStmtClass);
-      assert(AstC &&
-             "Attributes need the ast context to determine side-effects");
-      AttributedStmt *AS = cast<AttributedStmt>(S);
-      assert(AS);
 
-      // for an attributed stmt, the "children()" returns only the NullStmt
-      // (;) but semantically the "children" are supposed to be the
-      // expressions _within_ i.e. the two square brackets i.e. [[ HERE ]]
-      // so we add the subexpressions first, _then_ add the "children"
-      for (const Attr *Attr : AS->getAttrs()) {
-        // Only handles [[ assume(<assumption>) ]] right now
-        CXXAssumeAttr const *AssumeAttr = llvm::dyn_cast<CXXAssumeAttr>(Attr);
-        if (!AssumeAttr) {
-          continue;
-        }
+  // Note: Fill in this switch with more cases we want to optimize.
+  case Stmt::InitListExprClass: {
+    InitListExpr *IE = cast<InitListExpr>(S);
+    children = llvm::ArrayRef(reinterpret_cast<Stmt **>(IE->getInits()),
+                              IE->getNumInits());
+    return;
+  }
+  case Stmt::AttributedStmtClass: {
+    auto *AS = cast<AttributedStmt>(S);
+
+    // for an attributed stmt, the "children()" returns only the NullStmt
+    // (;) but semantically the "children" are supposed to be the
+    // expressions _within_ i.e. the two square brackets i.e. [[ HERE ]]
+    // so we add the subexpressions first, _then_ add the "children"
+
+    for (const auto *Attr : AS->getAttrs()) {
+      if (const auto *AssumeAttr = dyn_cast<CXXAssumeAttr>(Attr)) {
         Expr *AssumeExpr = AssumeAttr->getAssumption();
-        // If we skip adding the assumption expression to CFG,
-        // it doesn't get "branch"-ed by symbol analysis engine
-        // presumably because it's literally not in the CFG
-
-        if (AssumeExpr->HasSideEffects(*AstC)) {
-          continue;
+        if (!AssumeExpr->HasSideEffects(Ctx)) {
+          childrenBuf.push_back(AssumeExpr);
         }
-        childrenBuf.push_back(AssumeExpr);
       }
-      // children() for an CXXAssumeAttr is NullStmt(;)
-      // for others, it will have existing behavior
+      // Visit the actual children AST nodes.
+      // For CXXAssumeAttrs, this is always a NullStmt.
       llvm::append_range(childrenBuf, AS->children());
       children = childrenBuf;
-      return;
     }
-    default:
-      break;
+    return;
   }
-
-  // Default case for all other statements.
-  llvm::append_range(childrenBuf, S->children());
-
-  // This needs to be done *after* childrenBuf has been populated.
-  children = childrenBuf;
+  default:
+    // Default case for all other statements.
+    llvm::append_range(childrenBuf, S->children());
+    children = childrenBuf;
+  }
 }
 
 namespace {
@@ -2464,7 +2450,7 @@ CFGBlock *CFGBuilder::VisitChildren(Stmt *S) {
 
   // Visit the children in their reverse order so that they appear in
   // left-to-right (natural) order in the CFG.
-  reverse_children RChildren(S, Context);
+  reverse_children RChildren(S, *Context);
   for (Stmt *Child : RChildren) {
     if (Child)
       if (CFGBlock *R = Visit(Child))
@@ -2480,7 +2466,7 @@ CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {
   }
   CFGBlock *B = Block;
 
-  reverse_children RChildren(ILE);
+  reverse_children RChildren(ILE, *Context);
   for (Stmt *Child : RChildren) {
     if (!Child)
       continue;

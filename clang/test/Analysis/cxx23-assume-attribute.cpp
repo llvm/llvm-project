@@ -28,7 +28,7 @@ int ternary_in_builtin_assume(int a, int b) {
 int ternary_in_assume(int a, int b) {
   // FIXME notes
   // Currently, if this test is run without the core.builtin.Builtin checker, the above function with the __builtin_assume behaves identically to the following test
-  // i.e. calls to `clang_analyzer_dump` result in "extraneous"  prints of the SVal(s) `reg_$2<int > b ...` 
+  // i.e. calls to `clang_analyzer_dump` result in "extraneous"  prints of the SVal(s) `reg_$2<int > b ...`
   // as opposed to 4 or 10
   // which likely implies the Program State(s) did not get narrowed.
   // A new checker is likely needed to be implemented to properly handle the expressions within `[[assume]]` to eliminate the states where `b` is not narrowed.

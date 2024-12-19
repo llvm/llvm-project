@@ -785,8 +785,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
                                   const Expr *R,
                                   ExplodedNode *Pred,
                                   ExplodedNodeSet &Dst) {
-  assert(L && "L does not exist!");
-  assert(R && "R does not exist!");
+  assert(L && R);
 
   StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
@@ -797,8 +796,8 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   ProgramStateRef SrcState = state;
 
   for (const ExplodedNode *N = Pred ; N ; N = *N->pred_begin()) {
-    ProgramPoint PP = N->getLocation();
-    if (PP.getAs<PreStmtPurgeDeadSymbols>() || PP.getAs<BlockEntrance>() || PP.getAs<StmtPoint>()) {
+    auto Edge = N->getLocationAs<BlockEdge>();
+    if (!Edge.has_value()) {
       // If the state N has multiple predecessors P, it means that successors
       // of P are all equivalent.
       // In turn, that means that all nodes at P are equivalent in terms
@@ -806,8 +805,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
       // FIXME: a more robust solution which does not walk up the tree.
       continue;
     }
-    assert(PP.getAs<BlockEdge>());
-    SrcBlock = PP.castAs<BlockEdge>().getSrc();
+    SrcBlock = Edge->getSrc();
     SrcState = N->getState();
     break;
   }
