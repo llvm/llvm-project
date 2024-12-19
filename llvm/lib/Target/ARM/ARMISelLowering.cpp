@@ -804,6 +804,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setAllExpand(MVT::bf16);
     if (!Subtarget->hasFullFP16())
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+  } else {
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f32, Custom);
   }
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -3456,7 +3459,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -3494,7 +3497,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     // f32 returned in a single GPR.
     if (!Copy->hasOneUse())
       return false;
-    Copy = *Copy->use_begin();
+    Copy = *Copy->user_begin();
     if (Copy->getOpcode() != ISD::CopyToReg || !Copy->hasNUsesOfValue(1, 0))
       return false;
     // If the copy has a glue operand, we conservatively assume it isn't safe to
@@ -6301,10 +6304,13 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
                      DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op));
 
   if ((DstVT == MVT::i16 || DstVT == MVT::i32) &&
-      (SrcVT == MVT::f16 || SrcVT == MVT::bf16))
+      (SrcVT == MVT::f16 || SrcVT == MVT::bf16)) {
+    if (Subtarget->hasFullFP16() && !Subtarget->hasBF16())
+      Op = DAG.getBitcast(MVT::f16, Op);
     return DAG.getNode(
         ISD::TRUNCATE, SDLoc(N), DstVT,
         MoveFromHPR(SDLoc(N), DAG, MVT::i32, SrcVT.getSimpleVT(), Op));
+  }
 
   if (!(SrcVT == MVT::i64 || DstVT == MVT::i64))
     return SDValue();
@@ -10588,6 +10594,17 @@ SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getFrameIndex(FI, VT);
 }
 
+SDValue ARMTargetLowering::LowerFP_TO_BF16(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  MVT SVT = Op.getOperand(0).getSimpleValueType();
+  RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, MVT::bf16);
+  SDValue Res =
+      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+  return DAG.getBitcast(MVT::i32, Res);
+}
+
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Lowering node: "; Op.dump());
   switch (Op.getOpcode()) {
@@ -10713,6 +10730,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCCS: return LowerFSETCC(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return LowerFP_TO_BF16(Op, DAG);
   case ARMISD::WIN__DBZCHK: return SDValue();
   }
 }
@@ -15356,7 +15375,7 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   assert(EltVT == MVT::f32 && "Unexpected type!");
 
   // Check 1.2.
-  SDNode *Use = *N->use_begin();
+  SDNode *Use = *N->user_begin();
   if (Use->getOpcode() != ISD::BITCAST ||
       Use->getValueType(0).isFloatingPoint())
     return SDValue();
@@ -15561,9 +15580,8 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       !isa<ConstantSDNode>(Ext.getOperand(1)) ||
       Ext.getConstantOperandVal(1) % 2 != 0)
     return SDValue();
-  if (Ext->use_size() == 1 &&
-      (Ext->use_begin()->getOpcode() == ISD::SINT_TO_FP ||
-       Ext->use_begin()->getOpcode() == ISD::UINT_TO_FP))
+  if (Ext->hasOneUse() && (Ext->user_begin()->getOpcode() == ISD::SINT_TO_FP ||
+                           Ext->user_begin()->getOpcode() == ISD::UINT_TO_FP))
     return SDValue();
 
   SDValue Op0 = Ext.getOperand(0);
@@ -15587,11 +15605,11 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // lanes.
   SDValue OtherExt(*OtherIt, 0);
   if (OtherExt.getValueType() != MVT::i32) {
-    if (OtherExt->use_size() != 1 ||
-        OtherExt->use_begin()->getOpcode() != ISD::BITCAST ||
-        OtherExt->use_begin()->getValueType(0) != MVT::i32)
+    if (!OtherExt->hasOneUse() ||
+        OtherExt->user_begin()->getOpcode() != ISD::BITCAST ||
+        OtherExt->user_begin()->getValueType(0) != MVT::i32)
       return SDValue();
-    OtherExt = SDValue(*OtherExt->use_begin(), 0);
+    OtherExt = SDValue(*OtherExt->user_begin(), 0);
   }
 
   // Convert the type to a f64 and extract with a VMOVRRD.
@@ -18326,9 +18344,9 @@ static SDValue PerformHWLoopCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Elements = Int.getOperand(2);
   unsigned IntOp = Int->getConstantOperandVal(1);
-  assert((N->hasOneUse() && N->use_begin()->getOpcode() == ISD::BR)
-          && "expected single br user");
-  SDNode *Br = *N->use_begin();
+  assert((N->hasOneUse() && N->user_begin()->getOpcode() == ISD::BR) &&
+         "expected single br user");
+  SDNode *Br = *N->user_begin();
   SDValue OtherTarget = Br->getOperand(1);
 
   // Update the unconditional branch to branch to the given Dest.
@@ -19330,10 +19348,10 @@ bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   // If there's more than one user instruction, the loadext is desirable no
   // matter what.  There can be two uses by the same instruction.
   if (ExtVal->use_empty() ||
-      !ExtVal->use_begin()->isOnlyUserOf(ExtVal.getNode()))
+      !ExtVal->user_begin()->isOnlyUserOf(ExtVal.getNode()))
     return true;
 
-  SDNode *U = *ExtVal->use_begin();
+  SDNode *U = *ExtVal->user_begin();
   if ((U->getOpcode() == ISD::ADD || U->getOpcode() == ISD::SUB ||
        U->getOpcode() == ISD::SHL || U->getOpcode() == ARMISD::VSHLIMM))
     return false;

@@ -543,6 +543,10 @@ bool TosaValidation::isValidElementType(Type type) {
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
   getOperation().walk([&](Operation *op) {
+    if (!op->getDialect() ||
+        op->getDialect()->getNamespace() != TosaDialect::getDialectNamespace())
+      return;
+
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {

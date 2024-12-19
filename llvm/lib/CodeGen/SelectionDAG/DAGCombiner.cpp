@@ -2136,8 +2136,8 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   // If the sole user is a token factor, we should make sure we have a
   // chance to merge them together. This prevents TF chains from inhibiting
   // optimizations.
-  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::TokenFactor)
-    AddToWorklist(*(N->use_begin()));
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::TokenFactor)
+    AddToWorklist(*(N->user_begin()));
 
   SmallVector<SDNode *, 8> TFs;     // List of token factors to visit.
   SmallVector<SDValue, 8> Ops;      // Ops for replacing token factor.
@@ -10906,15 +10906,15 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   // which we plan to do. This workaround can be removed once the DAG is
   // processed in topological order.
   if (N->hasOneUse()) {
-    SDNode *Use = *N->use_begin();
+    SDNode *User = *N->user_begin();
 
     // Look pass the truncate.
-    if (Use->getOpcode() == ISD::TRUNCATE && Use->hasOneUse())
-      Use = *Use->use_begin();
+    if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse())
+      User = *User->user_begin();
 
-    if (Use->getOpcode() == ISD::BRCOND || Use->getOpcode() == ISD::AND ||
-        Use->getOpcode() == ISD::OR || Use->getOpcode() == ISD::XOR)
-      AddToWorklist(Use);
+    if (User->getOpcode() == ISD::BRCOND || User->getOpcode() == ISD::AND ||
+        User->getOpcode() == ISD::OR || User->getOpcode() == ISD::XOR)
+      AddToWorklist(User);
   }
 
   // Try to transform this shift into a multiply-high if
@@ -12917,7 +12917,7 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   // also lend itself to numerous combines and, as a result, it is desired
   // we keep the argument to a brcond as a setcc as much as possible.
   bool PreferSetCC =
-      N->hasOneUse() && N->use_begin()->getOpcode() == ISD::BRCOND;
+      N->hasOneUse() && N->user_begin()->getOpcode() == ISD::BRCOND;
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
@@ -14825,7 +14825,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
 
     // If the SRL is only used by a masking AND, we may be able to adjust
     // the ExtVT to make the AND redundant.
-    SDNode *Mask = *(SRL->use_begin());
+    SDNode *Mask = *(SRL->user_begin());
     if (SRL.hasOneUse() && Mask->getOpcode() == ISD::AND &&
         isa<ConstantSDNode>(Mask->getOperand(1))) {
       unsigned Offset, ActiveBits;
@@ -15364,7 +15364,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   }
 
   // If this is anyext(trunc), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ANY_EXTEND))
+  if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ANY_EXTEND))
     return SDValue();
 
   // Fold extract-and-trunc into a narrow extract. For example:
@@ -18370,7 +18370,7 @@ SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
       return FoldedVOp;
 
   // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND)
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::FP_ROUND)
     return SDValue();
 
   // fold (fp_extend c1fp) -> c1fp
@@ -19847,17 +19847,17 @@ struct LoadedSlice {
   bool canMergeExpensiveCrossRegisterBankCopy() const {
     if (!Inst || !Inst->hasOneUse())
       return false;
-    SDNode *Use = *Inst->use_begin();
-    if (Use->getOpcode() != ISD::BITCAST)
+    SDNode *User = *Inst->user_begin();
+    if (User->getOpcode() != ISD::BITCAST)
       return false;
     assert(DAG && "Missing context");
     const TargetLowering &TLI = DAG->getTargetLoweringInfo();
-    EVT ResVT = Use->getValueType(0);
+    EVT ResVT = User->getValueType(0);
     const TargetRegisterClass *ResRC =
-        TLI.getRegClassFor(ResVT.getSimpleVT(), Use->isDivergent());
+        TLI.getRegClassFor(ResVT.getSimpleVT(), User->isDivergent());
     const TargetRegisterClass *ArgRC =
-        TLI.getRegClassFor(Use->getOperand(0).getValueType().getSimpleVT(),
-                           Use->getOperand(0)->isDivergent());
+        TLI.getRegClassFor(User->getOperand(0).getValueType().getSimpleVT(),
+                           User->getOperand(0)->isDivergent());
     if (ArgRC == ResRC || !TLI.isOperationLegal(ISD::LOAD, ResVT))
       return false;
 
@@ -20069,7 +20069,7 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
     if (User->getOpcode() == ISD::SRL && User->hasOneUse() &&
         isa<ConstantSDNode>(User->getOperand(1))) {
       Shift = User->getConstantOperandVal(1);
-      User = *User->use_begin();
+      User = *User->user_begin();
     }
 
     // At this point, User is a Truncate, iff we encountered, trunc or

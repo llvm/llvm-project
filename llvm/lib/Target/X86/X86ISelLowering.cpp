@@ -2766,12 +2766,12 @@ bool X86::mayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT,
 }
 
 bool X86::mayFoldIntoStore(SDValue Op) {
-  return Op.hasOneUse() && ISD::isNormalStore(*Op.getNode()->use_begin());
+  return Op.hasOneUse() && ISD::isNormalStore(*Op.getNode()->user_begin());
 }
 
 bool X86::mayFoldIntoZeroExtend(SDValue Op) {
   if (Op.hasOneUse()) {
-    unsigned Opcode = Op.getNode()->use_begin()->getOpcode();
+    unsigned Opcode = Op.getNode()->user_begin()->getOpcode();
     return (ISD::ZERO_EXTEND == Opcode);
   }
   return false;
@@ -3215,7 +3215,7 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
 
       // If this use is not an extract + store, it's probably worth splitting.
       if (UI->getOpcode() != ISD::EXTRACT_SUBVECTOR || !UI->hasOneUse() ||
-          UI->use_begin()->getOpcode() != ISD::STORE)
+          UI->user_begin()->getOpcode() != ISD::STORE)
         return true;
     }
     // All non-chain uses are extract + store.
@@ -18212,7 +18212,7 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
     // because a MOVSSmr can be used instead, which is smaller and faster.
     if (!Op.hasOneUse())
       return SDValue();
-    SDNode *User = *Op.getNode()->use_begin();
+    SDNode *User = *Op.getNode()->user_begin();
     if ((User->getOpcode() != ISD::STORE || isNullConstant(Idx)) &&
         (User->getOpcode() != ISD::BITCAST ||
          User->getValueType(0) != MVT::i32))
@@ -22873,8 +22873,8 @@ static bool hasNonFlagsUse(SDValue Op) {
     unsigned UOpNo = UI.getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
       // Look pass truncate.
-      UOpNo = User->use_begin().getOperandNo();
-      User = *User->use_begin();
+      UOpNo = User->user_begin().getOperandNo();
+      User = *User->user_begin();
     }
 
     if (User->getOpcode() != ISD::BRCOND && User->getOpcode() != ISD::SETCC &&
@@ -25265,7 +25265,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       // have a fall-through edge, because this requires an explicit
       // jmp when the condition is false.
       if (Op.getNode()->hasOneUse()) {
-        SDNode *User = *Op.getNode()->use_begin();
+        SDNode *User = *Op.getNode()->user_begin();
         // Look for an unconditional branch following this conditional branch.
         // We need this because we need to reverse the successors in order
         // to implement FCMP_OEQ.
@@ -30125,11 +30125,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // element to the other.
     // This optimized lowering is only valid if the elements in a pair can
     // be treated identically.
-    SmallVector<SDValue, 32> AmtWideElts;
-    AmtWideElts.reserve(NumElts);
-    for (unsigned I = 0; I != NumElts; ++I) {
-      AmtWideElts.push_back(Amt.getOperand(I));
-    }
+    SmallVector<SDValue, 32> AmtWideElts(Amt->op_begin(), Amt->op_end());
     SmallVector<SDValue, 32> TmpAmtWideElts;
     int WideEltSizeInBits = EltSizeInBits;
     while (WideEltSizeInBits < 32) {
@@ -32653,8 +32649,7 @@ static SDValue ExtendToType(SDValue InOp, MVT NVT, SelectionDAG &DAG,
          "Unexpected request for vector widening");
 
   SDLoc dl(InOp);
-  if (InOp.getOpcode() == ISD::CONCAT_VECTORS &&
-      InOp.getNumOperands() == 2) {
+  if (InOp.getOpcode() == ISD::CONCAT_VECTORS && InOp.getNumOperands() == 2) {
     SDValue N1 = InOp.getOperand(1);
     if ((ISD::isBuildVectorAllZeros(N1.getNode()) && FillWithZeroes) ||
         N1.isUndef()) {
@@ -32665,22 +32660,17 @@ static SDValue ExtendToType(SDValue InOp, MVT NVT, SelectionDAG &DAG,
   }
   if (ISD::isBuildVectorOfConstantSDNodes(InOp.getNode()) ||
       ISD::isBuildVectorOfConstantFPSDNodes(InOp.getNode())) {
-    SmallVector<SDValue, 16> Ops;
-    for (unsigned i = 0; i < InNumElts; ++i)
-      Ops.push_back(InOp.getOperand(i));
-
     EVT EltVT = InOp.getOperand(0).getValueType();
-
-    SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, EltVT) :
-      DAG.getUNDEF(EltVT);
-    for (unsigned i = 0; i < WidenNumElts - InNumElts; ++i)
-      Ops.push_back(FillVal);
+    SDValue FillVal =
+        FillWithZeroes ? DAG.getConstant(0, dl, EltVT) : DAG.getUNDEF(EltVT);
+    SmallVector<SDValue, 16> Ops(InOp->op_begin(), InOp->op_end());
+    Ops.append(WidenNumElts - InNumElts, FillVal);
     return DAG.getBuildVector(NVT, dl, Ops);
   }
-  SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, NVT) :
-    DAG.getUNDEF(NVT);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, NVT, FillVal,
-                     InOp, DAG.getIntPtrConstant(0, dl));
+  SDValue FillVal =
+      FillWithZeroes ? DAG.getConstant(0, dl, NVT) : DAG.getUNDEF(NVT);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, NVT, FillVal, InOp,
+                     DAG.getIntPtrConstant(0, dl));
 }
 
 static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
@@ -39423,8 +39413,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // from being reused.
   bool IsMaskedShuffle = false;
   if (RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128)) {
-    if (Root.hasOneUse() && Root->use_begin()->getOpcode() == ISD::VSELECT &&
-        Root->use_begin()->getOperand(0).getScalarValueSizeInBits() == 1) {
+    if (Root.hasOneUse() && Root->user_begin()->getOpcode() == ISD::VSELECT &&
+        Root->user_begin()->getOperand(0).getScalarValueSizeInBits() == 1) {
       IsMaskedShuffle = true;
     }
   }
@@ -48982,7 +48972,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
          (SignMulAmt >= 0 && (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9)))) {
 
       if (isPowerOf2_64(MulAmt2) && !(SignMulAmt >= 0 && N->hasOneUse() &&
-                                      N->use_begin()->getOpcode() == ISD::ADD))
+                                      N->user_begin()->getOpcode() == ISD::ADD))
         // If second multiplifer is pow2, issue it first. We want the multiply
         // by 3, 5, or 9 to be folded into the addressing mode unless the lone
         // use is an add. Only do this for positive multiply amounts since the
@@ -50765,7 +50755,7 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
     return SDValue();
 
   // Check the only user of flag is `brcond ne`.
-  SDNode *BrCond = *Flag->use_begin();
+  SDNode *BrCond = *Flag->user_begin();
   if (BrCond->getOpcode() != X86ISD::BRCOND)
     return SDValue();
   unsigned CondNo = 2;
@@ -53176,9 +53166,9 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
 
   auto MergableHorizOp = [N](unsigned HorizOpcode) {
     return N->hasOneUse() &&
-           N->use_begin()->getOpcode() == ISD::VECTOR_SHUFFLE &&
-           (N->use_begin()->getOperand(0).getOpcode() == HorizOpcode ||
-            N->use_begin()->getOperand(1).getOpcode() == HorizOpcode);
+           N->user_begin()->getOpcode() == ISD::VECTOR_SHUFFLE &&
+           (N->user_begin()->getOperand(0).getOpcode() == HorizOpcode ||
+            N->user_begin()->getOperand(1).getOpcode() == HorizOpcode);
   };
 
   switch (Opcode) {
@@ -56422,7 +56412,7 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
       if (Negate) {
         // Bail if this is only used by a user of the x86 add/sub.
         if (GenericAddSub->hasOneUse() &&
-            GenericAddSub->use_begin()->isOnlyUserOf(N))
+            GenericAddSub->user_begin()->isOnlyUserOf(N))
           return;
         Op = DAG.getNegative(Op, DL, VT);
       }
@@ -59419,7 +59409,7 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   auto IsFoldableRMW = [](SDValue Load, SDValue Op) {
     if (!Op.hasOneUse())
       return false;
-    SDNode *User = *Op->use_begin();
+    SDNode *User = *Op->user_begin();
     if (!ISD::isNormalStore(User))
       return false;
     auto *Ld = cast<LoadSDNode>(Load);
@@ -59432,7 +59422,7 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
       return false;
     if (!Op.hasOneUse())
       return false;
-    SDNode *User = *Op->use_begin();
+    SDNode *User = *Op->user_begin();
     if (User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
     auto *Ld = cast<AtomicSDNode>(Load);
@@ -59443,7 +59433,7 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   auto IsFoldableZext = [](SDValue Op) {
     if (!Op.hasOneUse())
       return false;
-    SDNode *User = *Op->use_begin();
+    SDNode *User = *Op->user_begin();
     EVT VT = User->getValueType(0);
     return (User->getOpcode() == ISD::ZERO_EXTEND &&
             (VT == MVT::i32 || VT == MVT::i64));

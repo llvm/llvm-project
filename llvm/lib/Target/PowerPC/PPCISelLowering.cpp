@@ -16331,7 +16331,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       if (!LD->hasNUsesOfValue(2, 0))
         return false;
 
-      auto UI = LD->use_begin();
+      auto UI = LD->user_begin();
       while (UI.getUse().getResNo() != 0) ++UI;
       SDNode *Trunc = *UI++;
       while (UI.getUse().getResNo() != 0) ++UI;
@@ -16349,14 +16349,14 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
           !RightShift->hasOneUse())
         return false;
 
-      SDNode *Trunc2 = *RightShift->use_begin();
+      SDNode *Trunc2 = *RightShift->user_begin();
       if (Trunc2->getOpcode() != ISD::TRUNCATE ||
           Trunc2->getValueType(0) != MVT::i32 ||
           !Trunc2->hasOneUse())
         return false;
 
-      SDNode *Bitcast = *Trunc->use_begin();
-      SDNode *Bitcast2 = *Trunc2->use_begin();
+      SDNode *Bitcast = *Trunc->user_begin();
+      SDNode *Bitcast2 = *Trunc2->user_begin();
 
       if (Bitcast->getOpcode() != ISD::BITCAST ||
           Bitcast->getValueType(0) != MVT::f32)
