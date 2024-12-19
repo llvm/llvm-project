@@ -6936,7 +6936,6 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   RegClassInfo.runOnMachineFunction(*MF);
   RPTracker.init(MF, &RegClassInfo, nullptr, EndLoop->getParent(),
                  EndLoop->getParent()->end(), false, false);
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
 
   bumpCrossIterationPressure(RPTracker, CrossIterationNeeds);
 
@@ -6978,10 +6977,16 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   }
 
   auto &P = RPTracker.getPressure().MaxSetPressure;
-  for (unsigned I = 0, E = P.size(); I < E; ++I)
+  for (unsigned I = 0, E = P.size(); I < E; ++I) {
+    // Exclude some Neon register classes.
+    if (I == ARM::DQuad_with_ssub_0 || I == ARM::DTripleSpc_with_ssub_0 ||
+        I == ARM::DTriple_with_qsub_0_in_QPR)
+      continue;
+
     if (P[I] > RegClassInfo.getRegPressureSetLimit(I)) {
       return true;
     }
+  }
   return false;
 }
 
