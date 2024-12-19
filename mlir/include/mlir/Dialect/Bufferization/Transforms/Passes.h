@@ -6,6 +6,7 @@
 
 namespace mlir {
 class FunctionOpInterface;
+class MemRefType;
 class ModuleOp;
 class RewritePatternSet;
 class OpBuilder;
@@ -38,7 +39,7 @@ std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
     DeallocationOptions options = DeallocationOptions());
 
 /// Creates a pass that finds all temporary allocations
-/// and attempts to move the deallocation after the last user/dependency 
+/// and attempts to move the deallocation after the last user/dependency
 /// of the allocation, thereby optimizing allocation liveness.
 std::unique_ptr<Pass> createOptimizeAllocationLivenessPass();
 
@@ -157,6 +158,12 @@ std::unique_ptr<Pass> createBufferLoopHoistingPass();
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.
 struct BufferResultsToOutParamsOpts {
+  /// Allocator function: Generate a memref allocation with the given type.
+  /// Since `promoteBufferResultsToOutParams` doesn't allow dynamically shaped
+  /// results, we don't allow passing a range of values for dynamic dims.
+  using AllocationFn =
+      std::function<FailureOr<Value>(OpBuilder &, Location, MemRefType)>;
+
   /// Memcpy function: Generate a memcpy between two memrefs.
   using MemCpyFn =
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
@@ -166,6 +173,10 @@ struct BufferResultsToOutParamsOpts {
   std::function<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
     return true;
   };
+
+  /// Allocation function; used to allocate a memref.
+  /// If this is empty, memref.alloc is used
+  std::optional<AllocationFn> allocationFn;
 
   /// Memcpy function; used to create a copy between two memrefs.
   /// If this is empty, memref.copy is used.

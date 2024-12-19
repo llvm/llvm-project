@@ -22,6 +22,7 @@ namespace bufferization {
 } // namespace mlir
 
 using namespace mlir;
+using AllocationFn = bufferization::BufferResultsToOutParamsOpts::AllocationFn;
 using MemCpyFn = bufferization::BufferResultsToOutParamsOpts::MemCpyFn;
 
 /// Return `true` if the given MemRef type has a fully dynamic layout.
@@ -141,9 +142,8 @@ static LogicalResult updateReturnOps(func::FuncOp func,
 
 // Updates all CallOps in the scope of the given ModuleOp by allocating
 // temporary buffers for newly introduced out params.
-static LogicalResult
-updateCalls(ModuleOp module,
-            const bufferization::BufferResultsToOutParamsOpts &options) {
+static LogicalResult updateCalls(ModuleOp module, AllocationFn allocationFn,
+                                 std::function<bool(func::FuncOp *)> filterFn) {
   bool didFail = false;
   SymbolTable symtab(module);
   module.walk([&](func::CallOp op) {
@@ -154,7 +154,7 @@ updateCalls(ModuleOp module,
       didFail = true;
       return;
     }
-    if (!options.filterFn(&callee))
+    if (!filterFn(&callee))
       return;
     SmallVector<Value, 6> replaceWithNewCallResults;
     SmallVector<Value, 6> replaceWithOutParams;
@@ -177,7 +177,13 @@ updateCalls(ModuleOp module,
       auto allocType =
           MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
                           AffineMap(), memrefType.getMemorySpace());
-      Value outParam = builder.create<memref::AllocOp>(op.getLoc(), allocType);
+      auto maybeOutParam = allocationFn(builder, op.getLoc(), allocType);
+      if (failed(maybeOutParam)) {
+        op.emitError() << "failed to create allocation op";
+        didFail = true;
+        return;
+      }
+      Value outParam = maybeOutParam.value();
       if (!hasStaticIdentityLayout(memrefType)) {
         // Layout maps are already checked in `updateFuncOp`.
         assert(hasFullyDynamicLayoutMap(memrefType) &&
@@ -226,7 +232,13 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
       return failure();
     }
   }
-  if (failed(updateCalls(module, options)))
+  auto defaultAllocationFn = [](OpBuilder &builder, Location loc,
+                                MemRefType type) {
+    return builder.create<memref::AllocOp>(loc, type).getResult();
+  };
+  if (failed(updateCalls(module,
+                         options.allocationFn.value_or(defaultAllocationFn),
+                         options.filterFn)))
     return failure();
   return success();
 }
