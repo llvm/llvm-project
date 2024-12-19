@@ -54,6 +54,7 @@ typedef struct {
 } U;
 
 // CHECK: !ty_D = !cir.struct<struct "D" {!u16i, !s32i}>
+// CHECK: !ty_G = !cir.struct<struct "G" {!u16i, !s32i} #cir.record.decl.ast>
 // CHECK: !ty_T = !cir.struct<struct "T" {!u8i, !u32i} #cir.record.decl.ast>
 // CHECK: !ty_anon2E0_ = !cir.struct<struct "anon.0" {!u32i} #cir.record.decl.ast>
 // CHECK: !ty_anon_struct = !cir.struct<struct  {!u8i, !u8i, !s32i}>
@@ -128,4 +129,21 @@ void createU() {
 // CHECK:   cir.store %2, %1 : !ty_anon_struct, !cir.ptr<!ty_anon_struct>
 void createD() {
   D d = {1,2,3};
+}
+
+typedef struct {
+  int x : 15;
+  int y ;
+} G;
+
+// CHECK: cir.global external @g = #cir.const_struct<{#cir.int<133> : !u8i, #cir.int<127> : !u8i, #cir.int<254> : !s32i}> : !ty_anon_struct 
+G g = { -123, 254UL};
+
+// CHECK: cir.func {{.*@get_y}}
+// CHECK:   %[[V1:.*]] = cir.get_global @g : !cir.ptr<!ty_anon_struct>
+// CHECK:   %[[V2:.*]] = cir.cast(bitcast, %[[V1]] : !cir.ptr<!ty_anon_struct>), !cir.ptr<!ty_G>
+// CHECK:   %[[V3:.*]] = cir.get_member %[[V2]][1] {name = "y"} : !cir.ptr<!ty_G> -> !cir.ptr<!s32i>
+// CHECK:   cir.load %[[V3]] : !cir.ptr<!s32i>, !s32i
+int get_y() {
+  return g.y;
 }
