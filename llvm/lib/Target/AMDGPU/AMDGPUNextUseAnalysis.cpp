@@ -143,7 +143,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
 unsigned NextUseResult::computeNextUseDistance(const MachineBasicBlock &MBB,
                                                const SlotIndex I,
                                                Register VReg) {
-  T2->startTimer();
+  //T2->startTimer();
 
   unsigned Dist = Infinity;
 
@@ -257,8 +257,8 @@ unsigned NextUseResult::computeNextUseDistance(const MachineBasicBlock &MBB,
     if (Dist != Infinity)
       InstrCache[&I][VReg] = Dist;
   }
-  T2->stopTimer();
-  TG->print(llvm::errs());
+  //T2->stopTimer();
+  //TG->print(llvm::errs());
   return Dist;
 }
 
