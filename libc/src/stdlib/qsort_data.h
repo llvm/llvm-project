@@ -11,8 +11,6 @@
 
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/memory_utils/inline_memmove.h"
 
 #include <stdint.h>
 
@@ -48,26 +46,23 @@ public:
     using block_t = uint32_t;
     constexpr size_t BLOCK_SIZE = sizeof(block_t);
 
+    alignas(block_t) cpp::byte tmp_block[BLOCK_SIZE];
+
     cpp::byte *elem_i = get_internal(i);
     cpp::byte *elem_j = get_internal(j);
 
     const size_t elem_size_rem = elem_size % BLOCK_SIZE;
-    const block_t *elem_i_block_end =
-        reinterpret_cast<block_t *>(elem_i + (elem_size - elem_size_rem));
+    const cpp::byte *elem_i_block_end = elem_i + (elem_size - elem_size_rem);
 
-    block_t *elem_i_block = reinterpret_cast<block_t *>(elem_i);
-    block_t *elem_j_block = reinterpret_cast<block_t *>(elem_j);
+    while (elem_i != elem_i_block_end) {
+      __builtin_memcpy(tmp_block, elem_i, BLOCK_SIZE);
+      __builtin_memcpy(elem_i, elem_j, BLOCK_SIZE);
+      __builtin_memcpy(elem_j, tmp_block, BLOCK_SIZE);
 
-    while (elem_i_block != elem_i_block_end) {
-      block_t tmp = *elem_i_block;
-      *elem_i_block = *elem_j_block;
-      *elem_j_block = tmp;
-      elem_i_block += 1;
-      elem_j_block += 1;
+      elem_i += BLOCK_SIZE;
+      elem_j += BLOCK_SIZE;
     }
 
-    elem_i = reinterpret_cast<cpp::byte *>(elem_i_block);
-    elem_j = reinterpret_cast<cpp::byte *>(elem_j_block);
     for (size_t n = 0; n < elem_size_rem; ++n) {
       cpp::byte tmp = elem_i[n];
       elem_i[n] = elem_j[n];
@@ -118,9 +113,9 @@ public:
     cpp::byte *elem_i = get_internal(i);
     cpp::byte *elem_j = get_internal(j);
 
-    inline_memcpy(tmp, elem_i, ELEM_SIZE);
-    inline_memmove(elem_i, elem_j, ELEM_SIZE);
-    inline_memcpy(elem_j, tmp, ELEM_SIZE);
+    __builtin_memcpy(tmp, elem_i, ELEM_SIZE);
+    __builtin_memmove(elem_i, elem_j, ELEM_SIZE);
+    __builtin_memcpy(elem_j, tmp, ELEM_SIZE);
   }
 
   LIBC_INLINE size_t len() const { return array_len; }
