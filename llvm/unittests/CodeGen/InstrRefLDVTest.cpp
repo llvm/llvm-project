@@ -1801,11 +1801,11 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   DbgOpID ConstZeroID = addConstDbgOp(MachineOperand::CreateImm(0));
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
   DIExpression *TwoOpExpr =
       DIExpression::get(Ctx, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg,
                               1, dwarf::DW_OP_plus});
-  DbgValueProperties TwoOpProps(TwoOpExpr, false, true, 2);
+  DbgValueProperties TwoOpProps(TwoOpExpr, false, true);
   SmallVector<DbgValue, 32> VLiveOuts;
   VLiveOuts.resize(4, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
@@ -1904,14 +1904,14 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   MOutLocs[2][0] = LiveInRax;
   DIExpression *NewExpr =
       DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
-  DbgValueProperties PropsWithExpr(NewExpr, false, false, 1);
+  DbgValueProperties PropsWithExpr(NewExpr, false, false);
   VLiveOuts[1] = DbgValue(LiveInRspID, EmptyProps);
   VLiveOuts[2] = DbgValue(LiveInRspID, PropsWithExpr);
   OutValues.clear();
   Result = pickVPHILoc(OutValues, *MBB3, VLiveOutIdx, MOutLocs, Preds);
   EXPECT_FALSE(Result);
 
-  DbgValueProperties PropsWithIndirect(EmptyExpr, true, false, 1);
+  DbgValueProperties PropsWithIndirect(EmptyExpr, true, false);
   VLiveOuts[1] = DbgValue(LiveInRspID, EmptyProps);
   VLiveOuts[2] = DbgValue(LiveInRspID, PropsWithIndirect);
   OutValues.clear();
@@ -1994,11 +1994,11 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   DbgOpID RaxPHIInBlk1ID = addValueDbgOp(RaxPHIInBlk1);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
   DIExpression *TwoOpExpr =
       DIExpression::get(Ctx, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg,
                               1, dwarf::DW_OP_plus});
-  DbgValueProperties TwoOpProps(TwoOpExpr, false, true, 2);
+  DbgValueProperties TwoOpProps(TwoOpExpr, false, true);
   SmallVector<DbgValue, 32> VLiveOuts;
   VLiveOuts.resize(3, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
@@ -2128,7 +2128,7 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   DbgOpID RbxPHIInBlk1ID = addValueDbgOp(RbxPHIInBlk1);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
   SmallVector<DbgValue, 32> VLiveOuts;
   VLiveOuts.resize(5, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
@@ -2262,7 +2262,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   DbgOpID LiveInRaxID = DbgOpID(false, 1);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
   SmallVector<DbgValue, 32> VLiveOuts;
   VLiveOuts.resize(4, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
@@ -2374,7 +2374,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   EXPECT_EQ(JoinedLoc.BlockNo, 0);
 
   // We shouldn't eliminate PHIs when properties disagree.
-  DbgValueProperties PropsWithIndirect(EmptyExpr, true, false, 1);
+  DbgValueProperties PropsWithIndirect(EmptyExpr, true, false);
   VLiveOuts[1] = DbgValue(LiveInRspID, EmptyProps);
   VLiveOuts[2] = DbgValue(LiveInRspID, PropsWithIndirect);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
@@ -2401,7 +2401,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   // not be eliminated.
   DIExpression *NewExpr =
       DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
-  DbgValueProperties PropsWithExpr(NewExpr, false, false, 1);
+  DbgValueProperties PropsWithExpr(NewExpr, false, false);
   VLiveOuts[1] = DbgValue(LiveInRspID, EmptyProps);
   VLiveOuts[2] = DbgValue(LiveInRspID, PropsWithExpr);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
@@ -2413,7 +2413,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   DIExpression *TwoOpExpr =
       DIExpression::get(Ctx, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg,
                               1, dwarf::DW_OP_plus});
-  DbgValueProperties TwoOpProps(TwoOpExpr, false, true, 2);
+  DbgValueProperties TwoOpProps(TwoOpExpr, false, true);
   DbgOpID Locs0[] = {LiveInRspID, LiveInRaxID};
   DbgOpID Locs1[] = {LiveInRaxID, LiveInRspID};
   JoinedLoc = DbgValue(3, TwoOpProps, DbgValue::VPHI);
@@ -2446,7 +2446,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   DbgOpID LiveInRaxID = DbgOpID(false, 1);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
   SmallVector<DbgValue, 32> VLiveOuts;
   VLiveOuts.resize(3, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
@@ -2502,7 +2502,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   // properties.
   DIExpression *NewExpr =
       DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
-  DbgValueProperties PropsWithExpr(NewExpr, false, false, 1);
+  DbgValueProperties PropsWithExpr(NewExpr, false, false);
   VLiveOuts[0] = DbgValue(LiveInRspID, EmptyProps);
   VLiveOuts[1] = DbgValue(1, PropsWithExpr, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
@@ -2547,7 +2547,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   DbgOpID LiveInRbxID = DbgOpID(false, 2);
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
   SmallVector<DbgValue, 32> VLiveOuts;
   VLiveOuts.resize(5, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
@@ -2593,7 +2593,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   EXPECT_EQ(JoinedLoc.getDbgOpID(0), LiveInRspID);
 
   // They shouldn't merge if one of their properties is different.
-  DbgValueProperties PropsWithIndirect(EmptyExpr, true, false, 1);
+  DbgValueProperties PropsWithIndirect(EmptyExpr, true, false);
   VLiveOuts[0] = DbgValue(LiveInRspID, EmptyProps);
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   VLiveOuts[2] = DbgValue(1, PropsWithIndirect, DbgValue::VPHI);
@@ -2633,7 +2633,7 @@ TEST_F(InstrRefLDVTest, VLocSingleBlock) {
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
   DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
 
   SmallSet<DebugVariableID, 4> AllVars;
   AllVars.insert(VarID);
@@ -2696,7 +2696,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
   DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
 
   SmallSet<DebugVariableID, 4> AllVars;
   AllVars.insert(VarID);
@@ -2918,11 +2918,11 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
   DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
   DIExpression *TwoOpExpr =
       DIExpression::get(Ctx, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg,
                               1, dwarf::DW_OP_plus});
-  DbgValueProperties VariadicProps(TwoOpExpr, false, true, 2);
+  DbgValueProperties VariadicProps(TwoOpExpr, false, true);
 
   SmallSet<DebugVariableID, 4> AllVars;
   AllVars.insert(VarID);
@@ -3197,7 +3197,7 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
 
   DebugVariable Var(FuncVariable, std::nullopt, nullptr);
   DebugVariableID VarID = LDV->getDVMap().insertDVID(Var, OutermostLoc);
-  DbgValueProperties EmptyProps(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProps(EmptyExpr, false, false);
 
   SmallSet<DebugVariableID, 4> AllVars;
   AllVars.insert(VarID);

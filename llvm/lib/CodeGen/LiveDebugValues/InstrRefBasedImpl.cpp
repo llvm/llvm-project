@@ -3177,7 +3177,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
 
   // Initialize all values to start as NoVals. This signifies "it's live
   // through, but we don't know what it is".
-  DbgValueProperties EmptyProperties(EmptyExpr, false, false, 1);
+  DbgValueProperties EmptyProperties(EmptyExpr, false, false);
   for (unsigned int I = 0; I < NumBlocks; ++I) {
     DbgValue EmptyDbgValue(I, EmptyProperties, DbgValue::NoVal);
     LiveIns.push_back(EmptyDbgValue);

@@ -313,9 +313,11 @@ public:
 class DbgValueProperties {
 public:
   DbgValueProperties(const DIExpression *DIExpr, bool Indirect, bool IsVariadic,
-                     unsigned NumLocOps)
+                     std::optional<unsigned> NumLocOps = std::nullopt)
       : DIExpr(DIExpr), Indirect(Indirect), IsVariadic(IsVariadic),
-        NumLocOps(NumLocOps) {}
+        NumLocOps(NumLocOps
+                      ? *NumLocOps
+                      : (IsVariadic ? DIExpr->getNumLocationOperands() : 1)) {}
 
   /// Extract properties from an existing DBG_VALUE instruction.
   DbgValueProperties(const MachineInstr &MI) {
@@ -1059,7 +1061,7 @@ public:
   VLocTracker(DebugVariableMap &DVMap, const OverlapMap &O,
               const DIExpression *EmptyExpr)
       : DVMap(DVMap), OverlappingFragments(O),
-        EmptyProperties(EmptyExpr, false, false, 1) {}
+        EmptyProperties(EmptyExpr, false, false) {}
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               const SmallVectorImpl<DbgOpID> &DebugOps) {
