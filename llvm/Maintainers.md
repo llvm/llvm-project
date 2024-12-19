@@ -188,8 +188,10 @@ Ben Shi \
 
 #### BPF backend
 
-Alexei Starovoitov \
-alexei.starovoitov@gmail.com (email), [4ast](https://github.com/4ast) (GitHub)
+Yonghong Song \
+yhs@fb.com (email), [yonghong-song](https://github.com/yonghong-song) (GitHub) \
+Eduard Zingerman \
+eddyz87@gmail.com (email), [eddyz87](https://github.com/eddyz87) (GitHub)
 
 #### CSKY backend
 
@@ -461,6 +463,7 @@ Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- A
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
 ### Former maintainers of removed components
