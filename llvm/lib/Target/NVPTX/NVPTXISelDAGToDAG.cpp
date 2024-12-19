@@ -318,7 +318,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
-  for (auto *U : Vector.getNode()->uses()) {
+  for (auto *U : Vector.getNode()->users()) {
     if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       continue;
     if (U->getOperand(0) != Vector)

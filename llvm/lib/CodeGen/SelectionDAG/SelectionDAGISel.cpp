@@ -1225,7 +1225,7 @@ void SelectionDAGISel::EnforceNodeIdInvariant(SDNode *Node) {
 
   while (!Nodes.empty()) {
     SDNode *N = Nodes.pop_back_val();
-    for (auto *U : N->uses()) {
+    for (auto *U : N->users()) {
       auto UId = U->getNodeId();
       if (UId > 0) {
         InvalidateNodeId(U);

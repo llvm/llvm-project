@@ -1756,7 +1756,7 @@ void HvxSelector::select(SDNode *ISelN) {
     // Don't want to select N0 if it's shared with another node, except if
     // it's shared with other ISELs.
     auto IsISelN = [](SDNode *T) { return T->getOpcode() == HexagonISD::ISEL; };
-    if (llvm::all_of(N0->uses(), IsISelN))
+    if (llvm::all_of(N0->users(), IsISelN))
       SubNodes.insert(N0);
   }
   if (SubNodes.empty()) {
@@ -1775,7 +1775,7 @@ void HvxSelector::select(SDNode *ISelN) {
       return true;
     if (T->use_empty() || NonDom.count(T))
       return false;
-    for (SDNode *U : T->uses()) {
+    for (SDNode *U : T->users()) {
       // If T is reachable from a known non-dominated node, then T itself
       // is non-dominated.
       if (!Rec(U, Rec)) {
@@ -1814,7 +1814,7 @@ void HvxSelector::select(SDNode *ISelN) {
 
   for (unsigned I = 0; I != TmpQ.size(); ++I) {
     SDNode *S = TmpQ[I];
-    for (SDNode *U : S->uses()) {
+    for (SDNode *U : S->users()) {
       if (U == ISelN)
         continue;
       auto F = OpCount.find(U);
