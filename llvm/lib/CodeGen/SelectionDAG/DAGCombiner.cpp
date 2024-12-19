@@ -18965,15 +18965,15 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // Now check for #3 and #4.
   bool RealUse = false;
 
-  for (SDNode *Use : Ptr->users()) {
-    if (Use == N)
+  for (SDNode *User : Ptr->users()) {
+    if (User == N)
       continue;
-    if (SDNode::hasPredecessorHelper(Use, Visited, Worklist, MaxSteps))
+    if (SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
       return false;
 
     // If Ptr may be folded in addressing mode of other use, then it's
     // not profitable to do this transformation.
-    if (!canFoldInAddressingMode(Ptr.getNode(), Use, DAG, TLI))
+    if (!canFoldInAddressingMode(Ptr.getNode(), User, DAG, TLI))
       RealUse = true;
   }
 
@@ -19089,19 +19089,19 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
 
   SmallPtrSet<const SDNode *, 32> Visited;
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  for (SDNode *Use : BasePtr->users()) {
-    if (Use == Ptr.getNode())
+  for (SDNode *User : BasePtr->users()) {
+    if (User == Ptr.getNode())
       continue;
 
     // No if there's a later user which could perform the index instead.
-    if (isa<MemSDNode>(Use)) {
+    if (isa<MemSDNode>(User)) {
       bool IsLoad = true;
       bool IsMasked = false;
       SDValue OtherPtr;
-      if (getCombineLoadStoreParts(Use, ISD::POST_INC, ISD::POST_DEC, IsLoad,
+      if (getCombineLoadStoreParts(User, ISD::POST_INC, ISD::POST_DEC, IsLoad,
                                    IsMasked, OtherPtr, TLI)) {
         SmallVector<const SDNode *, 2> Worklist;
-        Worklist.push_back(Use);
+        Worklist.push_back(User);
         if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps))
           return false;
       }
@@ -19109,9 +19109,9 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
 
     // If all the uses are load / store addresses, then don't do the
     // transformation.
-    if (Use->getOpcode() == ISD::ADD || Use->getOpcode() == ISD::SUB) {
-      for (SDNode *UseUse : Use->users())
-        if (canFoldInAddressingMode(Use, UseUse, DAG, TLI))
+    if (User->getOpcode() == ISD::ADD || User->getOpcode() == ISD::SUB) {
+      for (SDNode *UserUser : User->users())
+        if (canFoldInAddressingMode(User, UserUser, DAG, TLI))
           return false;
     }
   }
@@ -20515,24 +20515,24 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
     return true;
 
   // Walk all the users of the constant with which we're multiplying.
-  for (SDNode *Use : ConstNode->users()) {
-    if (Use == MulNode) // This use is the one we're on right now. Skip it.
+  for (SDNode *User : ConstNode->users()) {
+    if (User == MulNode) // This use is the one we're on right now. Skip it.
       continue;
 
-    if (Use->getOpcode() == ISD::MUL) { // We have another multiply use.
+    if (User->getOpcode() == ISD::MUL) { // We have another multiply use.
       SDNode *OtherOp;
       SDNode *MulVar = AddNode.getOperand(0).getNode();
 
       // OtherOp is what we're multiplying against the constant.
-      if (Use->getOperand(0) == ConstNode)
-        OtherOp = Use->getOperand(1).getNode();
+      if (User->getOperand(0) == ConstNode)
+        OtherOp = User->getOperand(1).getNode();
       else
-        OtherOp = Use->getOperand(0).getNode();
+        OtherOp = User->getOperand(0).getNode();
 
       // Check to see if multiply is with the same operand of our "add".
       //
       //     ConstNode  = CONST
-      //     Use = ConstNode * A  <-- visiting Use. OtherOp is A.
+      //     User = ConstNode * A  <-- visiting User. OtherOp is A.
       //     ...
       //     AddNode  = (A + c1)  <-- MulVar is A.
       //         = AddNode * ConstNode   <-- current visiting instruction.
@@ -20550,7 +20550,7 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
       //     ...   = AddNode * ConstNode <-- current visiting instruction.
       //     ...
       //     OtherOp = (A + c2)
-      //     Use     = OtherOp * ConstNode <-- visiting Use.
+      //     User    = OtherOp * ConstNode <-- visiting User.
       //
       // If we make this transformation, we will have a common
       // multiply (CONST * A) after we also do the same transformation
@@ -23182,8 +23182,8 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
                isa<ConstantSDNode>(Use->getOperand(1));
       })) {
     APInt DemandedElts = APInt::getZero(NumElts);
-    for (SDNode *Use : VecOp->users()) {
-      auto *CstElt = cast<ConstantSDNode>(Use->getOperand(1));
+    for (SDNode *User : VecOp->users()) {
+      auto *CstElt = cast<ConstantSDNode>(User->getOperand(1));
       if (CstElt->getAPIntValue().ult(NumElts))
         DemandedElts.setBit(CstElt->getZExtValue());
     }

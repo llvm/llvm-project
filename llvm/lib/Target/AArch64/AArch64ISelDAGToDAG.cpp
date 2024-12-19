@@ -1012,15 +1012,15 @@ bool AArch64DAGToDAGISel::SelectArithUXTXRegister(SDValue N, SDValue &Reg,
 /// a single pseudo-instruction for an ADRP/ADD pair so over-aggressive folding
 /// leads to duplicated ADRP instructions.
 static bool isWorthFoldingADDlow(SDValue N) {
-  for (auto *Use : N->users()) {
-    if (Use->getOpcode() != ISD::LOAD && Use->getOpcode() != ISD::STORE &&
-        Use->getOpcode() != ISD::ATOMIC_LOAD &&
-        Use->getOpcode() != ISD::ATOMIC_STORE)
+  for (auto *User : N->users()) {
+    if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
+        User->getOpcode() != ISD::ATOMIC_LOAD &&
+        User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
 
     // ldar and stlr have much more restrictive addressing modes (just a
     // register).
-    if (isStrongerThanMonotonic(cast<MemSDNode>(Use)->getSuccessOrdering()))
+    if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
       return false;
   }
 
