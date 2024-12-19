@@ -177,7 +177,7 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
 	     --instrumented-output ${CLANG_INSTRUMENTED}
 	     --fdata ${BOLT_FDATA}
 	     --perf-training-binary-dir ${PERF_TRAINING_BINARY_DIR}
-	     --readelf $<TARGET_FILE:llvm-readelf>
+	     --readelf $<TARGET_FILE:llvm-readobj>
 	     --bolt $<TARGET_FILE:llvm-bolt>
 	     --lit "${LIT_COMMAND}"
 	     --merge-fdata $<TARGET_FILE:merge-fdata>
