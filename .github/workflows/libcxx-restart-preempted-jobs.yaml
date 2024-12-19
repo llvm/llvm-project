@@ -116,7 +116,7 @@ jobs:
                   saved_failure_message = annotation.message;
                 }
               }
-              if (has_failed_job and not has_preempted_job) {
+              if (has_failed_job && (! has_preempted_job)) {
                 // We only want to restart the workflow if all of the failures were due to preemption.
                 // We don't want to restart the workflow if there were other failures.
                 //
