@@ -141,12 +141,10 @@ void func() {
   // expected-warning@+1{{OpenACC construct 'declare' not yet implemented, pragma ignored}}
 #pragma acc declare clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc init clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'shutdown' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc shutdown clause list
   for(;;){}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}

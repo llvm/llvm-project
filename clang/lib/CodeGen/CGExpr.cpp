@@ -52,11 +52,6 @@
 using namespace clang;
 using namespace CodeGen;
 
-// Experiment to make sanitizers easier to debug
-static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
-    "ubsan-unique-traps", llvm::cl::Optional,
-    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check."));
-
 // TODO: Introduce frontend options to enabled per sanitizers, similar to
 // `fsanitize-trap`.
 static llvm::cl::opt<bool> ClSanitizeGuardChecks(
@@ -3581,8 +3576,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
-  NoMerge = NoMerge || ClSanitizeDebugDeoptimization ||
-            !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
+  NoMerge = NoMerge || !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
             (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
@@ -3915,8 +3909,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  NoMerge = NoMerge || ClSanitizeDebugDeoptimization ||
-            !CGM.getCodeGenOpts().OptimizationLevel ||
+  NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
   if (TrapBB && !NoMerge) {

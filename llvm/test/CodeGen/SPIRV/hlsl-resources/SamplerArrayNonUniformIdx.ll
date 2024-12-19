@@ -31,13 +31,13 @@ define void @main() #0 {
 ; CHECK: [[ac0]] = OpAccessChain [[SamplerPtrType]] [[Var]] [[Zero]]
 ; CHECK: [[ld0]] = OpLoad [[SamplerType]] [[ac0]]
   %buffer0 = call target("spirv.Sampler")
-      @llvm.spv.handle.fromBinding.tspirv.Image(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image(
           i32 3, i32 4, i32 3, i32 0, i1 true)
 
 ; CHECK: [[ac1:%[0-9]+]] = OpAccessChain [[SamplerPtrType]] [[Var]] [[One]]
 ; CHECK: [[ld1]] = OpLoad [[SamplerType]] [[ac1]]
   %buffer1 = call target("spirv.Sampler")
-      @llvm.spv.handle.fromBinding.tspirv.Image(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image(
           i32 3, i32 4, i32 3, i32 1, i1 true)
   ret void
 }
