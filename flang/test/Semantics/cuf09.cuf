@@ -49,6 +49,11 @@ module m
     i = threadIdx%x
     a(i) = c(10) ! ok, a is device and c is constant
   end subroutine
+
+  attributes(global) subroutine stoptest()
+    print*,threadIdx%x
+    stop ! ok
+  end subroutine
 end
 
 program main
