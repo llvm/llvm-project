@@ -28,6 +28,10 @@ void NormalFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_long' 'long ()'
 #pragma acc shutdown device_num(some_int())
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
+  // CHECK-NEXT: device_num clause
+  // CHECK-NEXT: CallExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'some_int' 'int ()'
 #pragma acc shutdown device_type(T)
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: device_type(T)
@@ -43,6 +47,10 @@ void NormalFunc() {
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_long' 'long ()'
   // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: device_num clause
+  // CHECK-NEXT: CallExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'some_int' 'int ()'
 }
 
 template<typename T>
@@ -64,6 +72,8 @@ void TemplFunc(T t) {
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
 #pragma acc shutdown device_num(t)
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
+  // CHECK-NEXT: device_num clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
 #pragma acc shutdown device_type(T)
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: device_type(T)
@@ -75,6 +85,8 @@ void TemplFunc(T t) {
   // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
   // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: device_num clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
 
   // Instantiation:
   // CHECK-NEXT: FunctionDecl{{.*}} TemplFunc 'void (SomeStruct)' implicit_instantiation
@@ -98,6 +110,11 @@ void TemplFunc(T t) {
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'SomeStruct'
 
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
+  // CHECK-NEXT: device_num clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'unsigned int'
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'unsigned int'
+  // CHECK-NEXT: MemberExpr{{.*}} .operator unsigned int
+  // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'SomeStruct'
 
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: device_type(T)
@@ -110,6 +127,12 @@ void TemplFunc(T t) {
   // CHECK-NEXT: NestedNameSpecifier{{.*}} 'SomeStruct'
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'unsigned int'
   // CHECK-NEXT: CXXMemberCallExpr{{.*}} 'unsigned int'
+  // CHECK-NEXT: MemberExpr{{.*}} .operator unsigned int
+  // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'SomeStruct'
+  // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: device_num clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'unsigned int'
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'unsigned int'
   // CHECK-NEXT: MemberExpr{{.*}} .operator unsigned int
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'SomeStruct'
 }
