@@ -139,6 +139,7 @@ class FuseIntoContainingOp(FuseIntoContainingOp):
             ip=ip,
         )
 
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class FuseOp(FuseOp):
     """Specialization for FuseOp class."""
