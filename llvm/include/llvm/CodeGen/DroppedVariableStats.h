@@ -18,6 +18,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 
@@ -206,12 +207,33 @@ private:
   virtual void
   visitEveryInstruction(unsigned &DroppedCount,
                         DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                        VarID Var) override;
+                        VarID Var) override {
+    const DIScope *DbgValScope = std::get<0>(Var);
+    for (const auto &I : instructions(Func)) {
+      auto *DbgLoc = I.getDebugLoc().get();
+      if (!DbgLoc)
+        continue;
+      if (updateDroppedCount(DbgLoc, DbgLoc->getScope(), DbgValScope,
+                             InlinedAtsMap, Var, DroppedCount))
+        break;
+    }
+  }
   /// Override base class method to run on #dbg_values specifically.
   virtual void visitEveryDebugRecord(
       DenseSet<VarID> &VarIDSet,
       DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-      StringRef FuncName, bool Before) override;
+      StringRef FuncName, bool Before) override {
+    for (const auto &I : instructions(Func)) {
+      for (DbgRecord &DR : I.getDbgRecordRange()) {
+        if (auto *Dbg = dyn_cast<DbgVariableRecord>(&DR)) {
+          auto *DbgVar = Dbg->getVariable();
+          auto DbgLoc = DR.getDebugLoc();
+          populateVarIDSetAndInlinedMap(DbgVar, DbgLoc, VarIDSet, InlinedAtsMap,
+                                        FuncName, Before);
+        }
+      }
+    }
+  }
 
   template <typename IRUnitT> static const IRUnitT *unwrapIR(Any IR) {
     const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
