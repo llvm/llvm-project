@@ -298,7 +298,7 @@ std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
 TEST(TelemetryTest, TelemetryEnabled) {
   const std::string ToolName = "TelemetryTestTool";
 
-  // Preset some params
+  // Preset some params.
   TestContext Context;
   Context.HasVendorPlugin = true;
   Context.Buffer.clear();
