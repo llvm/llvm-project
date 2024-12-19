@@ -13,4 +13,4 @@ template class Parser<internal::ArgList>;
 } // namespace LIBC_NAMESPACE_DECL
 
 // Bring this file into the link if __printf_float is referenced.
-void __printf_float() {}
+extern "C" void __printf_float() {}
