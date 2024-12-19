@@ -72,7 +72,6 @@ static int setBuf(const char *infile, char **buf) {
 static void dumpData(amd_comgr_data_t Data, const char *OutFile) {
   size_t size;
   char *bytes = NULL;
-  amd_comgr_status_t status;
 
   amd_comgr_(get_data(Data, &size, NULL));
 
