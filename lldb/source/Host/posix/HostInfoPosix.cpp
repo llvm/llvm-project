@@ -178,11 +178,6 @@ FileSpec HostInfoPosix::GetDefaultShell() {
   return FileSpec("/bin/sh");
 }
 
-// Keeping the original one for reference
-// bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
-//  return ComputePathRelativeToLibrary(file_spec, "/bin");
-// }
-
 bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   if (ComputePathRelativeToLibrary(file_spec, "/bin") &&
       file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
