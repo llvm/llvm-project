@@ -285,8 +285,7 @@ _LIBCPP_DIAGNOSTIC_POP
 #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
 
 struct __locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __locale_guard(__locale_t __l)
-      : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(__locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
     // Setting the locale can be expensive even when the locale given is
     // already the current locale, so do an explicit check to see if the
     // current locale is already the one we want.
