@@ -16221,9 +16221,8 @@ static SDValue CombineBaseUpdate(SDNode *N,
   // Search for a use of the address operand that is an increment.
   for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
          UE = Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (UI.getUse().getResNo() != Addr.getResNo() ||
-        User->getNumOperands() != 2)
+    SDNode *User = UI->getUser();
+    if (UI->getResNo() != Addr.getResNo() || User->getNumOperands() != 2)
       continue;
 
     SDValue Inc = User->getOperand(UI.getOperandNo() == 1 ? 0 : 1);
@@ -16244,8 +16243,8 @@ static SDValue CombineBaseUpdate(SDNode *N,
     for (SDNode::use_iterator UI = Base->use_begin(), UE = Base->use_end();
          UI != UE; ++UI) {
 
-      SDNode *User = *UI;
-      if (UI.getUse().getResNo() != Base.getResNo() || User == Addr.getNode() ||
+      SDNode *User = UI->getUser();
+      if (UI->getResNo() != Base.getResNo() || User == Addr.getNode() ||
           User->getNumOperands() != 2)
         continue;
 
@@ -16322,12 +16321,9 @@ static SDValue PerformMVEVLDCombine(SDNode *N,
     return SDValue();
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-                            UE = Addr.getNode()->use_end();
-       UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (User->getOpcode() != ISD::ADD ||
-        UI.getUse().getResNo() != Addr.getResNo())
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::ADD || Use.getResNo() != Addr.getResNo())
       continue;
 
     // Check that the add is independent of the load/store.  Otherwise, folding
@@ -16457,12 +16453,11 @@ static bool CombineVLDDUP(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // First check that all the vldN-lane uses are VDUPLANEs and that the lane
   // numbers match the load.
   unsigned VLDLaneNo = VLD->getConstantOperandVal(NumVecs + 3);
-  for (SDNode::use_iterator UI = VLD->use_begin(), UE = VLD->use_end();
-       UI != UE; ++UI) {
+  for (SDUse &Use : VLD->uses()) {
     // Ignore uses of the chain result.
-    if (UI.getUse().getResNo() == NumVecs)
+    if (Use.getResNo() == NumVecs)
       continue;
-    SDNode *User = *UI;
+    SDNode *User = Use.getUser();
     if (User->getOpcode() != ARMISD::VDUPLANE ||
         VLDLaneNo != User->getConstantOperandVal(1))
       return false;
@@ -16482,14 +16477,12 @@ static bool CombineVLDDUP(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
                                            VLDMemInt->getMemOperand());
 
   // Update the uses.
-  for (SDNode::use_iterator UI = VLD->use_begin(), UE = VLD->use_end();
-       UI != UE; ++UI) {
-    unsigned ResNo = UI.getUse().getResNo();
+  for (SDUse &Use : VLD->uses()) {
+    unsigned ResNo = Use.getResNo();
     // Ignore uses of the chain result.
     if (ResNo == NumVecs)
       continue;
-    SDNode *User = *UI;
-    DCI.CombineTo(User, SDValue(VLDDup.getNode(), ResNo));
+    DCI.CombineTo(Use.getUser(), SDValue(VLDDup.getNode(), ResNo));
   }
 
   // Now the vldN-lane intrinsic is dead except for its chain result.

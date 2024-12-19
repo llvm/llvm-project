@@ -3294,7 +3294,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     return false;
 
   for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
+    SDNode *User = UI->getUser();
     // Users of this node should have already been instruction selected
     if (!User->isMachineOpcode())
       return false;
