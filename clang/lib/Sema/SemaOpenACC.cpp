@@ -574,7 +574,9 @@ bool checkValidAfterDeviceType(
 bool isDirectiveKindImplemented(OpenACCDirectiveKind DK) {
   return isOpenACCComputeDirectiveKind(DK) ||
          isOpenACCCombinedDirectiveKind(DK) || isOpenACCDataDirectiveKind(DK) ||
-         DK == OpenACCDirectiveKind::Loop || DK == OpenACCDirectiveKind::Wait;
+         DK == OpenACCDirectiveKind::Loop || DK == OpenACCDirectiveKind::Wait ||
+         DK == OpenACCDirectiveKind::Init ||
+         DK == OpenACCDirectiveKind::Shutdown;
 }
 
 class SemaOpenACCClauseVisitor {
@@ -699,7 +701,10 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
   // sense. Prose DOES exist for 'data' and 'host_data', 'enter data' and 'exit
   // data' both don't, but other implmementations do this.  OpenACC issue 519
   // filed for the latter two.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+  // GCC allows this on init/shutdown, presumably for good reason, so we do too.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Init &&
+      Clause.getDirectiveKind() != OpenACCDirectiveKind::Shutdown &&
+      checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
     return nullptr;
 
   // The parser has ensured that we have a proper condition expr, so there
@@ -1868,6 +1873,8 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
     llvm_unreachable("Doesn't have an associated stmt");
   default:
   case OpenACCDirectiveKind::Invalid:
@@ -2294,6 +2301,8 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::HostData:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -3682,6 +3691,14 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
         getASTContext(), StartLoc, DirLoc, LParenLoc, Exprs.front(), MiscLoc,
         Exprs.drop_front(), RParenLoc, EndLoc, Clauses);
   }
+  case OpenACCDirectiveKind::Init: {
+    return OpenACCInitConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                        EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::Shutdown: {
+    return OpenACCShutdownConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                            EndLoc, Clauses);
+  }
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
@@ -3695,6 +3712,8 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
     llvm_unreachable(
         "these don't have associated statements, so shouldn't get here");
   case OpenACCDirectiveKind::Parallel:
