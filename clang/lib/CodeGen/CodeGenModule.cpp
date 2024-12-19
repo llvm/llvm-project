@@ -4283,7 +4283,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
           llvm::SmallVector<StringRef, 8> Feats;
-          bool IsDefined = CurFD->doesThisDeclarationHaveABody();
+          bool IsDefined = CurFD->getDefinition() != nullptr;
 
           if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
             assert(getTarget().getTriple().isX86() && "Unsupported target");
