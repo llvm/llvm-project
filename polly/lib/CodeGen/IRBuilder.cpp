@@ -166,7 +166,7 @@ void ScopAnnotator::annotateLoopLatch(
   if (IsParallel)
     addParallelMetadata(Ctx, &Args, ParallelLoops);
   if (EnableVectorizeMetadata.has_value())
-    this->addVectorizeMetadata(Ctx, &Args, *EnableVectorizeMetadata);
+    addVectorizeMetadata(Ctx, &Args, *EnableVectorizeMetadata);
 
   // No metadata to annotate.
   if (!MData && Args.size() <= 1)
