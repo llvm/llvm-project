@@ -19,8 +19,8 @@ void count_ok(void) {
 
 // CHECK-LABEL: @negative_count_trap(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6:[0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void negative_count_trap(void) {
   int arr[10];
@@ -30,8 +30,8 @@ void negative_count_trap(void) {
 
 // CHECK-LABEL: @too_big_count_trap(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void too_big_count_trap(void) {
   int arr[10];
@@ -43,8 +43,8 @@ inline void param_with_unsigned_count(int *__counted_by(len - 2) buf, size_t len
 
 // CHECK-LABEL: @overflow_unsigned_count_trap(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void overflow_unsigned_count_trap(void) {
   int arr[10];
@@ -55,10 +55,19 @@ void overflow_unsigned_count_trap(void) {
 void *__sized_by(count * size) return_buf(size_t count, size_t size);
 
 // CHECK-LABEL: @returned_buf_ok(
-// CHECK-NEXT:  cont8:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef 4, i64 noundef 5) #[[ATTR6:[0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[CALL]], i64 19
-// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef 4, i64 noundef 5) #[[ATTR7:[0-9]+]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 20
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[CALL]], i64 19
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[CALL]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK:       trap:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       cont8:
+// CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void returned_buf_ok(void) {
@@ -68,9 +77,9 @@ void returned_buf_ok(void) {
 
 // CHECK-LABEL: @oob_returned_buf_trap(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef 4, i64 noundef 5) #[[ATTR6]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef 4, i64 noundef 5) #[[ATTR7]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void oob_returned_buf_trap(void) {
   char *p = return_buf(4, 5);
@@ -79,9 +88,9 @@ void oob_returned_buf_trap(void) {
 
 // CHECK-LABEL: @overflow_returned_buf_trap(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef -1, i64 noundef -1) #[[ATTR6]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef -1, i64 noundef -1) #[[ATTR7]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void overflow_returned_buf_trap(void) {
   char *p = return_buf(__SIZE_MAX__, __SIZE_MAX__);
@@ -90,7 +99,7 @@ void overflow_returned_buf_trap(void) {
 
 // CHECK-LABEL: @overflow_returned_buf_ok(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef -1, i64 noundef -1) #[[ATTR6]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef -1, i64 noundef -1) #[[ATTR7]]
 // CHECK-NEXT:    store i8 0, ptr [[CALL]], align 1, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
@@ -101,7 +110,7 @@ void overflow_returned_buf_ok(void) {
 
 // CHECK-LABEL: @too_big_returned_buf_undef(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef -1, i64 noundef 1) #[[ATTR6]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef -1, i64 noundef 1) #[[ATTR7]]
 // CHECK-NEXT:    unreachable
 //
 void too_big_returned_buf_undef(void) {
@@ -111,10 +120,10 @@ void too_big_returned_buf_undef(void) {
 
 // XXX: In this case, the count argument already violates the assumption that the offset doesn't overflow in a signed sense.
 // This should actually be caught already when the count is assigned in side the callee, but if the callee's definition is
-// not -fbounds-safety'ed, there's not much we can do here. 
+// not -fbounds-safety'ed, there's not much we can do here.
 // CHECK-LABEL: @index_overflow_returned_buf_fixme(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef 9223372036854775807, i64 noundef 1) #[[ATTR6]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @return_buf(i64 noundef 9223372036854775807, i64 noundef 1) #[[ATTR7]]
 // CHECK-NEXT:    store i8 0, ptr [[CALL]], align 1, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
