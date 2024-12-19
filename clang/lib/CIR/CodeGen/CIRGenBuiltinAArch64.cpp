@@ -2676,19 +2676,17 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vaddlvq_u32:
     return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.uaddlv", resultTy,
                         loc);
-  case NEON::BI__builtin_neon_vaddv_s32:
-    llvm_unreachable(" neon_vaddv_s32 NYI ");
-  case NEON::BI__builtin_neon_vaddv_u32:
-    llvm_unreachable(" neon_vaddv_u32 NYI ");
   case NEON::BI__builtin_neon_vaddv_f32:
   case NEON::BI__builtin_neon_vaddvq_f32:
   case NEON::BI__builtin_neon_vaddvq_f64:
     return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.faddv", resultTy,
                         loc);
+  case NEON::BI__builtin_neon_vaddv_s32:
   case NEON::BI__builtin_neon_vaddvq_s32:
-    llvm_unreachable(" neon_vaddvq_s32 NYI ");
   case NEON::BI__builtin_neon_vaddvq_s64:
-    llvm_unreachable(" neon_vaddvq_s64 NYI ");
+    return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.saddv", resultTy,
+                        loc);
+  case NEON::BI__builtin_neon_vaddv_u32:
   case NEON::BI__builtin_neon_vaddvq_u32:
   case NEON::BI__builtin_neon_vaddvq_u64:
     return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.uaddv", resultTy,

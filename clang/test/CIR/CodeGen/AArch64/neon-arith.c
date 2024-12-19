@@ -952,3 +952,27 @@ uint64_t test_vaddvq_u64(uint64x2_t a) {
   // LLVM:   [[VADDVQ_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> {{%.*}})
   // LLVM:   ret i64 [[VADDVQ_U64_I]]
 }
+
+int32_t test_vaddvq_s32(int32x4_t a) {
+  return vaddvq_s32(a);
+
+  // CIR-LABEL: vaddvq_s32
+  // CIR: cir.llvm.intrinsic "aarch64.neon.saddv" {{%.*}} : (!cir.vector<!s32i x 4>) -> !s32i
+
+  // LLVM-LABEL: test_vaddvq_s32
+  // LLVM-SAME: (<4 x i32> [[a:%.*]])
+  // LLVM:   [[VADDVQ_S32_I:%.*]] = call i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32> [[a]])
+  // LLVM:   ret i32 [[VADDVQ_S32_I]]
+}
+
+int64_t test_vaddvq_s64(int64x2_t a) {
+  return vaddvq_s64(a);
+
+  // CIR-LABEL: vaddvq_s64
+  // CIR: cir.llvm.intrinsic "aarch64.neon.saddv" {{%.*}} : (!cir.vector<!s64i x 2>) -> !s64i
+
+  // LLVM-LABEL: test_vaddvq_s64
+  // LLVM-SAME: (<2 x i64> [[a:%.*]])
+  // LLVM:   [[VADDVQ_S64_I:%.*]] = call i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64> [[a]])
+  // LLVM:   ret i64 [[VADDVQ_S64_I]]
+}
