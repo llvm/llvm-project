@@ -28,10 +28,8 @@ def nativedeffile : P<"defArm64Native", "def file to use to generate native ARM6
 def llvmlibthin : F<"llvmlibthin">,
     HelpText<"Make .lib point to .obj files instead of copying their contents">;
 
-def llvmlibindex : F<"llvmlibindex">,
-    HelpText<"Write an index to the output (default)">;
-def llvmlibindex_no : F<"llvmlibindex:no">,
-    HelpText<"Do not write an index to the output">;
+defm llvmlibindex : B<"llvmlibindex", "Write an index to the output (default)",
+                      "Do not write an index to the output">;
 
 def llvmlibempty : F<"llvmlibempty">,
     HelpText<"When given no contents, produce an empty .lib file">;
