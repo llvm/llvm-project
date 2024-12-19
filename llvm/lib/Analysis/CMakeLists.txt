@@ -60,6 +60,7 @@ add_llvm_component_library(LLVMAnalysis
   DomPrinter.cpp
   DomTreeUpdater.cpp
   DominanceFrontier.cpp
+  DroppedVariableStats.cpp
   DXILResource.cpp
   DXILMetadataAnalysis.cpp
   FunctionPropertiesAnalysis.cpp
