@@ -171,9 +171,7 @@ class FuseOp(FuseOp):
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
             target = loop_types_or_target
-            assert (
-                target_or_none is None
-            ), "Cannot construct FuseOp with two targets."
+            assert target_or_none is None, "Cannot construct FuseOp with two targets."
         else:
             loop_types = (
                 ([loop_types_or_target] * num_loops)
