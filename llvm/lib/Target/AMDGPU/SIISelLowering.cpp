@@ -16896,7 +16896,7 @@ bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
   // Check if we have a good chance to form the memory access pattern with the
   // base and offset
   return (DAG.isBaseWithConstantOffset(N0) &&
-          hasMemSDNodeUser(*N0->use_begin()));
+          hasMemSDNodeUser(*N0->user_begin()));
 }
 
 bool SITargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
