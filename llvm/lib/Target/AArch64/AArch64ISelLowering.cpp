@@ -18109,9 +18109,9 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
   if (N->getOpcode() == ISD::SHL && N->hasOneUse()) {
     if (auto C2 = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
       unsigned ShlAmt = C2->getZExtValue();
-      if (auto ShouldADD = *N->use_begin();
+      if (auto ShouldADD = *N->user_begin();
           ShouldADD->getOpcode() == ISD::ADD && ShouldADD->hasOneUse()) {
-        if (auto ShouldLOAD = dyn_cast<LoadSDNode>(*ShouldADD->use_begin())) {
+        if (auto ShouldLOAD = dyn_cast<LoadSDNode>(*ShouldADD->user_begin())) {
           unsigned ByteVT = ShouldLOAD->getMemoryVT().getSizeInBits() / 8;
           if ((1ULL << ShlAmt) == ByteVT &&
               isIndexedLoadLegal(ISD::PRE_INC, ShouldLOAD->getMemoryVT()))
@@ -18902,8 +18902,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into madd or msub.
-    if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ADD ||
-                           N->use_begin()->getOpcode() == ISD::SUB))
+    if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ADD ||
+                           N->user_begin()->getOpcode() == ISD::SUB))
       return SDValue();
   }
   // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub
@@ -21803,7 +21803,7 @@ static SDValue tryCombineWhileLo(SDNode *N,
   if (HalfSize < 2)
     return SDValue();
 
-  auto It = N->use_begin();
+  auto It = N->user_begin();
   SDNode *Lo = *It++;
   SDNode *Hi = *It;
 
@@ -23402,7 +23402,7 @@ static SDValue performPostLD1Combine(SDNode *N,
   // TODO: This could be expanded to more operations if they reliably use the
   // index variants.
   if (N->hasOneUse()) {
-    unsigned UseOpc = N->use_begin()->getOpcode();
+    unsigned UseOpc = N->user_begin()->getOpcode();
     if (UseOpc == ISD::FMUL || UseOpc == ISD::FMA)
       return SDValue();
   }
@@ -24755,7 +24755,7 @@ static SDValue tryToWidenSetCCOperands(SDNode *Op, SelectionDAG &DAG) {
 
   // Make sure that all uses of Op are VSELECTs with result matching types where
   // the result type has a larger element type than the SetCC operand.
-  SDNode *FirstUse = *Op->use_begin();
+  SDNode *FirstUse = *Op->user_begin();
   if (FirstUse->getOpcode() != ISD::VSELECT)
     return SDValue();
   EVT UseMVT = FirstUse->getValueType(0);
@@ -25905,7 +25905,7 @@ static SDValue performFPExtendCombine(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND)
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::FP_ROUND)
     return SDValue();
 
   auto hasValidElementTypeForFPExtLoad = [](EVT VT) {
@@ -26072,7 +26072,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
 
   // Check ExtractLow's user.
   if (HasFoundMULLow) {
-    SDNode *ExtractLowUser = *ExtractLow.getNode()->use_begin();
+    SDNode *ExtractLowUser = *ExtractLow.getNode()->user_begin();
     if (ExtractLowUser->getOpcode() != N->getOpcode()) {
       HasFoundMULLow = false;
     } else {
@@ -26549,7 +26549,7 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
