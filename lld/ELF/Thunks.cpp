@@ -792,7 +792,14 @@ bool ThumbThunk::getMayUseShortThunk() {
   if (!mayUseShortThunk)
     return false;
   uint64_t s = getARMThunkDestVA(ctx, destination);
-  if ((s & 1) == 0 || !ctx.arg.armJ1J2BranchEncoding) {
+  // To use a short thunk the destination must be Thumb and the target must
+  // have the wide branch instruction B.w. This instruction is included when
+  // Thumb 2 is present, or in v8-M (and above) baseline architectures.
+  // armJ1J2BranchEncoding is available in all architectures with a profile and
+  // the one v6 CPU that implements Thumb 2 (Arm1156t2-s).
+  // Movt and Movw instructions require Thumb 2 or v8-M baseline.
+  if ((s & 1) == 0 || !ctx.arg.armJ1J2BranchEncoding ||
+      !ctx.arg.armHasMovtMovw) {
     mayUseShortThunk = false;
     addLongMapSyms();
     return false;

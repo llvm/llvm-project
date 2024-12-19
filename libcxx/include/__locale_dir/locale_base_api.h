@@ -98,15 +98,15 @@
 #  include <__locale_dir/support/apple.h>
 #elif defined(__FreeBSD__)
 #  include <__locale_dir/support/freebsd.h>
+#elif defined(_LIBCPP_MSVCRT_LIKE)
+#  include <__locale_dir/support/windows.h>
 #else
 
 // TODO: This is a temporary definition to bridge between the old way we defined the locale base API
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#  if defined(_LIBCPP_MSVCRT_LIKE)
-#    include <__locale_dir/locale_base_api/win32.h>
-#  elif defined(_AIX) || defined(__MVS__)
+#  if defined(_AIX) || defined(__MVS__)
 #    include <__locale_dir/locale_base_api/ibm.h>
 #  elif defined(__ANDROID__)
 #    include <__locale_dir/locale_base_api/android.h>

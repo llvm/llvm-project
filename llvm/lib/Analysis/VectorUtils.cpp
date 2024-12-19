@@ -144,6 +144,9 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isVectorIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
 
+  if (VPCastIntrinsic::isVPCast(ID))
+    return OpdIdx == -1 || OpdIdx == 0;
+
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:

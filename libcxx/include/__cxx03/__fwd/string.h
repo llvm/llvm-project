@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_STRING_H
-#define _LIBCPP___FWD_STRING_H
+#ifndef _LIBCPP___CXX03___FWD_STRING_H
+#define _LIBCPP___CXX03___FWD_STRING_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/memory.h>
@@ -104,4 +104,4 @@ class _LIBCPP_PREFERRED_NAME(string)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_STRING_H
+#endif // _LIBCPP___CXX03___FWD_STRING_H

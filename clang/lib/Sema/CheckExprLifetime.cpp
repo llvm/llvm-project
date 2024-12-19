@@ -367,6 +367,8 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
+      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+        return false;
       return OO == OverloadedOperatorKind::OO_Subscript ||
              OO == OverloadedOperatorKind::OO_Star;
     }
@@ -1089,14 +1091,13 @@ enum PathLifetimeKind {
 /// supposed to lifetime-extend along.
 static PathLifetimeKind
 shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
-  PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
       return PathLifetimeKind::Extend;
-    else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
+    if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
-  return Kind;
+  return PathLifetimeKind::Extend;
 }
 
 /// Find the range for the first interesting entry in the path at or after I.
@@ -1152,6 +1153,86 @@ static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
   }
   return false;
 }
+// Result of analyzing the Path for GSLPointer.
+enum AnalysisResult {
+  // Path does not correspond to a GSLPointer.
+  NotGSLPointer,
+
+  // A relevant case was identified.
+  Report,
+  // Stop the entire traversal.
+  Abandon,
+  // Skip this step and continue traversing inner AST nodes.
+  Skip,
+};
+// Analyze cases where a GSLPointer is initialized or assigned from a
+// temporary owner object.
+static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
+                                               Local L) {
+  if (!pathOnlyHandlesGslPointer(Path))
+    return NotGSLPointer;
+
+  // At this point, Path represents a series of operations involving a
+  // GSLPointer, either in the process of initialization or assignment.
+
+  // Note: A LifetimeBoundCall can appear interleaved in this sequence.
+  // For example:
+  //    const std::string& Ref(const std::string& a [[clang::lifetimebound]]);
+  //    string_view abc = Ref(std::string());
+  // The "Path" is [GSLPointerInit, LifetimeboundCall], where "L" is the
+  // temporary "std::string()" object. We need to check the return type of the
+  // function with the lifetimebound attribute.
+  if (Path.back().Kind == IndirectLocalPathEntry::LifetimeBoundCall) {
+    // The lifetimebound applies to the implicit object parameter of a method.
+    const FunctionDecl *FD =
+        llvm::dyn_cast_or_null<FunctionDecl>(Path.back().D);
+    // The lifetimebound applies to a function parameter.
+    if (const auto *PD = llvm::dyn_cast<ParmVarDecl>(Path.back().D))
+      FD = llvm::dyn_cast<FunctionDecl>(PD->getDeclContext());
+
+    if (isa_and_present<CXXConstructorDecl>(FD)) {
+      // Constructor case: the parameter is annotated with lifetimebound
+      //   e.g., GSLPointer(const S& s [[clang::lifetimebound]])
+      // We still respect this case even the type S is not an owner.
+      return Report;
+    }
+    // Check the return type, e.g.
+    //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+    //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
+    if (FD &&
+        ((FD->getReturnType()->isReferenceType() &&
+          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
+         isPointerLikeType(FD->getReturnType())))
+      return Report;
+
+    return Abandon;
+  }
+
+  if (isa<DeclRefExpr>(L)) {
+    // We do not want to follow the references when returning a pointer
+    // originating from a local owner to avoid the following false positive:
+    //   int &p = *localUniquePtr;
+    //   someContainer.add(std::move(localUniquePtr));
+    //   return p;
+    if (!pathContainsInit(Path) && isRecordWithAttr<OwnerAttr>(L->getType()))
+      return Report;
+    return Abandon;
+  }
+
+  // The GSLPointer is from a temporary object.
+  auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
+
+  bool IsGslPtrValueFromGslTempOwner =
+      MTE && !MTE->getExtendingDecl() &&
+      isRecordWithAttr<OwnerAttr>(MTE->getType());
+  // Skipping a chain of initializing gsl::Pointer annotated objects.
+  // We are looking only for the final source to find out if it was
+  // a local or temporary owner or the address of a local
+  // variable/param.
+  if (!IsGslPtrValueFromGslTempOwner)
+    return Skip;
+  return Report;
+}
 
 static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
   return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
@@ -1189,27 +1270,17 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
 
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
-    bool IsGslPtrValueFromGslTempOwner = false;
-    if (pathOnlyHandlesGslPointer(Path)) {
-      if (isa<DeclRefExpr>(L)) {
-        // We do not want to follow the references when returning a pointer
-        // originating from a local owner to avoid the following false positive:
-        //   int &p = *localUniquePtr;
-        //   someContainer.add(std::move(localUniquePtr));
-        //   return p;
-        if (pathContainsInit(Path) ||
-            !isRecordWithAttr<OwnerAttr>(L->getType()))
-          return false;
-      } else {
-        IsGslPtrValueFromGslTempOwner =
-            MTE && !MTE->getExtendingDecl() &&
-            isRecordWithAttr<OwnerAttr>(MTE->getType());
-        // Skipping a chain of initializing gsl::Pointer annotated objects.
-        // We are looking only for the final source to find out if it was
-        // a local or temporary owner or the address of a local variable/param.
-        if (!IsGslPtrValueFromGslTempOwner)
-          return true;
-      }
+    bool IsGslPtrValueFromGslTempOwner = true;
+    switch (analyzePathForGSLPointer(Path, L)) {
+    case Abandon:
+      return false;
+    case Skip:
+      return true;
+    case NotGSLPointer:
+      IsGslPtrValueFromGslTempOwner = false;
+      LLVM_FALLTHROUGH;
+    case Report:
+      break;
     }
 
     switch (LK) {

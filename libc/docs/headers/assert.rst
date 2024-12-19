@@ -15,7 +15,7 @@ Macros
   * - Macro
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section
+    - POSIX Docs
   * - __STDC_VERSION_ASSERT_H__
     - |check|
     - 7.2.1
@@ -23,5 +23,5 @@ Macros
   * - assert
     -
     - 7.2.1
-    -
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/assert.h.html>`__
 

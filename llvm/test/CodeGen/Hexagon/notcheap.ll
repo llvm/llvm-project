@@ -1,4 +1,4 @@
-; RUN: llc  -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check if only one transfer immediate instruction is generated for init.end block.
 ; Since the transfer immediate of address operand is declared as not cheap, it
 ; should generate only one transfer immediate, rather than two of them.

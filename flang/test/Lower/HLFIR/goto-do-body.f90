@@ -40,7 +40,7 @@ subroutine sub1()
 ! CHECK:    %[[TMP5:.*]] = arith.subi %[[TMP4]], %[[C1]] : i32
 ! CHECK:    fir.store %[[TMP5]] to %[[TRIP]] : !fir.ref<i32>
 ! CHECK:    %[[TMP6:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
-! CHECK:    %[[TMP7:.*]] = arith.addi %[[TMP6]], %[[C1]] : i32
+! CHECK:    %[[TMP7:.*]] = arith.addi %[[TMP6]], %[[C1]] overflow<nsw> : i32
 ! CHECK:    fir.store %[[TMP7]] to %[[I]]#1 : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER]]
   end do
@@ -104,7 +104,7 @@ subroutine sub2()
 ! CHECK:    fir.store %[[TMP9]] to %[[TRIP]] : !fir.ref<i32>
 ! CHECK:    %[[TMP10:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
 ! CHECK:    %[[STEP_VAL:.*]] = fir.load %[[STEP_VAR]] : !fir.ref<i32>
-! CHECK:    %[[TMP11:.*]] = arith.addi %[[TMP10]], %[[STEP_VAL]] : i32
+! CHECK:    %[[TMP11:.*]] = arith.addi %[[TMP10]], %[[STEP_VAL]] overflow<nsw> : i32
 ! CHECK:    fir.store %[[TMP11]] to %[[I]]#1 : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER]]
   end do
