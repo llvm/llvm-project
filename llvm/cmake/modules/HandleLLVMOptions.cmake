@@ -589,6 +589,10 @@ if( MSVC )
     append("/WX" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif (LLVM_ENABLE_WERROR)
 
+  # FIXME(kzhuravl): Need to check if it affects windows ci builds. If yes,
+  # we might need to upstream this, possibly under a cmake option.
+  append("/Zm20" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
