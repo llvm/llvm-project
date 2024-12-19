@@ -9,6 +9,7 @@
 #include "Options.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Driver/Driver.h"
+#include "clang/InstallAPI/DirectoryScanner.h"
 #include "clang/InstallAPI/FileList.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/InstallAPIDiagnostic.h"
@@ -30,41 +31,21 @@ namespace drv = clang::driver::options;
 namespace clang {
 namespace installapi {
 
-/// Create prefix string literals used in InstallAPIOpts.td.
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
 
-static constexpr const llvm::StringLiteral PrefixTable_init[] =
-#define PREFIX_UNION(VALUES) VALUES
+#define OPTTABLE_PREFIXES_TABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef PREFIX_UNION
-    ;
-static constexpr const ArrayRef<StringLiteral>
-    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+#undef OPTTABLE_PREFIXES_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_UNION_CODE
+#include "InstallAPIOpts.inc"
+#undef OPTTABLE_PREFIXES_UNION_CODE
 
 /// Create table mapping all options defined in InstallAPIOpts.td.
 static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   Option::KIND##Class,                                                        \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "InstallAPIOpts.inc"
 #undef OPTION
 };
@@ -74,7 +55,9 @@ namespace {
 /// \brief Create OptTable class for parsing actual command line arguments.
 class DriverOptTable : public opt::PrecomputedOptTable {
 public:
-  DriverOptTable() : PrecomputedOptTable(InfoTable, PrefixTable) {}
+  DriverOptTable()
+      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                            OptionPrefixesUnion) {}
 };
 
 } // end anonymous namespace.
@@ -126,8 +109,14 @@ getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
 
 bool Options::processDriverOptions(InputArgList &Args) {
   // Handle inputs.
-  llvm::append_range(DriverOpts.FileLists,
-                     Args.getAllArgValues(drv::OPT_INPUT));
+  for (const StringRef Path : Args.getAllArgValues(drv::OPT_INPUT)) {
+    // Assume any input that is not a directory is a filelist.
+    // InstallAPI does not accept multiple directories, so retain the last one.
+    if (FM->getOptionalDirectoryRef(Path))
+      DriverOpts.InputDirectory = Path.str();
+    else
+      DriverOpts.FileLists.emplace_back(Path.str());
+  }
 
   // Handle output.
   SmallString<PATH_MAX> OutputPath;
@@ -547,7 +536,7 @@ bool Options::processFrontendOptions(InputArgList &Args) {
 bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
                            OptSpecifier ID) {
   for (const StringRef Path : Args.getAllArgValues(ID)) {
-    if ((bool)FM->getDirectory(Path, /*CacheFailure=*/false)) {
+    if ((bool)FM->getOptionalDirectoryRef(Path, /*CacheFailure=*/false)) {
       auto InputHeadersOrErr = enumerateFiles(*FM, Path);
       if (!InputHeadersOrErr) {
         Diags->Report(diag::err_cannot_open_file)
@@ -760,15 +749,6 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   }
 }
 
-static const Regex Rule("(.+)/(.+)\\.framework/");
-static StringRef getFrameworkNameFromInstallName(StringRef InstallName) {
-  SmallVector<StringRef, 3> Match;
-  Rule.match(InstallName, &Match);
-  if (Match.empty())
-    return "";
-  return Match.back();
-}
-
 static Expected<std::unique_ptr<InterfaceFile>>
 getInterfaceFile(const StringRef Filename) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
@@ -897,9 +877,36 @@ InstallAPIContext Options::createContext() {
   // Attempt to find umbrella headers by capturing framework name.
   StringRef FrameworkName;
   if (!LinkerOpts.IsDylib)
-    FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
+    FrameworkName =
+        Library::getFrameworkNameFromInstallName(LinkerOpts.InstallName);
 
-  // Process inputs.
+  /// Process inputs headers.
+  // 1. For headers discovered by directory scanning, sort them.
+  // 2. For headers discovered by filelist, respect ordering.
+  // 3. Append extra headers and mark any excluded headers.
+  // 4. Finally, surface up umbrella headers to top of the list.
+  if (!DriverOpts.InputDirectory.empty()) {
+    DirectoryScanner Scanner(*FM, LinkerOpts.IsDylib
+                                      ? ScanMode::ScanDylibs
+                                      : ScanMode::ScanFrameworks);
+    SmallString<PATH_MAX> NormalizedPath(DriverOpts.InputDirectory);
+    FM->getVirtualFileSystem().makeAbsolute(NormalizedPath);
+    sys::path::remove_dots(NormalizedPath, /*remove_dot_dot=*/true);
+    if (llvm::Error Err = Scanner.scan(NormalizedPath)) {
+      Diags->Report(diag::err_directory_scanning)
+          << DriverOpts.InputDirectory << std::move(Err);
+      return Ctx;
+    }
+    std::vector<Library> InputLibraries = Scanner.takeLibraries();
+    if (InputLibraries.size() > 1) {
+      Diags->Report(diag::err_more_than_one_library);
+      return Ctx;
+    }
+    llvm::append_range(Ctx.InputHeaders,
+                       DirectoryScanner::getHeaders(InputLibraries));
+    llvm::stable_sort(Ctx.InputHeaders);
+  }
+
   for (const StringRef ListPath : DriverOpts.FileLists) {
     auto Buffer = FM->getBufferForFile(ListPath);
     if (auto Err = Buffer.getError()) {

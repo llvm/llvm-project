@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/StackLifetime.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -I%S %s -triple amdgcn-amd-amdhsa -emit-llvm -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 -I%S %s -triple spirv64-unknown-unknown -fsycl-is-device -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
+// RUN: %clang_cc1 -I%S %s -triple spirv64-amd-amdhsa -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
 #include <typeinfo>
 
 namespace Test1 {

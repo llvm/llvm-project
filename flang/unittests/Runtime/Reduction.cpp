@@ -42,7 +42,7 @@ TEST(Reductions, DimMaskProductInt4) {
       shape, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
   auto mask{MakeArray<TypeCategory::Logical, 1>(
       shape, std::vector<bool>{true, false, false, true, true, true})};
-  StaticDescriptor<1, true> statDesc;
+  StaticDescriptor<maxRank, true> statDesc;
   Descriptor &prod{statDesc.descriptor()};
   RTNAME(ProductDim)(prod, *array, 1, __FILE__, __LINE__, &*mask);
   EXPECT_EQ(prod.rank(), 1);
@@ -152,7 +152,7 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   // A scalar result occurs when you have a rank 1 array and dim == 1.
   std::vector<int> shape1{24};
   auto array1{MakeArray<TypeCategory::Real, 8>(shape1, rawData)};
-  StaticDescriptor<1, true> statDesc0[1];
+  StaticDescriptor<2, true> statDesc0[1];
   Descriptor &scalarResult{statDesc0[0].descriptor()};
   RTNAME(MaxlocDim)
   (scalarResult, *array1, /*KIND=*/2, /*DIM=*/1, __FILE__, __LINE__,
@@ -619,7 +619,7 @@ TEST(Reductions, DotProduct) {
       *logicalVector2, *logicalVector1, __FILE__, __LINE__));
 }
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 TEST(Reductions, ExtremaReal16) {
   // The identity value for Min/Maxval for REAL(16) was mistakenly
   // set to 0.0.
@@ -634,7 +634,7 @@ TEST(Reductions, ExtremaReal16) {
   auto maxArray{MakeArray<TypeCategory::Real, 16>(shape, rawMaxData)};
   EXPECT_EQ(RTNAME(MaxvalReal16)(*maxArray, __FILE__, __LINE__), -1.0);
 }
-#endif // LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#endif // HAS_LDBL128 || HAS_FLOAT128
 
 static std::int32_t IAdd(const std::int32_t *x, const std::int32_t *y) {
   return *x + *y;
@@ -655,7 +655,7 @@ TEST(Reductions, ReduceInt4) {
 TEST(Reductions, ReduceInt4Dim) {
   auto intMatrix{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{2, 2}, std::vector<std::int32_t>{1, 2, 3, 4})};
-  StaticDescriptor<1, true> statDesc;
+  StaticDescriptor<2, true> statDesc;
   Descriptor &sums{statDesc.descriptor()};
   RTNAME(ReduceInteger4DimRef)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 1);
   EXPECT_EQ(sums.rank(), 1);

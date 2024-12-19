@@ -243,6 +243,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(equalsBoundNode);
   REGISTER_MATCHER(equalsIntegralValue);
   REGISTER_MATCHER(explicitCastExpr);
+  REGISTER_MATCHER(exportDecl);
   REGISTER_MATCHER(expr);
   REGISTER_MATCHER(exprWithCleanups);
   REGISTER_MATCHER(fieldDecl);
@@ -791,7 +792,7 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
           TypedText += "\"";
       }
 
-      Completions.emplace_back(TypedText, OS.str(), MaxSpecificity);
+      Completions.emplace_back(TypedText, Decl, MaxSpecificity);
     }
   }
 

@@ -77,6 +77,18 @@ public:
       m_description.clear();
   }
 
+  /// This gives the StopInfo a chance to suggest a stack frame to select.
+  /// Passing true for inlined_stack will request changes to the inlined
+  /// call stack.  Passing false will request changes to the real stack
+  /// frame.  The inlined stack gets adjusted before we call into the thread
+  /// plans so they can reason based on the correct values.  The real stack
+  /// adjustment is handled after the frame recognizers get a chance to adjust
+  /// the frame.
+  virtual std::optional<uint32_t>
+  GetSuggestedStackFrameIndex(bool inlined_stack) {
+    return {};
+  }
+
   virtual bool IsValidForOperatingSystemThread(Thread &thread) { return true; }
 
   /// A Continue operation can result in a false stop event
@@ -122,6 +134,10 @@ public:
   CreateStopReasonWithSignal(Thread &thread, int signo,
                              const char *description = nullptr,
                              std::optional<int> code = std::nullopt);
+
+  static lldb::StopInfoSP
+  CreateStopReasonWithInterrupt(Thread &thread, int signo,
+                                const char *description);
 
   static lldb::StopInfoSP CreateStopReasonToTrace(Thread &thread);
 

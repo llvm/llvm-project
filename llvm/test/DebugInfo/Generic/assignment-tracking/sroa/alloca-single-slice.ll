@@ -19,7 +19,7 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT: %a.sroa.0 = alloca i64, align 8, !DIAssignID ![[ID_1:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR:[0-9]+]], metadata !DIExpression(), metadata ![[ID_1]], metadata ptr %a.sroa.0, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR:[0-9]+]], !DIExpression(), ![[ID_1]], ptr %a.sroa.0, !DIExpression(),
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 

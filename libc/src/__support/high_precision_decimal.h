@@ -6,15 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 #define LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 struct LShiftTableEntry {
@@ -22,6 +29,11 @@ struct LShiftTableEntry {
   char const *power_of_five;
 };
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // This is used in both this file and in the main str_to_float.h.
 // TODO: Figure out where to put this.
 enum class RoundDirection { Up, Down, Nearest };
@@ -166,9 +178,11 @@ private:
       if (digit_index >= this->num_digits) {
         return new_digits - 1;
       }
-      if (this->digits[digit_index] != power_of_five[digit_index] - '0') {
+      if (this->digits[digit_index] !=
+          internal::b36_char_to_int(power_of_five[digit_index])) {
         return new_digits -
-               ((this->digits[digit_index] < power_of_five[digit_index] - '0')
+               ((this->digits[digit_index] <
+                 internal::b36_char_to_int(power_of_five[digit_index]))
                     ? 1
                     : 0);
       }
@@ -325,8 +339,8 @@ public:
         }
         ++total_digits;
         if (this->num_digits < MAX_NUM_DIGITS) {
-          this->digits[this->num_digits] =
-              static_cast<uint8_t>(num_string[num_cur] - '0');
+          this->digits[this->num_digits] = static_cast<uint8_t>(
+              internal::b36_char_to_int(num_string[num_cur]));
           ++this->num_digits;
         } else if (num_string[num_cur] != '0') {
           this->truncated = true;
@@ -338,7 +352,8 @@ public:
     if (!saw_dot)
       this->decimal_point = total_digits;
 
-    if (num_cur < num_len && ((num_string[num_cur] | 32) == 'e')) {
+    if (num_cur < num_len &&
+        (num_string[num_cur] == 'e' || num_string[num_cur] == 'E')) {
       ++num_cur;
       if (isdigit(num_string[num_cur]) || num_string[num_cur] == '+' ||
           num_string[num_cur] == '-') {
@@ -409,7 +424,8 @@ public:
       result *= 10;
       ++cur_digit;
     }
-    return result + this->should_round_up(this->decimal_point, round);
+    return result + static_cast<unsigned int>(
+                        this->should_round_up(this->decimal_point, round));
   }
 
   // Extra functions for testing.
@@ -421,6 +437,6 @@ public:
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H

@@ -9,10 +9,10 @@
   !$omp parallel  private(a) shared(b)
   !DEF: /MainProgram1/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(4)
   a = 3.
-  !REF: /MainProgram1/b
+  !DEF: /MainProgram1/OtherConstruct1/b (OmpShared) HostAssoc REAL(4)
   b = 4
   !$omp parallel  private(b) shared(a)
-  !REF: /MainProgram1/OtherConstruct1/a
+  !DEF: /MainProgram1/OtherConstruct1/OtherConstruct1/a (OmpShared) HostAssoc REAL(4)
   a = 5.
   !DEF: /MainProgram1/OtherConstruct1/OtherConstruct1/b (OmpPrivate) HostAssoc REAL(4)
   b = 6

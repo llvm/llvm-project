@@ -8,8 +8,6 @@ define i64 @PR81136(i32 %a0, i32 %a1, ptr %a2) {
 ; CHECK-NEXT:    vmovd %esi, %xmm1
 ; CHECK-NEXT:    vmovdqa (%rdx), %ymm2
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm4 = [128,1]
-; CHECK-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm4
 ; CHECK-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
@@ -17,10 +15,10 @@ define i64 @PR81136(i32 %a0, i32 %a1, ptr %a2) {
 ; CHECK-NEXT:    vpalignr {{.*#+}} xmm0 = mem[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm2
 ; CHECK-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; CHECK-NEXT:    vandnpd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vmovmskpd %ymm0, %eax

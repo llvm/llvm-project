@@ -118,7 +118,7 @@ define i32 @log2_ceil_idiom_x_may_be_zero(i32 %x) {
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 false)
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -139,7 +139,7 @@ define i4 @log2_ceil_idiom_trunc_too_short(i32 %x) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[CTLZ]] to i4
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[TRUNC]], -1
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i4
 ; CHECK-NEXT:    [[RET:%.*]] = add i4 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i4 [[RET]]
@@ -160,7 +160,7 @@ define i32 @log2_ceil_idiom_mismatched_operands(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -180,7 +180,7 @@ define i32 @log2_ceil_idiom_wrong_constant(i32 %x) {
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 30
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -220,7 +220,7 @@ define i32 @log2_ceil_idiom_not_a_power2_test2(i32 %x) {
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 2
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -241,7 +241,7 @@ define i32 @log2_ceil_idiom_multiuse2(i32 %x) {
 ; CHECK-NEXT:    call void @use32(i32 [[CTLZ]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -263,7 +263,7 @@ define i32 @log2_ceil_idiom_multiuse3(i32 %x) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
 ; CHECK-NEXT:    call void @use32(i32 [[XOR]])
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -286,7 +286,7 @@ define i5 @log2_ceil_idiom_trunc_multiuse4(i32 %x) {
 ; CHECK-NEXT:    call void @use5(i5 [[TRUNC]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i5 [[TRUNC]], -1
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i5
 ; CHECK-NEXT:    [[RET:%.*]] = add i5 [[XOR]], [[ZEXT]]
 ; CHECK-NEXT:    ret i5 [[RET]]
@@ -310,7 +310,7 @@ define i64 @log2_ceil_idiom_zext_multiuse5(i32 %x) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[XOR]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[EXT]])
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i64
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i64 [[EXT]], [[ZEXT]]
 ; CHECK-NEXT:    ret i64 [[RET]]

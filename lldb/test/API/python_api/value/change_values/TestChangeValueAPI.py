@@ -2,7 +2,6 @@
 Test some SBValue APIs.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -111,6 +110,30 @@ class ChangeValueAPITestCase(TestBase):
             actual_value, 98765, "Got the right changed value from ptr->second_val"
         )
 
+        ptr_fourth_value = ptr_value.GetChildMemberWithName("fourth_val")
+        self.assertTrue(ptr_fourth_value.IsValid(), "Got fourth_val from ptr")
+        fourth_actual_value = ptr_fourth_value.GetValueAsUnsigned(error, 1)
+        self.assertTrue(error.Success(), "Got an unsigned value for ptr->fourth_val")
+        self.assertEqual(fourth_actual_value, 0)
+
+        result = ptr_fourth_value.SetValueFromCString("true")
+        self.assertTrue(result, "Success setting ptr->fourth_val.")
+        fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
+        self.assertTrue(error.Success(), "Got a changed value from ptr->fourth_val")
+        self.assertEqual(
+            fourth_actual_value, 1, "Got the right changed value from ptr->fourth_val"
+        )
+
+        result = ptr_fourth_value.SetValueFromCString("NO")
+        self.assertFalse(result, "Failed setting ptr->fourth_val.")
+        fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
+        self.assertTrue(error.Success(), "Got the original value from ptr->fourth_val")
+        self.assertEqual(
+            fourth_actual_value,
+            1,
+            "Got the original changed value from ptr->fourth_val",
+        )
+
         # gcc may set multiple locations for breakpoint
         breakpoint.SetEnabled(False)
 
@@ -125,7 +148,7 @@ class ChangeValueAPITestCase(TestBase):
         )
 
         expected_value = (
-            "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
+            "Val - 12345 Mine - 55, 98765, 55555555, 0. Ptr - 66, 98765, 66666666, 1"
         )
         stdout = process.GetSTDOUT(1000)
         self.assertIn(expected_value, stdout, "STDOUT showed changed values.")

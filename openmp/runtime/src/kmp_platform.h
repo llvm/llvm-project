@@ -25,6 +25,7 @@
 #define KMP_OS_HURD 0
 #define KMP_OS_SOLARIS 0
 #define KMP_OS_WASI 0
+#define KMP_OS_EMSCRIPTEN 0
 #define KMP_OS_UNIX 0 /* disjunction of KMP_OS_LINUX, KMP_OS_DARWIN etc. */
 
 #ifdef _WIN32
@@ -44,6 +45,11 @@
 #elif (defined __linux__)
 #undef KMP_OS_LINUX
 #define KMP_OS_LINUX 1
+#elif defined(__EMSCRIPTEN__)
+#undef KMP_OS_LINUX
+#undef KMP_OS_EMSCRIPTEN
+#define KMP_OS_LINUX 1
+#define KMP_OS_EMSCRIPTEN 1
 #else
 #endif
 
@@ -77,7 +83,7 @@
 #define KMP_OS_SOLARIS 1
 #endif
 
-#if (defined __wasi__) || (defined __EMSCRIPTEN__)
+#if (defined __wasi__)
 #undef KMP_OS_WASI
 #define KMP_OS_WASI 1
 #endif

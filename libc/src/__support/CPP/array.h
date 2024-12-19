@@ -11,9 +11,10 @@
 
 #include "src/__support/CPP/iterator.h" // reverse_iterator
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 template <class T, size_t N> struct array {
@@ -74,6 +75,6 @@ template <class T, size_t N> struct array {
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_ARRAY_H

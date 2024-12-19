@@ -61,7 +61,7 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
 void NVVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
-  SmallVector<StringRef> filesToLink(libs.begin(), libs.end());
+  SmallVector<StringRef> filesToLink(libs);
   auto target = builder.getAttr<NVVMTargetAttr>(
       optLevel, triple, chip, features, getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
@@ -78,8 +78,7 @@ void NVVMAttachTarget::runOnOperation() {
           targets.append(attrs->getValue().begin(), attrs->getValue().end());
         targets.push_back(target);
         // Remove any duplicate targets.
-        targets.erase(std::unique(targets.begin(), targets.end()),
-                      targets.end());
+        targets.erase(llvm::unique(targets), targets.end());
         // Update the target attribute array.
         module.setTargetsAttr(builder.getArrayAttr(targets));
       }

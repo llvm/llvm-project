@@ -898,13 +898,14 @@ body:             |
 # CHECK-NEXT:    CONSTPOOL_ENTRY 1, %const.0, 4
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:   bb.2.entry (align 2):
-# CHECK-NEXT:   liveins: $d13, $s27, $r10, $r9, $r8, $s26, $d12, $s25, $s24,
-# CHECK-SAME:            $d15, $s30, $s31, $d14, $s28, $s29, $lr, $r0, $d21,
-# CHECK-SAME:            $r3, $q10, $d20, $d17, $r2, $d25, $q11, $d22, $d23,
-# CHECK-SAME:            $r1, $q8, $d16, $s3, $q14, $d28, $d29, $d19, $s17,
-# CHECK-SAME:            $d8, $s16, $r6, $r7, $r4, $q12, $q9, $d18, $s0, $q15,
-# CHECK-SAME:            $d30, $d31, $r12, $s1, $d0, $d24, $s2, $d1, $q0, $s6,
-# CHECK-SAME:            $d3, $d2, $s4, $q1, $s7, $s5, $d9, $s18, $s19, $q4
+# CHECK-NEXT:   liveins: $s26, $s27, $r10, $r9, $r8, $d13, $s24, $s25,
+# CHECK-SAME:            $d12, $d15, $s30, $s31, $d14, $s28, $s29, $lr,
+# CHECK-SAME:            $d21, $q10, $r7, $r0, $d20, $d17, $r2, $q12,
+# CHECK-SAME:            $q11, $d22, $d23, $r1, $q8, $d16, $d30, $q14,
+# CHECK-SAME:            $d28, $d29, $d19, $s17, $r4, $d8, $r6, $r3,
+# CHECK-SAME:            $s16, $d25, $q9, $d18, $s0, $d31, $s3, $q15,
+# CHECK-SAME:            $r12, $d0, $s1, $d24, $d1, $s2, $q0, $s5, $d2,
+# CHECK-SAME:            $q1, $s4, $s7, $d3, $s6, $d9, $s18, $s19, $q4
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.84, 14 /* CC::al */, $noreg
 # CHECK-NEXT:     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.84, 14 /* CC::al */, $noreg

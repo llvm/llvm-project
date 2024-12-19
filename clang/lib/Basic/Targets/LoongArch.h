@@ -29,6 +29,11 @@ protected:
   bool HasFeatureF;
   bool HasFeatureLSX;
   bool HasFeatureLASX;
+  bool HasFeatureFrecipe;
+  bool HasFeatureLAM_BH;
+  bool HasFeatureLAMCAS;
+  bool HasFeatureLD_SEQ_SA;
+  bool HasFeatureDiv32;
 
 public:
   LoongArchTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -37,6 +42,11 @@ public:
     HasFeatureF = false;
     HasFeatureLSX = false;
     HasFeatureLASX = false;
+    HasFeatureFrecipe = false;
+    HasFeatureLAM_BH = false;
+    HasFeatureLAMCAS = false;
+    HasFeatureLD_SEQ_SA = false;
+    HasFeatureDiv32 = false;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();

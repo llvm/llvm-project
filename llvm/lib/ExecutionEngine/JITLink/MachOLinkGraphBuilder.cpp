@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MachOLinkGraphBuilder.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include <optional>
 
 #define DEBUG_TYPE "jitlink"
@@ -47,13 +49,14 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 }
 
 MachOLinkGraphBuilder::MachOLinkGraphBuilder(
-    const object::MachOObjectFile &Obj, Triple TT, SubtargetFeatures Features,
+    const object::MachOObjectFile &Obj,
+    std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+    SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
-    : Obj(Obj),
-      G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),
-                                    std::move(TT), std::move(Features),
-                                    getPointerSize(Obj), getEndianness(Obj),
-                                    std::move(GetEdgeKindName))) {
+    : Obj(Obj), G(std::make_unique<LinkGraph>(
+                    std::string(Obj.getFileName()), std::move(SSP),
+                    std::move(TT), std::move(Features), getPointerSize(Obj),
+                    getEndianness(Obj), std::move(GetEdgeKindName))) {
   auto &MachHeader = Obj.getHeader64();
   SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 }
@@ -317,9 +320,8 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
       }
     }
 
-    IndexToSymbol[SymbolIndex] =
-        &createNormalizedSymbol(*Name, Value, Type, Sect, Desc,
-                                getLinkage(Desc), getScope(*Name, Type));
+    IndexToSymbol[SymbolIndex] = &createNormalizedSymbol(
+        Name, Value, Type, Sect, Desc, getLinkage(Desc), getScope(*Name, Type));
   }
 
   return Error::success();
@@ -366,7 +368,7 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
                                    orc::ExecutorAddrDiff(NSym.Value),
                                    orc::ExecutorAddr(),
                                    1ull << MachO::GET_COMM_ALIGN(NSym.Desc), 0),
-            0, *NSym.Name, orc::ExecutorAddrDiff(NSym.Value), Linkage::Strong,
+            0, *NSym.Name, orc::ExecutorAddrDiff(NSym.Value), Linkage::Weak,
             NSym.S, false, NSym.Desc & MachO::N_NO_DEAD_STRIP);
       } else {
         if (!NSym.Name)
@@ -585,7 +587,7 @@ Symbol &MachOLinkGraphBuilder::createStandardGraphSymbol(NormalizedSymbol &NSym,
     if (!NSym.Name)
       dbgs() << "<anonymous symbol>";
     else
-      dbgs() << NSym.Name;
+      dbgs() << *NSym.Name;
     if (IsText)
       dbgs() << " [text]";
     if (IsNoDeadStrip)
@@ -724,7 +726,7 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
         LLVM_DEBUG({
           dbgs() << "      Adding symbol for c-string block " << B.getRange()
                  << ": "
-                 << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>")
+                 << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>")
                  << " at offset " << formatv("{0:x}", Sym.getOffset()) << "\n";
         });
 
@@ -796,10 +798,11 @@ Error CompactUnwindSplitter::operator()(LinkGraph &G) {
       continue;
     }
 
+    unsigned NumBlocks = B->getSize() / CURecordSize;
+
     LLVM_DEBUG({
       dbgs() << "  Splitting block at " << formatv("{0:x16}", B->getAddress())
-             << " into " << (B->getSize() / CURecordSize)
-             << " compact unwind record(s)\n";
+             << " into " << NumBlocks << " compact unwind record(s)\n";
     });
 
     if (B->getSize() % CURecordSize)
@@ -810,49 +813,50 @@ Error CompactUnwindSplitter::operator()(LinkGraph &G) {
           " (not a multiple of CU record size of " +
           formatv("{0:x}", CURecordSize) + ")");
 
-    unsigned NumBlocks = B->getSize() / CURecordSize;
-    LinkGraph::SplitBlockCache C;
+    auto Blocks =
+        G.splitBlock(*B, map_range(seq(1U, NumBlocks), [=](Edge::OffsetT Idx) {
+          return Idx * CURecordSize;
+        }));
 
-    for (unsigned I = 0; I != NumBlocks; ++I) {
-      auto &CURec = G.splitBlock(*B, CURecordSize, &C);
+    for (auto *CURec : Blocks) {
       bool AddedKeepAlive = false;
 
-      for (auto &E : CURec.edges()) {
+      for (auto &E : CURec->edges()) {
         if (E.getOffset() == 0) {
           LLVM_DEBUG({
             dbgs() << "    Updating compact unwind record at "
-                   << formatv("{0:x16}", CURec.getAddress()) << " to point to "
-                   << (E.getTarget().hasName() ? E.getTarget().getName()
+                   << CURec->getAddress() << " to point to "
+                   << (E.getTarget().hasName() ? *E.getTarget().getName()
                                                : StringRef())
-                   << " (at " << formatv("{0:x16}", E.getTarget().getAddress())
-                   << ")\n";
+                   << " (at " << E.getTarget().getAddress() << ")\n";
           });
 
           if (E.getTarget().isExternal())
             return make_error<JITLinkError>(
                 "Error adding keep-alive edge for compact unwind record at " +
-                formatv("{0:x}", CURec.getAddress()) + ": target " +
-                E.getTarget().getName() + " is an external symbol");
+                formatv("{0:x}", CURec->getAddress()) + ": target " +
+                *E.getTarget().getName() + " is an external symbol");
           auto &TgtBlock = E.getTarget().getBlock();
           auto &CURecSym =
-              G.addAnonymousSymbol(CURec, 0, CURecordSize, false, false);
+              G.addAnonymousSymbol(*CURec, 0, CURecordSize, false, false);
           TgtBlock.addEdge(Edge::KeepAlive, 0, CURecSym, 0);
           AddedKeepAlive = true;
         } else if (E.getOffset() != PersonalityEdgeOffset &&
                    E.getOffset() != LSDAEdgeOffset)
-          return make_error<JITLinkError>("Unexpected edge at offset " +
-                                          formatv("{0:x}", E.getOffset()) +
-                                          " in compact unwind record at " +
-                                          formatv("{0:x}", CURec.getAddress()));
+          return make_error<JITLinkError>(
+              "Unexpected edge at offset " + formatv("{0:x}", E.getOffset()) +
+              " in compact unwind record at " +
+              formatv("{0:x}", CURec->getAddress()));
       }
 
       if (!AddedKeepAlive)
         return make_error<JITLinkError>(
             "Error adding keep-alive edge for compact unwind record at " +
-            formatv("{0:x}", CURec.getAddress()) +
+            formatv("{0:x}", CURec->getAddress()) +
             ": no outgoing target edge at offset 0");
     }
   }
+
   return Error::success();
 }
 

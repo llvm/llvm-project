@@ -99,7 +99,6 @@
 namespace llvm {
 
 class Function;
-class Value;
 template <typename T, unsigned int N> class SmallPriorityWorklist;
 struct CGSCCUpdateResult;
 
@@ -230,17 +229,6 @@ using ModuleAnalysisManagerCGSCCProxy =
 /// Passes which do not change the call graph structure in any way can just
 /// ignore this argument to their run method.
 struct CGSCCUpdateResult {
-  /// Worklist of the RefSCCs queued for processing.
-  ///
-  /// When a pass refines the graph and creates new RefSCCs or causes them to
-  /// have a different shape or set of component SCCs it should add the RefSCCs
-  /// to this worklist so that we visit them in the refined form.
-  ///
-  /// This worklist is in reverse post-order, as we pop off the back in order
-  /// to observe RefSCCs in post-order. When adding RefSCCs, clients should add
-  /// them in reverse post-order.
-  SmallPriorityWorklist<LazyCallGraph::RefSCC *, 1> &RCWorklist;
-
   /// Worklist of the SCCs queued for processing.
   ///
   /// When a pass refines the graph and creates new SCCs or causes them to have
@@ -255,14 +243,6 @@ struct CGSCCUpdateResult {
   /// to observe SCCs in post-order. When adding SCCs, clients should add them
   /// in reverse post-order.
   SmallPriorityWorklist<LazyCallGraph::SCC *, 1> &CWorklist;
-
-  /// The set of invalidated RefSCCs which should be skipped if they are found
-  /// in \c RCWorklist.
-  ///
-  /// This is used to quickly prune out RefSCCs when they get deleted and
-  /// happen to already be on the worklist. We use this primarily to avoid
-  /// scanning the list and removing entries from it.
-  SmallPtrSetImpl<LazyCallGraph::RefSCC *> &InvalidatedRefSCCs;
 
   /// The set of invalidated SCCs which should be skipped if they are found
   /// in \c CWorklist.

@@ -476,6 +476,12 @@ public:
     // LD, and having the full constant in memory enables reg/mem opcodes.
     return VT != MVT::f64;
   }
+  MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
+                                      MachineBasicBlock *MBB) const;
+
+  MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
+                                       MachineBasicBlock *MBB) const;
+
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
@@ -506,6 +512,8 @@ public:
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
+
+  bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
@@ -568,9 +576,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   /// Override to support customized stack guard loading.
-  bool useLoadStackGuardNode() const override {
-    return true;
-  }
+  bool useLoadStackGuardNode(const Module &M) const override { return true; }
   void insertSSPDeclarations(Module &M) const override {
   }
 
@@ -802,6 +808,14 @@ private:
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
+
+  bool isFullyInternal(const Function *Fn) const;
+  void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                    const Function *F, SDValue Callee) const;
+  void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                   const Function *F) const;
+  bool verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                               bool IsInternal) const;
 };
 
 struct SystemZVectorConstantInfo {

@@ -280,7 +280,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
   p << " \"" << llvm::encodeBase64(getB64()) << "\"";
 }
 
-::mlir::LogicalResult FormatInferType2Op::inferReturnTypes(
+::llvm::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
     OpaqueProperties properties, ::mlir::RegionRange regions,

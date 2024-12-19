@@ -377,7 +377,7 @@ class PadOp(PadOp):
         pad_to_multiple_of: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         padding_values: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
         padding_dimensions: OptionalIntList = None,
-        pack_paddings: OptionalIntList = None,
+        nofold_flags: OptionalIntList = None,
         transpose_paddings: Optional[
             Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]
         ] = None,
@@ -407,7 +407,7 @@ class PadOp(PadOp):
             padding_values=padding_values,
             padding_dimensions=padding_dimensions,
             static_pad_to_multiple_of=static_pad_to_multiple_of,
-            pack_paddings=pack_paddings,
+            nofold_flags=nofold_flags,
             transpose_paddings=transpose_paddings,
             copy_back_op=copy_back_op,
             loc=loc,
@@ -432,25 +432,24 @@ class SplitOp(SplitOp):
         self,
         target: Union[Operation, Value],
         dimension: Union[int, Attribute],
-        split_point: Union[int, Operation, Value, Attribute],
+        chunk_sizes: Union[int, Operation, Value, Attribute],
         *,
         loc=None,
         ip=None,
     ):
-        if isinstance(split_point, int):
-            static_split_point = split_point
-            dynamic_split_point = None
+        if isinstance(chunk_sizes, int):
+            static_chunk_sizes = chunk_sizes
+            dynamic_chunk_sizes = None
         else:
-            static_split_point = ShapedType.get_dynamic_size()
-            dynamic_split_point = split_point
+            static_chunk_sizes = ShapedType.get_dynamic_size()
+            dynamic_chunk_sizes = chunk_sizes
 
         super().__init__(
             target.type,
-            target.type,
             target,
             dimension=dimension,
-            static_split_point=static_split_point,
-            dynamic_split_point=dynamic_split_point,
+            static_chunk_sizes=static_chunk_sizes,
+            dynamic_chunk_sizes=dynamic_chunk_sizes,
             loc=loc,
             ip=ip,
         )

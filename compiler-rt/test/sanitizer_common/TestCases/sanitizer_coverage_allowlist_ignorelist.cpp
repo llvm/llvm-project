@@ -7,10 +7,9 @@
 // XFAIL: ubsan,tsan
 // XFAIL: android && asan
 
-// RUN: DIR=%t_workdir
-// RUN: rm -rf $DIR
-// RUN: mkdir -p $DIR
-// RUN: cd $DIR
+// RUN: rm -rf %t_workdir
+// RUN: mkdir -p %t_workdir
+// RUN: cd %t_workdir
 
 // RUN: echo -e "src:*\nfun:*"     > al_all.txt
 // RUN: echo -e ""                 > al_none.txt
@@ -82,7 +81,7 @@
 // RUN: %clangxx -O0 %s -S -o - -emit-llvm -fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table -fsanitize-coverage-allowlist=al_bar.txt  -fsanitize-coverage-ignorelist=bl_bar.txt   2>&1 | not grep -f patterns.txt
 
 // RUN: cd -
-// RUN: rm -rf $DIR
+// RUN: rm -rf %t_workdir
 
 // foo has 3 instrumentation points, 0 indirect call, 1 comparison point
 

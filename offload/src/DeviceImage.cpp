@@ -27,9 +27,8 @@ DeviceImageTy::DeviceImageTy(__tgt_bin_desc &BinaryDesc,
                              __tgt_device_image &TgtDeviceImage)
     : BinaryDesc(&BinaryDesc), Image(TgtDeviceImage) {
 
-  llvm::StringRef ImageStr(
-      static_cast<char *>(Image.ImageStart),
-      llvm::omp::target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+  llvm::StringRef ImageStr(static_cast<char *>(Image.ImageStart),
+                           utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
 
   auto BinaryOrErr =
       llvm::object::OffloadBinary::create(llvm::MemoryBufferRef(ImageStr, ""));

@@ -24,7 +24,7 @@ void test1() {
 
 void test2() {
   constexpr int i = 0;
-  // expected-error@+1{{__builtin_bit_cast source size does not equal destination size (4 vs 1)}}
+  // expected-error@+1{{size of '__builtin_bit_cast' source type 'const int' does not match destination type 'char' (4 vs 1 bytes)}}
   constexpr char c = __builtin_bit_cast(char, i);
 }
 
@@ -32,10 +32,10 @@ struct not_trivially_copyable {
   virtual void foo() {}
 };
 
-// expected-error@+1{{__builtin_bit_cast source type must be trivially copyable}}
+// expected-error@+1{{'__builtin_bit_cast' source type must be trivially copyable}}
 constexpr unsigned long ul = __builtin_bit_cast(unsigned long, not_trivially_copyable{});
 
-// expected-error@+1 {{__builtin_bit_cast destination type must be trivially copyable}}
+// expected-error@+1 {{'__builtin_bit_cast' destination type must be trivially copyable}}
 constexpr long us = __builtin_bit_cast(unsigned long &, 0L);
 
 namespace PR42936 {

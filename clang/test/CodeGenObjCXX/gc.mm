@@ -13,7 +13,7 @@ namespace test0 {
 // CHECK:      [[THIS:%.*]] = alloca ptr, align 8
 // CHECK-NEXT: store 
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[THIS]]
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[TEST0:%.*]], ptr [[T0]], i32 0, i32 0
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[TEST0:%.*]], ptr [[T0]], i32 0, i32 0
 // CHECK-NEXT: [[T2:%.*]] = load ptr, ptr @_ZN5test01xE
 // CHECK-NEXT: call ptr @objc_assign_strongCast(ptr [[T2]], ptr [[T1]])
 // CHECK-NEXT: ret void

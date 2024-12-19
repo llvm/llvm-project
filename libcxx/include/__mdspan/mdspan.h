@@ -37,9 +37,6 @@
 #include <__type_traits/remove_reference.h>
 #include <__utility/integer_sequence.h>
 #include <array>
-#include <cinttypes>
-#include <cstddef>
-#include <limits>
 #include <span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -274,8 +271,8 @@ explicit mdspan(_ElementType*,
 #  else
 template <class _ElementType, class... _OtherIndexTypes>
   requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
-explicit mdspan(_ElementType*, _OtherIndexTypes...)
-    -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
+explicit mdspan(_ElementType*,
+                _OtherIndexTypes...) -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
 #  endif
 
 template <class _Pointer>

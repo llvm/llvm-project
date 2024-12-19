@@ -28,15 +28,12 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace mlir {
-struct LogicalResult;
-
 namespace lsp {
 
 enum class ErrorCode {

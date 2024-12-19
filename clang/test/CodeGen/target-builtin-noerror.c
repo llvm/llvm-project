@@ -143,6 +143,9 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("usermsr");
   (void)__builtin_cpu_supports("avx10.1-256");
   (void)__builtin_cpu_supports("avx10.1-512");
+  (void)__builtin_cpu_supports("avx10.2-256");
+  (void)__builtin_cpu_supports("avx10.2-512");
+  (void)__builtin_cpu_supports("movrs");
 }
 
 void verifycpustrings(void) {
@@ -205,4 +208,6 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("znver2");
   (void)__builtin_cpu_is("znver3");
   (void)__builtin_cpu_is("znver4");
+  (void)__builtin_cpu_is("znver5");
+  (void)__builtin_cpu_is("diamondrapids");
 }

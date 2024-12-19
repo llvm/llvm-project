@@ -99,7 +99,7 @@ PreservedAnalyses AAEvaluator::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 void AAEvaluator::runInternal(Function &F, AAResults &AA) {
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   ++FunctionCount;
 

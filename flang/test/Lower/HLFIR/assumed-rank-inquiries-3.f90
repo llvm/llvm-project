@@ -1,5 +1,5 @@
 ! Test shape lowering for assumed-rank
-! RUN: bbc -emit-hlfir -o - %s -allow-assumed-rank | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_shape(x)
   real :: x(..)

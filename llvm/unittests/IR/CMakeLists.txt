@@ -16,7 +16,9 @@ add_llvm_unittest(IRTests
   BasicBlockTest.cpp
   BasicBlockDbgInfoTest.cpp
   CFGBuilder.cpp
+  ConstantFPRangeTest.cpp
   ConstantRangeTest.cpp
+  ConstantRangeListTest.cpp
   ConstantsTest.cpp
   DataLayoutTest.cpp
   DebugInfoTest.cpp
@@ -41,6 +43,7 @@ add_llvm_unittest(IRTests
   ShuffleVectorInstTest.cpp
   StructuralHashTest.cpp
   TimePassesTest.cpp
+  DroppedVariableStatsIRTest.cpp
   TypesTest.cpp
   UseTest.cpp
   UserTest.cpp
@@ -48,6 +51,7 @@ add_llvm_unittest(IRTests
   ValueMapTest.cpp
   ValueTest.cpp
   VectorBuilderTest.cpp
+  VectorTypeUtilsTest.cpp
   VectorTypesTest.cpp
   VerifierTest.cpp
   VFABIDemanglerTest.cpp

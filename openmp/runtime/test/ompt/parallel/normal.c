@@ -32,13 +32,13 @@ int main() {
   // barrier_end and implicit_task_end before parallel_end!
 
   // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
+  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin
 
   // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
+  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin
 
   // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
+  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_end
 
@@ -61,13 +61,13 @@ int main() {
   // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID:[0-9]+]]
   // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
   // THREADS-NOT: ompt_event_implicit_task_end
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_begin
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_begin
   // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
   // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS]]{{[0-f][0-f]}}
   // THREADS: {{^}}[[MASTER_ID]]: task level 0
   // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
   // THREADS-SAME: exit_frame=[[NULL]], reenter_frame=[[NULL]]
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end
   // parallel_id is 0 because the region ended in the barrier!
   // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
   // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS]]{{[0-f][0-f]}}
@@ -85,9 +85,9 @@ int main() {
   // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]]
   // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
   // THREADS-NOT: ompt_event_implicit_task_end
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin
   // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end
   // parallel_id is 0 because the region ended in the barrier!
   // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
   // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
@@ -104,9 +104,9 @@ int main() {
   // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]]
   // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
   // THREADS-NOT: ompt_event_implicit_task_end
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin
   // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end
   // parallel_id is 0 because the region ended in the barrier!
   // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
   // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
@@ -123,9 +123,9 @@ int main() {
   // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]]
   // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
   // THREADS-NOT: ompt_event_implicit_task_end
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin
   // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end
   // parallel_id is 0 because the region ended in the barrier!
   // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
   // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end

@@ -25,7 +25,6 @@ class SourceMgr;
 
 namespace mlir {
 class DiagnosticEngine;
-struct LogicalResult;
 class MLIRContext;
 class Operation;
 class OperationName;
@@ -184,7 +183,8 @@ public:
   Diagnostic &operator<<(StringAttr val);
 
   /// Stream in a string literal.
-  Diagnostic &operator<<(const char *val) {
+  template <size_t n>
+  Diagnostic &operator<<(const char (&val)[n]) {
     arguments.push_back(DiagnosticArgument(val));
     return *this;
   }
@@ -272,6 +272,9 @@ public:
     return failure();
   }
 
+  /// Returns the current list of diagnostic metadata.
+  SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
+
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
   Diagnostic &operator=(const Diagnostic &rhs) = delete;
@@ -291,6 +294,9 @@ private:
 
   /// A list of attached notes.
   NoteVector notes;
+
+  /// A list of metadata attached to this Diagnostic.
+  SmallVector<DiagnosticArgument, 0> metadata;
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, const Diagnostic &diag) {

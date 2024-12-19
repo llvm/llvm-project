@@ -1223,6 +1223,10 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
   if (ER.Kind == MachineOperand::MO_GlobalAddress)
     if (ER.V.GV->getName().empty())
       return;
+  // Ignore block address that points to block in another function
+  if (ER.Kind == MachineOperand::MO_BlockAddress)
+    if (ER.V.BA->getFunction() != &(MI.getMF()->getFunction()))
+      return;
   Extenders.push_back(ED);
 }
 

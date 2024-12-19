@@ -64,7 +64,7 @@ define i32 @test3(i32 %c) nounwind {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[C]], 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i32 [[C]], 3
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END8:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    br i1 true, label [[IF_THEN4:%.*]], label [[IF_END6:%.*]]
@@ -989,11 +989,11 @@ define i1 @ctlz_nofold(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTLZ]], 9
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign uge i16 [[CTLZ]], 9
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CTLZ2:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
-; CHECK-NEXT:    [[RES2:%.*]] = icmp ult i16 [[CTLZ2]], 7
+; CHECK-NEXT:    [[RES2:%.*]] = icmp samesign ult i16 [[CTLZ2]], 7
 ; CHECK-NEXT:    ret i1 [[RES2]]
 ;
   %cmp = icmp ult i16 %x, 256
@@ -1038,7 +1038,7 @@ define i1 @cttz_nofold1(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 7
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign uge i16 [[CTTZ]], 7
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -1061,7 +1061,7 @@ define i1 @cttz_nofold2(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 8
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign uge i16 [[CTTZ]], 8
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -1106,7 +1106,7 @@ define i1 @ctpop_nofold(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i16 [[CTPOP]], 7
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign ule i16 [[CTPOP]], 7
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true

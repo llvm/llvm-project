@@ -14,10 +14,11 @@
 //
 // Returns: extents().fwd-prod-of-extents(extents_type::rank()).
 
-
-#include <mdspan>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <mdspan>
+#include <span> // dynamic_extent
 
 #include "test_macros.h"
 

@@ -57,8 +57,10 @@ bb:
 
 ; GCN-LABEL: {{^}}update_dppi64_test:
 ; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i64 %in2) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %id
@@ -70,8 +72,10 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 
 ; GCN-LABEL: {{^}}update_dppf64_test:
 ; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1, double %in2) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds double, ptr addrspace(1) %arg, i32 %id
@@ -83,8 +87,10 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 
 ; GCN-LABEL: {{^}}update_dppv2i32_test:
 ; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32> %in1, <2 x i32> %in2) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x i32>, ptr addrspace(1) %arg, i32 %id
@@ -96,8 +102,10 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 
 ; GCN-LABEL: {{^}}update_dppv2f32_test:
 ; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x float> %in1, <2 x float> %in2) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %arg, i32 %id
@@ -109,8 +117,10 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 
 ; GCN-LABEL: {{^}}update_dpp_p0_test:
 ; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
-; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, ptr %in2) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds ptr, ptr addrspace(1) %arg, i32 %id
@@ -287,7 +297,7 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb4(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,3,0] row_mask:0xe bank_mask:0xd bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_f32_imm_comb5(ptr addrspace(1) %out, float %in1, float %in2) {
-  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 63, i32 62, i32 61, i1 true)
+  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 63, i32 14, i32 13, i1 true)
   store float %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -300,7 +310,7 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb5(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,3,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_f32_imm_comb6(ptr addrspace(1) %out, float %in1, float %in2) {
-  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 63, i32 63, i32 63, i1 true)
+  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 63, i32 15, i32 15, i1 true)
   store float %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -314,7 +324,7 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb6(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[0,0,0,1] row_mask:0x0 bank_mask:0x0 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_f32_imm_comb7(ptr addrspace(1) %out, float %in1, float %in2) {
-  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 64, i32 64, i32 64, i1 true)
+  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 64, i32 0, i32 0, i1 true)
   store float %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -327,7 +337,7 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb7(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,1,0] row_mask:0xf bank_mask:0x0 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_f32_imm_comb8(ptr addrspace(1) %out, float %in1, float %in2) {
-  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 31, i32 63, i32 128, i1 true)
+  %tmp0 = call float @llvm.amdgcn.update.dpp.f32(float %in1, float %in2, i32 31, i32 15, i32 0, i1 true)
   store float %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -405,7 +415,7 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb4(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,3,0] row_mask:0xe bank_mask:0xd bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2i16_imm_comb5(ptr addrspace(1) %out, <2 x i16> %in1, <2 x i16> %in2) {
-  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 63, i32 62, i32 61, i1 true)
+  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 63, i32 14, i32 13, i1 true)
   store <2 x i16> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -418,7 +428,7 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb5(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,3,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2i16_imm_comb6(ptr addrspace(1) %out, <2 x i16> %in1, <2 x i16> %in2) {
-  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 63, i32 63, i32 63, i1 true)
+  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 63, i32 15, i32 15, i1 true)
   store <2 x i16> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -431,7 +441,7 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb6(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[0,0,0,1] row_mask:0x0 bank_mask:0x0 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2i16_imm_comb7(ptr addrspace(1) %out, <2 x i16> %in1, <2 x i16> %in2) {
-  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 64, i32 64, i32 64, i1 true)
+  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 64, i32 0, i32 0, i1 true)
   store <2 x i16> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -444,7 +454,7 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb7(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,1,0] row_mask:0xf bank_mask:0x0 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2i16_imm_comb8(ptr addrspace(1) %out, <2 x i16> %in1, <2 x i16> %in2) {
-  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 31, i32 63, i32 128, i1 true)
+  %tmp0 = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16> %in1, <2 x i16> %in2, i32 31, i32 15, i32 0, i1 true)
   store <2 x i16> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -522,7 +532,7 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb4(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,3,0] row_mask:0xe bank_mask:0xd bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2f16_imm_comb5(ptr addrspace(1) %out, <2 x half> %in1, <2 x half> %in2) {
-  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 63, i32 62, i32 61, i1 true)
+  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 63, i32 14, i32 13, i1 true)
   store <2 x half> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -535,7 +545,7 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb5(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,3,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2f16_imm_comb6(ptr addrspace(1) %out, <2 x half> %in1, <2 x half> %in2) {
-  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 63, i32 63, i32 63, i1 true)
+  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 63, i32 15, i32 15, i1 true)
   store <2 x half> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -548,7 +558,7 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb6(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[0,0,0,1] row_mask:0x0 bank_mask:0x0 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2f16_imm_comb7(ptr addrspace(1) %out, <2 x half> %in1, <2 x half> %in2) {
-  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 64, i32 64, i32 64, i1 true)
+  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 64, i32 0, i32 0, i1 true)
   store <2 x half> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -561,7 +571,7 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb7(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[3,3,1,0] row_mask:0xf bank_mask:0x0 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_v2f16_imm_comb8(ptr addrspace(1) %out, <2 x half> %in1, <2 x half> %in2) {
-  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 31, i32 63, i32 128, i1 true)
+  %tmp0 = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half> %in1, <2 x half> %in2, i32 31, i32 15, i32 0, i1 true)
   store <2 x half> %tmp0, ptr addrspace(1) %out
   ret void
 }

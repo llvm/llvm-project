@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 
+#include "ProjectModules.h"
 #include "support/Function.h"
 #include "support/Path.h"
 #include "support/Threading.h"
@@ -45,6 +46,12 @@ public:
     return std::nullopt;
   }
 
+  /// Get the modules in the closest project to \p File
+  virtual std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const {
+    return nullptr;
+  }
+
   /// Makes a guess at how to build a file.
   /// The default implementation just runs clang on the file.
   /// Clangd should treat the results as unreliable.
@@ -75,6 +82,9 @@ public:
   getCompileCommand(PathRef File) const override;
 
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+
+  std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
@@ -121,6 +131,9 @@ public:
   /// Returns the path to first directory containing a compilation database in
   /// \p File's parents.
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+
+  std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
   bool blockUntilIdle(Deadline Timeout) const override;
 
@@ -190,7 +203,9 @@ public:
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
-  void
+  /// Returns true if the command was changed (including insertion and removal),
+  /// false if it was unchanged.
+  bool
   setCompileCommand(PathRef File,
                     std::optional<tooling::CompileCommand> CompilationCommand);
 

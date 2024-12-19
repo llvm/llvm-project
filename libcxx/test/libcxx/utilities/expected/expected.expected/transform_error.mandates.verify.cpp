@@ -13,8 +13,13 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // With clang-cl, some warnings have a 'which is a Microsoft extension' suffix
-// which break the tests.
-// XFAIL: msvc
+// which break the tests. But #102851 will turn it into an error, making the test pass.
+// However, upstream libcxx buildbots do not build clang from source while testing, so
+// this tests still expected to fail on these bots.
+//
+// TODO(LLVM 22): Remove '0-1' from 'expected-error-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}}}'
+// and remove 'expected-warning-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}'
+// once LLVM 22 releases. See https://github.com/llvm/llvm-project/issues/104885.
 
 // Test the mandates
 
@@ -56,11 +61,12 @@ void test() {
     e.transform_error(return_unexpected<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}[expected.object.general] A program that instantiates the definition of template expected<T, E> for {{.*}} is ill-formed.}}
-    // expected-error-re@*:* {{union member {{.*}} has reference type {{.*}}}}
+    // expected-error-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}}}
 
     e.transform_error(return_no_object<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}[expected.object.general] A program that instantiates the definition of template expected<T, E> for {{.*}} is ill-formed.}}
+    // expected-warning-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}
   }
 
   // Test const& overload

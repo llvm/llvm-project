@@ -431,7 +431,7 @@ MutableOperandRange::MutableOperandRange(
     Operation *owner, unsigned start, unsigned length,
     ArrayRef<OperandSegment> operandSegments)
     : owner(owner), start(start), length(length),
-      operandSegments(operandSegments.begin(), operandSegments.end()) {
+      operandSegments(operandSegments) {
   assert((start + length) <= owner->getNumOperands() && "invalid range");
 }
 MutableOperandRange::MutableOperandRange(Operation *owner)
@@ -657,7 +657,7 @@ ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
     return {value + index};
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return {operand + index};
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
@@ -665,7 +665,7 @@ Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
     return value[index];
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return operand[index].get();
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 
 //===----------------------------------------------------------------------===//

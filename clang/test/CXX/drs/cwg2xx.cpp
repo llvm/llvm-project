@@ -41,7 +41,7 @@ namespace cwg202 { // cwg202: 3.1
   template struct X<f>;
 }
 
-// FIXME (export) cwg204: no
+// cwg204: sup 820
 
 namespace cwg206 { // cwg206: yes
   struct S; // #cwg206-S
@@ -1031,6 +1031,8 @@ namespace cwg277 { // cwg277: 3.1
   int *p = intp();
   static_assert(__enable_constant_folding(!intp()), "");
 }
+
+// cwg279 is in cwg279.cpp
 
 namespace cwg280 { // cwg280: 2.9
   typedef void f0();

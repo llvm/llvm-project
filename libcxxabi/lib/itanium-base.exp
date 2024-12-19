@@ -12,7 +12,6 @@ ___cxa_guard_acquire
 ___cxa_guard_release
 ___cxa_increment_exception_refcount
 ___cxa_pure_virtual
-___cxa_rethrow_primary_exception
 ___cxa_throw_bad_array_new_length
 ___cxa_uncaught_exception
 ___cxa_uncaught_exceptions

@@ -63,8 +63,11 @@ public:
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
+    TypeConverter converter;
+    tosa::populateTosaTypeConversion(converter);
+
     FunctionOpInterface func = getOperation();
-    mlir::tosa::populateTosaToLinalgConversionPatterns(&patterns);
+    mlir::tosa::populateTosaToLinalgConversionPatterns(converter, &patterns);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
@@ -112,7 +115,7 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
         TosaToLinalgOptions tosaToLinalgOptions;
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
         TosaValidationOptions validationOptions;
-        validationOptions.profile = tosa::TosaProfileEnum::BaseInference;
+        validationOptions.profile = {"none"};
         validationOptions.StrictOperationSpecAlignment = true;
         validationOptions.level = tosa::TosaLevelEnum::EightK;
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,

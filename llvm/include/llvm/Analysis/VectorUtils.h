@@ -16,7 +16,9 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
@@ -119,26 +121,11 @@ class DemandedBits;
 template <typename InstTy> class InterleaveGroup;
 class IRBuilderBase;
 class Loop;
-class ScalarEvolution;
 class TargetTransformInfo;
-class Type;
 class Value;
 
 namespace Intrinsic {
 typedef unsigned ID;
-}
-
-/// A helper function for converting Scalar types to vector types. If
-/// the incoming type is void, we return void. If the EC represents a
-/// scalar, we return the scalar type.
-inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
-    return Scalar;
-  return VectorType::get(Scalar, EC);
-}
-
-inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
-  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
 }
 
 /// Identify if the intrinsic is trivially vectorizable.
@@ -153,7 +140,15 @@ bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
-bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
+/// \p TTI is used to consider target specific intrinsics, if no target specific
+/// intrinsics will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
+                                            const TargetTransformInfo *TTI);
+
+/// Identifies if the vector form of the intrinsic that returns a struct is
+/// overloaded at the struct element index \p RetIdx.
+bool isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                      int RetIdx);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
@@ -224,6 +219,13 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
+/// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
+/// This will assert unless NumDstElts is a multiple of Mask.size (or vice-versa).
+/// Returns false on failure, and ScaledMask will be in an undefined state.
+bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                          SmallVectorImpl<int> &ScaledMask);
+
 /// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
 /// to get the shuffle mask with widest possible elements.
 void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
@@ -246,6 +248,23 @@ void processShuffleMasks(
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
+
+/// Compute the demanded elements mask of horizontal binary operations. A
+/// horizontal operation combines two adjacent elements in a vector operand.
+/// This function returns a mask for the elements that correspond to the first
+/// operand of this horizontal combination. For example, for two vectors
+/// [X1, X2, X3, X4] and [Y1, Y2, Y3, Y4], the resulting mask can include the
+/// elements X1, X3, Y1, and Y3. To get the other operands, simply shift the
+/// result of this function to the left by 1.
+///
+/// \param VectorBitWidth the total bit width of the vector
+/// \param DemandedElts   the demanded elements mask for the operation
+/// \param DemandedLHS    the demanded elements mask for the left operand
+/// \param DemandedRHS    the demanded elements mask for the right operand
+void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
+                                         const APInt &DemandedElts,
+                                         APInt &DemandedLHS,
+                                         APInt &DemandedRHS);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -715,11 +734,17 @@ private:
 
   /// Release the group and remove all the relationships.
   void releaseGroup(InterleaveGroup<Instruction> *Group) {
+    InterleaveGroups.erase(Group);
+    releaseGroupWithoutRemovingFromSet(Group);
+  }
+
+  /// Do everything necessary to release the group, apart from removing it from
+  /// the InterleaveGroups set.
+  void releaseGroupWithoutRemovingFromSet(InterleaveGroup<Instruction> *Group) {
     for (unsigned i = 0; i < Group->getFactor(); i++)
       if (Instruction *Member = Group->getMember(i))
         InterleaveGroupMap.erase(Member);
 
-    InterleaveGroups.erase(Group);
     delete Group;
   }
 

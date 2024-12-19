@@ -1037,7 +1037,7 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
     if (MI->isInlineAsm())
       continue;
     // Delete PHIs if possible.
-    if (!MI->isPHI() && !MI->isSafeToMove(nullptr, Store))
+    if (!MI->isPHI() && !MI->isSafeToMove(Store))
       continue;
 
     bool AllDead = true;
@@ -1056,8 +1056,8 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
       continue;
 
     B->erase(MI);
-    for (unsigned i = 0, n = Regs.size(); i != n; ++i)
-      MRI.markUsesInDebugValueAsUndef(Regs[i]);
+    for (unsigned Reg : Regs)
+      MRI.markUsesInDebugValueAsUndef(Reg);
     Changed = true;
   }
 

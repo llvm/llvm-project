@@ -4,10 +4,10 @@
 define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-LABEL: spill:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s44, s[4:5], 0x2
+; CHECK-NEXT:    s_load_dword s44, s[8:9], 0x2
 ; CHECK-NEXT:    s_mov_b64 s[98:99], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[96:97], s[0:1]
-; CHECK-NEXT:    s_add_u32 s96, s96, s7
+; CHECK-NEXT:    s_add_u32 s96, s96, s15
 ; CHECK-NEXT:    s_addc_u32 s97, s97, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_eq_u32 s44, 0
@@ -971,12 +971,12 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v1, s98, 3
 ; CHECK-NEXT:    v_writelane_b32 v0, s92, 61
 ; CHECK-NEXT:    v_writelane_b32 v1, s99, 4
+; CHECK-NEXT:    s_mov_b32 s49, s12
 ; CHECK-NEXT:    v_writelane_b32 v0, s93, 62
 ; CHECK-NEXT:    v_writelane_b32 v1, s100, 5
-; CHECK-NEXT:    s_mov_b32 s49, s12
+; CHECK-NEXT:    s_cmp_eq_u32 s49, 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s94, 63
 ; CHECK-NEXT:    v_writelane_b32 v1, s101, 6
-; CHECK-NEXT:    s_cmp_eq_u32 s49, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    ;;#ASMEND

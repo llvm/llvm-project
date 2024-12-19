@@ -127,3 +127,14 @@ body:             |
     $rbx = CFCMOV64rm_ND $rbx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
     RET64 $rax
 ...
+---
+name:            no_convert_8bit_16bit
+body:             |
+  bb.0.entry:
+    liveins: $di, $si, $ax
+    ; CHECK: addb    %sil, %dil                      # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf7]
+    ; CHECK: xorw    %di, %ax                        # EVEX TO LEGACY Compression encoding: [0x66,0x31,0xf8]
+    $dil = ADD8rr_ND $dil, killed $sil, implicit-def dead $eflags
+    $ax = XOR16rr_ND $ax, killed $di, implicit-def dead $eflags
+    RET64 $rax
+...

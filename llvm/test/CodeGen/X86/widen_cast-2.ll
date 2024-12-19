@@ -10,7 +10,7 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    cmpl $3, (%esp)
 ; CHECK-NEXT:    jg .LBB0_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %forbody
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%esp), %eax

@@ -614,42 +614,52 @@ def ForeachOp : TransformDialectOp<"foreach",
          "getSuccessorRegions", "getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
-  let summary = "Executes the body for each payload op";
+  let summary = "Executes the body for each element of the payload";
   let description = [{
-    This op has exactly one region with exactly one block ("body"). The body is
-    executed for each payload op that is associated to the target operand in an
-    unbatched fashion. I.e., the block argument ("iteration variable") is always
-    mapped to exactly one payload op.
+    Execute the op's body - its single region block - exactly once per
+    element of the payload associated to a target handle. The body's
+    transformations are applied in order of appearance until reaching the
+    (implicit) YieldOp terminator.
 
-    This op always reads the target handle. Furthermore, it consumes the handle
-    if there is a transform op in the body that consumes the iteration variable.
-    This op does not return anything.
+    Each iteration gets executed by co-indexing the payloads of the arguments
+    and mapping the body's arguments to these tuples, as though iterating over
+    the zipped together `targets`. As such, in each iteration, the size of the
+    payload of each of the body's block arguments is exactly one. The attribute
+    `zip_shortest` can be used if the targets vary in their number of payloads;
+    this will limit the iterations to only the number of payloads found in the
+    shortest target.
 
-    The transformations inside the body are applied in order of their
-    appearance. During application, if any transformation in the sequence fails,
-    the entire sequence fails immediately leaving the payload IR in potentially
-    invalid state, i.e., this operation offers no transformation rollback
-    capabilities.
+    This op always reads the target handles. Furthermore, it consumes a handle
+    if there is a transform op in the body that consumes the corresponding
+    block argument. Handles can point to ops, values, or parameters.
 
-    This op generates as many handles as the terminating YieldOp has operands.
-    For each result, the payload ops of the corresponding YieldOp operand are
-    merged and mapped to the same resulting handle.
+    #### Return Modes
+
+    This op produces as many result handles as the body's terminating YieldOp
+    has operands. For each result, the payloads of the corresponding YieldOp
+    operand are merged and mapped to the same resulting handle.
+
+    If the target handles do not associate payloads of the same size, a
+    silencable failure will be generated.
+
+    During application, if any transformation in the sequence fails, the entire
+    sequence fails immediately with the same failure, leaving the payload IR in
+    a potentially invalid state, i.e., this operation offers no transformation
+    rollback capabilities.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$targets,
+                       UnitAttr:$with_zip_shortest);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$target `:` type($target) (`->` type($results)^)? $body attr-dict";
+    "$targets oilist(`with_zip_shortest` $with_zip_shortest) `:` "
+    "type($targets) (`->` type($results)^)? $body attr-dict";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Allow the dialect prefix to be omitted.
     static StringRef getDefaultDialect() { return "transform"; }
-
-    BlockArgument getIterationVariable() {
-      return getBody().front().getArgument(0);
-    }
 
     transform::YieldOp getYieldOp();
   }];
@@ -1052,36 +1062,37 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
     [FunctionalStyleTransformOpTrait,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "Splits a handle of payload ops into handles with a single op";
+  let summary = "Splits a handle or parameter into multiple values";
   let description = [{
     Splits `handle` into one or multiple handles, as specified by the number
     of results of this operation. `handle` should be mapped to as many payload
-    ops as there are results. Otherwise, this transform will fail produces a
-    silenceable failure by default. Each result handle is mapped to exactly one
-    payload op. The order of the payload ops is preserved, i.e., the i-th
-    payload op is mapped to the i-th result handle.
+    ops, values or parameteres as there are results. Otherwise, this transform
+    will fail producing a silenceable failure by default. Each result handle
+    is mapped to exactly one payload unless specified otherwise by attributes
+    described below. The order of the payloads is preserved,  i.e., the i-th
+    payload is mapped to the i-th result handle.
 
     This operation is useful for ensuring a statically known number of
-    operations are tracked by the source `handle` and to extract them into
+    payloads are tracked by the source `handle` and to extract them into
     individual handles that can be further manipulated in isolation.
 
-    If there are more payload ops than results, the remaining ops are mapped to
+    If there are more payloads than results, the remaining payloads are mapped to
     the result with index `overflow_result`. If no `overflow_result` is
     specified, the transform produces a silenceable failure.
 
     If there are fewer payload ops than results, the transform produces a
     silenceable failure if `fail_on_payload_too_small` is set to "true".
     Otherwise, it succeeds and the remaining result handles are not mapped to
-    any op. It also succeeds if `handle` is empty and
+    anything. It also succeeds if `handle` is empty and
     `pass_through_empty_handle` is set to "true", regardless of
     `fail_on_payload_too_small`.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$handle,
+  let arguments = (ins Transform_AnyHandleOrParamType:$handle,
                        DefaultValuedAttr<BoolAttr, "true">:$pass_through_empty_handle,
                        DefaultValuedAttr<BoolAttr, "true">:$fail_on_payload_too_small,
                        OptionalAttr<I64Attr>:$overflow_result);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
   let hasVerifier = 1;
 
   let builders = [

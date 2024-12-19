@@ -29,6 +29,7 @@
 namespace llvm {
 
 class BasicBlock;
+class DataLayout;
 class DbgMarker;
 class FastMathFlags;
 class MDNode;
@@ -44,13 +45,32 @@ template <> struct ilist_alloc_traits<Instruction> {
 iterator_range<simple_ilist<DbgRecord>::iterator>
 getDbgRecordRange(DbgMarker *);
 
+class InsertPosition {
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+  InstListType::iterator InsertAt;
+
+public:
+  InsertPosition(std::nullptr_t) : InsertAt() {}
+  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
+                  "BasicBlock::iterator")
+  InsertPosition(Instruction *InsertBefore);
+  InsertPosition(BasicBlock *InsertAtEnd);
+  InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
+  operator InstListType::iterator() const { return InsertAt; }
+  bool isValid() const { return InsertAt.isValid(); }
+  BasicBlock *getBasicBlock() { return InsertAt.getNodeParent(); }
+};
+
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
-                                                  ilist_iterator_bits<true>> {
+                                                  ilist_iterator_bits<true>,
+                                                  ilist_parent<BasicBlock>> {
 public:
-  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+
 private:
-  BasicBlock *Parent;
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
   /// Relative order of this instruction in its parent basic block. Used for
@@ -149,9 +169,6 @@ public:
   Instruction       *user_back()       { return cast<Instruction>(*user_begin());}
   const Instruction *user_back() const { return cast<Instruction>(*user_begin());}
 
-  inline const BasicBlock *getParent() const { return Parent; }
-  inline       BasicBlock *getParent()       { return Parent; }
-
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.
   ///
@@ -172,6 +189,11 @@ public:
     return const_cast<Function *>(
                          static_cast<const Instruction *>(this)->getFunction());
   }
+
+  /// Get the data layout of the module this instruction belongs to.
+  ///
+  /// Requires the instruction to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -256,6 +278,7 @@ public:
   bool isUnaryOp() const { return isUnaryOp(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
   bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
+  bool isFPDivRem() const { return isFPDivRem(getOpcode()); }
   bool isShift() const { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
@@ -280,6 +303,10 @@ public:
 
   static inline bool isIntDivRem(unsigned Opcode) {
     return Opcode == UDiv || Opcode == SDiv || Opcode == URem || Opcode == SRem;
+  }
+
+  static inline bool isFPDivRem(unsigned Opcode) {
+    return Opcode == FDiv || Opcode == FRem;
   }
 
   /// Determine if the Opcode is one of the shift instructions.
@@ -411,17 +438,7 @@ public:
   /// convenience method for passes to do so.
   /// dropUBImplyingAttrsAndUnknownMetadata should be used instead of
   /// this API if the Instruction being modified is a call.
-  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs);
-  void dropUnknownNonDebugMetadata() {
-    return dropUnknownNonDebugMetadata(std::nullopt);
-  }
-  void dropUnknownNonDebugMetadata(unsigned ID1) {
-    return dropUnknownNonDebugMetadata(ArrayRef(ID1));
-  }
-  void dropUnknownNonDebugMetadata(unsigned ID1, unsigned ID2) {
-    unsigned IDs[] = {ID1, ID2};
-    return dropUnknownNonDebugMetadata(IDs);
-  }
+  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs = {});
   /// @}
 
   /// Adds an !annotation metadata node with \p Annotation to this instruction.
@@ -869,16 +886,20 @@ public:
   /// This is like isIdenticalTo, except that it ignores the
   /// SubclassOptionalData flags, which may specify conditions under which the
   /// instruction's result is undefined.
-  bool isIdenticalToWhenDefined(const Instruction *I) const LLVM_READONLY;
+  bool
+  isIdenticalToWhenDefined(const Instruction *I,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// When checking for operation equivalence (using isSameOperationAs) it is
   /// sometimes useful to ignore certain attributes.
   enum OperationEquivalenceFlags {
     /// Check for equivalence ignoring load/store alignment.
-    CompareIgnoringAlignment = 1<<0,
+    CompareIgnoringAlignment = 1 << 0,
     /// Check for equivalence treating a type and a vector of that type
     /// as equivalent.
-    CompareUsingScalarTypes = 1<<1
+    CompareUsingScalarTypes = 1 << 1,
+    /// Check for equivalence with intersected callbase attrs.
+    CompareUsingIntersectedAttrs = 1 << 2,
   };
 
   /// This function determines if the specified instruction executes the same
@@ -899,8 +920,8 @@ public:
   /// @returns true if the specific instruction has the same opcde specific
   /// characteristics as the current one. Determine if one instruction has the
   /// same state as another.
-  bool hasSameSpecialState(const Instruction *I2,
-                           bool IgnoreAlignment = false) const LLVM_READONLY;
+  bool hasSameSpecialState(const Instruction *I2, bool IgnoreAlignment = false,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their
@@ -980,7 +1001,8 @@ public:
   };
 
 private:
-  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>>;
+  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
+                                     ilist_parent<BasicBlock>>;
   friend class BasicBlock; // For renumbering.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that
@@ -992,8 +1014,6 @@ private:
   unsigned short getSubclassDataFromValue() const {
     return Value::getSubclassDataFromValue();
   }
-
-  void setParent(BasicBlock *P);
 
 protected:
   // Instruction subclasses can stick up to 15 bits of stuff into the
@@ -1019,12 +1039,8 @@ protected:
     setValueSubclassData(Storage);
   }
 
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              InstListType::iterator InsertBefore);
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              Instruction *InsertBefore = nullptr);
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              BasicBlock *InsertAtEnd);
+  Instruction(Type *Ty, unsigned iType, AllocInfo AllocInfo,
+              InsertPosition InsertBefore = nullptr);
 
 private:
   /// Create a copy of this instruction.

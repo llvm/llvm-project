@@ -72,7 +72,11 @@ static FindArgsResult findArgs(const CallExpr *Call) {
   return Result;
 }
 
-static SmallVector<FixItHint>
+// Returns `true` as `first` only if a nested call to `std::min` or
+// `std::max` was found. Checking if `FixItHint`s were generated is not enough,
+// as the explicit casts that the check introduces may be generated without a
+// nested `std::min` or `std::max` call.
+static std::pair<bool, SmallVector<FixItHint>>
 generateReplacements(const MatchFinder::MatchResult &Match,
                      const CallExpr *TopCall, const FindArgsResult &Result,
                      const bool IgnoreNonTrivialTypes,
@@ -91,13 +95,15 @@ generateReplacements(const MatchFinder::MatchResult &Match,
   const bool IsResultTypeTrivial = ResultType.isTrivialType(*Match.Context);
 
   if ((!IsResultTypeTrivial && IgnoreNonTrivialTypes))
-    return FixItHints;
+    return {false, FixItHints};
 
   if (IsResultTypeTrivial &&
       static_cast<std::uint64_t>(
           Match.Context->getTypeSizeInChars(ResultType).getQuantity()) >
           IgnoreTrivialTypesOfSizeAbove)
-    return FixItHints;
+    return {false, FixItHints};
+
+  bool FoundNestedCall = false;
 
   for (const Expr *Arg : Result.Args) {
     const auto *InnerCall = dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts());
@@ -146,6 +152,9 @@ generateReplacements(const MatchFinder::MatchResult &Match,
                                        *Match.Context))
       continue;
 
+    // We have found a nested call
+    FoundNestedCall = true;
+
     // remove the function call
     FixItHints.push_back(
         FixItHint::CreateRemoval(InnerCall->getCallee()->getSourceRange()));
@@ -168,7 +177,7 @@ generateReplacements(const MatchFinder::MatchResult &Match,
           CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
     }
 
-    const SmallVector<FixItHint> InnerReplacements = generateReplacements(
+    const auto [_, InnerReplacements] = generateReplacements(
         Match, InnerCall, InnerResult, IgnoreNonTrivialTypes,
         IgnoreTrivialTypesOfSizeAbove);
 
@@ -189,7 +198,7 @@ generateReplacements(const MatchFinder::MatchResult &Match,
     }
   }
 
-  return FixItHints;
+  return {FoundNestedCall, FixItHints};
 }
 
 MinMaxUseInitializerListCheck::MinMaxUseInitializerListCheck(
@@ -238,11 +247,11 @@ void MinMaxUseInitializerListCheck::check(
   const auto *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
 
   const FindArgsResult Result = findArgs(TopCall);
-  const SmallVector<FixItHint> Replacements =
+  const auto [FoundNestedCall, Replacements] =
       generateReplacements(Match, TopCall, Result, IgnoreNonTrivialTypes,
                            IgnoreTrivialTypesOfSizeAbove);
 
-  if (Replacements.empty())
+  if (!FoundNestedCall)
     return;
 
   const DiagnosticBuilder Diagnostic =

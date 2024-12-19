@@ -48,7 +48,7 @@ define amdgpu_kernel void @ham(ptr addrspace(4) %arg) {
 ; CHECK-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP6]], [[BB7]] ], [ [[TMP16:%.*]], [[COMPUTELOOP]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true)
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[PHI]], i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[PHI]], i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13]] = add i32 [[ACCUMULATOR]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 1, [[TMP10]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = xor i64 [[TMP14]], -1

@@ -261,13 +261,6 @@ libc_test(
 #     ],
 # )
 
-libc_test(
-    name = "getpid_test",
-    srcs = ["getpid_test.cpp"],
-    libc_function_deps = [
-        "//libc:getpid",
-    ],
-)
 
 libc_test(
     name = "getppid_test",

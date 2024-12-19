@@ -216,11 +216,8 @@ getOpAndSymbolNames(Operation *op, StringRef passName,
   SmallVector<std::pair<std::string, StringRef>> pathElements;
   SmallVector<unsigned> countPrefix;
 
-  if (!counters.contains(op))
-    counters[op] = -1;
-
   Operation *iter = op;
-  ++counters[op];
+  ++counters.try_emplace(op, -1).first->second;
   while (iter) {
     countPrefix.push_back(counters[iter]);
     StringAttr symbolName =
@@ -271,7 +268,7 @@ createTreePrinterOutputPath(Operation *op, llvm::StringRef passArgument,
   if (failed(createDirectoryOrPrintErr(path)))
     return nullptr;
 
-  for (auto [opName, symbolName] : opAndSymbolNames) {
+  for (const auto &[opName, symbolName] : opAndSymbolNames) {
     llvm::sys::path::append(path, opName + "_" + symbolName);
     if (failed(createDirectoryOrPrintErr(path)))
       return nullptr;

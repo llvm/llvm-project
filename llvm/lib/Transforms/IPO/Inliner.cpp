@@ -32,7 +32,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -47,7 +46,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -60,7 +58,6 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
-#include <functional>
 #include <utility>
 
 using namespace llvm;
@@ -223,8 +220,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   InlineAdvisor &Advisor = getAdvisor(MAMProxy, FAM, M);
   Advisor.onPassEntry(&InitialC);
 
-  auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(&InitialC); });
-
   // We use a single common worklist for calls across the entire SCC. We
   // process these in-order and append new calls introduced during inlining to
   // the end. The PriorityInlineOrder is optional here, in which the smaller
@@ -279,11 +274,14 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           }
         }
   }
-  if (Calls.empty())
-    return PreservedAnalyses::all();
 
   // Capture updatable variable for the current SCC.
   auto *C = &InitialC;
+
+  auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(C); });
+
+  if (Calls.empty())
+    return PreservedAnalyses::all();
 
   // When inlining a callee produces new call sites, we want to keep track of
   // the fact that they were inlined from the callee.  This allows us to avoid

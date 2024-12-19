@@ -44,7 +44,7 @@
 ;; and that the new stores share the same DIAssignID.
 
 ; CHECK-LABEL: for.cond:
-; CHECK: call void @llvm.dbg.assign(metadata i32 1, metadata ![[var:[0-9]+]], metadata !DIExpression(), metadata ![[id:[0-9]+]], metadata ptr %a, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(i32 1, ![[var:[0-9]+]], !DIExpression(), ![[id:[0-9]+]], ptr %a, !DIExpression(),
 
 ; CHECK-LABEL: if.end:
 ; CHECK-NEXT: store i32 1, ptr %a, align 1,{{.*}}!DIAssignID ![[id]]

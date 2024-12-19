@@ -1,0 +1,8 @@
+header: limits.h
+standards:
+  - stdc
+macros: []
+types: []
+enums: []
+objects: []
+functions: []

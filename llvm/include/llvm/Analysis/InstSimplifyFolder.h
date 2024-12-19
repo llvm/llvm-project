@@ -22,6 +22,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 
@@ -38,7 +39,7 @@ class InstSimplifyFolder final : public IRBuilderFolder {
   virtual void anchor();
 
 public:
-  InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
+  explicit InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
 
   //===--------------------------------------------------------------------===//
   // Value-based folders.

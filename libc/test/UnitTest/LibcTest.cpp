@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/fixed_point/fx_rep.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "src/__support/uint128.h"
 #include "test/UnitTest/TestLogger.h"
@@ -27,7 +28,7 @@ extern "C" clock_t clock() noexcept { return LIBC_NAMESPACE::clock(); }
 #define LIBC_TEST_USE_CLOCK
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 namespace internal {
@@ -43,7 +44,6 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                      is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
-  static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
   const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
   return buffer.view();
 }
@@ -158,13 +158,13 @@ int Test::runTests(const TestOptions &Options) {
     }
 
     tlog << green << "[ RUN      ] " << reset << TestName << '\n';
-    [[maybe_unused]] const auto start_time = clock();
+    [[maybe_unused]] const uint64_t start_time = clock();
     RunContext Ctx;
     T->SetUp();
     T->setContext(&Ctx);
     T->Run();
     T->TearDown();
-    [[maybe_unused]] const auto end_time = clock();
+    [[maybe_unused]] const uint64_t end_time = clock();
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
       tlog << red << "[  FAILED  ] " << reset << TestName << '\n';
@@ -241,6 +241,7 @@ TEST_SPECIALIZATION(__uint128_t);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::Int<128>);
 
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<96>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<128>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<192>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);
@@ -296,4 +297,4 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -40,8 +40,8 @@
 #   include <io.h> // _mktemp_s
 #   include <fcntl.h> // _O_EXCL, ...
 #   include <sys/stat.h> // _S_IREAD, ...
-#else
-#   include <unistd.h> // close
+#elif __has_include(<unistd.h>)
+#  include <unistd.h> // close
 #endif
 
 #if defined(_CS_GNU_LIBC_VERSION)
@@ -55,31 +55,44 @@ extern "C" {
 }
 #endif
 
-inline
-std::string get_temp_file_name()
-{
+inline std::string get_temp_file_name() {
 #if defined(_WIN32)
-    while (true) {
-        char Name[] = "libcxx.XXXXXX";
-        if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
-        int fd = _open(Name, _O_RDWR | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
-        if (fd != -1) {
-            _close(fd);
-            return Name;
-        }
-        if (errno == EEXIST)
-            continue;
-        abort();
+  while (true) {
+    char Name[] = "libcxx.XXXXXX";
+    if (_mktemp_s(Name, sizeof(Name)) != 0)
+      abort();
+    int fd = _open(Name, _O_RDWR | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
+    if (fd != -1) {
+      _close(fd);
+      return Name;
     }
+    if (errno == EEXIST)
+      continue;
+    abort();
+  }
+#elif !__has_include(<unistd.h>)
+  // Without `unistd.h` we cannot guarantee that the file is unused, however we
+  // can simply generate a good guess in the temporary folder and create it.
+  constexpr char chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  char Name[]            = "/tmp/libcxx.XXXXXX";
+  for (std::size_t i = 0; i < sizeof(Name); ++i)
+    if (Name[i] == 'X')
+      Name[i] = chars[rand() % strlen(chars)];
+  FILE* file = fopen(Name, "w");
+  if (!file)
+    abort();
+  if (fclose(file) == EOF)
+    abort();
+  return std::string(Name);
 #else
-    std::string Name = "libcxx.XXXXXX";
-    int FD = mkstemp(&Name[0]);
-    if (FD == -1) {
-        perror("mkstemp");
-        abort();
-    }
-    close(FD);
-    return Name;
+  std::string Name = "libcxx.XXXXXX";
+  int FD           = mkstemp(&Name[0]);
+  if (FD == -1) {
+    perror("mkstemp");
+    abort();
+  }
+  close(FD);
+  return Name;
 #endif
 }
 

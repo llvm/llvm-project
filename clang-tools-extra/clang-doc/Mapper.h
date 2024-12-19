@@ -43,7 +43,7 @@ public:
   bool VisitTypeAliasDecl(const TypeAliasDecl *D);
 
 private:
-  template <typename T> bool mapDecl(const T *D);
+  template <typename T> bool mapDecl(const T *D, bool IsDefinition);
 
   int getLine(const NamedDecl *D, const ASTContext &Context) const;
   llvm::SmallString<128> getFile(const NamedDecl *D, const ASTContext &Context,

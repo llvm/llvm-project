@@ -54,9 +54,6 @@ public:
   /// Return the number of registers for the function.
   unsigned getNumSupportedRegs(const MachineFunction &MF) const override;
 
-  // FIXME: This should be tablegen'd like getDwarfRegNum is
-  int getSEHRegNum(unsigned i) const;
-
   /// getMatchingSuperRegClass - Return a subclass of the specified register
   /// class A so that each register in it has a sub-register of the
   /// specified sub-register index which is in the specified register class B.
@@ -102,6 +99,9 @@ public:
   /// callee-save registers on this target.
   const MCPhysReg *
   getCalleeSavedRegs(const MachineFunction* MF) const override;
+  /// getIPRACSRegs - This API can be removed when rbp is safe to optimized out
+  /// when IPRA is on.
+  const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
   const MCPhysReg *
   getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,

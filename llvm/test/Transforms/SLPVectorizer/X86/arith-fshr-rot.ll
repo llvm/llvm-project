@@ -480,10 +480,10 @@ define void @fshr_v64i8() {
 ; SSE-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 32), align 1
 ; SSE-NEXT:    [[TMP8:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 32), align 1
 ; SSE-NEXT:    [[TMP9:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP7]], <16 x i8> [[TMP7]], <16 x i8> [[TMP8]])
+; SSE-NEXT:    store <16 x i8> [[TMP9]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 32), align 1
 ; SSE-NEXT:    [[TMP10:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 48), align 1
 ; SSE-NEXT:    [[TMP11:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 48), align 1
 ; SSE-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP10]], <16 x i8> [[TMP10]], <16 x i8> [[TMP11]])
-; SSE-NEXT:    store <16 x i8> [[TMP9]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 32), align 1
 ; SSE-NEXT:    store <16 x i8> [[TMP12]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 48), align 1
 ; SSE-NEXT:    ret void
 ;
@@ -854,13 +854,13 @@ define void @fshr_v2i32_uniformconst() {
 ;
 ; AVX256-LABEL: @fshr_v2i32_uniformconst(
 ; AVX256-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @a32, align 4
-; AVX256-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>)
+; AVX256-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> splat (i32 1))
 ; AVX256-NEXT:    store <2 x i32> [[TMP2]], ptr @d32, align 4
 ; AVX256-NEXT:    ret void
 ;
 ; AVX512-LABEL: @fshr_v2i32_uniformconst(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @a32, align 4
-; AVX512-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>)
+; AVX512-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> splat (i32 1))
 ; AVX512-NEXT:    store <2 x i32> [[TMP2]], ptr @d32, align 4
 ; AVX512-NEXT:    ret void
 ;

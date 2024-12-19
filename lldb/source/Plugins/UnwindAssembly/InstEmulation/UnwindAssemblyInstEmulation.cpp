@@ -70,8 +70,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     const bool prefer_file_cache = true;
     DisassemblerSP disasm_sp(Disassembler::DisassembleBytes(
-        m_arch, nullptr, nullptr, range.GetBaseAddress(), opcode_data,
-        opcode_size, 99999, prefer_file_cache));
+        m_arch, nullptr, nullptr, nullptr, nullptr, range.GetBaseAddress(),
+        opcode_data, opcode_size, 99999, prefer_file_cache));
 
     Log *log = GetLog(LLDBLog::Unwind);
 
@@ -461,8 +461,7 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
 
     if (reg_num != LLDB_INVALID_REGNUM &&
         generic_regnum != LLDB_REGNUM_GENERIC_SP) {
-      if (m_pushed_regs.find(reg_num) == m_pushed_regs.end()) {
-        m_pushed_regs[reg_num] = addr;
+      if (m_pushed_regs.try_emplace(reg_num, addr).second) {
         const int32_t offset = addr - m_initial_sp;
         m_curr_row->SetRegisterLocationToAtCFAPlusOffset(reg_num, offset,
                                                          /*can_replace=*/true);
@@ -608,8 +607,8 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
         generic_regnum != LLDB_REGNUM_GENERIC_SP) {
       switch (context.GetInfoType()) {
       case EmulateInstruction::eInfoTypeAddress:
-        if (m_pushed_regs.find(reg_num) != m_pushed_regs.end() &&
-            context.info.address == m_pushed_regs[reg_num]) {
+        if (auto it = m_pushed_regs.find(reg_num);
+            it != m_pushed_regs.end() && context.info.address == it->second) {
           m_curr_row->SetRegisterLocationToSame(reg_num,
                                                 false /*must_replace*/);
           m_curr_row_modified = true;

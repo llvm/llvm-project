@@ -1,0 +1,161 @@
+XFAIL: target={{.*haiku.*}}
+RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: %clang_pgogen -fprofile-update=atomic -fPIC foo.c -c -Xclang -fprofile-instrument-path="default_foo_%m.profraw"
+RUN: %clang_pgogen -fprofile-update=atomic -fPIC foo2.c -c -Xclang -fprofile-instrument-path="default_foo2_%m.profraw"
+RUN: %clang_pgogen -fprofile-update=atomic -shared foo.o -o shr_foo.o %if target={{.*aix.*}} %{ -bcdtors:mbr %}
+RUN: %clang_pgogen -fprofile-update=atomic -shared foo2.o -o shr_foo2.o
+
+RUN: %clang_pgogen common.c -c
+
+RUN: %clang_pgogen test1.c common.o -Xclang -fprofile-instrument-path="default_test1_%m.profraw"
+RUN: ./a.out 2>&1 | FileCheck %s -check-prefix=CHECK-FOO
+RUN: llvm-profdata show default_test1_*.profraw --counts --all-functions 2>&1 | \
+RUN:   FileCheck %s -check-prefix=CHECK-TEST1
+RUN: rm -f default*
+
+RUN: %clang_pgogen test2.c common.o -Xclang -fprofile-instrument-path="default_test2_%m.profraw"
+RUN: ./a.out 2>&1 | FileCheck %s -check-prefix=CHECK-FOO
+RUN: llvm-profdata show default_test2_*.profraw --counts --all-functions 2>&1 | \
+RUN:   FileCheck %s -check-prefix=CHECK-TEST2
+RUN: rm -f default*
+
+RUN: %clangxx_pgogen -lpthread test3.cpp common.o -Xclang -fprofile-instrument-path="default_test3_%m.profraw"
+RUN: ./a.out 2>&1 | FileCheck %s -check-prefix=CHECK-FOO-FOUR-THREADS
+
+CHECK-FOO:  foo:
+CHECK-FOO:    Block counts: [1]
+CHECK-FOO:  foo2:
+CHECK-FOO:    Block counts: [1]
+CHECK-FOO:  foo:
+CHECK-FOO:    Block counts: [2]
+
+CHECK-FOO-FOUR-THREADS:  foo:
+CHECK-FOO-FOUR-THREADS:    Block counts: [8]
+CHECK-FOO-FOUR-THREADS:  foo2:
+CHECK-FOO-FOUR-THREADS:    Block counts: [4]
+
+CHECK-TEST1:  main:
+CHECK-TEST1:    Block counts: [1, 0, 1, 0, 1, 1, 0]
+
+CHECK-TEST2: func1:
+CHECK-TEST2: Block counts: [4]
+CHECK-TEST2:  func2:
+CHECK-TEST2: Block counts: [1]
+
+
+//--- foo.c
+void foo() {}
+
+//--- foo2.c
+void foo2() {}
+
+//--- common.c
+#include <dlfcn.h>
+#include <stdio.h>
+#include <stdlib.h>
+typedef void (*FN_PTR)();
+int perform_check = 1;
+
+/* This function dlopen/dlclose shr_foo.a twice and shr_foo2.a once. Each time it
+ * dlopens a library, it runs the singleton function from that library. So the
+ * final counter value for foo and foo2 in each profile file is 2 and 1, resp.
+ */
+int open_close_libs() {
+  void *handle, *handle2;
+  FN_PTR foo, foo2;
+
+#define OPEN_AND_RUN(HANDLE, SUF)                                            \
+  HANDLE = dlopen("./shr_" #SUF ".o", RTLD_NOW);                             \
+  SUF = (void (*)())dlsym(HANDLE, #SUF);                                     \
+  if (SUF == NULL) {                                                         \
+    fprintf(stderr, "unable to lookup symbol '%s': %s\n", #SUF, dlerror());  \
+    return EXIT_FAILURE;                                                     \
+  }                                                                          \
+  SUF();
+
+#define CHECK_ONLY(SUF)                                                      \
+  system("llvm-profdata show default_" #SUF "_*.profraw --counts --all-functions");
+
+#define CLOSE_AND_CHECK(HANDLE, SUF)                                         \
+  dlclose(HANDLE);                                                           \
+  if (perform_check) { CHECK_ONLY(SUF) }
+
+  OPEN_AND_RUN(handle, foo)
+  CLOSE_AND_CHECK(handle, foo)
+
+  OPEN_AND_RUN(handle2, foo2)
+  OPEN_AND_RUN(handle, foo)
+  CLOSE_AND_CHECK(handle2, foo2)
+  CLOSE_AND_CHECK(handle, foo)
+  return EXIT_SUCCESS;
+}
+void check_prof_files() {
+  CHECK_ONLY(foo)
+  CHECK_ONLY(foo2)
+}
+
+//--- test1.c
+int open_close_libs();
+int main() {
+  open_close_libs();
+}
+
+//--- test2.c
+#include <dlfcn.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+__attribute__((noinline)) void func1() {}
+__attribute__((noinline)) void func2() {}
+void open_close_libs();
+
+int main(void) {
+  int status;
+  func1();
+  pid_t pid = fork();
+  if (pid == -1)
+    return 1;
+  if (pid == 0) { // child
+    open_close_libs();
+    func2();
+  }
+  func1();
+  if (pid)
+    wait(&status);
+  return 0;
+}
+
+//--- test3.cpp
+#include <sys/types.h>
+#include <thread>
+#include <unistd.h>
+
+extern "C" void check_prof_files();
+extern "C" void open_close_libs();
+extern int perform_check;
+
+template <typename T>
+void launcher(T func) {
+  auto t1 = std::thread(func);
+  auto t2 = std::thread(func);
+  auto t3 = std::thread(func);
+  auto t4 = std::thread(func);
+
+  t1.join();
+  t2.join();
+  t3.join();
+  t4.join();
+}
+
+int main() {
+  // don't check profiles generate inside open_close_libs because
+  // you'll get non-deterministic output due to threading.
+  perform_check = 0;
+  launcher<>(open_close_libs);
+
+  // instead, check the profiles manually here in the main thread.
+  check_prof_files();
+  return 0;
+}

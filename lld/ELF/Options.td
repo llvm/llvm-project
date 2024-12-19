@@ -434,6 +434,9 @@ defm section_start: Eq<"section-start", "Set address of section">,
 
 def shared: F<"shared">, HelpText<"Build a shared object">;
 
+def randomize_section_padding: JJ<"randomize-section-padding=">,
+  HelpText<"Randomly insert padding between input sections and at the start of each segment using given seed">;
+
 defm soname: Eq<"soname", "Set DT_SONAME">;
 
 defm sort_section:
@@ -614,6 +617,8 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
+def lto_emit_llvm: FF<"lto-emit-llvm">,
+  HelpText<"Emit LLVM-IR bitcode">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -695,7 +700,8 @@ def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
 def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
   Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
-def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
+def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">,
+  Alias<lto_emit_llvm>, HelpText<"Alias for --lto-emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
@@ -717,7 +723,7 @@ def: J<"plugin-opt=opt-remarks-format=">,
   HelpText<"Alias for --opt-remarks-format">;
 def: F<"plugin-opt=opt-remarks-with-hotness">,
   Alias<opt_remarks_with_hotness>,
-  HelpText<"Alias for --opt-remarks-with_hotness">;
+  HelpText<"Alias for --opt-remarks-with-hotness">;
 def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
   Alias<opt_remarks_hotness_threshold>,
   HelpText<"Alias for --opt-remarks-hotness-threshold">;
@@ -726,6 +732,7 @@ def: J<"plugin-opt=sample-profile=">,
 def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;
 def plugin_opt_stats_file: J<"plugin-opt=stats-file=">,
   HelpText<"Filename to write LTO statistics to">;
+def: J<"plugin-opt=time-trace=">, Alias<time_trace_eq>, HelpText<"Alias for --time-trace=">;
 def: F<"plugin-opt=thinlto-emit-imports-files">,
   Alias<thinlto_emit_imports_files>,
   HelpText<"Alias for --thinlto-emit-imports-files">;

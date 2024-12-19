@@ -29,10 +29,10 @@
 ;; bits that overlap the dbg.assign's fagment: [128, 160) (offset=128 size=32).
 
 ; CHECK: @_Z10shortenEndv
-; CHECK:      call void @llvm.dbg.assign({{.*}}, metadata ptr %local, metadata !DIExpression())
+; CHECK:      #dbg_assign({{.*}}, ptr %local, !DIExpression(),
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 96), metadata ![[ID:[0-9]+]], metadata ptr %offset_4_bytes, metadata !DIExpression(DW_OP_plus_uconst, 4))
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 32), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression({{.*}}))
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 64, 96), ![[ID:[0-9]+]], ptr %offset_4_bytes, !DIExpression(DW_OP_plus_uconst, 4),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), ![[UniqueID1:[0-9]+]], ptr poison, !DIExpression({{.*}}),
 
 ;; DSE will shorten the first store in shortenStart from [0, 160) bits to [128,
 ;; 160) bits. Variable 'local2' has been adjusted to be 160 bits.  Check we get
@@ -41,10 +41,10 @@
 ;; [0, 128) (offset=0, size=128).
 
 ; CHECK: @_Z12shortenStartv
-; CHECK:      call void @llvm.dbg.assign({{.*}}, metadata ptr %local2, metadata !DIExpression())
+; CHECK:      #dbg_assign({{.*}}, ptr %local2, !DIExpression(),
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID2:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR2:[0-9]+]], metadata !DIExpression(), metadata ![[ID2]], metadata ptr %local2, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR2]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 128), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2:[0-9]+]], !DIExpression(), ![[ID2]], ptr %local2, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), ![[UniqueID2:[0-9]+]], ptr poison, !DIExpression(),
 
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[UniqueID1]] = distinct !DIAssignID()
@@ -53,7 +53,7 @@
 define dso_local void @_Z10shortenEndv() local_unnamed_addr #0 !dbg !7 {
 entry:
   %local = alloca [80 x i8], align 16, !DIAssignID !16
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !16, metadata ptr %local, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.assign(metadata i1 poison, metadata !11, metadata !DIExpression(), metadata !16, metadata ptr %local, metadata !DIExpression()), !dbg !17
   %arraydecay = getelementptr inbounds [80 x i8], ptr %local, i64 0, i64 0, !dbg !19
   %offset_4_bytes = getelementptr inbounds [80 x i8], ptr %local, i64 0, i64 4, !dbg !21
   %offset_8_bytes = getelementptr inbounds [80 x i8], ptr %local, i64 0, i64 8, !dbg !21
@@ -71,7 +71,7 @@ declare !dbg !26 dso_local void @_Z3escPi(ptr noundef) local_unnamed_addr
 define dso_local void @_Z12shortenStartv() local_unnamed_addr #0 !dbg !31 {
 entry:
   %local2 = alloca [40 x i8], align 16, !DIAssignID !37
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !33, metadata !DIExpression(), metadata !37, metadata ptr %local2, metadata !DIExpression()), !dbg !38
+  call void @llvm.dbg.assign(metadata i1 poison, metadata !33, metadata !DIExpression(), metadata !37, metadata ptr %local2, metadata !DIExpression()), !dbg !38
   %arraydecay = getelementptr inbounds [40 x i8], ptr %local2, i64 0, i64 0, !dbg !40
   call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(40) %local2, i8 0, i64 36, i1 false), !dbg !40, !DIAssignID !41
   call void @llvm.dbg.assign(metadata i8 0, metadata !33, metadata !DIExpression(), metadata !41, metadata ptr %local2, metadata !DIExpression()), !dbg !38

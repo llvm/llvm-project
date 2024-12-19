@@ -13,8 +13,14 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // With clang-cl, some warnings have a 'which is a Microsoft extension' suffix
-// which break the tests.
-// XFAIL: msvc
+// which break the tests. But #102851 will turn it into an error, making the test pass.
+// However, upstream libcxx buildbots do not build clang from source while testing, so
+// this tests still expected to fail on these bots.
+//
+// TODO(LLVM 22): Remove '0-1' from 'expected-error-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}}}'
+// and remove 'expected-warning-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}'
+// and remove 'expected-error-re@*:* 0-1 {{call to deleted constructor of {{.*}}}}'
+// once LLVM 22 releases. See See https://github.com/llvm/llvm-project/issues/104885.
 
 // Test the mandates
 
@@ -57,11 +63,12 @@ void test() {
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}A program that instantiates expected<T, E> with a E that is not a valid argument for unexpected<E> is ill-formed}}
     // expected-error-re@*:* 0-1 {{call to deleted constructor of {{.*}}}}
-    // expected-error-re@*:* {{union member {{.*}} has reference type {{.*}}}}
+    // expected-error-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}}}
 
     e.transform_error(return_no_object<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}A program that instantiates expected<T, E> with a E that is not a valid argument for unexpected<E> is ill-formed}}
+    // expected-warning-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}
   }
 
   // Test const& overload
@@ -71,6 +78,7 @@ void test() {
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
     e.transform_error(return_no_object<const int &>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{call to deleted constructor of {{.*}}}}
   }
 
   // Test && overload

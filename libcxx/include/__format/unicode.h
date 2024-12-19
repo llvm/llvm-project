@@ -54,7 +54,7 @@ struct __consume_result {
 };
 static_assert(sizeof(__consume_result) == sizeof(char32_t));
 
-#  ifndef _LIBCPP_HAS_NO_UNICODE
+#  if _LIBCPP_HAS_UNICODE
 
 /// Implements the grapheme cluster boundary rules
 ///
@@ -235,7 +235,7 @@ private:
   _Iterator __last_;
 };
 
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_surrogate_pair_high(wchar_t __value) {
   return __value >= 0xd800 && __value <= 0xdbff;
 }
@@ -292,7 +292,7 @@ private:
   _Iterator __first_;
   _Iterator __last_;
 };
-#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // State machine to implement the Extended Grapheme Cluster Boundary
 //
@@ -566,10 +566,10 @@ private:
 template <contiguous_iterator _Iterator>
 __extended_grapheme_cluster_view(_Iterator, _Iterator) -> __extended_grapheme_cluster_view<iter_value_t<_Iterator>>;
 
-#  else //  _LIBCPP_HAS_NO_UNICODE
+#  else // _LIBCPP_HAS_UNICODE
 
 // For ASCII every character is a "code point".
-// This makes it easier to write code agnostic of the _LIBCPP_HAS_NO_UNICODE define.
+// This makes it easier to write code agnostic of the _LIBCPP_HAS_UNICODE define.
 template <class _CharT>
 class __code_point_view {
   using _Iterator = typename basic_string_view<_CharT>::const_iterator;
@@ -591,11 +591,11 @@ private:
   _Iterator __last_;
 };
 
-#  endif //  _LIBCPP_HAS_NO_UNICODE
+#  endif // _LIBCPP_HAS_UNICODE
 
 } // namespace __unicode
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

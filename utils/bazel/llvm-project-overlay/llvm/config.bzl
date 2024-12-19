@@ -6,10 +6,10 @@
 
 load(
     "//:vars.bzl",
-    "LLVM_VERSION",
     "LLVM_VERSION_MAJOR",
     "LLVM_VERSION_MINOR",
     "LLVM_VERSION_PATCH",
+    "PACKAGE_VERSION",
 )
 
 def native_arch_defines(arch, triple):
@@ -47,7 +47,6 @@ posix_defines = [
 
 linux_defines = posix_defines + [
     "_GNU_SOURCE",
-    "HAVE_LINK_H=1",
     "HAVE_MALLINFO=1",
     "HAVE_SBRK=1",
     "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
@@ -108,7 +107,7 @@ llvm_config_defines = os_defines + builtin_thread_pointer + select({
     "LLVM_VERSION_MAJOR={}".format(LLVM_VERSION_MAJOR),
     "LLVM_VERSION_MINOR={}".format(LLVM_VERSION_MINOR),
     "LLVM_VERSION_PATCH={}".format(LLVM_VERSION_PATCH),
-    r'LLVM_VERSION_STRING=\"{}git\"'.format(LLVM_VERSION),
+    r'LLVM_VERSION_STRING=\"{}\"'.format(PACKAGE_VERSION),
     # These shouldn't be needed by the C++11 standard, but are for some
     # platforms (e.g. glibc < 2.18. See
     # https://sourceware.org/bugzilla/show_bug.cgi?id=15366). These are also

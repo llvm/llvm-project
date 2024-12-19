@@ -82,6 +82,11 @@ constexpr void run_tests() {
   test(std::ranges::find, in, x);
   test(std::ranges::find_if, in, unary_pred);
   test(std::ranges::find_if_not, in, unary_pred);
+#if TEST_STD_VER >= 23
+  test(std::ranges::find_last, in, x);
+  test(std::ranges::find_last_if, in, unary_pred);
+  test(std::ranges::find_last_if_not, in, unary_pred);
+#endif
   test(std::ranges::find_first_of, in, in2);
   test(std::ranges::adjacent_find, in);
   test(std::ranges::mismatch, in, in2);

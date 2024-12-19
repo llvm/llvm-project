@@ -33,49 +33,6 @@
 
 namespace mlir {
 
-/// Extends `TypeConverter` with 1:N target materializations. Such
-/// materializations have to provide the "reverse" of 1:N type conversions,
-/// i.e., they need to materialize N values with target types into one value
-/// with a source type (which isn't possible in the base class currently).
-class OneToNTypeConverter : public TypeConverter {
-public:
-  /// Callback that expresses user-provided materialization logic from the given
-  /// value to N values of the given types. This is useful for expressing target
-  /// materializations for 1:N type conversions, which materialize one value in
-  /// a source type as N values in target types.
-  using OneToNMaterializationCallbackFn =
-      std::function<std::optional<SmallVector<Value>>(OpBuilder &, TypeRange,
-                                                      Value, Location)>;
-
-  /// Creates the mapping of the given range of original types to target types
-  /// of the conversion and stores that mapping in the given (signature)
-  /// conversion. This function simply calls
-  /// `TypeConverter::convertSignatureArgs` and exists here with a different
-  /// name to reflect the broader semantic.
-  LogicalResult computeTypeMapping(TypeRange types,
-                                   SignatureConversion &result) {
-    return convertSignatureArgs(types, result);
-  }
-
-  /// Applies one of the user-provided 1:N target materializations. If several
-  /// exists, they are tried out in the reverse order in which they have been
-  /// added until the first one succeeds. If none succeeds, the functions
-  /// returns `std::nullopt`.
-  std::optional<SmallVector<Value>>
-  materializeTargetConversion(OpBuilder &builder, Location loc,
-                              TypeRange resultTypes, Value input) const;
-
-  /// Adds a 1:N target materialization to the converter. Such materializations
-  /// build IR that converts N values with target types into 1 value of the
-  /// source type.
-  void addTargetMaterialization(OneToNMaterializationCallbackFn &&callback) {
-    oneToNTargetMaterializations.emplace_back(std::move(callback));
-  }
-
-private:
-  SmallVector<OneToNMaterializationCallbackFn> oneToNTargetMaterializations;
-};
-
 /// Stores a 1:N mapping of types and provides several useful accessors. This
 /// class extends `SignatureConversion`, which already supports 1:N type
 /// mappings but lacks some accessors into the mapping as well as access to the
@@ -126,24 +83,25 @@ public:
   /// Construct a conversion pattern with the given converter, and forward the
   /// remaining arguments to RewritePattern.
   template <typename... Args>
-  RewritePatternWithConverter(TypeConverter &typeConverter, Args &&...args)
+  RewritePatternWithConverter(const TypeConverter &typeConverter,
+                              Args &&...args)
       : RewritePattern(std::forward<Args>(args)...),
         typeConverter(&typeConverter) {}
 
   /// Return the type converter held by this pattern, or nullptr if the pattern
   /// does not require type conversion.
-  TypeConverter *getTypeConverter() const { return typeConverter; }
+  const TypeConverter *getTypeConverter() const { return typeConverter; }
 
   template <typename ConverterTy>
   std::enable_if_t<std::is_base_of<TypeConverter, ConverterTy>::value,
-                   ConverterTy *>
+                   const ConverterTy *>
   getTypeConverter() const {
-    return static_cast<ConverterTy *>(typeConverter);
+    return static_cast<const ConverterTy *>(typeConverter);
   }
 
 protected:
   /// A type converter for use by this pattern.
-  TypeConverter *const typeConverter;
+  const TypeConverter *const typeConverter;
 };
 
 /// Specialization of `PatternRewriter` that `OneToNConversionPattern`s use. The
@@ -212,8 +170,8 @@ public:
 template <typename SourceOp>
 class OneToNOpConversionPattern : public OneToNConversionPattern {
 public:
-  OneToNOpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
-                            PatternBenefit benefit = 1,
+  OneToNOpConversionPattern(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1,
                             ArrayRef<StringRef> generatedNames = {})
       : OneToNConversionPattern(typeConverter, SourceOp::getOperationName(),
                                 benefit, context, generatedNames) {}
@@ -294,7 +252,7 @@ public:
 /// not fail if some ops or types remain unconverted (i.e., the conversion is
 /// only "partial").
 LogicalResult
-applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
+applyPartialOneToNConversion(Operation *op, TypeConverter &typeConverter,
                              const FrozenRewritePatternSet &patterns);
 
 /// Add a pattern to the given pattern list to convert the signature of a
@@ -302,11 +260,11 @@ applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
 /// ops which use FunctionType to represent their type. This is intended to be
 /// used with the 1:N dialect conversion.
 void populateOneToNFunctionOpInterfaceTypeConversionPattern(
-    StringRef functionLikeOpName, TypeConverter &converter,
+    StringRef functionLikeOpName, const TypeConverter &converter,
     RewritePatternSet &patterns);
 template <typename FuncOpT>
 void populateOneToNFunctionOpInterfaceTypeConversionPattern(
-    TypeConverter &converter, RewritePatternSet &patterns) {
+    const TypeConverter &converter, RewritePatternSet &patterns) {
   populateOneToNFunctionOpInterfaceTypeConversionPattern(
       FuncOpT::getOperationName(), converter, patterns);
 }

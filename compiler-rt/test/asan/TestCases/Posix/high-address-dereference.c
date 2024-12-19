@@ -5,12 +5,11 @@
 
 // REQUIRES: x86_64-target-arch
 // RUN: %clang_asan %s -o %t
-// RUN: export %env_asan_opts=print_scariness=1
-// RUN: not %run %t 0x0000000000000000 2>&1 | FileCheck %s --check-prefixes=ZERO,HINT-PAGE0
-// RUN: not %run %t 0x0000000000000FFF 2>&1 | FileCheck %s --check-prefixes=LOW1,HINT-PAGE0
-// RUN: not %run %t 0x0000000000001000 2>&1 | FileCheck %s --check-prefixes=LOW2,HINT-NONE
-// RUN: not %run %t 0x4141414141414141 2>&1 | FileCheck %s --check-prefixes=HIGH,HINT-HIGHADDR
-// RUN: not %run %t 0xFFFFFFFFFFFFFFFF 2>&1 | FileCheck %s --check-prefixes=MAX,HINT-HIGHADDR
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x0000000000000000 2>&1 | FileCheck %s --check-prefixes=ZERO,HINT-PAGE0
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x0000000000000FFF 2>&1 | FileCheck %s --check-prefixes=LOW1,HINT-PAGE0
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x0000000000001000 2>&1 | FileCheck %s --check-prefixes=LOW2,HINT-NONE
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x4141414141414141 2>&1 | FileCheck %s --check-prefixes=HIGH,HINT-HIGHADDR
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0xFFFFFFFFFFFFFFFF 2>&1 | FileCheck %s --check-prefixes=MAX,HINT-HIGHADDR
 
 #include <stdint.h>
 #include <stdlib.h>

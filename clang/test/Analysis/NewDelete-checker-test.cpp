@@ -37,10 +37,6 @@ extern "C" void *malloc(size_t);
 extern "C" void free (void* ptr);
 int *global;
 
-//------------------
-// check for leaks
-//------------------
-
 //----- Standard non-placement operators
 void testGlobalOpNew() {
   void *p = operator new(0);
@@ -66,19 +62,6 @@ void testGlobalNoThrowPlacementOpNewBeforeOverload() {
 void testGlobalNoThrowPlacementExprNewBeforeOverload() {
   int *p = new(std::nothrow) int;
 } // leak-warning{{Potential leak of memory pointed to by 'p'}}
-
-//----- Standard pointer placement operators
-void testGlobalPointerPlacementNew() {
-  int i;
-
-  void *p1 = operator new(0, &i); // no warn
-
-  void *p2 = operator new[](0, &i); // no warn
-
-  int *p3 = new(&i) int; // no warn
-
-  int *p4 = new(&i) int[0]; // no warn
-}
 
 //----- Other cases
 void testNewMemoryIsInHeap() {

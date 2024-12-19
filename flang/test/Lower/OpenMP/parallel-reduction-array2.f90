@@ -13,11 +13,13 @@ i(3) = i(3) + 3
 print *,i
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3xi32 : !fir.ref<!fir.box<!fir.array<3xi32>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3xi32>>>):
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3xi32 : !fir.ref<!fir.box<!fir.array<3xi32>>> alloc {
+! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<3xi32>>
+! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<3xi32>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3xi32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.array<3xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3xi32>>>
-! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<3xi32>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_1:.*]] = fir.allocmem !fir.array<3xi32>
@@ -28,8 +30,8 @@ end program
 ! CHECK:           %[[SHIFT:.*]] = fir.shape_shift %[[DIMS]]#0, %[[DIMS]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]]#0(%[[SHIFT]]) : (!fir.heap<!fir.array<3xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<3xi32>>
 ! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_7]] : i32, !fir.box<!fir.array<3xi32>>
-! CHECK:           fir.store %[[VAL_7]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<3xi32>>>
-! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<3xi32>>>)
+! CHECK:           fir.store %[[VAL_7]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3xi32>>>
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3xi32>>>)
 ! CHECK:         } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3xi32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<3xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3xi32>>>

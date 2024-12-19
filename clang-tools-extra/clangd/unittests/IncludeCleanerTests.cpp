@@ -644,6 +644,28 @@ TEST(IncludeCleaner, ResourceDirIsIgnored) {
   EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
 }
 
+TEST(IncludeCleaner, DifferentHeaderSameSpelling) {
+  // `foo` is declared in foo_inner/foo.h, but there's no way to spell it
+  // directly. Make sure we don't generate unusued/missing include findings in
+  // such cases.
+  auto TU = TestTU::withCode(R"cpp(
+    #include <foo.h>
+    void baz() {
+      foo();
+    }
+  )cpp");
+  TU.AdditionalFiles["foo/foo.h"] = guard("#include_next <foo.h>");
+  TU.AdditionalFiles["foo_inner/foo.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  TU.ExtraArgs.push_back("-Ifoo");
+  TU.ExtraArgs.push_back("-Ifoo_inner");
+
+  auto AST = TU.build();
+  auto Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

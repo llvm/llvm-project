@@ -9,13 +9,14 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 // TODO: Get PATH_MAX via https://github.com/llvm/llvm-project/issues/85121
 #include <linux/limits.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace shm_common {
 
@@ -50,4 +51,4 @@ LIBC_INLINE cpp::optional<SHMPath> translate_name(cpp::string_view name) {
 }
 } // namespace shm_common
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

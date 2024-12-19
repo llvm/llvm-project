@@ -50,8 +50,8 @@ IRDLCollectMatchingOp::apply(TransformRewriter &rewriter,
 
 void IRDLCollectMatchingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getRoot(), effects);
-  producesHandle(getMatched(), effects);
+  onlyReadsHandle(getRootMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   onlyReadsPayload(effects);
 }
 

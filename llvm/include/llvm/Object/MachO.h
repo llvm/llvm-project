@@ -799,7 +799,7 @@ public:
       std::string ret;
       raw_string_ostream ss(ret);
       ss << format_hex(platform, 8, true);
-      return ss.str();
+      return ret;
     }
   }
 
@@ -814,7 +814,7 @@ public:
       std::string ret;
       raw_string_ostream ss(ret);
       ss << format_hex(tools, 8, true);
-      return ss.str();
+      return ret;
     }
   }
 

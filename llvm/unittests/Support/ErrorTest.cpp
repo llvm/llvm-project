@@ -442,7 +442,7 @@ TEST(Error, StringError) {
   raw_string_ostream S(Msg);
   logAllUnhandledErrors(
       make_error<StringError>("foo" + Twine(42), inconvertibleErrorCode()), S);
-  EXPECT_EQ(S.str(), "foo42\n") << "Unexpected StringError log result";
+  EXPECT_EQ(Msg, "foo42\n") << "Unexpected StringError log result";
 
   auto EC =
     errorToErrorCode(make_error<StringError>("", errc::invalid_argument));
@@ -457,16 +457,14 @@ TEST(Error, createStringError) {
   raw_string_ostream S(Msg);
   logAllUnhandledErrors(createStringError(EC, "foo%s%d0x%" PRIx8, Bar, 1, 0xff),
                         S);
-  EXPECT_EQ(S.str(), "foobar10xff\n")
-    << "Unexpected createStringError() log result";
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() log result";
 
-  S.flush();
   Msg.clear();
   logAllUnhandledErrors(createStringError(EC, Bar), S);
-  EXPECT_EQ(S.str(), "bar\n")
-    << "Unexpected createStringError() (overloaded) log result";
+  EXPECT_EQ(Msg, "bar\n")
+      << "Unexpected createStringError() (overloaded) log result";
 
-  S.flush();
   Msg.clear();
   auto Res = errorToErrorCode(createStringError(EC, "foo%s", Bar));
   EXPECT_EQ(Res, EC)
@@ -740,15 +738,25 @@ TEST(Error, ErrorCodeConversions) {
 TEST(Error, ErrorMessage) {
   EXPECT_EQ(toString(Error::success()), "");
 
+  Error E0 = Error::success();
+  EXPECT_EQ(toStringWithoutConsuming(E0), "");
+  EXPECT_EQ(toString(std::move(E0)), "");
+
   Error E1 = make_error<CustomError>(0);
+  EXPECT_EQ(toStringWithoutConsuming(E1), "CustomError {0}");
   EXPECT_EQ(toString(std::move(E1)), "CustomError {0}");
 
   Error E2 = make_error<CustomError>(0);
+  visitErrors(E2, [](const ErrorInfoBase &EI) {
+    EXPECT_EQ(EI.message(), "CustomError {0}");
+  });
   handleAllErrors(std::move(E2), [](const CustomError &CE) {
     EXPECT_EQ(CE.message(), "CustomError {0}");
   });
 
   Error E3 = joinErrors(make_error<CustomError>(0), make_error<CustomError>(1));
+  EXPECT_EQ(toStringWithoutConsuming(E3), "CustomError {0}\n"
+                                          "CustomError {1}");
   EXPECT_EQ(toString(std::move(E3)), "CustomError {0}\n"
                                      "CustomError {1}");
 }
@@ -759,7 +767,7 @@ TEST(Error, Stream) {
     std::string Buf;
     llvm::raw_string_ostream S(Buf);
     S << OK;
-    EXPECT_EQ("success", S.str());
+    EXPECT_EQ("success", Buf);
     consumeError(std::move(OK));
   }
   {
@@ -767,7 +775,7 @@ TEST(Error, Stream) {
     std::string Buf;
     llvm::raw_string_ostream S(Buf);
     S << E1;
-    EXPECT_EQ("CustomError {0}", S.str());
+    EXPECT_EQ("CustomError {0}", Buf);
     consumeError(std::move(E1));
   }
 }
@@ -920,6 +928,8 @@ TEST(Error, C_API) {
     });
   EXPECT_TRUE(GotCSE) << "Failed to round-trip ErrorList via C API";
   EXPECT_TRUE(GotCE) << "Failed to round-trip ErrorList via C API";
+
+  LLVMCantFail(wrap(Error::success()));
 }
 
 TEST(Error, FileErrorTest) {

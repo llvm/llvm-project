@@ -230,7 +230,7 @@ define <4 x i1> @p7_vector_urem_by_const__nonsplat_undef2(<4 x i32> %x, <4 x i32
 ; SSE2-LABEL: p7_vector_urem_by_const__nonsplat_undef2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,2863311531,2863311531,2863311531]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [715827883,715827883,715827883,715827883]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
@@ -238,8 +238,7 @@ define <4 x i1> @p7_vector_urem_by_const__nonsplat_undef2(<4 x i32> %x, <4 x i32
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-NEXT:    psrld $2, %xmm2
-; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [6,0,6,0,6,0,6,0]
 ; SSE2-NEXT:    psubd %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -249,13 +248,12 @@ define <4 x i1> @p7_vector_urem_by_const__nonsplat_undef2(<4 x i32> %x, <4 x i32
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [2863311531,2863311531,2863311531,2863311531]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [715827883,715827883,715827883,715827883]
 ; SSE4-NEXT:    pmuludq %xmm2, %xmm1
 ; SSE4-NEXT:    pmuludq %xmm0, %xmm2
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
-; SSE4-NEXT:    psrld $2, %xmm2
-; SSE4-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE4-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [6,0,6,0,6,0,6,0]
 ; SSE4-NEXT:    psubd %xmm2, %xmm0
 ; SSE4-NEXT:    pxor %xmm1, %xmm1
 ; SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -266,13 +264,12 @@ define <4 x i1> @p7_vector_urem_by_const__nonsplat_undef2(<4 x i32> %x, <4 x i32
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [128,128,128,128]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2863311531,2863311531,2863311531,2863311531]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [715827883,715827883,715827883,715827883]
 ; AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
-; AVX2-NEXT:    vpsrld $2, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [6,0,6,0,6,0,6,0]
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0

@@ -12,4 +12,4 @@ end program
 ! CHECK: INTEGER :: var = 1
 ! CHECK: INTEGER, DEVICE :: dvar
 
-! ERROR: cuda-option.f90:8:19: error: expected end of statement
+! ERROR: cuda-option.f90:{{.*}}:{{.*}}: error: expected end of statement

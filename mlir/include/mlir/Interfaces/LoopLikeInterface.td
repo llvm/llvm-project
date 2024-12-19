@@ -84,7 +84,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         have a single iteration. Returns "success" if the promotion was
         successful.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"promoteIfSingleIteration",
       /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
       /*methodBody=*/"",
@@ -246,7 +246,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// If there is a single induction variable return it, otherwise return
     /// std::nullopt.
     ::std::optional<::mlir::Value> getSingleInductionVar() {
-      auto inductionVars = this->getLoopInductionVars();
+      auto inductionVars = $_op.getLoopInductionVars();
       if (inductionVars.has_value() && (*inductionVars).size() == 1)
           return (*inductionVars)[0];
         return std::nullopt;
@@ -254,7 +254,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the single lower bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleLowerBound() {
-      auto lowerBounds = this->getLoopLowerBounds();
+      auto lowerBounds = $_op.getLoopLowerBounds();
       if (lowerBounds.has_value() && (*lowerBounds).size() == 1)
           return (*lowerBounds)[0];
       return std::nullopt;
@@ -262,7 +262,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the single step value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleStep() {
-      auto steps = this->getLoopSteps(); 
+      auto steps = $_op.getLoopSteps();
       if (steps.has_value() && (*steps).size() == 1)
           return (*steps)[0];
       return std::nullopt;
@@ -270,7 +270,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the single upper bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleUpperBound() {
-      auto upperBounds = this->getLoopUpperBounds();
+      auto upperBounds = $_op.getLoopUpperBounds();
       if (upperBounds.has_value() && (*upperBounds).size() == 1)
           return (*upperBounds)[0];
       return std::nullopt;

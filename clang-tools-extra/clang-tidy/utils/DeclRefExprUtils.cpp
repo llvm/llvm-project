@@ -296,7 +296,7 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
           return false;
         }
         const auto *const Method =
-            dyn_cast<CXXMethodDecl>(OpCall->getDirectCallee());
+            dyn_cast_or_null<CXXMethodDecl>(OpCall->getDirectCallee());
 
         if (Method == nullptr) {
           // This is not a member operator. Typically, a friend operator. These

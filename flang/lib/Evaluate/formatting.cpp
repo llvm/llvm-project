@@ -71,6 +71,8 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
     }
     if constexpr (Result::category == TypeCategory::Integer) {
       o << value.SignedDecimal() << '_' << Result::kind;
+    } else if constexpr (Result::category == TypeCategory::Unsigned) {
+      o << value.UnsignedDecimal() << "U_" << Result::kind;
     } else if constexpr (Result::category == TypeCategory::Real ||
         Result::category == TypeCategory::Complex) {
       value.AsFortran(o, Result::kind);
@@ -478,7 +480,8 @@ llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
           TO::category == TypeCategory::Real ||
           TO::category == TypeCategory::Complex ||
           TO::category == TypeCategory::Character ||
-          TO::category == TypeCategory::Logical,
+          TO::category == TypeCategory::Logical ||
+          TO::category == TypeCategory::Unsigned,
       "Convert<> to bad category!");
   if constexpr (TO::category == TypeCategory::Character) {
     this->left().AsFortran(o << "achar(iachar(") << ')';
@@ -488,8 +491,10 @@ llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
     this->left().AsFortran(o << "real(");
   } else if constexpr (TO::category == TypeCategory::Complex) {
     this->left().AsFortran(o << "cmplx(");
-  } else {
+  } else if constexpr (TO::category == TypeCategory::Logical) {
     this->left().AsFortran(o << "logical(");
+  } else {
+    this->left().AsFortran(o << "uint(");
   }
   return o << ",kind=" << TO::kind << ')';
 }
@@ -563,7 +568,7 @@ std::string ExpressionBase<RESULT>::AsFortran() const {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
   AsFortran(ss);
-  return ss.str();
+  return buf;
 }
 
 template <typename RESULT>
@@ -604,7 +609,7 @@ static std::string DerivedTypeSpecAsFortran(
   if (ch != '(') {
     ss << ')';
   }
-  return ss.str();
+  return buf;
 }
 
 llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {

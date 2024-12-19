@@ -2,7 +2,7 @@
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
-  // CHECK %{{.*}}, %{{.*}}:2 = transform.structured.tile
+  // CHECK: %{{.*}}, %{{.*}}:2 = transform.structured.tile
   %0, %1:2 = transform.structured.tile_using_for %arg0 tile_sizes [2, 0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
@@ -10,15 +10,16 @@ transform.sequence failures(propagate) {
 // and parsing with and without use of the optional `interchange` Attribute.
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
-  // CHECK %{{.*}}, %{{.*}}:2 = transform.structured.tile %arg0 [2, 0, 3] interchange = [2, 1] {test_attr1 = 1 : i64, test_attr2}
+  // CHECK: %{{.*}}, %{{.*}}:2 = transform.structured.tile_using_for %arg0 tile_sizes [2, 0, 3] interchange = [2, 1] {test_attr1 = 1 : i64, test_attr2}
   %0, %1:2 = transform.structured.tile_using_for %arg0 tile_sizes [2, 0, 3] interchange = [2, 1] {test_attr1 = 1 : i64, test_attr2}: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-  // CHECK %{{.*}}, %{{.*}}:2 = transform.structured.tile %arg0 [4, 5, 3] {test_attr3 = 1 : i64, test_attr4}
+  // CHECK: %{{.*}}, %{{.*}}:2 = transform.structured.tile_using_for %tiled_linalg_op tile_sizes [0, 5, 3] {test_attr3 = 1 : i64, test_attr4}
   %2, %3:2 = transform.structured.tile_using_for %0 tile_sizes [0, 5, 3] {test_attr3 = 1 : i64, test_attr4}: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
-  %0:2 = transform.structured.split %arg0 after 42 { dimension = 0 } : !transform.any_op
+  %t = transform.structured.split %arg0 after 42 { dimension = 0 } : !transform.any_op
+  %0:2 = transform.split_handle %t : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   transform.structured.split %0#0 after %0#1 { dimension = 1 } : !transform.any_op, !transform.any_op
 }
 

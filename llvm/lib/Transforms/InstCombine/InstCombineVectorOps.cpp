@@ -62,7 +62,7 @@ static bool cheapToScalarize(Value *V, Value *EI) {
   if (auto *C = dyn_cast<Constant>(V))
     return CEI || C->getSplatValue();
 
-  if (CEI && match(V, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+  if (CEI && match(V, m_Intrinsic<Intrinsic::stepvector>())) {
     ElementCount EC = cast<VectorType>(V->getType())->getElementCount();
     // Index needs to be lower than the minimum size of the vector, because
     // for scalable vector, the vector size is known at run time.
@@ -86,7 +86,7 @@ static bool cheapToScalarize(Value *V, Value *EI) {
     if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
 
-  CmpInst::Predicate UnusedPred;
+  CmpPredicate UnusedPred;
   if (match(V, m_OneUse(m_Cmp(UnusedPred, m_Value(V0), m_Value(V1)))))
     if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
@@ -205,9 +205,9 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     if (IsBigEndian)
       ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
     unsigned ShiftAmountC = ExtIndexC * DestWidth;
-    if (!ShiftAmountC ||
-        (isDesirableIntType(X->getType()->getPrimitiveSizeInBits()) &&
-        Ext.getVectorOperand()->hasOneUse())) {
+    if ((!ShiftAmountC ||
+         isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) &&
+        Ext.getVectorOperand()->hasOneUse()) {
       if (ShiftAmountC)
         X = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
       if (DestTy->isFloatingPointTy()) {
@@ -419,6 +419,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
+  bool HasKnownValidIndex = false;
   if (IndexC) {
     // Canonicalize type of constant indices to i64 to simplify CSE
     if (auto *NewIdx = getPreferredVectorIndex(IndexC))
@@ -426,13 +427,13 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
     ElementCount EC = EI.getVectorOperandType()->getElementCount();
     unsigned NumElts = EC.getKnownMinValue();
+    HasKnownValidIndex = IndexC->getValue().ult(NumElts);
 
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(SrcVec)) {
       Intrinsic::ID IID = II->getIntrinsicID();
       // Index needs to be lower than the minimum size of the vector, because
       // for scalable vector, the vector size is known at run time.
-      if (IID == Intrinsic::experimental_stepvector &&
-          IndexC->getValue().ult(NumElts)) {
+      if (IID == Intrinsic::stepvector && IndexC->getValue().ult(NumElts)) {
         Type *Ty = EI.getType();
         unsigned BitWidth = Ty->getIntegerBitWidth();
         Value *Idx;
@@ -471,8 +472,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     return UnaryOperator::CreateWithCopiedFlags(UO->getOpcode(), E, UO);
   }
 
+  // If the binop is not speculatable, we cannot hoist the extractelement if
+  // it may make the operand poison.
   BinaryOperator *BO;
-  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index)) {
+  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index) &&
+      (HasKnownValidIndex ||
+       isSafeToSpeculativelyExecuteWithVariableReplaced(BO))) {
     // extelt (binop X, Y), Index --> binop (extelt X, Index), (extelt Y, Index)
     Value *X = BO->getOperand(0), *Y = BO->getOperand(1);
     Value *E0 = Builder.CreateExtractElement(X, Index);
@@ -481,7 +486,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   }
 
   Value *X, *Y;
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(SrcVec, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
       cheapToScalarize(SrcVec, Index)) {
     // extelt (cmp X, Y), Index --> cmp (extelt X, Index), (extelt Y, Index)
@@ -958,6 +963,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     return AggregateDescription::Found;
   };
 
+  // If an aggregate element is defined in UseBB, we can't use it in PredBB.
+  bool EltDefinedInUseBB = false;
+
   // Given the value \p Elt that was being inserted into element \p EltIdx of an
   // aggregate AggTy, see if \p Elt was originally defined by an
   // appropriate extractvalue (same element index, same aggregate type).
@@ -967,8 +975,11 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       [&](Instruction *Elt, unsigned EltIdx, std::optional<BasicBlock *> UseBB,
           std::optional<BasicBlock *> PredBB) -> std::optional<Value *> {
     // For now(?), only deal with, at most, a single level of PHI indirection.
-    if (UseBB && PredBB)
+    if (UseBB && PredBB) {
       Elt = dyn_cast<Instruction>(Elt->DoPHITranslation(*UseBB, *PredBB));
+      if (Elt && Elt->getParent() == *UseBB)
+        EltDefinedInUseBB = true;
+    }
     // FIXME: deal with multiple levels of PHI indirection?
 
     // Did we find an extraction?
@@ -1101,6 +1112,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
   SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
         SourceAggregates.insert({Pred, nullptr});
@@ -1112,9 +1124,68 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // aggregate produced by OrigIVI must have been originally extracted from
     // the same aggregate. Is that so? Can we find said original aggregate?
     SourceAggregate = FindCommonSourceAggregate(UseBB, Pred);
-    if (Describe(SourceAggregate) != AggregateDescription::Found)
-      return nullptr; // Give up.
-    IV.first->second = *SourceAggregate;
+    if (Describe(SourceAggregate) == AggregateDescription::Found) {
+      FoundSrcAgg = true;
+      IV.first->second = *SourceAggregate;
+    } else {
+      // If UseBB is the single successor of Pred, we can add InsertValue to
+      // Pred.
+      auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
+      if (!BI || !BI->isUnconditional())
+        return nullptr;
+    }
+  }
+
+  if (!FoundSrcAgg)
+    return nullptr;
+
+  // Do some sanity check if we need to add insertvalue into predecessors.
+  auto OrigBB = OrigIVI.getParent();
+  for (auto &It : SourceAggregates) {
+    if (Describe(It.second) == AggregateDescription::Found)
+      continue;
+
+    // Element is defined in UseBB, so it can't be used in predecessors.
+    if (EltDefinedInUseBB)
+      return nullptr;
+
+    // Do this transformation cross loop boundary may cause dead loop. So we
+    // should avoid this situation. But LoopInfo is not generally available, we
+    // must be conservative here.
+    // If OrigIVI is in UseBB and it's the only successor of PredBB, PredBB
+    // can't be in inner loop.
+    if (UseBB != OrigBB)
+      return nullptr;
+
+    // Avoid constructing constant aggregate because constant value may expose
+    // more optimizations.
+    bool ConstAgg = true;
+    for (auto Val : AggElts) {
+      Value *Elt = (*Val)->DoPHITranslation(UseBB, It.first);
+      if (!isa<Constant>(Elt)) {
+        ConstAgg = false;
+        break;
+      }
+    }
+    if (ConstAgg)
+      return nullptr;
+  }
+
+  // For predecessors without appropriate source aggregate, create one in the
+  // predecessor.
+  for (auto &It : SourceAggregates) {
+    if (Describe(It.second) == AggregateDescription::Found)
+      continue;
+
+    BasicBlock *Pred = It.first;
+    Builder.SetInsertPoint(Pred->getTerminator());
+    Value *V = PoisonValue::get(AggTy);
+    for (auto [Idx, Val] : enumerate(AggElts)) {
+      Value *Elt = (*Val)->DoPHITranslation(UseBB, Pred);
+      V = Builder.CreateInsertValue(V, Elt, Idx);
+    }
+
+    It.second = V;
   }
 
   // All good! Now we just need to thread the source aggregates here.
@@ -2063,16 +2134,17 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
   case Instruction::Shl: {
     // shl X, C --> mul X, (1 << C)
     Constant *C;
-    if (match(BO1, m_Constant(C))) {
-      Constant *ShlOne = ConstantExpr::getShl(ConstantInt::get(Ty, 1), C);
+    if (match(BO1, m_ImmConstant(C))) {
+      Constant *ShlOne = ConstantFoldBinaryOpOperands(
+          Instruction::Shl, ConstantInt::get(Ty, 1), C, DL);
+      assert(ShlOne && "Constant folding of immediate constants failed");
       return {Instruction::Mul, BO0, ShlOne};
     }
     break;
   }
   case Instruction::Or: {
-    // or X, C --> add X, C (when X and C have no common bits set)
-    const APInt *C;
-    if (match(BO1, m_APInt(C)) && MaskedValueIsZero(BO0, *C, DL))
+    // or disjoin X, C --> add X, C
+    if (cast<PossiblyDisjointInst>(BO)->isDisjoint())
       return {Instruction::Add, BO0, BO1};
     break;
   }
@@ -2468,8 +2540,8 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
     if (IsFNeg)
       return UnaryOperator::CreateFNegFMF(NewShuf, S0);
 
-    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
-                                               Intrinsic::fabs, Shuf.getType());
+    Function *FAbs = Intrinsic::getOrInsertDeclaration(
+        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
     CallInst *NewF = CallInst::Create(FAbs, {NewShuf});
     NewF->setFastMathFlags(S0->getFastMathFlags());
     return NewF;
@@ -2489,8 +2561,8 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
   if (IsFNeg) {
     NewF = UnaryOperator::CreateFNeg(NewShuf);
   } else {
-    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
-                                               Intrinsic::fabs, Shuf.getType());
+    Function *FAbs = Intrinsic::getOrInsertDeclaration(
+        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
     NewF = CallInst::Create(FAbs, {NewShuf});
   }
   NewF->copyIRFlags(S0);
@@ -2772,7 +2844,7 @@ Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
     return nullptr;
 
   auto *BinOp = cast<BinaryOperator>(Op0);
-  if (!isSafeToSpeculativelyExecute(BinOp))
+  if (!isSafeToSpeculativelyExecuteWithVariableReplaced(BinOp))
     return nullptr;
 
   Value *NewBO = Builder.CreateBinOp(BinOp->getOpcode(), X, Y);
@@ -2836,15 +2908,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     auto *XType = cast<FixedVectorType>(X->getType());
     unsigned XNumElts = XType->getNumElements();
     SmallVector<int, 16> ScaledMask;
-    if (XNumElts >= VWidth) {
-      assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
-      narrowShuffleMaskElts(XNumElts / VWidth, Mask, ScaledMask);
-    } else {
-      assert(VWidth % XNumElts == 0 && "Unexpected vector bitcast");
-      if (!widenShuffleMaskElts(VWidth / XNumElts, Mask, ScaledMask))
-        ScaledMask.clear();
-    }
-    if (!ScaledMask.empty()) {
+    if (scaleShuffleMaskElts(XNumElts, Mask, ScaledMask)) {
       // If the shuffled source vector simplifies, cast that value to this
       // shuffle's type.
       if (auto *V = simplifyShuffleVectorInst(X, UndefValue::get(XType),
@@ -2901,6 +2965,23 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
   if (Instruction *I = foldIdentityPaddedShuffles(SVI))
     return I;
+
+  if (match(RHS, m_Constant())) {
+    if (auto *SI = dyn_cast<SelectInst>(LHS)) {
+      // We cannot do this fold for elementwise select since ShuffleVector is
+      // not elementwise.
+      if (SI->getCondition()->getType()->isIntegerTy() &&
+          (isa<PoisonValue>(RHS) ||
+           isGuaranteedNotToBePoison(SI->getCondition()))) {
+        if (Instruction *I = FoldOpIntoSelect(SVI, SI))
+          return I;
+      }
+    }
+    if (auto *PN = dyn_cast<PHINode>(LHS)) {
+      if (Instruction *I = foldOpIntoPhi(SVI, PN, /*AllowMultipleUses=*/true))
+        return I;
+    }
+  }
 
   if (match(RHS, m_Poison()) && canEvaluateShuffled(LHS, Mask)) {
     Value *V = evaluateInDifferentElementOrder(LHS, Mask, Builder);

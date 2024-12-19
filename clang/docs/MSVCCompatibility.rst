@@ -154,3 +154,133 @@ a hint suggesting how to fix the problem.
 As of this writing, Clang is able to compile a simple ATL hello world
 application.  There are still issues parsing WRL headers for modern Windows 8
 apps, but they should be addressed soon.
+
+__forceinline behavior
+======================
+
+``__forceinline`` behaves like ``[[clang::always_inline]]``.
+Inlining is always attempted regardless of optimization level.
+
+This differs from MSVC where ``__forceinline`` is only respected once inline expansion is enabled
+which allows any function marked implicitly or explicitly ``inline`` or ``__forceinline`` to be expanded.
+Therefore functions marked ``__forceinline`` will be expanded when the optimization level is ``/Od`` unlike
+MSVC where ``__forceinline`` will not be expanded under ``/Od``.
+
+SIMD and instruction set intrinsic behavior
+===========================================
+
+Clang follows the GCC model for intrinsics and not the MSVC model.
+There are currently no plans to support the MSVC model.
+
+MSVC intrinsics always emit the machine instruction the intrinsic models regardless of the compile time options specified.
+For example ``__popcnt`` always emits the x86 popcnt instruction even if the compiler does not have the option enabled to emit popcnt on its own volition.
+
+There are two common cases where code that compiles with MSVC will need reworking to build on clang.
+Assume the examples are only built with `-msse2` so we do not have the intrinsics at compile time.
+
+.. code-block:: c++
+
+  unsigned PopCnt(unsigned v) {
+    if (HavePopCnt)
+      return __popcnt(v);
+    else
+      return GenericPopCnt(v);
+  }
+
+.. code-block:: c++
+
+  __m128 dot4_sse3(__m128 v0, __m128 v1) {
+    __m128 r = _mm_mul_ps(v0, v1);
+    r = _mm_hadd_ps(r, r);
+    r = _mm_hadd_ps(r, r);
+    return r;
+  }
+
+Clang expects that either you have compile time support for the target features, `-msse3` and `-mpopcnt`, you mark the function with the expected target feature or use runtime detection with an indirect call.
+
+.. code-block:: c++
+
+  __attribute__((__target__("sse3"))) __m128 dot4_sse3(__m128 v0, __m128 v1) {
+    __m128 r = _mm_mul_ps(v0, v1);
+    r = _mm_hadd_ps(r, r);
+    r = _mm_hadd_ps(r, r);
+    return r;
+  }
+
+The SSE3 dot product can be easily fixed by either building the translation unit with SSE3 support or using `__target__` to compile that specific function with SSE3 support.
+
+.. code-block:: c++
+
+  unsigned PopCnt(unsigned v) {
+    if (HavePopCnt)
+      return __popcnt(v);
+    else
+      return GenericPopCnt(v);
+  }
+
+The above ``PopCnt`` example must be changed to work with clang. If we mark the function with `__target__("popcnt")` then the compiler is free to emit popcnt at will which we do not want. While this isn't a concern in our small example it is a concern in larger functions with surrounding code around the intrinsics. Similar reasoning for compiling the translation unit with `-mpopcnt`.
+We must split each branch into its own function that can be called indirectly instead of using the intrinsic directly.
+
+.. code-block:: c++
+
+  __attribute__((__target__("popcnt"))) unsigned hwPopCnt(unsigned v) { return __popcnt(v); }
+  unsigned (*PopCnt)(unsigned) = HavePopCnt ? hwPopCnt : GenericPopCnt;
+
+.. code-block:: c++
+
+  __attribute__((__target__("popcnt"))) unsigned hwPopCnt(unsigned v) { return __popcnt(v); }
+  unsigned PopCnt(unsigned v) {
+    if (HavePopCnt)
+      return hwPopCnt(v);
+    else
+      return GenericPopCnt(v);
+  }
+
+In the above example ``hwPopCnt`` will not be inlined into ``PopCnt`` since ``PopCnt`` doesn't have the popcnt target feature.
+With a larger function that does real work the function call overhead is negligible. However in our popcnt example there is the function call
+overhead. There is no analog for this specific MSVC behavior in clang.
+
+For clang we effectively have to create the dispatch function ourselves to each specfic implementation.
+
+SIMD vector types
+=================
+
+Clang's simd vector types are builtin types and not user defined types as in MSVC. This does have some observable behavior changes.
+We will look at the x86 `__m128` type for the examples below but the statements apply to all vector types including ARM's `float32x4_t`.
+
+There are no members that can be accessed on the vector types. Vector types are not structs in clang.
+You cannot use ``__m128.m128_f32[0]`` to access the first element of the `__m128`.
+This also means struct initialization like ``__m128{ { 0.0f, 0.0f, 0.0f, 0.0f } }`` will not compile with clang.
+
+Since vector types are builtin types, clang implements operators on them natively.
+
+.. code-block:: c++
+
+  #ifdef _MSC_VER
+  __m128 operator+(__m128 a, __m128 b) { return _mm_add_ps(a, b); }
+  #endif
+
+The above code will fail to compile since overloaded 'operator+' must have at least one parameter of class or enumeration type.
+You will need to fix such code to have the check ``#if defined(_MSC_VER) && !defined(__clang__)``.
+
+Since `__m128` is not a class type in clang any overloads after a template definition will not be considered.
+
+.. code-block:: c++
+
+  template<class T>
+  void foo(T) {}
+
+  template<class T>
+  void bar(T t) {
+    foo(t);
+  }
+
+  void foo(__m128) {}
+
+  int main() {
+    bar(_mm_setzero_ps());
+  }
+
+With MSVC ``foo(__m128)`` will be selected but with clang ``foo<__m128>()`` will be selected since on clang `__m128` is a builtin type.
+
+In general the takeaway is `__m128` is a builtin type on clang while a class type on MSVC.

@@ -20,7 +20,7 @@ typedef __attribute__((address_space(3))) float *LP;
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[ADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(4) [[VAL_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call contract addrspace(4) float @llvm.amdgcn.ds.fadd.f32(ptr addrspace(3) [[TMP1]], float [[TMP2]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[RTN_ASCAST]], align 8
 // CHECK-NEXT:    store float [[TMP3]], ptr addrspace(4) [[TMP4]], align 4
 // CHECK-NEXT:    ret void

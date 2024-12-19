@@ -958,7 +958,6 @@ std::string APValue::getAsString(const ASTContext &Ctx, QualType Ty) const {
   std::string Result;
   llvm::raw_string_ostream Out(Result);
   printPretty(Out, Ctx, Ty);
-  Out.flush();
   return Result;
 }
 
@@ -1098,10 +1097,6 @@ void APValue::MakeArray(unsigned InitElts, unsigned Size) {
   new ((void *)(char *)&Data) Arr(InitElts, Size);
   Kind = Array;
 }
-
-MutableArrayRef<APValue::LValuePathEntry>
-setLValueUninit(APValue::LValueBase B, const CharUnits &O, unsigned Size,
-                bool OnePastTheEnd, bool IsNullPtr);
 
 MutableArrayRef<const CXXRecordDecl *>
 APValue::setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,

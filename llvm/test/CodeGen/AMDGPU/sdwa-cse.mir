@@ -1,0 +1,57 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=machine-cse -verify-machineinstrs %s -o - 2>&1 | FileCheck --check-prefix=GCN %s
+
+# GCN-LABEL: name: test_machine_cse_subtraction_sdwa_f16_no_merge
+# GCN:   %2:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %0.sub0, 0, %1.sub0, 0, 0, 6, 0, 5, 5, implicit $mode, implicit $exec
+# GCN:   %3:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %1.sub0, 0, %0.sub0, 0, 0, 6, 0, 5, 5, implicit $mode, implicit $exec
+# GCN:   %5:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %2, %4, implicit $mode, implicit $exec
+# GCN:   %6:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %3, %4, implicit $mode, implicit $exec
+# GCN:   DS_WRITE2_B32_gfx9 undef %7:vgpr_32, %5, %6, 0, 1, 0, implicit $exec
+---
+name: test_machine_cse_subtraction_sdwa_f16_no_merge
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %0.sub0, 0, %1.sub0, 0, 0, 6, 0, 5, 5, implicit $mode, implicit $exec
+    %3:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %1.sub0, 0, %0.sub0, 0, 0, 6, 0, 5, 5, implicit $mode, implicit $exec
+    %4:vgpr_32 = IMPLICIT_DEF
+    %5:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %2, %4, implicit $mode, implicit $exec
+    %6:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %3, %4, implicit $mode, implicit $exec
+    DS_WRITE2_B32_gfx9 undef %7:vgpr_32, %5, %6, 0, 1, 0, implicit $exec
+...
+
+# GCN-LABEL: name: test_machine_cse_subtraction_sdwa_f16_merge_same_src_sel
+# GCN:   %2:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %0.sub0, 0, %1.sub0, 0, 0, 6, 0, 5, 5, implicit $mode, implicit $exec
+# GCN:   %5:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %2, %4, implicit $mode, implicit $exec
+# GCN:   DS_WRITE2_B32_gfx9 undef %7:vgpr_32, %5, %5, 0, 1, 0, implicit $exec
+---
+name: test_machine_cse_subtraction_sdwa_f16_merge_same_src_sel
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %0.sub0, 0, %1.sub0, 0, 0, 6, 0, 5, 5, implicit $mode, implicit $exec
+    %3:vgpr_32 = contract nofpexcept V_SUBREV_F16_sdwa 0, %1.sub0, 0, %0.sub0, 0, 0, 6, 0, 5, 5, implicit $mode, implicit $exec
+    %4:vgpr_32 = IMPLICIT_DEF
+    %5:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %2, %4, implicit $mode, implicit $exec
+    %6:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %3, %4, implicit $mode, implicit $exec
+    DS_WRITE2_B32_gfx9 undef %7:vgpr_32, %5, %6, 0, 1, 0, implicit $exec
+...
+
+# GCN-LABEL: name: test_machine_cse_subtraction_sdwa_f16_merge_diff_src_sel
+# GCN:   %2:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %0.sub0, 0, %1.sub0, 0, 0, 6, 0, 6, 5, implicit $mode, implicit $exec
+# GCN:   %5:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %2, %4, implicit $mode, implicit $exec
+# GCN:   DS_WRITE2_B32_gfx9 undef %7:vgpr_32, %5, %5, 0, 1, 0, implicit $exec
+---
+name: test_machine_cse_subtraction_sdwa_f16_merge_diff_src_sel
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:vgpr_32 = contract nofpexcept V_SUB_F16_sdwa 0, %0.sub0, 0, %1.sub0, 0, 0, 6, 0, 6, 5, implicit $mode, implicit $exec
+    %3:vgpr_32 = contract nofpexcept V_SUBREV_F16_sdwa 0, %1.sub0, 0, %0.sub0, 0, 0, 6, 0, 5, 6, implicit $mode, implicit $exec
+    %4:vgpr_32 = IMPLICIT_DEF
+    %5:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %2, %4, implicit $mode, implicit $exec
+    %6:vgpr_32 = contract nofpexcept V_ADD_F16_e32 %3, %4, implicit $mode, implicit $exec
+    DS_WRITE2_B32_gfx9 undef %7:vgpr_32, %5, %6, 0, 1, 0, implicit $exec
+...

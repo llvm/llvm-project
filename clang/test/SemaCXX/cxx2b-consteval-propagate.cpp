@@ -454,3 +454,45 @@ namespace GH91308 {
     }
     using R1 = decltype(&f<int>);
 }
+
+namespace GH94935 {
+
+consteval void f(int) {}
+consteval void undef(int); // expected-note {{declared here}}
+
+template<typename T>
+struct G {
+    void g() {
+        GH94935::f(T::fn());
+        GH94935::f(T::undef2());  // expected-error {{call to consteval function 'GH94935::f' is not a constant expression}} \
+                                  // expected-note  {{undefined function 'undef2' cannot be used in a constant expression}}
+        GH94935::undef(T::fn());  // expected-error {{call to consteval function 'GH94935::undef' is not a constant expression}} \
+                                  // expected-note  {{undefined function 'undef' cannot be used in a constant expression}}
+    }
+};
+
+struct X {
+    static consteval int fn() { return 0; }
+    static consteval int undef2();  // expected-note {{declared here}}
+
+};
+
+void test() {
+    G<X>{}.g(); // expected-note {{instantiation}}
+}
+
+
+template<typename T>
+void g() {
+    auto l = []{
+        ::f(T::fn());
+    };
+}
+
+struct Y {
+    static int fn();
+};
+
+template void g<Y>();
+
+}

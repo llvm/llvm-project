@@ -579,6 +579,19 @@ TEST_F(FormatTestJS, GoogScopes) {
                "});");
 }
 
+TEST_F(FormatTestJS, ClassExtends) {
+  verifyFormat("a = class extends goog.structs.a {\n"
+               "  a() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};");
+  verifyFormat("a = class Foo extends goog.structs.a {\n"
+               "  a() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};");
+}
+
 TEST_F(FormatTestJS, IIFEs) {
   // Internal calling parens; no semi.
   verifyFormat("(function() {\n"
@@ -1740,6 +1753,10 @@ TEST_F(FormatTestJS, ClassDeclarations) {
                "  x: {y: Z;} = {};\n"
                "  private y: {y: Z;} = {};\n"
                "}");
+  verifyFormat("class Foo {\n"
+               "  private addGrammarCheckOneboxProductInfo(\n"
+               "      productInfo: {[key: string]: string;}) {}\n"
+               "}");
 
   // ':' is not a type declaration here.
   verifyFormat("class X {\n"
@@ -2144,6 +2161,13 @@ TEST_F(FormatTestJS, TemplateStringMultiLineExpression) {
                "                          aaaa:  aaaaa,\n"
                "                          bbbb:  bbbbb,\n"
                "                        })}`;");
+
+  verifyFormat("`${\n"
+               "    (\n"
+               "        FOOFOOFOOFOO____FOO_FOO_FO_FOO_FOOO -\n"
+               "            (barbarbarbar____bar_bar_bar_bar_bar_bar +\n"
+               "             bar_bar_bar_barbarbar___bar_bar_bar + 1),\n"
+               "        )}`;");
 }
 
 TEST_F(FormatTestJS, TemplateStringASI) {
@@ -2840,6 +2864,28 @@ TEST_F(FormatTestJS, DontBreakFieldsAsGoToLabels) {
   verifyFormat("export type Params = Config&{\n"
                "  columns: Column[];\n"
                "};");
+}
+
+TEST_F(FormatTestJS, BreakAfterOpenBracket) {
+  auto Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  EXPECT_EQ(Style.AlignAfterOpenBracket, FormatStyle::BAS_AlwaysBreak);
+  verifyFormat("ctrl.onCopy(/** @type {!WizEvent}*/ (\n"
+               "    {event, targetElement: {el: () => selectedElement}}));",
+               Style);
+  verifyFormat("failedUserIds.push(...subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(!subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(await subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("for await (const packageId of ops.api.iterateEmbeddedFiles(\n"
+               "    this.getFileId().getDriveFile(),\n"
+               "    )) {\n"
+               "}",
+               Style);
 }
 
 } // namespace format

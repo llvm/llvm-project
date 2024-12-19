@@ -25,7 +25,7 @@ define void @scan(i32 %n) #0 !dbg !4 {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[VLA1_0:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[T0:%.*]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[T0]] = add i32 [[VLA1_0]], 1
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 undef, metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 poison, [[META11:![0-9]+]], !DIExpression(), [[META19:![0-9]+]])
 ; CHECK-NEXT:    br label [[FOR_COND]], !dbg [[DBG10]]
 ;
 entry:

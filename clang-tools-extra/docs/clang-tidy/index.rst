@@ -9,9 +9,10 @@ See also:
 .. toctree::
    :maxdepth: 1
 
-   The list of clang-tidy checks <checks/list>
+   List of Clang-Tidy Checks <checks/list>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
+   External Clang-Tidy Examples <ExternalClang-TidyExamples>
 
 :program:`clang-tidy` is a clang-based C++ "linter" tool. Its purpose is to
 provide an extensible framework for diagnosing and fixing typical programming
@@ -20,7 +21,7 @@ static analysis. :program:`clang-tidy` is modular and provides a convenient
 interface for writing new checks.
 
 
-Using clang-tidy
+Using Clang-Tidy
 ================
 
 :program:`clang-tidy` is a `LibTooling`_-based tool, and it's easier to work
@@ -240,6 +241,9 @@ An overview of all the command-line options:
                                        This option's value is appended to the value of
                                        the 'WarningsAsErrors' option in .clang-tidy
                                        file, if any.
+    --allow-no-checks                - Allow empty enabled checks. This suppresses
+                                       the "no checks enabled" error when disabling
+                                       all of the checks.
 
   -p <build-path> is used to read a compile command database.
 
@@ -283,7 +287,7 @@ An overview of all the command-line options:
     FormatStyle                  - Same as '--format-style'.
     HeaderFileExtensions         - File extensions to consider to determine if a
                                    given diagnostic is located in a header file.
-    HeaderFilterRegex            - Same as '--header-filter-regex'.
+    HeaderFilterRegex            - Same as '--header-filter'.
     ImplementationFileExtensions - File extensions to consider to determine if a
                                    given diagnostic is located in an
                                    implementation file.

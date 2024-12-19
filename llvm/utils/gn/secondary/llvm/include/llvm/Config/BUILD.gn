@@ -81,6 +81,7 @@ write_cmake_config("config") {
   values = [
     "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
     "ENABLE_BACKTRACES=1",
+    "ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
     "HAVE_BUILTIN_THREAD_POINTER=",
@@ -97,9 +98,10 @@ write_cmake_config("config") {
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
+    "HAVE_PTHREAD_GET_NAME_NP=",
+    "HAVE_PTHREAD_SET_NAME_NP=",
     "HAVE_SIGNAL_H=1",
     "HAVE_SYS_STAT_H=1",
-    "HAVE_SYS_TYPES_H=1",
     "HAVE_VALGRIND_VALGRIND_H=",
     "HAVE__ALLOCA=",
     "HAVE___ALLOCA=",
@@ -140,14 +142,12 @@ write_cmake_config("config") {
   if (current_os == "linux" || current_os == "android") {
     values += [
       "HAVE_FUTIMENS=1",
-      "HAVE_LINK_H=1",
       "HAVE_MALLINFO=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
     values += [
       "HAVE_FUTIMENS=",
-      "HAVE_LINK_H=",
       "HAVE_MALLINFO=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
@@ -228,7 +228,6 @@ write_cmake_config("config") {
       "HAVE_SYSCONF=",
       "HAVE_SYS_IOCTL_H=",
       "HAVE_SYS_MMAN_H=",
-      "HAVE_SYS_PARAM_H=",
       "HAVE_SYS_RESOURCE_H=",
       "HAVE_SYS_TIME_H=",
       "HAVE_TERMIOS_H=",
@@ -264,7 +263,6 @@ write_cmake_config("config") {
       "HAVE_SYSCONF=1",
       "HAVE_SYS_IOCTL_H=1",
       "HAVE_SYS_MMAN_H=1",
-      "HAVE_SYS_PARAM_H=1",
       "HAVE_SYS_RESOURCE_H=1",
       "HAVE_SYS_TIME_H=1",
       "HAVE_TERMIOS_H=1",

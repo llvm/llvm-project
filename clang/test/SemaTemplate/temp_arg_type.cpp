@@ -69,11 +69,10 @@ namespace deduce_noexcept {
   void noexcept_function() noexcept;
   void throwing_function();
 
-  template<typename T, bool B> float &deduce_function(T(*)() noexcept(B)); // expected-note {{candidate}}
-  template<typename T> int &deduce_function(T(*)() noexcept); // expected-note {{candidate}}
+  template<typename T, bool B> float &deduce_function(T(*)() noexcept(B));
+  template<typename T> int &deduce_function(T(*)() noexcept);
   void test_function_deduction() {
-    // FIXME: This should probably unambiguously select the second overload.
-    int &r = deduce_function(noexcept_function); // expected-error {{ambiguous}}
+    int &r = deduce_function(noexcept_function);
     float &s = deduce_function(throwing_function);
   }
 

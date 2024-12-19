@@ -109,10 +109,10 @@ static RT_API_ATTRS bool EditBOZOutput(IoStatementState &io,
 
 template <int KIND>
 bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
-    common::HostSignedIntType<8 * KIND> n) {
+    common::HostSignedIntType<8 * KIND> n, bool isSigned) {
   addSpaceBeforeCharacter(io);
   char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
-  bool isNegative{n < 0};
+  bool isNegative{isSigned && n < 0};
   using Unsigned = common::HostUnsignedIntType<8 * KIND>;
   Unsigned un{static_cast<Unsigned>(n)};
   int signChars{0};
@@ -300,10 +300,12 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
     flags |= decimal::AlwaysSign;
   }
   int scale{edit.modes.scale}; // 'kP' value
+  bool isEN{edit.variation == 'N'};
+  bool isES{edit.variation == 'S'};
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
       if (editDigits == 0 && scale <= 0) { // E0.0
-        significantDigits = 1;
+        significantDigits = isEN || isES ? 0 : 1;
       }
     } else { // E0
       flags |= decimal::Minimize;
@@ -311,8 +313,6 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
           sizeof buffer_ - 5; // sign, NUL, + 3 extra for EN scaling
     }
   }
-  bool isEN{edit.variation == 'N'};
-  bool isES{edit.variation == 'S'};
   int zeroesAfterPoint{0};
   if (isEN) {
     scale = IsZero() ? 1 : 3;
@@ -933,15 +933,15 @@ RT_API_ATTRS bool EditCharacterOutput(IoStatementState &io,
 }
 
 template RT_API_ATTRS bool EditIntegerOutput<1>(
-    IoStatementState &, const DataEdit &, std::int8_t);
+    IoStatementState &, const DataEdit &, std::int8_t, bool);
 template RT_API_ATTRS bool EditIntegerOutput<2>(
-    IoStatementState &, const DataEdit &, std::int16_t);
+    IoStatementState &, const DataEdit &, std::int16_t, bool);
 template RT_API_ATTRS bool EditIntegerOutput<4>(
-    IoStatementState &, const DataEdit &, std::int32_t);
+    IoStatementState &, const DataEdit &, std::int32_t, bool);
 template RT_API_ATTRS bool EditIntegerOutput<8>(
-    IoStatementState &, const DataEdit &, std::int64_t);
+    IoStatementState &, const DataEdit &, std::int64_t, bool);
 template RT_API_ATTRS bool EditIntegerOutput<16>(
-    IoStatementState &, const DataEdit &, common::int128_t);
+    IoStatementState &, const DataEdit &, common::int128_t, bool);
 
 template class RealOutputEditing<2>;
 template class RealOutputEditing<3>;

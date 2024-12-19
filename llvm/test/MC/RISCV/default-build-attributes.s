@@ -14,7 +14,7 @@
 # RV64: attribute 5, "rv64i2p1"
 
 # RV32M-NOT: attribute 4
-# RV32M: attribute 5, "rv32i2p1_m2p0"
+# RV32M: attribute 5, "rv32i2p1_m2p0_zmmul1p0"
 
 # RV64M-NOT: attribute 4
-# RV64M: attribute 5, "rv64i2p1_m2p0"
+# RV64M: attribute 5, "rv64i2p1_m2p0_zmmul1p0"

@@ -15,9 +15,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -30,6 +27,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
 using namespace lldb;
@@ -298,13 +298,13 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                             lldb::ValueObjectSP &new_value_sp) {
   Status error;
   if (!new_value_sp) {
-    error.SetErrorString("Empty value object for return value.");
+    error = Status::FromErrorString("Empty value object for return value.");
     return error;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    error.SetErrorString("Null clang type for return value.");
+    error = Status::FromErrorString("Null clang type for return value.");
     return error;
   }
 
@@ -325,7 +325,7 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
           data_error.AsCString());
       return error;
@@ -337,18 +337,19 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       if (reg_ctx->WriteRegisterFromUnsigned(reg_info, raw_value))
         set_it_simple = true;
     } else {
-      error.SetErrorString("We don't support returning longer than 64 bit "
-                           "integer values at present.");
+      error = Status::FromErrorString(
+          "We don't support returning longer than 64 bit "
+          "integer values at present.");
     }
   } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
     if (is_complex)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "We don't support returning complex values at present");
     else {
       std::optional<uint64_t> bit_width =
           compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
-        error.SetErrorString("can't get type size");
+        error = Status::FromErrorString("can't get type size");
         return error;
       }
       if (*bit_width <= 64) {
@@ -359,7 +360,7 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         Status data_error;
         size_t num_bytes = new_value_sp->GetData(data, data_error);
         if (data_error.Fail()) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "Couldn't convert return value to raw data: %s",
               data_error.AsCString());
           return error;
@@ -374,7 +375,7 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         set_it_simple = true;
       } else {
         // Windows doesn't support 80 bit FP
-        error.SetErrorString(
+        error = Status::FromErrorString(
             "Windows-x86_64 doesn't allow FP larger than 64 bits.");
       }
     }
@@ -387,8 +388,9 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     // 1) smaller that 64 bits and return by value -> RAX
     // 2) bigger than 64 bits, the caller will allocate memory for that struct
     // and pass the struct pointer in RCX then return the pointer in RAX
-    error.SetErrorString("We only support setting simple integer and float "
-                         "return types at present.");
+    error = Status::FromErrorString(
+        "We only support setting simple integer and float "
+        "return types at present.");
   }
 
   return error;

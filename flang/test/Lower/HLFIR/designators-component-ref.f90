@@ -340,7 +340,7 @@ subroutine test_scalar_array_complex_chain(a)
   type(t_complex) :: a
   print *, a%array_comp%im
 ! CHECK-LABEL:   func.func @_QPtest_scalar_array_complex_chain(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_scalar_array_complex_chainEa"} : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_scalar_array_complex_chainEa"} : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20xcomplex<f32>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20xcomplex<f32>>}>>, !fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20xcomplex<f32>>}>>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 20 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 2 : index
@@ -365,7 +365,7 @@ subroutine test_scalar_array_complex_chain(a)
 ! CHECK:           %[[VAL_28:.*]] = arith.cmpi sgt, %[[VAL_27]], %[[VAL_24]] : index
 ! CHECK:           %[[VAL_29:.*]] = arith.select %[[VAL_28]], %[[VAL_27]], %[[VAL_24]] : index
 ! CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_23]], %[[VAL_29]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_31:.*]] = hlfir.designate %[[VAL_1]]#0{"array_comp"} <%[[VAL_11]]> (%[[VAL_9]]:%[[VAL_15]]:%[[VAL_12]], %[[VAL_10]]:%[[VAL_17]]:%[[VAL_12]]) imag shape %[[VAL_30]] : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.shapeshift<2>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<10x20xf32>>
+! CHECK:           %[[VAL_31:.*]] = hlfir.designate %[[VAL_1]]#0{"array_comp"} <%[[VAL_11]]> (%[[VAL_9]]:%[[VAL_15]]:%[[VAL_12]], %[[VAL_10]]:%[[VAL_17]]:%[[VAL_12]]) imag shape %[[VAL_30]] : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20xcomplex<f32>>}>>, !fir.shapeshift<2>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<10x20xf32>>
 end subroutine
 
 subroutine test_poly_array_vector_subscript(p, v, r)

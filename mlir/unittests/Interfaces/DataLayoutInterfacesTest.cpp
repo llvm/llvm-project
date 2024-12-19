@@ -32,6 +32,9 @@ constexpr static llvm::StringLiteral kGlobalKeyName =
 constexpr static llvm::StringLiteral kStackAlignmentKeyName =
     "dltest.stack_alignment";
 
+constexpr static llvm::StringLiteral kTargetSystemDescAttrName =
+    "dl_target_sys_desc_test.target_system_spec";
+
 /// Trivial array storage for the custom data layout spec attribute, just a list
 /// of entries.
 class DataLayoutSpecStorage : public AttributeStorage {
@@ -55,9 +58,9 @@ public:
 /// Simple data layout spec containing a list of entries that always verifies
 /// as valid.
 struct CustomDataLayoutSpec
-    : public Attribute::AttrBase<CustomDataLayoutSpec, Attribute,
-                                 DataLayoutSpecStorage,
-                                 DataLayoutSpecInterface::Trait> {
+    : public Attribute::AttrBase<
+          CustomDataLayoutSpec, Attribute, DataLayoutSpecStorage,
+          DLTIQueryInterface::Trait, DataLayoutSpecInterface::Trait> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
@@ -88,6 +91,60 @@ struct CustomDataLayoutSpec
   }
   StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kStackAlignmentKeyName);
+  }
+  FailureOr<Attribute> query(DataLayoutEntryKey key) const {
+    return llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
+  }
+};
+
+class TargetSystemSpecStorage : public AttributeStorage {
+public:
+  using KeyTy = ArrayRef<DataLayoutEntryInterface>;
+
+  TargetSystemSpecStorage(ArrayRef<DataLayoutEntryInterface> entries)
+      : entries(entries) {}
+
+  bool operator==(const KeyTy &key) const { return key == entries; }
+
+  static TargetSystemSpecStorage *
+  construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
+    return new (allocator.allocate<TargetSystemSpecStorage>())
+        TargetSystemSpecStorage(allocator.copyInto(key));
+  }
+
+  ArrayRef<DataLayoutEntryInterface> entries;
+};
+
+struct CustomTargetSystemSpec
+    : public Attribute::AttrBase<
+          CustomTargetSystemSpec, Attribute, TargetSystemSpecStorage,
+          DLTIQueryInterface::Trait, TargetSystemSpecInterface::Trait> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
+
+  using Base::Base;
+
+  static constexpr StringLiteral name = "test.custom_target_system_spec";
+
+  static CustomTargetSystemSpec
+  get(MLIRContext *ctx, ArrayRef<DataLayoutEntryInterface> entries) {
+    return Base::get(ctx, entries);
+  }
+  ArrayRef<DataLayoutEntryInterface> getEntries() const {
+    return getImpl()->entries;
+  }
+  LogicalResult verifySpec(Location loc) { return success(); }
+  std::optional<TargetDeviceSpecInterface>
+  getDeviceSpecForDeviceID(TargetSystemSpecInterface::DeviceID deviceID) {
+    for (const auto &entry : getEntries()) {
+      if (entry.getKey() == DataLayoutEntryKey(deviceID))
+        if (auto deviceSpec =
+                llvm::dyn_cast<TargetDeviceSpecInterface>(entry.getValue()))
+          return deviceSpec;
+    }
+    return std::nullopt;
+  }
+  FailureOr<Attribute> query(DataLayoutEntryKey key) const {
+    return llvm::cast<mlir::TargetSystemSpecInterface>(*this).queryHelper(key);
   }
 };
 
@@ -197,6 +254,11 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
+  TargetSystemSpecInterface getTargetSystemSpec() {
+    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
+        kTargetSystemDescAttrName);
+  }
+
   static llvm::TypeSize getTypeSizeInBits(Type type,
                                           const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) {
@@ -242,6 +304,11 @@ struct OpWith7BitByte
 
   DataLayoutSpecInterface getDataLayoutSpec() {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
+  }
+
+  TargetSystemSpecInterface getTargetSystemSpec() {
+    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
+        kTargetSystemDescAttrName);
   }
 
   // Bytes are assumed to be 7-bit here.
@@ -308,6 +375,78 @@ struct DLTestDialect : Dialect {
   }
 };
 
+/// A dialect to test DLTI's target system spec and related attributes
+struct DLTargetSystemDescTestDialect : public Dialect {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DLTargetSystemDescTestDialect)
+
+  explicit DLTargetSystemDescTestDialect(MLIRContext *ctx)
+      : Dialect(getDialectNamespace(), ctx,
+                TypeID::get<DLTargetSystemDescTestDialect>()) {
+    ctx->getOrLoadDialect<DLTIDialect>();
+    addAttributes<CustomTargetSystemSpec>();
+  }
+  static StringRef getDialectNamespace() { return "dl_target_sys_desc_test"; }
+
+  void printAttribute(Attribute attr,
+                      DialectAsmPrinter &printer) const override {
+    printer << "target_system_spec<";
+    llvm::interleaveComma(cast<CustomTargetSystemSpec>(attr).getEntries(),
+                          printer, [&](const auto &it) {
+                            printer << dyn_cast<StringAttr>(it.getKey()) << ":"
+                                    << it.getValue();
+                          });
+    printer << ">";
+  }
+
+  Attribute parseAttribute(DialectAsmParser &parser, Type type) const override {
+    bool ok = succeeded(parser.parseKeyword("target_system_spec")) &&
+              succeeded(parser.parseLess());
+    (void)ok;
+    assert(ok);
+    if (succeeded(parser.parseOptionalGreater()))
+      return CustomTargetSystemSpec::get(parser.getContext(), {});
+
+    auto parseTargetDeviceSpecEntry =
+        [&](AsmParser &parser) -> FailureOr<TargetDeviceSpecEntry> {
+      std::string deviceID;
+      if (failed(parser.parseString(&deviceID))) {
+        parser.emitError(parser.getCurrentLocation())
+            << "DeviceID is missing, or is not of string type";
+        return failure();
+      }
+      if (failed(parser.parseColon())) {
+        parser.emitError(parser.getCurrentLocation()) << "Missing colon";
+        return failure();
+      }
+
+      TargetDeviceSpecInterface targetDeviceSpec;
+      if (failed(parser.parseAttribute(targetDeviceSpec))) {
+        parser.emitError(parser.getCurrentLocation())
+            << "Error in parsing target device spec";
+        return failure();
+      }
+      return std::make_pair(parser.getBuilder().getStringAttr(deviceID),
+                            targetDeviceSpec);
+    };
+
+    SmallVector<DataLayoutEntryInterface> entries;
+    ok = succeeded(parser.parseCommaSeparatedList([&]() {
+      auto deviceIDAndTargetDeviceSpecPair = parseTargetDeviceSpecEntry(parser);
+      ok = succeeded(deviceIDAndTargetDeviceSpecPair);
+      assert(ok);
+      auto entry =
+          DataLayoutEntryAttr::get(deviceIDAndTargetDeviceSpecPair->first,
+                                   deviceIDAndTargetDeviceSpecPair->second);
+      entries.push_back(entry);
+      return success();
+    }));
+    assert(ok);
+    ok = succeeded(parser.parseGreater());
+    assert(ok);
+    return CustomTargetSystemSpec::get(parser.getContext(), entries);
+  }
+};
+
 } // namespace
 
 TEST(DataLayout, FallbackDefault) {
@@ -367,6 +506,15 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+
+  EXPECT_EQ(layout.getDevicePropertyValue(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
+            std::nullopt);
+  EXPECT_EQ(layout.getDevicePropertyValue(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("max_vector_width")),
+            std::nullopt);
 }
 
 TEST(DataLayout, EmptySpec) {
@@ -398,6 +546,15 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+
+  EXPECT_EQ(layout.getDevicePropertyValue(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
+            std::nullopt);
+  EXPECT_EQ(layout.getDevicePropertyValue(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("max_vector_width")),
+            std::nullopt);
 }
 
 TEST(DataLayout, SpecWithEntries) {
@@ -447,6 +604,32 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getProgramMemorySpace(), Builder(&ctx).getI32IntegerAttr(3));
   EXPECT_EQ(layout.getGlobalMemorySpace(), Builder(&ctx).getI32IntegerAttr(2));
   EXPECT_EQ(layout.getStackAlignment(), 128u);
+}
+
+TEST(DataLayout, SpecWithTargetSystemDescEntries) {
+  const char *ir = R"MLIR(
+  module attributes { dl_target_sys_desc_test.target_system_spec =
+    #dl_target_sys_desc_test.target_system_spec<
+      "CPU": #dlti.target_device_spec<
+              #dlti.dl_entry<"L1_cache_size_in_bytes", "4096">,
+              #dlti.dl_entry<"max_vector_op_width", "128">>
+    > } {}
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<DLTIDialect, DLTargetSystemDescTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  DataLayout layout(*module);
+  EXPECT_EQ(layout.getDevicePropertyValue(
+                Builder(&ctx).getStringAttr("CPU") /* device ID*/,
+                Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
+            std::optional<Attribute>(Builder(&ctx).getStringAttr("4096")));
+  EXPECT_EQ(layout.getDevicePropertyValue(
+                Builder(&ctx).getStringAttr("CPU") /* device ID*/,
+                Builder(&ctx).getStringAttr("max_vector_op_width")),
+            std::optional<Attribute>(Builder(&ctx).getStringAttr("128")));
 }
 
 TEST(DataLayout, Caching) {

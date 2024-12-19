@@ -9,7 +9,7 @@ config.name = "Builtins"
 config.test_source_root = os.path.dirname(__file__)
 
 # Test suffixes.
-config.suffixes = [".c", ".cpp", ".m", ".mm"]
+config.suffixes = [".c", ".cpp", ".m", ".mm", ".test"]
 extra_flags = ["-Wall"]
 if config.compiler_id == "GNU":
     # detect incorrect declarations of libgcc functions

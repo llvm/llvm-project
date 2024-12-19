@@ -2,6 +2,75 @@ add_subdirectory(CPP)
 add_subdirectory(macros)
 
 add_header_library(
+  block
+  HDRS
+    block.h
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
+)
+
+add_object_library(
+  freelist
+  HDRS
+    freelist.h
+  SRCS
+    freelist.cpp
+  DEPENDS
+    .block
+    libc.src.__support.fixedvector
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.span
+)
+
+add_object_library(
+  freetrie
+  HDRS
+    freetrie.h
+  SRCS
+    freetrie.cpp
+  DEPENDS
+    .block
+    .freelist
+)
+
+add_header_library(
+  freestore
+  HDRS
+    freestore.h
+  DEPENDS
+    .freetrie
+)
+
+add_object_library(
+  freelist_heap
+  SRCS
+    freelist_heap.cpp
+  HDRS
+    freelist_heap.h
+  COMPILE_OPTIONS
+    -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
+  DEPENDS
+    .block
+    .freelist
+    .freestore
+    .freetrie
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.libc_assert
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)
+
+add_header_library(
   blockstore
   HDRS
     blockstore.h
@@ -14,7 +83,7 @@ add_header_library(
   common
   HDRS
     common.h
-    endian.h
+    endian_internal.h
     macros/properties/architectures.h
     macros/attributes.h
     macros/properties/cpu_features.h
@@ -76,6 +145,8 @@ add_header_library(
   wctype_utils
   HDRS
     wctype_utils.h
+  DEPENDS
+    libc.hdr.types.wint_t
 )
 
 add_header_library(
@@ -149,10 +220,11 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
     libc.src.errno.errno
 )
 
@@ -163,6 +235,17 @@ add_header_library(
   DEPENDS
     .uint128
     libc.src.__support.CPP.limits
+)
+
+add_header_library(
+  complex_type
+  HDRS
+    complex_type.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_header_library(
@@ -192,6 +275,9 @@ add_header_library(
   HDRS
     char_vector.h
   DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
     libc.src.__support.common
 )
 
@@ -233,6 +319,7 @@ add_header_library(
   DEPENDS
     .integer_to_string
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

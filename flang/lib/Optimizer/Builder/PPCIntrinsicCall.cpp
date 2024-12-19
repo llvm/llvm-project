@@ -2797,7 +2797,7 @@ void PPCIntrinsicLibrary::genMmaIntr(llvm::ArrayRef<fir::ExtendedValue> args) {
     if (vType != targetType) {
       if (mlir::isa<mlir::VectorType>(targetType)) {
         // Perform vector type conversion for arguments passed by value.
-        auto eleTy{mlir::dyn_cast<fir::VectorType>(vType).getEleTy()};
+        auto eleTy{mlir::dyn_cast<fir::VectorType>(vType).getElementType()};
         auto len{mlir::dyn_cast<fir::VectorType>(vType).getLen()};
         mlir::VectorType mlirType = mlir::VectorType::get(len, eleTy);
         auto v0{builder.createConvert(loc, mlirType, v)};

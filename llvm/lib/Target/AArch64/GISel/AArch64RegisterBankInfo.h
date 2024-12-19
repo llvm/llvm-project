@@ -70,7 +70,7 @@ protected:
                                      PartialMappingIdx LastAlias,
                                      ArrayRef<PartialMappingIdx> Order);
 
-  static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, unsigned Size);
+  static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, TypeSize Size);
 
   /// Get the pointer to the ValueMapping representing the RegisterBank
   /// at \p RBIdx with a size of \p Size.
@@ -80,13 +80,13 @@ protected:
   ///
   /// \pre \p RBIdx != PartialMappingIdx::None
   static const RegisterBankInfo::ValueMapping *
-  getValueMapping(PartialMappingIdx RBIdx, unsigned Size);
+  getValueMapping(PartialMappingIdx RBIdx, TypeSize Size);
 
   /// Get the pointer to the ValueMapping of the operands of a copy
   /// instruction from the \p SrcBankID register bank to the \p DstBankID
   /// register bank with a size of \p Size.
   static const RegisterBankInfo::ValueMapping *
-  getCopyMapping(unsigned DstBankID, unsigned SrcBankID, unsigned Size);
+  getCopyMapping(unsigned DstBankID, unsigned SrcBankID, TypeSize Size);
 
   /// Get the instruction mapping for G_FPEXT.
   ///
@@ -150,7 +150,7 @@ public:
                     TypeSize Size) const override;
 
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT) const override;
+                                             LLT Ty) const override;
 
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;

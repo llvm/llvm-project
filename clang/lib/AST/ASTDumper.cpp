@@ -16,7 +16,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/JSONNodeDumper.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -342,8 +341,7 @@ LLVM_DUMP_METHOD void APValue::dump() const {
 
 LLVM_DUMP_METHOD void APValue::dump(raw_ostream &OS,
                                     const ASTContext &Context) const {
-  ASTDumper Dumper(llvm::errs(), Context,
-                   Context.getDiagnostics().getShowColors());
+  ASTDumper Dumper(OS, Context, Context.getDiagnostics().getShowColors());
   Dumper.Visit(*this, /*Ty=*/Context.getPointerType(Context.CharTy));
 }
 

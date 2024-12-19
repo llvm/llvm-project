@@ -1,11 +1,11 @@
+.. _testing:
+
 ==============
 Testing libc++
 ==============
 
 .. contents::
   :local:
-
-.. _testing:
 
 Getting Started
 ===============
@@ -26,7 +26,7 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 Usage
 -----
 
-After building libc++, you can run parts of the libc++ test suite by simply
+After :ref:`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
 ``cxx-test-depends`` target. For example:
@@ -83,6 +83,12 @@ like the compiler to use for running the tests, which default compiler and linke
 flags to use, and how to run an executable. This system is meant to be easily
 extended for custom needs, in particular when porting the libc++ test suite to
 new platforms.
+
+.. note::
+  If you run the test suite on Apple platforms, we recommend adding the terminal application
+  used to run the test suite to the list of "Developer Tools". This prevents the system from
+  trying to scan each individual test binary for malware and dramatically speeds up the test
+  suite.
 
 Using a Custom Site Configuration
 ---------------------------------
@@ -351,7 +357,7 @@ Test Filenames`_ when determining the names for new test files.
      - Same as ``FOO.pass.cpp``, but for Objective-C++.
 
    * - ``FOO.compile.pass.cpp``
-     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests, 
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests,
        subject to the specific recommendations, below, for when to write ``verify`` tests.
    * - ``FOO.compile.pass.mm``
      - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
@@ -385,6 +391,10 @@ Test Filenames`_ when determining the names for new test files.
        by LLVM split-file. Each generated file will drive an invocation of a separate Lit test. The format of the generated file will determine the type
        of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
        in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
+
+   * - ``FOO.bench.cpp``
+     - A benchmark test. These tests are linked against the GoogleBenchmark library and generally consist of micro-benchmarks of individual
+       components of the library.
 
 
 libc++-Specific Lit Features
@@ -432,55 +442,24 @@ Libc++ contains benchmark tests separately from the test of the test suite.
 The benchmarks are written using the `Google Benchmark`_ library, a copy of which
 is stored in the libc++ repository.
 
-For more information about using the Google Benchmark library see the
+For more information about using the Google Benchmark library, see the
 `official documentation <https://github.com/google/benchmark>`_.
 
+The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
+works in the same way as running a test. Both the benchmarks and the tests share
+the same configuration, so make sure to enable the relevant optimization level
+when running the benchmarks. For example,
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+
+Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
+we only want to make sure they don't rot. Do not rely on the results of benchmarks
+run through ``check-cxx`` for anything, instead run the benchmarks manually using
+the instructions for running individual tests.
+
 .. _`Google Benchmark`: https://github.com/google/benchmark
-
-Building Benchmarks
--------------------
-
-The benchmark tests are not built by default. The benchmarks can be built using
-the ``cxx-benchmarks`` target.
-
-An example build would look like:
-
-.. code-block:: bash
-
-  $ cd build
-  $ ninja cxx-benchmarks
-
-This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
-built against the just-built libc++. The compiled tests are output into
-``build/projects/libcxx/benchmarks``.
-
-The benchmarks can also be built against the platforms native standard library
-using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
-is useful for comparing the performance of libc++ to other standard libraries.
-The compiled benchmarks are named ``<test>.libcxx.out`` if they test libc++ and
-``<test>.native.out`` otherwise.
-
-Also See:
-
-  * :ref:`Building Libc++ <build instructions>`
-  * :ref:`CMake Options`
-
-Running Benchmarks
-------------------
-
-The benchmarks must be run manually by the user. Currently there is no way
-to run them as part of the build.
-
-For example:
-
-.. code-block:: bash
-
-  $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.libcxx.out # Runs all the benchmarks
-  $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
-
-For more information about running benchmarks see `Google Benchmark`_.
-
 
 .. _testing-hardening-assertions:
 
@@ -524,4 +503,3 @@ A toy example:
 
 Note that error messages are only tested (matched) if the ``debug``
 hardening mode is used.
-

@@ -85,16 +85,22 @@ static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
 }
 
 /// Return the length of the longest entry in the table.
-template <typename T>
-static size_t getLongestEntryLength(ArrayRef<T> Table) {
+static size_t getLongestEntryLength(ArrayRef<SubtargetFeatureKV> Table) {
   size_t MaxLen = 0;
   for (auto &I : Table)
     MaxLen = std::max(MaxLen, std::strlen(I.Key));
   return MaxLen;
 }
 
+static size_t getLongestEntryLength(ArrayRef<StringRef> Table) {
+  size_t MaxLen = 0;
+  for (StringRef I : Table)
+    MaxLen = std::max(MaxLen, I.size());
+  return MaxLen;
+}
+
 /// Display help for feature and mcpu choices.
-static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
+static void Help(ArrayRef<StringRef> CPUNames,
                  ArrayRef<SubtargetFeatureKV> FeatTable) {
   // the static variable ensures that the help information only gets
   // printed once even though a target machine creates multiple subtargets
@@ -104,14 +110,20 @@ static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
   }
 
   // Determine the length of the longest CPU and Feature entries.
-  unsigned MaxCPULen  = getLongestEntryLength(CPUTable);
+  unsigned MaxCPULen = getLongestEntryLength(CPUNames);
   unsigned MaxFeatLen = getLongestEntryLength(FeatTable);
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPU : CPUTable)
-    errs() << format("  %-*s - Select the %s processor.\n", MaxCPULen, CPU.Key,
-                     CPU.Key);
+  for (auto &CPUName : CPUNames) {
+    // Skip apple-latest, as that's only meant to be used in
+    // disassemblers/debuggers, and we don't want normal code to be built with
+    // it as an -mcpu=
+    if (CPUName == "apple-latest")
+      continue;
+    errs() << format("  %-*s - Select the %s processor.\n", MaxCPULen,
+                     CPUName.str().c_str(), CPUName.str().c_str());
+  }
   errs() << '\n';
 
   // Print the Feature table.
@@ -127,7 +139,7 @@ static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
 }
 
 /// Display help for mcpu choices only
-static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
+static void cpuHelp(ArrayRef<StringRef> CPUNames) {
   // the static variable ensures that the help information only gets
   // printed once even though a target machine creates multiple subtargets
   static bool PrintOnce = false;
@@ -137,8 +149,14 @@ static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPU : CPUTable)
-    errs() << "\t" << CPU.Key << "\n";
+  for (auto &CPU : CPUNames) {
+    // Skip apple-latest, as that's only meant to be used in
+    // disassemblers/debuggers, and we don't want normal code to be built with
+    // it as an -mcpu=
+    if (CPU == "apple-latest")
+      continue;
+    errs() << "\t" << CPU << "\n";
+  }
   errs() << '\n';
 
   errs() << "Use -mcpu or -mtune to specify the target's processor.\n"
@@ -148,7 +166,9 @@ static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
   PrintOnce = true;
 }
 
-static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
+static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
+                                 StringRef TuneCPU, StringRef FS,
+                                 ArrayRef<StringRef> ProcNames,
                                  ArrayRef<SubtargetSubTypeKV> ProcDesc,
                                  ArrayRef<SubtargetFeatureKV> ProcFeatures) {
   SubtargetFeatures Features(FS);
@@ -163,7 +183,7 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
 
   // Check if help is needed
   if (CPU == "help")
-    Help(ProcDesc, ProcFeatures);
+    Help(ProcNames, ProcFeatures);
 
   // Find CPU entry if CPU name is specified.
   else if (!CPU.empty()) {
@@ -196,9 +216,9 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
   for (const std::string &Feature : Features.getFeatures()) {
     // Check for help
     if (Feature == "+help")
-      Help(ProcDesc, ProcFeatures);
+      Help(ProcNames, ProcFeatures);
     else if (Feature == "+cpuhelp")
-      cpuHelp(ProcDesc);
+      cpuHelp(ProcNames);
     else
       ApplyFeatureFlag(Bits, Feature, ProcFeatures);
   }
@@ -208,7 +228,8 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
 
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
                                           StringRef FS) {
-  FeatureBits = getFeatures(CPU, TuneCPU, FS, ProcDesc, ProcFeatures);
+  FeatureBits =
+      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
   FeatureString = std::string(FS);
 
   if (!TuneCPU.empty())
@@ -219,20 +240,19 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
 
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
                                          StringRef FS) {
-  FeatureBits = getFeatures(CPU, TuneCPU, FS, ProcDesc, ProcFeatures);
+  FeatureBits =
+      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
   FeatureString = std::string(FS);
 }
 
-MCSubtargetInfo::MCSubtargetInfo(const Triple &TT, StringRef C, StringRef TC,
-                                 StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
-                                 ArrayRef<SubtargetSubTypeKV> PD,
-                                 const MCWriteProcResEntry *WPR,
-                                 const MCWriteLatencyEntry *WL,
-                                 const MCReadAdvanceEntry *RA,
-                                 const InstrStage *IS, const unsigned *OC,
-                                 const unsigned *FP)
+MCSubtargetInfo::MCSubtargetInfo(
+    const Triple &TT, StringRef C, StringRef TC, StringRef FS,
+    ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
+    ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
+    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
-      ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
+      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
       WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
       OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, TuneCPU, FS);
@@ -334,6 +354,16 @@ MCSubtargetInfo::getInstrItineraryForCPU(StringRef CPU) const {
 void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
   InstrItins = InstrItineraryData(getSchedModel(), Stages, OperandCycles,
                                   ForwardingPaths);
+}
+
+std::vector<SubtargetFeatureKV>
+MCSubtargetInfo::getEnabledProcessorFeatures() const {
+  std::vector<SubtargetFeatureKV> EnabledFeatures;
+  auto IsEnabled = [&](const SubtargetFeatureKV &FeatureKV) {
+    return FeatureBits.test(FeatureKV.Value);
+  };
+  llvm::copy_if(ProcFeatures, std::back_inserter(EnabledFeatures), IsEnabled);
+  return EnabledFeatures;
 }
 
 std::optional<unsigned> MCSubtargetInfo::getCacheSize(unsigned Level) const {

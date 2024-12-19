@@ -71,6 +71,24 @@ struct ForcedMaxvalInteger16 {
   }
 };
 
+/// Placeholder for unsigned*16 version of Maxval Intrinsic
+struct ForcedMaxvalUnsigned16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(MaxvalUnsigned16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(
+          ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Minval Intrinsic
 struct ForcedMinvalReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MinvalReal10));
@@ -119,6 +137,36 @@ struct ForcedMinvalInteger16 {
     };
   }
 };
+
+/// Placeholder for unsigned*16 version of Minval Intrinsic
+struct ForcedMinvalUnsigned16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(MinvalUnsigned16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(
+          ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+// Maxloc/Minloc take descriptor, so these runtime signature are not ifdef
+// and the mkRTKey can safely be used here. Define alias so that the
+// REAL_INTRINSIC_INSTANCES macro works with them too
+using ForcedMaxlocReal10 = mkRTKey(MaxlocReal10);
+using ForcedMaxlocReal16 = mkRTKey(MaxlocReal16);
+using ForcedMaxlocInteger16 = mkRTKey(MaxlocInteger16);
+using ForcedMaxlocUnsigned16 = mkRTKey(MaxlocUnsigned16);
+using ForcedMinlocReal10 = mkRTKey(MinlocReal10);
+using ForcedMinlocReal16 = mkRTKey(MinlocReal16);
+using ForcedMinlocInteger16 = mkRTKey(MinlocInteger16);
+using ForcedMinlocUnsigned16 = mkRTKey(MinlocUnsigned16);
 
 /// Placeholder for real*10 version of Norm2 Intrinsic
 struct ForcedNorm2Real10 {
@@ -205,6 +253,24 @@ struct ForcedProductInteger16 {
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for unsigned*16 version of Product Intrinsic
+struct ForcedProductUnsigned16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ProductUnsigned16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(
+          ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -335,6 +401,23 @@ struct ForcedDotProductInteger16 {
   }
 };
 
+/// Placeholder for unsigned*16 version of DotProduct Intrinsic
+struct ForcedDotProductUnsigned16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(DotProductUnsigned16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(
+          ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, boxTy, strTy, intTy}, {ty});
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Sum Intrinsic
 struct ForcedSumReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumReal10));
@@ -373,6 +456,23 @@ struct ForcedSumInteger16 {
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for unsigned*16 version of Sum Intrinsic
+struct ForcedSumUnsigned16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumUnsigned16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(
+          ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -468,7 +568,7 @@ struct ForcedIParity16 {
 };
 
 /// Placeholder for real*10 version of Reduce Intrinsic
-struct ForcedReduceReal10 {
+struct ForcedReduceReal10Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -476,10 +576,30 @@ struct ForcedReduceReal10 {
       auto ty = mlir::FloatType::getF80(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of Reduce Intrinsic
+struct ForcedReduceReal10Value {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceReal10Value));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
           ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
@@ -488,7 +608,7 @@ struct ForcedReduceReal10 {
 };
 
 /// Placeholder for real*16 version of Reduce Intrinsic
-struct ForcedReduceReal16 {
+struct ForcedReduceReal16Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -496,10 +616,30 @@ struct ForcedReduceReal16 {
       auto ty = mlir::FloatType::getF128(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of Reduce Intrinsic
+struct ForcedReduceReal16Value {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceReal16Value));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
           ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
@@ -508,7 +648,7 @@ struct ForcedReduceReal16 {
 };
 
 /// Placeholder for DIM real*10 version of Reduce Intrinsic
-struct ForcedReduceReal10Dim {
+struct ForcedReduceReal10DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -516,10 +656,32 @@ struct ForcedReduceReal10Dim {
       auto ty = mlir::FloatType::getF80(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refBoxTy = fir::ReferenceType::get(boxTy);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refBoxTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for DIM real*10 with value version of Reduce Intrinsic
+struct ForcedReduceReal10DimValue {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceReal10DimValue));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto refBoxTy = fir::ReferenceType::get(boxTy);
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
@@ -530,7 +692,7 @@ struct ForcedReduceReal10Dim {
 };
 
 /// Placeholder for DIM real*16 version of Reduce Intrinsic
-struct ForcedReduceReal16Dim {
+struct ForcedReduceReal16DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -538,10 +700,32 @@ struct ForcedReduceReal16Dim {
       auto ty = mlir::FloatType::getF128(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refBoxTy = fir::ReferenceType::get(boxTy);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refBoxTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for DIM real*16 with value version of Reduce Intrinsic
+struct ForcedReduceReal16DimValue {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceReal16DimValue));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto refBoxTy = fir::ReferenceType::get(boxTy);
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
@@ -552,7 +736,7 @@ struct ForcedReduceReal16Dim {
 };
 
 /// Placeholder for integer*16 version of Reduce Intrinsic
-struct ForcedReduceInteger16 {
+struct ForcedReduceInteger16Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceInteger16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -560,10 +744,70 @@ struct ForcedReduceInteger16 {
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for unsigned*16 version of Reduce Intrinsic
+struct ForcedReduceUnsigned16Ref {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceUnsigned16Ref));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for integer*16 with value version of Reduce Intrinsic
+struct ForcedReduceInteger16Value {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceInteger16Value));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for unsigned*16 with value version of Reduce Intrinsic
+struct ForcedReduceUnsigned16Value {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceUnsigned16Value));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
           ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
@@ -572,7 +816,7 @@ struct ForcedReduceInteger16 {
 };
 
 /// Placeholder for DIM integer*16 version of Reduce Intrinsic
-struct ForcedReduceInteger16Dim {
+struct ForcedReduceInteger16DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceInteger16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -580,10 +824,78 @@ struct ForcedReduceInteger16Dim {
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refBoxTy = fir::ReferenceType::get(boxTy);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refBoxTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for DIM unsigned*16 version of Reduce Intrinsic
+struct ForcedReduceUnsigned16DimRef {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceUnsigned16DimRef));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(
+          ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refBoxTy = fir::ReferenceType::get(boxTy);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refBoxTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for DIM integer*16 with value version of Reduce Intrinsic
+struct ForcedReduceInteger16DimValue {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceInteger16DimValue));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refBoxTy = fir::ReferenceType::get(boxTy);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refBoxTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for DIM unsigned*16 with value version of Reduce Intrinsic
+struct ForcedReduceUnsigned16DimValue {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceUnsigned16DimValue));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(
+          ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto refBoxTy = fir::ReferenceType::get(boxTy);
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
@@ -594,7 +906,7 @@ struct ForcedReduceInteger16Dim {
 };
 
 /// Placeholder for complex(10) version of Reduce Intrinsic
-struct ForcedReduceComplex10 {
+struct ForcedReduceComplex10Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -602,10 +914,31 @@ struct ForcedReduceComplex10 {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for complex(10) with value version of Reduce Intrinsic
+struct ForcedReduceComplex10Value {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex10Value));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
           ctx, {refTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
@@ -615,7 +948,7 @@ struct ForcedReduceComplex10 {
 };
 
 /// Placeholder for Dim complex(10) version of Reduce Intrinsic
-struct ForcedReduceComplex10Dim {
+struct ForcedReduceComplex10DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -623,10 +956,32 @@ struct ForcedReduceComplex10Dim {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refBoxTy = fir::ReferenceType::get(boxTy);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refBoxTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for Dim complex(10) with value version of Reduce Intrinsic
+struct ForcedReduceComplex10DimValue {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex10DimValue));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto refBoxTy = fir::ReferenceType::get(boxTy);
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
@@ -637,7 +992,7 @@ struct ForcedReduceComplex10Dim {
 };
 
 /// Placeholder for complex(16) version of Reduce Intrinsic
-struct ForcedReduceComplex16 {
+struct ForcedReduceComplex16Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -645,10 +1000,31 @@ struct ForcedReduceComplex16 {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for complex(16) with value version of Reduce Intrinsic
+struct ForcedReduceComplex16Value {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex16Value));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
           ctx, {refTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
@@ -658,7 +1034,7 @@ struct ForcedReduceComplex16 {
 };
 
 /// Placeholder for Dim complex(16) version of Reduce Intrinsic
-struct ForcedReduceComplex16Dim {
+struct ForcedReduceComplex16DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
@@ -666,10 +1042,10 @@ struct ForcedReduceComplex16Dim {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {refTy, refTy}, refTy);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
-      auto refTy = fir::ReferenceType::get(ty);
       auto refBoxTy = fir::ReferenceType::get(boxTy);
       auto i1Ty = mlir::IntegerType::get(ctx, 1);
       return mlir::FunctionType::get(
@@ -678,6 +1054,94 @@ struct ForcedReduceComplex16Dim {
     };
   }
 };
+
+/// Placeholder for Dim complex(16) with value version of Reduce Intrinsic
+struct ForcedReduceComplex16DimValue {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex16DimValue));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto refTy = fir::ReferenceType::get(ty);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, refTy);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refBoxTy = fir::ReferenceType::get(boxTy);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refBoxTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+#define INTRINSIC_INSTANCE(NAME, CAT, KIND, SUFFIX)                            \
+  if (!func && cat == TypeCategory::CAT && kind == KIND) {                     \
+    func = fir::runtime::getRuntimeFunc<mkRTKey(NAME##CAT##KIND##SUFFIX)>(     \
+        loc, builder);                                                         \
+  }
+#define FORCED_INTRINSIC_INSTANCE(NAME, CAT, KIND, SUFFIX)                     \
+  if (!func && cat == TypeCategory::CAT && kind == KIND) {                     \
+    func = fir::runtime::getRuntimeFunc<Forced##NAME##CAT##KIND##SUFFIX>(      \
+        loc, builder);                                                         \
+  }
+
+#define INTEGER_INTRINSIC_INSTANCES(NAME, SUFFIX)                              \
+  INTRINSIC_INSTANCE(NAME, Integer, 1, SUFFIX)                                 \
+  INTRINSIC_INSTANCE(NAME, Integer, 2, SUFFIX)                                 \
+  INTRINSIC_INSTANCE(NAME, Integer, 4, SUFFIX)                                 \
+  INTRINSIC_INSTANCE(NAME, Integer, 8, SUFFIX)                                 \
+  FORCED_INTRINSIC_INSTANCE(NAME, Integer, 16, SUFFIX)
+
+#define UNSIGNED_INTRINSIC_INSTANCES(NAME, SUFFIX)                             \
+  INTRINSIC_INSTANCE(NAME, Unsigned, 1, SUFFIX)                                \
+  INTRINSIC_INSTANCE(NAME, Unsigned, 2, SUFFIX)                                \
+  INTRINSIC_INSTANCE(NAME, Unsigned, 4, SUFFIX)                                \
+  INTRINSIC_INSTANCE(NAME, Unsigned, 8, SUFFIX)                                \
+  FORCED_INTRINSIC_INSTANCE(NAME, Unsigned, 16, SUFFIX)
+
+#define REAL_INTRINSIC_INSTANCES(NAME, SUFFIX)                                 \
+  INTRINSIC_INSTANCE(NAME, Real, 4, SUFFIX)                                    \
+  INTRINSIC_INSTANCE(NAME, Real, 8, SUFFIX)                                    \
+  FORCED_INTRINSIC_INSTANCE(NAME, Real, 10, SUFFIX)                            \
+  FORCED_INTRINSIC_INSTANCE(NAME, Real, 16, SUFFIX)
+
+#define COMPLEX_INTRINSIC_INSTANCES(NAME, SUFFIX)                              \
+  INTRINSIC_INSTANCE(Cpp##NAME, Complex, 4, SUFFIX)                            \
+  INTRINSIC_INSTANCE(Cpp##NAME, Complex, 8, SUFFIX)                            \
+  FORCED_INTRINSIC_INSTANCE(NAME, Complex, 10, SUFFIX)                         \
+  FORCED_INTRINSIC_INSTANCE(NAME, Complex, 16, SUFFIX)
+
+#define NUMERICAL_INTRINSIC_INSTANCES(NAME)                                    \
+  INTEGER_INTRINSIC_INSTANCES(NAME, )                                          \
+  UNSIGNED_INTRINSIC_INSTANCES(NAME, )                                         \
+  REAL_INTRINSIC_INSTANCES(NAME, )                                             \
+  COMPLEX_INTRINSIC_INSTANCES(NAME, )
+
+#define LOGICAL_INTRINSIC_INSTANCES(NAME, SUFFIX)                              \
+  INTRINSIC_INSTANCE(NAME, Logical, 1, SUFFIX)                                 \
+  INTRINSIC_INSTANCE(NAME, Logical, 2, SUFFIX)                                 \
+  INTRINSIC_INSTANCE(NAME, Logical, 4, SUFFIX)                                 \
+  INTRINSIC_INSTANCE(NAME, Logical, 8, SUFFIX)
+
+#define NUMERICAL_AND_LOGICAL_INSTANCES(NAME, SUFFIX)                          \
+  INTEGER_INTRINSIC_INSTANCES(NAME, SUFFIX)                                    \
+  UNSIGNED_INTRINSIC_INSTANCES(NAME, SUFFIX)                                   \
+  REAL_INTRINSIC_INSTANCES(NAME, SUFFIX)                                       \
+  COMPLEX_INTRINSIC_INSTANCES(NAME, SUFFIX)                                    \
+  LOGICAL_INTRINSIC_INSTANCES(NAME, SUFFIX)
+
+// REAL/COMPLEX 2 and 3 usually have no runtime implementation, so they have
+// special macros.
+#define REAL_2_3_INTRINSIC_INSTANCES(NAME, SUFFIX)                             \
+  INTRINSIC_INSTANCE(NAME, Real, 2, SUFFIX)                                    \
+  INTRINSIC_INSTANCE(NAME, Real, 3, SUFFIX)
+
+#define COMPLEX_2_3_INTRINSIC_INSTANCES(NAME, SUFFIX)                          \
+  INTRINSIC_INSTANCE(Cpp##NAME, Complex, 2, SUFFIX)                            \
+  INTRINSIC_INSTANCE(Cpp##NAME, Complex, 3, SUFFIX)
 
 /// Generate call to specialized runtime function that takes a mask and
 /// dim argument. The All, Any, and Count intrinsics use this pattern.
@@ -874,36 +1338,22 @@ void fir::runtime::genFindlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
 /// that does not take a dim argument.
 void fir::runtime::genMaxloc(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value arrayBox,
-                             mlir::Value maskBox, mlir::Value kind,
+                             mlir::Value maskBox, mlir::Value kindVal,
                              mlir::Value back) {
-  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   fir::factory::CharacterExprHelper charHelper{builder, loc};
-  if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocReal4)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocReal8)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocReal10)>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocReal16)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocInteger1)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocInteger2)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocInteger4)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocInteger8)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocInteger16)>(loc, builder);
-  else if (charHelper.isCharacterScalar(eleTy))
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  REAL_INTRINSIC_INSTANCES(Maxloc, )
+  INTEGER_INTRINSIC_INSTANCES(Maxloc, )
+  UNSIGNED_INTRINSIC_INSTANCES(Maxloc, )
+  if (charHelper.isCharacterScalar(eleTy))
     func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocCharacter)>(loc, builder);
-  else
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "MAXLOC");
-  genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kind,
+  genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kindVal,
                     back);
 }
 
@@ -923,31 +1373,16 @@ void fir::runtime::genMaxlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genMaxval(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
                                     mlir::Value maskBox) {
-  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-
-  if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxvalReal4)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxvalReal8)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<ForcedMaxvalReal10>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<ForcedMaxvalReal16>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxvalInteger1)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxvalInteger2)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxvalInteger4)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MaxvalInteger8)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<ForcedMaxvalInteger16>(loc, builder);
-  else
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  REAL_INTRINSIC_INSTANCES(Maxval, )
+  INTEGER_INTRINSIC_INSTANCES(Maxval, )
+  UNSIGNED_INTRINSIC_INSTANCES(Maxval, )
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "MAXVAL");
 
   auto fTy = func.getFunctionType();
@@ -989,36 +1424,22 @@ void fir::runtime::genMaxvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
 /// that does not take a dim argument.
 void fir::runtime::genMinloc(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value arrayBox,
-                             mlir::Value maskBox, mlir::Value kind,
+                             mlir::Value maskBox, mlir::Value kindVal,
                              mlir::Value back) {
-  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  REAL_INTRINSIC_INSTANCES(Minloc, )
+  INTEGER_INTRINSIC_INSTANCES(Minloc, )
+  UNSIGNED_INTRINSIC_INSTANCES(Minloc, )
   fir::factory::CharacterExprHelper charHelper{builder, loc};
-  if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocReal4)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocReal8)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocReal10)>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocReal16)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocInteger1)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocInteger2)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocInteger4)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocInteger8)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocInteger16)>(loc, builder);
-  else if (charHelper.isCharacterScalar(eleTy))
+  if (charHelper.isCharacterScalar(eleTy))
     func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocCharacter)>(loc, builder);
-  else
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "MINLOC");
-  genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kind,
+  genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kindVal,
                     back);
 }
 
@@ -1063,31 +1484,17 @@ void fir::runtime::genMinvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
                                     mlir::Value maskBox) {
-  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
 
-  if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinvalReal4)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinvalReal8)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<ForcedMinvalReal10>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<ForcedMinvalReal16>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinvalInteger1)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinvalInteger2)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinvalInteger4)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(MinvalInteger8)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<ForcedMinvalInteger16>(loc, builder);
-  else
+  mlir::func::FuncOp func;
+  REAL_INTRINSIC_INSTANCES(Minval, )
+  INTEGER_INTRINSIC_INSTANCES(Minval, )
+  UNSIGNED_INTRINSIC_INSTANCES(Minval, )
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "MINVAL");
 
   auto fTy = func.getFunctionType();
@@ -1108,7 +1515,7 @@ void fir::runtime::genNorm2Dim(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   if (eleTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedNorm2DimReal16>(loc, builder);
   else
@@ -1130,7 +1537,7 @@ mlir::Value fir::runtime::genNorm2(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
   if (eleTy.isF32())
@@ -1178,41 +1585,15 @@ mlir::Value fir::runtime::genProduct(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value arrayBox,
                                      mlir::Value maskBox,
                                      mlir::Value resultBox) {
-  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
-  if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ProductReal4)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ProductReal8)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<ForcedProductReal10>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<ForcedProductReal16>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ProductInteger1)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ProductInteger2)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ProductInteger4)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ProductInteger8)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<ForcedProductInteger16>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 4))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CppProductComplex4)>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 8))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CppProductComplex8)>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 10))
-    func = fir::runtime::getRuntimeFunc<ForcedProductComplex10>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 16))
-    func = fir::runtime::getRuntimeFunc<ForcedProductComplex16>(loc, builder);
-  else
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  NUMERICAL_INTRINSIC_INSTANCES(Product)
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "PRODUCT");
 
   auto fTy = func.getFunctionType();
@@ -1241,51 +1622,18 @@ mlir::Value fir::runtime::genDotProduct(fir::FirOpBuilder &builder,
                                         mlir::Value vectorABox,
                                         mlir::Value vectorBBox,
                                         mlir::Value resultBox) {
-  mlir::func::FuncOp func;
   // For complex data types, resultBox is !fir.ref<!fir.complex<N>>,
   // otherwise it is !fir.box<T>.
   auto ty = resultBox.getType();
   auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
 
-  if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(DotProductReal4)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(DotProductReal8)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<ForcedDotProductReal10>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<ForcedDotProductReal16>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 4))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppDotProductComplex4)>(
-        loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 8))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppDotProductComplex8)>(
-        loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 10))
-    func =
-        fir::runtime::getRuntimeFunc<ForcedDotProductComplex10>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 16))
-    func =
-        fir::runtime::getRuntimeFunc<ForcedDotProductComplex16>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(DotProductInteger1)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(DotProductInteger2)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(DotProductInteger4)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(DotProductInteger8)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func =
-        fir::runtime::getRuntimeFunc<ForcedDotProductInteger16>(loc, builder);
-  else if (mlir::isa<fir::LogicalType>(eleTy))
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  NUMERICAL_INTRINSIC_INSTANCES(DotProduct)
+  if (cat == Fortran::common::TypeCategory::Logical)
     func =
         fir::runtime::getRuntimeFunc<mkRTKey(DotProductLogical)>(loc, builder);
-  else
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "DOTPRODUCT");
 
   auto fTy = func.getFunctionType();
@@ -1321,39 +1669,15 @@ void fir::runtime::genSumDim(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value arrayBox, mlir::Value maskBox,
                                  mlir::Value resultBox) {
-  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
-  if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(SumReal4)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(SumReal8)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<ForcedSumReal10>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<ForcedSumReal16>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(SumInteger1)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(SumInteger2)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(SumInteger4)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(SumInteger8)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<ForcedSumInteger16>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 4))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppSumComplex4)>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 8))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppSumComplex8)>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 10))
-    func = fir::runtime::getRuntimeFunc<ForcedSumComplex10>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(builder.getContext(), 16))
-    func = fir::runtime::getRuntimeFunc<ForcedSumComplex16>(loc, builder);
-  else
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  NUMERICAL_INTRINSIC_INSTANCES(Sum)
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "SUM");
 
   auto fTy = func.getFunctionType();
@@ -1378,7 +1702,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
 
 // The IAll, IAny and IParity intrinsics have essentially the same
 // implementation. This macro will generate the function body given the
-// instrinsic name.
+// intrinsic name.
 #define GEN_IALL_IANY_IPARITY(F)                                               \
   mlir::Value fir::runtime::JOIN2(gen, F)(                                     \
       fir::FirOpBuilder & builder, mlir::Location loc, mlir::Value arrayBox,   \
@@ -1386,7 +1710,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::func::FuncOp func;                                                   \
     auto ty = arrayBox.getType();                                              \
     auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);                              \
-    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();              \
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();        \
     auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);  \
                                                                                \
     if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))            \
@@ -1457,11 +1781,11 @@ GEN_IALL_IANY_IPARITY(IParity)
 void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value arrayBox, mlir::Value operation,
                              mlir::Value maskBox, mlir::Value identity,
-                             mlir::Value ordered, mlir::Value resultBox) {
-  mlir::func::FuncOp func;
+                             mlir::Value ordered, mlir::Value resultBox,
+                             bool argByRef) {
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   auto dim = builder.createIntegerConstant(loc, builder.getI32Type(), 1);
 
   assert(resultBox && "expect non null value for the result");
@@ -1469,26 +1793,17 @@ void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
           fir::isa_derived(eleTy)) &&
          "expect character, complex or derived-type");
 
-  mlir::MLIRContext *ctx = builder.getContext();
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  if (argByRef) {
+    COMPLEX_2_3_INTRINSIC_INSTANCES(Reduce, Ref)
+    COMPLEX_INTRINSIC_INSTANCES(Reduce, Ref)
+  } else {
+    COMPLEX_2_3_INTRINSIC_INSTANCES(Reduce, Value)
+    COMPLEX_INTRINSIC_INSTANCES(Reduce, Value)
+  }
   fir::factory::CharacterExprHelper charHelper{builder, loc};
-
-  if (eleTy == fir::ComplexType::get(ctx, 2))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex2Ref)>(loc,
-                                                                       builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 3))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex3Ref)>(loc,
-                                                                       builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 4))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex4Ref)>(loc,
-                                                                       builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 8))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex8Ref)>(loc,
-                                                                       builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 10))
-    func = fir::runtime::getRuntimeFunc<ForcedReduceComplex10>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 16))
-    func = fir::runtime::getRuntimeFunc<ForcedReduceComplex16>(loc, builder);
-  else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 1)
+  if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 1)
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceChar1)>(loc, builder);
   else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 2)
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceChar2)>(loc, builder);
@@ -1497,7 +1812,7 @@ void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (fir::isa_derived(eleTy))
     func =
         fir::runtime::getRuntimeFunc<mkRTKey(ReduceDerivedType)>(loc, builder);
-  else
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
 
   auto fTy = func.getFunctionType();
@@ -1516,59 +1831,33 @@ void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
                                     mlir::Value operation, mlir::Value maskBox,
-                                    mlir::Value identity, mlir::Value ordered) {
-  mlir::func::FuncOp func;
+                                    mlir::Value identity, mlir::Value ordered,
+                                    bool argByRef) {
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
   auto dim = builder.createIntegerConstant(loc, builder.getI32Type(), 1);
-
-  mlir::MLIRContext *ctx = builder.getContext();
-  fir::factory::CharacterExprHelper charHelper{builder, loc};
 
   assert((fir::isa_real(eleTy) || fir::isa_integer(eleTy) ||
           mlir::isa<fir::LogicalType>(eleTy)) &&
          "expect real, interger or logical");
 
-  if (eleTy.isF16())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal2Ref)>(loc, builder);
-  else if (eleTy.isBF16())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal3Ref)>(loc, builder);
-  else if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal4Ref)>(loc, builder);
-  else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8Ref)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<ForcedReduceReal10>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<ForcedReduceReal16>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger1Ref)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger2Ref)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger4Ref)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger8Ref)>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<ForcedReduceInteger16>(loc, builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 1))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical1Ref)>(loc, builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 2))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical2Ref)>(loc, builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 4))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical4Ref)>(loc, builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 8))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical8Ref)>(loc, builder);
-  else
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
+  mlir::func::FuncOp func;
+  if (argByRef) {
+    REAL_2_3_INTRINSIC_INSTANCES(Reduce, Ref)
+    REAL_INTRINSIC_INSTANCES(Reduce, Ref)
+    INTEGER_INTRINSIC_INSTANCES(Reduce, Ref)
+    UNSIGNED_INTRINSIC_INSTANCES(Reduce, Ref)
+    LOGICAL_INTRINSIC_INSTANCES(Reduce, Ref)
+  } else {
+    REAL_2_3_INTRINSIC_INSTANCES(Reduce, Value)
+    REAL_INTRINSIC_INSTANCES(Reduce, Value)
+    INTEGER_INTRINSIC_INSTANCES(Reduce, Value)
+    UNSIGNED_INTRINSIC_INSTANCES(Reduce, Value)
+    LOGICAL_INTRINSIC_INSTANCES(Reduce, Value)
+  }
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
 
   auto fTy = func.getFunctionType();
@@ -1586,74 +1875,24 @@ void fir::runtime::genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value arrayBox, mlir::Value operation,
                                 mlir::Value dim, mlir::Value maskBox,
                                 mlir::Value identity, mlir::Value ordered,
-                                mlir::Value resultBox) {
-  mlir::func::FuncOp func;
+                                mlir::Value resultBox, bool argByRef) {
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
+  auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
 
-  mlir::MLIRContext *ctx = builder.getContext();
+  mlir::func::FuncOp func;
+  if (argByRef) {
+    REAL_2_3_INTRINSIC_INSTANCES(Reduce, DimRef)
+    COMPLEX_2_3_INTRINSIC_INSTANCES(Reduce, DimRef)
+    NUMERICAL_AND_LOGICAL_INSTANCES(Reduce, DimRef)
+  } else {
+    REAL_2_3_INTRINSIC_INSTANCES(Reduce, DimValue)
+    COMPLEX_2_3_INTRINSIC_INSTANCES(Reduce, DimValue)
+    NUMERICAL_AND_LOGICAL_INSTANCES(Reduce, DimValue)
+  }
   fir::factory::CharacterExprHelper charHelper{builder, loc};
-
-  if (eleTy.isF16())
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal2DimRef)>(loc, builder);
-  else if (eleTy.isBF16())
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal3DimRef)>(loc, builder);
-  else if (eleTy.isF32())
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal4DimRef)>(loc, builder);
-  else if (eleTy.isF64())
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8DimRef)>(loc, builder);
-  else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<ForcedReduceReal10Dim>(loc, builder);
-  else if (eleTy.isF128())
-    func = fir::runtime::getRuntimeFunc<ForcedReduceReal16Dim>(loc, builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger1DimRef)>(loc,
-                                                                       builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger2DimRef)>(loc,
-                                                                       builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger4DimRef)>(loc,
-                                                                       builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger8DimRef)>(loc,
-                                                                       builder);
-  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
-    func = fir::runtime::getRuntimeFunc<ForcedReduceInteger16Dim>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 2))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex2DimRef)>(
-        loc, builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 3))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex3DimRef)>(
-        loc, builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 4))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex4DimRef)>(
-        loc, builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 8))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex8DimRef)>(
-        loc, builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 10))
-    func = fir::runtime::getRuntimeFunc<ForcedReduceComplex10Dim>(loc, builder);
-  else if (eleTy == fir::ComplexType::get(ctx, 16))
-    func = fir::runtime::getRuntimeFunc<ForcedReduceComplex16Dim>(loc, builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 1))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical1DimRef)>(loc,
-                                                                       builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 2))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical2DimRef)>(loc,
-                                                                       builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 4))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical4DimRef)>(loc,
-                                                                       builder);
-  else if (eleTy == fir::LogicalType::get(ctx, 8))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical8DimRef)>(loc,
-                                                                       builder);
-  else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 1)
+  if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 1)
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceCharacter1Dim)>(loc,
                                                                       builder);
   else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 2)
@@ -1665,7 +1904,7 @@ void fir::runtime::genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (fir::isa_derived(eleTy))
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceDerivedTypeDim)>(loc,
                                                                        builder);
-  else
+  if (!func)
     fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
 
   auto fTy = func.getFunctionType();

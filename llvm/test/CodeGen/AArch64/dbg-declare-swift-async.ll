@@ -3,7 +3,7 @@
 ; RUN: llc -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s
 
 ; CHECK: void @foo
-; CHECK-NEXT: dbg.declare(metadata {{.*}}, metadata ![[VAR:.*]], metadata !DIExpression([[EXPR:.*]])), !dbg ![[LOC:.*]]
+; CHECK-NEXT: #dbg_declare({{.*}}, ![[VAR:.*]], !DIExpression([[EXPR:.*]]), ![[LOC:[0-9]+]]
 ; CHECK: entry_values:
 ; CHECK-NEXT: entry-value-register: '$x22', debug-info-variable: '![[VAR]]', debug-info-expression: '!DIExpression([[EXPR]], DW_OP_deref)',
 ; CHECK-NEXT:   debug-info-location: '![[LOC]]

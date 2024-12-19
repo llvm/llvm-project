@@ -39,6 +39,7 @@
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -51,6 +52,7 @@
 # FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
+# FULL-NEXT:  hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -142,6 +144,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -154,6 +157,7 @@ body:             |
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -216,6 +220,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -228,6 +233,7 @@ body:             |
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -291,6 +297,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -303,6 +310,7 @@ body:             |
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -569,6 +577,33 @@ body:             |
 name: sgpr_for_exec_copy_noreg
 machineFunctionInfo:
   sgprForEXECCopy: '$noreg'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+---
+name: vregs
+# FULL: registers:
+# FULL-NEXT:   - { id: 0, class: vgpr_32, preferred-register: '$vgpr1', flags: [ WWM_REG ] }
+# FULL-NEXT:   - { id: 1, class: sgpr_64, preferred-register: '$sgpr0_sgpr1', flags: [  ] }
+# FULL-NEXT:   - { id: 2, class: sgpr_64, preferred-register: '', flags: [  ] }
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: $vgpr1, flags: [ WWM_REG ]}
+  - { id: 1, class: sgpr_64, preferred-register: $sgpr0_sgpr1 }
+  - { id: 2, class: sgpr_64, flags: [ ] }
+body: |
+  bb.0:
+    %2:sgpr_64 = COPY %1
+    %1:sgpr_64 = COPY %0
+...
+
+---
+# ALL-LABEL: name: max_memory_cluster_dwords
+# ALL: maxMemoryClusterDWords: 16
+name: max_memory_cluster_dwords
+machineFunctionInfo:
+  maxMemoryClusterDWords: 16
 body:             |
   bb.0:
     SI_RETURN

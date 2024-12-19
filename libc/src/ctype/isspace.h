@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_CTYPE_ISSPACE_H
 #define LLVM_LIBC_SRC_CTYPE_ISSPACE_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int isspace(int c);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif //  LLVM_LIBC_SRC_CTYPE_ISSPACE_H

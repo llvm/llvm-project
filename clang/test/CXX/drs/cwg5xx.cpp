@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-11,cxx98-14,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-11,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx98-23,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx98-23,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx98-23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,cxx98-23,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx26,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -183,7 +184,7 @@ namespace cwg522 { // cwg522: yes
     b2(am);
     b2a(am);
     // expected-error@-1 {{no matching function for call to 'b2a'}}
-    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *cwg522::S::*const *' of 1st parameter does not match adjusted type 'int *cwg522::S::**' of argument}}
+    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *S::*const *' of 1st parameter does not match adjusted type 'int *S::**' of argument}}
     b3(d);
     b3(cd);
   }
@@ -798,6 +799,7 @@ namespace cwg561 { // cwg561: yes
 }
 
 // cwg562: na
+// cwg563 is in cwg563.cpp
 
 namespace cwg564 { // cwg564: yes
   extern "C++" void f(int);
@@ -901,7 +903,8 @@ namespace cwg573 { // cwg573: no
   void *d = reinterpret_cast<void*>(c);
   // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
   void f() { delete a; }
-  // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
   int n = d - a;
   // expected-error@-1 {{arithmetic on pointers to void}}
   // FIXME: This is ill-formed.
@@ -1175,17 +1178,70 @@ namespace cwg590 { // cwg590: yes
   template<typename T> typename A<T>::B::C A<T>::B::C::f(A<T>::B::C) {}
 }
 
-namespace cwg591 { // cwg591: no
+namespace cwg591 { // cwg591: 20
   template<typename T> struct A {
     typedef int M;
     struct B {
       typedef void M;
       struct C;
+      struct D;
     };
   };
 
+  template<typename T> struct G {
+    struct B {
+      typedef int M;
+      struct C {
+        typedef void M;
+        struct D;
+      };
+    };
+  };
+
+  template<typename T> struct H {
+    template<typename U> struct B {
+      typedef int M;
+      template<typename F> struct C {
+        typedef void M;
+        struct D;
+        struct P;
+      };
+    };
+  };
+
+  template <typename, bool> struct M {
+    class P;
+    int M;
+  };
+
   template<typename T> struct A<T>::B::C : A<T> {
-    // FIXME: Should find member of non-dependent base class A<T>.
+    M m;
+  };
+
+  template<typename T> struct G<T>::B::C::D : B {
+    M m;
+  };
+
+  template<typename T>
+  template<typename U>
+  template<typename F>
+  struct H<T>::B<U>::C<F>::D : B<U> {
+    M m;
+  };
+
+  template<typename T, bool B> class M<T,B>::P : M {
+    int foo() { (void) M; }
+  };
+
+  template<typename T> struct A<T>::B::D : A<T*> {
+    M m;
+    // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
+  };
+
+  template<typename T>
+  template<typename U>
+  template<typename F>
+  struct H<T>::B<U>::C<F>::P : B<F> {
     M m;
     // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
   };
@@ -1238,11 +1294,13 @@ namespace cwg599 { // cwg599: partial
   struct V { operator int*(); operator Fn*(); };
   void f(void *p, void (*q)(), S s, T t, U u, V v) {
     delete p;
-    // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
     delete q;
     // expected-error@-1 {{cannot delete expression of type 'void (*)()'}}
     delete s;
-    // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
     delete t;
     // expected-error@-1 {{cannot delete expression of type 'T'}}
     // FIXME: This is valid, but is rejected due to a non-conforming GNU

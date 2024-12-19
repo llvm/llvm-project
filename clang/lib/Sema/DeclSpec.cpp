@@ -22,9 +22,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include <cstring>
 using namespace clang;
 
@@ -377,6 +374,8 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_typename_pack_indexing:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
       return false;
 
     case TST_decltype_auto:
@@ -416,6 +415,7 @@ bool Declarator::isDeclarationOfFunction() const {
 bool Declarator::isStaticMember() {
   assert(getContext() == DeclaratorContext::Member);
   return getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+         (!isDeclarationOfFunction() && !getTemplateParameterLists().empty()) ||
          (getName().getKind() == UnqualifiedIdKind::IK_OperatorFunctionId &&
           CXXMethodDecl::isStaticOverloadedOperator(
               getName().OperatorFunctionId.Operator));
@@ -607,6 +607,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_##ImgType##_t: \
     return #ImgType "_t";
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case DeclSpec::TST_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
@@ -1145,7 +1149,7 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
 }
 
 /// Finish - This does final analysis of the declspec, rejecting things like
-/// "_Imaginary" (lacking an FP type). After calling this method, DeclSpec is
+/// "_Complex" (lacking an FP type). After calling this method, DeclSpec is
 /// guaranteed to be self-consistent, even if an error occurred.
 void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // Before possibly changing their values, save specs as written.
@@ -1330,8 +1334,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     break;
   }
 
-  // TODO: if the implementation does not implement _Complex or _Imaginary,
-  // disallow their use.  Need information about the backend.
+  // TODO: if the implementation does not implement _Complex, disallow their
+  // use. Need information about the backend.
   if (TypeSpecComplex != TSC_unspecified) {
     if (TypeSpecType == TST_unspecified) {
       S.Diag(TSCLoc, diag::ext_plain_complex)
@@ -1339,8 +1343,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
                               S.getLocForEndOfToken(getTypeSpecComplexLoc()),
                                                  " double");
       TypeSpecType = TST_double;   // _Complex -> _Complex double.
-    } else if (TypeSpecType == TST_int || TypeSpecType == TST_char ||
-               TypeSpecType == TST_bitint) {
+    } else if (TypeSpecType == TST_int || TypeSpecType == TST_char) {
       // Note that this intentionally doesn't include _Complex _Bool.
       if (!S.getLangOpts().CPlusPlus)
         S.Diag(TSTLoc, diag::ext_integer_complex);
@@ -1411,7 +1414,11 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // specifier in a pre-C++11 dialect of C++ or in a pre-C23 dialect of C.
   if (!S.getLangOpts().CPlusPlus11 && !S.getLangOpts().C23 &&
       TypeSpecType == TST_auto)
-    S.Diag(TSTLoc, diag::ext_auto_type_specifier);
+    S.Diag(TSTLoc, diag::ext_auto_type_specifier) << /*C++*/ 0;
+  if (S.getLangOpts().HLSL &&
+      S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202y &&
+      TypeSpecType == TST_auto)
+    S.Diag(TSTLoc, diag::ext_hlsl_auto_type_specifier) << /*HLSL*/ 1;
   if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11 &&
       StorageClassSpec == SCS_auto)
     S.Diag(StorageClassSpecLoc, diag::warn_auto_storage_class)

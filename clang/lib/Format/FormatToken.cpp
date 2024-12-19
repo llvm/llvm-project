@@ -322,5 +322,22 @@ CommaSeparatedList::getColumnFormat(unsigned RemainingCharacters) const {
   return BestFormat;
 }
 
+bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
+  if (Current.is(TT_CtorInitializerComma) &&
+      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
+    return true;
+  }
+  if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
+    return true;
+  return Previous.is(tok::comma) && !Current.isTrailingComment() &&
+         ((Previous.isNot(TT_CtorInitializerComma) ||
+           Style.BreakConstructorInitializers !=
+               FormatStyle::BCIS_BeforeComma) &&
+          (Previous.isNot(TT_InheritanceComma) ||
+           Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
+}
+
 } // namespace format
 } // namespace clang

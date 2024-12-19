@@ -11,9 +11,9 @@
 // CHECK: %[[X:.*]] = alloca %[[STRUCT_BLOCK_BYREF_X]], align 8
 // CHECK: %[[Y:.*]] = alloca %[[STRUCT_BLOCK_BYREF_Y]], align 8
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, align 8
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK: store ptr %[[X]], ptr %[[BLOCK_CAPTURED]], align 8
-// CHECK: %[[BLOCK_CAPTURED10:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 6
+// CHECK: %[[BLOCK_CAPTURED10:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 6
 // CHECK: store ptr %[[Y]], ptr %[[BLOCK_CAPTURED10]], align 8
 
 // CHECK-LABEL: define internal void @___ZN1S1mEv_block_invoke(

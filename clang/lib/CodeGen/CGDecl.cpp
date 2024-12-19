@@ -29,10 +29,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -369,38 +369,12 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   assert(VarSize == CstSize && "Emitted constant has unexpected size");
 #endif
 
-  // The initializer may differ in type from the global. Rewrite
-  // the global to match the initializer.  (We have to do this
-  // because some types, like unions, can't be completely represented
-  // in the LLVM type system.)
-  if (GV->getValueType() != Init->getType()) {
-    llvm::GlobalVariable *OldGV = GV;
-
-    GV = new llvm::GlobalVariable(
-        CGM.getModule(), Init->getType(), OldGV->isConstant(),
-        OldGV->getLinkage(), Init, "",
-        /*InsertBefore*/ OldGV, OldGV->getThreadLocalMode(),
-        OldGV->getType()->getPointerAddressSpace());
-    GV->setVisibility(OldGV->getVisibility());
-    GV->setDSOLocal(OldGV->isDSOLocal());
-    GV->setComdat(OldGV->getComdat());
-
-    // Steal the name of the old global
-    GV->takeName(OldGV);
-
-    // Replace all uses of the old global with the new global
-    OldGV->replaceAllUsesWith(GV);
-
-    // Erase the old global, since it is no longer used.
-    OldGV->eraseFromParent();
-  }
-
   bool NeedsDtor =
       D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
   GV->setConstant(
       D.getType().isConstantStorage(getContext(), true, !NeedsDtor));
-  GV->setInitializer(Init);
+  GV->replaceInitializer(Init);
 
   emitter.finalize(GV);
 
@@ -1925,13 +1899,16 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
+  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      (D.isConstexpr()
+      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
+        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
            ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : (D.getAttr<UninitializedAttr>()
-                  ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-                  : getContext().getLangOpts().getTrivialAutoVarInit()));
+           : getContext().getLangOpts().getTrivialAutoVarInit());
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -1969,10 +1946,34 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       constant = constWithPadding(CGM, IsPattern::No,
                                   replaceUndef(CGM, isPattern, constant));
     }
+
+    if (constant && type->isBitIntType() &&
+        CGM.getTypes().typeRequiresSplitIntoByteArray(type)) {
+      // Constants for long _BitInt types are split into individual bytes.
+      // Try to fold these back into an integer constant so it can be stored
+      // properly.
+      llvm::Type *LoadType =
+          CGM.getTypes().convertTypeForLoadStore(type, constant->getType());
+      constant = llvm::ConstantFoldLoadFromConst(
+          constant, LoadType, llvm::APInt::getZero(32), CGM.getDataLayout());
+    }
   }
 
   if (!constant) {
-    initializeWhatIsTechnicallyUninitialized(Loc);
+    if (trivialAutoVarInit !=
+        LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      // At this point, we know D has an Init expression, but isn't a constant.
+      // - If D is not a scalar, auto-var-init conservatively (members may be
+      // left uninitialized by constructor Init expressions for example).
+      // - If D is a scalar, we only need to auto-var-init if there is a
+      // self-reference. Otherwise, the Init expression should be sufficient.
+      // It may be that the Init expression uses other uninitialized memory,
+      // but auto-var-init here would not help, as auto-init would get
+      // overwritten by Init.
+      if (!type->isScalarType() || capturedByInit || isAccessedBy(D, Init)) {
+        initializeWhatIsTechnicallyUninitialized(Loc);
+      }
+    }
     LValue lv = MakeAddrLValue(Loc, type);
     lv.setNonGC(true);
     return EmitExprAsInit(Init, &D, lv, capturedByInit);
@@ -2509,8 +2510,8 @@ void CodeGenFunction::pushRegularPartialArrayCleanup(llvm::Value *arrayBegin,
 llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
   if (LifetimeStartFn)
     return LifetimeStartFn;
-  LifetimeStartFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
+  LifetimeStartFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
   return LifetimeStartFn;
 }
 
@@ -2518,8 +2519,8 @@ llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
 llvm::Function *CodeGenModule::getLLVMLifetimeEndFn() {
   if (LifetimeEndFn)
     return LifetimeEndFn;
-  LifetimeEndFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
+  LifetimeEndFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
   return LifetimeEndFn;
 }
 
@@ -2764,7 +2765,7 @@ void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
 }
 
 void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
-  for (const Expr *E : D->varlists()) {
+  for (const Expr *E : D->varlist()) {
     const auto *DE = cast<DeclRefExpr>(E);
     const auto *VD = cast<VarDecl>(DE->getDecl());
 

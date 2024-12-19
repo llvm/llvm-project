@@ -80,9 +80,7 @@ public:
 
   void linkerMain(llvm::ArrayRef<const char *> args);
 
-  // Adds various search paths based on the sysroot.  Must only be called once
-  // config->machine has been set.
-  void addWinSysRootLibSearchPaths();
+  void setMachine(llvm::COFF::MachineTypes machine);
 
   void addClangLibSearchPaths(const std::string &argv0);
 
@@ -101,6 +99,8 @@ public:
 
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
+  void pullArm64ECIcallHelper();
+
 private:
   // Searches a file from search paths.
   std::optional<StringRef> findFileIfNew(StringRef filename);
@@ -113,6 +113,10 @@ private:
 
   // Determines the location of the sysroot based on `args`, environment, etc.
   void detectWinSysRoot(const llvm::opt::InputArgList &args);
+
+  // Adds various search paths based on the sysroot.  Must only be called once
+  // config->machine has been set.
+  void addWinSysRootLibSearchPaths();
 
   // Symbol names are mangled by prepending "_" on x86.
   StringRef mangle(StringRef sym);
@@ -168,7 +172,9 @@ private:
 
   std::set<std::string> visitedLibs;
 
-  Symbol *addUndefined(StringRef sym);
+  Symbol *addUndefined(StringRef sym, bool aliasEC = false);
+
+  void addUndefinedGlob(StringRef arg);
 
   StringRef mangleMaybe(Symbol *s);
 
@@ -191,7 +197,6 @@ private:
   bool run();
 
   std::list<std::function<void()>> taskQueue;
-  std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 
   llvm::DenseSet<StringRef> directivesExports;
@@ -270,6 +275,10 @@ private:
   // Convert Windows resource files (.res files) to a .obj file.
   MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
                                    ArrayRef<ObjFile *> objs);
+
+  // Create export thunks for exported and patchable Arm64EC function symbols.
+  void createECExportThunks();
+  void maybeCreateECExportThunk(StringRef name, Symbol *&sym);
 };
 
 // Create enum with OPT_xxx values for each option in Options.td

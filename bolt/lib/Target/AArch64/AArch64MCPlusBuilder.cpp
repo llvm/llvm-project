@@ -15,6 +15,8 @@
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -22,6 +24,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -139,10 +142,6 @@ public:
 
     return MCPlusBuilder::equals(*AArch64ExprA.getSubExpr(),
                                  *AArch64ExprB.getSubExpr(), Comp);
-  }
-
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    return false;
   }
 
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
@@ -706,8 +705,20 @@ public:
     unsigned ShiftVal = AArch64_AM::getArithShiftValue(OperandExtension);
     AArch64_AM::ShiftExtendType ExtendType =
         AArch64_AM::getArithExtendType(OperandExtension);
-    if (ShiftVal != 2)
-      llvm_unreachable("Failed to match indirect branch! (fragment 2)");
+    if (ShiftVal != 2) {
+      // TODO: Handle the patten where ShiftVal != 2.
+      // The following code sequence below has no shift amount,
+      // the range could be 0 to 4.
+      // The pattern comes from libc, it occurs when the binary is static.
+      //   adr     x6, 0x219fb0 <sigall_set+0x88>
+      //   add     x6, x6, x14, lsl #2
+      //   ldr     w7, [x6]
+      //   add     x6, x6, w7, sxtw => no shift amount
+      //   br      x6
+      errs() << "BOLT-WARNING: "
+                "Failed to match indirect branch: ShiftVAL != 2 \n";
+      return false;
+    }
 
     if (ExtendType == AArch64_AM::SXTB)
       ScaleValue = 1LL;
@@ -750,6 +761,19 @@ public:
       // (hoisted). Return with no jump table info.
       JumpTable = nullptr;
       return true;
+    }
+
+    if (DefJTBaseAdd->getOpcode() == AArch64::ADR) {
+      // TODO: Handle the pattern where there is no adrp/add pair.
+      // It also occurs when the binary is static.
+      //  adr     x13, 0x215a18 <_nl_value_type_LC_COLLATE+0x50>
+      //  ldrh    w13, [x13, w12, uxtw #1]
+      //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
+      //  add     x13, x12, w13, sxth #2
+      //  br      x13
+      errs() << "BOLT-WARNING: Failed to match indirect branch: "
+                "nop/adr instead of adrp/add \n";
+      return false;
     }
 
     assert(DefJTBaseAdd->getOpcode() == AArch64::ADDXri &&
@@ -831,16 +855,19 @@ public:
     return Uses;
   }
 
-  IndirectBranchType analyzeIndirectBranch(
-      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-      unsigned &IndexRegNumOut, int64_t &DispValueOut,
-      const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut) const override {
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
+                        MCInst *&FixedEntryLoadInstr) const override {
     MemLocInstrOut = nullptr;
     BaseRegNumOut = AArch64::NoRegister;
     IndexRegNumOut = AArch64::NoRegister;
     DispValueOut = 0;
     DispExprOut = nullptr;
+    FixedEntryLoadInstr = nullptr;
 
     // An instruction referencing memory used by jump instruction (directly or
     // via register). This location could be an array of function pointers
@@ -1294,6 +1321,67 @@ public:
             0xFFFFFFFFFFFFF000ULL;
     Target = Addr;
     return 3;
+  }
+
+  /// Match the following pattern:
+  ///
+  ///   LDR x16, .L1
+  ///   BR  x16
+  /// L1:
+  ///   .quad Target
+  ///
+  /// Populate \p TargetAddress with the Target value on successful match.
+  bool matchAbsLongVeneer(const BinaryFunction &BF,
+                          uint64_t &TargetAddress) const override {
+    if (BF.size() != 1 || BF.getMaxSize() < 16)
+      return false;
+
+    if (!BF.hasConstantIsland())
+      return false;
+
+    const BinaryBasicBlock &BB = BF.front();
+    if (BB.size() != 2)
+      return false;
+
+    const MCInst &LDRInst = BB.getInstructionAtIndex(0);
+    if (LDRInst.getOpcode() != AArch64::LDRXl)
+      return false;
+
+    if (!LDRInst.getOperand(0).isReg() ||
+        LDRInst.getOperand(0).getReg() != AArch64::X16)
+      return false;
+
+    const MCSymbol *TargetSym = getTargetSymbol(LDRInst, 1);
+    if (!TargetSym)
+      return false;
+
+    const MCInst &BRInst = BB.getInstructionAtIndex(1);
+    if (BRInst.getOpcode() != AArch64::BR)
+      return false;
+    if (!BRInst.getOperand(0).isReg() ||
+        BRInst.getOperand(0).getReg() != AArch64::X16)
+      return false;
+
+    const BinaryFunction::IslandInfo &IInfo = BF.getIslandInfo();
+    if (IInfo.HasDynamicRelocations)
+      return false;
+
+    auto Iter = IInfo.Offsets.find(8);
+    if (Iter == IInfo.Offsets.end() || Iter->second != TargetSym)
+      return false;
+
+    // Extract the absolute value stored inside the island.
+    StringRef SectionContents = BF.getOriginSection()->getContents();
+    StringRef FunctionContents = SectionContents.substr(
+        BF.getAddress() - BF.getOriginSection()->getAddress(), BF.getMaxSize());
+
+    const BinaryContext &BC = BF.getBinaryContext();
+    DataExtractor DE(FunctionContents, BC.AsmInfo->isLittleEndian(),
+                     BC.AsmInfo->getCodePointerSize());
+    uint64_t Offset = 8;
+    TargetAddress = DE.getAddress(&Offset);
+
+    return true;
   }
 
   bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const override {

@@ -28,8 +28,8 @@ static_assert(sizeof(SymbolUnion) <= 48,
               "symbols should be optimized for memory usage");
 
 // Returns a symbol name for an error message.
-static std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
-                                       StringRef symName) {
+std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
+                                StringRef symName) {
   if (ctx.config.demangle) {
     std::string prefix;
     StringRef prefixless = symName;
@@ -51,6 +51,17 @@ std::string toString(const COFFLinkerContext &ctx, coff::Symbol &b) {
 std::string toCOFFString(const COFFLinkerContext &ctx,
                          const Archive::Symbol &b) {
   return maybeDemangleSymbol(ctx, b.getName());
+}
+
+const COFFSyncStream &
+coff::operator<<(const COFFSyncStream &s,
+                 const llvm::object::Archive::Symbol *sym) {
+  s << maybeDemangleSymbol(s.ctx, sym->getName());
+  return s;
+}
+
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s, Symbol *sym) {
+  return s << maybeDemangleSymbol(s.ctx, sym->getName());
 }
 
 namespace coff {
@@ -84,7 +95,7 @@ bool Symbol::isLive() const {
   if (auto *imp = dyn_cast<DefinedImportData>(this))
     return imp->file->live;
   if (auto *imp = dyn_cast<DefinedImportThunk>(this))
-    return imp->wrappedSym->file->thunkLive;
+    return imp->getChunk()->live;
   // Assume any other kind of symbol is live.
   return true;
 }
@@ -107,38 +118,58 @@ COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
 
 uint64_t DefinedAbsolute::getRVA() { return va - ctx.config.imageBase; }
 
-static Chunk *makeImportThunk(COFFLinkerContext &ctx, DefinedImportData *s,
-                              uint16_t machine) {
-  if (machine == AMD64)
-    return make<ImportThunkChunkX64>(ctx, s);
-  if (machine == I386)
-    return make<ImportThunkChunkX86>(ctx, s);
-  if (machine == ARM64)
-    return make<ImportThunkChunkARM64>(ctx, s);
-  assert(machine == ARMNT);
-  return make<ImportThunkChunkARM>(ctx, s);
+DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
+                                       DefinedImportData *s,
+                                       ImportThunkChunk *chunk)
+    : Defined(DefinedImportThunkKind, name), wrappedSym(s), data(chunk) {}
+
+Symbol *Undefined::getWeakAlias() {
+  // A weak alias may be a weak alias to another symbol, so check recursively.
+  DenseSet<Symbol *> weakChain;
+  for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias) {
+    // Anti-dependency symbols can't be chained.
+    if (a->isAntiDep)
+      break;
+    if (!isa<Undefined>(a))
+      return a;
+    if (!weakChain.insert(a).second)
+      break; // We have a cycle.
+  }
+  return nullptr;
 }
 
-DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                                       DefinedImportData *s, uint16_t machine)
-    : Defined(DefinedImportThunkKind, name), wrappedSym(s),
-      data(makeImportThunk(ctx, s, machine)) {}
+bool Undefined::resolveWeakAlias() {
+  Defined *d = getDefinedWeakAlias();
+  if (!d)
+    return false;
 
-Defined *Undefined::getWeakAlias() {
-  // A weak alias may be a weak alias to another symbol, so check recursively.
-  for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias)
-    if (auto *d = dyn_cast<Defined>(a))
-      return d;
-  return nullptr;
+  // We want to replace Sym with D. However, we can't just blindly
+  // copy sizeof(SymbolUnion) bytes from D to Sym because D may be an
+  // internal symbol, and internal symbols are stored as "unparented"
+  // Symbols. For that reason we need to check which type of symbol we
+  // are dealing with and copy the correct number of bytes.
+  StringRef name = getName();
+  bool wasAntiDep = isAntiDep;
+  if (isa<DefinedRegular>(d))
+    memcpy(this, d, sizeof(DefinedRegular));
+  else if (isa<DefinedAbsolute>(d))
+    memcpy(this, d, sizeof(DefinedAbsolute));
+  else
+    memcpy(this, d, sizeof(SymbolUnion));
+
+  nameData = name.data();
+  nameSize = name.size();
+  isAntiDep = wasAntiDep;
+  return true;
 }
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {
   Archive::Child c =
       CHECK(sym.getMember(), "could not get the member for symbol " +
-                                 toCOFFString(file->ctx, sym));
+                                 toCOFFString(file->symtab.ctx, sym));
   return CHECK(c.getMemoryBufferRef(),
                "could not get the buffer for the member defining symbol " +
-                   toCOFFString(file->ctx, sym));
+                   toCOFFString(file->symtab.ctx, sym));
 }
 } // namespace coff
 } // namespace lld

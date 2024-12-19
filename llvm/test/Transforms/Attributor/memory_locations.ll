@@ -35,7 +35,7 @@ define dso_local ptr @internal_only_rec(i32 %arg) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @internal_only_rec(i32 [[DIV]])
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64

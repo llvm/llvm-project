@@ -30,11 +30,12 @@ void FileSystemStatCache::anchor() {}
 /// success for directories (not files).  On a successful file lookup, the
 /// implementation can optionally fill in FileDescriptor with a valid
 /// descriptor and the client guarantees that it will close it.
-std::error_code
-FileSystemStatCache::get(StringRef Path, llvm::vfs::Status &Status,
-                         bool isFile, std::unique_ptr<llvm::vfs::File> *F,
-                         FileSystemStatCache *Cache,
-                         llvm::vfs::FileSystem &FS) {
+std::error_code FileSystemStatCache::get(StringRef Path,
+                                         llvm::vfs::Status &Status, bool isFile,
+                                         std::unique_ptr<llvm::vfs::File> *F,
+                                         FileSystemStatCache *Cache,
+                                         llvm::vfs::FileSystem &FS,
+                                         bool IsText) {
   bool isForDir = !isFile;
   std::error_code RetCode;
 
@@ -58,7 +59,8 @@ FileSystemStatCache::get(StringRef Path, llvm::vfs::Status &Status,
     //
     // Because of this, check to see if the file exists with 'open'.  If the
     // open succeeds, use fstat to get the stat info.
-    auto OwnedFile = FS.openFileForRead(Path);
+    auto OwnedFile =
+        IsText ? FS.openFileForRead(Path) : FS.openFileForReadBinary(Path);
 
     if (!OwnedFile) {
       // If the open fails, our "stat" fails.
