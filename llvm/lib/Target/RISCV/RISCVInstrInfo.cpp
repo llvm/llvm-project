@@ -118,6 +118,9 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case RISCV::FLD:
     MemBytes = 8;
     break;
+  case RISCV::VL1RE8_V:
+  case RISCV::VL2RE8_V:
+  case RISCV::VL4RE8_V:
   case RISCV::VL8RE8_V:
     if (!MI.getOperand(1).isFI())
       return Register();
@@ -164,6 +167,9 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case RISCV::FSD:
     MemBytes = 8;
     break;
+  case RISCV::VS1R_V:
+  case RISCV::VS2R_V:
+  case RISCV::VS4R_V:
   case RISCV::VS8R_V:
     if (!MI.getOperand(1).isFI())
       return Register();
