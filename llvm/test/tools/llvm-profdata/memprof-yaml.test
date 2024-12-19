@@ -11,24 +11,24 @@ HeapProfileRecords:
   - GUID:            0xdeadbeef12345678
     AllocSites:
       - Callstack:
-          - { Function: 100, LineOffset: 11, Column: 10, IsInlineFrame: true }
-          - { Function: 200, LineOffset: 22, Column: 20, IsInlineFrame: false }
+          - { Function: 0x1111111111111111, LineOffset: 11, Column: 10, IsInlineFrame: true }
+          - { Function: 0x2222222222222222, LineOffset: 22, Column: 20, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      111
           TotalSize:       222
           TotalLifetime:   333
           TotalLifetimeAccessDensity: 444
       - Callstack:
-          - { Function: 300, LineOffset: 33, Column: 30, IsInlineFrame: false }
-          - { Function: 400, LineOffset: 44, Column: 40, IsInlineFrame: true }
+          - { Function: 0x3333333333333333, LineOffset: 33, Column: 30, IsInlineFrame: false }
+          - { Function: 0x4444444444444444, LineOffset: 44, Column: 40, IsInlineFrame: true }
         MemInfoBlock:
           AllocCount:      555
           TotalSize:       666
           TotalLifetime:   777
           TotalLifetimeAccessDensity: 888
     CallSites:
-      - - { Function: 500, LineOffset: 55, Column: 50, IsInlineFrame: true }
-        - { Function: 600, LineOffset: 66, Column: 60, IsInlineFrame: false }
-      - - { Function: 700, LineOffset: 77, Column: 70, IsInlineFrame: true }
-        - { Function: 800, LineOffset: 88, Column: 80, IsInlineFrame: false }
+      - - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
+        - { Function: 0x6666666666666666, LineOffset: 66, Column: 60, IsInlineFrame: false }
+      - - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
+        - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
 ...

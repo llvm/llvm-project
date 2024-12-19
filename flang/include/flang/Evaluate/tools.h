@@ -582,7 +582,8 @@ Expr<TO> ConvertToType(Expr<Type<FROMCAT, FROMKIND>> &&x) {
 
 template <typename TO> Expr<TO> ConvertToType(BOZLiteralConstant &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
-  if constexpr (TO::category == TypeCategory::Integer) {
+  if constexpr (TO::category == TypeCategory::Integer ||
+      TO::category == TypeCategory::Unsigned) {
     return Expr<TO>{
         Constant<TO>{Scalar<TO>::ConvertUnsigned(std::move(x)).value}};
   } else {
@@ -754,11 +755,11 @@ Expr<SomeKind<CAT>> PromoteAndCombine(
 // one of the operands to the type of the other.  Handles special cases with
 // typeless literal operands and with REAL/COMPLEX exponentiation to INTEGER
 // powers.
-template <template <typename> class OPR>
+template <template <typename> class OPR, bool CAN_BE_UNSIGNED = true>
 std::optional<Expr<SomeType>> NumericOperation(parser::ContextualMessages &,
     Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
 
-extern template std::optional<Expr<SomeType>> NumericOperation<Power>(
+extern template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -909,6 +910,9 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
     SWITCH_COVERS_ALL_CASES
   case TypeCategory::Integer:
     return WrapperHelper<TypeCategory::Integer, WRAPPER, WRAPPED>(
+        dyType.kind(), std::move(x));
+  case TypeCategory::Unsigned:
+    return WrapperHelper<TypeCategory::Unsigned, WRAPPER, WRAPPED>(
         dyType.kind(), std::move(x));
   case TypeCategory::Real:
     return WrapperHelper<TypeCategory::Real, WRAPPER, WRAPPED>(

@@ -52,6 +52,7 @@ include "arm_immcheck_incl.td"
 // h: half-float
 // d: double
 // b: bfloat
+// m: mfloat8
 
 // Typespec modifiers
 // ------------------
@@ -69,6 +70,7 @@ include "arm_immcheck_incl.td"
 // x: vector of signed integers
 // u: vector of unsigned integers
 // d: default
+// p: pointer type
 // c: const pointer type
 // P: predicate type
 // s: scalar of element type
@@ -88,6 +90,7 @@ include "arm_immcheck_incl.td"
 // j: element type promoted to 64bits (splat to vector type)
 // K: element type bitcast to a signed integer (splat to vector type)
 // L: element type bitcast to an unsigned integer (splat to vector type)
+// !: mfloat8_t (splat to svmfloat8_t)
 //
 // i: constant uint64_t
 // k: int32_t
@@ -99,6 +102,7 @@ include "arm_immcheck_incl.td"
 // [: svuint8_t
 // t: svint32_t
 // z: svuint32_t
+// #: svint64_t
 // g: svuint64_t
 // O: svfloat16_t
 // M: svfloat32_t

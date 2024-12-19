@@ -87,6 +87,8 @@ DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
 DECLARE_DESCRIPTOR(parser::OmpPrescriptiveness);
 DECLARE_DESCRIPTOR(parser::OmpReductionIdentifier);
 DECLARE_DESCRIPTOR(parser::OmpReductionModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
 

@@ -20,11 +20,11 @@ define i1 @test_redand_v1i1(<1 x i1> %a) {
 define i1 @test_redand_v2i1(<2 x i1> %a) {
 ; CHECK-LABEL: test_redand_v2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    uminp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v2i1:
@@ -42,11 +42,11 @@ define i1 @test_redand_v2i1(<2 x i1> %a) {
 define i1 @test_redand_v4i1(<4 x i1> %a) {
 ; CHECK-LABEL: test_redand_v4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    uminv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v4i1:
@@ -68,11 +68,11 @@ define i1 @test_redand_v4i1(<4 x i1> %a) {
 define i1 @test_redand_v8i1(<8 x i1> %a) {
 ; CHECK-LABEL: test_redand_v8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v8i1:

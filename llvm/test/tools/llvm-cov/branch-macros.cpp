@@ -5,7 +5,7 @@
 #define COND1 (a == b)
 #define COND2 (a != b)
 #define COND3 (COND1 && COND2)
-#define COND4 (COND3 ? COND2 : COND1)
+#define COND4 (COND3 ? COND2 : COND1) // CHECK: | Branch ([[@LINE]]:15): [True: 1, False: 2]
 #define MACRO1 COND3
 #define MACRO2 MACRO1
 #define MACRO3 MACRO2

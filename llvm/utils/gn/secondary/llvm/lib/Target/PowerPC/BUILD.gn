@@ -86,6 +86,7 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCPreEmitPeephole.cpp",
     "PPCReduceCRLogicals.cpp",
     "PPCRegisterInfo.cpp",
+    "PPCSelectionDAGInfo.cpp",
     "PPCSubtarget.cpp",
     "PPCTLSDynamicCall.cpp",
     "PPCTOCRegDeps.cpp",
