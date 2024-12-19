@@ -18,6 +18,8 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SourceModule.h"
+#include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -313,6 +315,21 @@ public:
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
+  /// Finds imported declarations whose name match \p name.
+  ///
+  /// \param[in] name
+  ///     The name to search the imported declaration by.
+  ///
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object.
+  ///
+  /// \param[in] find_one
+  ///     If set to true, the search will stop after the first imported
+  ///     declaration is found.
+  virtual void
+  FindImportedDeclaration(ConstString name,
+                          std::vector<ImportedDeclaration> &declarations,
+                          bool find_one) {}
 
   /// Find types using a type-matching object that contains all search
   /// parameters.

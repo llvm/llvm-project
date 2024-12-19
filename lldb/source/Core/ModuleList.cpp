@@ -831,6 +831,24 @@ void ModuleList::FindTypes(Module *search_first, const TypeQuery &query,
   }
 }
 
+void ModuleList::FindImportedDeclarations(
+    Module *search_first, ConstString name,
+    std::vector<ImportedDeclaration> &results, bool find_one) const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  if (search_first) {
+    search_first->FindImportedDeclarations(name, results, find_one);
+    if (find_one && !results.empty())
+      return;
+  }
+  for (const auto &module_sp : m_modules) {
+    if (search_first != module_sp.get()) {
+      module_sp->FindImportedDeclarations(name, results, find_one);
+    }
+    if (find_one && !results.empty())
+      return;
+  }
+}
+
 bool ModuleList::FindSourceFile(const FileSpec &orig_spec,
                                 FileSpec &new_spec) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);

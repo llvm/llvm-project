@@ -42,6 +42,7 @@
 #include "swift/../../lib/ClangImporter/ClangAdapter.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/Demangler.h"
 #include "swift/Demangling/ManglingFlavor.h"
 #include "swift/Frontend/Frontend.h"
 
@@ -156,6 +157,179 @@ TypeSystemSwiftTypeRef::CanonicalizeSugar(swift::Demangle::Demangler &dem,
   });
 }
 
+NodePointer TypeSystemSwiftTypeRef::FindTypeWithModuleAndIdentifierNode(
+    swift::Demangle::NodePointer node) {
+  if (!node || node->getKind() != Node::Kind::Type)
+    return nullptr;
+
+  NodePointer current = node;
+  while (current && current->hasChildren() &&
+         current->getFirstChild()->getKind() != Node::Kind::Module) {
+    current = current->getFirstChild();
+  }
+  switch (current->getKind()) {
+  case Node::Kind::Structure:
+  case Node::Kind::Class:
+  case Node::Kind::Enum:
+  case Node::Kind::BoundGenericStructure:
+  case Node::Kind::BoundGenericClass:
+  case Node::Kind::BoundGenericEnum:
+    return current;
+  default:
+    return nullptr;
+  }
+}
+
+std::string TypeSystemSwiftTypeRef::AdjustTypeForOriginallyDefinedInModule(
+    llvm::StringRef mangled_typename) {
+  if (mangled_typename.empty())
+    return {};
+
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_typename);
+  swift::Demangle::Demangler dem;
+  auto *type_node =
+      swift_demangle::GetDemangledTypeMangling(dem, mangled_typename);
+  if (!type_node)
+    return {};
+
+  TargetSP target_sp(GetTargetWP().lock());
+  if (!target_sp)
+    return {};
+
+  ModuleList &module_list = target_sp->GetImages();
+
+  // A map from the node containing the module and identifier of a specific type
+  // to a node with the modified module and identifier of that type. For
+  // example, given the following type:
+  //
+  // Module "a":
+  //
+  // @available(...)
+  // @_originallyDefinedIn(module: "Other", ...)
+  // public struct A { ... }
+  // The demangle tree of the mangled name stored in DWARF will be:
+  //
+  // kind=Global
+  //   kind=TypeMangling
+  //     kind=Type
+  //       kind=Structure
+  //         kind=Module, text="Other"
+  //         kind=Identifier, text="A"
+  //
+  // This functions needs to construct the following tree:
+  //
+  // kind=Global
+  //   kind=TypeMangling
+  //     kind=Type
+  //       kind=Structure
+  //         kind=Module, text="a"
+  //         kind=Identifier, text="A"
+  //
+  // type_to_renamed_type_nodes is populated with the nodes in the original tree
+  // node that need to be replaced mapping to their replacements. In this
+  // example that would be:
+  //
+  // kind=Structure
+  //   kind=Module, text="Other"
+  //   kind=Identifier, text="A"
+  //
+  // mapping to:
+  //
+  // kind=Structure
+  //   kind=Module, text="a"
+  //   kind=Identifier, text="A"
+  //
+  // We can't have a map from module nodes to renamed module nodes because those
+  // nodes might be reused elsewhere in the tree.
+  llvm::DenseMap<NodePointer, NodePointer> type_to_renamed_type_nodes;
+
+  // Visit the demangle tree and populate type_to_renamed_type_nodes.
+  PreOrderTraversal(type_node, [&](NodePointer node) {
+    // We're visiting the entire tree, but we only need to examine "Type" nodes.
+    if (node->getKind() != Node::Kind::Type)
+      return true;
+
+    auto compiler_type = RemangleAsType(dem, node, flavor);
+    if (!compiler_type)
+      return true;
+
+    // Find the node that contains the module and identifier nodes.
+    NodePointer node_with_module_and_name =
+        FindTypeWithModuleAndIdentifierNode(node);
+    if (!node_with_module_and_name)
+      return true;
+
+    auto module_name = node_with_module_and_name->getFirstChild()->getText();
+    // Clang types couldn't have been renamed.
+    if (module_name == swift::MANGLING_MODULE_OBJC)
+      return true;
+
+    // If we already processed this node there's nothing to do (this can happen
+    // because nodes are shared in the tree).
+    if (type_to_renamed_type_nodes.contains(node_with_module_and_name))
+      return true;
+
+    // Look for the imported declarations that indicate the type has moved
+    // modules.
+    std::vector<ImportedDeclaration> decls;
+    module_list.FindImportedDeclarations(GetModule(),
+                                         compiler_type.GetMangledTypeName(),
+                                         decls, /*find_one=*/true);
+    // If there are none there's nothing to do.
+    if (decls.empty())
+      return true;
+
+    std::vector<lldb_private::CompilerContext> declContext =
+        decls[0].GetDeclContext();
+
+    lldbassert(!declContext.empty() &&
+               "Unexpected decl context for imported declaration!");
+    if (declContext.empty())
+      return true;
+
+    auto module_context = declContext[0];
+
+    // If the mangled name's module and module context module match then
+    // there's nothing to do.
+    if (module_name == module_context.name)
+      return true;
+
+    // Construct the node tree that will substituted in.
+    NodePointer new_node = dem.createNode(node_with_module_and_name->getKind());
+    NodePointer new_module_node = dem.createNodeWithAllocatedText(
+        Node::Kind::Module, module_context.name);
+    new_node->addChild(new_module_node, dem);
+    new_node->addChild(node_with_module_and_name->getLastChild(), dem);
+
+    type_to_renamed_type_nodes[node_with_module_and_name] = new_node;
+    return true;
+  });
+
+  // If there are no renamed modules, there's nothing to do.
+  if (type_to_renamed_type_nodes.empty())
+    return mangled_typename.str();
+
+  NodePointer transformed = Transform(dem, type_node, [&](NodePointer node) {
+    return type_to_renamed_type_nodes.contains(node)
+               ? type_to_renamed_type_nodes[node]
+               : node;
+  });
+
+  auto mangling = mangleNode(swift_demangle::mangleType(dem, transformed));
+  assert(mangling.isSuccess());
+  if (!mangling.isSuccess()) {
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "[AdjustTypeForOriginallyDefinedInModule] Unexpected mangling "
+             "error when mangling adjusted node for type with mangled name {0}",
+             mangled_typename);
+
+    return {};
+  }
+
+  auto str = mangling.result();
+  return str;
+}
+
 llvm::StringRef
 TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
   if (!node)
@@ -237,7 +411,7 @@ TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
   ConstString name(name_ref);
   if (m_clang_type_cache.Lookup(name.AsCString(), result))
     return result;
-  
+
   TargetSP target_sp = GetTargetWP().lock();
   if (!target_sp)
     return {};
@@ -455,7 +629,7 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
     if (!is_vector)
       break;
 
-    auto qual_type = ClangUtil::GetQualType(clang_type); 
+    auto qual_type = ClangUtil::GetQualType(clang_type);
     const auto *ptr = qual_type.getTypePtrOrNull();
     if (!ptr)
       break;

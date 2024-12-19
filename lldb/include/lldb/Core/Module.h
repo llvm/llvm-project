@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Symbol/ImportedDeclaration.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -436,6 +437,21 @@ public:
   ///     Any matching types will be populated into the \a results object using
   ///     TypeMap::InsertUnique(...).
   void FindTypes(const TypeQuery &query, TypeResults &results);
+
+  /// Finds imported declarations whose name match \p name.
+  ///
+  /// \param[in] name
+  ///     The name to search the imported declaration by.
+  ///
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object.
+  ///
+  /// \param[in] find_one
+  ///     If set to true, the search will stop after the first imported
+  ///     declaration is found.
+  void FindImportedDeclarations(ConstString name,
+                                std::vector<ImportedDeclaration> &results,
+                                bool find_one);
 
   /// Get const accessor for the module architecture.
   ///

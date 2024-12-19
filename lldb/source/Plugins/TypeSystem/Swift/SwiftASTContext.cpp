@@ -4780,6 +4780,16 @@ SwiftASTContext::ReconstructType(ConstString mangled_typename) {
                    .getPointer();
   assert(!found_type || &found_type->getASTContext() == *ast_ctx);
 
+  // This type might have been been found in reflection and annotated with
+  // @_originallyDefinedIn. The compiler emits a typelias for these type
+  // pointing them back to the types with the real module name.
+  if (!found_type) {
+    auto adjusted =
+        GetTypeSystemSwiftTypeRef()->AdjustTypeForOriginallyDefinedInModule(
+            mangled_typename);
+    found_type =
+        swift::Demangle::getTypeForMangling(**ast_ctx, adjusted).getPointer();
+  }
   // Objective-C classes sometimes have private subclasses that are invisible
   // to the Swift compiler because they are declared and defined in a .m file.
   // If we can't reconstruct an ObjC type, walk up the type hierarchy until we

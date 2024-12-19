@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/UserSettingsController.h"
+#include "lldb/Symbol/ImportedDeclaration.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
@@ -396,6 +397,25 @@ public:
   ///     TypeMap::InsertUnique(...).
   void FindTypes(Module *search_first, const TypeQuery &query,
                  lldb_private::TypeResults &results) const;
+
+  /// Finds imported declarations whose name match \p name.
+  ///
+  /// \param[in] search_first
+  ///     If non-null, this module will be searched before any other
+  ///     modules.
+  ///
+  /// \param[in] name
+  ///     The name to search the imported declaration by.
+  ///
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object.
+  ///
+  /// \param[in] find_one
+  ///     If set to true, the search will stop after the first imported
+  ///     declaration is found.
+  void FindImportedDeclarations(Module *search_first, ConstString name,
+                                std::vector<ImportedDeclaration> &results,
+                                bool find_one) const;
 
   bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
 

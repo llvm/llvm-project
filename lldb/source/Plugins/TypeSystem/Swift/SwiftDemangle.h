@@ -60,8 +60,9 @@ NodeAtPath(swift::Demangle::NodePointer root,
   return ChildAtPath(root, kind_path.drop_front());
 }
 
-/// \return the child of the \p Type node.
-static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
+/// \return the child of the TypeMangling node.
+static swift::Demangle::NodePointer
+GetTypeMangling(swift::Demangle::NodePointer n) {
   using namespace swift::Demangle;
   if (!n || n->getKind() != Node::Kind::Global)
     return nullptr;
@@ -69,6 +70,13 @@ static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
   if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
     return nullptr;
   n = n->getFirstChild();
+  return n;
+}
+
+/// \return the child of the \p Type node.
+static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
+  using namespace swift::Demangle;
+  n = GetTypeMangling(n);
   if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
     return nullptr;
   n = n->getFirstChild();
@@ -79,6 +87,14 @@ static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
 inline swift::Demangle::NodePointer
 GetDemangledType(swift::Demangle::Demangler &dem, llvm::StringRef name) {
   return GetType(dem.demangleSymbol(name));
+}
+
+/// Demangle a mangled type name and return the child of the \p TypeMangling
+/// node.
+inline swift::Demangle::NodePointer
+GetDemangledTypeMangling(swift::Demangle::Demangler &dem,
+                         llvm::StringRef name) {
+  return GetTypeMangling(dem.demangleSymbol(name));
 }
 
 /// Wrap node in Global/TypeMangling/Type.

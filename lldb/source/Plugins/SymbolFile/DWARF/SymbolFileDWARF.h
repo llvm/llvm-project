@@ -194,6 +194,10 @@ public:
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
 
+  void FindImportedDeclaration(ConstString name,
+                               std::vector<ImportedDeclaration> &sc_list,
+                               bool find_one) override;
+
   void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names) override;
