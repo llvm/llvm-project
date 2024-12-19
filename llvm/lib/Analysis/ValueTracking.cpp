@@ -1100,7 +1100,8 @@ static bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
                                          const APInt *&CLow,
                                          const APInt *&CHigh) {
   assert((II->getIntrinsicID() == Intrinsic::smin ||
-          II->getIntrinsicID() == Intrinsic::smax) && "Must be smin/smax");
+          II->getIntrinsicID() == Intrinsic::smax) &&
+         "Must be smin/smax");
 
   Intrinsic::ID InverseID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
   auto *InnerII = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
