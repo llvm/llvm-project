@@ -2710,9 +2710,13 @@ public:
     Walk(x.v);
     return false;
   }
-  void Unparse(const OpenMPErrorConstruct &x) {
+  void Unparse(const OmpErrorDirective &x) {
     Word("!$OMP ERROR ");
     Walk(x.t);
+    Put("\n");
+  }
+  void Unparse(const OmpNothingDirective &x) {
+    Word("!$OMP NOTHING");
     Put("\n");
   }
   void Unparse(const OmpSectionsDirective &x) {
