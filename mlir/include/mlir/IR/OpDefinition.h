@@ -695,13 +695,13 @@ public:
       : public TraitBase<ConcreteType, OneTypedResult<ResultType>::Impl> {
   public:
     template <typename ValTy>
-    mlir::TypedValue<ValTy> getResultOfType() {
+    mlir::TypedValue<ValTy> getResultAs() {
       return mlir::cast<mlir::TypedValue<ValTy>>(
           this->getOperation()->getResult(0));
     }
 
     mlir::TypedValue<ResultType> getResult() {
-      return getResultOfType<ResultType>();
+      return getResultAs<ResultType>();
     }
 
     /// If the operation returns a single value, then the Op can be implicitly
