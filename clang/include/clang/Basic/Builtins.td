@@ -1980,13 +1980,13 @@ def AtomicNandFetch : AtomicBuiltin {
 def AtomicTestAndSet : AtomicBuiltin {
   let Spellings = ["__atomic_test_and_set"];
   let Attributes = [NoThrow, CustomTypeChecking];
-  let Prototype = "bool(void volatile*, int)";
+  let Prototype = "void(...)";
 }
 
 def AtomicClear : AtomicBuiltin {
   let Spellings = ["__atomic_clear"];
   let Attributes = [NoThrow, CustomTypeChecking];
-  let Prototype = "void(void volatile*, int)";
+  let Prototype = "void(...)";
 }
 
 def AtomicThreadFence : Builtin {
