@@ -623,7 +623,7 @@ def bolt_optimize(args):
         sys.stdout.write(line)
     process.check_returncode()
 
-    if opts.method == "PERF":
+    if opts.method in ["PERF", "LBR"]:
         perf2bolt([bolt, opts.perf_training_binary_dir, opts.input])
 
     merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
