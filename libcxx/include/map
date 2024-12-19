@@ -591,6 +591,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__memory/pointer_traits.h>
 #  include <__memory/unique_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
+#  include <__new/launder.h>
 #  include <__node_handle>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
@@ -604,7 +605,6 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__utility/pair.h>
 #  include <__utility/piecewise_construct.h>
 #  include <__utility/swap.h>
-#  include <new> // for std::launder
 #  include <stdexcept>
 #  include <tuple>
 #  include <version>

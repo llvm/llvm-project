@@ -12569,10 +12569,10 @@ multiclass GF2P8AFFINE_avx512_common<bits<8> Op, string OpStr, SDNode OpNode,
 
 defm VGF2P8AFFINEINVQB : GF2P8AFFINE_avx512_common<0xCF, "vgf2p8affineinvqb",
                          X86GF2P8affineinvqb, SchedWriteVecIMul>,
-                         EVEX, VVVV, EVEX_CD8<8, CD8VF>, REX_W, AVX512AIi8Base;
+                         EVEX, VVVV, EVEX_CD8<64, CD8VF>, REX_W, AVX512AIi8Base;
 defm VGF2P8AFFINEQB    : GF2P8AFFINE_avx512_common<0xCE, "vgf2p8affineqb",
                          X86GF2P8affineqb, SchedWriteVecIMul>,
-                         EVEX, VVVV, EVEX_CD8<8, CD8VF>, REX_W, AVX512AIi8Base;
+                         EVEX, VVVV, EVEX_CD8<64, CD8VF>, REX_W, AVX512AIi8Base;
 
 
 //===----------------------------------------------------------------------===//

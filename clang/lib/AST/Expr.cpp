@@ -2990,6 +2990,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case ExprWithCleanupsClass:
     return cast<ExprWithCleanups>(this)->getSubExpr()
                ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  case OpaqueValueExprClass:
+    return cast<OpaqueValueExpr>(this)->getSourceExpr()->isUnusedResultAWarning(
+        WarnE, Loc, R1, R2, Ctx);
   }
 }
 
@@ -5067,6 +5070,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__opencl_atomic_init:
   case AO__c11_atomic_load:
   case AO__atomic_load_n:
+  case AO__atomic_test_and_set:
+  case AO__atomic_clear:
     return 2;
 
   case AO__scoped_atomic_load_n:

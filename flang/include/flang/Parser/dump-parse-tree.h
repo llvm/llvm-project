@@ -488,6 +488,9 @@ public:
   NODE(parser, OmpAlignment)
   NODE(parser, OmpAlignedClause)
   NODE(OmpAlignedClause, Modifier)
+  NODE(parser, OmpAtClause)
+  NODE_ENUM(OmpAtClause, ActionTime)
+  NODE_ENUM(OmpSeverityClause, Severity)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)
   NODE(OmpAtomicCapture, Stmt1)
@@ -559,12 +562,14 @@ public:
   NODE(parser, OmpLastprivateModifier)
   NODE_ENUM(OmpLastprivateModifier, Value)
   NODE(parser, OmpLinearClause)
-  NODE(OmpLinearClause, WithModifier)
-  NODE(OmpLinearClause, WithoutModifier)
+  NODE(OmpLinearClause, Modifier)
   NODE(parser, OmpLinearModifier)
   NODE_ENUM(OmpLinearModifier, Value)
+  NODE(parser, OmpStepComplexModifier)
+  NODE(parser, OmpStepSimpleModifier)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
+  NODE(parser, OmpMessageClause)
   NODE(OmpMapClause, Modifier)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
@@ -593,7 +598,10 @@ public:
   NODE(parser, OmpReductionClause)
   NODE(OmpReductionClause, Modifier)
   NODE(parser, OmpInReductionClause)
+  NODE(OmpInReductionClause, Modifier)
   NODE(parser, OmpReductionCombiner)
+  NODE(parser, OmpTaskReductionClause)
+  NODE(OmpTaskReductionClause, Modifier)
   NODE(OmpReductionCombiner, FunctionCombiner)
   NODE(parser, OmpReductionInitializerClause)
   NODE(parser, OmpReductionIdentifier)
@@ -605,6 +613,7 @@ public:
   NODE(parser, OmpScheduleClause)
   NODE(OmpScheduleClause, Modifier)
   NODE_ENUM(OmpScheduleClause, Kind)
+  NODE(parser, OmpSeverityClause)
   NODE(parser, OmpDeviceClause)
   NODE(OmpDeviceClause, Modifier)
   NODE(parser, OmpDeviceModifier)
@@ -653,6 +662,7 @@ public:
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
   NODE(parser, OpenMPDepobjConstruct)
+  NODE(parser, OpenMPErrorConstruct)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
@@ -796,6 +806,7 @@ public:
   NODE(Union, EndUnionStmt)
   NODE(Union, UnionStmt)
   NODE(parser, UnlockStmt)
+  NODE(parser, UnsignedLiteralConstant)
   NODE(parser, UnsignedTypeSpec)
   NODE(parser, UseStmt)
   NODE_ENUM(UseStmt, ModuleNature)
@@ -918,7 +929,8 @@ protected:
         asFortran_->call(ss, *x.typedCall);
       }
     } else if constexpr (std::is_same_v<T, IntLiteralConstant> ||
-        std::is_same_v<T, SignedIntLiteralConstant>) {
+        std::is_same_v<T, SignedIntLiteralConstant> ||
+        std::is_same_v<T, UnsignedLiteralConstant>) {
       ss << std::get<CharBlock>(x.t);
     } else if constexpr (std::is_same_v<T, RealLiteralConstant::Real>) {
       ss << x.source;
