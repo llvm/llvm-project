@@ -1098,11 +1098,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                    options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
 
   // Parse -link-cxx-sanitizer flag.
-  LinkCXXRuntimes =
-      D.CCCIsCXX() && !Args.hasArg(clang::driver::options::OPT_nostdlibxx);
-  LinkCXXRuntimes =
-      Args.hasFlag(options::OPT_fsanitize_link_cxx_runtime,
-                   options::OPT_fno_sanitize_link_cxx_runtime, LinkCXXRuntimes);
+  LinkCXXRuntimes = Args.hasArg(options::OPT_fsanitize_link_cxx_runtime,
+                                options::OPT_fno_sanitize_link_cxx_runtime,
+                                LinkCXXRuntimes) ||
+                    D.CCCIsCXX();
 
   NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
                                 options::OPT_fmemory_profile_EQ,
