@@ -14,6 +14,8 @@
 # RUN:   | FileCheck %s --check-prefix=SYMTAB
 # RUN: llvm-nm --print-armap %t_noindex.lib \
 # RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
+# RUN: llvm-nm --print-armap %t_thin.lib \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
 # RUN: llvm-nm --print-armap %t_thin_noindex.lib \
 # RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
 
