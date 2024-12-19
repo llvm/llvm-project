@@ -10,6 +10,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_APSIntPtr_H
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Compiler.h"
 
 namespace clang::ento {
 
@@ -31,6 +32,7 @@ public:
     return APSIntPtr(Ptr);
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const APSInt *get() const { return Ptr; }
   /*implicit*/ operator const APSInt &() const { return *get(); }
 
