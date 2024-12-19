@@ -196,8 +196,10 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 
     CallInst *TrapCall;
     if (DebugTrapBB) {
+      // Ideally we would use the SanitizerHandler::OutOfBounds constant
       TrapCall = IRB.CreateIntrinsic(
           IntrID, {}, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     } else {
       TrapCall = IRB.CreateIntrinsic(IntrID, {}, {});
     }
