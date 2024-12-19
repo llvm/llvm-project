@@ -1920,9 +1920,6 @@ public:
   ParseStatus parseEndpgm(OperandVector &Operands);
 
   ParseStatus parseVOPD(OperandVector &Operands);
-
-  ParseStatus parseBitOp3(OperandVector &Operands);
-  AMDGPUOperand::Ptr defaultBitOp3() const;
 };
 
 } // end anonymous namespace
@@ -9795,20 +9792,6 @@ ParseStatus AMDGPUAsmParser::parseEndpgm(OperandVector &Operands) {
 }
 
 bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
-
-//===----------------------------------------------------------------------===//
-// BITOP3
-//===----------------------------------------------------------------------===//
-
-ParseStatus AMDGPUAsmParser::parseBitOp3(OperandVector &Operands) {
-  ParseStatus Res =
-      parseIntWithPrefix("bitop3", Operands, AMDGPUOperand::ImmTyBitOp3);
-  return Res;
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBitOp3() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyBitOp3);
-}
 
 //===----------------------------------------------------------------------===//
 // Split Barrier

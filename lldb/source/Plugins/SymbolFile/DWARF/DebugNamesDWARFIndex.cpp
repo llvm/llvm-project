@@ -271,11 +271,6 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
       // Report invalid
       continue;
     }
-    DWARFUnit *cu = die.GetCU();
-    if (!cu->Supports_DW_AT_APPLE_objc_complete_type()) {
-      incomplete_types.push_back(die);
-      continue;
-    }
 
     if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
       // If we find the complete version we're done.
@@ -527,7 +522,7 @@ void DebugNamesDWARFIndex::GetTypesWithQuery(
   ConstString name = query.GetTypeBasename();
   std::vector<lldb_private::CompilerContext> query_context =
       query.GetContextRef();
-  if (query_context.size() <= 1)
+  if (query_context.size() <= 1 && !query.GetExactMatch())
     return GetTypes(name, callback);
 
   llvm::SmallVector<CompilerContext> parent_contexts =

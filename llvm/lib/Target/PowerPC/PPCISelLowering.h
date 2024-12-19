@@ -985,10 +985,8 @@ namespace llvm {
                                  StringRef Constraint, MVT VT) const override;
 
     /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
-    /// function arguments in the caller parameter area.  This is the actual
-    /// alignment, not its logarithm.
-    uint64_t getByValTypeAlignment(Type *Ty,
-                                   const DataLayout &DL) const override;
+    /// function arguments in the caller parameter area.
+    Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
     /// vector.  If it is invalid, don't add anything to Ops.
@@ -1285,6 +1283,7 @@ namespace llvm {
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUaddo(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;

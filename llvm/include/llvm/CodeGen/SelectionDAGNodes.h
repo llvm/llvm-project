@@ -664,7 +664,7 @@ private:
   DebugLoc debugLoc;
 
   /// Return a pointer to the specified value type.
-  static const EVT *getValueTypeList(EVT VT);
+  static const EVT *getValueTypeList(MVT VT);
 
   /// Index in worklist of DAGCombiner, or negative if the node is not in the
   /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
@@ -750,7 +750,7 @@ public:
   bool use_empty() const { return UseList == nullptr; }
 
   /// Return true if there is exactly one use of this node.
-  bool hasOneUse() const { return hasSingleElement(uses()); }
+  bool hasOneUse() const { return hasSingleElement(users()); }
 
   /// Return the number of uses of this node. This method takes
   /// time proportional to the number of uses.
@@ -844,10 +844,19 @@ public:
 
   static use_iterator use_end() { return use_iterator(nullptr); }
 
-  inline iterator_range<use_iterator> uses() {
+  /// Provide iteration support to walk over all users of an SDNode.
+  /// For now, this should only be used to get a pointer to the first user.
+  /// FIXME: Rename use_iterator to user_iterator. Add user_end().
+  use_iterator user_begin() const { return use_iterator(UseList); }
+
+  // Dereferencing use_iterator returns the user SDNode* making it closer to a
+  // user_iterator thus this function is called users() to reflect that.
+  // FIXME: Rename to user_iterator and introduce a use_iterator that returns
+  // SDUse*.
+  inline iterator_range<use_iterator> users() {
     return make_range(use_begin(), use_end());
   }
-  inline iterator_range<use_iterator> uses() const {
+  inline iterator_range<use_iterator> users() const {
     return make_range(use_begin(), use_end());
   }
 
@@ -1124,7 +1133,7 @@ public:
   void addUse(SDUse &U) { U.addToList(&UseList); }
 
 protected:
-  static SDVTList getSDVTList(EVT VT) {
+  static SDVTList getSDVTList(MVT VT) {
     SDVTList Ret = { getValueTypeList(VT), 1 };
     return Ret;
   }

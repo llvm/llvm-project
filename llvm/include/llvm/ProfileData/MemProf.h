@@ -323,21 +323,6 @@ struct Frame {
        << "        Column: " << Column << "\n"
        << "        Inline: " << IsInlineFrame << "\n";
   }
-
-  // Return a hash value based on the contents of the frame. Here we use a
-  // cryptographic hash function to minimize the chance of hash collisions.  We
-  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
-  // However, the deserializer never calls this function; it uses FrameIds
-  // merely as keys to look up Frames proper.
-  inline FrameId hash() const {
-    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
-        HashBuilder;
-    HashBuilder.add(Function, LineOffset, Column, IsInlineFrame);
-    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
-    FrameId Id;
-    std::memcpy(&Id, Hash.data(), sizeof(Hash));
-    return Id;
-  }
 };
 
 // A type representing the index into the table of call stacks.
@@ -351,21 +336,11 @@ using LinearCallStackId = uint32_t;
 struct IndexedAllocationInfo {
   // The dynamic calling context for the allocation in bottom-up (leaf-to-root)
   // order. Frame contents are stored out-of-line.
-  // TODO: Remove once we fully transition to CSId.
-  llvm::SmallVector<FrameId> CallStack;
-  // Conceptually the same as above.  We are going to keep both CallStack and
-  // CallStackId while we are transitioning from CallStack to CallStackId.
   CallStackId CSId = 0;
   // The statistics obtained from the runtime for the allocation.
   PortableMemInfoBlock Info;
 
   IndexedAllocationInfo() = default;
-  // This constructor is soft deprecated.  It will be removed once we remove all
-  // users of the CallStack field.
-  IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
-                        const MemInfoBlock &MB,
-                        const MemProfSchema &Schema = getFullSchema())
-      : CallStack(CS), CSId(CSId), Info(MB, Schema) {}
   IndexedAllocationInfo(CallStackId CSId, const MemInfoBlock &MB,
                         const MemProfSchema &Schema = getFullSchema())
       : CSId(CSId), Info(MB, Schema) {}
@@ -424,21 +399,14 @@ struct IndexedMemProfRecord {
   // list of inline locations in bottom-up order i.e. from leaf to root. The
   // inline location list may include additional entries, users should pick
   // the last entry in the list with the same function GUID.
-  llvm::SmallVector<llvm::SmallVector<FrameId>> CallSites;
-  // Conceptually the same as above.  We are going to keep both CallSites and
-  // CallSiteIds while we are transitioning from CallSites to CallSiteIds.
   llvm::SmallVector<CallStackId> CallSiteIds;
 
-  void clear() {
-    AllocSites.clear();
-    CallSites.clear();
-  }
+  void clear() { *this = IndexedMemProfRecord(); }
 
   void merge(const IndexedMemProfRecord &Other) {
     // TODO: Filter out duplicates which may occur if multiple memprof
     // profiles are merged together using llvm-profdata.
     AllocSites.append(Other.AllocSites);
-    CallSites.append(Other.CallSites);
   }
 
   size_t serializedSize(const MemProfSchema &Schema,
@@ -505,19 +473,6 @@ struct MemProfRecord {
       }
     }
   }
-};
-
-// Helper struct for AllMemProfData.  In YAML, we treat the GUID and the fields
-// within MemProfRecord at the same level as if the GUID were part of
-// MemProfRecord.
-struct GUIDMemProfRecordPair {
-  GlobalValue::GUID GUID;
-  MemProfRecord Record;
-};
-
-// The top-level data structure, only used with YAML for now.
-struct AllMemProfData {
-  std::vector<GUIDMemProfRecordPair> HeapProfileRecords;
 };
 
 // Reads a memprof schema from a buffer. All entries in the buffer are
@@ -805,9 +760,6 @@ public:
   }
 };
 
-// Compute a CallStackId for a given call stack.
-CallStackId hashCallStack(ArrayRef<FrameId> CS);
-
 namespace detail {
 // "Dereference" the iterator from DenseMap or OnDiskChainedHashTable.  We have
 // to do so in one of two different ways depending on the type of the hash
@@ -1039,6 +991,43 @@ struct IndexedMemProfData {
 
   // A map to hold call stack id to call stacks.
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStacks;
+
+  FrameId addFrame(const Frame &F) {
+    const FrameId Id = hashFrame(F);
+    Frames.try_emplace(Id, F);
+    return Id;
+  }
+
+  CallStackId addCallStack(ArrayRef<FrameId> CS) {
+    CallStackId CSId = hashCallStack(CS);
+    CallStacks.try_emplace(CSId, CS);
+    return CSId;
+  }
+
+  CallStackId addCallStack(SmallVector<FrameId> &&CS) {
+    CallStackId CSId = hashCallStack(CS);
+    CallStacks.try_emplace(CSId, std::move(CS));
+    return CSId;
+  }
+
+private:
+  // Return a hash value based on the contents of the frame. Here we use a
+  // cryptographic hash function to minimize the chance of hash collisions.  We
+  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
+  // However, the deserializer never calls this function; it uses FrameIds
+  // merely as keys to look up Frames proper.
+  FrameId hashFrame(const Frame &F) const {
+    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+        HashBuilder;
+    HashBuilder.add(F.Function, F.LineOffset, F.Column, F.IsInlineFrame);
+    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+    FrameId Id;
+    std::memcpy(&Id, Hash.data(), sizeof(Hash));
+    return Id;
+  }
+
+  // Compute a CallStackId for a given call stack.
+  CallStackId hashCallStack(ArrayRef<FrameId> CS) const;
 };
 
 struct FrameStat {

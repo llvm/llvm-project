@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_SET_UNION_H
-#define _LIBCPP___ALGORITHM_RANGES_SET_UNION_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_SET_UNION_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_SET_UNION_H
 
 #include <__cxx03/__algorithm/in_in_out_result.h>
 #include <__cxx03/__algorithm/iterator_operations.h>
@@ -112,4 +112,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_SET_UNION_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_SET_UNION_H

@@ -18,6 +18,7 @@
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/CanonicalIncludes.h"
+#include "index/Ref.h"
 #include "index/Relation.h"
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
@@ -549,9 +550,14 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
   // Avoid indexing internal symbols in protobuf generated headers.
   if (isPrivateProtoDecl(ND))
     return false;
+
+  // System headers that end with `intrin.h` likely contain useful symbols.
   if (!Opts.CollectReserved &&
       (hasReservedName(ND) || hasReservedScope(*ND.getDeclContext())) &&
-      ASTCtx.getSourceManager().isInSystemHeader(ND.getLocation()))
+      ASTCtx.getSourceManager().isInSystemHeader(ND.getLocation()) &&
+      !ASTCtx.getSourceManager()
+           .getFilename(ND.getLocation())
+           .ends_with("intrin.h"))
     return false;
 
   return true;
@@ -660,7 +666,7 @@ bool SymbolCollector::handleDeclOccurrence(
     auto FileLoc = SM.getFileLoc(Loc);
     auto FID = SM.getFileID(FileLoc);
     if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
-      addRef(ID, SymbolRef{FileLoc, FID, Roles,
+      addRef(ID, SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
                            getRefContainer(ASTNode.Parent, Opts),
                            isSpelled(FileLoc, *ND)});
     }
@@ -774,8 +780,10 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
     // FIXME: Populate container information for macro references.
     // FIXME: All MacroRefs are marked as Spelled now, but this should be
     // checked.
-    addRef(ID, SymbolRef{Loc, SM.getFileID(Loc), Roles, /*Container=*/nullptr,
-                         /*Spelled=*/true});
+    addRef(ID,
+           SymbolRef{Loc, SM.getFileID(Loc), Roles, index::SymbolKind::Macro,
+                     /*Container=*/nullptr,
+                     /*Spelled=*/true});
   }
 
   // Collect symbols.
@@ -1166,6 +1174,14 @@ bool SymbolCollector::shouldIndexFile(FileID FID) {
   return I.first->second;
 }
 
+static bool refIsCall(index::SymbolKind Kind) {
+  using SK = index::SymbolKind;
+  return Kind == SK::Function || Kind == SK::InstanceMethod ||
+         Kind == SK::ClassMethod || Kind == SK::StaticMethod ||
+         Kind == SK::Constructor || Kind == SK::Destructor ||
+         Kind == SK::ConversionFunction;
+}
+
 void SymbolCollector::addRef(SymbolID ID, const SymbolRef &SR) {
   const auto &SM = ASTCtx->getSourceManager();
   // FIXME: use the result to filter out references.
@@ -1177,6 +1193,9 @@ void SymbolCollector::addRef(SymbolID ID, const SymbolRef &SR) {
     R.Location.End = Range.second;
     R.Location.FileURI = HeaderFileURIs->toURI(*FE).c_str();
     R.Kind = toRefKind(SR.Roles, SR.Spelled);
+    if (refIsCall(SR.Kind)) {
+      R.Kind |= RefKind::Call;
+    }
     R.Container = getSymbolIDCached(SR.Container);
     Refs.insert(ID, R);
   }
