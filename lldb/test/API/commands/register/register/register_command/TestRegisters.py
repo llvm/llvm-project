@@ -51,7 +51,7 @@ class RegisterCommandsTestCase(TestBase):
         self.log_enable("registers")
 
         error_str_matched = False
-        if self.get_sme_available() == True and self.platformIsDarwin():
+        if self.get_sme_available() and self.platformIsDarwin():
             # On Darwin AArch64 SME machines, we will have unavailable
             # registers when not in Streaming SVE Mode/SME, so
             # `register read -a` will report that some registers
