@@ -83,8 +83,7 @@ static cl::opt<unsigned>
     UnrollThreshold("unroll-threshold", cl::Hidden,
                     cl::desc("The cost threshold for loop unrolling"));
 
-static cl::opt<unsigned>
-    UnrollOptSizeThreshold(
+static cl::opt<unsigned> UnrollOptSizeThreshold(
     "unroll-optsize-threshold", cl::init(0), cl::Hidden,
     cl::desc("The cost threshold for loop unrolling when optimizing for "
              "size"));
@@ -152,8 +151,8 @@ static cl::opt<unsigned> FlatLoopTripCountThreshold(
              "threshold, the loop is considered as flat and will be less "
              "aggressively unrolled."));
 
-static cl::opt<bool> UnrollUnrollRemainder(
-  "unroll-remainder", cl::Hidden,
+static cl::opt<bool>
+    UnrollUnrollRemainder("unroll-remainder", cl::Hidden,
                           cl::desc("Allow the loop remainder to be unrolled."));
 
 // This option isn't ever intended to be enabled, it serves to allow
