@@ -2787,10 +2787,12 @@ multiclass sve_fp_fcadd<string asm, SDPatternOperator op> {
 // SVE2 Floating Point Convert Group
 //===----------------------------------------------------------------------===//
 
-class sve2_fp_convert_precision<bits<4> opc, string asm,
-                                ZPRRegOp zprty1, ZPRRegOp zprty2>
-: I<(outs zprty1:$Zd), (ins zprty1:$_Zd, PPR3bAny:$Pg, zprty2:$Zn),
-  asm, "\t$Zd, $Pg/m, $Zn",
+class sve2_fp_convert_precision<bits<4> opc, bit merging, string asm,
+                                ZPRRegOp zprty1, ZPRRegOp zprty2, bit destructive=merging>
+: I<(outs zprty1:$Zd),
+  !if(destructive, (ins zprty1:$_Zd, PPR3bAny:$Pg, zprty2:$Zn),
+                   (ins PPR3bAny:$Pg, zprty2:$Zn)),
+  asm, "\t$Zd, " # !if(merging, "$Pg/m", "$Pg/z")  # ", $Zn",
   "",
   []>, Sched<[]> {
   bits<5> Zd;
@@ -2798,72 +2800,53 @@ class sve2_fp_convert_precision<bits<4> opc, string asm,
   bits<3> Pg;
   let Inst{31-24} = 0b01100100;
   let Inst{23-22} = opc{3-2};
-  let Inst{21-18} = 0b0010;
+  let Inst{21-20} = 0b00;
+  let Inst{19}    = merging;
+  let Inst{18}    = 0b0;
   let Inst{17-16} = opc{1-0};
   let Inst{15-13} = 0b101;
   let Inst{12-10} = Pg;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
 
-  let Constraints = "$Zd = $_Zd";
+  let Constraints = !if(destructive, "$Zd = $_Zd", "");
   let hasSideEffects = 0;
   let mayRaiseFPException = 1;
 }
 
 multiclass sve2_fp_convert_down_narrow<string asm, string op> {
-  def _StoH : sve2_fp_convert_precision<0b1000, asm, ZPR16, ZPR32>;
-  def _DtoS : sve2_fp_convert_precision<0b1110, asm, ZPR32, ZPR64>;
+  def _StoH : sve2_fp_convert_precision<0b1000, 0b1, asm, ZPR16, ZPR32>;
+  def _DtoS : sve2_fp_convert_precision<0b1110, 0b1, asm, ZPR32, ZPR64>;
 
   def : SVE_3_Op_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16f32), nxv8f16, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _StoH)>;
   def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 multiclass sve2_fp_convert_up_long<string asm, string op> {
-  def _HtoS : sve2_fp_convert_precision<0b1001, asm, ZPR32, ZPR16>;
-  def _StoD : sve2_fp_convert_precision<0b1111, asm, ZPR64, ZPR32>;
+  def _HtoS : sve2_fp_convert_precision<0b1001, 0b1, asm, ZPR32, ZPR16>;
+  def _StoD : sve2_fp_convert_precision<0b1111, 0b1, asm, ZPR64, ZPR32>;
 
   def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f16), nxv4f32, nxv4i1, nxv8f16, !cast<Instruction>(NAME # _HtoS)>;
   def : SVE_3_Op_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv2i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
 }
 
 multiclass sve2_fp_convert_down_odd_rounding_top<string asm, string op> {
-  def _DtoS : sve2_fp_convert_precision<0b0010, asm, ZPR32, ZPR64>;
+  def _DtoS : sve2_fp_convert_precision<0b0010, 0b1, asm, ZPR32, ZPR64>;
 
   def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
-class sve_fp_fcvt2z<bits<4> opc, string asm, ZPRRegOp zprty1,
-                    ZPRRegOp zprty2>
-  : I<(outs zprty1:$Zd), (ins PPR3bAny:$Pg, zprty2:$Zn),
-    asm, "\t$Zd, $Pg/z, $Zn",
-    "",
-    []>, Sched<[]> {
-    bits<5> Zd;
-    bits<5> Zn;
-    bits<3> Pg;
-    let Inst{31-24} = 0b01100100;
-    let Inst{23-22} = opc{3-2};
-    let Inst{21-18} = 0b0000;
-    let Inst{17-16} = opc{1-0};
-    let Inst{15-13} = 0b101;
-    let Inst{12-10} = Pg;
-    let Inst{9-5}   = Zn;
-    let Inst{4-0}   = Zd;
-    let hasSideEffects = 0;
-    let mayRaiseFPException = 1;
-}
-
-multiclass sve_fp_fcvtntz<string asm> {
-  def _StoH : sve_fp_fcvt2z<0b1000, asm,  ZPR16, ZPR32>;
-  def _DtoS : sve_fp_fcvt2z<0b1110, asm,  ZPR32, ZPR64>;
-}
-
-multiclass sve_fp_fcvtltz<string asm, string op> {
-  def _HtoS  : sve_fp_fcvt2z<0b1001, asm,  ZPR32, ZPR16>;
-  def _StoD  : sve_fp_fcvt2z<0b1111, asm,  ZPR64, ZPR32>;
+multiclass sve2_fp_convert_up_long_z<string asm, string op> {
+  def _HtoS : sve2_fp_convert_precision<0b1001, 0b0, asm, ZPR32, ZPR16>;
+  def _StoD : sve2_fp_convert_precision<0b1111, 0b0, asm, ZPR64, ZPR32>;
 
   def : SVE_3_Op_UndefZero_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f16), nxv4f32, nxv4i1, nxv8f16, !cast<Instruction>(NAME # _HtoS)>;
   def : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv2i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
+}
+
+multiclass sve2_fp_convert_down_narrow_z<string asm> {
+  def _StoH : sve2_fp_convert_precision<0b1000, 0b0, asm,  ZPR16, ZPR32, /*destructive*/ true>;
+  def _DtoS : sve2_fp_convert_precision<0b1110, 0b0, asm,  ZPR32, ZPR64, /*destructive*/ true>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9311,33 +9294,18 @@ multiclass sve_float_dot_indexed<bit bf, bits<2> opc, ZPRRegOp src1_ty,
   def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, InVT, InVT, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME)>;
 }
 
-class sve_bfloat_convert<bit N, string asm>
-: I<(outs ZPR16:$Zd), (ins ZPR16:$_Zd, PPR3bAny:$Pg, ZPR32:$Zn),
-  asm, "\t$Zd, $Pg/m, $Zn", "", []>, Sched<[]> {
-  bits<5> Zd;
-  bits<3> Pg;
-  bits<5> Zn;
-  let Inst{31-25} = 0b0110010;
-  let Inst{24}    = N;
-  let Inst{23-13} = 0b10001010101;
-  let Inst{12-10} = Pg;
-  let Inst{9-5}   = Zn;
-  let Inst{4-0}   = Zd;
-
-  let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = DestructiveOther;
-  let ElementSize = ElementSizeS;
-  let hasSideEffects = 0;
-  let mayRaiseFPException = 1;
-}
-
-multiclass sve_bfloat_convert<bit N, string asm, SDPatternOperator op,
-                              SDPatternOperator ir_op = null_frag> {
-  def NAME : sve_bfloat_convert<N, asm>;
+multiclass sve_bfloat_convert<string asm, SDPatternOperator op, SDPatternOperator ir_op> {
+  def NAME : sve_fp_2op_p_zd<0b1001010, asm, ZPR32, ZPR16, ElementSizeS>;
 
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8bf16, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Round_Pat<nxv4bf16, ir_op, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Round_Pat<nxv2bf16, ir_op, nxv2i1, nxv2f32, !cast<Instruction>(NAME)>;
+}
+
+multiclass sve_bfloat_convert_top<string asm,  SDPatternOperator op> {
+  def NAME : sve2_fp_convert_precision<0b1010, 0b1, asm, ZPR16, ZPR32>;
+
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8bf16, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//
