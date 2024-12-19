@@ -178,18 +178,9 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   }
   MyManager() = default;
 
-  Error dispatch(TelemetryInfo *Entry) const override {
+  Error preDispatch(TelemetryInfo *Entry) override {
     Entry->SessionId = SessionId;
-    Error AllErrs = Error::success();
-    for (auto &Dest : Destinations) {
-      if (Error Err = Dest->receiveEntry(Entry))
-        AllErrs = joinErrors(std::move(AllErrs), std::move(Err));
-    }
-    return AllErrs;
-  }
-      
-  void addDestination(std::unique_ptr<Destination> Dest) override {
-    destinations.push_back(std::move(Dest));
+    return Error::success();
   }
   
   // You can also define additional instrumentation points.
@@ -204,7 +195,6 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   }
   
   private:    
-    std::vector<Destination> Destinations;
     const std::string SessionId;
   };
 

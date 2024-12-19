@@ -14,15 +14,16 @@
 #ifndef LLVM_TELEMETRY_TELEMETRY_H
 #define LLVM_TELEMETRY_TELEMETRY_H
 
-#include "<optional>
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 namespace llvm {
 namespace telemetry {
@@ -142,13 +143,20 @@ public:
 /// monitored and transmitting the data elsewhere.
 class Manager {
 public:
+  // Optional callback for subclasses to perform additional tasks before
+  // dispatching to Destinations.
+  virtual Error preDispatch(TelemetryInfo *Entry) = 0;
+
   // Dispatch Telemetry data to the Destination(s).
   // The argument is non-const because the Manager may add or remove
   // data from the entry.
-  virtual Error dispatch(TelemetryInfo *Entry) = 0;
+  virtual Error dispatch(TelemetryInfo *Entry);
 
   // Register a Destination.
-  virtual void addDestination(std::unique_ptr<Destination> Destination) = 0;
+  void addDestination(std::unique_ptr<Destination> Destination);
+
+private:
+  std::vector<std::unique_ptr<Destination>> Destinations;
 };
 
 } // namespace telemetry
