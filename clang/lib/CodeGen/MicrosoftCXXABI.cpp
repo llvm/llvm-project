@@ -431,6 +431,7 @@ public:
   bool usesThreadWrapperFunction(const VarDecl *VD) const override {
     return getContext().getLangOpts().isCompatibleWithMSVC(
                LangOptions::MSVC2019_5) &&
+           CGM.getCodeGenOpts().TlsGuards &&
            (!isEmittedWithConstantInitializer(VD) || mayNeedDestruction(VD));
   }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
@@ -3453,7 +3454,7 @@ llvm::Value *MicrosoftCXXABI::EmitNonNullMemberPointerConversion(
   if (inheritanceModelHasOnlyOneField(IsFunc, DstInheritance)) {
     Dst = FirstField;
   } else {
-    Dst = llvm::UndefValue::get(ConvertMemberPointerType(DstTy));
+    Dst = llvm::PoisonValue::get(ConvertMemberPointerType(DstTy));
     unsigned Idx = 0;
     Dst = Builder.CreateInsertValue(Dst, FirstField, Idx++);
     if (inheritanceModelHasNVOffsetField(IsFunc, DstInheritance))

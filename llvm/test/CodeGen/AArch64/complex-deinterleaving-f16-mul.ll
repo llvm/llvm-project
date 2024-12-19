@@ -11,10 +11,10 @@ define <2 x half> @complex_mul_v2f16(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    mov h2, v0.h[1]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul h3, h0, v1.h[1]
-; CHECK-NEXT:    fmul h4, h2, v1.h[1]
-; CHECK-NEXT:    fmadd h2, h1, h2, h3
-; CHECK-NEXT:    fnmsub h0, h1, h0, h4
-; CHECK-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-NEXT:    fmul h2, h2, v1.h[1]
+; CHECK-NEXT:    fmla h3, h1, v0.h[1]
+; CHECK-NEXT:    fnmsub h0, h1, h0, h2
+; CHECK-NEXT:    mov v0.h[1], v3.h[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:

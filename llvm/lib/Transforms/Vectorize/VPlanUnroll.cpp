@@ -168,7 +168,7 @@ void UnrollState::unrollWidenInductionByUF(
   auto *ConstStep = ScalarStep->isLiveIn()
                         ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
                         : nullptr;
-  if (!ConstStep || ConstStep->getZExtValue() != 1) {
+  if (!ConstStep || ConstStep->getValue() != 1) {
     if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
       ScalarStep =
           Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
@@ -297,12 +297,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
       auto *Phi = cast<VPReductionPHIRecipe>(R.getOperand(0));
       if (Phi->isOrdered()) {
-        auto Ins = VPV2Parts.insert({Phi, {}});
+        auto &Parts = VPV2Parts[Phi];
         if (Part == 1) {
-          Ins.first->second.clear();
-          Ins.first->second.push_back(Red);
+          Parts.clear();
+          Parts.push_back(Red);
         }
-        Ins.first->second.push_back(Copy->getVPSingleValue());
+        Parts.push_back(Copy->getVPSingleValue());
         Phi->setOperand(1, Copy->getVPSingleValue());
       }
     }
@@ -411,8 +411,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   }
 
   UnrollState Unroller(Plan, UF, Ctx);
-
-  Unroller.unrollBlock(Plan.getPreheader());
 
   // Iterate over all blocks in the plan starting from Entry, and unroll
   // recipes inside them. This includes the vector preheader and middle blocks,

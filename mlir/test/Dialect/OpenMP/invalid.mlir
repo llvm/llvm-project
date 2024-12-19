@@ -1634,7 +1634,7 @@ func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
 // -----
 
 func.func @omp_task_depend(%data_var: memref<i32>) {
-  // expected-error @below {{op expected as many depend values as depend variables}}
+  // expected-error @below {{'omp.task' op operand count (1) does not match with the total size (0) specified in attribute 'operandSegmentSizes'}}
     "omp.task"(%data_var) ({
       "omp.terminator"() : () -> ()
     }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
@@ -2575,5 +2575,89 @@ func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) 
       omp.yield
     }
   } {omp.composite}
+  return
+}
+
+// -----
+
+func.func @omp_loop_invalid_nesting(%lb : index, %ub : index, %step : index) {
+
+  // expected-error @below {{`omp.loop` expected to be a standalone loop wrapper}}
+  omp.loop {
+    omp.simd {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    } {omp.composite}
+  }
+
+  return
+}
+
+// -----
+
+func.func @omp_loop_invalid_nesting2(%lb : index, %ub : index, %step : index) {
+
+  omp.simd {
+    // expected-error @below {{`omp.loop` expected to be a standalone loop wrapper}}
+    omp.loop {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    } {omp.composite}
+  }
+
+  return
+}
+
+// -----
+
+func.func @omp_loop_invalid_binding(%lb : index, %ub : index, %step : index) {
+
+  // expected-error @below {{custom op 'omp.loop' invalid clause value: 'dummy_value'}}
+  omp.loop bind(dummy_value) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  return
+}
+
+// -----
+func.func @nested_wrapper(%idx : index) {
+  omp.workshare {
+    // expected-error @below {{cannot be composite}}
+    omp.workshare.loop_wrapper {
+      omp.simd {
+        omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
+          omp.yield
+        }
+      } {omp.composite}
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @not_wrapper() {
+  omp.workshare {
+    // expected-error @below {{op nested in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
+    omp.workshare.loop_wrapper {
+      %0 = arith.constant 0 : index
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @missing_workshare(%idx : index) {
+  // expected-error @below {{must be nested in an omp.workshare}}
+  omp.workshare.loop_wrapper {
+    omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
+      omp.yield
+    }
+  }
   return
 }

@@ -192,7 +192,7 @@ define double @sqrt_exp_intr_and_libcall_2(double %x) {
 
 define <2 x float> @sqrt_exp_vec(<2 x float> %x) {
 ; CHECK-LABEL: @sqrt_exp_vec(
-; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 5.000000e-01, float 5.000000e-01>
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc <2 x float> [[X:%.*]], splat (float 5.000000e-01)
 ; CHECK-NEXT:    [[E:%.*]] = call reassoc <2 x float> @llvm.exp.v2f32(<2 x float> [[MERGED_SQRT]])
 ; CHECK-NEXT:    ret <2 x float> [[E]]
 ;

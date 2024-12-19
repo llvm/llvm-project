@@ -558,6 +558,27 @@
 
 // NO-AMX-TRANSPOSE-NOT: #define __AMX_TRANSPOSE__ 1
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-avx512 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=AMX-AVX512 %s
+
+// AMX-AVX512: #define __AMX_AVX512__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-amx-avx512 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-AVX512 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-avx512 -mno-amx-tile \
+// RUN: -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-AVX512 %s
+
+// NO-AMX-AVX512-NOT: #define __AMX_AVX512__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-tf32 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=AMX-TF32 %s
+// AMX-TF32: #define __AMX_TF32__ 1
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-amx-tf32 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TF32 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-tf32 -mno-amx-tile \
+// RUN: -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TF32 %s
+// NO-AMX-TF32-NOT: #define __AMX_TF32__ 1
+
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnni -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNI %s
 
 // AVXVNNI: #define __AVX2__ 1

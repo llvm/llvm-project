@@ -184,15 +184,16 @@ def t2am_imm7shift0OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<0>;
 def t2am_imm7shift1OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<1>;
 def t2am_imm7shift2OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<2>;
 
-class t2am_imm7_offset<int shift> : MemOperand,
-      ComplexPattern<i32, 1, "SelectT2AddrModeImm7Offset<"#shift#">",
-                     [], [SDNPWantRoot]> {
+class t2am_imm7_offset<int shift>
+    : MemOperand,
+      ComplexPattern<i32, 1, "SelectT2AddrModeImm7Offset<"#shift#">"> {
   // They are printed the same way as the imm8 version
   let PrintMethod = "printT2AddrModeImm8OffsetOperand";
   let ParserMatchClass =
     !cast<AsmOperandClass>("t2am_imm7shift"#shift#"OffsetAsmOperand");
   let EncoderMethod = "getT2ScaledImmOpValue<7,"#shift#">";
   let DecoderMethod = "DecodeT2Imm7<"#shift#">";
+  let WantsRoot = true;
 }
 
 // Operands for gather/scatter loads of the form [Rbase, Qoffsets]
@@ -3583,10 +3584,10 @@ def ARMimmOneH: PatLeaf<(bitconvert (v8i16 (ARMvmovImm (i32 2620))))>; // 1.0 ha
 defm MVE_VMULf32 : MVE_VMUL_fp_m<MVE_v4f32, ARMimmOneF>;
 defm MVE_VMULf16 : MVE_VMUL_fp_m<MVE_v8f16, ARMimmOneH>;
 
-class MVE_VCMLA<string suffix, bits<2> size>
+class MVE_VCMLA<string suffix, bits<2> size, string cstr>
   : MVEFloatArithNeon<"vcmla", suffix, size{1}, (outs MQPR:$Qd),
                          (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
-                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src", size, []> {
+                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src"#cstr, size, []> {
   bits<4> Qd;
   bits<4> Qn;
   bits<2> rot;
@@ -3603,8 +3604,8 @@ class MVE_VCMLA<string suffix, bits<2> size>
   let Inst{4} = 0b0;
 }
 
-multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
-  def "" : MVE_VCMLA<VTI.Suffix, VTI.Size>;
+multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI, string cstr=""> {
+  def "" : MVE_VCMLA<VTI.Suffix, VTI.Size, cstr>;
   defvar Inst = !cast<Instruction>(NAME);
 
   let Predicates = [HasMVEFloat] in {
@@ -3633,7 +3634,7 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
 }
 
 defm MVE_VCMLAf16 : MVE_VCMLA_m<MVE_v8f16>;
-defm MVE_VCMLAf32 : MVE_VCMLA_m<MVE_v4f32>;
+defm MVE_VCMLAf32 : MVE_VCMLA_m<MVE_v4f32, ",@earlyclobber $Qd">;
 
 class MVE_VADDSUBFMA_fp<string iname, string suffix, bits<2> size, bit bit_4,
                         bit bit_8, bit bit_21, dag iops=(ins),
@@ -5614,8 +5615,6 @@ multiclass MVE_VFMA_qr_multi<string iname, MVEVectorVTInfo VTI,
                                   (VTI.Vec (fma v1, v2, vs)),
                                   v1)),
                 (VTI.Vec (Inst v1, v2, is, ARMVCCThen, $pred, zero_reg))>;
-      def : Pat<(VTI.Vec (pred_int v1, v2, vs, pred)),
-                (VTI.Vec (Inst v1, v2, is, ARMVCCThen, pred, zero_reg))>;
     } else {
       def : Pat<(VTI.Vec (fma v1, vs, v2)),
                 (VTI.Vec (Inst v2, v1, is))>;

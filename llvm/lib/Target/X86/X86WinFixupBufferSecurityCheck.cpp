@@ -19,9 +19,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Module.h"
-#include <iterator>
 
 using namespace llvm;
 

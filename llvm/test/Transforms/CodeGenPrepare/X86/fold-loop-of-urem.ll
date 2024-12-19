@@ -327,10 +327,10 @@ define void @simple_urem_to_sel_vec(<2 x i64> %rem_amt) nounwind {
 ; CHECK-NEXT:    [[REM:%.*]] = phi <2 x i64> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP3:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi <2 x i64> [ [[INC:%.*]], %[[FOR_BODY]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    tail call void @use.2xi64(<2 x i64> [[REM]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i64> [[REM]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i64> [[REM]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], [[REM_AMT]]
 ; CHECK-NEXT:    [[TMP3]] = select <2 x i1> [[TMP2]], <2 x i64> zeroinitializer, <2 x i64> [[TMP1]]
-; CHECK-NEXT:    [[INC]] = add nuw <2 x i64> [[I_04]], <i64 1, i64 1>
+; CHECK-NEXT:    [[INC]] = add nuw <2 x i64> [[I_04]], splat (i64 1)
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = call i1 @get.i1()
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;

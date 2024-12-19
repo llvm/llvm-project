@@ -21,14 +21,34 @@
 #include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "flang/FrontendTool/Utils.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstdio>
 
 using namespace Fortran::frontend;
+
+/// Print supported cpus of the given target.
+static int printSupportedCPUs(llvm::StringRef triple) {
+  std::string error;
+  const llvm::Target *target =
+      llvm::TargetRegistry::lookupTarget(triple, error);
+  if (!target) {
+    llvm::errs() << error;
+    return 1;
+  }
+
+  // the target machine will handle the mcpu printing
+  llvm::TargetOptions targetOpts;
+  std::unique_ptr<llvm::TargetMachine> targetMachine(
+      target->createTargetMachine(triple, "", "+cpuhelp", targetOpts,
+                                  std::nullopt));
+  return 0;
+}
 
 int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   // Create CompilerInstance
@@ -57,6 +77,10 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
+
+  // --print-supported-cpus takes priority over the actual compilation.
+  if (flang->getFrontendOpts().printSupportedCPUs)
+    return printSupportedCPUs(flang->getInvocation().getTargetOpts().triple);
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 

@@ -167,8 +167,10 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
 
   const char *plugin_name = nullptr;
   const char *flavor_string = nullptr;
-  lldb::DisassemblerSP disassembler_sp =
-      Disassembler::FindPlugin(arch, flavor_string, plugin_name);
+  const char *cpu_string = nullptr;
+  const char *features_string = nullptr;
+  lldb::DisassemblerSP disassembler_sp = Disassembler::FindPlugin(
+      arch, flavor_string, cpu_string, features_string, plugin_name);
 
   if (!disassembler_sp) {
     ret = Status::FromErrorStringWithFormat(

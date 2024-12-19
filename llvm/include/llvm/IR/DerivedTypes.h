@@ -225,7 +225,11 @@ class StructType : public Type {
     SCDB_IsLiteral = 4,
     SCDB_IsSized = 8,
     SCDB_ContainsScalableVector = 16,
-    SCDB_NotContainsScalableVector = 32
+    SCDB_NotContainsScalableVector = 32,
+    SCDB_ContainsNonGlobalTargetExtType = 64,
+    SCDB_NotContainsNonGlobalTargetExtType = 128,
+    SCDB_ContainsNonLocalTargetExtType = 64,
+    SCDB_NotContainsNonLocalTargetExtType = 128,
   };
 
   /// For a named struct that actually has a name, this is a pointer to the
@@ -294,6 +298,18 @@ public:
   bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::isScalableTy;
 
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a global.
+  bool
+  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonGlobalTargetExtType;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a local.
+  bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonLocalTargetExtType;
+
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
   /// recursive here. That means the following structure will return false
@@ -329,13 +345,6 @@ public:
   /// Return an error if the body for an opaque identified type would make it
   /// recursive.
   Error checkBody(ArrayRef<Type *> Elements);
-
-  template <typename... Tys>
-  std::enable_if_t<are_base_of<Type, Tys...>::value, void>
-  setBody(Type *elt1, Tys *... elts) {
-    assert(elt1 && "Cannot create a struct type with no elements with this");
-    setBody(ArrayRef<Type *>({elt1, elts...}));
-  }
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
@@ -797,6 +806,9 @@ public:
     HasZeroInit = 1U << 0,
     /// This type may be used as the value type of a global variable.
     CanBeGlobal = 1U << 1,
+    /// This type may be allocated on the stack, either as the allocated type
+    /// of an alloca instruction or as a byval function parameter.
+    CanBeLocal = 1U << 2,
   };
 
   /// Returns true if the target extension type contains the given property.

@@ -11,6 +11,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Constant.h"
@@ -1743,11 +1744,12 @@ public:
 
 class CatchSwitchInst
     : public SingleLLVMInstructionImpl<llvm::CatchSwitchInst> {
-public:
   CatchSwitchInst(llvm::CatchSwitchInst *CSI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::CatchSwitch, Opcode::CatchSwitch,
                                   CSI, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
 
+public:
   static CatchSwitchInst *create(Value *ParentPad, BasicBlock *UnwindBB,
                                  unsigned NumHandlers, InsertPosition Pos,
                                  Context &Ctx, const Twine &Name = "");
@@ -1832,10 +1834,11 @@ public:
 };
 
 class ResumeInst : public SingleLLVMInstructionImpl<llvm::ResumeInst> {
-public:
   ResumeInst(llvm::ResumeInst *CSI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Resume, Opcode::Resume, CSI, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
 
+public:
   static ResumeInst *create(Value *Exn, InsertPosition Pos, Context &Ctx);
   Value *getValue() const;
   unsigned getNumSuccessors() const {
@@ -1847,10 +1850,11 @@ public:
 };
 
 class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
-public:
   SwitchInst(llvm::SwitchInst *SI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Switch, Opcode::Switch, SI, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
 
+public:
   static constexpr const unsigned DefaultPseudoIndex =
       llvm::SwitchInst::DefaultPseudoIndex;
 
@@ -2501,9 +2505,6 @@ public:
   WRAP_BOTH(isEquality);
   WRAP_BOTH(isRelational);
   WRAP_BOTH(isSigned);
-  WRAP_BOTH(getSignedPredicate);
-  WRAP_BOTH(getUnsignedPredicate);
-  WRAP_BOTH(getFlippedSignednessPredicate);
   WRAP_BOTH(isTrueWhenEqual);
   WRAP_BOTH(isFalseWhenEqual);
   WRAP_BOTH(isUnsigned);
@@ -2544,6 +2545,7 @@ public:
 
   WRAP_BOTH(getSignedPredicate);
   WRAP_BOTH(getUnsignedPredicate);
+  WRAP_BOTH(getFlippedSignednessPredicate);
   WRAP_BOTH(isEquality);
   WRAP_MEMBER(isCommutative);
   WRAP_MEMBER(isRelational);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
-#define _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ALIGNED_STORAGE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_ALIGNED_STORAGE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -135,4 +135,4 @@ _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x4000);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_ALIGNED_STORAGE_H

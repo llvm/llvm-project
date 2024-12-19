@@ -111,7 +111,7 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -274,7 +274,7 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -479,13 +479,13 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP50:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP51:%.*]] = lshr exact i64 [[TMP50]], 1
-; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP51]]
+; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr nusw i32, ptr [[B]], i64 [[TMP51]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP52]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC34:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP50]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr i32, ptr [[B]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP54]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison), !alias.scope [[META6:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP54]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = shufflevector <4 x i32> [[STRIDED_VEC]], <4 x i32> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP59:%.*]] = shufflevector <4 x i32> [[STRIDED_VEC34]], <4 x i32> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP60:%.*]] = shufflevector <4 x i32> [[WIDE_MASKED_GATHER]], <4 x i32> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -495,13 +495,13 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i32> [[TMP63]], <32 x i32> poison, <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
 ; CHECK-NEXT:    store <32 x i32> [[INTERLEAVED_VEC]], ptr [[TMP56]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 32, i64 32, i64 32, i64 32>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP64:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP64]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT_7:%.*]], %[[LOOP]] ]
@@ -603,7 +603,7 @@ define void @interleave_store_double_i64(ptr %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -725,7 +725,7 @@ define void @interleave_store_i64_double_2(ptr %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

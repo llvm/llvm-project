@@ -14,7 +14,6 @@
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -39,7 +38,6 @@ public:
   bool runOnModule(Module &M) override;
   DXILIntrinsicExpansionLegacy() : ModulePass(ID) {}
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
   static char ID; // Pass identification.
 };
 
@@ -53,9 +51,10 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::pow:
   case Intrinsic::dx_all:
   case Intrinsic::dx_any:
-  case Intrinsic::dx_clamp:
   case Intrinsic::dx_cross:
   case Intrinsic::dx_uclamp:
+  case Intrinsic::dx_sclamp:
+  case Intrinsic::dx_nclamp:
   case Intrinsic::dx_degrees:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_length:
@@ -66,9 +65,42 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_fadd:
     return true;
   }
   return false;
+}
+static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
+  assert(IntrinsicId == Intrinsic::vector_reduce_add ||
+         IntrinsicId == Intrinsic::vector_reduce_fadd);
+
+  IRBuilder<> Builder(Orig);
+  bool IsFAdd = (IntrinsicId == Intrinsic::vector_reduce_fadd);
+
+  Value *X = Orig->getOperand(IsFAdd ? 1 : 0);
+  Type *Ty = X->getType();
+  auto *XVec = dyn_cast<FixedVectorType>(Ty);
+  unsigned XVecSize = XVec->getNumElements();
+  Value *Sum = Builder.CreateExtractElement(X, static_cast<uint64_t>(0));
+
+  // Handle the initial start value for floating-point addition.
+  if (IsFAdd) {
+    Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
+    if (StartValue && !StartValue->isZeroValue())
+      Sum = Builder.CreateFAdd(Sum, StartValue);
+  }
+
+  // Accumulate the remaining vector elements.
+  for (unsigned I = 1; I < XVecSize; I++) {
+    Value *Elt = Builder.CreateExtractElement(X, I);
+    if (IsFAdd)
+      Sum = Builder.CreateFAdd(Sum, Elt);
+    else
+      Sum = Builder.CreateAdd(Sum, Elt);
+  }
+
+  return Sum;
 }
 
 static Value *expandAbs(CallInst *Orig) {
@@ -452,29 +484,21 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Intrinsic::ID getMaxForClamp(Type *ElemTy,
-                                    Intrinsic::ID ClampIntrinsic) {
+static Intrinsic::ID getMaxForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;
-  assert(ClampIntrinsic == Intrinsic::dx_clamp);
-  if (ElemTy->isVectorTy())
-    ElemTy = ElemTy->getScalarType();
-  if (ElemTy->isIntegerTy())
+  if (ClampIntrinsic == Intrinsic::dx_sclamp)
     return Intrinsic::smax;
-  assert(ElemTy->isFloatingPointTy());
+  assert(ClampIntrinsic == Intrinsic::dx_nclamp);
   return Intrinsic::maxnum;
 }
 
-static Intrinsic::ID getMinForClamp(Type *ElemTy,
-                                    Intrinsic::ID ClampIntrinsic) {
+static Intrinsic::ID getMinForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umin;
-  assert(ClampIntrinsic == Intrinsic::dx_clamp);
-  if (ElemTy->isVectorTy())
-    ElemTy = ElemTy->getScalarType();
-  if (ElemTy->isIntegerTy())
+  if (ClampIntrinsic == Intrinsic::dx_sclamp)
     return Intrinsic::smin;
-  assert(ElemTy->isFloatingPointTy());
+  assert(ClampIntrinsic == Intrinsic::dx_nclamp);
   return Intrinsic::minnum;
 }
 
@@ -485,9 +509,9 @@ static Value *expandClampIntrinsic(CallInst *Orig,
   Value *Max = Orig->getOperand(2);
   Type *Ty = X->getType();
   IRBuilder<> Builder(Orig);
-  auto *MaxCall = Builder.CreateIntrinsic(
-      Ty, getMaxForClamp(Ty, ClampIntrinsic), {X, Min}, nullptr, "dx.max");
-  return Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
+  auto *MaxCall = Builder.CreateIntrinsic(Ty, getMaxForClamp(ClampIntrinsic),
+                                          {X, Min}, nullptr, "dx.max");
+  return Builder.CreateIntrinsic(Ty, getMinForClamp(ClampIntrinsic),
                                  {MaxCall, Max}, nullptr, "dx.min");
 }
 
@@ -555,7 +579,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandCrossIntrinsic(Orig);
     break;
   case Intrinsic::dx_uclamp:
-  case Intrinsic::dx_clamp:
+  case Intrinsic::dx_sclamp:
+  case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_degrees:
@@ -585,6 +610,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
+    break;
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_fadd:
+    Result = expandVecReduceAdd(Orig, IntrinsicId);
     break;
   }
   if (Result) {
@@ -621,10 +650,6 @@ PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
 
 bool DXILIntrinsicExpansionLegacy::runOnModule(Module &M) {
   return expansionIntrinsics(M);
-}
-
-void DXILIntrinsicExpansionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILIntrinsicExpansionLegacy::ID = 0;

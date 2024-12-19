@@ -342,8 +342,8 @@ define bfloat @bfloat_add(bfloat %a, bfloat %b) nounwind {
 ; RV32ID-ILP32-NEXT:    addi sp, sp, -16
 ; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ID-ILP32-NEXT:    slli a1, a1, 16
-; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32-NEXT:    slli a0, a0, 16
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a0
 ; RV32ID-ILP32-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
@@ -359,8 +359,8 @@ define bfloat @bfloat_add(bfloat %a, bfloat %b) nounwind {
 ; RV64ID-LP64-NEXT:    addi sp, sp, -16
 ; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ID-LP64-NEXT:    slli a1, a1, 16
-; RV64ID-LP64-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64-NEXT:    slli a0, a0, 16
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64-NEXT:    fmv.w.x fa4, a0
 ; RV64ID-LP64-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
@@ -378,8 +378,8 @@ define bfloat @bfloat_add(bfloat %a, bfloat %b) nounwind {
 ; RV32ID-ILP32D-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-ILP32D-NEXT:    fmv.x.w a1, fa1
 ; RV32ID-ILP32D-NEXT:    slli a1, a1, 16
-; RV32ID-ILP32D-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32D-NEXT:    slli a0, a0, 16
+; RV32ID-ILP32D-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32D-NEXT:    fmv.w.x fa4, a0
 ; RV32ID-ILP32D-NEXT:    fadd.s fa0, fa4, fa5
 ; RV32ID-ILP32D-NEXT:    call __truncsfbf2
@@ -398,8 +398,8 @@ define bfloat @bfloat_add(bfloat %a, bfloat %b) nounwind {
 ; RV64ID-LP64D-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-LP64D-NEXT:    fmv.x.w a1, fa1
 ; RV64ID-LP64D-NEXT:    slli a1, a1, 16
-; RV64ID-LP64D-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64D-NEXT:    slli a0, a0, 16
+; RV64ID-LP64D-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64D-NEXT:    fmv.w.x fa4, a0
 ; RV64ID-LP64D-NEXT:    fadd.s fa0, fa4, fa5
 ; RV64ID-LP64D-NEXT:    call __truncsfbf2
@@ -450,8 +450,8 @@ define bfloat @bfloat_load(ptr %a) nounwind {
 ; RV32ID-ILP32-NEXT:    lhu a1, 6(a0)
 ; RV32ID-ILP32-NEXT:    lhu a0, 0(a0)
 ; RV32ID-ILP32-NEXT:    slli a1, a1, 16
-; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32-NEXT:    slli a0, a0, 16
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a0
 ; RV32ID-ILP32-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
@@ -469,8 +469,8 @@ define bfloat @bfloat_load(ptr %a) nounwind {
 ; RV64ID-LP64-NEXT:    lhu a1, 6(a0)
 ; RV64ID-LP64-NEXT:    lhu a0, 0(a0)
 ; RV64ID-LP64-NEXT:    slli a1, a1, 16
-; RV64ID-LP64-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64-NEXT:    slli a0, a0, 16
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64-NEXT:    fmv.w.x fa4, a0
 ; RV64ID-LP64-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
@@ -488,8 +488,8 @@ define bfloat @bfloat_load(ptr %a) nounwind {
 ; RV32ID-ILP32D-NEXT:    lhu a1, 6(a0)
 ; RV32ID-ILP32D-NEXT:    lhu a0, 0(a0)
 ; RV32ID-ILP32D-NEXT:    slli a1, a1, 16
-; RV32ID-ILP32D-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32D-NEXT:    slli a0, a0, 16
+; RV32ID-ILP32D-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32D-NEXT:    fmv.w.x fa4, a0
 ; RV32ID-ILP32D-NEXT:    fadd.s fa0, fa4, fa5
 ; RV32ID-ILP32D-NEXT:    call __truncsfbf2
@@ -508,8 +508,8 @@ define bfloat @bfloat_load(ptr %a) nounwind {
 ; RV64ID-LP64D-NEXT:    lhu a1, 6(a0)
 ; RV64ID-LP64D-NEXT:    lhu a0, 0(a0)
 ; RV64ID-LP64D-NEXT:    slli a1, a1, 16
-; RV64ID-LP64D-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64D-NEXT:    slli a0, a0, 16
+; RV64ID-LP64D-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64D-NEXT:    fmv.w.x fa4, a0
 ; RV64ID-LP64D-NEXT:    fadd.s fa0, fa4, fa5
 ; RV64ID-LP64D-NEXT:    call __truncsfbf2
@@ -569,8 +569,8 @@ define void @bfloat_store(ptr %a, bfloat %b, bfloat %c) nounwind {
 ; RV32ID-ILP32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32ID-ILP32-NEXT:    mv s0, a0
 ; RV32ID-ILP32-NEXT:    slli a2, a2, 16
-; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a2
 ; RV32ID-ILP32-NEXT:    slli a1, a1, 16
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a2
 ; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a1
 ; RV32ID-ILP32-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
@@ -589,8 +589,8 @@ define void @bfloat_store(ptr %a, bfloat %b, bfloat %c) nounwind {
 ; RV64ID-LP64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64ID-LP64-NEXT:    mv s0, a0
 ; RV64ID-LP64-NEXT:    slli a2, a2, 16
-; RV64ID-LP64-NEXT:    fmv.w.x fa5, a2
 ; RV64ID-LP64-NEXT:    slli a1, a1, 16
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a2
 ; RV64ID-LP64-NEXT:    fmv.w.x fa4, a1
 ; RV64ID-LP64-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
@@ -611,8 +611,8 @@ define void @bfloat_store(ptr %a, bfloat %b, bfloat %c) nounwind {
 ; RV32ID-ILP32D-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-ILP32D-NEXT:    fmv.x.w a1, fa1
 ; RV32ID-ILP32D-NEXT:    slli a1, a1, 16
-; RV32ID-ILP32D-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32D-NEXT:    slli a0, a0, 16
+; RV32ID-ILP32D-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32D-NEXT:    fmv.w.x fa4, a0
 ; RV32ID-ILP32D-NEXT:    fadd.s fa0, fa4, fa5
 ; RV32ID-ILP32D-NEXT:    call __truncsfbf2
@@ -633,8 +633,8 @@ define void @bfloat_store(ptr %a, bfloat %b, bfloat %c) nounwind {
 ; RV64ID-LP64D-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-LP64D-NEXT:    fmv.x.w a1, fa1
 ; RV64ID-LP64D-NEXT:    slli a1, a1, 16
-; RV64ID-LP64D-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64D-NEXT:    slli a0, a0, 16
+; RV64ID-LP64D-NEXT:    fmv.w.x fa5, a1
 ; RV64ID-LP64D-NEXT:    fmv.w.x fa4, a0
 ; RV64ID-LP64D-NEXT:    fadd.s fa0, fa4, fa5
 ; RV64ID-LP64D-NEXT:    call __truncsfbf2

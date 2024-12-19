@@ -19,7 +19,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include <cstdint>
 
 using namespace llvm;

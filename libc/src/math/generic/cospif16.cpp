@@ -37,7 +37,7 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
   //   k = round(x * 32)
   //   y = x * 32 - k
   //
-  // Once k and y are computed, we then deduce the answer by the sine of sum
+  // Once k and y are computed, we then deduce the answer by the cosine of sum
   // formula:
   //   cos(x * pi) = cos((k + y) * pi/32)
   //               = cos(k * pi/32) * cos(y * pi/32) +
@@ -73,7 +73,7 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
     return fputil::cast<float16>(0.0f);
 
   // Since, cosm1_y = cos_y - 1, therefore:
-  // 	cos(x * pi) = cos_k(cosm1_y) + cos_k - sin_k * sin_y
+  //   cos(x * pi) = cos_k(cosm1_y) + cos_k - sin_k * sin_y
   return fputil::cast<float16>(fputil::multiply_add(
       cos_k, cosm1_y, fputil::multiply_add(-sin_k, sin_y, cos_k)));
 }

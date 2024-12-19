@@ -6,9 +6,9 @@
 define amdgpu_kernel void @buffer_store_format_d16_x(ptr addrspace(8) %rsrc, [8 x i32], half %data, [8 x i32], i32 %index) {
 ; GCN-LABEL: buffer_store_format_d16_x:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    s_load_dword s4, s[6:7], 0x30
-; GCN-NEXT:    s_load_dword s5, s[6:7], 0x54
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GCN-NEXT:    s_load_dword s4, s[8:9], 0x30
+; GCN-NEXT:    s_load_dword s5, s[8:9], 0x54
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
@@ -22,8 +22,8 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xy(ptr addrspace(8) %rsrc, <2 x half> %data, i32 %index) {
 ; UNPACKED-LABEL: buffer_store_format_d16_xy:
 ; UNPACKED:       ; %bb.0: ; %main_body
-; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x10
-; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNPACKED-NEXT:    s_lshr_b32 s6, s4, 16
 ; UNPACKED-NEXT:    s_and_b32 s4, s4, 0xffff
@@ -35,8 +35,8 @@ define amdgpu_kernel void @buffer_store_format_d16_xy(ptr addrspace(8) %rsrc, <2
 ;
 ; PACKED-LABEL: buffer_store_format_d16_xy:
 ; PACKED:       ; %bb.0: ; %main_body
-; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x10
-; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; PACKED-NEXT:    v_mov_b32_e32 v1, s5
@@ -50,9 +50,9 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %index) {
 ; UNPACKED-LABEL: buffer_store_format_d16_xyz:
 ; UNPACKED:       ; %bb.0: ; %main_body
-; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x10
-; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
-; UNPACKED-NEXT:    s_load_dword s6, s[6:7], 0x18
+; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; UNPACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
 ; UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNPACKED-NEXT:    s_and_b32 s5, s5, 0xffff
 ; UNPACKED-NEXT:    s_lshr_b32 s7, s4, 16
@@ -66,14 +66,14 @@ define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <
 ;
 ; PACKED-LABEL: buffer_store_format_d16_xyz:
 ; PACKED:       ; %bb.0: ; %main_body
-; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x10
-; PACKED-NEXT:    s_load_dword s8, s[6:7], 0x18
-; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; PACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
+; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-NEXT:    s_and_b32 s5, s5, 0xffff
 ; PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; PACKED-NEXT:    v_mov_b32_e32 v1, s5
-; PACKED-NEXT:    v_mov_b32_e32 v2, s8
+; PACKED-NEXT:    v_mov_b32_e32 v2, s6
 ; PACKED-NEXT:    buffer_store_format_d16_xyz v[0:1], v2, s[0:3], 0 idxen
 ; PACKED-NEXT:    s_endpgm
 main_body:
@@ -85,9 +85,9 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %index) {
 ; UNPACKED-LABEL: buffer_store_format_d16_xyzw:
 ; UNPACKED:       ; %bb.0: ; %main_body
-; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x10
-; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
-; UNPACKED-NEXT:    s_load_dword s6, s[6:7], 0x18
+; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; UNPACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
 ; UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNPACKED-NEXT:    s_lshr_b32 s7, s5, 16
 ; UNPACKED-NEXT:    s_and_b32 s5, s5, 0xffff
@@ -103,13 +103,13 @@ define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, 
 ;
 ; PACKED-LABEL: buffer_store_format_d16_xyzw:
 ; PACKED:       ; %bb.0: ; %main_body
-; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x10
-; PACKED-NEXT:    s_load_dword s8, s[6:7], 0x18
-; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; PACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
+; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; PACKED-NEXT:    v_mov_b32_e32 v1, s5
-; PACKED-NEXT:    v_mov_b32_e32 v2, s8
+; PACKED-NEXT:    v_mov_b32_e32 v2, s6
 ; PACKED-NEXT:    buffer_store_format_d16_xyzw v[0:1], v2, s[0:3], 0 idxen
 ; PACKED-NEXT:    s_endpgm
 main_body:
@@ -120,9 +120,9 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_i16_x(ptr addrspace(8) %rsrc, [8 x i32], i16 %data, [8 x i32], i32 %index) {
 ; GCN-LABEL: buffer_store_format_i16_x:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    s_load_dword s4, s[6:7], 0x30
-; GCN-NEXT:    s_load_dword s5, s[6:7], 0x54
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GCN-NEXT:    s_load_dword s4, s[8:9], 0x30
+; GCN-NEXT:    s_load_dword s5, s[8:9], 0x54
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5

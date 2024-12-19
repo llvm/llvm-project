@@ -1886,6 +1886,11 @@ def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
 def LegalOpD : TEST_Op<"legal_op_d">, Arguments<(ins AnyType)>;
 
+def DuplicateBlockArgsOp : TEST_Op<"duplicate_block_args", [SingleBlock]> {
+  let arguments = (ins UnitAttr:$is_legal);
+  let regions = (region SizedRegion<1>:$body);
+}
+
 // Check that the conversion infrastructure can properly undo the creation of
 // operations where an operation was created before its parent, in this case,
 // in the parent's builder.
@@ -2781,7 +2786,7 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
 //===----------------------------------------------------------------------===//
 // Test InferIntRangeInterface
 //===----------------------------------------------------------------------===//
-def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOf<[AnyInteger, Index]>]>;
+def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOfNonZeroRankOf<[AnyInteger, Index]>]>;
 
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
@@ -2993,7 +2998,7 @@ def TestOpWithProperties : TEST_Op<"with_properties"> {
     StrAttr:$b, // Attributes can directly be used here.
     StringProperty:$c,
     BoolProperty:$flag,
-    IntArrayProperty<"int64_t">:$array // example of an array
+    IntArrayProperty<I64Property>:$array // example of an array
   );
 }
 
@@ -3035,16 +3040,25 @@ def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
 
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) attr-dict";
-  let arguments = (ins IntArrayProperty<"int64_t">:$prop);
+  let arguments = (ins IntArrayProperty<I64Property>:$prop);
 }
 
 def TestOpUsingPropertyInCustomAndOther
   : TEST_Op<"using_property_in_custom_and_other"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) prop-dict attr-dict";
   let arguments = (ins
-    IntArrayProperty<"int64_t">:$prop,
-    IntProperty<"int64_t">:$other
+    IntArrayProperty<I64Property>:$prop,
+    I64Property:$other
   );
+}
+
+def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
+    [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let arguments = (ins Variadic<I64>:$a1, Variadic<I64>:$a2);
+  let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
+  let assemblyFormat = [{
+    $a1 `:` $a2 `:` type($b1) `:` type($b2) prop-dict attr-dict `end`
+  }];
 }
 
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
@@ -3237,6 +3251,30 @@ def TestOpWithArrayProperties : TEST_Op<"with_array_properties"> {
     DefaultValuedProperty<ArrayProperty<I64Property>,
       "::llvm::ArrayRef<int64_t>{}", "::llvm::SmallVector<int64_t>{}">:$hasDefault
   );
+}
+
+def NonNegativeI64Property : ConfinedProperty<I64Property,
+  CPred<"$_self >= 0">, "non-negative int64_t">;
+
+class NonEmptyArray<Property p> : ConfinedProperty
+    <ArrayProperty<p>, Neg<CPred<"$_self.empty()">>,
+    "non-empty array of " # p.summary>;
+
+def OpWithPropertyPredicates : TEST_Op<"op_with_property_predicates"> {
+  let arguments = (ins
+    NonNegativeI64Property:$scalar,
+    OptionalProperty<NonNegativeI64Property>:$optional,
+    DefaultValuedProperty<NonNegativeI64Property, "0">:$defaulted,
+    ConfinedProperty<NonNegativeI64Property,
+      CPred<"$_self <= 5">, "between 0 and 5">:$more_constrained,
+    ArrayProperty<NonNegativeI64Property>:$array,
+    NonEmptyArray<I64Property>:$non_empty_unconstrained,
+    NonEmptyArray<NonNegativeI64Property>:$non_empty_constrained,
+    // Test applying predicates when the fromStorage() on the optional<> isn't trivial.
+    OptionalProperty<NonEmptyArray<NonNegativeI64Property>>:$non_empty_optional,
+    I64Property:$unconstrained
+  );
+  let assemblyFormat = "attr-dict prop-dict";
 }
 
 //===----------------------------------------------------------------------===//

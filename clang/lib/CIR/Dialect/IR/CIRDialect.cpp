@@ -17,13 +17,13 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 
 using namespace mlir;
-using namespace mlir::cir;
+using namespace cir;
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 
-void mlir::cir::CIRDialect::initialize() {
+void cir::CIRDialect::initialize() {
   registerTypes();
   registerAttributes();
   addOperations<
@@ -33,11 +33,27 @@ void mlir::cir::CIRDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+
+// TODO(CIR): The properties of global variables that require verification
+// haven't been implemented yet.
+mlir::LogicalResult cir::GlobalOp::verify() { return success(); }
+
+void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                          llvm::StringRef sym_name, mlir::Type sym_type) {
+  odsState.addAttribute(getSymNameAttrName(odsState.name),
+                        odsBuilder.getStringAttr(sym_name));
+  odsState.addAttribute(getSymTypeAttrName(odsState.name),
+                        mlir::TypeAttr::get(sym_type));
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
-void mlir::cir::FuncOp::build(OpBuilder &builder, OperationState &result,
-                              StringRef name) {
+void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
+                        StringRef name) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
 }
@@ -56,7 +72,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   p.printSymbolName(getSymName());
 }
 
-mlir::LogicalResult mlir::cir::FuncOp::verify() { return success(); }
+// TODO(CIR): The properties of functions that require verification haven't
+// been implemented yet.
+mlir::LogicalResult cir::FuncOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions

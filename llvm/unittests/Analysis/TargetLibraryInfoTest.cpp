@@ -318,6 +318,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @qsort(i8*, i64, i64, i32 (i8*, i8*)*)\n"
       "declare i64 @readlink(i8*, i8*, i64)\n"
       "declare i8* @realloc(i8*, i64)\n"
+      "declare i8* @reallocarray(i8*, i64, i64)\n"
       "declare i8* @reallocf(i8*, i64)\n"
       "declare double @remainder(double, double)\n"
       "declare float @remainderf(float, float)\n"

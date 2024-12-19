@@ -15,6 +15,7 @@
 #define LLVM_CLANG_CIR_DIALECT_IR_CIROPS
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIRTypes.td"
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
@@ -51,12 +52,12 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // following:
 //
 //   class CIRFooOpLowering
-//       : public mlir::OpConversionPattern<mlir::cir::FooOp> {
+//       : public mlir::OpConversionPattern<cir::FooOp> {
 //   public:
-//     using OpConversionPattern<mlir::cir::FooOp>::OpConversionPattern;
+//     using OpConversionPattern<cir::FooOp>::OpConversionPattern;
 //
 //     mlir::LogicalResult matchAndRewrite(
-//         mlir::cir::FooOp op,
+//         cir::FooOp op,
 //         OpAdaptor adaptor,
 //         mlir::ConversionPatternRewriter &rewriter) const override {
 //       rewriter.replaceOpWithNewOp<mlir::LLVM::BarOp>(
@@ -75,6 +76,35 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
 
 //===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+
+// TODO(CIR): For starters, cir.global has only name and type.  The other
+// properties of a global variable will be added over time as more of ClangIR
+// is upstreamed.
+
+def GlobalOp : CIR_Op<"global"> {
+  let summary = "Declare or define a global variable";
+  let description = [{
+    The `cir.global` operation declares or defines a named global variable.
+
+    The backing memory for the variable is allocated statically and is
+    described by the type of the variable.
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type);
+
+  let assemblyFormat = [{ $sym_name `:` $sym_type attr-dict }];
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
+                                 "mlir::Type":$sym_type)>];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -85,14 +115,15 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 def FuncOp : CIR_Op<"func"> {
   let summary = "Declare or define a function";
   let description = [{
-    ... lots of text to be added later ...
+    The `cir.func` operation defines a function, similar to the `mlir::FuncOp`
+    built-in.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name);
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "StringRef":$name)>];
+  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name)>];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;

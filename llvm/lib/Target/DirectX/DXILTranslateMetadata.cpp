@@ -72,25 +72,30 @@ enum class EntryPropsTag {
 
 } // namespace
 
-static NamedMDNode *emitResourceMetadata(Module &M, const DXILResourceMap &DRM,
+static NamedMDNode *emitResourceMetadata(Module &M, DXILBindingMap &DBM,
+                                         DXILResourceTypeMap &DRTM,
                                          const dxil::Resources &MDResources) {
   LLVMContext &Context = M.getContext();
 
+  for (ResourceBindingInfo &RI : DBM)
+    if (!RI.hasSymbol())
+      RI.createSymbol(M, DRTM[RI.getHandleTy()].createElementStruct());
+
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
-  for (const ResourceInfo &RI : DRM.srvs())
-    SRVs.push_back(RI.getAsMetadata(Context));
-  for (const ResourceInfo &RI : DRM.uavs())
-    UAVs.push_back(RI.getAsMetadata(Context));
-  for (const ResourceInfo &RI : DRM.cbuffers())
-    CBufs.push_back(RI.getAsMetadata(Context));
-  for (const ResourceInfo &RI : DRM.samplers())
-    Smps.push_back(RI.getAsMetadata(Context));
+  for (const ResourceBindingInfo &RI : DBM.srvs())
+    SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+  for (const ResourceBindingInfo &RI : DBM.uavs())
+    UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+  for (const ResourceBindingInfo &RI : DBM.cbuffers())
+    CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+  for (const ResourceBindingInfo &RI : DBM.samplers())
+    Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
 
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);
   Metadata *CBufMD = CBufs.empty() ? nullptr : MDNode::get(Context, CBufs);
   Metadata *SmpMD = Smps.empty() ? nullptr : MDNode::get(Context, Smps);
-  bool HasResources = !DRM.empty();
+  bool HasResources = !DBM.empty();
 
   if (MDResources.hasUAVs()) {
     assert(!UAVMD && "Old and new UAV representations can't coexist");
@@ -286,11 +291,6 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
   MDTuple *Properties = nullptr;
   if (ShaderFlags != 0) {
     SmallVector<Metadata *> MDVals;
-    // FIXME: ShaderFlagsAnalysis pass needs to collect and provide
-    // ShaderFlags for each entry function. Currently, ShaderFlags value
-    // provided by ShaderFlagsAnalysis pass is created by walking *all* the
-    // function instructions of the module. Is it is correct to use this value
-    // for metadata of the empty library entry?
     MDVals.append(
         getTagValueAsMetadata(EntryPropsTag::ShaderFlags, ShaderFlags, Ctx));
     Properties = MDNode::get(Ctx, MDVals);
@@ -300,9 +300,10 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
   return constructEntryMetadata(nullptr, nullptr, RMD, Properties, Ctx);
 }
 
-static void translateMetadata(Module &M, const DXILResourceMap &DRM,
+static void translateMetadata(Module &M, DXILBindingMap &DBM,
+                              DXILResourceTypeMap &DRTM,
                               const Resources &MDResources,
-                              const ComputedShaderFlags &ShaderFlags,
+                              const ModuleShaderFlags &ShaderFlags,
                               const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> IRB(Ctx);
@@ -311,30 +312,35 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
   emitValidatorVersionMD(M, MMDI);
   emitShaderModelVersionMD(M, MMDI);
   emitDXILVersionTupleMD(M, MMDI);
-  NamedMDNode *NamedResourceMD = emitResourceMetadata(M, DRM, MDResources);
+  NamedMDNode *NamedResourceMD =
+      emitResourceMetadata(M, DBM, DRTM, MDResources);
   auto *ResourceMD =
       (NamedResourceMD != nullptr) ? NamedResourceMD->getOperand(0) : nullptr;
   // FIXME: Add support to construct Signatures
   // See https://github.com/llvm/llvm-project/issues/57928
   MDTuple *Signatures = nullptr;
 
-  if (MMDI.ShaderProfile == Triple::EnvironmentType::Library)
+  if (MMDI.ShaderProfile == Triple::EnvironmentType::Library) {
+    // Get the combined shader flag mask of all functions in the library to be
+    // used as shader flags mask value associated with top-level library entry
+    // metadata.
+    uint64_t CombinedMask = ShaderFlags.getCombinedFlags();
     EntryFnMDNodes.emplace_back(
-        emitTopLevelLibraryNode(M, ResourceMD, ShaderFlags));
-  else if (MMDI.EntryPropertyVec.size() > 1) {
+        emitTopLevelLibraryNode(M, ResourceMD, CombinedMask));
+  } else if (MMDI.EntryPropertyVec.size() > 1) {
     M.getContext().diagnose(DiagnosticInfoTranslateMD(
         M, "Non-library shader: One and only one entry expected"));
   }
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
-    // FIXME: ShaderFlagsAnalysis pass needs to collect and provide
-    // ShaderFlags for each entry function. For now, assume shader flags value
-    // of entry functions being compiled for lib_* shader profile viz.,
-    // EntryPro.Entry is 0.
-    uint64_t EntryShaderFlags =
-        (MMDI.ShaderProfile == Triple::EnvironmentType::Library) ? 0
-                                                                 : ShaderFlags;
+    const ComputedShaderFlags &EntrySFMask =
+        ShaderFlags.getFunctionFlags(EntryProp.Entry);
+
+    // If ShaderProfile is Library, mask is already consolidated in the
+    // top-level library node. Hence it is not emitted.
+    uint64_t EntryShaderFlags = 0;
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
+      EntryShaderFlags = EntrySFMask;
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
         M.getContext().diagnose(DiagnosticInfoTranslateMD(
             M,
@@ -359,13 +365,13 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
 
 PreservedAnalyses DXILTranslateMetadata::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-  const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
+  DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
-  const ComputedShaderFlags &ShaderFlags =
-      MAM.getResult<ShaderFlagsAnalysis>(M);
+  const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
-  translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
+  translateMetadata(M, DBM, DRTM, MDResources, ShaderFlags, MMDI);
 
   return PreservedAnalyses::all();
 }
@@ -379,26 +385,30 @@ public:
   StringRef getPassName() const override { return "DXIL Translate Metadata"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
+    AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addRequired<DXILResourceMDWrapper>();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
-    AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
 
   bool runOnModule(Module &M) override {
-    const DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+    DXILBindingMap &DBM =
+        getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
     const dxil::Resources &MDResources =
         getAnalysis<DXILResourceMDWrapper>().getDXILResource();
-    const ComputedShaderFlags &ShaderFlags =
+    const ModuleShaderFlags &ShaderFlags =
         getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
     dxil::ModuleMetadataInfo MMDI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-    translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
+    translateMetadata(M, DBM, DRTM, MDResources, ShaderFlags, MMDI);
     return true;
   }
 };
@@ -413,7 +423,7 @@ ModulePass *llvm::createDXILTranslateMetadataLegacyPass() {
 
 INITIALIZE_PASS_BEGIN(DXILTranslateMetadataLegacy, "dxil-translate-metadata",
                       "DXIL Translate Metadata", false, false)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)

@@ -78,6 +78,8 @@ BENCHMARK(BM_std_min<unsigned char>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<unsigned short>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<unsigned int>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<unsigned long long>)->Apply(run_sizes);
+#ifndef TEST_HAS_NO_INT128
 BENCHMARK(BM_std_min<unsigned __int128>)->Apply(run_sizes);
+#endif
 
 BENCHMARK_MAIN();

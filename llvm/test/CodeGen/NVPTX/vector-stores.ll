@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: .visible .func foo1
 ; CHECK: st.v2.f32
@@ -31,8 +31,8 @@ define void @foo4(<4 x i32> %val, ptr %ptr) {
 
 ; CHECK-LABEL: .visible .func v16i8
 define void @v16i8(ptr %a, ptr %b) {
-; CHECK: ld.v4.u32
-; CHECK: st.v4.u32
+; CHECK: ld.v4.b32
+; CHECK: st.v4.b32
   %v = load <16 x i8>, ptr %a
   store <16 x i8> %v, ptr %b
   ret void

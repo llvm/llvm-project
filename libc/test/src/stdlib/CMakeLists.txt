@@ -382,7 +382,6 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       atexit_test.cpp
     DEPENDS
-      libc.hdr.func._Exit 
       libc.src.stdlib._Exit
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
@@ -398,7 +397,7 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       at_quick_exit_test.cpp
     DEPENDS
-      libc.hdr.func._Exit 
+      libc.src.stdlib._Exit
       libc.src.stdlib.quick_exit
       libc.src.stdlib.at_quick_exit
       libc.src.__support.CPP.array
@@ -432,8 +431,8 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.quick_exit
   )
 
-  # Only the GPU has an in-tree 'malloc' implementation.
-  if(LIBC_TARGET_OS_IS_GPU)
+  # Only baremetal and GPU has an in-tree 'malloc' implementation.
+  if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY

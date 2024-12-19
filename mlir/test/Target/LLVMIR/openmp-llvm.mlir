@@ -2505,6 +2505,23 @@ llvm.mlir.global internal @_QFsubEx() : i32
 
 // -----
 
+// CHECK-LABEL: define void @omp_task_detach
+// CHECK-SAME: (ptr %[[event_handle:.*]])
+llvm.func @omp_task_detach(%event_handle : !llvm.ptr){
+   // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
+   // CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
+   // CHECK: %[[return_val:.*]] = call ptr @__kmpc_task_allow_completion_event(ptr {{.*}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]])
+   // CHECK: %[[conv:.*]] = ptrtoint ptr %[[return_val]] to i64
+   // CHECK: store i64 %[[conv]], ptr %[[event_handle]], align 4
+   // CHECK: call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]])
+   omp.task detach(%event_handle : !llvm.ptr){
+     omp.terminator
+   }
+   llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: define void @omp_task
 // CHECK-SAME: (i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
 llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
@@ -2668,6 +2685,57 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
 // CHECK: %[[ARG_ALLOC:.*]] = alloca { ptr }, align 8
 // CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @[[parallel_outlined_fn:.+]], ptr %[[ARG_ALLOC]])
 // CHECK: define internal void @[[parallel_outlined_fn]]
+// -----
+
+llvm.func @foo(!llvm.ptr) -> ()
+llvm.func @destroy(!llvm.ptr) -> ()
+
+omp.private {type = firstprivate} @privatizer : !llvm.ptr alloc {
+^bb0(%arg0 : !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+} dealloc {
+^bb0(%arg0 : !llvm.ptr):
+  llvm.call @destroy(%arg0) : (!llvm.ptr) -> ()
+  omp.yield
+}
+
+llvm.func @task(%arg0 : !llvm.ptr) {
+  omp.task private(@privatizer %arg0 -> %arg1 : !llvm.ptr) {
+    llvm.call @foo(%arg1) : (!llvm.ptr) -> ()
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: @task..omp_par
+// CHECK:       task.alloca:
+// CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_12:.*]], align 8
+// CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_11]], i32 0, i32 0
+// CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
+// CHECK:         %[[VAL_15:.*]] = alloca i32, i64 1, align 4
+// CHECK:         br label %omp.private.latealloc
+// CHECK:       omp.private.latealloc:                            ; preds = %task.alloca
+// CHECK:         br label %omp.private.copy
+// CHECK:       omp.private.copy:                                 ; preds = %omp.private.latealloc
+// CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
+// CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
+// CHECK:         br label %[[VAL_20:.*]]
+// CHECK:       task.body:                                        ; preds = %omp.private.copy
+// CHECK:         br label %omp.task.region
+// CHECK:       omp.task.region:                                  ; preds = %task.body
+// CHECK:         call void @foo(ptr %[[VAL_15]])
+// CHECK:         br label %omp.region.cont
+// CHECK:       omp.region.cont:                                  ; preds = %omp.task.region
+// CHECK:         call void @destroy(ptr %[[VAL_15]])
+// CHECK:         br label %task.exit.exitStub
+// CHECK:       task.exit.exitStub:                               ; preds = %omp.region.cont
+// CHECK:         ret void
 // -----
 
 llvm.func @foo() -> ()
@@ -2948,6 +3016,19 @@ module attributes {omp.is_target_device = true} {
       } {
     llvm.return
   }
+}
+
+// -----
+
+// Third argument is 5: essentially (4 || 1)
+// signifying this task is TIED and MERGEABLE
+
+// CHECK: {{.*}} = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %omp_global_thread_num, i32 5, i64 40, i64 0, ptr @omp_task_mergeable..omp_par)
+llvm.func @omp_task_mergeable() {
+  omp.task mergeable {
+    omp.terminator
+  }
+  llvm.return
 }
 
 // -----

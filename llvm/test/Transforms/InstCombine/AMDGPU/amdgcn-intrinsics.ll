@@ -1155,7 +1155,7 @@ define <2 x half> @constant_cvt_pkrtz() {
 ; Test constant values where rtz changes result
 define <2 x half> @constant_rtz_pkrtz() {
 ; CHECK-LABEL: @constant_rtz_pkrtz(
-; CHECK-NEXT:    ret <2 x half> <half 0xH7BFF, half 0xH7BFF>
+; CHECK-NEXT:    ret <2 x half> splat (half 0xH7BFF)
 ;
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 65535.0, float 65535.0)
   ret <2 x half> %cvt
@@ -6546,4 +6546,22 @@ define half @test_constant_fold_exp2_f16_neg_denorm() {
 ;
   %val = call half @llvm.amdgcn.exp2.f16(half 0xH83ff)
   ret half %val
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.prng
+; --------------------------------------------------------------------
+declare i32 @llvm.amdgcn.prng.b32(i32)
+define i32 @prng_undef_i32() {
+; CHECK-LABEL: @prng_undef_i32(
+; CHECK-NEXT:    ret i32 undef
+  %prng = call i32 @llvm.amdgcn.prng.b32(i32 undef)
+  ret i32 %prng
+}
+
+define i32 @prng_poison_i32() {
+; CHECK-LABEL: @prng_poison_i32(
+; CHECK-NEXT:    ret i32 poison
+  %prng = call i32 @llvm.amdgcn.prng.b32(i32 poison)
+  ret i32 %prng
 }

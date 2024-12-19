@@ -102,21 +102,15 @@ will not be able to select reviewers in such a way, in which case you can still
 get the attention of potential reviewers by CC'ing them in a comment -- just
 @name them.
 
-A reviewer may request changes or ask questions during the review. If you are
-uncertain on how to provide test cases, documentation, etc., feel free to ask
-for guidance during the review. Please address the feedback and re-post an
-updated version of your patch. This cycle continues until all requests and comments
-have been addressed and a reviewer accepts the patch with a `Looks good to me` or `LGTM`.
-Once that is done the change can be committed. If you do not have commit
-access, please let people know during the review and someone should commit it
-on your behalf.
-
 If you have received no comments on your patch for a week, you can request a
 review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate
-is once a week. Please remember that you are asking for valuable time from other
-professional developers.
+is once a week. Please remember that you are asking for valuable time from
+other professional developers. Finally, if you do not have commit access,
+please let people know during the review and someone should commit it on your
+behalf once it has been accepted.
 
-For more information on LLVM's code-review process, please see :doc:`CodeReview`.
+For more information on LLVM's code-review process, please see
+:doc:`CodeReview`.
 
 .. _commit_from_git:
 

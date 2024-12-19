@@ -260,6 +260,9 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpRestoreState:
     OutStreamer->emitCFIRestoreState(Loc);
     break;
+  case MCCFIInstruction::OpValOffset:
+    OutStreamer->emitCFIValOffset(Inst.getRegister(), Inst.getOffset(), Loc);
+    break;
   }
 }
 

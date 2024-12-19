@@ -344,7 +344,9 @@ enum class InstrProfKind {
   MemProf = 0x40,
   // A temporal profile.
   TemporalProfile = 0x80,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/TemporalProfile)
+  // A profile with loop entry basic blocks instrumentation.
+  LoopEntriesInstrumentation = 0x100,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/LoopEntriesInstrumentation)
 };
 
 const std::error_category &instrprof_category();
@@ -504,7 +506,8 @@ private:
   // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
   // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
-  Error addFuncWithName(Function &F, StringRef PGOFuncName);
+  // The canonical name is only added if \c AddCanonical is true.
+  Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical);
 
   // Add the vtable into the symbol table, by creating the following
   // map entries:
@@ -560,7 +563,9 @@ public:
   /// decls from module \c M. This interface is used by transformation
   /// passes such as indirect function call promotion. Variable \c InLTO
   /// indicates if this is called from LTO optimization passes.
-  Error create(Module &M, bool InLTO = false);
+  /// A canonical name, removing non-__uniq suffixes, is added if
+  /// \c AddCanonical is true.
+  Error create(Module &M, bool InLTO = false, bool AddCanonical = true);
 
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.

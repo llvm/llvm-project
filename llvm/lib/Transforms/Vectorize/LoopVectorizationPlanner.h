@@ -222,21 +222,21 @@ public:
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                               const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name));
   }
   VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                                 const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
   }
 
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPCanonicalIVPHIRecipe *CanonicalIV,
-                                     VPValue *Step) {
+                                     VPValue *Step, const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step, Name));
   }
 
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -524,6 +524,12 @@ private:
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B) const;
+
+  /// Returns true if the per-lane cost of VectorizationFactor A is lower than
+  /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
+  bool isMoreProfitable(const VectorizationFactor &A,
+                        const VectorizationFactor &B,
+                        const unsigned MaxTripCount) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

@@ -23,6 +23,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 using namespace clang;
@@ -68,7 +69,7 @@ template <> struct ScalarEnumerationTraits<MethodKind> {
 
 namespace {
 struct Param {
-  unsigned Position;
+  int Position;
   std::optional<bool> NoEscape = false;
   std::optional<bool> Lifetimebound = false;
   std::optional<NullabilityKind> Nullability;
@@ -161,6 +162,7 @@ struct Method {
   bool DesignatedInit = false;
   bool Required = false;
   StringRef ResultType;
+  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Method> MethodsSeq;
@@ -195,6 +197,8 @@ template <> struct MappingTraits<Method> {
     IO.mapOptional("DesignatedInit", M.DesignatedInit, false);
     IO.mapOptional("Required", M.Required, false);
     IO.mapOptional("ResultType", M.ResultType, StringRef(""));
+    IO.mapOptional("SwiftReturnOwnership", M.SwiftReturnOwnership,
+                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -290,6 +294,7 @@ struct Function {
   StringRef SwiftName;
   StringRef Type;
   StringRef ResultType;
+  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -312,6 +317,8 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
+    IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
+                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -458,6 +465,7 @@ struct Tag {
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
+  std::optional<bool> SwiftEscapable;
   FunctionsSeq Methods;
   FieldsSeq Fields;
 
@@ -497,6 +505,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
     IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
+    IO.mapOptional("SwiftEscapable", T.SwiftEscapable);
     IO.mapOptional("Methods", T.Methods);
     IO.mapOptional("Fields", T.Fields);
     IO.mapOptional("Tags", T.Tags);
@@ -730,7 +739,8 @@ public:
     }
   }
 
-  void convertParams(const ParamsSeq &Params, FunctionInfo &OutInfo) {
+  void convertParams(const ParamsSeq &Params, FunctionInfo &OutInfo,
+                     std::optional<ParamInfo> &thisOrSelf) {
     for (const auto &P : Params) {
       ParamInfo PI;
       if (P.Nullability)
@@ -739,9 +749,14 @@ public:
       PI.setLifetimebound(P.Lifetimebound);
       PI.setType(std::string(P.Type));
       PI.setRetainCountConvention(P.RetainCountConvention);
-      if (OutInfo.Params.size() <= P.Position)
+      if (static_cast<int>(OutInfo.Params.size()) <= P.Position)
         OutInfo.Params.resize(P.Position + 1);
-      OutInfo.Params[P.Position] |= PI;
+      if (P.Position == -1)
+        thisOrSelf = PI;
+      else if (P.Position >= 0)
+        OutInfo.Params[P.Position] |= PI;
+      else
+        emitError("invalid parameter position " + llvm::itostr(P.Position));
     }
   }
 
@@ -816,9 +831,10 @@ public:
       emitError("'FactoryAsInit' is no longer valid; use 'SwiftName' instead");
 
     MI.ResultType = std::string(M.ResultType);
+    MI.SwiftReturnOwnership = std::string(M.SwiftReturnOwnership);
 
     // Translate parameter information.
-    convertParams(M.Params, MI);
+    convertParams(M.Params, MI, MI.Self);
 
     // Translate nullability info.
     convertNullability(M.Nullability, M.NullabilityOfRet, MI, M.Selector);
@@ -926,14 +942,22 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
-  void convertFunction(const Function &Function, FunctionInfo &FI) {
+  template <typename FuncOrMethodInfo>
+  void convertFunction(const Function &Function, FuncOrMethodInfo &FI) {
     convertAvailability(Function.Availability, FI, Function.Name);
     FI.setSwiftPrivate(Function.SwiftPrivate);
     FI.SwiftName = std::string(Function.SwiftName);
-    convertParams(Function.Params, FI);
+    std::optional<ParamInfo> This;
+    convertParams(Function.Params, FI, This);
+    if constexpr (std::is_same_v<FuncOrMethodInfo, CXXMethodInfo>)
+      FI.This = This;
+    else if (This)
+      emitError("implicit instance parameter is only permitted on C++ and "
+                "Objective-C methods");
     convertNullability(Function.Nullability, Function.NullabilityOfRet, FI,
                        Function.Name);
     FI.ResultType = std::string(Function.ResultType);
+    FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
   }
 
@@ -969,6 +993,8 @@ public:
 
     if (T.SwiftCopyable)
       TI.setSwiftCopyable(T.SwiftCopyable);
+    if (T.SwiftEscapable)
+      TI.setSwiftEscapable(T.SwiftEscapable);
 
     if (T.EnumConvenienceKind) {
       if (T.EnumExtensibility) {

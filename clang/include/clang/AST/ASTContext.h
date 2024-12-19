@@ -245,7 +245,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
   mutable llvm::FoldingSet<DependentUnaryTransformType>
     DependentUnaryTransformTypes;
-  mutable llvm::ContextualFoldingSet<AutoType, ASTContext&> AutoTypes;
+  // An AutoType can have a dependency on another AutoType via its template
+  // arguments. Since both dependent and dependency are on the same set,
+  // we can end up in an infinite recursion when looking for a node if we used
+  // a `FoldingSet`, since both could end up in the same bucket.
+  mutable llvm::DenseMap<llvm::FoldingSetNodeID, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
@@ -1041,7 +1045,7 @@ public:
   void setInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst,
                                           UsingShadowDecl *Pattern);
 
-  FieldDecl *getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field);
+  FieldDecl *getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) const;
 
   void setInstantiatedFromUnnamedFieldDecl(FieldDecl *Inst, FieldDecl *Tmpl);
 
@@ -1747,7 +1751,9 @@ public:
   QualType
   getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
                                unsigned Index,
-                               std::optional<unsigned> PackIndex) const;
+                               std::optional<unsigned> PackIndex,
+                               SubstTemplateTypeParmTypeFlag Flag =
+                                   SubstTemplateTypeParmTypeFlag::None) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);

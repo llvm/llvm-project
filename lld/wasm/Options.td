@@ -309,6 +309,8 @@ def thinlto_index_only: FF<"thinlto-index-only">;
 def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 

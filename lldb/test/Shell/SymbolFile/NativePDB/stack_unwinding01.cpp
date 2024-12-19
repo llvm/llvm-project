@@ -1,5 +1,5 @@
 // clang-format off
-// REQUIRES: lld, system-windows
+// REQUIRES: lld, target-windows
 
 // RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
 // RUN: %lldb -f %t.exe -s \

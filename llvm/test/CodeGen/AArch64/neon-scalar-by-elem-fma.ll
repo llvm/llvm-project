@@ -84,8 +84,7 @@ define float @test_fmla_ss2S_1(float %a, float %b, <2 x float> %v) {
 define float @test_fmla_ss4S_3_ext0(float %a, <4 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss4S_3_ext0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[3]
-; CHECK-NEXT:    fmadd s0, s1, s2, s0
+; CHECK-NEXT:    fmla s0, s1, v1.s[3]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <4 x float> %v, i32 0
   %tmp1 = extractelement <4 x float> %v, i32 3
@@ -96,8 +95,7 @@ define float @test_fmla_ss4S_3_ext0(float %a, <4 x float> %v) {
 define float @test_fmla_ss4S_3_ext0_swp(float %a, <4 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss4S_3_ext0_swp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[3]
-; CHECK-NEXT:    fmadd s0, s2, s1, s0
+; CHECK-NEXT:    fmla s0, s1, v1.s[3]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <4 x float> %v, i32 0
   %tmp1 = extractelement <4 x float> %v, i32 3
@@ -120,8 +118,7 @@ define float @test_fmla_ss2S_3_ext0(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss2S_3_ext0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    fmadd s0, s1, s2, s0
+; CHECK-NEXT:    fmla s0, s1, v1.s[1]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x float> %v, i32 0
   %tmp1 = extractelement <2 x float> %v, i32 1
@@ -133,8 +130,7 @@ define float @test_fmla_ss2S_3_ext0_swp(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss2S_3_ext0_swp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    fmadd s0, s2, s1, s0
+; CHECK-NEXT:    fmla s0, s1, v1.s[1]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x float> %v, i32 0
   %tmp1 = extractelement <2 x float> %v, i32 1
@@ -218,8 +214,7 @@ define double @test_fmla_dd2D_1_swap(double %a, double %b, <2 x double> %v) {
 define double @test_fmla_ss2D_1_ext0(double %a, <2 x double> %v) {
 ; CHECK-LABEL: test_fmla_ss2D_1_ext0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    fmadd d0, d1, d2, d0
+; CHECK-NEXT:    fmla d0, d1, v1.d[1]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x double> %v, i32 0
   %tmp1 = extractelement <2 x double> %v, i32 1
@@ -230,8 +225,7 @@ define double @test_fmla_ss2D_1_ext0(double %a, <2 x double> %v) {
 define double @test_fmla_ss2D_1_ext0_swp(double %a, <2 x double> %v) {
 ; CHECK-LABEL: test_fmla_ss2D_1_ext0_swp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    fmadd d0, d2, d1, d0
+; CHECK-NEXT:    fmla d0, d1, v1.d[1]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x double> %v, i32 0
   %tmp1 = extractelement <2 x double> %v, i32 1
@@ -340,8 +334,7 @@ define float @test_fmls_ss2S_1(float %a, float %b, <2 x float> %v) {
 define float @test_fmls_ss4S_3_ext0(float %a, <4 x float> %v) {
 ; CHECK-LABEL: test_fmls_ss4S_3_ext0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[3]
-; CHECK-NEXT:    fmsub s0, s1, s2, s0
+; CHECK-NEXT:    fmls s0, s1, v1.s[3]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <4 x float> %v, i32 0
   %tmp1 = extractelement <4 x float> %v, i32 3
@@ -437,8 +430,7 @@ define double @test_fmls_dd2D_1_swap(double %a, double %b, <2 x double> %v) {
 define double @test_fmls_dd2D_1_ext0(double %a, <2 x double> %v) {
 ; CHECK-LABEL: test_fmls_dd2D_1_ext0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    fmsub d0, d1, d2, d0
+; CHECK-NEXT:    fmls d0, d1, v1.d[1]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x double> %v, i32 0
   %tmp1 = extractelement <2 x double> %v, i32 1

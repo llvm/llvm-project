@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_UTILITY
-#define _LIBCPP_UTILITY
+#ifndef _LIBCPP___CXX03_UTILITY
+#define _LIBCPP___CXX03_UTILITY
 
 /*
     utility synopsis
@@ -306,4 +306,4 @@ template <class T>
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_UTILITY
+#endif // _LIBCPP___CXX03_UTILITY

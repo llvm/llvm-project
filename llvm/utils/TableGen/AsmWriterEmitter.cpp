@@ -955,11 +955,11 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               if (R->isSubClassOf("RegisterOperand"))
                 R = R->getValueAsDef("RegClass");
               IAP.addCond(std::string(
-                  formatv("AliasPatternCond::K_RegClass, {0}::{1}RegClassID",
+                  formatv("AliasPatternCond::K_RegClass, {}::{}RegClassID",
                           Namespace, R->getName())));
             } else {
-              IAP.addCond(std::string(formatv(
-                  "AliasPatternCond::K_TiedReg, {0}", IAP.getOpIndex(ROName))));
+              IAP.addCond(std::string(formatv("AliasPatternCond::K_TiedReg, {}",
+                                              IAP.getOpIndex(ROName))));
             }
           } else {
             // Assume all printable operands are desired for now. This can be
@@ -977,7 +977,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
                 break; // No conditions on this operand at all
             }
             IAP.addCond(
-                std::string(formatv("AliasPatternCond::K_Custom, {0}", Entry)));
+                std::string(formatv("AliasPatternCond::K_Custom, {}", Entry)));
           }
           break;
         }
@@ -990,19 +990,19 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             PrintFatalError("Matching an alias with an immediate out of the "
                             "range of int32_t is not supported");
           IAP.addCond(std::string(
-              formatv("AliasPatternCond::K_Imm, uint32_t({0})", Imm32)));
+              formatv("AliasPatternCond::K_Imm, uint32_t({})", Imm32)));
           break;
         }
         case CodeGenInstAlias::ResultOperand::K_Reg:
           if (!CGA.ResultOperands[i].getRegister()) {
-            IAP.addCond(std::string(formatv(
-                "AliasPatternCond::K_Reg, {0}::NoRegister", Namespace)));
+            IAP.addCond(std::string(
+                formatv("AliasPatternCond::K_Reg, {}::NoRegister", Namespace)));
             break;
           }
 
           StringRef Reg = CGA.ResultOperands[i].getRegister()->getName();
           IAP.addCond(std::string(
-              formatv("AliasPatternCond::K_Reg, {0}::{1}", Namespace, Reg)));
+              formatv("AliasPatternCond::K_Reg, {}::{}", Namespace, Reg)));
           break;
         }
 
@@ -1056,7 +1056,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
 
           IAP.addCond(std::string(formatv(
-              "AliasPatternCond::K_{0}{1}Feature, {2}::{3}", IsOr ? "Or" : "",
+              "AliasPatternCond::K_{}{}Feature, {}::{}", IsOr ? "Or" : "",
               IsNeg ? "Neg" : "", Namespace, Arg->getAsString())));
         }
         // If an AssemblerPredicate with ors is used, note end of list should
@@ -1127,13 +1127,13 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
     unsigned PatternStart = PatternCount;
 
     // Insert the pattern start and opcode in the pattern list for debugging.
-    PatternO << formatv("    // {0} - {1}\n", It->first, PatternStart);
+    PatternO << formatv("    // {} - {}\n", It->first, PatternStart);
 
     for (IAPrinter *IAP : UniqueIAPs) {
       // Start each condition list with a comment of the resulting pattern that
       // we're trying to match.
       unsigned CondStart = CondCount;
-      CondO << formatv("    // {0} - {1}\n", IAP->getResult(), CondStart);
+      CondO << formatv("    // {} - {}\n", IAP->getResult(), CondStart);
       for (const auto &Cond : IAP->getConds())
         CondO << "    {" << Cond << "},\n";
       CondCount += IAP->getCondCount();
@@ -1151,12 +1151,12 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       }
       unsigned AsmStrOffset = Insertion.first->second;
 
-      PatternO << formatv("    {{{0}, {1}, {2}, {3} },\n", AsmStrOffset,
-                          CondStart, IAP->getNumMIOps(), IAP->getCondCount());
+      PatternO << formatv("    {{{}, {}, {}, {} },\n", AsmStrOffset, CondStart,
+                          IAP->getNumMIOps(), IAP->getCondCount());
       ++PatternCount;
     }
 
-    OpcodeO << formatv("    {{{0}, {1}, {2} },\n", It->first, PatternStart,
+    OpcodeO << formatv("    {{{}, {}, {} },\n", It->first, PatternStart,
                        PatternCount - PatternStart);
   }
 
