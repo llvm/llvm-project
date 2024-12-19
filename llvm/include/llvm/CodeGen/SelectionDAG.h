@@ -1608,7 +1608,13 @@ public:
   /// \p Op1 Accumulator for where the result is stored for the partial
   /// reduction operation.
   /// \p Op2 Input for the partial reduction operation.
-  SDValue expandPartialReduceAdd(SDLoc DL, SDValue Op1, SDValue Op2);
+  /// Expands PARTIAL_REDUCE_S/UMLA nodes.
+  /// \p Acc Accumulator for where the result is stored for the partial
+  /// reduction operation.
+  /// \p Input1 First input for the partial reduction operation.
+  /// \p Input2 Second input for the partial reduction operation.
+  SDValue expandPartialReduceAdd(SDLoc DL, SDValue Acc, SDValue Input1,
+                                 SDValue Input2);
 
   /// Expands a node with multiple results to an FP or vector libcall. The
   /// libcall is expected to take all the operands of the \p Node followed by

@@ -8124,11 +8124,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Input = getValue(I.getOperand(1));
 
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
-      setValue(&I,
-               DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, dl, AccVT, Acc, Input));
+      setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, dl, AccVT, Acc, Input,
+                               DAG.getConstant(1, dl, Input.getValueType())));
       return;
     }
-    setValue(&I, DAG.expandPartialReduceAdd(dl, Acc, Input));
+    setValue(&I,
+             DAG.expandPartialReduceAdd(
+                 dl, Acc, Input, DAG.getConstant(1, dl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

@@ -2467,20 +2467,24 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
-SDValue SelectionDAG::expandPartialReduceAdd(SDLoc DL, SDValue Op1,
-                                             SDValue Op2) {
-  EVT ReducedTy = Op1.getValueType();
-  EVT FullTy = Op2.getValueType();
+SDValue SelectionDAG::expandPartialReduceAdd(SDLoc DL, SDValue Acc,
+                                             SDValue Input1, SDValue Input2) {
+
+  EVT FullTy = Input1.getValueType();
+  Input2 = getAnyExtOrTrunc(Input2, DL, FullTy);
+  SDValue Input = getNode(ISD::MUL, DL, FullTy, Input1, Input2);
+
+  EVT ReducedTy = Acc.getValueType();
 
   unsigned Stride = ReducedTy.getVectorMinNumElements();
   unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
 
   // Collect all of the subvectors
-  std::deque<SDValue> Subvectors = {Op1};
+  std::deque<SDValue> Subvectors = {Acc};
   for (unsigned I = 0; I < ScaleFactor; I++) {
     auto SourceIndex = getVectorIdxConstant(I * Stride, DL);
     Subvectors.push_back(
-        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
+        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Input, SourceIndex}));
   }
 
   // Flatten the subvector tree
