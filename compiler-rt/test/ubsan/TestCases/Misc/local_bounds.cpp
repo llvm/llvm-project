@@ -15,7 +15,8 @@ __attribute__((noinline)) void init(S *s) {
   __asm__ __volatile__("" : : "r"(s) : "memory");
 }
 
-__attribute__((noinline, no_sanitize("memory", "address"))) int test(char i) {
+__attribute__((noinline, no_sanitize("memory", "address", "hwaddress"))) int
+test(char i) {
   S a;
   init(&a);
   S b;
