@@ -427,7 +427,6 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
                              RegisterSet &Spilled,
                              MachineBasicBlock::iterator I,
                              const RegisterSet Defs) {
-  //T2->startTimer();
   MachineBasicBlock::iterator LimitPoint = I;
 
   if (!Defs.empty()) {
@@ -435,20 +434,31 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
       LimitPoint = std::next(LimitPoint);
   }
 
+  Active.remove_if([&](Register R) {
+    return (LimitPoint == MBB.end()) ? NU.isDead(MBB, R)
+                                     : NU.isDead(*LimitPoint, R);
+  });
+
   unsigned CurRP = getSizeInRegs(Active);
   unsigned DefsRP = getSizeInRegs(Defs);
-  if(CurRP <= NumAvailableRegs - DefsRP) {
-    //T2->stopTimer();
+  if (CurRP <= NumAvailableRegs - DefsRP)
     return;
-  }
 
-  if (LimitPoint == MBB.end())
-    NU.getSortedForBlockEnd(MBB, Active);
-  else {
-    T2->startTimer();
-    NU.getSortedForInstruction(*LimitPoint, Active);
-    T2->stopTimer();
+  //T2->startTimer();
+  DenseMap<Register, unsigned> M;
+  for (auto R : Active) {
+    unsigned D = (LimitPoint == MBB.end())
+                     ? NU.getNextUseDistance(MBB, R)
+                     : NU.getNextUseDistance(*LimitPoint, R);
+    M[R] = D;
   }
+  auto SortByDist = [&](const Register LHS, const Register RHS) {
+      return M[LHS] < M[RHS];
+  };
+  SmallVector<Register> Tmp(Active.takeVector());
+  sort(Tmp, SortByDist);
+  Active.insert(Tmp.begin(), Tmp.end());
+  //T2->stopTimer();
 
 
   unsigned ShrinkTo = NumAvailableRegs - DefsRP;
@@ -475,15 +485,9 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
   }
 
   for (auto R : ToSpill) {
-
-    bool Alive = (LimitPoint == MBB.end()) ? !NU.isDead(MBB, R)
-                                           : !NU.isDead(*LimitPoint, R);
-    if (Alive) {
-      spillBefore(R, I);
-      Spilled.insert(R);
-    }
+    spillBefore(R, I);
+    Spilled.insert(R);
   }
-  //T2->stopTimer();
 }
 
 unsigned AMDGPUSSASpiller::getSizeInRegs(const Register VReg) {
