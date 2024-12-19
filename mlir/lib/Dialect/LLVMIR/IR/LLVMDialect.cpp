@@ -821,11 +821,12 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
 
   return TypeSwitch<Type, LogicalResult>(baseGEPType)
       .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
-        if (!isa<IntegerAttr>(indices[indexPos]))
+        auto attr = dyn_cast<IntegerAttr>(indices[indexPos]);
+        if (!attr)
           return emitOpError() << "expected index " << indexPos
                                << " indexing a struct to be constant";
 
-        int32_t gepIndex = cast<IntegerAttr>(indices[indexPos]).getInt();
+        int32_t gepIndex = attr.getInt();
         ArrayRef<Type> elementTypes = structType.getBody();
         if (gepIndex < 0 ||
             static_cast<size_t>(gepIndex) >= elementTypes.size())
