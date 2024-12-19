@@ -38,6 +38,12 @@ endif()
 include(LLDBConfig)
 include(AddLLDB)
 
+# This has been added to keep the AIX build isolated for now.
+# It will need to be modified later.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_definitions("-D__AIX__")
+endif()
+
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
 if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
   add_definitions(-DLLDB_CONFIGURATION_DEBUG)
