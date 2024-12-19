@@ -177,7 +177,7 @@ int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
 int __asprintf(char** ret, __locale_t loc, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return __libcpp_vasprintf(ret, format, ap);
 }
 
