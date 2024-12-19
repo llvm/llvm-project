@@ -1593,7 +1593,9 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   DWARFASTParser *dwarf_ast = GetDWARFParser(*def_die.GetCU());
   if (!dwarf_ast)
     return false;
-  Type *type = GetDIEToType().lookup(decl_die.GetDIE());
+  Type *type = decl_die.GetDWARF()->GetDIEToType().lookup(decl_die.GetDIE());
+  assert (type);
+
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
     DWARFASTParserClang *ast_parser =
