@@ -194,7 +194,7 @@ struct VendorConfig : public Config {
 };
 
 std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
-  return std::make_shared<VendorConfig>(/*EnableTelemetry*/ true);
+  return std::make_shared<VendorConfig>(/*EnableTelemetry=*/true);
 }
 
 class JsonStorageDestination : public Destination {
