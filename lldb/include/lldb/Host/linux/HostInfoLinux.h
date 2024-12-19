@@ -26,6 +26,7 @@ public:
   static void Terminate();
 
   static llvm::StringRef GetDistributionId();
+  static FileSpec GetProgramFileSpec();
 
 protected:
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

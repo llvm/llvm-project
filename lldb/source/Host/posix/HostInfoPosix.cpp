@@ -9,6 +9,7 @@
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "llvm/ADT/SmallString.h"
@@ -46,7 +47,7 @@ llvm::VersionTuple HostInfoPosix::GetOSVersion() {
       return;
 
     llvm::StringRef release = un.release;
-    // The kernel release string can include a lot of stuff (e.g.
+    // The Linux kernel release string can include a lot of stuff (e.g.
     // 4.9.0-6-amd64). We're only interested in the numbered prefix.
     release = release.substr(0, release.find_first_not_of("0123456789."));
     g_fields->m_os_version.tryParse(release);
@@ -177,21 +178,6 @@ FileSpec HostInfoPosix::GetDefaultShell() {
   return FileSpec("/bin/sh");
 }
 
-FileSpec HostInfoPosix::GetProgramFileSpec() {
-  static FileSpec g_program_filespec;
-
-  if (!g_program_filespec) {
-    char exe_path[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-    if (len > 0) {
-      exe_path[len] = 0;
-      g_program_filespec.SetFile(exe_path, FileSpec::Style::native);
-    }
-  }
-
-  return g_program_filespec;
-}
-
 // Keeping the original one for reference
 // bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
 //  return ComputePathRelativeToLibrary(file_spec, "/bin");
@@ -201,7 +187,7 @@ bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   if (ComputePathRelativeToLibrary(file_spec, "/bin") &&
       file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
     return true;
-  file_spec.SetDirectory(GetProgramFileSpec().GetDirectory());
+  file_spec.SetDirectory(HostInfo::GetProgramFileSpec().GetDirectory());
   return !file_spec.GetDirectory().IsEmpty();
 }
 

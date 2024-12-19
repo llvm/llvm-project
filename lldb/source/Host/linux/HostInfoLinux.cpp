@@ -30,8 +30,6 @@ namespace {
 struct HostInfoLinuxFields {
   llvm::once_flag m_distribution_once_flag;
   std::string m_distribution_id;
-  // llvm::once_flag m_os_version_once_flag;
-  // llvm::VersionTuple m_os_version;
 };
 } // namespace
 
@@ -50,23 +48,6 @@ void HostInfoLinux::Terminate() {
   HostInfoBase::Terminate();
 }
 
-/*llvm::VersionTuple HostInfoPosix::GetOSVersion() {
-  assert(g_fields && "Missing call to Initialize?");
-  llvm::call_once(g_fields->m_os_version_once_flag, []() {
-    struct utsname un;
-    if (uname(&un) != 0)
-      return;
-
-    llvm::StringRef release = un.release;
-    // The kernel release string can include a lot of stuff (e.g.
-    // 4.9.0-6-amd64). We're only interested in the numbered prefix.
-    release = release.substr(0, release.find_first_not_of("0123456789."));
-    g_fields->m_os_version.tryParse(release);
-  });
-
-  return g_fields->m_os_version;
-}
-*/
 llvm::StringRef HostInfoLinux::GetDistributionId() {
   assert(g_fields && "Missing call to Initialize?");
   // Try to run 'lbs_release -i', and use that response for the distribution
@@ -140,6 +121,21 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
   });
 
   return g_fields->m_distribution_id;
+}
+
+FileSpec HostInfoLinux::GetProgramFileSpec() {
+  static FileSpec g_program_filespec;
+
+  if (!g_program_filespec) {
+    char exe_path[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+    if (len > 0) {
+      exe_path[len] = 0;
+      g_program_filespec.SetFile(exe_path, FileSpec::Style::native);
+    }
+  }
+
+  return g_program_filespec;
 }
 
 void HostInfoLinux::ComputeHostArchitectureSupport(ArchSpec &arch_32,

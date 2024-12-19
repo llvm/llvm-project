@@ -32,7 +32,6 @@ public:
   static uint32_t GetEffectiveGroupID();
 
   static FileSpec GetDefaultShell();
-  static FileSpec GetProgramFileSpec();
 
   static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
