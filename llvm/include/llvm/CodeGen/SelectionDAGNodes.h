@@ -806,9 +806,6 @@ public:
       return !operator==(x);
     }
 
-    /// Return true if this iterator is at the end of uses list.
-    bool atEnd() const { return Op == nullptr; }
-
     // Iterator traversal: forward iteration only.
     use_iterator &operator++() {          // Preincrement
       assert(Op && "Cannot increment end iterator!");
@@ -852,9 +849,6 @@ public:
 
     bool operator==(const user_iterator &x) const { return UI == x.UI; }
     bool operator!=(const user_iterator &x) const { return !operator==(x); }
-
-    /// Return true if this iterator is at the end of the uses list.
-    bool atEnd() const { return *this == user_iterator(); }
 
     user_iterator &operator++() { // Preincrement
       ++UI;
