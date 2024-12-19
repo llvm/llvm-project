@@ -804,6 +804,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setAllExpand(MVT::bf16);
     if (!Subtarget->hasFullFP16())
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+  } else {
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f32, Custom);
   }
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -6301,10 +6304,13 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
                      DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op));
 
   if ((DstVT == MVT::i16 || DstVT == MVT::i32) &&
-      (SrcVT == MVT::f16 || SrcVT == MVT::bf16))
+      (SrcVT == MVT::f16 || SrcVT == MVT::bf16)) {
+    if (Subtarget->hasFullFP16() && !Subtarget->hasBF16())
+      Op = DAG.getBitcast(MVT::f16, Op);
     return DAG.getNode(
         ISD::TRUNCATE, SDLoc(N), DstVT,
         MoveFromHPR(SDLoc(N), DAG, MVT::i32, SrcVT.getSimpleVT(), Op));
+  }
 
   if (!(SrcVT == MVT::i64 || DstVT == MVT::i64))
     return SDValue();
@@ -10588,6 +10594,17 @@ SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getFrameIndex(FI, VT);
 }
 
+SDValue ARMTargetLowering::LowerFP_TO_BF16(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  MVT SVT = Op.getOperand(0).getSimpleValueType();
+  RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, MVT::bf16);
+  SDValue Res =
+      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+  return DAG.getBitcast(MVT::i32, Res);
+}
+
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Lowering node: "; Op.dump());
   switch (Op.getOpcode()) {
@@ -10713,6 +10730,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCCS: return LowerFSETCC(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return LowerFP_TO_BF16(Op, DAG);
   case ARMISD::WIN__DBZCHK: return SDValue();
   }
 }
