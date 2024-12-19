@@ -905,14 +905,20 @@ public:
 
   bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
+  /// Identifies if the vector form of the intrinsic has a scalar operand.
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx) const;
 
   /// Identifies if the vector form of the intrinsic is overloaded on the type
   /// of the operand at index \p OpdIdx, or on the return type if \p OpdIdx is
   /// -1.
-  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              int ScalarOpdIdx) const;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const;
+
+  /// Identifies if the vector form of the intrinsic that returns a struct is
+  /// overloaded at the struct element index \p RetIdx.
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) const;
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -2020,8 +2026,11 @@ public:
   virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) = 0;
   virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                   unsigned ScalarOpdIdx) = 0;
-  virtual bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                      int ScalarOpdIdx) = 0;
+  virtual bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                      int OpdIdx) = 0;
+  virtual bool
+  isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                   int RetIdx) = 0;
   virtual InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
                            bool Insert, bool Extract, TargetCostKind CostKind,
@@ -2610,9 +2619,14 @@ public:
     return Impl.isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
   }
 
-  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              int ScalarOpdIdx) override {
-    return Impl.isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx);
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) override {
+    return Impl.isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+  }
+
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) override {
+    return Impl.isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
   }
 
   InstructionCost getScalarizationOverhead(VectorType *Ty,
