@@ -22,55 +22,73 @@ define i32 @foo(ptr %a) {
 ; ANALYZE-FULL:       for.body:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE:%.*]], label [[FOR_NEXT:%.*]]
 ; ANALYZE-FULL:       do_store:
-; ANALYZE-FULL-NEXT:    store i32 0, ptr [[A:%.*]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA:%.*]] = load i32, ptr [[A:%.*]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL:%.*]] = mul i32 [[DATA]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL]], ptr [[A]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT]]
 ; ANALYZE-FULL:       for.next:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE_1:%.*]], label [[FOR_NEXT_1:%.*]]
 ; ANALYZE-FULL:       do_store.1:
 ; ANALYZE-FULL-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[A]], i32 1
-; ANALYZE-FULL-NEXT:    store i32 1, ptr [[GEP_1]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_1:%.*]] = load i32, ptr [[GEP_1]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_1:%.*]] = mul i32 [[DATA_1]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_1]], ptr [[GEP_1]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_1]]
 ; ANALYZE-FULL:       for.next.1:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE_2:%.*]], label [[FOR_NEXT_2:%.*]]
 ; ANALYZE-FULL:       do_store.2:
 ; ANALYZE-FULL-NEXT:    [[GEP_2:%.*]] = getelementptr i32, ptr [[A]], i32 2
-; ANALYZE-FULL-NEXT:    store i32 2, ptr [[GEP_2]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_2:%.*]] = load i32, ptr [[GEP_2]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_2:%.*]] = mul i32 [[DATA_2]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_2]], ptr [[GEP_2]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_2]]
 ; ANALYZE-FULL:       for.next.2:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE_3:%.*]], label [[FOR_NEXT_3:%.*]]
 ; ANALYZE-FULL:       do_store.3:
 ; ANALYZE-FULL-NEXT:    [[GEP_3:%.*]] = getelementptr i32, ptr [[A]], i32 3
-; ANALYZE-FULL-NEXT:    store i32 3, ptr [[GEP_3]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_3:%.*]] = load i32, ptr [[GEP_3]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_3:%.*]] = mul i32 [[DATA_3]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_3]], ptr [[GEP_3]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_3]]
 ; ANALYZE-FULL:       for.next.3:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_4:%.*]], label [[FOR_NEXT_4:%.*]]
 ; ANALYZE-FULL:       do_store.4:
 ; ANALYZE-FULL-NEXT:    [[GEP_4:%.*]] = getelementptr i32, ptr [[A]], i32 4
-; ANALYZE-FULL-NEXT:    store i32 4, ptr [[GEP_4]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_4:%.*]] = load i32, ptr [[GEP_4]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_4:%.*]] = mul i32 [[DATA_4]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_4]], ptr [[GEP_4]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_4]]
 ; ANALYZE-FULL:       for.next.4:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_5:%.*]], label [[FOR_NEXT_5:%.*]]
 ; ANALYZE-FULL:       do_store.5:
 ; ANALYZE-FULL-NEXT:    [[GEP_5:%.*]] = getelementptr i32, ptr [[A]], i32 5
-; ANALYZE-FULL-NEXT:    store i32 5, ptr [[GEP_5]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_5:%.*]] = load i32, ptr [[GEP_5]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_5:%.*]] = mul i32 [[DATA_5]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_5]], ptr [[GEP_5]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_5]]
 ; ANALYZE-FULL:       for.next.5:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_6:%.*]], label [[FOR_NEXT_6:%.*]]
 ; ANALYZE-FULL:       do_store.6:
 ; ANALYZE-FULL-NEXT:    [[GEP_6:%.*]] = getelementptr i32, ptr [[A]], i32 6
-; ANALYZE-FULL-NEXT:    store i32 6, ptr [[GEP_6]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_6:%.*]] = load i32, ptr [[GEP_6]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_6:%.*]] = mul i32 [[DATA_6]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_6]], ptr [[GEP_6]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_6]]
 ; ANALYZE-FULL:       for.next.6:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_7:%.*]], label [[FOR_NEXT_7:%.*]]
 ; ANALYZE-FULL:       do_store.7:
 ; ANALYZE-FULL-NEXT:    [[GEP_7:%.*]] = getelementptr i32, ptr [[A]], i32 7
-; ANALYZE-FULL-NEXT:    store i32 7, ptr [[GEP_7]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_7:%.*]] = load i32, ptr [[GEP_7]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_7:%.*]] = mul i32 [[DATA_7]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_7]], ptr [[GEP_7]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_7]]
 ; ANALYZE-FULL:       for.next.7:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_8:%.*]], label [[FOR_NEXT_8:%.*]]
 ; ANALYZE-FULL:       do_store.8:
 ; ANALYZE-FULL-NEXT:    [[GEP_8:%.*]] = getelementptr i32, ptr [[A]], i32 8
-; ANALYZE-FULL-NEXT:    store i32 8, ptr [[GEP_8]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_8:%.*]] = load i32, ptr [[GEP_8]], align 4
+; ANALYZE-FULL-NEXT:    [[DATA_MUL_8:%.*]] = mul i32 [[DATA_8]], 2
+; ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL_8]], ptr [[GEP_8]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_8]]
 ; ANALYZE-FULL:       for.next.8:
 ; ANALYZE-FULL-NEXT:    ret i32 9
@@ -87,7 +105,10 @@ define i32 @foo(ptr %a) {
 ; DONT-ANALYZE-FULL-NEXT:    br i1 [[CMP2]], label [[DO_STORE:%.*]], label [[FOR_NEXT]]
 ; DONT-ANALYZE-FULL:       do_store:
 ; DONT-ANALYZE-FULL-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 [[INDVAR]]
-; DONT-ANALYZE-FULL-NEXT:    store i32 [[INDVAR]], ptr [[GEP]], align 4
+; DONT-ANALYZE-FULL-NEXT:    [[DATA:%.*]] = load i32, ptr [[GEP]], align 4
+; DONT-ANALYZE-FULL-NEXT:    [[DATA_MUL:%.*]] = mul i32 [[DATA]], 2
+; DONT-ANALYZE-FULL-NEXT:    [[DATA_ADD:%.*]] = add i32 [[DATA_MUL]], 1
+; DONT-ANALYZE-FULL-NEXT:    store i32 [[DATA_MUL]], ptr [[GEP]], align 4
 ; DONT-ANALYZE-FULL-NEXT:    br label [[FOR_NEXT]]
 ; DONT-ANALYZE-FULL:       for.next:
 ; DONT-ANALYZE-FULL-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INDVAR_NEXT]], 9
@@ -108,7 +129,10 @@ for.body:
 
 do_store:
   %gep = getelementptr i32, ptr %a, i32 %indvar
-  store i32 %indvar, ptr %gep
+  %data = load i32, ptr %gep
+  %data_mul = mul i32 %data, 2
+  %data_add = add i32 %data_mul, 1
+  store i32 %data_mul, ptr %gep
   br label %for.next
 
 for.next:
