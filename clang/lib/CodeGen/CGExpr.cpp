@@ -4540,7 +4540,7 @@ void CodeGenFunction::EmitBoundsSafetyTrapCheck(llvm::Value *Checked,
   // We still need to pass `OptRemark` because not all emitted instructions
   // can be covered by BoundsSafetyOptRemarkScope. This is because EmitTrapCheck
   // caches basic blocks that contain instructions that need annotating.
-  EmitTrapCheck(Checked, SanitizerHandler::BoundsSafety,
+  EmitTrapCheck(Checked, SanitizerHandler::BoundsSafety, false,
                 GetBoundsSafetyOptRemarkString(OptRemark),
                 GetBoundsSafetyTrapMessageSuffix(kind, TrapCtx));
 }
