@@ -188,9 +188,10 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   // Tally up any thunks that have already been placed that have VA higher than
   // inputs[callIdx]. First, find the index of the first thunk that is beyond
   // the current inputs[callIdx].
-  auto itPostcallIdxThunks = std::partition_point(
-      thunks.begin(), thunks.end(),
-      [isecVA](const ConcatInputSection *t) { return t->getVA() <= isecVA; });
+  auto itPostcallIdxThunks =
+      llvm::partition_point(thunks, [isecVA](const ConcatInputSection *t) {
+        return t->getVA() <= isecVA;
+      });
   uint64_t existingForwardThunks = thunks.end() - itPostcallIdxThunks;
 
   // Estimate the address after which call sites can safely call stubs
