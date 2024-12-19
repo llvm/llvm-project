@@ -541,8 +541,8 @@ def SSP : X86Reg<"ssp", 0>;
 // R12, R13, R14, and R15 for X86-64) are callee-save registers.
 // In 64-mode, there are 12 additional i8 registers, SIL, DIL, BPL, SPL, and
 // R8B, ... R15B.
-// Allocate R12 and R13 last, as these require an extra byte when
-// encoded in x86_64 instructions.
+// Allocate R12, R13, R20, R21, R28 and R29 last, as these require an extra byte
+// when encoded in x86_64 instructions.
 // FIXME: Allow AH, CH, DH, BH to be used as general-purpose registers in
 // 64-bit mode. The main complication is that they cannot be encoded in an
 // instruction requiring a REX prefix, while SIL, DIL, BPL, R8D, etc.
