@@ -6591,18 +6591,20 @@ void CheckFormatHandler::HandleNonStandardConversionSpecifier(
 
 void CheckFormatHandler::HandlePosition(const char *startPos,
                                         unsigned posLen) {
-  if (!S.getDiagnostics().isIgnored(diag::warn_format_non_standard_positional_arg, SourceLocation())) {
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_non_standard_positional_arg, SourceLocation())) {
     EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
-                                getLocationOfByte(startPos),
-                                /*IsStringLocation*/true,
-                                getSpecifierRange(startPos, posLen));
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
   }
 }
 
 void CheckFormatHandler::HandleInvalidPosition(
     const char *startSpecifier, unsigned specifierLen,
     analyze_format_string::PositionContext p) {
-  if (!S.getDiagnostics().isIgnored(diag::warn_format_invalid_positional_specifier, SourceLocation())) {
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_invalid_positional_specifier, SourceLocation())) {
     EmitFormatDiagnostic(
         S.PDiag(diag::warn_format_invalid_positional_specifier) << (unsigned)p,
         getLocationOfByte(startSpecifier), /*IsStringLocation*/ true,
@@ -6612,11 +6614,12 @@ void CheckFormatHandler::HandleInvalidPosition(
 
 void CheckFormatHandler::HandleZeroPosition(const char *startPos,
                                             unsigned posLen) {
-  if (!S.getDiagnostics().isIgnored(diag::warn_format_zero_positional_specifier, SourceLocation())) {
+  if (!S.getDiagnostics().isIgnored(diag::warn_format_zero_positional_specifier,
+                                    SourceLocation())) {
     EmitFormatDiagnostic(S.PDiag(diag::warn_format_zero_positional_specifier),
-                                getLocationOfByte(startPos),
-                                /*IsStringLocation*/true,
-                                getSpecifierRange(startPos, posLen));
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
   }
 }
 
