@@ -214,6 +214,8 @@ public:
           continue;
         bool hasProtectThis = false;
         for (const LambdaCapture &OtherCapture : L->captures()) {
+          if (!OtherCapture.capturesVariable())
+              continue;
           if (auto *ValueDecl = OtherCapture.getCapturedVar()) {
             if (protectThis(ValueDecl)) {
               hasProtectThis = true;
