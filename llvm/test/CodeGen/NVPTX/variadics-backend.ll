@@ -111,13 +111,13 @@ define dso_local i32 @foo() {
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.u64 %SPL, __local_depot1;
 ; CHECK-PTX-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-PTX-NEXT:    mov.u64 %rd1, 4294967297;
+; CHECK-PTX-NEXT:    mov.b64 %rd1, 4294967297;
 ; CHECK-PTX-NEXT:    st.u64 [%SP], %rd1;
 ; CHECK-PTX-NEXT:    mov.b32 %r1, 1;
 ; CHECK-PTX-NEXT:    st.u32 [%SP+8], %r1;
-; CHECK-PTX-NEXT:    mov.u64 %rd2, 1;
+; CHECK-PTX-NEXT:    mov.b64 %rd2, 1;
 ; CHECK-PTX-NEXT:    st.u64 [%SP+16], %rd2;
-; CHECK-PTX-NEXT:    mov.u64 %rd3, 4607182418800017408;
+; CHECK-PTX-NEXT:    mov.b64 %rd3, 4607182418800017408;
 ; CHECK-PTX-NEXT:    st.u64 [%SP+24], %rd3;
 ; CHECK-PTX-NEXT:    st.u64 [%SP+32], %rd3;
 ; CHECK-PTX-NEXT:    add.u64 %rd4, %SP, 0;
@@ -242,9 +242,9 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:    st.u32 [%SP+8], %r1;
 ; CHECK-PTX-NEXT:    add.u64 %rd5, %SP, 8;
 ; CHECK-PTX-NEXT:    or.b64 %rd6, %rd5, 4;
-; CHECK-PTX-NEXT:    mov.u16 %rs9, 1;
+; CHECK-PTX-NEXT:    mov.b16 %rs9, 1;
 ; CHECK-PTX-NEXT:    st.u8 [%rd6], %rs9;
-; CHECK-PTX-NEXT:    mov.u64 %rd7, 1;
+; CHECK-PTX-NEXT:    mov.b64 %rd7, 1;
 ; CHECK-PTX-NEXT:    st.u64 [%SP+16], %rd7;
 ; CHECK-PTX-NEXT:    { // callseq 1, 0
 ; CHECK-PTX-NEXT:    .param .b32 param0;
@@ -400,7 +400,7 @@ define dso_local void @qux() {
 ; CHECK-PTX-NEXT:    add.s64 %rd3, %rd2, 8;
 ; CHECK-PTX-NEXT:    ld.global.nc.u64 %rd4, [%rd3];
 ; CHECK-PTX-NEXT:    st.u64 [%SP+8], %rd4;
-; CHECK-PTX-NEXT:    mov.u64 %rd5, 1;
+; CHECK-PTX-NEXT:    mov.b64 %rd5, 1;
 ; CHECK-PTX-NEXT:    st.u64 [%SP+16], %rd5;
 ; CHECK-PTX-NEXT:    add.u64 %rd6, %SP, 16;
 ; CHECK-PTX-NEXT:    { // callseq 3, 0
