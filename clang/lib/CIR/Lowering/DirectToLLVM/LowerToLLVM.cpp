@@ -689,19 +689,18 @@ mlir::LLVM::TBAATypeDescriptorAttr getChar(mlir::MLIRContext *ctx) {
   return createScalarTypeNode(ctx, "omnipotent char", getRoot(ctx), 0);
 }
 
-// FIXME(cir): This should be moved and use tablegen approach
-// see https://github.com/llvm/clangir/pull/1220#discussion_r1889187867
+#define GET_TBAANAME_LOWERING_FUNCTIONS_DEF
+#include "clang/CIR/Dialect/IR/CIRTBAANameLowering.inc"
+#undef GET_TBAANAME_LOWERING_FUNCTIONS_DEF
+
 StringRef getTypeName(mlir::Type type) {
   return TypeSwitch<mlir::Type, StringRef>(type)
       .Case<cir::IntType>([](cir::IntType ty) { return ty.getTBAATypeName(); })
-      .Case<cir::SingleType>([](cir::SingleType) { return "float"; })
-      .Case<cir::DoubleType>([](cir::DoubleType) { return "double"; })
-      .Case<cir::FP80Type>([](cir::FP80Type) { return "f80"; })
-      .Case<cir::FP128Type>([](cir::FP128Type) { return "f128"; })
-      .Case<cir::LongDoubleType>(
-          [](cir::LongDoubleType) { return "long double"; })
-      .Case<cir::BoolType>([](cir::BoolType) { return "bool"; })
-      .Case<cir::PointerType>([](cir::PointerType) { return "any pointer"; })
+      .Case<
+#define GET_TBAANAME_LOWERING_LIST
+#include "clang/CIR/Dialect/IR/CIRTBAANameLowering.inc"
+#undef GET_TBAANAME_LOWERING_LIST
+          >([](auto ty) { return getTBAAName(ty); })
       .Default([](auto ty) {
         llvm::errs() << "unknown type: " << ty << "\n";
         return "unknown";

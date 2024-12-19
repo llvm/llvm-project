@@ -20,13 +20,18 @@ include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 
+// Specify the TBAA name of CIR_type
+class TBAALoweringInfo {
+  string tbaaName = "";
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Types
 //===----------------------------------------------------------------------===//
 
 class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
-    : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
+    : TypeDef<CIR_Dialect, name, traits, baseCppClass>, TBAALoweringInfo {
   let mnemonic = typeMnemonic;
 }
 
@@ -162,6 +167,7 @@ class CIR_FloatType<string name, string mnemonic>
           ]> {}
 
 def CIR_Single : CIR_FloatType<"Single", "float"> {
+  let tbaaName = "float";
   let summary = "CIR single-precision float type";
   let description = [{
     Floating-point type that represents the `float` type in C/C++. Its
@@ -170,6 +176,7 @@ def CIR_Single : CIR_FloatType<"Single", "float"> {
 }
 
 def CIR_Double : CIR_FloatType<"Double", "double"> {
+  let tbaaName = "double";
   let summary = "CIR double-precision float type";
   let description = [{
     Floating-point type that represents the `double` type in C/C++. Its
@@ -206,6 +213,7 @@ def CIR_FP128 : CIR_FloatType<"FP128", "f128"> {
 }
 
 def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
+  let tbaaName = "long double";
   let summary = "CIR extended-precision float type";
   let description = [{
     Floating-point type that represents the `long double` type in C/C++.
@@ -263,7 +271,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex",
 
 def CIR_PointerType : CIR_Type<"Pointer", "ptr",
     [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
-
+  let tbaaName = "any pointer";
   let summary = "CIR pointer type";
   let description = [{
     `CIR.ptr` is a type returned by any op generating a pointer in C++.
@@ -339,7 +347,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
 def CIR_BoolType :
     CIR_Type<"Bool", "bool",
              [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
-
+  let tbaaName = "bool";
   let summary = "CIR bool type";
   let description = [{
     `cir.bool` represent's C++ bool type.
