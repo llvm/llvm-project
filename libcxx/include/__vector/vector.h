@@ -879,9 +879,8 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__alloc_, std::__to_address(__pos));
+  for (; __tx.__pos_ != __tx.__new_end_; ++__tx.__pos_) {
+    __alloc_traits::construct(this->__alloc_, std::__to_address(__tx.__pos_));
   }
 }
 
@@ -895,9 +894,8 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
   _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__alloc_, std::__to_address(__pos), __x);
+  for (; __tx.__pos_ != __tx.__new_end_; ++__tx.__pos_) {
+    __alloc_traits::construct(this->__alloc_, std::__to_address(__tx.__pos_), __x);
   }
 }
 
@@ -1101,16 +1099,12 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
     void
 #endif
     vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
-  pointer __end = this->__end_;
-  if (__end < this->__cap_) {
+  if (this->__end_ < this->__cap_)
     __construct_one_at_end(std::forward<_Args>(__args)...);
-    ++__end;
-  } else {
-    __end = __emplace_back_slow_path(std::forward<_Args>(__args)...);
-  }
-  this->__end_ = __end;
+  else
+    (void)__emplace_back_slow_path(std::forward<_Args>(__args)...);
 #if _LIBCPP_STD_VER >= 17
-  return *(__end - 1);
+  return *(this->__end_ - 1);
 #endif
 }
 
@@ -1144,8 +1138,8 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
   {
     pointer __i = __from_s + __n;
     _ConstructTransaction __tx(*this, __from_e - __i);
-    for (pointer __pos = __tx.__pos_; __i < __from_e; ++__i, (void)++__pos, __tx.__pos_ = __pos) {
-      __alloc_traits::construct(this->__alloc_, std::__to_address(__pos), std::move(*__i));
+    for (; __i < __from_e; ++__i, (void)++__tx.__pos_) {
+      __alloc_traits::construct(this->__alloc_, std::__to_address(__tx.__pos_), std::move(*__i));
     }
   }
   std::move_backward(__from_s, __from_s + __n, __old_last);
