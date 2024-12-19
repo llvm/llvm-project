@@ -3,7 +3,7 @@
 // CHECK: ConceptDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> __is_structured_resource_element_compatible
 // CHECK: |-TemplateTypeParmDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> referenced typename depth 0 index 0 element_type
 // CHECK: `-BinaryOperator 0x{{[0-9a-f]+}} <<invalid sloc>> 'bool' lvalue '&&'
-// CHECK:   |-UnaryOperator 0x{{[0-9a-f]+}} <<invalid sloc>> 'bool' lvalue prefix '~' cannot overflow
+// CHECK:   |-UnaryOperator 0x{{[0-9a-f]+}} <<invalid sloc>> 'bool' lvalue prefix '!' cannot overflow
 // CHECK:   | `-TypeTraitExpr 0x{{[0-9a-f]+}} <<invalid sloc>> 'bool' __builtin_hlsl_is_intangible
 // CHECK:   |   `-TemplateTypeParmType 0x{{[0-9a-f]+}} 'element_type' dependent depth 0 index 0
 // CHECK:   |     `-TemplateTypeParm 0x{{[0-9a-f]+}} 'element_type'

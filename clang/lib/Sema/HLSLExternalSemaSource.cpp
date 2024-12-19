@@ -897,7 +897,7 @@ static Expr *constructStructuredBufferConstraintExpr(Sema &S,
 
   // negate IsIntangibleExpr
   UnaryOperator *NotIntangibleExpr = UnaryOperator::Create(
-      Context, IsIntangibleExpr, UO_Not, BoolTy, VK_LValue, OK_Ordinary,
+      Context, IsIntangibleExpr, UO_LNot, BoolTy, VK_LValue, OK_Ordinary,
       NameLoc, false, FPOptionsOverride());
 
   // element types also may not be of 0 size
