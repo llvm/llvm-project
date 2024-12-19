@@ -103,6 +103,27 @@ def testFuseIntoContainingOpCompact(target):
 
 @run
 @create_sequence
+def testFuseOpCompact(target):
+    structured.FuseOp(target, sizes=[4, 8], interchange=[0, 1])
+    # CHECK-LABEL: TEST: testFuseOpCompact
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK-SAME: interchange [0, 1]
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpNoArg(target):
+    structured.FuseOp(target)
+    # CHECK-LABEL: TEST: testFuseOpNoArg
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}} = transform.structured.fuse %{{.*}} :
+    # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+@create_sequence
 def testGeneralize(target):
     structured.GeneralizeOp(target)
     # CHECK-LABEL: TEST: testGeneralize
