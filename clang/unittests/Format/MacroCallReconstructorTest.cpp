@@ -65,7 +65,9 @@ private:
     }
     Unexpanded[ID] = std::move(UnexpandedLine);
 
-    auto Expanded = uneof(Macros.expand(ID, Args));
+    auto Expanded = Macros.expand(ID, Args);
+    if (Expanded.size() > 1)
+      Expanded = uneof(Expanded);
     Tokens.append(Expanded.begin(), Expanded.end());
 
     TokenList UnexpandedTokens;
@@ -218,7 +220,7 @@ TEST_F(MacroCallReconstructorTest, Identifier) {
 }
 
 TEST_F(MacroCallReconstructorTest, EmptyExpansion) {
-  auto Macros = createExpander({"A(x)=y"});
+  auto Macros = createExpander({"A(x)=x"});
   Expansion Exp(Lex, *Macros);
   TokenList Call = Exp.expand("A", {""});
 
