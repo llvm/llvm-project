@@ -20,12 +20,14 @@
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang::tooling;
@@ -553,6 +555,20 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
 
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
+  SmallVector<const char *> Args{argv, argv + argc};
+
+  llvm::BumpPtrAllocator Alloc;
+  llvm::cl::TokenizerCallback Tokenizer =
+      llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+          ? llvm::cl::TokenizeWindowsCommandLine
+          : llvm::cl::TokenizeGNUCommandLine;
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
+    llvm::WithColor::error() << Err << "\n";
+    return 1;
+  }
+  argc = static_cast<int>(Args.size());
+  argv = Args.data();
 
   // Enable help for -load option, if plugins are enabled.
   if (cl::Option *LoadOpt = cl::getRegisteredOptions().lookup("load"))
