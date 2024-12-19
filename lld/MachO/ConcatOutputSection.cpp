@@ -191,7 +191,7 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   auto itPostcallIdxThunks = std::partition_point(
       thunks.begin(), thunks.end(),
       [isecVA](const ConcatInputSection *t) { return t->getVA() <= isecVA; });
-  uint32_t existingForwardThunks = thunks.end() - itPostcallIdxThunks;
+  uint64_t existingForwardThunks = thunks.end() - itPostcallIdxThunks;
 
   // Estimate the address after which call sites can safely call stubs
   // directly rather than through intermediary thunks.
@@ -201,26 +201,30 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   assert(isecEnd - isecVA <= forwardBranchRange &&
          "should only finalize sections in jump range");
 
-  // Estimate the maximum size of the code, right before the stubs section
-  uint32_t maxTextSize = 0;
+  // Estimate the maximum size of the code, right before the stubs section.
+  uint64_t maxTextSize = 0;
   // Add the size of all the inputs, including the unprocessed ones.
   maxTextSize += isecEnd;
 
-  // Add the size of the thunks that may be created in the future
+  // Add the size of the thunks that may be created in the future. Since
+  // 'maxPotentialThunks' overcounts, this is an estimate of the upper limit.
   maxTextSize += maxPotentialThunks * target->thunkSize;
 
   // Add the size of the thunks that have already been created that are ahead
   maxTextSize += existingForwardThunks * target->thunkSize;
 
-  uint64_t stubsInRangeVA =
-      maxTextSize + in.stubs->getSize() - forwardBranchRange;
+  // Estimated maximum VA of last stub.
+  uint64_t maxVAOfLastStub = maxTextSize + in.stubs->getSize();
+
+  // Calculaate the first address that is gueranteed to not need a thunk to
+  // reach any stub.git
+  uint64_t stubsInRangeVA = maxVAOfLastStub - forwardBranchRange;
 
   log("thunks = " + std::to_string(thunkMap.size()) +
-      ", potential = " + std::to_string(maxPotentialThunks) +
-      ", stubs = " + std::to_string(in.stubs->getSize()) + ", isecVA = " +
-      utohexstr(isecVA) + ", threshold = " + utohexstr(stubsInRangeVA) +
-      ", isecEnd = " + utohexstr(isecEnd) +
-      ", tail = " + utohexstr(isecEnd - isecVA) +
+      ", potential = " + std::to_string(maxPotentialThunks) + ", stubs = " +
+      std::to_string(in.stubs->getSize()) + ", isecVA = " + utohexstr(isecVA) +
+      ", threshold = " + utohexstr(stubsInRangeVA) + ", isecEnd = " +
+      utohexstr(isecEnd) + ", tail = " + utohexstr(isecEnd - isecVA) +
       ", slop = " + utohexstr(forwardBranchRange - (isecEnd - isecVA)));
   return stubsInRangeVA;
 }
