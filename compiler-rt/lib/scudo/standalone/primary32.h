@@ -387,7 +387,7 @@ private:
 
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
-    uptr NumReleaseAttempted;
+    uptr NumReleasesAttempted;
     uptr LastReleasedBytes;
     u64 LastReleaseAtNs;
   };
@@ -882,11 +882,11 @@ private:
     const uptr AvailableChunks = Sci->AllocatedUser / BlockSize;
     Str->append(
         "  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-        "inuse: %6zu avail: %6zu release count: %6zu last released: %6zuK "
+        "inuse: %6zu avail: %6zu release attempted: %6zu last released: %6zuK "
         "latest pushed bytes: %6zuK\n",
         ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
         Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks, InUse,
-        AvailableChunks, Sci->ReleaseInfo.NumReleaseAttempted,
+        AvailableChunks, Sci->ReleaseInfo.NumReleasesAttempted,
         Sci->ReleaseInfo.LastReleasedBytes >> 10, PushedBytesDelta >> 10);
   }
 
@@ -974,7 +974,7 @@ private:
 
     // The following steps contribute to the majority time spent in page
     // releasing thus we increment the counter here.
-    ++Sci->ReleaseInfo.NumReleaseAttempted;
+    ++Sci->ReleaseInfo.NumReleasesAttempted;
 
     // ==================================================================== //
     // 2. Mark the free blocks and we can tell which pages are in-use by

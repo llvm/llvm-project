@@ -1141,18 +1141,18 @@ private:
           BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
     }
     const uptr TotalChunks = Region->MemMapInfo.AllocatedUser / BlockSize;
-    Str->append("%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-                "inuse: %6zu total: %6zu releases: %6zu last "
-                "release count: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
-                "(0x%zx)\n",
-                Region->Exhausted ? "E" : " ", ClassId,
-                getSizeByClassId(ClassId), Region->MemMapInfo.MappedUser >> 10,
-                Region->FreeListInfo.PoppedBlocks,
-                Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
-                Region->ReleaseInfo.NumReleaseAttempted,
-                Region->ReleaseInfo.LastReleasedBytes >> 10,
-                RegionPushedBytesDelta >> 10, Region->RegionBeg,
-                getRegionBaseByClassId(ClassId));
+    Str->append(
+        "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
+        "inuse: %6zu total: %6zu releases: %6zu last "
+        "release attempted: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
+        "(0x%zx)\n",
+        Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
+        Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
+        Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
+        Region->ReleaseInfo.NumReleaseAttempted,
+        Region->ReleaseInfo.LastReleasedBytes >> 10,
+        RegionPushedBytesDelta >> 10, Region->RegionBeg,
+        getRegionBaseByClassId(ClassId));
   }
 
   void getRegionFragmentationInfo(RegionInfo *Region, uptr ClassId,
