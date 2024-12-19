@@ -126,15 +126,7 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
     assert(sb);
     mlir::Value addr = sb.getAddr();
     assert(addr);
-    mlir::Type ty = addr.getType();
-
-    // Unwrap type
-    while (auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(ty))
-      ty = eleTy;
-    // For arrays, use its element type
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
-      ty = seqTy.getEleTy();
-    return fir::isRecordWithAllocatableMember(ty);
+    return hlfir::mayHaveAllocatableComponent(addr.getType());
   };
 
   if (needInitClone()) {
