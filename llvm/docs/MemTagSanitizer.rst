@@ -29,9 +29,9 @@ Usage
 =====
 
 Compile and link your program with ``-fsanitize=memtag`` flag. This
-will only work when targeting AArch64 with MemTag extension. One
+will only work when targeting AArch64 Android with MemTag extension. One
 possible way to achieve that is to add ``-target
-aarch64-linux -march=armv8+memtag`` to compilation flags.
+aarch64-linux-android -march=armv8+memtag`` to compilation flags.
 
 Implementation
 ==============
