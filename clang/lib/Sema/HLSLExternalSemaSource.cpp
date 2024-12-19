@@ -847,6 +847,10 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor();
 }
 
+// This function is responsible for constructing the constraint expression for
+// this concept:
+// template<typename T> concept is_typed_resource_element_compatible =
+// __is_typed_resource_element_compatible<T>;
 static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                                 TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
@@ -868,6 +872,10 @@ static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
   return TypedResExpr;
 }
 
+// This function is responsible for constructing the constraint expression for
+// this concept:
+// template<typename T> concept is_structured_resource_element_compatible =
+// !__is_intangible<T> && sizeof(T) >= 1;
 static Expr *constructStructuredBufferConstraintExpr(Sema &S,
                                                      SourceLocation NameLoc,
                                                      TemplateTypeParmDecl *T) {
