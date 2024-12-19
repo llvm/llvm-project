@@ -234,8 +234,7 @@ void macho::writeMapFile() {
   os << "# Address\tSize    \tFile  Name\n";
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
-      const TextOutputSection *textOsec = dyn_cast<TextOutputSection>(osec);
-      if (textOsec && textOsec->getThunks().size()) {
+      if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
         auto inputsAndThunks =
             mergeOrderedInputs(textOsec->inputs, textOsec->getThunks());
         printIsecArrSyms(inputsAndThunks);
