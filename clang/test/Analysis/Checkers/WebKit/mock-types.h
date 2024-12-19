@@ -105,8 +105,17 @@ template <typename T> struct RefPtr {
   RefPtr(const RefPtr& o)
     : t(o.t)
   {
-      if (t)
-          t->ref();
+    if (t)
+      t->ref();
+  }
+  RefPtr operator=(const RefPtr& o)
+  {
+    if (t)
+      t->deref();
+    t = o.t;
+    if (t)
+      t->ref();
+    return *this;
   }
   ~RefPtr() {
     if (t)
