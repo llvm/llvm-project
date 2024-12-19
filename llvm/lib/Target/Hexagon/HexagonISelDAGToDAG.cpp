@@ -1303,7 +1303,7 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
     if (!OpVT.isSimple() || OpVT.getSimpleVT() != MVT::i1)
       continue;
     for (auto I = N->use_begin(), E = N->use_end(); I != E; ++I) {
-      SDNode *U = *I;
+      SDNode *U = I->getUser();
       if (U->getNumValues() != 1)
         continue;
       EVT UVT = U->getValueType(0);
