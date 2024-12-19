@@ -271,9 +271,10 @@ FunctionPass *llvm::createStraightLineStrengthReducePass() {
 
 bool StraightLineStrengthReduce::isBasisFor(const Candidate &Basis,
                                             const Candidate &C) {
-  return (Basis.Ins != C.Ins && // skip the same instruction
-          // They must have the same type too. Basis.Base == C.Base doesn't
-          // guarantee their types are the same (PR23975).
+  return (Basis.Ins !=
+              C.Ins && // skip the same instruction
+                       // They must have the same type too. Basis.Base == C.Base
+                       // doesn't guarantee their types are the same (PR23975).
           Basis.Ins->getType() == C.Ins->getType() &&
           // Basis must dominate C in order to rewrite C with respect to Basis.
           DT->dominates(Basis.Ins->getParent(), C.Ins->getParent()) &&
@@ -614,6 +615,9 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
 
 void StraightLineStrengthReduce::rewriteCandidateWithBasis(
     const Candidate &C, const Candidate &Basis) {
+  if (!DebugCounter::shouldExecute(StraightLineStrengthReduceCounter))
+    return;
+
   assert(C.CandidateKind == Basis.CandidateKind && C.Base == Basis.Base &&
          C.Stride == Basis.Stride);
   // We run rewriteCandidateWithBasis on all candidates in a post-order, so the
@@ -694,8 +698,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   while (!Candidates.empty()) {
     const Candidate &C = Candidates.back();
     if (C.Basis != nullptr) {
-      if (DebugCounter::shouldExecute(StraightLineStrengthReduceCounter))
-        rewriteCandidateWithBasis(C, *C.Basis);
+      rewriteCandidateWithBasis(C, *C.Basis);
     }
     Candidates.pop_back();
   }
