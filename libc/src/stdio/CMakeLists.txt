@@ -116,10 +116,15 @@ add_entrypoint_object(
     libc.src.stdio.scanf_core.string_reader
 )
 
+set(sprintf_srcs sprintf.cpp)
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND sprintf_srcs sprintf_modular.cpp)
+endif()
+
 add_entrypoint_object(
   sprintf
   SRCS
-    sprintf.cpp
+    ${sprintf_srcs}
   HDRS
     sprintf.h
   DEPENDS
@@ -131,10 +136,14 @@ add_entrypoint_object(
     libc.src.__support.CPP.limits
 )
 
+set(snprintf_srcs snprintf.cpp)
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND snprintf_srcs snprintf_modular.cpp)
+endif()
 add_entrypoint_object(
   snprintf
   SRCS
-    snprintf.cpp
+    ${snprintf_srcs}
   HDRS
     snprintf.h
   DEPENDS
@@ -146,10 +155,14 @@ add_entrypoint_object(
     libc.src.__support.CPP.limits
 )
 
+set(asprintf_srcs asprintf.cpp)
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND asprintf_srcs asprintf_modular.cpp)
+endif()
 add_entrypoint_object(
   asprintf
   SRCS
-    asprintf.cpp
+    ${asprintf_srcs}
   HDRS
     asprintf.h
   DEPENDS
@@ -160,10 +173,15 @@ add_entrypoint_object(
     libc.src.__support.CPP.limits
 )
 
+set(vsprintf_srcs vsprintf.cpp)
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND vsprintf_srcs vsprintf_modular.cpp)
+endif()
+
 add_entrypoint_object(
   vsprintf
   SRCS
-    vsprintf.cpp
+    ${vsprintf_srcs}
   HDRS
     vsprintf.h
   DEPENDS
@@ -175,10 +193,15 @@ add_entrypoint_object(
     libc.src.__support.CPP.limits
 )
 
+set(vsnprintf_srcs vsnprintf.cpp)
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND vsnprintf_srcs vsnprintf_modular.cpp)
+endif()
+
 add_entrypoint_object(
   vsnprintf
   SRCS
-    vsnprintf.cpp
+    ${vsnprintf_srcs}
   HDRS
     vsnprintf.h
   DEPENDS
@@ -190,10 +213,15 @@ add_entrypoint_object(
     libc.src.__support.CPP.limits
 )
 
+set(vasprintf_srcs vasprintf.cpp)
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND vasprintf_srcs vasprintf_modular.cpp)
+endif()
+
 add_entrypoint_object(
   vasprintf
   SRCS
-    vasprintf.cpp
+    ${vasprintf_srcs}
   HDRS
     vasprintf.h
   DEPENDS

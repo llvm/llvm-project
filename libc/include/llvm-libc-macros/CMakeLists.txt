@@ -3,15 +3,19 @@ function(add_macro_header name)
   cmake_parse_arguments(
     "MACRO_HEADER"
     "" # Optional arguments
-    "HDR" # Single value arguments
+    "HDR;DEST_HDR" # Single value arguments
     "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
+  if (MACRO_HEADER_DEST_HDR)
+    set(dest_header_arg DEST_HDR ${MACRO_HEADER_DEST_HDR})
+  endif()
   if(TARGET libc.include.llvm-libc-macros.${LIBC_TARGET_OS}.${name})
     add_header(
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      ${dest_header_arg}
       DEPENDS
         .${LIBC_TARGET_OS}.${name}
         ${MACRO_HEADER_DEPENDS}
@@ -21,6 +25,7 @@ function(add_macro_header name)
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      ${dest_header_arg}
       DEPENDS
         ${MACRO_HEADER_DEPENDS}
     )
@@ -383,3 +388,18 @@ add_macro_header(
     sysexits-macros.h
 )
 
+if (LIBC_CONF_MODULAR_FORMAT)
+  add_macro_header(
+    _LIBC_MODULAR_FORMAT_PRINTF
+    HDR
+      _LIBC_MODULAR_FORMAT_PRINTF.h
+  )
+else()
+  add_macro_header(
+    _LIBC_MODULAR_FORMAT_PRINTF
+    HDR
+      _LIBC_MODULAR_FORMAT_PRINTF-disable.h
+      DEST_HDR
+      _LIBC_MODULAR_FORMAT_PRINTF.h
+  )
+endif()

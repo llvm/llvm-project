@@ -1,4 +1,4 @@
-//===-- Implementation of vsprintf ------------------------------*- C++ -*-===//
+//===-- Implementation of vsprintf_modular ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, vsprintf,
+LLVM_LIBC_FUNCTION(int, __vsprintf_modular,
                    (char *__restrict buffer, const char *__restrict format,
                     va_list vlist)) {
   internal::ArgList args(vlist); // This holder class allows for easier copying
@@ -32,12 +32,7 @@ LLVM_LIBC_FUNCTION(int, vsprintf,
                                      cpp::numeric_limits<size_t>::max());
   printf_core::Writer writer(wb);
 
-#ifdef LIBC_COPT_PRINTF_MODULAR
-  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
   auto ret_val = printf_core::printf_main_modular(&writer, format, args);
-#else
-  auto ret_val = printf_core::printf_main(&writer, format, args);
-#endif
   if (!ret_val.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(ret_val.error());
     return -1;

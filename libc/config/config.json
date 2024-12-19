@@ -59,6 +59,10 @@
     "LIBC_COPT_PRINTF_DISABLE_BITINT": {
       "value": false,
       "doc": "Disable bitint length modifiers to reduce code size. Specifically the wNUM and wfNUM modifiers."
+    },
+    "LIBC_CONF_PRINTF_MODULAR": {
+      "value": false,
+      "doc": "Split printf implementation into modules that can be lazily linked in."
     }
   },
   "scanf": {

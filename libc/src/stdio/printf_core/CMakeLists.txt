@@ -28,6 +28,9 @@ endif()
 if(LIBC_CONF_PRINTF_RUNTIME_DISPATCH)
   list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_RUNTIME_DISPATCH")
 endif()
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_MODULAR")
+endif()
 if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
 endif()
@@ -146,10 +149,12 @@ add_header_library(
     ${wchar_deps}
 )
 
-add_header_library(
+add_object_library(
   printf_main
   HDRS
     printf_main.h
+  SRCS
+    float_impl.cpp
   DEPENDS
     .parser
     .converter
