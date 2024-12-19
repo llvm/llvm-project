@@ -217,6 +217,15 @@ struct RefCountableWithLambdaCapturingThis {
     });
   }
 
+  void method_captures_this_with_other_protected_var() {
+    RefCountable* x = make_obj();
+    call([this, protectedX = RefPtr { x }]() {
+      // expected-warning@-1{{Captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      protectedX->method();
+    });
+  }
+
   void method_captures_this_unsafe_capture_local_var_explicitly_with_deref() {
     RefCountable* x = make_obj();
     call([this, protectedThis = Ref { *this }, x]() {
@@ -238,6 +247,13 @@ struct RefCountableWithLambdaCapturingThis {
 
   void method_captures_this_with_guardian() {
     auto lambda = [this, protectedThis = Ref { *this }]() {
+      nonTrivial();
+    };
+    call(lambda);
+  }
+
+  void method_captures_this_with_guardian_refPtr() {
+    auto lambda = [this, protectedThis = RefPtr { &*this }]() {
       nonTrivial();
     };
     call(lambda);
