@@ -1623,3 +1623,28 @@ body:             |
     %3:vgpr_32 = V_MAX_U32_e64 12345, %0, implicit $exec
     V_STORE_IDX %1, %2, 1020, implicit $exec :: (store (s128), addrspace 10)
 ...
+
+---
+name:            debug-instr
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+
+  bb.0:
+    ; GCN-LABEL: name: debug-instr
+    ; GCN: DBG_VALUE %0:sreg_32, $noreg
+    ;
+    ; ALLOC-LABEL: name: debug-instr
+    ; ALLOC: DBG_VALUE %0:sreg_32, $noreg
+    ;
+    ; LOWERED-LABEL: name: debug-instr
+    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED-NEXT: S_WAIT_EXPCNT 0
+    ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
+    ; LOWERED-NEXT: S_WAIT_BVHCNT 0
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    DBG_VALUE %0:sreg_32, $noreg
+...
