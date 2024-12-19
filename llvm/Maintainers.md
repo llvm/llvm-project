@@ -386,11 +386,6 @@ tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 Martin Storsjö \
 martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
 
-#### Windows support in object tools
-
-Michael Spencer \
-bigcheesegs@gmail.com (email), [Bigcheese](https://github.com/Bigcheese) (GitHub)
-
 #### Sony PlayStation support
 
 Jeremy Morse \
@@ -463,6 +458,7 @@ Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- A
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
