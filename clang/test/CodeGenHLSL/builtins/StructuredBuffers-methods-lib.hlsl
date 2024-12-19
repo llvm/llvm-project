@@ -15,14 +15,14 @@ export int TestIncrementCounter() {
 }
 
 // CHECK: define noundef i32 @_Z20TestIncrementCounterv()
-// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.bufferUpdateCounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 1)
+// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 1)
 // CHECK-DXIL: ret i32 %[[INDEX]]
 export int TestDecrementCounter() {
     return RWSB2.DecrementCounter();
 }
 
 // CHECK: define noundef i32 @_Z20TestDecrementCounterv()
-// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.bufferUpdateCounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 -1)
+// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 -1)
 // CHECK-DXIL: ret i32 %[[INDEX]]
 
 export void TestAppend(float value) {
@@ -31,7 +31,7 @@ export void TestAppend(float value) {
 
 // CHECK: define void @_Z10TestAppendf(float noundef %value)
 // CHECK-DXIL: %[[VALUE:.*]] = load float, ptr %value.addr, align 4
-// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.bufferUpdateCounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 1)
+// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 1)
 // CHECK-DXIL: %[[RESPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i32 %[[INDEX]])
 // CHECK-DXIL: store float %[[VALUE]], ptr %[[RESPTR]], align 4
 
@@ -40,10 +40,10 @@ export float TestConsume() {
 }
 
 // CHECK: define noundef float @_Z11TestConsumev()
-// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.bufferUpdateCounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %1, i8 -1)
+// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %1, i8 -1)
 // CHECK-DXIL: %[[RESPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %0, i32 %[[INDEX]])
 // CHECK-DXIL: %[[VALUE:.*]] = load float, ptr %[[RESPTR]], align 4
 // CHECK-DXIL: ret float %[[VALUE]]
 
-// CHECK: declare i32 @llvm.dx.bufferUpdateCounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
+// CHECK: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
 // CHECK: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i32)

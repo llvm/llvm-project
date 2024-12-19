@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This test checks to see if, after lowering the two loads below, we set up the
 ; memrefs of the resulting load MIs correctly, so that they are packetized

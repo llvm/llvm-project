@@ -21,6 +21,24 @@ class RegisterCommandsTestCase(TestBase):
         self.dbg.GetSelectedTarget().GetProcess().Destroy()
         TestBase.tearDown(self)
 
+    # on macOS, detect if the current machine is arm64 and supports SME
+    def get_sme_available(self):
+        if self.getArchitecture() != "arm64":
+            return None
+        try:
+            sysctl_output = subprocess.check_output(
+                ["sysctl", "hw.optional.arm.FEAT_SME"]
+            ).decode("utf-8")
+        except subprocess.CalledProcessError:
+            return None
+        m = re.match(r"hw\.optional\.arm\.FEAT_SME: (\w+)", sysctl_output)
+        if m:
+            if int(m.group(1)) == 1:
+                return True
+            else:
+                return False
+        return None
+
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48371")
@@ -32,11 +50,19 @@ class RegisterCommandsTestCase(TestBase):
         # verify that logging does not assert
         self.log_enable("registers")
 
+        error_str_matched = False
+        if self.get_sme_available() and self.platformIsDarwin():
+            # On Darwin AArch64 SME machines, we will have unavailable
+            # registers when not in Streaming SVE Mode/SME, so
+            # `register read -a` will report that some registers
+            # could not be read.  This is expected.
+            error_str_matched = True
+
         self.expect(
             "register read -a",
             MISSING_EXPECTED_REGISTERS,
             substrs=["registers were unavailable"],
-            matching=False,
+            matching=error_str_matched,
         )
 
         all_registers = self.res.GetOutput()
@@ -60,7 +86,7 @@ class RegisterCommandsTestCase(TestBase):
                 self.runCmd("register read q15")  # may be available
 
         self.expect(
-            "register read -s 4", substrs=["invalid register set index: 4"], error=True
+            "register read -s 8", substrs=["invalid register set index: 8"], error=True
         )
 
     @skipIfiOSSimulator

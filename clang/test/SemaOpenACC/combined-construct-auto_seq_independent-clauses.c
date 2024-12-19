@@ -37,10 +37,10 @@ void uses() {
   int *VarPtr;
 
   // 'auto' can combine with any other clause.
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto finalize
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto if_present
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto worker
@@ -64,15 +64,15 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop auto present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto attach(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto delete(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto detach(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
@@ -134,7 +134,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto device_num(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
@@ -154,10 +154,10 @@ void uses() {
 #pragma acc parallel loop auto wait
   for(unsigned i = 0; i < 5; ++i);
 
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop finalize auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop if_present auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop worker auto
@@ -181,15 +181,15 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop present_or_copy(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop use_device(Var) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop attach(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop delete(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop detach(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
@@ -251,7 +251,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop num_workers(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_num(1) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
@@ -272,10 +272,10 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 
   // 'independent' can also be combined with any clauses
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent finalize
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent if_present
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent worker
@@ -299,15 +299,15 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop independent present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent attach(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent delete(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent detach(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
@@ -369,7 +369,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent device_num(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
@@ -389,10 +389,10 @@ void uses() {
 #pragma acc parallel loop independent wait
   for(unsigned i = 0; i < 5; ++i);
 
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop finalize independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop if_present independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop worker independent
@@ -416,15 +416,15 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop present_or_copy(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop use_device(Var) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop attach(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop delete(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop detach(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
@@ -486,7 +486,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop num_workers(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_num(1) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
@@ -519,10 +519,10 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel loop seq vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq finalize
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq if_present
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
@@ -542,15 +542,15 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop seq present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq attach(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq delete(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq detach(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
@@ -612,7 +612,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq device_num(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
@@ -642,10 +642,10 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel loop vector seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop finalize seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop if_present seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
@@ -665,15 +665,15 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop present_or_copy(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop use_device(Var) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop attach(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop delete(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop detach(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
@@ -735,7 +735,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop num_workers(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_num(1) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}

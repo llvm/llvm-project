@@ -2538,6 +2538,82 @@ INTERCEPTOR(int, glob64, const char *pattern, int flags,
 #define INIT_GLOB64
 #endif  // SANITIZER_INTERCEPT_GLOB64
 
+#if SANITIZER_INTERCEPT___B64_TO
+INTERCEPTOR(int, __b64_ntop, unsigned char const *src, SIZE_T srclength,
+            char *target, SIZE_T targsize) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __b64_ntop, src, srclength, target, targsize);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, src, srclength);
+  int res = REAL(__b64_ntop)(src, srclength, target, targsize);
+  if (res >= 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, target, res + 1);
+  return res;
+}
+INTERCEPTOR(int, __b64_pton, char const *src, char *target, SIZE_T targsize) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __b64_pton, src, target, targsize);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, src, internal_strlen(src) + 1);
+  int res = REAL(__b64_pton)(src, target, targsize);
+  if (res >= 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, target, res);
+  return res;
+}
+#define INIT___B64_TO                      \
+    COMMON_INTERCEPT_FUNCTION(__b64_ntop); \
+    COMMON_INTERCEPT_FUNCTION(__b64_pton);
+#else  // SANITIZER_INTERCEPT___B64_TO
+#define INIT___B64_TO
+#endif  // SANITIZER_INTERCEPT___B64_TO
+
+#if SANITIZER_INTERCEPT_DN_COMP_EXPAND
+#  if __GLIBC_PREREQ(2, 34)
+// Changed with https://sourceware.org/git/?p=glibc.git;h=640bbdf
+#    define DN_COMP_INTERCEPTOR_NAME dn_comp
+#    define DN_EXPAND_INTERCEPTOR_NAME dn_expand
+#  else
+#    define DN_COMP_INTERCEPTOR_NAME __dn_comp
+#    define DN_EXPAND_INTERCEPTOR_NAME __dn_expand
+#  endif
+INTERCEPTOR(int, DN_COMP_INTERCEPTOR_NAME, unsigned char *exp_dn,
+            unsigned char *comp_dn, int length, unsigned char **dnptrs,
+            unsigned char **lastdnptr) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, DN_COMP_INTERCEPTOR_NAME, exp_dn, comp_dn,
+                           length, dnptrs, lastdnptr);
+  int res = REAL(DN_COMP_INTERCEPTOR_NAME)(exp_dn, comp_dn, length, dnptrs,
+                                           lastdnptr);
+  if (res >= 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, comp_dn, res);
+    if (dnptrs && lastdnptr) {
+      unsigned char **p = dnptrs;
+      for (; p != lastdnptr && *p; ++p)
+        ;
+      if (p != lastdnptr)
+        ++p;
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dnptrs, (p - dnptrs) * sizeof(*p));
+    }
+  }
+  return res;
+}
+INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
+            unsigned char const *end, unsigned char const *src, char *dest,
+            int space) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, DN_EXPAND_INTERCEPTOR_NAME, base, end, src,
+                           dest, space);
+  // TODO: add read check if __dn_comp intercept added
+  int res = REAL(DN_EXPAND_INTERCEPTOR_NAME)(base, end, src, dest, space);
+  if (res >= 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, internal_strlen(dest) + 1);
+  return res;
+}
+#  define INIT_DN_COMP_EXPAND                            \
+    COMMON_INTERCEPT_FUNCTION(DN_COMP_INTERCEPTOR_NAME); \
+    COMMON_INTERCEPT_FUNCTION(DN_EXPAND_INTERCEPTOR_NAME);
+#else  // SANITIZER_INTERCEPT_DN_COMP_EXPAND
+#  define INIT_DN_COMP_EXPAND
+#endif  // SANITIZER_INTERCEPT_DN_COMP_EXPAND
+
 #if SANITIZER_INTERCEPT_POSIX_SPAWN
 
 template <class RealSpawnPtr>
@@ -10270,6 +10346,8 @@ static void InitializeCommonInterceptors() {
   INIT_TIMESPEC_GET;
   INIT_GLOB;
   INIT_GLOB64;
+  INIT___B64_TO;
+  INIT_DN_COMP_EXPAND;
   INIT_POSIX_SPAWN;
   INIT_WAIT;
   INIT_WAIT4;
