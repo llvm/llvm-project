@@ -1092,7 +1092,7 @@ New features
 
 - Now CSA models `__builtin_*_overflow` functions. (#GH102602)
 
-- Now CSA models `[[assume]]` attributes that have no side-effects. (#GH-TODO)
+- Now CSA models `[[assume]]` attributes that have no side-effects. (#GH100762)
 
 - MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
   attributes with class names different from "malloc". Clang static analyzer now reports an error
