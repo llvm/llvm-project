@@ -875,7 +875,7 @@ public:
 
     // Integer to bool.
     if (CastTy->isBooleanType())
-      return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
+      return VB.makeTruthVal(V.getValue()->getBoolValue(), CastTy);
 
     // Integer to pointer.
     if (CastTy->isIntegralOrEnumerationType())

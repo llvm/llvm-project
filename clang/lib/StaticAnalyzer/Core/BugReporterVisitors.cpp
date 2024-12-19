@@ -264,7 +264,7 @@ getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
 
   if (std::optional<SVal> V = getSValForVar(CondVarExpr, N))
     if (auto CI = V->getAs<nonloc::ConcreteInt>())
-      return &CI->getValue();
+      return CI->getValue().get();
   return std::nullopt;
 }
 
