@@ -1990,7 +1990,7 @@ def : Flag<["-"], "fno-diagnostics-color">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Alias<fno_color_diagnostics>;
 def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>,
-  Visibility<[ClangOption, FlangOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Values<"auto,always,never">,
   HelpText<"When to use colors in diagnostics">;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,

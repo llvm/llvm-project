@@ -664,6 +664,15 @@
 // RUN: not %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
 
+// The test doesn't run in a PTY, so "auto" defaults to off.
+// RUN: %clang_cl -fdiagnostics-color=auto -### -- %s 2>&1 | FileCheck -check-prefix=NO_COLOR %s
+
+// RUN: %clang_cl -fdiagnostics-color -### -- %s 2>&1 | FileCheck -check-prefix=COLOR %s
+// RUN: %clang_cl -fdiagnostics-color=always -### -- %s 2>&1 | FileCheck -check-prefix=COLOR %s
+// RUN: %clang_cl -fdiagnostics-color=never -### -- %s 2>&1 | FileCheck -check-prefix=NO_COLOR %s
+// COLOR: "-fcolor-diagnostics"
+// NO_COLOR-NOT: "-fcolor-diagnostics"
+
 // Accept "core" clang options.
 // (/Zs is for syntax-only, -Werror makes it fail hard on unknown options)
 // RUN: %clang_cl \
