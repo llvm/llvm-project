@@ -349,7 +349,7 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
       return nonloc::SymbolVal(ResultSym);
     }
   }
-  const llvm::APSInt &PersistentResultInt = BV.getValue(ResultInt);
+  APSIntPtr PersistentResultInt = BV.getValue(ResultInt);
   return nonloc::SymbolVal(
       SymMgr.getSymIntExpr(ResultSym, ResultOp, PersistentResultInt, ResultTy));
 }
