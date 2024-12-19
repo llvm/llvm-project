@@ -6610,7 +6610,7 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
   SDValue ConstFalse = CurDAG->getConstant(0, dl, VT);
 
   do {
-    SDNode *User = *N->use_begin();
+    SDNode *User = *N->user_begin();
     if (User->getNumOperands() != 2)
       break;
 
@@ -7564,7 +7564,7 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
     while (V->isMachineOpcode() &&
            V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS) {
       // All values in the chain should have single use.
-      if (V->use_empty() || !V->use_begin()->isOnlyUserOf(V.getNode()))
+      if (V->use_empty() || !V->user_begin()->isOnlyUserOf(V.getNode()))
         return SDValue();
       V = V->getOperand(0);
     }
