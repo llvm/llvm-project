@@ -29,7 +29,7 @@ Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
                    lldb_private::Debugger *debugger,
                    Timeout<std::nano> minimum_report_time,
-                   Progress::ProgressOrigin origin)
+                   Progress::Origin origin)
     : m_total(total.value_or(Progress::kNonDeterministicTotal)),
       m_minimum_report_time(minimum_report_time),
       m_progress_data{title, ++g_id,
@@ -110,7 +110,7 @@ void Progress::ReportProgress() {
     return; // An overflow in the m_completed counter. Just ignore these events.
 
   // Change the category bit if we're an internal or external progress.
-  uint32_t progress_category_bit = m_origin == ProgressOrigin::eExternal
+  uint32_t progress_category_bit = m_origin == Progress::Origin::eExternal
                                        ? lldb::eBroadcastBitExternalProgress
                                        : lldb::eBroadcastBitProgress;
 
@@ -210,7 +210,7 @@ void ProgressManager::ReportProgress(
   const uint64_t completed =
       (type == EventType::Begin) ? 0 : Progress::kNonDeterministicTotal;
   const uint32_t progress_category_bit =
-      progress_data.origin == Progress::ProgressOrigin::eExternal
+      progress_data.origin == Progress::Origin::eExternal
           ? lldb::eBroadcastBitExternalProgressCategory
           : lldb::eBroadcastBitProgressCategory;
   Debugger::ReportProgress(progress_data.progress_id, progress_data.title, "",

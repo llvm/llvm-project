@@ -60,7 +60,7 @@ namespace lldb_private {
 class Progress {
 public:
   /// Enum to indicate the origin of a progress event, internal or external.
-  enum class ProgressOrigin : uint8_t {
+  enum class Origin : uint8_t {
     eInternal = 0,
     eExternal = 1,
   };
@@ -90,7 +90,7 @@ public:
            std::optional<uint64_t> total = std::nullopt,
            lldb_private::Debugger *debugger = nullptr,
            Timeout<std::nano> minimum_report_time = std::nullopt,
-           ProgressOrigin origin = ProgressOrigin::eInternal);
+           Origin origin = Origin::eInternal);
 
   /// Destroy the progress object.
   ///
@@ -127,7 +127,7 @@ public:
     std::optional<lldb::user_id_t> debugger_id;
 
     /// The origin of the progress event, wheter it is internal or external.
-    Progress::ProgressOrigin origin;
+    Progress::Origin origin;
   };
 
 private:
@@ -145,7 +145,7 @@ private:
   const ProgressData m_progress_data;
 
   /// The origin of this progress event.
-  const ProgressOrigin m_origin;
+  const Progress::Origin m_origin;
 
   /// How much work ([0...m_total]) that has been completed.
   std::atomic<uint64_t> m_completed = 0;
