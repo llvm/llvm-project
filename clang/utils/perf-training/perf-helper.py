@@ -562,7 +562,7 @@ def genOrderFile(args):
 
 def bolt_optimize(args):
     parser = argparse.ArgumentParser("%prog  [options] ")
-    parser.add_argument("--method")
+    parser.add_argument("--method", choices=["INSTRUMENT", "PERF", "LBR"])
     parser.add_argument("--input")
     parser.add_argument("--instrumented-output")
     parser.add_argument("--fdata")
