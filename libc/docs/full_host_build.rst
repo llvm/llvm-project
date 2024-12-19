@@ -207,6 +207,7 @@ that aren't yet supported by the system toolchain, such as fixed point. The
 following is an example program that demonstrates the difference:
 
 .. code-block:: C
+
    // $ $SYSROOT/bin/clang example.c -static -ffixed-point --sysroot=$SYSROOT
 
    #include <stdio.h>
