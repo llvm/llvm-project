@@ -3470,6 +3470,12 @@ class File(ClangObject):
     def __repr__(self):
         return "<File: %s>" % (self.name)
 
+    def __eq__(self, other) -> bool:
+        return isinstance(other, File) and bool(conf.lib.clang_File_isEqual(self, other))
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
     @staticmethod
     def from_result(res, arg):
         assert isinstance(res, c_object_p)
@@ -3956,6 +3962,7 @@ function_list: list[LibFunc] = [
     ("clang_getFile", [TranslationUnit, c_interop_string], c_object_p),
     ("clang_getFileName", [File], _CXString),
     ("clang_getFileTime", [File], c_uint),
+    ("clang_File_isEqual", [File, File], bool),
     ("clang_getIBOutletCollectionType", [Cursor], Type),
     ("clang_getIncludedFile", [Cursor], c_object_p),
     (

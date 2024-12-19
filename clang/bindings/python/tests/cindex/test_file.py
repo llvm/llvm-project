@@ -16,3 +16,18 @@ class TestFile(unittest.TestCase):
         self.assertEqual(str(file), "t.c")
         self.assertEqual(file.name, "t.c")
         self.assertEqual(repr(file), "<File: t.c>")
+
+    def test_file_eq(self):
+        index = Index.create()
+        tu = index.parse(
+            "t.c",
+            unsaved_files=[
+                ("t.c", "int a = 729;"),
+                ("s.c", "int a = 729;"),
+            ],
+        )
+        file1 = File.from_name(tu, "t.c")
+        file2 = File.from_name(tu, "s.c")
+        self.assertEqual(file1, file1)
+        self.assertNotEqual(file1, file2)
+        self.assertNotEqual(file1, "t.c")
