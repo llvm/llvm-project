@@ -3287,10 +3287,40 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
   }
 };
 
+/// Helper function for converting select ops. This function converts the
+/// signature of the given block. If the new block signature is different from
+/// `expectedTypes`, returns "failure".
+static llvm::FailureOr<mlir::Block *>
+getConvertedBlock(mlir::ConversionPatternRewriter &rewriter,
+                  const mlir::TypeConverter *converter,
+                  mlir::Operation *branchOp, mlir::Block *block,
+                  mlir::TypeRange expectedTypes) {
+  assert(converter && "expected non-null type converter");
+  assert(!block->isEntryBlock() && "entry blocks have no predecessors");
+
+  // There is nothing to do if the types already match.
+  if (block->getArgumentTypes() == expectedTypes)
+    return block;
+
+  // Compute the new block argument types and convert the block.
+  std::optional<mlir::TypeConverter::SignatureConversion> conversion =
+      converter->convertBlockSignature(block);
+  if (!conversion)
+    return rewriter.notifyMatchFailure(branchOp,
+                                       "could not compute block signature");
+  if (expectedTypes != conversion->getConvertedTypes())
+    return rewriter.notifyMatchFailure(
+        branchOp,
+        "mismatch between adaptor operand types and computed block signature");
+  return rewriter.applySignatureConversion(block, *conversion, converter);
+}
+
 template <typename OP>
-static void selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering,
-                                  OP select, typename OP::Adaptor adaptor,
-                                  mlir::ConversionPatternRewriter &rewriter) {
+static llvm::LogicalResult
+selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering, OP select,
+                      typename OP::Adaptor adaptor,
+                      mlir::ConversionPatternRewriter &rewriter,
+                      const mlir::TypeConverter *converter) {
   unsigned conds = select.getNumConditions();
   auto cases = select.getCases().getValue();
   mlir::Value selector = adaptor.getSelector();
@@ -3308,15 +3338,24 @@ static void selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering,
     auto destOps = select.getSuccessorOperands(adaptor.getOperands(), t);
     const mlir::Attribute &attr = cases[t];
     if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr)) {
-      destinations.push_back(dest);
       destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
+      auto convertedBlock =
+          getConvertedBlock(rewriter, converter, select, dest,
+                            mlir::TypeRange(destinationsOperands.back()));
+      if (mlir::failed(convertedBlock))
+        return mlir::failure();
+      destinations.push_back(*convertedBlock);
       caseValues.push_back(intAttr.getInt());
       continue;
     }
     assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
     assert((t + 1 == conds) && "unit must be last");
-    defaultDestination = dest;
     defaultOperands = destOps ? *destOps : mlir::ValueRange{};
+    auto convertedBlock = getConvertedBlock(rewriter, converter, select, dest,
+                                            mlir::TypeRange(defaultOperands));
+    if (mlir::failed(convertedBlock))
+      return mlir::failure();
+    defaultDestination = *convertedBlock;
   }
 
   // LLVM::SwitchOp takes a i32 type for the selector.
@@ -3332,6 +3371,7 @@ static void selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering,
       /*caseDestinations=*/destinations,
       /*caseOperands=*/destinationsOperands,
       /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
+  return mlir::success();
 }
 
 /// conversion of fir::SelectOp to an if-then-else ladder
@@ -3341,8 +3381,8 @@ struct SelectOpConversion : public fir::FIROpConversion<fir::SelectOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::SelectOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    selectMatchAndRewrite<fir::SelectOp>(lowerTy(), op, adaptor, rewriter);
-    return mlir::success();
+    return selectMatchAndRewrite<fir::SelectOp>(lowerTy(), op, adaptor,
+                                                rewriter, getTypeConverter());
   }
 };
 
@@ -3353,8 +3393,8 @@ struct SelectRankOpConversion : public fir::FIROpConversion<fir::SelectRankOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::SelectRankOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    selectMatchAndRewrite<fir::SelectRankOp>(lowerTy(), op, adaptor, rewriter);
-    return mlir::success();
+    return selectMatchAndRewrite<fir::SelectRankOp>(
+        lowerTy(), op, adaptor, rewriter, getTypeConverter());
   }
 };
 
