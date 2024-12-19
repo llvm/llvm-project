@@ -736,10 +736,8 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
-    if (LangOpts.Sanitize.has(SanitizerKind::Type)) {
-      MPM.addPass(ModuleTypeSanitizerPass());
-      MPM.addPass(createModuleToFunctionPassAdaptor(TypeSanitizerPass()));
-    }
+    if (LangOpts.Sanitize.has(SanitizerKind::Type))
+      MPM.addPass(TypeSanitizerPass());
 
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
