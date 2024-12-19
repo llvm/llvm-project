@@ -86,11 +86,11 @@ char B2[10];
 // NOOPTARRAY-LABEL: @f8
 void f8(int i, int k) {
   // NOOPTLOCAL: call void @llvm.ubsantrap(i8 3)
-  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18)
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18) #[[ATTR2:[0-9]+]]
   B[i] = '\0';
 
   // NOOPTLOCAL: call void @llvm.ubsantrap(i8 5)
-  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18)
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18) #[[ATTR2:[0-9]+]]
   B2[k] = '\0';
 }
 
@@ -102,3 +102,4 @@ struct S {
 struct S *f9(int i) {
   return &s[i];
 }
+// NOOPTARRAY: attributes #[[ATTR2]] = { nomerge noreturn nounwind }
