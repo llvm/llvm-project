@@ -82,10 +82,6 @@ struct DeviceExprChecker
           }
         }
       }
-      // c_devloc is inlined in lowering.
-      if (x.GetName().compare("c_devloc") == 0) {
-        return {};
-      }
     } else if (x.GetSpecificIntrinsic()) {
       // TODO(CUDA): Check for unsupported intrinsics here
       return {};
