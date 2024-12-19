@@ -221,10 +221,11 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   uint64_t stubsInRangeVA = maxVAOfLastStub - forwardBranchRange;
 
   log("thunks = " + std::to_string(thunkMap.size()) +
-      ", potential = " + std::to_string(maxPotentialThunks) + ", stubs = " +
-      std::to_string(in.stubs->getSize()) + ", isecVA = " + utohexstr(isecVA) +
-      ", threshold = " + utohexstr(stubsInRangeVA) + ", isecEnd = " +
-      utohexstr(isecEnd) + ", tail = " + utohexstr(isecEnd - isecVA) +
+      ", potential = " + std::to_string(maxPotentialThunks) +
+      ", stubs = " + std::to_string(in.stubs->getSize()) + ", isecVA = " +
+      utohexstr(isecVA) + ", threshold = " + utohexstr(stubsInRangeVA) +
+      ", isecEnd = " + utohexstr(isecEnd) +
+      ", tail = " + utohexstr(isecEnd - isecVA) +
       ", slop = " + utohexstr(forwardBranchRange - (isecEnd - isecVA)));
   return stubsInRangeVA;
 }
