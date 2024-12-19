@@ -17934,6 +17934,9 @@ std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
   if (!EvaluatePointer(Arg, Val, Info))
     return std::nullopt;
 
+  if (Val.allowConstexprUnknown())
+    return true;
+
   auto Error = [&](int Diag) {
     bool CalledFromStd = false;
     const auto *Callee = Info.CurrentCall->getCallee();
