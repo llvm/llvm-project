@@ -3290,10 +3290,9 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
       if (!OpsList->getArgName(j))
         P->error("Operands list should have names for each operand!");
       StringRef ArgNameStr = OpsList->getArgNameStr(j);
-      if (!OperandsSet.count(ArgNameStr))
+      if (!OperandsSet.erase(ArgNameStr))
         P->error("'" + ArgNameStr +
                  "' does not occur in pattern or was multiply specified!");
-      OperandsSet.erase(ArgNameStr);
       Args.push_back(std::string(ArgNameStr));
     }
 
