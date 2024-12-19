@@ -20,3 +20,8 @@ yes
 #else
 no
 #endif
+
+// RUN: echo '/*' | not llvm-tblgen -E 2>&1 | grep "error: unterminated comment"
+// RUN: echo 'include "foo"' | not llvm-tblgen -E 2>&1 | grep "error: could not find include file"
+// RUN: echo '!foo' | not llvm-tblgen -E 2>&1 | grep "error: unknown operator"
+// RUN: echo '#else' | not llvm-tblgen -E 2>&1 | grep "error: #else without #ifdef or #ifndef"
