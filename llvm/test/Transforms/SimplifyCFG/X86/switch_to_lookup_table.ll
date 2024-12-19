@@ -39,6 +39,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 1, i32 1], align 4
 ; CHECK: @switch.table.signed_overflow1 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 1111, i32 2222], align 4
 ; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 2222, i32 2222], align 4
+; CHECK: @switch.table.truncatedint_shift_mask = private unnamed_addr constant [4 x i32] [i32 33578, i32 33594, i32 33658, i32 33626], align 4
+; CHECK: @switch.table.truncatedint_shift_nsw = private unnamed_addr constant [5 x i32] [i32 8483, i32 12579, i32 28963, i32 33059, i32 37155], align 4
+; CHECK: @switch.table.truncatedint_shift_not_nsw = private unnamed_addr constant [5 x i16] [i16 8483, i16 12579, i16 28963, i16 -32477, i16 -28381], align 2
 ;.
 define i32 @f(i32 %c) {
 ; CHECK-LABEL: @f(
@@ -219,13 +222,13 @@ define i32 @earlyreturncrash(i32 %x)  {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[SW_EPILOG:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.earlyreturncrash, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    [[SWITCH_GEP1:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.earlyreturncrash.1, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD2:%.*]] = load i32, ptr [[SWITCH_GEP1]], align 4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST4:%.*]] = load i32, ptr [[SWITCH_GEP1]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ [[SWITCH_LOAD2]], [[SWITCH_LOOKUP]] ], [ 10, [[ENTRY]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[SWITCH_TRUNCATEDINT_CAST]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ [[SWITCH_TRUNCATEDINT_CAST4]], [[SWITCH_LOOKUP]] ], [ 10, [[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[A_0]]
 ;
 entry:
@@ -402,10 +405,10 @@ define i32 @large(i32 %x) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [199 x i32], ptr @switch.table.large, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SWITCH_TRUNCATEDINT_CAST]], [[SWITCH_LOOKUP]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -918,8 +921,8 @@ define i32 @unreachable_default(i32 %x)  {
 ; CHECK-LABEL: @unreachable_default(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.unreachable_default, i32 0, i32 [[X:%.*]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_CAST]]
 ;
 entry:
   switch i32 %x, label %default [
@@ -1714,8 +1717,8 @@ define i32 @signed_overflow1(i8 %n) {
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.signed_overflow1, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_CAST]]
 ;
 start:
   %trunc = trunc i8 %n to i2
@@ -1750,8 +1753,8 @@ define i32 @signed_overflow2(i8 %n) {
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.signed_overflow2, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_CAST]]
 ;
 start:
   %trunc = trunc i8 %n to i2
@@ -2183,4 +2186,87 @@ sw.default:                                       ; preds = %entry
 return:                                           ; preds = %sw.default, %entry, %entry, %entry
   %retval.0 = phi { i8, i8 } [ undef, %entry ], [ undef, %entry ], [ undef, %entry ], [ %1, %sw.default ]
   ret { i8, i8 } %retval.0
+}
+
+define i32 @truncatedint_shift_mask(i32 %c) {
+; CHECK-LABEL: @truncatedint_shift_mask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.truncatedint_shift_mask, i32 0, i32 [[C:%.*]]
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_MASK:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_MASK]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %bb3
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+
+return:
+  %x = phi i32 [ u0x832A, %bb0 ], [ u0x833A, %bb1 ], [ u0x837A, %bb2 ], [ u0x835A, %bb3 ]
+  ret i32 %x
+}
+
+define i32 @truncatedint_shift_nsw(i32 %c) {
+; CHECK-LABEL: @truncatedint_shift_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.truncatedint_shift_nsw, i32 0, i32 [[C:%.*]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %bb3
+  i32 4, label %bb4
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+bb4: br label %return
+
+return:
+  %x = phi i32 [ u0x2123, %bb0 ], [ u0x3123, %bb1 ], [ u0x7123, %bb2 ], [ u0x8123, %bb3 ], [ u0x9123, %bb4 ]
+  ret i32 %x
+}
+
+; Same as @truncatedint_shift_nsw, but the return type is i16 so the NSW flag shouldn't be set on shl
+define i16 @truncatedint_shift_not_nsw(i32 %c) {
+; CHECK-LABEL: @truncatedint_shift_not_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i16], ptr @switch.table.truncatedint_shift_not_nsw, i32 0, i32 [[C:%.*]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i16, ptr [[SWITCH_GEP]], align 2
+; CHECK-NEXT:    ret i16 [[SWITCH_LOAD]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %bb3
+  i32 4, label %bb4
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+bb4: br label %return
+
+return:
+  %x = phi i16 [ u0x2123, %bb0 ], [ u0x3123, %bb1 ], [ u0x7123, %bb2 ], [ u0x8123, %bb3 ], [ u0x9123, %bb4 ]
+  ret i16 %x
 }
