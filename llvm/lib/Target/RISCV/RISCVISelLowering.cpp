@@ -16310,7 +16310,7 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
     // All users should be a shift by constant less than or equal to 32. This
     // ensures we'll do this optimization for each of them to produce an
     // add/sub+sext_inreg they can all share.
-    for (SDNode *U : N0->uses()) {
+    for (SDNode *U : N0->users()) {
       if (U->getOpcode() != ISD::SRA ||
           !isa<ConstantSDNode>(U->getOperand(1)) ||
           U->getConstantOperandVal(1) > 32)
@@ -18374,7 +18374,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   // LD/ST, it can still complete the folding optimization operation performed
   // above.
   auto isUsedByLdSt = [](const SDNode *X, const SDNode *User) {
-    for (SDNode *Use : X->uses()) {
+    for (SDNode *Use : X->users()) {
       // This use is the one we're on right now. Skip it
       if (Use == User || Use->getOpcode() == ISD::SELECT)
         continue;
@@ -20511,7 +20511,7 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
 
   // The copy must be used by a RISCVISD::RET_GLUE, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != RISCVISD::RET_GLUE)
       return false;
     HasRet = true;
