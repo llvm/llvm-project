@@ -472,7 +472,8 @@ private:
         args_cur.template next_var<uint64_t>();
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
       // Floating point numbers are stored separately from the other arguments.
-      else if (advance_arg_if_float(cur_type_desc))
+      else if (&Parser::advance_arg_if_float &&
+               advance_arg_if_float(cur_type_desc))
         ;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
