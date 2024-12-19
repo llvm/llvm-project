@@ -272,6 +272,8 @@ C++23 Feature Support
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
   supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
+  
+- ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -848,6 +850,7 @@ Bug Fixes to C++ Support
 - Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 - Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
+- Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

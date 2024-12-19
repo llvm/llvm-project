@@ -41,6 +41,7 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::HostData:
+  case OpenACCDirectiveKind::Wait:
     if (!IsStmt)
       return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
@@ -566,6 +567,16 @@ bool checkValidAfterDeviceType(
   return true;
 }
 
+// A temporary function that helps implement the 'not implemented' check at the
+// top of each clause checking function. This should only be used in conjunction
+// with the one being currently implemented/only updated after the entire
+// construct has been implemented.
+bool isDirectiveKindImplemented(OpenACCDirectiveKind DK) {
+  return isOpenACCComputeDirectiveKind(DK) ||
+         isOpenACCCombinedDirectiveKind(DK) || isOpenACCDataDirectiveKind(DK) ||
+         DK == OpenACCDirectiveKind::Loop || DK == OpenACCDirectiveKind::Wait;
+}
+
 class SemaOpenACCClauseVisitor {
   SemaOpenACC &SemaRef;
   ASTContext &Ctx;
@@ -680,9 +691,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // constructs that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // There is no prose in the standard that says duplicates aren't allowed,
@@ -717,8 +726,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
   // Restrictions only properly implemented on 'compute' constructs, and
   // 'compute' constructs are the only construct that can do anything with
   // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // TODO OpenACC: When we implement this for 'update', this takes a
@@ -915,9 +923,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // There is no prose in the standard that says duplicates aren't allowed,
@@ -973,9 +979,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPresentClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -992,9 +996,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -1011,9 +1013,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyInClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -1030,9 +1030,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyOutClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -1109,9 +1107,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // ActOnVar ensured that everything is a valid variable reference, but we
@@ -1134,9 +1130,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
   // constructs, and 'compute'/'combined'/'data' constructs are the only
   // construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()) &&
-      !isOpenACCDataDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   return OpenACCWaitClause::Create(
@@ -1150,10 +1144,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
   // 'loop' constructs, and 'compute'/'combined'/'data'/'loop' constructs are
   // the only construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
-      Clause.getDirectiveKind() != OpenACCDirectiveKind::Data &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
@@ -1347,8 +1338,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
   // Restrictions only properly implemented on 'loop'/'combined' constructs, and
   // it is the only construct that can do anything with this, so skip/treat as
   // unimplemented for the routine constructs.
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   Expr *IntExpr =
@@ -1446,8 +1436,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
   // Restrictions only properly implemented on 'loop'/'combined' constructs, and
   // it is the only construct that can do anything with this, so skip/treat as
   // unimplemented for the routine constructs.
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   Expr *IntExpr =
@@ -1559,8 +1548,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
   // Restrictions only properly implemented on 'loop' constructs, and it is
   // the only construct that can do anything with this, so skip/treat as
   // unimplemented for the combined constructs.
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
-      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // OpenACC 3.3 Section 2.9.11: A reduction clause may not appear on a loop
@@ -1691,7 +1679,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFinalizeClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::HostData)
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
   // There isn't anything to do here, this is only valid on one construct, and
   // has no associated rules.
@@ -1704,7 +1692,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
   // Restrictions only properly implemented on 'loop' constructs and combined ,
   // and it is the only construct that can do anything with this, so skip/treat
   // as unimplemented for the routine constructs.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Routine)
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // OpenACC 3.3 2.9:
@@ -1879,6 +1867,7 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
     return true;
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
+  case OpenACCDirectiveKind::Wait:
     llvm_unreachable("Doesn't have an associated stmt");
   default:
   case OpenACCDirectiveKind::Invalid:
@@ -2307,6 +2296,10 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::HostData:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
+    break;
+  case OpenACCDirectiveKind::Wait:
+    // Nothing really to do here, the arguments to the 'wait' should have
+    // already been handled by the time we get here.
     break;
   default:
     Diag(DirLoc, diag::warn_acc_construct_unimplemented) << K;
@@ -3637,12 +3630,11 @@ bool SemaOpenACC::ActOnStartStmtDirective(
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
-StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
-                                              SourceLocation StartLoc,
-                                              SourceLocation DirLoc,
-                                              SourceLocation EndLoc,
-                                              ArrayRef<OpenACCClause *> Clauses,
-                                              StmtResult AssocStmt) {
+StmtResult SemaOpenACC::ActOnEndStmtDirective(
+    OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+    SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
+    SourceLocation RParenLoc, SourceLocation EndLoc,
+    ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt) {
   switch (K) {
   default:
     return StmtEmpty();
@@ -3685,6 +3677,11 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
         getASTContext(), StartLoc, DirLoc, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
+  case OpenACCDirectiveKind::Wait: {
+    return OpenACCWaitConstruct::Create(
+        getASTContext(), StartLoc, DirLoc, LParenLoc, Exprs.front(), MiscLoc,
+        Exprs.drop_front(), RParenLoc, EndLoc, Clauses);
+  }
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
@@ -3697,6 +3694,7 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
     llvm_unreachable("Unimplemented associated statement application");
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
+  case OpenACCDirectiveKind::Wait:
     llvm_unreachable(
         "these don't have associated statements, so shouldn't get here");
   case OpenACCDirectiveKind::Parallel:

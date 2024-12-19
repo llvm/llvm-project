@@ -44,6 +44,7 @@ TargetCharacteristics::TargetCharacteristics() {
   enableCategoryKinds(TypeCategory::Complex);
   enableCategoryKinds(TypeCategory::Character);
   enableCategoryKinds(TypeCategory::Logical);
+  enableCategoryKinds(TypeCategory::Unsigned);
 
   isBigEndian_ = !isHostLittleEndian;
 
@@ -137,6 +138,7 @@ void TargetCharacteristics::set_roundingMode(Rounding rounding) {
 }
 
 // SELECTED_INT_KIND() -- F'2018 16.9.169
+// and SELECTED_UNSIGNED_KIND() extension (same results)
 class SelectedIntKindVisitor {
 public:
   SelectedIntKindVisitor(
