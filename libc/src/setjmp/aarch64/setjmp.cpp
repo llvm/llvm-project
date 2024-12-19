@@ -12,7 +12,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::naked]] LLVM_LIBC_FUNCTION(int, setjmp, ([[maybe_unused]] jmp_buf buf)) {
+#ifndef __GNUC__
+[[gnu::naked]]
+#endif
+LLVM_LIBC_FUNCTION(int, setjmp, ([[maybe_unused]] jmp_buf buf)) {
   // If BTI branch protection is in use, the compiler will automatically insert
   // a BTI here, so we don't need to make any extra effort to do so.
 
@@ -88,6 +91,11 @@ namespace LIBC_NAMESPACE_DECL {
       R"(
         ret
       )");
+
+#ifdef __GNUC__
+  // GCC fails here because it doesn't recognize a value is returned.
+  __builtin_unreachable();
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL
