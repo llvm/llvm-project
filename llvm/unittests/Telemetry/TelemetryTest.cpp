@@ -286,7 +286,6 @@ private:
   const std::string SessionId;
   std::vector<std::unique_ptr<Destination>> Destinations;
 };
-
 } // namespace vendor
 
 std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
