@@ -853,7 +853,7 @@ public:
     bool operator==(const user_iterator &x) const { return UI == x.UI; }
     bool operator!=(const user_iterator &x) const { return !operator==(x); }
 
-    // /// Return true if this iterator is at the end of the uses list.
+    /// Return true if this iterator is at the end of the uses list.
     bool atEnd() const { return *this == user_iterator(); }
 
     user_iterator &operator++() { // Preincrement
