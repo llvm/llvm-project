@@ -17,12 +17,9 @@ struct ExplicitConvertOnly {
 void uses() {
 #pragma acc shutdown
 #pragma acc shutdown if (getI() < getS())
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
 #pragma acc shutdown device_num(getI())
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
 #pragma acc shutdown device_type(SOMETHING) device_num(getI())
 #pragma acc shutdown device_type(SOMETHING) if (getI() < getS())
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
 #pragma acc shutdown device_type(SOMETHING) device_num(getI()) if (getI() < getS())
 
   // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
@@ -34,7 +31,6 @@ void uses() {
   // expected-note@#AMBIG_INT{{conversion to integral type 'int'}}
   // expected-note@#AMBIG_SHORT{{conversion to integral type 'short'}}
 #pragma acc shutdown device_num(Ambiguous)
-  // expected-warning@+3{{OpenACC clause 'device_num' not yet implemented}}
   // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc shutdown device_num(Explicit)
@@ -45,19 +41,20 @@ void TestInst() {
   T t;
 #pragma acc shutdown
 #pragma acc shutdown if (T::value < T{})
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
 #pragma acc shutdown device_type(SOMETHING) device_num(getI()) if (getI() < getS())
-  // expected-warning@+1 2{{OpenACC clause 'device_num' not yet implemented}}
 #pragma acc shutdown device_type(SOMETHING) device_type(T) device_num(t) if (t < T::value) device_num(getI()) if (getI() < getS())
 
   // expected-error@+1{{value of type 'const NotConvertible' is not contextually convertible to 'bool'}}
 #pragma acc shutdown if (T::NCValue)
 
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC clause 'device_num' requires expression of integer type ('const NotConvertible' invalid)}}
 #pragma acc shutdown device_num(T::NCValue)
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+3{{multiple conversions from expression type 'const AmbiguousConvert' to an integral type}}
+  // expected-note@#AMBIG_INT{{conversion to integral type 'int'}}
+  // expected-note@#AMBIG_SHORT{{conversion to integral type 'short'}}
 #pragma acc shutdown device_num(T::ACValue)
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
+  // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc shutdown device_num(T::EXValue)
 }
 
