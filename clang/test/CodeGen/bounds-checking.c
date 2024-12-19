@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsanitize=local-bounds -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -O3 -mllvm -bounds-checking-unique-traps -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s --check-prefixes=NOOPTLOCAL
 // RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds -O3 -mllvm -ubsan-unique-traps -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s --check-prefixes=NOOPTARRAY
