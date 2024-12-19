@@ -20751,7 +20751,8 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
 
   // Performing the following combine produces a preferable form for ISEL.
   // i32 (trunc (extract Vi64, idx)) -> i32 (extract (nvcast Vi32), idx*2))
-  if (DCI.isAfterLegalizeDAG() && N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+  if (DCI.isAfterLegalizeDAG() && N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      N0.hasOneUse()) {
     SDValue Op = N0.getOperand(0);
     SDValue ExtractIndexNode = N0.getOperand(1);
     if (!isa<ConstantSDNode>(ExtractIndexNode))
@@ -20765,15 +20766,8 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
     EVT SrcVectorType = Op.getValueType();
     // We also assume that SrcVectorType cannot be a V64 (see
     // LowerEXTRACT_VECTOR_ELT).
-    assert((SrcVectorType.getScalarType() == MVT::i64 &&
-            SrcVectorType != MVT::v1i64) &&
+    assert((SrcVectorType == MVT::v2i64 || SrcVectorType == MVT::nxv2i64) &&
            "Unexpected legalisation result!");
-
-    // If the i64 we are extacting has uses other than this truncation, the
-    // upper half of this value must still be live so we prefer to extract it
-    // all at once.
-    if (!N0.hasOneUse())
-      return SDValue();
 
     unsigned ExtractIndex =
         cast<ConstantSDNode>(ExtractIndexNode)->getZExtValue();
@@ -20781,7 +20775,7 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
 
     Op = DAG.getNode(AArch64ISD::NVCAST, DL, CastVT, Op);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op,
-                       DAG.getConstant(ExtractIndex * 2, DL, MVT::i64));
+                       DAG.getVectorIdxConstant(ExtractIndex * 2, DL));
   }
 
   return SDValue();
