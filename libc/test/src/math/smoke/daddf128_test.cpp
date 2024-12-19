@@ -10,4 +10,4 @@
 
 #include "src/math/daddf128.h"
 
-LIST_ADD_TESTS(DoubleFloat128, double, float128, LIBC_NAMESPACE::daddf128)
+LIST_ADD_TESTS(double, float128, LIBC_NAMESPACE::daddf128)

@@ -10,4 +10,4 @@
 
 #include "src/math/daddl.h"
 
-LIST_ADD_TESTS(DoubleLongDouble, double, long double, LIBC_NAMESPACE::daddl)
+LIST_ADD_TESTS(double, long double, LIBC_NAMESPACE::daddl)

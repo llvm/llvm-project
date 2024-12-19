@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 
-#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
@@ -110,12 +109,8 @@ add_or_sub(InType x, InType y) {
       return cast<OutType>(tmp);
     }
 
-    if (y_bits.is_zero()) {
-      volatile InType tmp = y;
-      if constexpr (IsSub)
-        tmp = -tmp;
-      return cast<OutType>(tmp);
-    }
+    if (y_bits.is_zero())
+      return cast<OutType>(x);
   }
 
   InType x_abs = x_bits.abs().get_val();
@@ -174,7 +169,8 @@ add_or_sub(InType x, InType y) {
       aligned_min_mant_sticky = true;
     else
       aligned_min_mant_sticky =
-          (min_mant << (InFPBits::STORAGE_LEN - alignment)) != 0;
+          (static_cast<InStorageType>(
+              min_mant << (InFPBits::STORAGE_LEN - alignment))) != 0;
 
     InStorageType min_mant_sticky(static_cast<int>(aligned_min_mant_sticky));
 

@@ -10,4 +10,4 @@
 
 #include "src/math/faddl.h"
 
-LIST_ADD_TESTS(FloatLongDouble, float, long double, LIBC_NAMESPACE::faddl)
+LIST_ADD_TESTS(float, long double, LIBC_NAMESPACE::faddl)

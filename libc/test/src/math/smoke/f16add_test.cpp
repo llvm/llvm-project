@@ -10,4 +10,4 @@
 
 #include "src/math/f16add.h"
 
-LIST_ADD_TESTS(Float16Double, float16, double, LIBC_NAMESPACE::f16add)
+LIST_ADD_TESTS(float16, double, LIBC_NAMESPACE::f16add)
