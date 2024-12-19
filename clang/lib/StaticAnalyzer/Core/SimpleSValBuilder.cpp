@@ -1210,7 +1210,7 @@ const llvm::APSInt *SimpleSValBuilder::getConstValue(ProgramStateRef state,
 
 const llvm::APSInt *SimpleSValBuilder::getConcreteValue(SVal V) {
   if (std::optional<loc::ConcreteInt> X = V.getAs<loc::ConcreteInt>())
-    return &X->getValue();
+    return X->getValue().get();
 
   if (std::optional<nonloc::ConcreteInt> X = V.getAs<nonloc::ConcreteInt>())
     return X->getValue().get();
