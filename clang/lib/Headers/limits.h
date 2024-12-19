@@ -20,8 +20,10 @@
 #endif
 
 /* System headers include a number of constants from POSIX in <limits.h>.
-   Include it if we're hosted. */
-#if __STDC_HOSTED__ && __has_include_next(<limits.h>)
+   Include it if we're hosted. If we are included by libc with include_next,
+   we shouldn't include it again. */
+#if __STDC_HOSTED__ &&                                                         \
+    __has_include_next(<limits.h>) && !defined(_LIBC_LIMITS_H_) && !defined(_LIMITS_H)
 #include_next <limits.h>
 #endif
 
