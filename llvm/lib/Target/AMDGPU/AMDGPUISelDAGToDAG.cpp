@@ -349,8 +349,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
         return MRI.getRegClass(Reg);
       }
 
-      const SIRegisterInfo *TRI
-        = static_cast<const GCNSubtarget *>(Subtarget)->getRegisterInfo();
+      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
       return TRI->getPhysRegBaseClass(Reg);
     }
 
@@ -2390,10 +2389,9 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
     return true;
 
   if (VT == MVT::i64) {
-    const auto *ST = static_cast<const GCNSubtarget *>(Subtarget);
-
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-    return (CC == ISD::SETEQ || CC == ISD::SETNE) && ST->hasScalarCompareEq64();
+    return (CC == ISD::SETEQ || CC == ISD::SETNE) &&
+           Subtarget->hasScalarCompareEq64();
   }
 
   return false;
@@ -2435,8 +2433,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     return;
   }
 
-  const GCNSubtarget *ST = static_cast<const GCNSubtarget *>(Subtarget);
-  const SIRegisterInfo *TRI = ST->getRegisterInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   bool UseSCCBr = isCBranchSCC(N) && isUniformBr(N);
   bool AndExec = !UseSCCBr;
@@ -2449,7 +2446,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
         isNullConstant(Cond->getOperand(1)) &&
         // We may encounter ballot.i64 in wave32 mode on -O0.
-        VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
+        VCMP.getValueType().getSizeInBits() == Subtarget->getWavefrontSize()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
       // %C = i1 ISD::SETCC %VCMP, 0, setne/seteq
       // BRCOND i1 %C, %BB
@@ -2496,14 +2493,15 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     // the S_AND when is unnecessary. But it would be better to add a separate
     // pass after SIFixSGPRCopies to do the unnecessary S_AND removal, so it
     // catches both cases.
-    Cond = SDValue(CurDAG->getMachineNode(ST->isWave32() ? AMDGPU::S_AND_B32
-                                                         : AMDGPU::S_AND_B64,
-                     SL, MVT::i1,
-                     CurDAG->getRegister(ST->isWave32() ? AMDGPU::EXEC_LO
-                                                        : AMDGPU::EXEC,
-                                         MVT::i1),
-                    Cond),
-                   0);
+    Cond = SDValue(
+        CurDAG->getMachineNode(
+            Subtarget->isWave32() ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64, SL,
+            MVT::i1,
+            CurDAG->getRegister(Subtarget->isWave32() ? AMDGPU::EXEC_LO
+                                                      : AMDGPU::EXEC,
+                                MVT::i1),
+            Cond),
+        0);
   }
 
   SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, CondReg, Cond);
