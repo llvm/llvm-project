@@ -13,8 +13,8 @@ define void @test_b128_input_from_const() {
 ; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.u64 %rd2, 0;
-; CHECK-NEXT:    mov.u64 %rd3, 42;
+; CHECK-NEXT:    mov.b64 %rd2, 0;
+; CHECK-NEXT:    mov.b64 %rd3, 42;
 ; CHECK-NEXT:    mov.b128 %rq1, {%rd3, %rd2};
 ; CHECK-NEXT:    mov.u64 %rd4, value;
 ; CHECK-NEXT:    cvta.global.u64 %rd1, %rd4;
@@ -65,7 +65,7 @@ define void @test_b128_input_from_select(ptr nocapture readonly %flag) {
 ; CHECK-NEXT:    ld.global.u8 %rs1, [%rd3];
 ; CHECK-NEXT:    setp.eq.s16 %p1, %rs1, 0;
 ; CHECK-NEXT:    selp.b64 %rd4, 24, 42, %p1;
-; CHECK-NEXT:    mov.u64 %rd5, 0;
+; CHECK-NEXT:    mov.b64 %rd5, 0;
 ; CHECK-NEXT:    mov.b128 %rq1, {%rd4, %rd5};
 ; CHECK-NEXT:    mov.u64 %rd6, value;
 ; CHECK-NEXT:    cvta.global.u64 %rd1, %rd6;
