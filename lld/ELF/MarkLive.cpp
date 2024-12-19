@@ -132,12 +132,13 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     // discarded, marking the LSDA will unnecessarily retain the text section.
     if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
                       relSec->nextInSectionGroup))) {
-      Symbol *canonicalSym = d;
-      if (offset >= d->value + d->size)
-        if (Symbol *s = relSec->getEnclosingSymbol(offset))
+      Symbol *canonicalSym = nullptr;
+      if (!d->isSection()) {
+        if (offset < d->value + d->size)
+          canonicalSym = d;
+        else if (Symbol *s = relSec->getEnclosingSymbol(offset))
           canonicalSym = s;
-      if (canonicalSym->isSection())
-        canonicalSym = nullptr;
+      }
       enqueue(relSec, offset, canonicalSym, parent);
     }
     return;
