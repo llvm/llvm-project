@@ -2329,11 +2329,11 @@ define <64 x i32> @umulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vptestmb %zmm0, %zmm0, %k1
 ; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k2
+; AVX512BW-NEXT:    kshiftrq $16, %k1, %k2
 ; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 {%k2} {z} = -1
-; AVX512BW-NEXT:    kshiftrq $32, %k1, %k1
-; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k1
+; AVX512BW-NEXT:    kshiftrq $32, %k1, %k2
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm2 {%k2} {z} = -1
+; AVX512BW-NEXT:    kshiftrq $48, %k1, %k1
 ; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
 ; AVX512BW-NEXT:    vmovdqa64 %zmm4, (%rdi)
 ; AVX512BW-NEXT:    retq

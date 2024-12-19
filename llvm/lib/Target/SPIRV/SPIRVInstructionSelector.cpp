@@ -431,6 +431,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       }
       MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
+      GR.invalidateMachineInstr(&I);
       I.removeFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
@@ -445,6 +446,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     // erase it
     LLVM_DEBUG(dbgs() << "Instruction is folded and dead.\n");
     salvageDebugInfo(*MRI, I);
+    GR.invalidateMachineInstr(&I);
     I.eraseFromParent();
     return true;
   }
@@ -464,6 +466,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     if (HasDefs) // Make all vregs 64 bits (for SPIR-V IDs).
       for (unsigned i = 0; i < I.getNumDefs(); ++i)
         MRI->setType(I.getOperand(i).getReg(), LLT::scalar(64));
+    GR.invalidateMachineInstr(&I);
     I.removeFromParent();
     return true;
   }
@@ -2253,8 +2256,10 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
   } else {
     Opcode = SPIRV::OpKill;
     // OpKill must be the last operation of any basic block.
-    MachineInstr *NextI = I.getNextNode();
-    NextI->removeFromParent();
+    if (MachineInstr *NextI = I.getNextNode()) {
+      GR.invalidateMachineInstr(NextI);
+      NextI->removeFromParent();
+    }
   }
 
   MachineBasicBlock &BB = *I.getParent();
