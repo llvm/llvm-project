@@ -52,14 +52,12 @@ __UbuntuPackages+=" symlinks"
 __UbuntuPackages+=" libicu-dev"
 __UbuntuPackages+=" liblttng-ust-dev"
 __UbuntuPackages+=" libunwind8-dev"
-__UbuntuPackages+=" libnuma-dev"
 
 __AlpinePackages+=" gettext-dev"
 __AlpinePackages+=" icu-dev"
 __AlpinePackages+=" libunwind-dev"
 __AlpinePackages+=" lttng-ust-dev"
 __AlpinePackages+=" compiler-rt"
-__AlpinePackages+=" numactl-dev"
 
 # runtime libraries' dependencies
 __UbuntuPackages+=" libcurl4-openssl-dev"
@@ -424,13 +422,12 @@ case "$__AlpineVersion" in
         elif [[ "$__AlpineArch" == "riscv64" ]]; then
             __AlpineLlvmLibsLookup=1
             __AlpineVersion=edge # minimum version with APKINDEX.tar.gz (packages archive)
+        elif [[ -n "$__AlpineVersion" ]]; then
+            # use whichever alpine version is provided and select the latest toolchain libs
+            __AlpineLlvmLibsLookup=1
         else
             __AlpineVersion=3.13 # 3.13 to maximize compatibility
             __AlpinePackages+=" llvm10-libs"
-
-            if [[ "$__AlpineArch" == "armv7" ]]; then
-                __AlpinePackages="${__AlpinePackages//numactl-dev/}"
-            fi
         fi
 esac
 
@@ -442,11 +439,6 @@ fi
 
 if [[ "$__BuildArch" == "armel" ]]; then
     __LLDB_Package="lldb-3.5-dev"
-fi
-
-if [[ "$__CodeName" == "xenial" && "$__UbuntuArch" == "armhf" ]]; then
-    # libnuma-dev is not available on armhf for xenial
-    __UbuntuPackages="${__UbuntuPackages//libnuma-dev/}"
 fi
 
 __UbuntuPackages+=" ${__LLDB_Package:-}"
