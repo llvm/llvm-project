@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -104,13 +105,64 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   return Or;
 }
 
+template <class T> class HandlerBuilder {
+  BasicBlock *ReuseTrapBB = nullptr;
+
+public:
+  BasicBlock *build(BuilderTy &IRB, BasicBlock *Cont) {
+    Function *Fn = IRB.GetInsertBlock()->getParent();
+    auto DebugLoc = IRB.getCurrentDebugLocation();
+    IRBuilder<>::InsertPointGuard Guard(IRB);
+
+    // Create a trapping basic block on demand using a callback. Depending on
+    // flags, this will either create a single block for the entire function or
+    // will create a fresh block every time it is called.
+    if (ReuseTrapBB)
+      return ReuseTrapBB;
+
+    BasicBlock *TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
+    IRB.SetInsertPoint(TrapBB);
+
+    CallInst *TrapCall = T::CallHandler(IRB);
+
+    TrapCall->setDoesNotThrow();
+    TrapCall->setDebugLoc(DebugLoc);
+    if (T::MayReturn) {
+      IRB.CreateBr(Cont);
+    } else {
+      TrapCall->setDoesNotReturn();
+      IRB.CreateUnreachable();
+    }
+
+    if (T::CanReuseTrapBB && SingleTrapBB && !DebugTrapBB)
+      ReuseTrapBB = TrapBB;
+
+    return TrapBB;
+  }
+};
+
+class TrapHandlerBuilder : public HandlerBuilder<TrapHandlerBuilder> {
+public:
+  static constexpr bool MayReturn = false;
+  static constexpr bool CanReuseTrapBB = true;
+
+  static CallInst *CallHandler(BuilderTy &IRB) {
+    if (!DebugTrapBB)
+      return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
+    return IRB.CreateIntrinsic(
+        Intrinsic::ubsantrap, {},
+        ConstantInt::get(IRB.getInt8Ty(),
+                         IRB.GetInsertBlock()->getParent()->size()));
+  }
+};
+
 /// Adds run-time bounds checks to memory accessing instructions.
 ///
 /// \p Or is the condition that should guard the trap.
 ///
 /// \p GetTrapBB is a callable that returns the trap BB to use on failure.
-template <typename GetTrapBBT>
-static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
+template <typename HandlerBuilderTy>
+static void insertBoundsCheck(Value *Or, BuilderTy &IRB, HandlerBuilderTy &HB) {
   // check if the comparison is always false
   ConstantInt *C = dyn_cast_or_null<ConstantInt>(Or);
   if (C) {
@@ -126,20 +178,37 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   BasicBlock *Cont = OldBB->splitBasicBlock(SplitI);
   OldBB->getTerminator()->eraseFromParent();
 
+  BasicBlock *TrapBB = HB.build(IRB, Cont);
+
   if (C) {
     // If we have a constant zero, unconditionally branch.
     // FIXME: We should really handle this differently to bypass the splitting
     // the block.
-    BranchInst::Create(GetTrapBB(IRB), OldBB);
+    BranchInst::Create(TrapBB, OldBB);
     return;
   }
 
   // Create the conditional branch.
-  BranchInst::Create(GetTrapBB(IRB), Cont, Or, OldBB);
+  BranchInst::Create(TrapBB, Cont, Or, OldBB);
+}
+
+template <typename HandlerBuilderTy>
+bool insertBoundsChecks(
+    const ArrayRef<std::pair<Instruction *, Value *>> &TrapInfo) {
+  HandlerBuilderTy HB;
+  for (const auto &Entry : TrapInfo) {
+    Instruction *Inst = Entry.first;
+    const DataLayout &DL = Inst->getParent()->getDataLayout();
+    BuilderTy IRB(Inst->getParent(), BasicBlock::iterator(Inst),
+                  TargetFolder(DL));
+    insertBoundsCheck(Entry.second, IRB, HB);
+  }
+  return !TrapInfo.empty();
 }
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
-                              ScalarEvolution &SE) {
+                              ScalarEvolution &SE,
+                              BoundsCheckingPass::ReportingMode Mode) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -177,54 +246,21 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
       TrapInfo.push_back(std::make_pair(&I, Or));
   }
 
-  // Create a trapping basic block on demand using a callback. Depending on
-  // flags, this will either create a single block for the entire function or
-  // will create a fresh block every time it is called.
-  BasicBlock *TrapBB = nullptr;
-  auto GetTrapBB = [&TrapBB](BuilderTy &IRB) {
-    Function *Fn = IRB.GetInsertBlock()->getParent();
-    auto DebugLoc = IRB.getCurrentDebugLocation();
-    IRBuilder<>::InsertPointGuard Guard(IRB);
-
-    if (TrapBB && SingleTrapBB && !DebugTrapBB)
-      return TrapBB;
-
-    TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
-    IRB.SetInsertPoint(TrapBB);
-
-    Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
-
-    CallInst *TrapCall;
-    if (DebugTrapBB) {
-      TrapCall = IRB.CreateIntrinsic(
-          IntrID, {}, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
-    } else {
-      TrapCall = IRB.CreateIntrinsic(IntrID, {}, {});
-    }
-
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
-    TrapCall->setDebugLoc(DebugLoc);
-    IRB.CreateUnreachable();
-
-    return TrapBB;
-  };
-
-  // Add the checks.
-  for (const auto &Entry : TrapInfo) {
-    Instruction *Inst = Entry.first;
-    BuilderTy IRB(Inst->getParent(), BasicBlock::iterator(Inst), TargetFolder(DL));
-    insertBoundsCheck(Entry.second, IRB, GetTrapBB);
+  switch (Mode) {
+  case BoundsCheckingPass::ReportingMode::Trap:
+  case BoundsCheckingPass::ReportingMode::MinRuntimeAbort:
+  case BoundsCheckingPass::ReportingMode::MinRuntime:
+  case BoundsCheckingPass::ReportingMode::FullRuntime:
+  case BoundsCheckingPass::ReportingMode::FullRuntimeAbort:
+    return insertBoundsChecks<TrapHandlerBuilder>(TrapInfo);
   }
-
-  return !TrapInfo.empty();
 }
 
 PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE))
+  if (!addBoundsChecking(F, TLI, SE, Mode))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
