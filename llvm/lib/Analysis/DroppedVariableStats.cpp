@@ -11,7 +11,7 @@
 ///
 ///===---------------------------------------------------------------------===//
 
-#include "llvm/Passes/DroppedVariableStats.h"
+#include "llvm/Analysis/DroppedVariableStats.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
