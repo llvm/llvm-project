@@ -315,7 +315,7 @@ std::string TypeSystemSwiftTypeRef::AdjustTypeForOriginallyDefinedInModule(
                : node;
   });
 
-  auto mangling = mangleNode(swift_demangle::mangleType(dem, transformed));
+  auto mangling = mangleNode(swift_demangle::MangleType(dem, transformed));
   assert(mangling.isSuccess());
   if (!mangling.isSuccess()) {
     LLDB_LOG(GetLog(LLDBLog::Types),

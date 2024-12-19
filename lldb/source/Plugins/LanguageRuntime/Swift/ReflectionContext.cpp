@@ -12,7 +12,7 @@
 
 #include "swift/RemoteInspection/ReflectionContext.h"
 #include "ReflectionContextInterface.h"
-#include "SwiftLanguageRuntimeImpl.h"
+#include "SwiftLanguageRuntime.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "swift/Demangling/Demangle.h"
