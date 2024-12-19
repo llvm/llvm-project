@@ -184,6 +184,15 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
     InputSection *isec = inputs[i];
     isecEnd = alignToPowerOf2(isecEnd, isec->align) + isec->getSize();
   }
+
+  // Tally up any thunks that have already been placed that have address higher
+  // than the equivalent callIdx. We first find the index of the first thunk
+  // that is beyond the current inputs[callIdx].
+  auto itPostcallIdxThunks = std::partition_point(
+      thunks.begin(), thunks.end(),
+      [isecVA](const ConcatInputSection *t) { return t->getVA() <= isecVA; });
+  uint32_t existingForwardThunks = thunks.end() - itPostcallIdxThunks;
+
   // Estimate the address after which call sites can safely call stubs
   // directly rather than through intermediary thunks.
   uint64_t forwardBranchRange = target->forwardBranchRange;
@@ -191,8 +200,21 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
          "should not run thunk insertion if all code fits in jump range");
   assert(isecEnd - isecVA <= forwardBranchRange &&
          "should only finalize sections in jump range");
-  uint64_t stubsInRangeVA = isecEnd + maxPotentialThunks * target->thunkSize +
-                            in.stubs->getSize() - forwardBranchRange;
+
+  // Estimate the maximum size of the code, right before the stubs section
+  uint32_t maxTextSize = 0;
+  // Add the size of all the inputs, including the unprocessed ones.
+  maxTextSize += isecEnd;
+
+  // Add the size of the thunks that may be created in the future
+  maxTextSize += maxPotentialThunks * target->thunkSize;
+
+  // Add the size of the thunks that have already been created that are ahead
+  maxTextSize += existingForwardThunks * target->thunkSize;
+
+  uint64_t stubsInRangeVA =
+      maxTextSize + in.stubs->getSize() - forwardBranchRange;
+
   log("thunks = " + std::to_string(thunkMap.size()) +
       ", potential = " + std::to_string(maxPotentialThunks) +
       ", stubs = " + std::to_string(in.stubs->getSize()) + ", isecVA = " +
