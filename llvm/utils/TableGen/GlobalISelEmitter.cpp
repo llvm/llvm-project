@@ -324,8 +324,6 @@ public:
   void emitTestSimplePredicate(raw_ostream &OS) override;
   void emitRunCustomAction(raw_ostream &OS) override;
 
-  void postProcessRule(RuleMatcher &M);
-
   const CodeGenTarget &getTarget() const override { return Target; }
   StringRef getClassName() const override { return ClassName; }
 
@@ -1350,13 +1348,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
 
   // Handle the case where the MVT/register class is omitted in the dest pattern
   // but MVT exists in the source pattern.
-  if (isa<UnsetInit>(DstChild.getLeafValue())) {
-    for (const TreePatternNode &SrcChild : Src.children()) {
-      if (SrcChild.getName() == DstChild.getName()) {
-        DstMIBuilder.addRenderer<CopyRenderer>(SrcChild.getName());
-        return InsertPt;
-      }
-    }
+  if (isa<UnsetInit>(DstChild.getLeafValue()) &&
+      Rule.hasOperand(DstChild.getName())) {
+    DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+    return InsertPt;
   }
   return failedImport("Dst pattern child is an unsupported kind");
 }
@@ -1413,12 +1408,10 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true);
 
   // Handle additional (ignored) results.
-  if (DstMIBuilder.getCGI()->Operands.NumDefs > 1) {
-    InsertPtOrError = importExplicitDefRenderers(
-        std::prev(*InsertPtOrError), M, DstMIBuilder, Src, Dst, /*Start=*/1);
-    if (auto Error = InsertPtOrError.takeError())
-      return std::move(Error);
-  }
+  InsertPtOrError = importExplicitDefRenderers(
+      std::prev(*InsertPtOrError), M, DstMIBuilder, Src, Dst, /*Start=*/1);
+  if (auto Error = InsertPtOrError.takeError())
+    return std::move(Error);
 
   InsertPtOrError = importExplicitUseRenderers(InsertPtOrError.get(), M,
                                                DstMIBuilder, Dst, Src);
@@ -1457,25 +1450,26 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
     const TreePatternNode &Src, const TreePatternNode &Dst, unsigned Start) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
-  const unsigned SrcNumDefs = Src.getExtTypes().size();
-  const unsigned DstNumDefs = DstI->Operands.NumDefs;
-  if (DstNumDefs == 0)
-    return InsertPt;
-
-  for (unsigned I = Start; I < SrcNumDefs; ++I) {
-    std::string OpName = getMangledRootDefName(DstI->Operands[I].Name);
-    // CopyRenderer saves a StringRef, so cannot pass OpName itself -
-    // let's use a string with an appropriate lifetime.
-    StringRef PermanentRef = M.getOperandMatcher(OpName).getSymbolicName();
-    DstMIBuilder.addRenderer<CopyRenderer>(PermanentRef);
-  }
 
   // Some instructions have multiple defs, but are missing a type entry
   // (e.g. s_cc_out operands).
-  if (Dst.getExtTypes().size() < DstNumDefs)
+  if (Dst.getExtTypes().size() < DstI->Operands.NumDefs)
     return failedImport("unhandled discarded def");
 
-  for (unsigned I = SrcNumDefs; I < DstNumDefs; ++I) {
+  // Process explicit defs. The caller may have already handled the first def.
+  for (unsigned I = Start, E = DstI->Operands.NumDefs; I != E; ++I) {
+    std::string OpName = getMangledRootDefName(DstI->Operands[I].Name);
+
+    // If the def is used in the source DAG, forward it.
+    if (M.hasOperand(OpName)) {
+      // CopyRenderer saves a StringRef, so cannot pass OpName itself -
+      // let's use a string with an appropriate lifetime.
+      StringRef PermanentRef = M.getOperandMatcher(OpName).getSymbolicName();
+      DstMIBuilder.addRenderer<CopyRenderer>(PermanentRef);
+      continue;
+    }
+
+    // The def is discarded, create a dead virtual register for it.
     const TypeSetByHwMode &ExtTy = Dst.getExtType(I);
     if (!ExtTy.isMachineValueType())
       return failedImport("unsupported typeset");
@@ -1487,7 +1481,15 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     unsigned TempRegID = M.allocateTempRegID();
     InsertPt =
         M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
-    DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true, nullptr, true);
+    DstMIBuilder.addRenderer<TempRegRenderer>(
+        TempRegID, /*IsDef=*/true, /*SubReg=*/nullptr, /*IsDead=*/true);
+  }
+
+  // Implicit defs are not currently supported, mark all of them as dead.
+  for (const Record *Reg : DstI->ImplicitDefs) {
+    std::string OpName = getMangledRootDefName(Reg->getName());
+    assert(!M.hasOperand(OpName) && "The pattern should've been rejected");
+    DstMIBuilder.setDeadImplicitDef(Reg);
   }
 
   return InsertPt;
@@ -2302,31 +2304,6 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
      << "}\n";
 }
 
-void GlobalISelEmitter::postProcessRule(RuleMatcher &M) {
-  SmallPtrSet<const Record *, 16> UsedRegs;
-
-  // TODO: deal with subregs?
-  for (auto &A : M.actions()) {
-    auto *MI = dyn_cast<BuildMIAction>(A.get());
-    if (!MI)
-      continue;
-
-    for (auto *Use : MI->getCGI()->ImplicitUses)
-      UsedRegs.insert(Use);
-  }
-
-  for (auto &A : M.actions()) {
-    auto *MI = dyn_cast<BuildMIAction>(A.get());
-    if (!MI)
-      continue;
-
-    for (auto *Def : MI->getCGI()->ImplicitDefs) {
-      if (!UsedRegs.contains(Def))
-        MI->setDeadImplicitDef(Def);
-    }
-  }
-}
-
 void GlobalISelEmitter::run(raw_ostream &OS) {
   if (!UseCoverageFile.empty()) {
     RuleCoverage = CodeGenCoverage();
@@ -2386,7 +2363,6 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
                      "Pattern is not covered by a test");
     }
     Rules.push_back(std::move(MatcherOrErr.get()));
-    postProcessRule(Rules.back());
   }
 
   // Comparison function to order records by name.

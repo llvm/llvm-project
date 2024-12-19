@@ -3369,6 +3369,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     if (hasSingleAllocType(Node->AllocTypes) || Node->CallerEdges.size() <= 1)
       break;
 
+    // If the caller was not successfully matched to a call in the IR/summary,
+    // there is no point in trying to clone for it as we can't update that call.
+    if (!CallerEdge->Caller->hasCall()) {
+      ++EI;
+      continue;
+    }
+
     // Only need to process the ids along this edge pertaining to the given
     // allocation.
     auto CallerEdgeContextsForAlloc =

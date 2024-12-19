@@ -2614,21 +2614,21 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
 // Is this ADD instruction only used as the base pointer of scalar loads and
 // stores?
 static bool isWorthFoldingAdd(SDValue Add) {
-  for (auto *Use : Add->uses()) {
-    if (Use->getOpcode() != ISD::LOAD && Use->getOpcode() != ISD::STORE &&
-        Use->getOpcode() != ISD::ATOMIC_LOAD &&
-        Use->getOpcode() != ISD::ATOMIC_STORE)
+  for (auto *User : Add->users()) {
+    if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
+        User->getOpcode() != ISD::ATOMIC_LOAD &&
+        User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
-    EVT VT = cast<MemSDNode>(Use)->getMemoryVT();
+    EVT VT = cast<MemSDNode>(User)->getMemoryVT();
     if (!VT.isScalarInteger() && VT != MVT::f16 && VT != MVT::f32 &&
         VT != MVT::f64)
       return false;
     // Don't allow stores of the value. It must be used as the address.
-    if (Use->getOpcode() == ISD::STORE &&
-        cast<StoreSDNode>(Use)->getValue() == Add)
+    if (User->getOpcode() == ISD::STORE &&
+        cast<StoreSDNode>(User)->getValue() == Add)
       return false;
-    if (Use->getOpcode() == ISD::ATOMIC_STORE &&
-        cast<AtomicSDNode>(Use)->getVal() == Add)
+    if (User->getOpcode() == ISD::ATOMIC_STORE &&
+        cast<AtomicSDNode>(User)->getVal() == Add)
       return false;
   }
 
@@ -3293,8 +3293,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
   if (Depth == 0 && !Node->getValueType(0).isScalarInteger())
     return false;
 
-  for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
+  for (SDUse &Use : Node->uses()) {
+    SDNode *User = Use.getUser();
     // Users of this node should have already been instruction selected
     if (!User->isMachineOpcode())
       return false;
@@ -3302,7 +3302,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     // TODO: Add more opcodes?
     switch (User->getMachineOpcode()) {
     default:
-      if (vectorPseudoHasAllNBitUsers(User, UI.getOperandNo(), Bits, TII))
+      if (vectorPseudoHasAllNBitUsers(User, Use.getOperandNo(), Bits, TII))
         break;
       return false;
     case RISCV::ADDW:
@@ -3353,7 +3353,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BCLR:
     case RISCV::BINV:
       // Shift amount operands only use log2(Xlen) bits.
-      if (UI.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
+      if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
       return false;
     case RISCV::SLLI:
@@ -3417,19 +3417,19 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SH3ADD_UW:
       // The first operand to add.uw/shXadd.uw is implicitly zero extended from
       // 32 bits.
-      if (UI.getOperandNo() == 0 && Bits >=  32)
+      if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
     case RISCV::SB:
-      if (UI.getOperandNo() == 0 && Bits >= 8)
+      if (Use.getOperandNo() == 0 && Bits >= 8)
         break;
       return false;
     case RISCV::SH:
-      if (UI.getOperandNo() == 0 && Bits >= 16)
+      if (Use.getOperandNo() == 0 && Bits >= 16)
         break;
       return false;
     case RISCV::SW:
-      if (UI.getOperandNo() == 0 && Bits >= 32)
+      if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
     }

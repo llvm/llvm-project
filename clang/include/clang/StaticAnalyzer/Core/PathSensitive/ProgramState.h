@@ -70,7 +70,6 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
-  typedef llvm::ImmutableSet<llvm::APSInt*>                IntSetTy;
   typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
 
 private:

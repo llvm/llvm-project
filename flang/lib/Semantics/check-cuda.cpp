@@ -114,6 +114,7 @@ struct FindHostArray
           (!details->cudaDataAttr() ||
               (details->cudaDataAttr() &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Constant &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
