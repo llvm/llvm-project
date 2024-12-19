@@ -295,8 +295,10 @@ andrei.safronov@espressif.com (email), [andreisfr](https://github.com/andreisfr)
 
 #### ADT, Support
 
-Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+David Blaikie \
+dblaikie@gmail.com (email), [dwblaikie](https://github.com/dwblaike) (GitHub) \
+Jakub Kuderski \
+jakub@nod-labs.com (email), [kuhar](https://github.com/kuhar) (GitHub)
 
 #### Bitcode
 
@@ -453,6 +455,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
+Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
