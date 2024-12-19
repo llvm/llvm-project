@@ -240,7 +240,8 @@ public:
   }
 
 private:
-  /// Check if the ConstantExpr \p CE requires the queue pointer.
+  /// Check if the ConstantExpr \p CE uses an addrspacecast from private or
+  /// local to flat. These casts may require the queue pointer.
   static uint8_t visitConstExpr(const ConstantExpr *CE) {
     uint8_t Status = NONE;
 
