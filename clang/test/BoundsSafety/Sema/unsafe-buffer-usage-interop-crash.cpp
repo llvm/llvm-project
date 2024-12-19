@@ -11,12 +11,15 @@ class MyClass {
 namespace value_dependent_assertion_violation {
   // Running attribute-only mode on the C++ code below crashes
   // previously.
-  void g(unsigned);
+  void g(int * __counted_by(n) * p, size_t n);
 
   template<typename T>
   struct S {
     void f(T p) {
-      g(sizeof(p));
+      g(nullptr, sizeof(p));
     }
   };
+
+  // expected-error@-4{{incompatible dynamic count pointer argument to parameter of type 'int * __counted_by(n)*' (aka 'int **')}}
+  template struct S<int>; // expected-note{{in instantiation of member function 'value_dependent_assertion_violation::S<int>::f' requested here}}
 }

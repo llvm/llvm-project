@@ -22,6 +22,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
@@ -8332,7 +8333,7 @@ static bool checkDynamicCountPointerAsParameter(Sema &S, FunctionDecl *FDecl,
     if (!ArgInfo.isCountInParamOrCountPointer() && !ArgInfo.isCountInRet() &&
         !ParmInfo.isCountInParamOrCountPointer() && !ParmInfo.isCountInRet())
       continue;
-    assert(!ActualArgExp->isValueDependent());
+
     // Disable these checks for attribute-only mode because we don't want
     // non-type-incompatibility errors in that mode.
     if (!S.getLangOpts().isBoundsSafetyAttributeOnlyMode() &&
@@ -8903,7 +8904,10 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   if (getLangOpts().BoundsSafetyAttributes && FDecl) {
     // FIXME: We need to support function pointers and blocks that don't have
     // function decl.
-    if (!checkDynamicCountPointerAsParameter(*this, FDecl, TheCall))
+
+    // For C++, we don't want to check for any dependent constructs.
+    if (TheCall->getDependence() == ExprDependence::None &&
+        !checkDynamicCountPointerAsParameter(*this, FDecl, TheCall))
       return ExprError();
     if (getLangOpts().BoundsSafety)
       if (!checkDynamicRangePointerAsParameter(*this, FDecl, TheCall))
