@@ -117,13 +117,12 @@ class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 // NVVM intrinsic operations
 //===----------------------------------------------------------------------===//
 
-class NVVM_IntrOp<string mnem, list<Trait> traits,
-                  int numResults>
+class NVVM_IntrOp<string mnem, list<Trait> traits = [],
+                  int numResults = 0>
   : LLVM_IntrOpBase<NVVM_Dialect, mnem, "nvvm_" # !subst(".", "_", mnem),
                     /*list<int> overloadedResults=*/[],
                     /*list<int> overloadedOperands=*/[],
                     traits, numResults>;
-
 
 //===----------------------------------------------------------------------===//
 // NVVM special register op definitions
@@ -431,10 +430,7 @@ def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
-  }];
+def NVVM_Barrier0Op : NVVM_IntrOp<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
@@ -2319,6 +2315,20 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
         llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
   }];
 }
+
+def NVVM_Exit : NVVM_Op<"exit"> {
+  let summary = "Exit Op";
+  let description = [{
+    Ends execution of a thread.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#control-flow-instructions-exit)
+  }];
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_exit);
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 
 //===----------------------------------------------------------------------===//
 // NVVM breakpoint Op

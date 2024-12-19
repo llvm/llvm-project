@@ -752,6 +752,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
     Builder.defineMacro("__cpp_auto_cast", "202110L");
+    Builder.defineMacro("__cpp_explicit_this_parameter", "202110L");
   }
 
   // We provide those C++23 features as extensions in earlier language modes, so

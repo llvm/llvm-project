@@ -455,14 +455,20 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // RHS. For example,
   // (icmp ne (A & 255), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   // (icmp ne (A & 15), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
-  if (IsSuperSetOrEqual(BCst, DCst))
+  if (IsSuperSetOrEqual(BCst, DCst)) {
+    // We can't guarantee that samesign hold after this fold.
+    RHS->setSameSign(false);
     return RHS;
+  }
   // Otherwise, B is a subset of D. If B and E have a common bit set,
   // ie. (B & E) != 0, then LHS is subsumed by RHS. For example.
   // (icmp ne (A & 12), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   assert(IsSubSetOrEqual(BCst, DCst) && "Precondition due to above code");
-  if ((*BCst & ECst) != 0)
+  if ((*BCst & ECst) != 0) {
+    // We can't guarantee that samesign hold after this fold.
+    RHS->setSameSign(false);
     return RHS;
+  }
   // Otherwise, LHS and RHS contradict and the whole expression becomes false
   // (or true if negated.) For example,
   // (icmp ne (A & 7), 0) & (icmp eq (A & 15), 8) -> false.

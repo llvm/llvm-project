@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=dxil-op-lower,dxil-translate-metadata %s | FileCheck %s
+; RUN: opt -S -passes=dxil-translate-metadata,dxil-op-lower %s | FileCheck %s
 ; RUN: opt -S -passes=dxil-pretty-printer %s 2>&1 >/dev/null | FileCheck --check-prefix=CHECK-PRETTY %s
 
 ; CHECK-PRETTY:       Type  Format         Dim      ID      HLSL Bind     Count

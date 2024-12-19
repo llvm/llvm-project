@@ -229,3 +229,26 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
 
   return PreservedAnalyses::none();
 }
+
+void BoundsCheckingPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<BoundsCheckingPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  switch (Mode) {
+  case ReportingMode::Trap:
+    OS << "<trap>";
+    break;
+  case ReportingMode::MinRuntime:
+    OS << "<min-rt>";
+    break;
+  case ReportingMode::MinRuntimeAbort:
+    OS << "<min-rt-abort>";
+    break;
+  case ReportingMode::FullRuntime:
+    OS << "<rt>";
+    break;
+  case ReportingMode::FullRuntimeAbort:
+    OS << "<rt-abort>";
+    break;
+  }
+}

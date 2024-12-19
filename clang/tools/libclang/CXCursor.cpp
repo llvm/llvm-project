@@ -900,6 +900,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OpenACCHostDataConstructClass:
     K = CXCursor_OpenACCHostDataConstruct;
     break;
+  case Stmt::OpenACCWaitConstructClass:
+    K = CXCursor_OpenACCWaitConstruct;
+    break;
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPTargetParallelGenericLoopDirective;
     break;

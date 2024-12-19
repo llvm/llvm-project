@@ -292,6 +292,66 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
   llvm_unreachable("subclasses should implement computeCost");
 }
 
+InstructionCost
+VPPartialReductionRecipe::computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const {
+  std::optional<unsigned> Opcode = std::nullopt;
+  VPRecipeBase *BinOpR = getOperand(0)->getDefiningRecipe();
+  if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
+    Opcode = std::make_optional(WidenR->getOpcode());
+
+  VPRecipeBase *ExtAR = BinOpR->getOperand(0)->getDefiningRecipe();
+  VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
+
+  auto GetExtendKind = [](VPRecipeBase *R) {
+    auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
+    if (!WidenCastR)
+      return TargetTransformInfo::PR_None;
+    if (WidenCastR->getOpcode() == Instruction::CastOps::ZExt)
+      return TargetTransformInfo::PR_ZeroExtend;
+    if (WidenCastR->getOpcode() == Instruction::CastOps::SExt)
+      return TargetTransformInfo::PR_SignExtend;
+    return TargetTransformInfo::PR_None;
+  };
+
+  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
+  auto *ExtTy = Ctx.Types.inferScalarType(ExtAR->getOperand(0));
+
+  return Ctx.TTI.getPartialReductionCost(getOpcode(), ExtTy, PhiType, VF,
+                                         GetExtendKind(ExtAR),
+                                         GetExtendKind(ExtBR), Opcode);
+}
+
+void VPPartialReductionRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+  auto &Builder = State.Builder;
+
+  assert(getOpcode() == Instruction::Add &&
+         "Unhandled partial reduction opcode");
+
+  Value *BinOpVal = State.get(getOperand(0));
+  Value *PhiVal = State.get(getOperand(1));
+  assert(PhiVal && BinOpVal && "Phi and Mul must be set");
+
+  Type *RetTy = PhiVal->getType();
+
+  CallInst *V = Builder.CreateIntrinsic(
+      RetTy, Intrinsic::experimental_vector_partial_reduce_add,
+      {PhiVal, BinOpVal}, nullptr, "partial.reduce");
+
+  State.set(this, V);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPPartialReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
+  O << Indent << "PARTIAL-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = " << Instruction::getOpcodeName(getOpcode()) << " ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -621,8 +681,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
            "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
     Value *Addend = State.get(getOperand(1), VPLane(0));
-    return isInBounds() ? Builder.CreateInBoundsPtrAdd(Ptr, Addend, Name)
-                        : Builder.CreatePtrAdd(Ptr, Addend, Name);
+    return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::ResumePhi: {
     Value *IncomingFromVPlanPred =
@@ -635,10 +694,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    // TODO: Predecessors are temporarily reversed to reduce test changes.
-    // Remove it and update remaining tests after functional change landed.
-    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
-    for (auto *OtherPred : reverse(Predecessors)) {
+    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
       if (OtherPred == VPlanPred)
         continue;
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
@@ -1276,8 +1332,12 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
     getFastMathFlags().print(O);
     break;
   case OperationType::GEPOp:
-    if (GEPFlags.IsInBounds)
+    if (GEPFlags.isInBounds())
       O << " inbounds";
+    else if (GEPFlags.hasNoUnsignedSignedWrap())
+      O << " nusw";
+    if (GEPFlags.hasNoUnsignedWrap())
+      O << " nuw";
     break;
   case OperationType::NonNegOp:
     if (NonNegFlags.NonNeg)
@@ -1906,9 +1966,9 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     for (unsigned I = 0, E = getNumOperands(); I != E; I++)
       Ops.push_back(State.get(getOperand(I), VPLane(0)));
 
-    auto *NewGEP =
-        State.Builder.CreateGEP(GEP->getSourceElementType(), Ops[0],
-                                ArrayRef(Ops).drop_front(), "", isInBounds());
+    auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ops[0],
+                                           ArrayRef(Ops).drop_front(), "",
+                                           getGEPNoWrapFlags());
     Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
     State.set(this, Splat);
     State.addMetadata(Splat, GEP);
@@ -1934,7 +1994,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
     // but it should be a vector, otherwise.
     auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ptr,
-                                           Indices, "", isInBounds());
+                                           Indices, "", getGEPNoWrapFlags());
     assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
            "NewGEP is not a pointer vector");
     State.set(this, NewGEP);
@@ -1985,9 +2045,10 @@ void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
   // LastLane = 1 - RunTimeVF
   Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  bool InBounds = isInBounds();
-  Value *ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", InBounds);
-  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "", InBounds);
+  Value *ResultPtr =
+      Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
+  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
+                                getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -1997,9 +2058,9 @@ void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
                                          VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = reverse-vector-pointer ";
-  if (isInBounds())
-    O << "inbounds ";
+  O << " = reverse-vector-pointer";
+  printFlags(O);
+  O << " ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -2011,10 +2072,10 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
                                 CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  bool InBounds = isInBounds();
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  Value *ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
+  Value *ResultPtr =
+      Builder.CreateGEP(IndexedTy, Ptr, Increment, "", getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -3366,6 +3427,8 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
+  auto VF = State.VF.divideCoefficientBy(VFScaleFactor);
+
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
   VPValue *StartVPV = getStartValue();
@@ -3375,9 +3438,9 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  bool ScalarPHI = State.VF.isScalar() || IsInLoop;
-  Type *VecTy = ScalarPHI ? StartV->getType()
-                          : VectorType::get(StartV->getType(), State.VF);
+  bool ScalarPHI = VF.isScalar() || IsInLoop;
+  Type *VecTy =
+      ScalarPHI ? StartV->getType() : VectorType::get(StartV->getType(), VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
   assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
@@ -3404,13 +3467,15 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     }
   } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
     // [I|F]FindLastIV will use a sentinel value to initialize the reduction
-    // phi. In the exit block, ComputeReductionResult will generate checks to
-    // verify if the reduction result is the sentinel value. If the result is
-    // the sentinel value, it will be corrected back to the start value.
+    // phi or the resume value from the main vector loop when vectorizing the
+    // epilogue loop. In the exit block, ComputeReductionResult will generate
+    // checks to verify if the reduction result is the sentinel value. If the
+    // result is the sentinel value, it will be corrected back to the start
+    // value.
     // TODO: The sentinel value is not always necessary. When the start value is
     // a constant, and smaller than the start value of the induction variable,
     // the start value can be directly used to initialize the reduction phi.
-    StartV = Iden = RdxDesc.getSentinelValue();
+    Iden = StartV;
     if (!ScalarPHI) {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());
@@ -3425,13 +3490,13 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
         // Create start and identity vector values for the reduction in the
         // preheader.
         // TODO: Introduce recipes in VPlan preheader to create initial values.
-        Iden = Builder.CreateVectorSplat(State.VF, Iden);
+        Iden = Builder.CreateVectorSplat(VF, Iden);
         IRBuilderBase::InsertPointGuard IPBuilder(Builder);
         Builder.SetInsertPoint(VectorPH->getTerminator());
         Constant *Zero = Builder.getInt32(0);
         StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
       } else {
-        Iden = Builder.CreateVectorSplat(State.VF, Iden);
+        Iden = Builder.CreateVectorSplat(VF, Iden);
       }
     }
   }
@@ -3449,6 +3514,8 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
+  if (VFScaleFactor != 1)
+    O << " (VF scaled by 1/" << VFScaleFactor << ")";
 }
 #endif
 
