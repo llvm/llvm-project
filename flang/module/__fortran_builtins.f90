@@ -22,6 +22,9 @@ module __fortran_builtins
   intrinsic :: __builtin_c_loc
   public :: __builtin_c_loc
 
+  intrinsic :: __builtin_c_devloc
+  public :: __builtin_c_devloc
+
   intrinsic :: __builtin_c_f_pointer
   public :: __builtin_c_f_pointer
 
@@ -144,6 +147,7 @@ module __fortran_builtins
 
   type :: __force_derived_type_instantiations
     type(__builtin_c_ptr) :: c_ptr
+    type(__builtin_c_devptr) :: c_devptr
     type(__builtin_c_funptr) :: c_funptr
     type(__builtin_event_type) :: event_type
     type(__builtin_lock_type) :: lock_type
