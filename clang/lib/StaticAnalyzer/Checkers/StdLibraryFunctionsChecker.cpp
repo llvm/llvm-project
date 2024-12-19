@@ -1643,7 +1643,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   public:
     GetMaxValue(BasicValueFactory &BVF) : BVF(BVF) {}
     std::optional<RangeInt> operator()(QualType Ty) {
-      return BVF.getMaxValue(Ty).getLimitedValue();
+      return BVF.getMaxValue(Ty)->getLimitedValue();
     }
     std::optional<RangeInt> operator()(std::optional<QualType> Ty) {
       if (Ty) {
@@ -1687,11 +1687,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType SizePtrTy = getPointerTy(SizeTy);
   const QualType SizePtrRestrictTy = getRestrictTy(SizePtrTy);
 
-  const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
+  const RangeInt IntMax = BVF.getMaxValue(IntTy)->getLimitedValue();
   const RangeInt UnsignedIntMax =
-      BVF.getMaxValue(UnsignedIntTy).getLimitedValue();
-  const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
-  const RangeInt SizeMax = BVF.getMaxValue(SizeTy).getLimitedValue();
+      BVF.getMaxValue(UnsignedIntTy)->getLimitedValue();
+  const RangeInt LongMax = BVF.getMaxValue(LongTy)->getLimitedValue();
+  const RangeInt SizeMax = BVF.getMaxValue(SizeTy)->getLimitedValue();
 
   // Set UCharRangeMax to min of int or uchar maximum value.
   // The C standard states that the arguments of functions like isalpha must
@@ -1700,7 +1700,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // to be true for commonly used and well tested instruction set
   // architectures, but not for others.
   const RangeInt UCharRangeMax =
-      std::min(BVF.getMaxValue(ACtx.UnsignedCharTy).getLimitedValue(), IntMax);
+      std::min(BVF.getMaxValue(ACtx.UnsignedCharTy)->getLimitedValue(), IntMax);
 
   // Get platform dependent values of some macros.
   // Try our best to parse this from the Preprocessor, otherwise fallback to a
@@ -3704,7 +3704,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
   // Functions for testing.
   if (AddTestFunctions) {
-    const RangeInt IntMin = BVF.getMinValue(IntTy).getLimitedValue();
+    const RangeInt IntMin = BVF.getMinValue(IntTy)->getLimitedValue();
 
     addToFunctionSummaryMap(
         "__not_null", Signature(ArgTypes{IntPtrTy}, RetType{IntTy}),
