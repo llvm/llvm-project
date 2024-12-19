@@ -297,8 +297,8 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
                             bool needsMemMove) {
   tysan_type_descriptor **destShadowDataPtr = shadow_for(dest);
 
-  if(!src){
-    internal_memset((char*) destShadowDataPtr, 0, size << PtrShift());
+  if (!src) {
+    internal_memset((char *)destShadowDataPtr, 0, size << PtrShift());
     return;
   }
 
@@ -307,9 +307,9 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
   uint64_t *srcShadow = (uint64_t *)srcShadowInt;
 
   if (needsMemMove) {
-    internal_memmove((char*) destShadowDataPtr, srcShadow, size << PtrShift());
+    internal_memmove((char *)destShadowDataPtr, srcShadow, size << PtrShift());
   } else {
-    internal_memcpy((char*) destShadowDataPtr, srcShadow, size << PtrShift());
+    internal_memcpy((char *)destShadowDataPtr, srcShadow, size << PtrShift());
   }
 }
 
