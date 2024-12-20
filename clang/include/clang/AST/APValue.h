@@ -366,18 +366,22 @@ public:
   /// \param OnePastTheEnd Whether this lvalue is one-past-the-end of the
   /// subobject it points to.
   /// \param IsNullPtr Whether this lvalue is a null pointer.
-  APValue(LValueBase B, const CharUnits &O, ArrayRef<LValuePathEntry> Path,
-          bool OnePastTheEnd, bool IsNullPtr = false)
+  APValue(LValueBase Base, const CharUnits &Offset,
+          ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
+          bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeLValue();
-    setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
+    setLValue(Base, Offset, Path, OnePastTheEnd, IsNullPtr);
   }
-
-  APValue(LValueBase B, ConstexprUnknown, const CharUnits &O,
+  /// Creates a constexpr unknown lvalue APValue.
+  /// \param Base The base of the lvalue.
+  /// \param Offset The offset of the lvalue.
+  /// \param IsNullPtr Whether this lvalue is a null pointer.
+  APValue(LValueBase Base, const CharUnits &Offset, ConstexprUnknown,
           bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(true) {
     MakeLValue();
-    setLValue(B, O, NoLValuePath{}, IsNullPtr);
+    setLValue(Base, Offset, NoLValuePath{}, IsNullPtr);
   }
 
   /// Creates a new array APValue.

@@ -1960,7 +1960,7 @@ APValue &
 CallStackFrame::createConstexprUnknownAPValues(const VarDecl *Key,
                                                APValue::LValueBase Base) {
   APValue &Result = ConstexprUnknownAPValues[MapKeyTy(Key, Base.getVersion())];
-  Result = APValue(Base, APValue::ConstexprUnknown{}, CharUnits::One());
+  Result = APValue(Base, CharUnits::One(), APValue::ConstexprUnknown{});
   Result.setConstexprUnknown();
 
   return Result;

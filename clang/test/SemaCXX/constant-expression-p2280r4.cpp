@@ -53,6 +53,26 @@ constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
 constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}}
                                                 // expected-note@-1 {{initializer of 'trident' is not a constant expression}}
 
+namespace explicitThis {
+struct C {
+  constexpr int b()  { return 0; };
+
+  constexpr int f(this C &c) {
+    return c.b();     // ok
+  }
+
+   constexpr int g() {
+    return f();       // ok
+  }
+};
+
+void g() {
+  C c;
+  constexpr int x = c.f();
+  constexpr int y = c.g();
+}
+}
+
 namespace GH64376 {
 template<int V>
 struct Test {
@@ -114,5 +134,23 @@ void g() {
   [](auto f) { constexpr int x = f(); }(f);
   [](auto &f) { constexpr int x = f(); }(f);
   (void)[&]() { constexpr int x = f(); };
+}
+}
+
+namespace GH118063 {
+template <unsigned int N>
+struct array {
+    constexpr auto size() const -> unsigned int {
+        return N;
+    }
+};
+
+constexpr auto f(array<5> const& arr) {
+    return array<arr.size()>{}.size();
+}
+
+int g() {
+    array<5> arr {};
+    static_assert(f(arr) == 5);
 }
 }
