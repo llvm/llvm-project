@@ -755,7 +755,14 @@ TYPE_PARSER(construct<OmpSeverityClause>(
 
 TYPE_PARSER(construct<OmpMessageClause>(expr))
 
-TYPE_PARSER(
+TYPE_PARSER(construct<OmpHoldsClause>(many(maybe(","_tok) >> indirect(expr))))
+TYPE_PARSER(construct<OmpAbsentClause>(many(maybe(","_tok) >>
+    construct<OmpDirectiveNameEntry>(OmpDirectiveNameParser{}))))
+TYPE_PARSER(construct<OmpContainsClause>(many(maybe(","_tok) >>
+    construct<OmpDirectiveNameEntry>(OmpDirectiveNameParser{}))))
+
+TYPE_PARSER("ABSENT" >> construct<OmpClause>(construct<OmpClause::Absent>(
+                            parenthesized(Parser<OmpAbsentClause>{}))) ||
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
     "AFFINITY" >> construct<OmpClause>(construct<OmpClause::Affinity>(
@@ -777,6 +784,8 @@ TYPE_PARSER(
                   parenthesized(Parser<OmpBindClause>{}))) ||
     "COLLAPSE" >> construct<OmpClause>(construct<OmpClause::Collapse>(
                       parenthesized(scalarIntConstantExpr))) ||
+    "CONTAINS" >> construct<OmpClause>(construct<OmpClause::Contains>(
+                      parenthesized(Parser<OmpContainsClause>{}))) ||
     "COPYIN" >> construct<OmpClause>(construct<OmpClause::Copyin>(
                     parenthesized(Parser<OmpObjectList>{}))) ||
     "COPYPRIVATE" >> construct<OmpClause>(construct<OmpClause::Copyprivate>(
@@ -821,6 +830,8 @@ TYPE_PARSER(
             parenthesized(Parser<OmpObjectList>{}))) ||
     "HINT" >> construct<OmpClause>(
                   construct<OmpClause::Hint>(parenthesized(constantExpr))) ||
+    "HOLDS" >> construct<OmpClause>(construct<OmpClause::Holds>(
+                   parenthesized(Parser<OmpHoldsClause>{}))) ||
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
@@ -851,6 +862,11 @@ TYPE_PARSER(
     "NOVARIANTS" >> construct<OmpClause>(construct<OmpClause::Novariants>(
                         parenthesized(scalarLogicalExpr))) ||
     "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
+    "NO_OPENMP"_id >> construct<OmpClause>(construct<OmpClause::NoOpenmp>()) ||
+    "NO_OPENMP_ROUTINES" >>
+        construct<OmpClause>(construct<OmpClause::NoOpenmpRoutines>()) ||
+    "NO_PARALLELISM" >>
+        construct<OmpClause>(construct<OmpClause::NoParallelism>()) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(Parser<OmpNumTasksClause>{}))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(
@@ -1300,6 +1316,24 @@ TYPE_PARSER(startOmpLine >>
                 Parser<OpenMPUtilityConstruct>{})) /
             endOmpLine))
 
+// Assume Construct
+TYPE_PARSER(sourced(construct<OpenMPAssumeConstruct>(
+                        verbatim("ASSUME"_tok), Parser<OmpClauseList>{}) /
+    endOmpLine))
+// Assumes Construct
+TYPE_PARSER(sourced(construct<OmpAssumesDirective>(
+    verbatim("ASSUMES"_tok), Parser<OmpClauseList>{})))
+
+TYPE_PARSER(sourced(construct<OmpEndAssumesDirective>(
+    verbatim(startOmpLine >> "END ASSUMES"_tok))))
+
+TYPE_PARSER(construct<OpenMPAssumesPartConstruct>(block))
+
+TYPE_PARSER(sourced(construct<OpenMPAssumesConstruct>(
+    maybe("BEGIN"_tok) >> Parser<OmpAssumesDirective>{} / endOmpLine,
+    Parser<OpenMPAssumesPartConstruct>{},
+    Parser<OmpEndAssumesDirective>{} / endOmpLine)))
+
 // Block Construct
 TYPE_PARSER(construct<OpenMPBlockConstruct>(
     Parser<OmpBeginBlockDirective>{} / endOmpLine, block,
@@ -1347,6 +1381,8 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPAssumesConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}))))
 
 // END OMP Block directives

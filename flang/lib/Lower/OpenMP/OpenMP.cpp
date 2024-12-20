@@ -3377,6 +3377,24 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
+                   const parser::OpenMPAssumeConstruct &assumeConstruct) {
+  const auto &verbatim = std::get<parser::Verbatim>(assumeConstruct.t);
+  mlir::Location clauseLocation = converter.genLocation(verbatim.source);
+  TODO(clauseLocation, "OpenMP ASSUME construct");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPAssumesConstruct &assumesConstruct) {
+  mlir::Location clauseLocation =
+      converter.genLocation(assumesConstruct.source);
+  TODO(clauseLocation, "OpenMP ASSUMES construct");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
                    const parser::OpenMPCriticalConstruct &criticalConstruct) {
   const auto &cd = std::get<parser::OmpCriticalDirective>(criticalConstruct.t);
   List<Clause> clauses =
