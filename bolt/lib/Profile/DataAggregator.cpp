@@ -49,6 +49,13 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
+cl::opt<bool> ArmSPE(
+    "spe",
+    cl::desc(
+        "Enable Arm SPE mode. Used in conjuction with no-lbr mode, ie `--spe "
+        "--nl`"),
+    cl::cat(AggregatorCategory));
+
 static cl::opt<std::string>
     ITraceAggregation("itrace",
                       cl::desc("Generate LBR info with perf itrace argument"),
@@ -171,11 +178,19 @@ void DataAggregator::start() {
 
   findPerfExecutable();
 
-  if (opts::BasicAggregation) {
-    launchPerfProcess("events without LBR",
-                      MainEventsPPI,
+  if (opts::ArmSPE) {
+    if (!opts::BasicAggregation) {
+      errs() << "PERF2BOLT-ERROR: Arm SPE mode is combined only with "
+                "BasicAggregation.\n";
+      exit(1);
+    }
+    launchPerfProcess("branch events with SPE", MainEventsPPI,
+                      "script -F pid,event,ip,addr --itrace=i1i",
+                      /*Wait = */ false);
+  } else if (opts::BasicAggregation) {
+    launchPerfProcess("events without LBR", MainEventsPPI,
                       "script -F pid,event,ip",
-                      /*Wait = */false);
+                      /*Wait = */ false);
   } else if (!opts::ITraceAggregation.empty()) {
     std::string ItracePerfScriptArgs = llvm::formatv(
         "script -F pid,brstack --itrace={0}", opts::ITraceAggregation);
@@ -459,14 +474,20 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
               "not read one from input binary\n";
   }
 
-  auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
+  const Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
+                     "Cannot print 'addr' field.");
+
+  auto ErrorCallback = [&NoData](int ReturnCode, StringRef ErrBuf) {
+    if (opts::ArmSPE && NoData.match(ErrBuf)) {
+      errs() << "PERF2BOLT-ERROR: perf data are incompatible for Arm SPE mode "
+                "consumption. ADDR attribute is unset.\n";
+      exit(1);
+    }
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
   };
 
   auto MemEventsErrorCallback = [&](int ReturnCode, StringRef ErrBuf) {
-    Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
-                 "Cannot print 'addr' field.");
     if (!NoData.match(ErrBuf))
       ErrorCallback(ReturnCode, ErrBuf);
   };
@@ -507,7 +528,8 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     exit(0);
   }
 
-  if ((!opts::BasicAggregation && parseBranchEvents()) ||
+  if (((!opts::BasicAggregation && !opts::ArmSPE) && parseBranchEvents()) ||
+      (opts::BasicAggregation && opts::ArmSPE && parseSpeAsBasicEvents()) ||
       (opts::BasicAggregation && parseBasicEvents()))
     errs() << "PERF2BOLT: failed to parse samples\n";
 
@@ -1138,6 +1160,66 @@ ErrorOr<DataAggregator::PerfBasicSample> DataAggregator::parseBasicSample() {
   return PerfBasicSample{Event.get(), Address};
 }
 
+ErrorOr<
+    std::pair<DataAggregator::PerfBasicSample, DataAggregator::PerfBasicSample>>
+DataAggregator::parseSpeAsBasicSamples() {
+  while (checkAndConsumeFS()) {
+  }
+
+  ErrorOr<int64_t> PIDRes = parseNumberField(FieldSeparator, true);
+  if (std::error_code EC = PIDRes.getError())
+    return EC;
+
+  constexpr PerfBasicSample EmptySample = PerfBasicSample{StringRef(), 0};
+  auto MMapInfoIter = BinaryMMapInfo.find(*PIDRes);
+  if (MMapInfoIter == BinaryMMapInfo.end()) {
+    consumeRestOfLine();
+    return std::make_pair(EmptySample, EmptySample);
+  }
+
+  while (checkAndConsumeFS()) {
+  }
+
+  ErrorOr<StringRef> Event = parseString(FieldSeparator);
+  if (std::error_code EC = Event.getError())
+    return EC;
+
+  while (checkAndConsumeFS()) {
+  }
+
+  ErrorOr<uint64_t> AddrResTo = parseHexField(FieldSeparator);
+  if (std::error_code EC = AddrResTo.getError())
+    return EC;
+  consumeAllRemainingFS();
+
+  ErrorOr<uint64_t> AddrResFrom = parseHexField(FieldSeparator, true);
+  if (std::error_code EC = AddrResFrom.getError())
+    return EC;
+
+  if (!checkAndConsumeNewLine()) {
+    reportError("expected end of line");
+    return make_error_code(llvm::errc::io_error);
+  }
+
+  auto genBasicSample = [&](uint64_t Address) {
+    // When fed with non SPE branch events the target address will be null.
+    // This is expected and ignored.
+    if (Address == 0x0)
+      return EmptySample;
+
+    if (!BC->HasFixedLoadAddress)
+      adjustAddress(Address, MMapInfoIter->second);
+    return PerfBasicSample{Event.get(), Address};
+  };
+
+  // Show more meaningful event names on boltdata.
+  if (Event->str() == "instructions:")
+    Event = *AddrResTo != 0x0 ? "branch-spe:" : "instruction-spe:";
+
+  return std::make_pair(genBasicSample(*AddrResFrom),
+                        genBasicSample(*AddrResTo));
+}
+
 ErrorOr<DataAggregator::PerfMemSample> DataAggregator::parseMemSample() {
   PerfMemSample Res{0, 0};
 
@@ -1639,6 +1721,46 @@ std::error_code DataAggregator::parseBasicEvents() {
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
   }
+
+  return std::error_code();
+}
+
+std::error_code DataAggregator::parseSpeAsBasicEvents() {
+  outs() << "PERF2BOLT: parsing SPE data as basic events (no LBR)...\n";
+  NamedRegionTimer T("parseSPEBasic", "Parsing SPE as basic events",
+                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
+  uint64_t NumSpeBranchSamples = 0;
+
+  // Convert entries to one or two basic samples, depending on whether there is
+  // branch target information.
+  while (hasData()) {
+    auto SamplePair = parseSpeAsBasicSamples();
+    if (std::error_code EC = SamplePair.getError())
+      return EC;
+
+    auto registerSample = [this](const PerfBasicSample *Sample) {
+      if (!Sample->PC)
+        return;
+
+      if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
+        BF->setHasProfileAvailable();
+
+      ++BasicSamples[Sample->PC];
+      EventNames.insert(Sample->EventName);
+    };
+
+    if (SamplePair->first.PC != 0x0 && SamplePair->second.PC != 0x0)
+      ++NumSpeBranchSamples;
+
+    registerSample(&SamplePair->first);
+    registerSample(&SamplePair->second);
+  }
+
+  if (NumSpeBranchSamples == 0)
+    errs() << "PERF2BOLT-WARNING: no SPE branches found\n";
+  else
+    outs() << "PERF2BOLT: found " << NumSpeBranchSamples
+           << " SPE branch sample pairs.\n";
 
   return std::error_code();
 }
