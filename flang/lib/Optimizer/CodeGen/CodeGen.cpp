@@ -1725,13 +1725,17 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 };
 
 static bool isDeviceAllocation(mlir::Value val) {
+  if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
+    return isDeviceAllocation(loadOp.getMemref());
   if (auto convertOp =
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
     val = convertOp.getValue();
   if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
     if (callOp.getCallee() &&
-        callOp.getCallee().value().getRootReference().getValue().starts_with(
-            RTNAME_STRING(CUFMemAlloc)))
+        (callOp.getCallee().value().getRootReference().getValue().starts_with(
+             RTNAME_STRING(CUFMemAlloc)) ||
+         callOp.getCallee().value().getRootReference().getValue().starts_with(
+             RTNAME_STRING(CUFAllocDesciptor))))
       return true;
   return false;
 }
@@ -2045,7 +2049,8 @@ private:
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
     mlir::Value result =
-        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest);
+        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest,
+                                     isDeviceAllocation(rebox.getBox()));
     rewriter.replaceOp(rebox, result);
     return mlir::success();
   }
