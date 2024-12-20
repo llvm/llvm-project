@@ -65,17 +65,16 @@ void dontRememberOldBifurcation(int arg) {
   // at the first iteration of the loop, but does not make any new assumptions
   // in the subsequent iterations, so the analyzer should continue evaluating
   // the loop.
-  // FIXME: This is mishandled in `eagerly-assume` mode (which is enabled by
-  // default), because `didEagerlyAssumeBifurcateAt()` returns true for the
-  // loop condition -- referring to the bifurcation which happened on an early
-  // iteration.
+  // Previously this was mishandled in `eagerly-assume` mode (which is enabled
+  // by default), because the code remembered that there was a bifurcation on
+  // the first iteration of the loop and didn't realize that this is obsolete.
 
   // NOTE: The variable `i` is introduced to ensure that the iterations of the
   // loop change the state -- otherwise the analyzer stops iterating because it
   // returns to the same `ExplodedNode`.
   int i = 0;
   while (arg > 3) {
-    clang_analyzer_numTimesReached(); // noeagerlyassume-warning {{4}} eagerlyassume-warning {{2}}
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
     i++;
   }
 
@@ -90,10 +89,8 @@ void dontAssumeFourthIterartion(int arg) {
   // iterations (because it knows that `arg != 2` at that point), so it
   // performs a third iteration, but it does not assume that a fourth iteration
   // is also possible.
-  // FIXME: This test case is also affected by the bug described in
-  // `dontRememberOldBifurcation()`.
   for (int i = 0; i < arg; i++)
-    clang_analyzer_numTimesReached(); // noeagerlyassume-warning {{3}} eagerlyassume-warning {{2}}
+    clang_analyzer_numTimesReached(); // expected-warning {{3}}
 
   clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
 }

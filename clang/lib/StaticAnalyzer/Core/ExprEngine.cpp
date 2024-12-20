@@ -3749,9 +3749,10 @@ ExprEngine::getEagerlyAssumeBifurcationTags() {
   return std::make_pair(&TrueTag, &FalseTag);
 }
 
-/// The last expression where EagerlyAssume produced two transitions (i.e. it
-/// activated and the true and false cases were both feasible).
-REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeBifurcationAt, const Expr *)
+/// If the last EagerlyAssume attempt was successful (i.e. the true and false
+/// cases were both feasible), this state trait stores the expression where it
+/// happened; otherwise this holds nullptr.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful, const Expr *)
 
 void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
                                               ExplodedNodeSet &Src,
@@ -3768,6 +3769,7 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
     }
 
     ProgramStateRef State = Pred->getState();
+    State = State->set<LastEagerlyAssumeExprIfSuccessful>(nullptr);
     SVal V = State->getSVal(Ex, Pred->getLocationContext());
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
@@ -3776,8 +3778,8 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
       auto [StateTrue, StateFalse] = State->assume(*SEV);
 
       if (StateTrue && StateFalse) {
-        StateTrue = StateTrue->set<LastEagerlyAssumeBifurcationAt>(Ex);
-        StateFalse = StateFalse->set<LastEagerlyAssumeBifurcationAt>(Ex);
+        StateTrue = StateTrue->set<LastEagerlyAssumeExprIfSuccessful>(Ex);
+        StateFalse = StateFalse->set<LastEagerlyAssumeExprIfSuccessful>(Ex);
       }
 
       // First assume that the condition is true.
@@ -3799,7 +3801,7 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
 
 bool ExprEngine::didEagerlyAssumeBifurcateAt(ProgramStateRef State,
                                              const Expr *Ex) const {
-  return Ex && State->get<LastEagerlyAssumeBifurcationAt>() == Ex;
+  return Ex && State->get<LastEagerlyAssumeExprIfSuccessful>() == Ex;
 }
 
 void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
