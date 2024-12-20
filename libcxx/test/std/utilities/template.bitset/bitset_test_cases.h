@@ -44,6 +44,28 @@ TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<2> > get_test_cases<2>() {
 }
 
 template <>
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<5> > get_test_cases<5>() {
+  std::vector<std::bitset<5> > cases;
+  cases.push_back(std::bitset<5>("00000"));
+  cases.push_back(std::bitset<5>("00001"));
+  cases.push_back(std::bitset<5>("10000"));
+  cases.push_back(std::bitset<5>("00010"));
+  cases.push_back(std::bitset<5>("01000"));
+  cases.push_back(std::bitset<5>("00011"));
+  cases.push_back(std::bitset<5>("11000"));
+  cases.push_back(std::bitset<5>("00100"));
+  cases.push_back(std::bitset<5>("11011"));
+  cases.push_back(std::bitset<5>("00101"));
+  cases.push_back(std::bitset<5>("10100"));
+  cases.push_back(std::bitset<5>("00110"));
+  cases.push_back(std::bitset<5>("01100"));
+  cases.push_back(std::bitset<5>("00111"));
+  cases.push_back(std::bitset<5>("11100"));
+  cases.push_back(std::bitset<5>("11111"));
+  return cases;
+}
+
+template <>
 TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<31> > get_test_cases<31>() {
   std::vector<std::bitset<31> > cases;
   cases.push_back(std::bitset<31>("0000000000000000000000000000000"));
