@@ -286,15 +286,14 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   // Store ZT0
   str     zt0, [x18]
   add     x18, x18, #64
-  b       1f
 
 1:
   // Set up lazy-save (x18 = pointer to buffer)
   rdsvl   x17, #1
   str     x18, [x0, #16]!
   strh    w17, [x0, #8]
-  stur    wzr, [x0, #10]
-  strh    wzr, [x0, #14]
+  strh    wzr, [x0, #10]
+  str     wzr, [x0, #12]
   msr     TPIDR2_EL0, x0
 
 2:
