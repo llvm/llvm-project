@@ -20,8 +20,6 @@
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__functional/identity.h>
-#include <__iterator/advance.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/destruct_n.h>

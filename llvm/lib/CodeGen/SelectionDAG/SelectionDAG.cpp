@@ -2556,7 +2556,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   // destination pointers can be used instead of creating stack allocations.
   SDValue StoresInChain;
   SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
-  for (SDNode *User : Node->uses()) {
+  for (SDNode *User : Node->users()) {
     if (!ISD::isNormalStore(User))
       continue;
     auto *ST = cast<StoreSDNode>(User);
@@ -7933,7 +7933,7 @@ SDValue SelectionDAG::getStackArgumentTokenFactor(SDValue Chain) {
   ArgChains.push_back(Chain);
 
   // Add a chain value for each stack argument.
-  for (SDNode *U : getEntryNode().getNode()->uses())
+  for (SDNode *U : getEntryNode().getNode()->users())
     if (LoadSDNode *L = dyn_cast<LoadSDNode>(U))
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr()))
         if (FI->getIndex() < 0)
@@ -11611,7 +11611,7 @@ class RAUWUpdateListener : public SelectionDAG::DAGUpdateListener {
 
   void NodeDeleted(SDNode *N, SDNode *E) override {
     // Increment the iterator as needed.
-    while (UI != UE && N == *UI)
+    while (UI != UE && N == UI->getUser())
       ++UI;
   }
 
@@ -11650,7 +11650,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
   SDNode::use_iterator UI = From->use_begin(), UE = From->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = *UI;
+    SDNode *User = UI->getUser();
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
@@ -11660,12 +11660,12 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
     // To help reduce the number of CSE recomputations, process all
     // the uses of this user that we can find this way.
     do {
-      SDUse &Use = UI.getUse();
+      SDUse &Use = *UI;
       ++UI;
       Use.set(To);
       if (To->isDivergent() != From->isDivergent())
         updateDivergence(User);
-    } while (UI != UE && *UI == User);
+    } while (UI != UE && UI->getUser() == User);
     // Now that we have modified User, add it back to the CSE maps.  If it
     // already exists there, recursively merge the results together.
     AddModifiedNodeToCSEMaps(User);
@@ -11708,7 +11708,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
   SDNode::use_iterator UI = From->use_begin(), UE = From->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = *UI;
+    SDNode *User = UI->getUser();
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
@@ -11718,12 +11718,12 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
     // To help reduce the number of CSE recomputations, process all
     // the uses of this user that we can find this way.
     do {
-      SDUse &Use = UI.getUse();
+      SDUse &Use = *UI;
       ++UI;
       Use.setNode(To);
       if (To->isDivergent() != From->isDivergent())
         updateDivergence(User);
-    } while (UI != UE && *UI == User);
+    } while (UI != UE && UI->getUser() == User);
 
     // Now that we have modified User, add it back to the CSE maps.  If it
     // already exists there, recursively merge the results together.
@@ -11756,7 +11756,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
   SDNode::use_iterator UI = From->use_begin(), UE = From->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = *UI;
+    SDNode *User = UI->getUser();
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
@@ -11767,12 +11767,12 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
     // user that we can find this way.
     bool To_IsDivergent = false;
     do {
-      SDUse &Use = UI.getUse();
+      SDUse &Use = *UI;
       const SDValue &ToOp = To[Use.getResNo()];
       ++UI;
       Use.set(ToOp);
       To_IsDivergent |= ToOp->isDivergent();
-    } while (UI != UE && *UI == User);
+    } while (UI != UE && UI->getUser() == User);
 
     if (To_IsDivergent != From->isDivergent())
       updateDivergence(User);
@@ -11810,7 +11810,7 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
                        UE = From.getNode()->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = *UI;
+    SDNode *User = UI->getUser();
     bool UserRemovedFromCSEMaps = false;
 
     // A user can appear in a use list multiple times, and when this
@@ -11818,7 +11818,7 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
     // To help reduce the number of CSE recomputations, process all
     // the uses of this user that we can find this way.
     do {
-      SDUse &Use = UI.getUse();
+      SDUse &Use = *UI;
 
       // Skip uses of different values from the same node.
       if (Use.getResNo() != From.getResNo()) {
@@ -11837,7 +11837,7 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
       Use.set(To);
       if (To->isDivergent() != From->isDivergent())
         updateDivergence(User);
-    } while (UI != UE && *UI == User);
+    } while (UI != UE && UI->getUser() == User);
     // We are iterating over all uses of the From node, so if a use
     // doesn't use the specific value, no changes are made.
     if (!UserRemovedFromCSEMaps)
@@ -11872,7 +11872,7 @@ bool operator<(const UseMemo &L, const UseMemo &R) {
 /// pointed to by a UseMemo is deleted, set the User to nullptr to indicate that
 /// the node already has been taken care of recursively.
 class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
-  SmallVector<UseMemo, 4> &Uses;
+  SmallVectorImpl<UseMemo> &Uses;
 
   void NodeDeleted(SDNode *N, SDNode *E) override {
     for (UseMemo &Memo : Uses)
@@ -11881,7 +11881,7 @@ class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
   }
 
 public:
-  RAUOVWUpdateListener(SelectionDAG &d, SmallVector<UseMemo, 4> &uses)
+  RAUOVWUpdateListener(SelectionDAG &d, SmallVectorImpl<UseMemo> &uses)
       : SelectionDAG::DAGUpdateListener(d), Uses(uses) {}
 };
 
@@ -11926,7 +11926,7 @@ void SelectionDAG::updateDivergence(SDNode *N) {
     bool IsDivergent = calculateDivergence(N);
     if (N->SDNodeBits.IsDivergent != IsDivergent) {
       N->SDNodeBits.IsDivergent = IsDivergent;
-      llvm::append_range(Worklist, N->uses());
+      llvm::append_range(Worklist, N->users());
     }
   } while (!Worklist.empty());
 }
@@ -11942,7 +11942,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   }
   for (size_t I = 0; I != Order.size(); ++I) {
     SDNode *N = Order[I];
-    for (auto *U : N->uses()) {
+    for (auto *U : N->users()) {
       unsigned &UnsortedOps = Degree[U];
       if (0 == --UnsortedOps)
         Order.push_back(U);
@@ -11982,11 +11982,9 @@ void SelectionDAG::ReplaceAllUsesOfValuesWith(const SDValue *From,
   for (unsigned i = 0; i != Num; ++i) {
     unsigned FromResNo = From[i].getResNo();
     SDNode *FromNode = From[i].getNode();
-    for (SDNode::use_iterator UI = FromNode->use_begin(),
-         E = FromNode->use_end(); UI != E; ++UI) {
-      SDUse &Use = UI.getUse();
+    for (SDUse &Use : FromNode->uses()) {
       if (Use.getResNo() == FromResNo) {
-        UseMemo Memo = { *UI, i, &Use };
+        UseMemo Memo = {Use.getUser(), i, &Use};
         Uses.push_back(Memo);
       }
     }
@@ -12071,7 +12069,7 @@ unsigned SelectionDAG::AssignTopologicalOrder() {
     checkForCycles(N, this);
     // N is in sorted position, so all its uses have one less operand
     // that needs to be sorted.
-    for (SDNode *P : N->uses()) {
+    for (SDNode *P : N->users()) {
       unsigned Degree = P->getNodeId();
       assert(Degree != 0 && "Invalid node degree");
       --Degree;
@@ -12462,8 +12460,8 @@ bool SDNode::hasNUsesOfValue(unsigned NUses, unsigned Value) const {
   assert(Value < getNumValues() && "Bad value!");
 
   // TODO: Only iterate over uses of a given value of the node
-  for (SDNode::use_iterator UI = use_begin(), E = use_end(); UI != E; ++UI) {
-    if (UI.getUse().getResNo() == Value) {
+  for (SDUse &U : uses()) {
+    if (U.getResNo() == Value) {
       if (NUses == 0)
         return false;
       --NUses;
@@ -12479,8 +12477,8 @@ bool SDNode::hasNUsesOfValue(unsigned NUses, unsigned Value) const {
 bool SDNode::hasAnyUseOfValue(unsigned Value) const {
   assert(Value < getNumValues() && "Bad value!");
 
-  for (SDNode::use_iterator UI = use_begin(), E = use_end(); UI != E; ++UI)
-    if (UI.getUse().getResNo() == Value)
+  for (SDUse &U : uses())
+    if (U.getResNo() == Value)
       return true;
 
   return false;
@@ -12489,7 +12487,7 @@ bool SDNode::hasAnyUseOfValue(unsigned Value) const {
 /// isOnlyUserOf - Return true if this node is the only use of N.
 bool SDNode::isOnlyUserOf(const SDNode *N) const {
   bool Seen = false;
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     if (User == this)
       Seen = true;
     else
@@ -12502,7 +12500,7 @@ bool SDNode::isOnlyUserOf(const SDNode *N) const {
 /// Return true if the only users of N are contained in Nodes.
 bool SDNode::areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N) {
   bool Seen = false;
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     if (llvm::is_contained(Nodes, User))
       Seen = true;
     else

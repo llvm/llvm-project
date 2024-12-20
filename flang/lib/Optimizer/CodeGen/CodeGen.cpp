@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/CUDA/descriptor.h"
+#include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
@@ -791,7 +792,10 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         return mlir::success();
       }
       if (mlir::isa<mlir::IntegerType>(toTy)) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
+        if (toTy.isUnsignedInteger())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToUIOp>(convert, toTy, op0);
+        else
+          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
         return mlir::success();
       }
     } else if (mlir::isa<mlir::IntegerType>(fromTy)) {
@@ -804,7 +808,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
           rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
           return mlir::success();
         }
-        if (fromFirTy == i1Type) {
+        if (fromFirTy == i1Type || fromFirTy.isUnsignedInteger()) {
           rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(convert, toTy, op0);
           return mlir::success();
         }
@@ -813,7 +817,10 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       }
       // Integer to floating point conversion.
       if (isFloatingPointTy(toTy)) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
+        if (fromTy.isUnsignedInteger())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::UIToFPOp>(convert, toTy, op0);
+        else
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
         return mlir::success();
       }
       // Integer to pointer conversion.
@@ -1135,6 +1142,93 @@ convertSubcomponentIndices(mlir::Location loc, mlir::Type eleTy,
   return result;
 }
 
+static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
+                                 mlir::ConversionPatternRewriter &rewriter) {
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
+    auto fn = flc.getFilename().str() + '\0';
+    std::string globalName = fir::factory::uniqueCGIdent("cl", fn);
+
+    if (auto g = mod.lookupSymbol<fir::GlobalOp>(globalName)) {
+      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrTy, g.getName());
+    } else if (auto g = mod.lookupSymbol<mlir::LLVM::GlobalOp>(globalName)) {
+      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrTy, g.getName());
+    }
+
+    auto crtInsPt = rewriter.saveInsertionPoint();
+    rewriter.setInsertionPoint(mod.getBody(), mod.getBody()->end());
+    auto arrayTy = mlir::LLVM::LLVMArrayType::get(
+        mlir::IntegerType::get(rewriter.getContext(), 8), fn.size());
+    mlir::LLVM::GlobalOp globalOp = rewriter.create<mlir::LLVM::GlobalOp>(
+        loc, arrayTy, /*constant=*/true, mlir::LLVM::Linkage::Linkonce,
+        globalName, mlir::Attribute());
+
+    mlir::Region &region = globalOp.getInitializerRegion();
+    mlir::Block *block = rewriter.createBlock(&region);
+    rewriter.setInsertionPoint(block, block->begin());
+    mlir::Value constValue = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, arrayTy, rewriter.getStringAttr(fn));
+    rewriter.create<mlir::LLVM::ReturnOp>(loc, constValue);
+    rewriter.restoreInsertionPoint(crtInsPt);
+    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrTy,
+                                                    globalOp.getName());
+  }
+  return rewriter.create<mlir::LLVM::ZeroOp>(loc, ptrTy);
+}
+
+static mlir::Value genSourceLine(mlir::Location loc,
+                                 mlir::ConversionPatternRewriter &rewriter) {
+  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+    return rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI32Type(),
+                                                   flc.getLine());
+  return rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI32Type(), 0);
+}
+
+static mlir::Value
+genCUFAllocDescriptor(mlir::Location loc,
+                      mlir::ConversionPatternRewriter &rewriter,
+                      mlir::ModuleOp mod, fir::BaseBoxType boxTy,
+                      const fir::LLVMTypeConverter &typeConverter) {
+  std::optional<mlir::DataLayout> dl =
+      fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+  if (!dl)
+    mlir::emitError(mod.getLoc(),
+                    "module operation must carry a data layout attribute "
+                    "to generate llvm IR from FIR");
+
+  mlir::Value sourceFile = genSourceFile(loc, mod, rewriter);
+  mlir::Value sourceLine = genSourceLine(loc, rewriter);
+
+  mlir::MLIRContext *ctx = mod.getContext();
+
+  mlir::LLVM::LLVMPointerType llvmPointerType =
+      mlir::LLVM::LLVMPointerType::get(ctx);
+  mlir::Type llvmInt32Type = mlir::IntegerType::get(ctx, 32);
+  mlir::Type llvmIntPtrType =
+      mlir::IntegerType::get(ctx, typeConverter.getPointerBitwidth(0));
+  auto fctTy = mlir::LLVM::LLVMFunctionType::get(
+      llvmPointerType, {llvmIntPtrType, llvmPointerType, llvmInt32Type});
+
+  auto llvmFunc = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+      RTNAME_STRING(CUFAllocDesciptor));
+  auto funcFunc =
+      mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDesciptor));
+  if (!llvmFunc && !funcFunc)
+    mlir::OpBuilder::atBlockEnd(mod.getBody())
+        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDesciptor),
+                                        fctTy);
+
+  mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+  std::size_t boxSize = dl->getTypeSizeInBits(structTy) / 8;
+  mlir::Value sizeInBytes =
+      genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
+  llvm::SmallVector args = {sizeInBytes, sourceFile, sourceLine};
+  return rewriter
+      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDesciptor),
+                                  args)
+      .getResult();
+}
+
 /// Common base class for embox to descriptor conversion.
 template <typename OP>
 struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
@@ -1247,10 +1341,10 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
 
   /// Get the address of the type descriptor global variable that was created by
   /// lowering for derived type \p recType.
-  mlir::Value getTypeDescriptor(mlir::ModuleOp mod,
-                                mlir::ConversionPatternRewriter &rewriter,
-                                mlir::Location loc,
-                                fir::RecordType recType) const {
+  template <typename ModOpTy>
+  mlir::Value
+  getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
+                    mlir::Location loc, fir::RecordType recType) const {
     std::string name =
         this->options.typeDescriptorsRenamedForAssembly
             ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
@@ -1275,7 +1369,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     return rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
   }
 
-  mlir::Value populateDescriptor(mlir::Location loc, mlir::ModuleOp mod,
+  template <typename ModOpTy>
+  mlir::Value populateDescriptor(mlir::Location loc, ModOpTy mod,
                                  fir::BaseBoxType boxTy, mlir::Type inputType,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  unsigned rank, mlir::Value eleSize,
@@ -1414,10 +1509,16 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       extraField =
           this->getExtraFromBox(loc, sourceBoxTyPair, sourceBox, rewriter);
     }
-    auto mod = box->template getParentOfType<mlir::ModuleOp>();
-    mlir::Value descriptor =
-        populateDescriptor(loc, mod, boxTy, inputType, rewriter, rank, eleSize,
-                           cfiTy, typeDesc, allocatorIdx, extraField);
+
+    mlir::Value descriptor;
+    if (auto gpuMod = box->template getParentOfType<mlir::gpu::GPUModuleOp>())
+      descriptor = populateDescriptor(loc, gpuMod, boxTy, inputType, rewriter,
+                                      rank, eleSize, cfiTy, typeDesc,
+                                      allocatorIdx, extraField);
+    else if (auto mod = box->template getParentOfType<mlir::ModuleOp>())
+      descriptor = populateDescriptor(loc, mod, boxTy, inputType, rewriter,
+                                      rank, eleSize, cfiTy, typeDesc,
+                                      allocatorIdx, extraField);
 
     return {boxTy, descriptor, eleSize};
   }
@@ -1460,11 +1561,17 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     mlir::Value extraField =
         this->getExtraFromBox(loc, inputBoxTyPair, loweredBox, rewriter);
 
-    auto mod = box->template getParentOfType<mlir::ModuleOp>();
-    mlir::Value descriptor =
-        populateDescriptor(loc, mod, boxTy, box.getBox().getType(), rewriter,
-                           rank, eleSize, cfiTy, typeDesc,
-                           /*allocatorIdx=*/kDefaultAllocator, extraField);
+    mlir::Value descriptor;
+    if (auto gpuMod = box->template getParentOfType<mlir::gpu::GPUModuleOp>())
+      descriptor =
+          populateDescriptor(loc, gpuMod, boxTy, box.getBox().getType(),
+                             rewriter, rank, eleSize, cfiTy, typeDesc,
+                             /*allocatorIdx=*/kDefaultAllocator, extraField);
+    else if (auto mod = box->template getParentOfType<mlir::ModuleOp>())
+      descriptor =
+          populateDescriptor(loc, mod, boxTy, box.getBox().getType(), rewriter,
+                             rank, eleSize, cfiTy, typeDesc,
+                             /*allocatorIdx=*/kDefaultAllocator, extraField);
 
     return {boxTy, descriptor, eleSize};
   }
@@ -1548,15 +1655,24 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
   mlir::Value
   placeInMemoryIfNotGlobalInit(mlir::ConversionPatternRewriter &rewriter,
                                mlir::Location loc, mlir::Type boxTy,
-                               mlir::Value boxValue) const {
+                               mlir::Value boxValue,
+                               bool needDeviceAllocation = false) const {
     if (isInGlobalOp(rewriter))
       return boxValue;
     mlir::Type llvmBoxTy = boxValue.getType();
-    auto alloca = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy,
-                                                     defaultAlign, rewriter);
-    auto storeOp = rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, alloca);
+    mlir::Value storage;
+    if (needDeviceAllocation) {
+      auto mod = boxValue.getDefiningOp()->getParentOfType<mlir::ModuleOp>();
+      auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(boxTy);
+      storage =
+          genCUFAllocDescriptor(loc, rewriter, mod, baseBoxTy, this->lowerTy());
+    } else {
+      storage = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign,
+                                                   rewriter);
+    }
+    auto storeOp = rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, storage);
     this->attachTBAATag(storeOp, boxTy, boxTy, nullptr);
-    return alloca;
+    return storage;
   }
 };
 
@@ -1607,6 +1723,18 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
     return mlir::success();
   }
 };
+
+static bool isDeviceAllocation(mlir::Value val) {
+  if (auto convertOp =
+          mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
+    val = convertOp.getValue();
+  if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
+    if (callOp.getCallee() &&
+        callOp.getCallee().value().getRootReference().getValue().starts_with(
+            RTNAME_STRING(CUFMemAlloc)))
+      return true;
+  return false;
+}
 
 /// Create a generic box on a memory reference.
 struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
@@ -1791,9 +1919,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     dest = insertBaseAddress(rewriter, loc, dest, base);
     if (fir::isDerivedTypeWithLenParams(boxTy))
       TODO(loc, "fir.embox codegen of derived with length parameters");
-
-    mlir::Value result =
-        placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy, dest);
+    mlir::Value result = placeInMemoryIfNotGlobalInit(
+        rewriter, loc, boxTy, dest, isDeviceAllocation(xbox.getMemref()));
     rewriter.replaceOp(xbox, result);
     return mlir::success();
   }
@@ -2970,93 +3097,6 @@ private:
         mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr())));
   }
 };
-
-static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
-                                 mlir::ConversionPatternRewriter &rewriter) {
-  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
-    auto fn = flc.getFilename().str() + '\0';
-    std::string globalName = fir::factory::uniqueCGIdent("cl", fn);
-
-    if (auto g = mod.lookupSymbol<fir::GlobalOp>(globalName)) {
-      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrTy, g.getName());
-    } else if (auto g = mod.lookupSymbol<mlir::LLVM::GlobalOp>(globalName)) {
-      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrTy, g.getName());
-    }
-
-    auto crtInsPt = rewriter.saveInsertionPoint();
-    rewriter.setInsertionPoint(mod.getBody(), mod.getBody()->end());
-    auto arrayTy = mlir::LLVM::LLVMArrayType::get(
-        mlir::IntegerType::get(rewriter.getContext(), 8), fn.size());
-    mlir::LLVM::GlobalOp globalOp = rewriter.create<mlir::LLVM::GlobalOp>(
-        loc, arrayTy, /*constant=*/true, mlir::LLVM::Linkage::Linkonce,
-        globalName, mlir::Attribute());
-
-    mlir::Region &region = globalOp.getInitializerRegion();
-    mlir::Block *block = rewriter.createBlock(&region);
-    rewriter.setInsertionPoint(block, block->begin());
-    mlir::Value constValue = rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, arrayTy, rewriter.getStringAttr(fn));
-    rewriter.create<mlir::LLVM::ReturnOp>(loc, constValue);
-    rewriter.restoreInsertionPoint(crtInsPt);
-    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrTy,
-                                                    globalOp.getName());
-  }
-  return rewriter.create<mlir::LLVM::ZeroOp>(loc, ptrTy);
-}
-
-static mlir::Value genSourceLine(mlir::Location loc,
-                                 mlir::ConversionPatternRewriter &rewriter) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
-    return rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI32Type(),
-                                                   flc.getLine());
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI32Type(), 0);
-}
-
-static mlir::Value
-genCUFAllocDescriptor(mlir::Location loc,
-                      mlir::ConversionPatternRewriter &rewriter,
-                      mlir::ModuleOp mod, fir::BaseBoxType boxTy,
-                      const fir::LLVMTypeConverter &typeConverter) {
-  std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
-  if (!dl)
-    mlir::emitError(mod.getLoc(),
-                    "module operation must carry a data layout attribute "
-                    "to generate llvm IR from FIR");
-
-  mlir::Value sourceFile = genSourceFile(loc, mod, rewriter);
-  mlir::Value sourceLine = genSourceLine(loc, rewriter);
-
-  mlir::MLIRContext *ctx = mod.getContext();
-
-  mlir::LLVM::LLVMPointerType llvmPointerType =
-      mlir::LLVM::LLVMPointerType::get(ctx);
-  mlir::Type llvmInt32Type = mlir::IntegerType::get(ctx, 32);
-  mlir::Type llvmIntPtrType =
-      mlir::IntegerType::get(ctx, typeConverter.getPointerBitwidth(0));
-  auto fctTy = mlir::LLVM::LLVMFunctionType::get(
-      llvmPointerType, {llvmIntPtrType, llvmPointerType, llvmInt32Type});
-
-  auto llvmFunc = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-      RTNAME_STRING(CUFAllocDesciptor));
-  auto funcFunc =
-      mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDesciptor));
-  if (!llvmFunc && !funcFunc)
-    mlir::OpBuilder::atBlockEnd(mod.getBody())
-        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDesciptor),
-                                        fctTy);
-
-  mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
-  std::size_t boxSize = dl->getTypeSizeInBits(structTy) / 8;
-  mlir::Value sizeInBytes =
-      genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
-  llvm::SmallVector args = {sizeInBytes, sourceFile, sourceLine};
-  return rewriter
-      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDesciptor),
-                                  args)
-      .getResult();
-}
 
 /// `fir.load` --> `llvm.load`
 struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {

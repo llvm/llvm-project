@@ -14978,6 +14978,11 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
       Flags != SCEVWrapPredicate::IncrementNUSW)
     return false;
 
+  const SCEV *Start = AR->getStart();
+  const SCEV *OpStart = Op->AR->getStart();
+  if (Start->getType()->isPointerTy() != OpStart->getType()->isPointerTy())
+    return false;
+
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
   if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))
@@ -14990,8 +14995,6 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   OpStep = SE.getNoopOrZeroExtend(OpStep, WiderTy);
 
   bool IsNUW = Flags == SCEVWrapPredicate::IncrementNUSW;
-  const SCEV *OpStart = Op->AR->getStart();
-  const SCEV *Start = AR->getStart();
   OpStart = IsNUW ? SE.getNoopOrZeroExtend(OpStart, WiderTy)
                   : SE.getNoopOrSignExtend(OpStart, WiderTy);
   Start = IsNUW ? SE.getNoopOrZeroExtend(Start, WiderTy)

@@ -349,8 +349,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
         return MRI.getRegClass(Reg);
       }
 
-      const SIRegisterInfo *TRI
-        = static_cast<const GCNSubtarget *>(Subtarget)->getRegisterInfo();
+      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
       return TRI->getPhysRegBaseClass(Reg);
     }
 
@@ -933,7 +932,7 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   bool IsAdd = N->getOpcode() == ISD::UADDO;
   bool IsVALU = N->isDivergent();
 
-  for (SDNode::use_iterator UI = N->use_begin(), E = N->use_end(); UI != E;
+  for (SDNode::user_iterator UI = N->user_begin(), E = N->user_end(); UI != E;
        ++UI)
     if (UI.getUse().getResNo() == 1) {
       if ((IsAdd && (UI->getOpcode() != ISD::UADDO_CARRY)) ||
@@ -2390,11 +2389,13 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
     return true;
 
   if (VT == MVT::i64) {
-    const auto *ST = static_cast<const GCNSubtarget *>(Subtarget);
-
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-    return (CC == ISD::SETEQ || CC == ISD::SETNE) && ST->hasScalarCompareEq64();
+    return (CC == ISD::SETEQ || CC == ISD::SETNE) &&
+           Subtarget->hasScalarCompareEq64();
   }
+
+  if ((VT == MVT::f16 || VT == MVT::f32) && Subtarget->hasSALUFloatInsts())
+    return true;
 
   return false;
 }
@@ -2435,8 +2436,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     return;
   }
 
-  const GCNSubtarget *ST = static_cast<const GCNSubtarget *>(Subtarget);
-  const SIRegisterInfo *TRI = ST->getRegisterInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   bool UseSCCBr = isCBranchSCC(N) && isUniformBr(N);
   bool AndExec = !UseSCCBr;
@@ -2449,7 +2449,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
         isNullConstant(Cond->getOperand(1)) &&
         // We may encounter ballot.i64 in wave32 mode on -O0.
-        VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
+        VCMP.getValueType().getSizeInBits() == Subtarget->getWavefrontSize()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
       // %C = i1 ISD::SETCC %VCMP, 0, setne/seteq
       // BRCOND i1 %C, %BB
@@ -2496,14 +2496,15 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     // the S_AND when is unnecessary. But it would be better to add a separate
     // pass after SIFixSGPRCopies to do the unnecessary S_AND removal, so it
     // catches both cases.
-    Cond = SDValue(CurDAG->getMachineNode(ST->isWave32() ? AMDGPU::S_AND_B32
-                                                         : AMDGPU::S_AND_B64,
-                     SL, MVT::i1,
-                     CurDAG->getRegister(ST->isWave32() ? AMDGPU::EXEC_LO
-                                                        : AMDGPU::EXEC,
-                                         MVT::i1),
-                    Cond),
-                   0);
+    Cond = SDValue(
+        CurDAG->getMachineNode(
+            Subtarget->isWave32() ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64, SL,
+            MVT::i1,
+            CurDAG->getRegister(Subtarget->isWave32() ? AMDGPU::EXEC_LO
+                                                      : AMDGPU::EXEC,
+                                MVT::i1),
+            Cond),
+        0);
   }
 
   SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, CondReg, Cond);
@@ -3771,7 +3772,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   bool AllUsesAcceptSReg = true;
   for (SDNode::use_iterator U = N->use_begin(), E = SDNode::use_end();
     Limit < 10 && U != E; ++U, ++Limit) {
-    const TargetRegisterClass *RC = getOperandRegClass(*U, U.getOperandNo());
+    const TargetRegisterClass *RC =
+        getOperandRegClass(U->getUser(), U->getOperandNo());
 
     // If the register class is unknown, it could be an unknown
     // register class that needs to be an SGPR, e.g. an inline asm
@@ -3781,16 +3783,17 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
 
     if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass) {
       AllUsesAcceptSReg = false;
-      SDNode * User = *U;
+      SDNode *User = U->getUser();
       if (User->isMachineOpcode()) {
         unsigned Opc = User->getMachineOpcode();
         const MCInstrDesc &Desc = SII->get(Opc);
         if (Desc.isCommutable()) {
-          unsigned OpIdx = Desc.getNumDefs() + U.getOperandNo();
+          unsigned OpIdx = Desc.getNumDefs() + U->getOperandNo();
           unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;
           if (SII->findCommutedOpIndices(Desc, OpIdx, CommuteIdx1)) {
             unsigned CommutedOpNo = CommuteIdx1 - Desc.getNumDefs();
-            const TargetRegisterClass *CommutedRC = getOperandRegClass(*U, CommutedOpNo);
+            const TargetRegisterClass *CommutedRC =
+                getOperandRegClass(U->getUser(), CommutedOpNo);
             if (CommutedRC == &AMDGPU::VS_32RegClass ||
                 CommutedRC == &AMDGPU::VS_64RegClass)
               AllUsesAcceptSReg = true;

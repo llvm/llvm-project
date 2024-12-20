@@ -76,7 +76,7 @@ define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32
 ; CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -234,8 +234,8 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ], [ [[IND_END4]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -363,7 +363,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -422,7 +422,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N4]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.scalar.ph:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       for.body:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -528,8 +528,8 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ 85, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 85, [[VEC_EPILOG_ITER_CHECK]] ], [ 1, [[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i8 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ 85, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1, [[ITER_CHECK]] ], [ 85, [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i8 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL3]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[INNER]] ]
@@ -618,8 +618,8 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.middle.block:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.scalar.ph:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ 85, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 85, [[VEC_EPILOG_ITER_CHECK]] ], [ 1, [[ITER_CHECK]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i8 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ 85, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1, [[ITER_CHECK]] ], [ 85, [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i8 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[INNER:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       inner:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL3]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[INNER]] ]
@@ -720,7 +720,7 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL4]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -790,7 +790,7 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N5]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.scalar.ph:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       loop:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL4]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

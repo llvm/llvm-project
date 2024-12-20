@@ -110,10 +110,13 @@ struct FindHostArray
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
+          !symbol.attrs().test(Fortran::semantics::Attr::PARAMETER) &&
           (!details->cudaDataAttr() ||
               (details->cudaDataAttr() &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Constant &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
         return &symbol;
       }
@@ -347,6 +350,7 @@ private:
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::StopStmt> &) { return; },
             [&](const common::Indirection<parser::PrintStmt> &) {},
             [&](const common::Indirection<parser::WriteStmt> &x) {
               if (x.value().format) { // Formatted write to '*' or '6'

@@ -61,6 +61,66 @@ add_libc_test(
 )
 
 add_libc_test(
+  cproj_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cproj_test.cpp
+  DEPENDS
+    libc.src.complex.cproj
+  LINK_LIBRARIES
+      LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojf_test.cpp
+  DEPENDS
+    libc.src.complex.cprojf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojl_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojl_test.cpp
+  DEPENDS
+    libc.src.complex.cprojl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojf16_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojf16_test.cpp
+  DEPENDS
+    libc.src.complex.cprojf16
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojf128_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojf128_test.cpp
+  DEPENDS
+    libc.src.complex.cprojf128
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
   creal_test
   SUITE
     libc-complex-unittests

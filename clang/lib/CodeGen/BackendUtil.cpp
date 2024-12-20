@@ -1028,8 +1028,20 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // of the pipeline.
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
       PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, OptimizationLevel Level) {
-            FPM.addPass(BoundsCheckingPass());
+          [this](FunctionPassManager &FPM, OptimizationLevel Level) {
+            BoundsCheckingPass::ReportingMode Mode;
+            if (CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
+              Mode = BoundsCheckingPass::ReportingMode::Trap;
+            } else if (CodeGenOpts.SanitizeMinimalRuntime) {
+              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
+                         ? BoundsCheckingPass::ReportingMode::MinRuntime
+                         : BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+            } else {
+              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
+                         ? BoundsCheckingPass::ReportingMode::FullRuntime
+                         : BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+            }
+            FPM.addPass(BoundsCheckingPass(Mode));
           });
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already

@@ -634,10 +634,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    // TODO: Predecessors are temporarily reversed to reduce test changes.
-    // Remove it and update remaining tests after functional change landed.
-    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
-    for (auto *OtherPred : reverse(Predecessors)) {
+    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
       if (OtherPred == VPlanPred)
         continue;
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
@@ -970,7 +967,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     // Some intrinsics have a scalar argument - don't replace it with a
     // vector.
     Value *Arg;
-    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
+    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index(),
+                                           State.TTI))
       Arg = State.get(I.value(), VPLane(0));
     else
       Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
@@ -3416,7 +3414,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     // TODO: The sentinel value is not always necessary. When the start value is
     // a constant, and smaller than the start value of the induction variable,
     // the start value can be directly used to initialize the reduction phi.
-    StartV = Iden = StartV;
+    Iden = StartV;
     if (!ScalarPHI) {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());

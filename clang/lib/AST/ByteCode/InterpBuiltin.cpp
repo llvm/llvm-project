@@ -1862,10 +1862,10 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   }
 
   QualType ElemType;
-  if (SrcPtr.getFieldDesc()->isArray())
-    ElemType = SrcPtr.getFieldDesc()->getElemQualType();
+  if (DestPtr.getFieldDesc()->isArray())
+    ElemType = DestPtr.getFieldDesc()->getElemQualType();
   else
-    ElemType = SrcPtr.getType();
+    ElemType = DestPtr.getType();
 
   unsigned ElemSize =
       S.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
@@ -1873,6 +1873,18 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
         << Move << /*IsWchar=*/false << 0 << ElemType << Size << ElemSize;
+    return false;
+  }
+
+  QualType SrcElemType;
+  if (SrcPtr.getFieldDesc()->isArray())
+    SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
+  else
+    SrcElemType = SrcPtr.getType();
+
+  if (!S.getASTContext().hasSameUnqualifiedType(ElemType, SrcElemType)) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_type_pun)
+        << Move << SrcElemType << ElemType;
     return false;
   }
 
@@ -1893,8 +1905,8 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   // As a last resort, reject dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
-
-  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr, Size.getZExtValue()))
+  assert(Size.getZExtValue() % ElemSize == 0);
+  if (!DoMemcpy(S, OpPC, SrcPtr, DestPtr, Bytes(Size.getZExtValue()).toBits()))
     return false;
 
   S.Stk.push<Pointer>(DestPtr);
