@@ -152,15 +152,15 @@ MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
   return new AArch64TargetStreamer(S);
 }
 
-void AArch64TargetStreamer::emitSubsection(
-    unsigned VendorID, ARMBuildAttrs::SubsectionOptional IsOptional,
-    ARMBuildAttrs::SubsectionType ParameterType) {
-  StringRef VendorName = ARMBuildAttrs::getVendorName(VendorID);
+void AArch64TargetStreamer::emitAtributesSubsection(
+    unsigned VendorID, AArch64BuildAttributes::SubsectionOptional IsOptional,
+    AArch64BuildAttributes::SubsectionType ParameterType) {
+  StringRef VendorName = AArch64BuildAttributes::getVendorName(VendorID);
 
   // If exists, return.
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (VendorName == SubSection.VendorName) {
-      activateSubsection(VendorName);
+      activateAtributesSubsection(VendorName);
       return;
     }
   }
@@ -170,10 +170,10 @@ void AArch64TargetStreamer::emitSubsection(
   AttSubSection.IsOptional = IsOptional;
   AttSubSection.ParameterType = ParameterType;
   AttributeSubSections.push_back(AttSubSection);
-  activateSubsection(VendorName);
+  activateAtributesSubsection(VendorName);
 }
 
-StringRef AArch64TargetStreamer::getActiveSubsection() {
+StringRef AArch64TargetStreamer::getActiveAtributesSubsection() {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (SubSection.IsActive) {
       return SubSection.VendorName;
@@ -184,7 +184,7 @@ StringRef AArch64TargetStreamer::getActiveSubsection() {
 
 void AArch64TargetStreamer::emitAttribute(unsigned VendorID, unsigned Tag,
                                           unsigned Value, bool Override) {
-  StringRef VendorName = ARMBuildAttrs::getVendorName(VendorID);
+  StringRef VendorName = AArch64BuildAttributes::getVendorName(VendorID);
 
   if (AttributeSubSections.size() == 0) {
     assert(0 &&
@@ -209,6 +209,10 @@ void AArch64TargetStreamer::emitAttribute(unsigned VendorID, unsigned Tag,
               return;
             }
           }
+          // Case Item.IntValue == Value, no need to emit twice
+          assert(0 && "AArch64 build attribute: An attribute with the same tag "
+                      "and a same value allready exists");
+          return;
         }
       }
       SubSection.Content.push_back(MCELFStreamer::AttributeItem(
@@ -220,7 +224,7 @@ void AArch64TargetStreamer::emitAttribute(unsigned VendorID, unsigned Tag,
               "not exists");
 }
 
-void AArch64TargetStreamer::activateSubsection(StringRef VendorName) {
+void AArch64TargetStreamer::activateAtributesSubsection(StringRef VendorName) {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (VendorName == SubSection.VendorName) {
       SubSection.IsActive = true;

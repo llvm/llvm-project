@@ -113,27 +113,21 @@ public:
 
   /// ELF object attributes subsection support
   struct AttributeSubSection {
-    bool IsActive; // Indicates whether the section is the active section,
-                   // required for assembly parsing
-    // [<uint32: subsection-length> NTBS: vendor-name <bytes: vendor-data>]*
+    bool IsActive;
     StringRef VendorName;
-    // <uint8: optional> <uint8: parameter type> <attribute>*
-    ARMBuildAttrs::SubsectionOptional IsOptional;
-    ARMBuildAttrs::SubsectionType ParameterType;
+    unsigned IsOptional;
+    unsigned ParameterType;
     SmallVector<AttributeItem, 64> Content;
   };
 
   // Attributes that are added and managed entirely by target.
   SmallVector<AttributeItem, 64> Contents;
   void setAttributeItem(unsigned Attribute, unsigned Value,
-                        bool OverwriteExisting,
-                        SmallVector<AttributeItem, 64> &Attributes);
+                        bool OverwriteExisting);
   void setAttributeItem(unsigned Attribute, StringRef Value,
-                        bool OverwriteExisting,
-                        SmallVector<AttributeItem, 64> &Attributes);
+                        bool OverwriteExisting);
   void setAttributeItems(unsigned Attribute, unsigned IntValue,
-                         StringRef StringValue, bool OverwriteExisting,
-                         SmallVector<AttributeItem, 64> &Attributes);
+                         StringRef StringValue, bool OverwriteExisting);
   void emitAttributesSection(StringRef Vendor, const Twine &Section,
                              unsigned Type, MCSection *&AttributeSection) {
     createAttributesSection(Vendor, Section, Type, AttributeSection, Contents);
@@ -142,7 +136,7 @@ public:
   emitAttributesSection(MCSection *&AttributeSection, const Twine &Section,
                         unsigned Type,
                         SmallVector<AttributeSubSection, 64> &SubSectionVec) {
-    createAArch64AttributesSection(AttributeSection, Section, Type,
+    createAttributesWithSubsection(AttributeSection, Section, Type,
                                    SubSectionVec);
   }
 
@@ -153,7 +147,7 @@ private:
   void createAttributesSection(StringRef Vendor, const Twine &Section,
                                unsigned Type, MCSection *&AttributeSection,
                                SmallVector<AttributeItem, 64> &AttrsVec);
-  void createAArch64AttributesSection(
+  void createAttributesWithSubsection(
       MCSection *&AttributeSection, const Twine &Section, unsigned Type,
       SmallVector<AttributeSubSection, 64> &SubSectionVec);
 

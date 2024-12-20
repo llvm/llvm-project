@@ -635,11 +635,10 @@ void MCELFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
   llvm_unreachable("ELF doesn't support this directive");
 }
 
-void MCELFStreamer::setAttributeItem(
-    unsigned Attribute, unsigned Value, bool OverwriteExisting,
-    SmallVector<AttributeItem, 64> &Attributes) {
+void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
+                                     bool OverwriteExisting) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute, Attributes)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute, Contents)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::NumericAttribute;
@@ -653,11 +652,10 @@ void MCELFStreamer::setAttributeItem(
   Contents.push_back(Item);
 }
 
-void MCELFStreamer::setAttributeItem(
-    unsigned Attribute, StringRef Value, bool OverwriteExisting,
-    SmallVector<AttributeItem, 64> &Attributes) {
+void MCELFStreamer::setAttributeItem(unsigned Attribute, StringRef Value,
+                                     bool OverwriteExisting) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute, Attributes)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute, Contents)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::TextAttribute;
@@ -671,11 +669,11 @@ void MCELFStreamer::setAttributeItem(
   Contents.push_back(Item);
 }
 
-void MCELFStreamer::setAttributeItems(
-    unsigned Attribute, unsigned IntValue, StringRef StringValue,
-    bool OverwriteExisting, SmallVector<AttributeItem, 64> &Attributes) {
+void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
+                                      StringRef StringValue,
+                                      bool OverwriteExisting) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute, Attributes)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute, Contents)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::NumericAndTextAttributes;
@@ -786,7 +784,7 @@ void MCELFStreamer::createAttributesSection(
   AttrsVec.clear();
 }
 
-void MCELFStreamer::createAArch64AttributesSection(
+void MCELFStreamer::createAttributesWithSubsection(
     MCSection *&AttributeSection, const Twine &Section, unsigned Type,
     SmallVector<AttributeSubSection, 64> &SubSectionVec) {
   // <format-version: 'A'>

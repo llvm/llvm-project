@@ -14,7 +14,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
 #include <cstdint>
 
 namespace {
@@ -95,13 +95,17 @@ public:
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
-  virtual void emitSubsection(unsigned VendorID,
-                              ARMBuildAttrs::SubsectionOptional IsOptional,
-                              ARMBuildAttrs::SubsectionType ParameterType);
+  virtual void
+  emitAtributesSubsection(unsigned VendorID,
+                          AArch64BuildAttributes::SubsectionOptional IsOptional,
+                          AArch64BuildAttributes::SubsectionType ParameterType);
   virtual void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
                              bool Override);
-  void activateSubsection(StringRef VendorName);
-  StringRef getActiveSubsection();
+  void activateAtributesSubsection(StringRef VendorName);
+  StringRef getActiveAtributesSubsection();
+  void
+  insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
+                         MCELFStreamer::AttributeSubSection &AttSubSection);
 
   SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
@@ -116,9 +120,9 @@ private:
   MCSection *AttributeSection = nullptr;
 
   /// Build attributes implementation
-  void emitSubsection(unsigned VendorID,
-                      ARMBuildAttrs::SubsectionOptional IsOptional,
-                      ARMBuildAttrs::SubsectionType ParameterType) override;
+  void emitAtributesSubsection(
+      unsigned VendorID, AArch64BuildAttributes::SubsectionOptional IsOptional,
+      AArch64BuildAttributes::SubsectionType ParameterType) override;
   void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
                      bool Override = false) override;
 
