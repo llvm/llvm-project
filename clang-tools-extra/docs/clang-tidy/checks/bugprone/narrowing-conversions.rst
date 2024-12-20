@@ -9,7 +9,7 @@ Checks for silent narrowing conversions, e.g: ``int i = 0; i += 0.1;``. While
 the issue is obvious in this former example, it might not be so in the
 following: ``void MyClass::f(double d) { int_member_ += d; }``.
 
-We enforce only part of the guideline, more specifically, we flag narrowing conversions from:
+We flag narrowing conversions from:
  - an integer to a narrower integer (e.g. ``char`` to ``unsigned char``)
    if WarnOnIntegerNarrowingConversion Option is set,
  - an integer to a narrower floating-point (e.g. ``uint64_t`` to ``float``)
