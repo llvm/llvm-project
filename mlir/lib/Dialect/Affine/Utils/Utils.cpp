@@ -426,7 +426,7 @@ LogicalResult mlir::affine::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   config.strictMode = GreedyRewriteStrictness::ExistingOps;
   bool erased;
   (void)applyOpPatternsGreedily(ifOp.getOperation(), frozenPatterns, config,
-                               /*changed=*/nullptr, &erased);
+                                /*changed=*/nullptr, &erased);
   if (erased) {
     if (folded)
       *folded = true;
