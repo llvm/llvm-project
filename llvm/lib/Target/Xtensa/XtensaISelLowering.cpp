@@ -747,7 +747,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
       return Op;
     // Check if use node maybe lowered to the ADDMI instruction
     SDNode &OpNode = *Op.getNode();
-    if ((OpNode.hasOneUse() && OpNode.use_begin()->getOpcode() == ISD::ADD) &&
+    if ((OpNode.hasOneUse() && OpNode.user_begin()->getOpcode() == ISD::ADD) &&
         isShiftedInt<16, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());

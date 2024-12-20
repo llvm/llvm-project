@@ -1177,17 +1177,6 @@ def NegDoubleConst : SDNodeXForm<fpimm, [{
                                      SDLoc(N), MVT::f64);
 }]>;
 
-// Loads FP16 constant into a register.
-//
-// ptxas does not have hex representation for fp16, so we can't use
-// fp16 immediate values in .f16 instructions. Instead we have to load
-// the constant into a register using mov.b16.
-def LOAD_CONST_F16 :
-  NVPTXInst<(outs Int16Regs:$dst), (ins f16imm:$a),
-            "mov.b16 \t$dst, $a;", []>;
-def LOAD_CONST_BF16 :
-  NVPTXInst<(outs Int16Regs:$dst), (ins bf16imm:$a),
-            "mov.b16 \t$dst, $a;", []>;
 defm FADD : F3_fma_component<"add", fadd>;
 defm FSUB : F3_fma_component<"sub", fsub>;
 defm FMUL : F3_fma_component<"mul", fmul>;
@@ -1963,7 +1952,7 @@ let hasSideEffects = false in {
 
 
 // copyPhysreg is hard-coded in NVPTXInstrInfo.cpp
-let IsSimpleMove=1, hasSideEffects=0 in {
+let IsSimpleMove=1, hasSideEffects=0, isAsCheapAsAMove=1 in {
   def IMOV1rr :  NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$sss),
                            "mov.pred \t$dst, $sss;", []>;
   def IMOV16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$sss),
@@ -1975,48 +1964,37 @@ let IsSimpleMove=1, hasSideEffects=0 in {
   def IMOV128rr : NVPTXInst<(outs Int128Regs:$dst), (ins Int128Regs:$sss),
                            "mov.b128 \t$dst, $sss;", []>;
 
-  def IMOVB16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$sss),
-                           "mov.b16 \t$dst, $sss;", []>;
-  def IMOVB32rr : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$sss),
-                           "mov.b32 \t$dst, $sss;", []>;
-  def IMOVB64rr : NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$sss),
-                           "mov.b64 \t$dst, $sss;", []>;
-
-  def FMOV16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$src),
-                           // We have to use .b16 here as there's no mov.f16.
-                           "mov.b16 \t$dst, $src;", []>;
   def FMOV32rr : NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src),
                            "mov.f32 \t$dst, $src;", []>;
   def FMOV64rr : NVPTXInst<(outs Float64Regs:$dst), (ins Float64Regs:$src),
                            "mov.f64 \t$dst, $src;", []>;
+
+  def IMOV1ri : NVPTXInst<(outs Int1Regs:$dst), (ins i1imm:$src),
+                          "mov.pred \t$dst, $src;",
+                          [(set i1:$dst, imm:$src)]>;
+  def IMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
+                          "mov.b16 \t$dst, $src;",
+                          [(set i16:$dst, imm:$src)]>;
+  def IMOV32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
+                          "mov.b32 \t$dst, $src;",
+                          [(set i32:$dst, imm:$src)]>;
+  def IMOV64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
+                          "mov.b64 \t$dst, $src;",
+                          [(set i64:$dst, imm:$src)]>;
+
+  def FMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins f16imm:$src),
+                          "mov.b16 \t$dst, $src;",
+                          [(set f16:$dst, fpimm:$src)]>;
+  def BFMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins bf16imm:$src),
+                          "mov.b16 \t$dst, $src;",
+                          [(set bf16:$dst, fpimm:$src)]>;
+  def FMOV32ri : NVPTXInst<(outs Float32Regs:$dst), (ins f32imm:$src),
+                          "mov.f32 \t$dst, $src;",
+                          [(set f32:$dst, fpimm:$src)]>;
+  def FMOV64ri : NVPTXInst<(outs Float64Regs:$dst), (ins f64imm:$src),
+                          "mov.f64 \t$dst, $src;",
+                          [(set f64:$dst, fpimm:$src)]>;
 }
-
-def IMOV1ri : NVPTXInst<(outs Int1Regs:$dst), (ins i1imm:$src),
-                        "mov.pred \t$dst, $src;",
-                        [(set i1:$dst, imm:$src)]>;
-def IMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
-                         "mov.u16 \t$dst, $src;",
-                         [(set i16:$dst, imm:$src)]>;
-def IMOV32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
-                         "mov.u32 \t$dst, $src;",
-                         [(set i32:$dst, imm:$src)]>;
-def IMOV64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
-                        "mov.u64 \t$dst, $src;",
-                        [(set i64:$dst, imm:$src)]>;
-
-def IMOVB16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
-                         "mov.b16 \t$dst, $src;", []>;
-def IMOVB32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
-                         "mov.b32 \t$dst, $src;", []>;
-def IMOVB64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
-                        "mov.b64 \t$dst, $src;", []>;
-
-def FMOV32ri : NVPTXInst<(outs Float32Regs:$dst), (ins f32imm:$src),
-                         "mov.f32 \t$dst, $src;",
-                         [(set f32:$dst, fpimm:$src)]>;
-def FMOV64ri : NVPTXInst<(outs Float64Regs:$dst), (ins f64imm:$src),
-                         "mov.f64 \t$dst, $src;",
-                         [(set f64:$dst, fpimm:$src)]>;
 
 def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32ri texternalsym:$dst)>;
 def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64ri texternalsym:$dst)>;
@@ -2215,18 +2193,6 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
   def : Pat<(i1 (OpNode f16:$a, f16:$b)),
             (SETP_f16rr Int16Regs:$a, Int16Regs:$b, Mode)>,
         Requires<[useFP16Math]>;
-  def : Pat<(i1 (OpNode f16:$a, fpimm:$b)),
-            (SETP_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), ModeFTZ)>,
-        Requires<[useFP16Math,doF32FTZ]>;
-  def : Pat<(i1 (OpNode f16:$a, fpimm:$b)),
-            (SETP_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), Mode)>,
-        Requires<[useFP16Math]>;
-  def : Pat<(i1 (OpNode fpimm:$a, f16:$b)),
-            (SETP_f16rr (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, ModeFTZ)>,
-        Requires<[useFP16Math,doF32FTZ]>;
-  def : Pat<(i1 (OpNode fpimm:$a, f16:$b)),
-            (SETP_f16rr (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, Mode)>,
-        Requires<[useFP16Math]>;
 
   // bf16 -> pred
   def : Pat<(i1 (OpNode bf16:$a, bf16:$b)),
@@ -2234,18 +2200,6 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
         Requires<[hasBF16Math,doF32FTZ]>;
   def : Pat<(i1 (OpNode bf16:$a, bf16:$b)),
             (SETP_bf16rr Int16Regs:$a, Int16Regs:$b, Mode)>,
-        Requires<[hasBF16Math]>;
-  def : Pat<(i1 (OpNode bf16:$a, fpimm:$b)),
-            (SETP_bf16rr Int16Regs:$a, (LOAD_CONST_BF16 fpimm:$b), ModeFTZ)>,
-        Requires<[hasBF16Math,doF32FTZ]>;
-  def : Pat<(i1 (OpNode bf16:$a, fpimm:$b)),
-            (SETP_bf16rr Int16Regs:$a, (LOAD_CONST_BF16 fpimm:$b), Mode)>,
-        Requires<[hasBF16Math]>;
-  def : Pat<(i1 (OpNode fpimm:$a, bf16:$b)),
-            (SETP_bf16rr (LOAD_CONST_BF16 fpimm:$a), Int16Regs:$b, ModeFTZ)>,
-        Requires<[hasBF16Math,doF32FTZ]>;
-  def : Pat<(i1 (OpNode fpimm:$a, bf16:$b)),
-            (SETP_bf16rr (LOAD_CONST_BF16 fpimm:$a), Int16Regs:$b, Mode)>,
         Requires<[hasBF16Math]>;
 
   // f32 -> pred
@@ -2280,18 +2234,6 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
   def : Pat<(i32 (OpNode f16:$a, f16:$b)),
             (SET_f16rr Int16Regs:$a, Int16Regs:$b, Mode)>,
         Requires<[useFP16Math]>;
-  def : Pat<(i32 (OpNode f16:$a, fpimm:$b)),
-            (SET_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), ModeFTZ)>,
-        Requires<[useFP16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode f16:$a, fpimm:$b)),
-            (SET_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), Mode)>,
-        Requires<[useFP16Math]>;
-  def : Pat<(i32 (OpNode fpimm:$a, f16:$b)),
-            (SET_f16ir (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, ModeFTZ)>,
-        Requires<[useFP16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode fpimm:$a, f16:$b)),
-            (SET_f16ir (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, Mode)>,
-        Requires<[useFP16Math]>;
 
   // bf16 -> i32
   def : Pat<(i32 (OpNode bf16:$a, bf16:$b)),
@@ -2299,18 +2241,6 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
         Requires<[hasBF16Math, doF32FTZ]>;
   def : Pat<(i32 (OpNode bf16:$a, bf16:$b)),
             (SET_bf16rr Int16Regs:$a, Int16Regs:$b, Mode)>,
-        Requires<[hasBF16Math]>;
-  def : Pat<(i32 (OpNode bf16:$a, fpimm:$b)),
-            (SET_bf16rr Int16Regs:$a, (LOAD_CONST_BF16 fpimm:$b), ModeFTZ)>,
-        Requires<[hasBF16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode bf16:$a, fpimm:$b)),
-            (SET_bf16rr Int16Regs:$a, (LOAD_CONST_BF16 fpimm:$b), Mode)>,
-        Requires<[hasBF16Math]>;
-  def : Pat<(i32 (OpNode fpimm:$a, bf16:$b)),
-            (SET_bf16ir (LOAD_CONST_BF16 fpimm:$a), Int16Regs:$b, ModeFTZ)>,
-        Requires<[hasBF16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode fpimm:$a, bf16:$b)),
-            (SET_bf16ir (LOAD_CONST_BF16 fpimm:$a), Int16Regs:$b, Mode)>,
         Requires<[hasBF16Math]>;
 
   // f32 -> i32
@@ -3104,21 +3034,17 @@ def: Pat<(f32 (bitconvert vt:$a)),
          (BITCONVERT_32_I2F Int32Regs:$a)>;
 }
 foreach vt = [f16, bf16] in {
-def: Pat<(vt (bitconvert (i16 UInt16Const:$a))),
-         (IMOVB16ri UInt16Const:$a)>;
-def: Pat<(vt (bitconvert i16:$a)),
-         (ProxyRegI16 Int16Regs:$a)>;
-def: Pat<(i16 (bitconvert vt:$a)),
-         (ProxyRegI16 Int16Regs:$a)>;
+  def: Pat<(vt (bitconvert i16:$a)),
+           (vt Int16Regs:$a)>;
+  def: Pat<(i16 (bitconvert vt:$a)),
+           (i16 Int16Regs:$a)>;
 }
 
 foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
-  def: Pat<(ta (bitconvert (i32 UInt32Const:$a))),
-           (IMOVB32ri UInt32Const:$a)>;
   foreach tb = [v2f16, v2bf16, v2i16, v4i8, i32] in {
     if !ne(ta, tb) then {
-      def: Pat<(ta (bitconvert (tb Int32Regs:$a))),
-             (ProxyRegI32 Int32Regs:$a)>;
+      def: Pat<(ta (bitconvert tb:$a)),
+               (ta Int32Regs:$a)>;
     }
   }
 }
