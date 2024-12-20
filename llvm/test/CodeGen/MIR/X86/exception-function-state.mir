@@ -1,5 +1,5 @@
-# RUN: llc -simplify-mir=0 -march=x86-64 -run-pass=none -o - %s | FileCheck -check-prefixes=FULL,ALL %s
-# RUN: llc -simplify-mir=1 -march=x86-64 -run-pass=none -o - %s | FileCheck -check-prefixes=SIMPLE,ALL %s
+# RUN: llc -simplify-mir=0 -mtriple=x86_64 -run-pass=none -o - %s | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -simplify-mir=1 -mtriple=x86_64 -run-pass=none -o - %s | FileCheck -check-prefixes=SIMPLE,ALL %s
 
 # This test ensures that the MIR parser parses callee saved information in the
 # stack objects correctly.

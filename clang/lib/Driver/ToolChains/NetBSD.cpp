@@ -274,12 +274,11 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
-  bool NeedsSanitizerDeps =
-      addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
   if (SanArgs.needsSharedRt()) {
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRTPath()));
@@ -335,7 +334,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, Args, SanArgs, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     if (Args.hasArg(options::OPT_pthread))

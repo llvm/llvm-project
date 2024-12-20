@@ -2186,7 +2186,19 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCHostDataConstruct = 326,
 
-  CXCursor_LastStmt = CXCursor_OpenACCHostDataConstruct,
+  /** OpenACC wait Construct.
+   */
+  CXCursor_OpenACCWaitConstruct = 327,
+
+  /** OpenACC init Construct.
+   */
+  CXCursor_OpenACCInitConstruct = 328,
+
+  /** OpenACC shutdown Construct.
+   */
+  CXCursor_OpenACCShutdownConstruct = 329,
+
+  CXCursor_LastStmt = CXCursor_OpenACCShutdownConstruct,
 
   /**
    * Cursor that represents the translation unit itself.

@@ -12,7 +12,7 @@ GRAFANA_URL = (
     "https://influx-prod-13-prod-us-east-0.grafana.net/api/v1/push/influx/write"
 )
 GITHUB_PROJECT = "llvm/llvm-project"
-WORKFLOWS_TO_TRACK = ["Check code formatting"]
+WORKFLOWS_TO_TRACK = ["Check code formatting", "LLVM Premerge Checks"]
 SCRAPE_INTERVAL_SECONDS = 5 * 60
 
 

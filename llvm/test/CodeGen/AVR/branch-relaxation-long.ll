@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=avr -mattr=avr3 | FileCheck %s
-; RUN: llc < %s -march=avr -mattr=avr2 | FileCheck --check-prefix=AVR2 %s
+; RUN: llc < %s -mtriple=avr -mattr=avr3 | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mattr=avr2 | FileCheck --check-prefix=AVR2 %s
 
 ; CHECK-LABEL: relax_to_jmp:
 ; CHECK: cpi     r{{[0-9]+}}, 0

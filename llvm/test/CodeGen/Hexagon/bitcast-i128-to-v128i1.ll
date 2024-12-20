@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mattr=+hvx-length128b < %s
+; RUN: llc -mtriple=hexagon -mattr=+hvx-length128b < %s
 
 ; Function Attrs: nounwind readnone
 declare <64 x i32> @llvm.hexagon.V6.vshuffvdd.128B(<32 x i32>, <32 x i32>, i32)

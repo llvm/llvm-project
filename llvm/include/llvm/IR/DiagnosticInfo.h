@@ -61,6 +61,7 @@ enum DiagnosticKind {
   DK_Generic,
   DK_GenericWithLoc,
   DK_InlineAsm,
+  DK_RegAllocFailure,
   DK_ResourceLimit,
   DK_StackSize,
   DK_Linker,
@@ -149,7 +150,7 @@ public:
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(MsgStr) {}
 
   DiagnosticInfoGeneric(const Instruction *I, const Twine &ErrMsg,
-                        DiagnosticSeverity Severity = DS_Warning)
+                        DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(ErrMsg), Inst(I) {}
 
   const Twine &getMsgStr() const { return MsgStr; }
@@ -396,6 +397,32 @@ public:
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_GenericWithLoc;
+  }
+};
+
+class DiagnosticInfoRegAllocFailure : public DiagnosticInfoWithLocationBase {
+private:
+  /// Message to be reported.
+  const Twine &MsgStr;
+
+public:
+  /// \p MsgStr is the message to be reported to the frontend.
+  /// This class does not copy \p MsgStr, therefore the reference must be valid
+  /// for the whole life time of the Diagnostic.
+  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+                                const DiagnosticLocation &DL,
+                                DiagnosticSeverity Severity = DS_Error);
+
+  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+                                DiagnosticSeverity Severity = DS_Error);
+
+  const Twine &getMsgStr() const { return MsgStr; }
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_RegAllocFailure;
   }
 };
 

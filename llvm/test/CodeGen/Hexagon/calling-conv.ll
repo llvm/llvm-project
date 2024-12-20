@@ -1,6 +1,6 @@
-; RUN: llc -march=hexagon -mno-pairing -mno-compound <%s | FileCheck %s --check-prefix=CHECK-ONE
-; RUN: llc -march=hexagon -mno-pairing -mno-compound <%s | FileCheck %s --check-prefix=CHECK-TWO
-; RUN: llc -march=hexagon -mno-pairing -mno-compound <%s | FileCheck %s --check-prefix=CHECK-THREE
+; RUN: llc -mtriple=hexagon -mno-pairing -mno-compound <%s | FileCheck %s --check-prefix=CHECK-ONE
+; RUN: llc -mtriple=hexagon -mno-pairing -mno-compound <%s | FileCheck %s --check-prefix=CHECK-TWO
+; RUN: llc -mtriple=hexagon -mno-pairing -mno-compound <%s | FileCheck %s --check-prefix=CHECK-THREE
 
 %s.0 = type { i32, i8, i64 }
 %s.1 = type { i8, i64 }

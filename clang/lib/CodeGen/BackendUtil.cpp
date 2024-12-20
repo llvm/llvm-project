@@ -77,6 +77,7 @@
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -735,8 +736,16 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Type)) {
+      MPM.addPass(ModuleTypeSanitizerPass());
+      MPM.addPass(createModuleToFunctionPassAdaptor(TypeSanitizerPass()));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
+
+    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
+      MPM.addPass(RealtimeSanitizerPass());
 
     auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
@@ -1019,18 +1028,21 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // of the pipeline.
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
       PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, OptimizationLevel Level) {
-            FPM.addPass(BoundsCheckingPass());
+          [this](FunctionPassManager &FPM, OptimizationLevel Level) {
+            BoundsCheckingPass::ReportingMode Mode;
+            if (CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
+              Mode = BoundsCheckingPass::ReportingMode::Trap;
+            } else if (CodeGenOpts.SanitizeMinimalRuntime) {
+              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
+                         ? BoundsCheckingPass::ReportingMode::MinRuntime
+                         : BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+            } else {
+              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
+                         ? BoundsCheckingPass::ReportingMode::FullRuntime
+                         : BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+            }
+            FPM.addPass(BoundsCheckingPass(Mode));
           });
-
-    if (LangOpts.Sanitize.has(SanitizerKind::Realtime)) {
-      PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, OptimizationLevel Level) {
-            RealtimeSanitizerOptions Opts;
-            FPM.addPass(RealtimeSanitizerPass(Opts));
-          });
-      MPM.addPass(ModuleRealtimeSanitizerPass());
-    }
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already
     // done on PreLink stage.

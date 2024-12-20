@@ -188,8 +188,10 @@ Ben Shi \
 
 #### BPF backend
 
-Alexei Starovoitov \
-alexei.starovoitov@gmail.com (email), [4ast](https://github.com/4ast) (GitHub)
+Yonghong Song \
+yhs@fb.com (email), [yonghong-song](https://github.com/yonghong-song) (GitHub) \
+Eduard Zingerman \
+eddyz87@gmail.com (email), [eddyz87](https://github.com/eddyz87) (GitHub)
 
 #### CSKY backend
 
@@ -293,8 +295,10 @@ andrei.safronov@espressif.com (email), [andreisfr](https://github.com/andreisfr)
 
 #### ADT, Support
 
-Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+David Blaikie \
+dblaikie@gmail.com (email), [dwblaikie](https://github.com/dwblaike) (GitHub) \
+Jakub Kuderski \
+jakub@nod-labs.com (email), [kuhar](https://github.com/kuhar) (GitHub)
 
 #### Bitcode
 
@@ -355,10 +359,12 @@ cyndyishida@gmail.com (email), [cyndyishida](https://github.com/cyndyishida) (Gi
 Andrea Di Biagio \
 andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https://github.com/adibiagio) (GitHub)
 
-#### llvm-objcopy and ObjCopy library
+#### Binary Utilities
 
-Jake Ehrlich \
-jakehehrlich@google.com (email), [jakehehrlich](https://github.com/jakehehrlich) (GitHub)
+James Henderson \
+james.henderson@sony.com (email), [jh7370](https://github.com/jh7370) (GitHub) \
+Fangrui Song \
+i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 
 #### Gold plugin
 
@@ -383,11 +389,6 @@ tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 
 Martin Storsjö \
 martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
-
-#### Windows support in object tools
-
-Michael Spencer \
-bigcheesegs@gmail.com (email), [Bigcheese](https://github.com/Bigcheese) (GitHub)
 
 #### Sony PlayStation support
 
@@ -454,13 +455,17 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
+Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
+Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
+Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
 ### Former maintainers of removed components

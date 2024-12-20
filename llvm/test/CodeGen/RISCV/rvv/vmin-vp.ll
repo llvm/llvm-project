@@ -11,9 +11,7 @@ define <vscale x 8 x i7> @vmin_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsra.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsra.vi v9, v9, 1, v0.t

@@ -23,14 +23,12 @@
 // Variadic functions may be implemented as templates with a parameter pack instead
 // of C-style variadic functions.
 //
-// TODO: I think __uselocale() is not necessary if we refactor a bit.
 // TODO: __localeconv shouldn't take a reference, but the Windows implementation doesn't allow copying __locale_t
 //
 // Locale management
 // -----------------
 // namespace __locale {
 //  using __locale_t = implementation-defined;
-//  __locale_t  __uselocale(__locale_t);
 //  __locale_t  __newlocale(int, const char*, __locale_t);
 //  void        __freelocale(__locale_t);
 //  lconv*      __localeconv(__locale_t&);
@@ -98,15 +96,15 @@
 #  include <__locale_dir/support/apple.h>
 #elif defined(__FreeBSD__)
 #  include <__locale_dir/support/freebsd.h>
+#elif defined(_LIBCPP_MSVCRT_LIKE)
+#  include <__locale_dir/support/windows.h>
 #else
 
 // TODO: This is a temporary definition to bridge between the old way we defined the locale base API
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#  if defined(_LIBCPP_MSVCRT_LIKE)
-#    include <__locale_dir/locale_base_api/win32.h>
-#  elif defined(_AIX) || defined(__MVS__)
+#  if defined(_AIX) || defined(__MVS__)
 #    include <__locale_dir/locale_base_api/ibm.h>
 #  elif defined(__ANDROID__)
 #    include <__locale_dir/locale_base_api/android.h>
@@ -138,10 +136,6 @@ namespace __locale {
 // Locale management
 //
 using __locale_t = locale_t;
-
-#  ifndef _LIBCPP_MSVCRT_LIKE
-inline _LIBCPP_HIDE_FROM_ABI __locale_t __uselocale(__locale_t __loc) { return uselocale(__loc); }
-#  endif
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return newlocale(__category_mask, __name, __loc);
