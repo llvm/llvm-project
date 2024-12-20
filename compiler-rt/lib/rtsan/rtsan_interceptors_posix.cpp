@@ -807,6 +807,17 @@ INTERCEPTOR(int, epoll_pwait, int epfd, struct epoll_event *events,
 #define RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT
 #endif // SANITIZER_INTERCEPT_EPOLL
 
+#if SANITIZER_INTERCEPT_PPOLL
+INTERCEPTOR(int, ppoll, struct pollfd *fds, nfds_t n, const struct timespec *ts,
+            const sigset_t *set) {
+  __rtsan_notify_intercepted_call("ppoll");
+  return REAL(ppoll)(fds, n, ts, set);
+}
+#define RTSAN_MAYBE_INTERCEPT_PPOLL INTERCEPT_FUNCTION(ppoll)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PPOLL
+#endif
+
 #if SANITIZER_INTERCEPT_KQUEUE
 INTERCEPTOR(int, kqueue, void) {
   __rtsan_notify_intercepted_call("kqueue");
@@ -1000,6 +1011,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_EPOLL_CTL;
   RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
   RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
+  RTSAN_MAYBE_INTERCEPT_PPOLL;
   RTSAN_MAYBE_INTERCEPT_KQUEUE;
   RTSAN_MAYBE_INTERCEPT_KEVENT;
   RTSAN_MAYBE_INTERCEPT_KEVENT64;
