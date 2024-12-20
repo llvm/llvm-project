@@ -4017,10 +4017,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 }
 
 // This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
-// except for stack growth direction(default: downwards, AMDGPU: upwards) and
-// applying the wave size scale to the increment amount.
-SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
-                                                      SelectionDAG &DAG) const {
+// except for stack growth direction(default: downwards, AMDGPU: upwards),
+// applying the wave size scale to the increment amount,
+// and performing a wave-reduction for divergent allocation size.
+SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
@@ -4057,30 +4058,33 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
                            DAG.getSignedConstant(-ScaledAlignment, dl, VT));
   }
 
-  SDValue ScaledSize = DAG.getNode(
-      ISD::SHL, dl, VT, Size,
-      DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
-
-  SDValue NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  SDValue NewSP;
+  if (isa<ConstantSDNode>(Op.getOperand(1))){
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  }
+  else{
+    // performing a wave reduction to get the maximum size
+    SDValue WaveReduction =
+        DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
+    Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32,
+                          WaveReduction, Size, DAG.getConstant(0, dl, MVT::i32));
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
+    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32,
+                          ReadFirstLaneID, NewSP);
+  }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
   Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
   return DAG.getMergeValues({BaseAddr, Tmp2}, dl);
-}
-
-SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  // We only handle constant sizes here to allow non-entry block, static sized
-  // allocas. A truly dynamic value is more difficult to support because we
-  // don't know if the size value is uniform or not. If the size isn't uniform,
-  // we would need to do a wave reduction to get the maximum size to know how
-  // much to increment the uniform stack pointer.
-  SDValue Size = Op.getOperand(1);
-  if (isa<ConstantSDNode>(Size))
-    return lowerDYNAMIC_STACKALLOCImpl(Op, DAG); // Use "generic" expansion.
-
-  return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
 }
 
 SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {
