@@ -567,6 +567,8 @@ TYPE_PARSER(construct<OmpBindClause>(
     "TEAMS" >> pure(OmpBindClause::Binding::Teams) ||
     "THREAD" >> pure(OmpBindClause::Binding::Thread)))
 
+TYPE_PARSER(construct<OmpAlignClause>(scalarIntExpr))
+
 TYPE_PARSER(construct<OmpAtClause>(
     "EXECUTION" >> pure(OmpAtClause::ActionTime::Execution) ||
     "COMPILATION" >> pure(OmpAtClause::ActionTime::Compilation)))
@@ -582,6 +584,8 @@ TYPE_PARSER(
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
     "AFFINITY" >> construct<OmpClause>(construct<OmpClause::Affinity>(
                       parenthesized(Parser<OmpAffinityClause>{}))) ||
+    "ALIGN" >> construct<OmpClause>(construct<OmpClause::Align>(
+                   parenthesized(Parser<OmpAlignClause>{}))) ||
     "ALIGNED" >> construct<OmpClause>(construct<OmpClause::Aligned>(
                      parenthesized(Parser<OmpAlignedClause>{}))) ||
     "ALLOCATE" >> construct<OmpClause>(construct<OmpClause::Allocate>(

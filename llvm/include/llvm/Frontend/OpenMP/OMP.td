@@ -49,6 +49,7 @@ def OMPC_Affinity : Clause<"affinity"> {
 }
 def OMPC_Align : Clause<"align"> {
   let clangClass = "OMPAlignClause";
+  let flangClass = "OmpAlignClause";
 }
 def OMPC_Aligned : Clause<"aligned"> {
   let clangClass = "OMPAlignedClause";
