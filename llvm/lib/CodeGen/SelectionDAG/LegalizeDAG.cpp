@@ -191,7 +191,7 @@ private:
   SDValue ExpandExtractFromVectorThroughStack(SDValue Op);
   SDValue ExpandInsertToVectorThroughStack(SDValue Op);
   SDValue ExpandVectorBuildThroughStack(SDNode* Node);
-  SDValue ExpandConcatVectors(SDNode* Node);
+  SDValue ExpandConcatVectors(SDNode *Node);
 
   SDValue ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP);
   SDValue ExpandConstant(ConstantSDNode *CP);
@@ -1535,11 +1535,13 @@ SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
   for (unsigned I = 0; I < NumOperands; ++I) {
     SDValue SubOp = Node->getOperand(I);
     EVT VectorValueType = SubOp.getValueType();
-    EVT ElementValueType = VectorValueType.getVectorElementType();
+    EVT ElementValueType = TLI.getTypeToTransformTo(
+        *DAG.getContext(), VectorValueType.getVectorElementType());
     unsigned NumSubElem = VectorValueType.getVectorNumElements();
     for (unsigned Idx = 0; Idx < NumSubElem; ++Idx) {
       Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElementValueType,
-                                SubOp, DAG.getConstant(Idx, DL, VectorIdxType)));
+                                SubOp,
+                                DAG.getConstant(Idx, DL, VectorIdxType)));
     }
   }
   return DAG.getBuildVector(Node->getValueType(0), DL, Ops);
@@ -1553,8 +1555,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
   // the result as a vector.
   // Create the stack frame object.
   EVT VT = Node->getValueType(0);
-  EVT MemVT = isa<BuildVectorSDNode>(Node) ? VT.getVectorElementType()
-                                           : Node->getOperand(0).getValueType();
+  EVT MemVT = VT.getVectorElementType();
   SDLoc dl(Node);
   SDValue FIPtr = DAG.CreateStackTemporary(VT);
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
@@ -1568,8 +1569,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
   // If the destination vector element type of a BUILD_VECTOR is narrower than
   // the source element type, only store the bits necessary.
-  bool Truncate = isa<BuildVectorSDNode>(Node) &&
-                  MemVT.bitsLT(Node->getOperand(0).getValueType());
+  bool Truncate = MemVT.bitsLT(Node->getOperand(0).getValueType());
 
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
