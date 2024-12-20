@@ -5,6 +5,21 @@
 ; RUN: opt < %s -passes='bounds-checking<rt-abort>'     -S | FileCheck %s --check-prefixes=RTABORT
 ; RUN: opt < %s -passes='bounds-checking<min-rt>'       -S | FileCheck %s --check-prefixes=MINRT
 ; RUN: opt < %s -passes='bounds-checking<min-rt-abort>' -S | FileCheck %s --check-prefixes=MINRTABORT
+;
+; merge defaults to true
+; RUN: opt < %s -passes='bounds-checking<merge=true>'              -S | FileCheck %s --check-prefixes=TR
+; RUN: opt < %s -passes='bounds-checking<trap;merge=true>'         -S | FileCheck %s --check-prefixes=TR
+; RUN: opt < %s -passes='bounds-checking<rt;merge=true>'           -S | FileCheck %s --check-prefixes=RT
+; RUN: opt < %s -passes='bounds-checking<rt-abort;merge=true>'     -S | FileCheck %s --check-prefixes=RTABORT
+; RUN: opt < %s -passes='bounds-checking<min-rt;merge=true>'       -S | FileCheck %s --check-prefixes=MINRT
+; RUN: opt < %s -passes='bounds-checking<min-rt-abort;merge=true>' -S | FileCheck %s --check-prefixes=MINRTABORT
+;
+; RUN: opt < %s -passes='bounds-checking<merge=false>'              -S | FileCheck %s --check-prefixes=TR-NOMERGE
+; RUN: opt < %s -passes='bounds-checking<trap;merge=false>'         -S | FileCheck %s --check-prefixes=TR-NOMERGE
+; RUN: opt < %s -passes='bounds-checking<rt;merge=false>'           -S | FileCheck %s --check-prefixes=RT-NOMERGE
+; RUN: opt < %s -passes='bounds-checking<rt-abort;merge=false>'     -S | FileCheck %s --check-prefixes=RTABORT-NOMERGE
+; RUN: opt < %s -passes='bounds-checking<min-rt;merge=false>'       -S | FileCheck %s --check-prefixes=MINRT-NOMERGE
+; RUN: opt < %s -passes='bounds-checking<min-rt-abort;merge=false>' -S | FileCheck %s --check-prefixes=MINRTABORT-NOMERGE
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -89,7 +104,99 @@ define void @f1(i64 %x) nounwind {
 ; MINRTABORT-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal_abort() #[[ATTR1:[0-9]+]]
 ; MINRTABORT-NEXT:    unreachable
 ;
+; TR-NOMERGE-LABEL: define void @f1(
+; TR-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; TR-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; TR-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; TR-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0
+; TR-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16
+; TR-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]]
+; TR-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]]
+; TR-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
+; TR-NOMERGE:       [[BB7]]:
+; TR-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
+; TR-NOMERGE-NEXT:    ret void
+; TR-NOMERGE:       [[TRAP]]:
+; TR-NOMERGE-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR2:[0-9]+]]
+; TR-NOMERGE-NEXT:    unreachable
+;
+; RT-NOMERGE-LABEL: define void @f1(
+; RT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; RT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; RT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; RT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0
+; RT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16
+; RT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]]
+; RT-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]]
+; RT-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
+; RT-NOMERGE:       [[BB7]]:
+; RT-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
+; RT-NOMERGE-NEXT:    ret void
+; RT-NOMERGE:       [[TRAP]]:
+; RT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR1:[0-9]+]]
+; RT-NOMERGE-NEXT:    br label %[[BB7]]
+;
+; RTABORT-NOMERGE-LABEL: define void @f1(
+; RTABORT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; RTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; RTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; RTABORT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0
+; RTABORT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16
+; RTABORT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]]
+; RTABORT-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]]
+; RTABORT-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
+; RTABORT-NOMERGE:       [[BB7]]:
+; RTABORT-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
+; RTABORT-NOMERGE-NEXT:    ret void
+; RTABORT-NOMERGE:       [[TRAP]]:
+; RTABORT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR2:[0-9]+]]
+; RTABORT-NOMERGE-NEXT:    unreachable
+;
+; MINRT-NOMERGE-LABEL: define void @f1(
+; MINRT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; MINRT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; MINRT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; MINRT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0
+; MINRT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16
+; MINRT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]]
+; MINRT-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]]
+; MINRT-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
+; MINRT-NOMERGE:       [[BB7]]:
+; MINRT-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
+; MINRT-NOMERGE-NEXT:    ret void
+; MINRT-NOMERGE:       [[TRAP]]:
+; MINRT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal() #[[ATTR1:[0-9]+]]
+; MINRT-NOMERGE-NEXT:    br label %[[BB7]]
+;
+; MINRTABORT-NOMERGE-LABEL: define void @f1(
+; MINRTABORT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; MINRTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; MINRTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; MINRTABORT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0
+; MINRTABORT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16
+; MINRTABORT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]]
+; MINRTABORT-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]]
+; MINRTABORT-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
+; MINRTABORT-NOMERGE:       [[BB7]]:
+; MINRTABORT-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
+; MINRTABORT-NOMERGE-NEXT:    ret void
+; MINRTABORT-NOMERGE:       [[TRAP]]:
+; MINRTABORT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal_abort() #[[ATTR2:[0-9]+]]
+; MINRTABORT-NOMERGE-NEXT:    unreachable
+;
   %1 = alloca i128, i64 %x
   %3 = load i128, ptr %1, align 4
   ret void
 }
+
+; TR: attributes #[[ATTR2]] = { noreturn nounwind }
+; RT: attributes #[[ATTR0]] = { nounwind }
+; RTABORT: attributes #[[ATTR1]] = { noreturn nounwind }
+; MINRT: attributes #[[ATTR0]] = { nounwind }
+; MINRTABORT: attributes #[[ATTR1]] = { noreturn nounwind }
+
+; TR-NOMERGE: attributes #[[ATTR2]] = { nomerge noreturn nounwind }
+; RT-NOMERGE: attributes #[[ATTR1]] = { nomerge nounwind }
+; RTABORT-NOMERGE: attributes #[[ATTR2]] = { nomerge noreturn nounwind }
+; MINRT-NOMERGE: attributes #[[ATTR1]] = { nomerge nounwind }
+; MINRTABORT-NOMERGE: attributes #[[ATTR2]] = { nomerge noreturn nounwind }
