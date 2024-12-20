@@ -3650,9 +3650,6 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
 
   auto resultTy = getTypeConverter()->convertType(op.getType());
 
-  resultVal = createIntCast(rewriter, resultVal,
-                            mlir::cast<mlir::IntegerType>(resultTy));
-
   if (info.getIsSigned()) {
     assert(size <= storageSize);
     unsigned highBits = storageSize - size;
@@ -3662,6 +3659,10 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
       resultVal = createAShR(rewriter, resultVal, highBits);
     }
   }
+
+  resultVal = createIntCast(rewriter, resultVal,
+                            mlir::cast<mlir::IntegerType>(resultTy),
+                            info.getIsSigned());
 
   rewriter.replaceOp(op, resultVal);
   return mlir::success();

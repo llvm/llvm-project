@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct __long {
   struct __attribute__((__packed__)) {
@@ -129,6 +131,16 @@ void createU() {
 // CHECK:   cir.store %2, %1 : !ty_anon_struct, !cir.ptr<!ty_anon_struct>
 void createD() {
   D d = {1,2,3};
+}
+
+// check the -1 is stored to the ret value
+// LLVM: define dso_local i32 {{@.*get_a.*}}
+// LLVM:    %[[V1:.*]] = alloca i32
+// LLVM:    store i32 -1, ptr %[[V1]], align 4
+// LLVM:    %[[V2:.*]] = load i32, ptr %[[V1]], align 4
+// LLVM:    ret i32 %[[V2:.*]]
+int get_a(T *t) {
+  return (t->a = 7);
 }
 
 typedef struct {
