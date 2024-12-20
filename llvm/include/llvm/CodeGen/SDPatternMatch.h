@@ -507,6 +507,13 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VSELECT, Cond, T, F);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_InsertElt(const T0_P &Vec, const T1_P &Val, const T2_P &Idx) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::INSERT_VECTOR_ELT, Vec, Val,
+                                            Idx);
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -844,6 +851,10 @@ template <typename V1_t, typename V2_t>
 inline SDShuffle_maskMatch<V1_t, V2_t>
 m_ShuffleSpecificMask(const V1_t &v1, const V2_t &v2, ArrayRef<int> mask) {
   return SDShuffle_maskMatch<V1_t, V2_t>(v1, v2, mask);
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_ExtractElt(const LHS &Vec, const RHS &Idx) {
+  return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_VECTOR_ELT, Vec, Idx);
 }
 
 // === Unary operations ===

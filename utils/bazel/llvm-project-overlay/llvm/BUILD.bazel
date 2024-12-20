@@ -2800,6 +2800,7 @@ cc_library(
         ":MC",
         ":MCDisassembler",
         ":Object",
+        ":OrcShared",
         ":OrcTargetProcess",
         ":Passes",
         ":Support",

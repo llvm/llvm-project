@@ -81,15 +81,6 @@ static bool hasDoubleDescriptors(OpTy op) {
   return false;
 }
 
-bool isDeviceGlobal(fir::GlobalOp op) {
-  auto attr = op.getDataAttr();
-  if (attr && (*attr == cuf::DataAttribute::Device ||
-               *attr == cuf::DataAttribute::Managed ||
-               *attr == cuf::DataAttribute::Constant))
-    return true;
-  return false;
-}
-
 static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
                                    mlir::Location loc, mlir::Type toTy,
                                    mlir::Value val) {
@@ -388,7 +379,7 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
     if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
       if (auto global = symTab.lookup<fir::GlobalOp>(
               addrOfOp.getSymbol().getRootReference().getValue())) {
-        if (isDeviceGlobal(global)) {
+        if (cuf::isRegisteredDeviceGlobal(global)) {
           rewriter.setInsertionPointAfter(addrOfOp);
           auto mod = op->getParentOfType<mlir::ModuleOp>();
           fir::FirOpBuilder builder(rewriter, mod);
@@ -833,7 +824,7 @@ public:
                 addrOfOp.getSymbol().getRootReference().getValue())) {
           if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(global.getType())))
             return true;
-          if (isDeviceGlobal(global))
+          if (cuf::isRegisteredDeviceGlobal(global))
             return false;
         }
       }

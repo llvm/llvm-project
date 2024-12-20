@@ -925,7 +925,7 @@ public:
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
-    AU.addPreserved<LiveStacks>();
+    AU.addPreserved<LiveStacksWrapperLegacy>();
 
     MachineFunctionPass::getAnalysisUsage(AU);
   }

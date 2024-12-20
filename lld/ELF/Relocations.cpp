@@ -65,21 +65,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-static std::optional<std::string> getLinkerScriptLocation(Ctx &ctx,
-                                                          const Symbol &sym) {
-  for (SectionCommand *cmd : ctx.script->sectionCommands)
-    if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
-      if (assign->sym == &sym)
-        return assign->location;
-  return std::nullopt;
-}
-
 static void printDefinedLocation(ELFSyncStream &s, const Symbol &sym) {
-  s << "\n>>> defined in ";
-  if (sym.file)
-    return void(s << sym.file);
-  if (std::optional<std::string> loc = getLinkerScriptLocation(s.ctx, sym))
-    return void(s << *loc);
+  s << "\n>>> defined in " << sym.file;
 }
 
 // Construct a message in the following format.
@@ -210,8 +197,10 @@ static bool needsPlt(RelExpr expr) {
 }
 
 bool lld::elf::needsGot(RelExpr expr) {
-  return oneof<R_GOT, R_GOT_OFF, RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF,
-               RE_MIPS_GOT_OFF32, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
+  return oneof<R_GOT, RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, R_GOT_OFF,
+               RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
+               RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC,
+               RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
                RE_AARCH64_GOT_PAGE, RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(
       expr);
 }
@@ -323,7 +312,6 @@ static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
       .overwrite(sym);
 
   sym.versionId = old.versionId;
-  sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
   sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
@@ -526,7 +514,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 // Custom error message if Sym is defined in a discarded section.
 template <class ELFT>
 static void maybeReportDiscarded(Ctx &ctx, ELFSyncStream &msg, Undefined &sym) {
-  auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
+  auto *file = dyn_cast<ObjFile<ELFT>>(sym.file);
   if (!file || !sym.discardedSecIdx)
     return;
   ArrayRef<typename ELFT::Shdr> objSections =
@@ -582,11 +570,11 @@ static const Symbol *getAlternativeSpelling(Ctx &ctx, const Undefined &sym,
                                             std::string &pre_hint,
                                             std::string &post_hint) {
   DenseMap<StringRef, const Symbol *> map;
-  if (sym.file && sym.file->kind() == InputFile::ObjKind) {
+  if (sym.file->kind() == InputFile::ObjKind) {
     auto *file = cast<ELFFileBase>(sym.file);
     // If sym is a symbol defined in a discarded section, maybeReportDiscarded()
     // will give an error. Don't suggest an alternative spelling.
-    if (file && sym.discardedSecIdx != 0 &&
+    if (sym.discardedSecIdx != 0 &&
         file->getSections()[sym.discardedSecIdx] == &InputSection::discarded)
       return nullptr;
 
@@ -756,9 +744,8 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
             getAlternativeSpelling(ctx, sym, pre_hint, post_hint)) {
-      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint;
-      if (corrected->file)
-        msg << "\n>>> defined in: " << corrected->file;
+      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint
+          << "\n>>> defined in: " << corrected->file;
     }
   }
 
@@ -925,6 +912,25 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
                      ctx.target->symbolicRel);
 }
 
+static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
+  ctx.in.got->addEntry(sym);
+  ctx.in.got->addAuthEntry(sym);
+  uint64_t off = sym.getGotOffset(ctx);
+
+  // If preemptible, emit a GLOB_DAT relocation.
+  if (sym.isPreemptible) {
+    ctx.mainPart->relaDyn->addReloc({R_AARCH64_AUTH_GLOB_DAT, ctx.in.got.get(),
+                                     off, DynamicReloc::AgainstSymbol, sym, 0,
+                                     R_ABS});
+    return;
+  }
+
+  // Signed GOT requires dynamic relocation.
+  ctx.in.got->getPartition(ctx).relaDyn->addReloc(
+      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off,
+       DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
+}
+
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset(ctx);
@@ -969,14 +975,15 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
                                                  const Symbol &sym,
                                                  uint64_t relOff) const {
   // These expressions always compute a constant
-  if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
-            RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
-            RE_MIPS_GOT_GP_PC, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
-            R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
-            R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
-            RE_PPC64_RELAX_TOC, RE_RISCV_ADD, RE_AARCH64_GOT_PAGE,
-            RE_LOONGARCH_PLT_PAGE_PC, RE_LOONGARCH_GOT,
-            RE_LOONGARCH_GOT_PAGE_PC>(e))
+  if (oneof<
+          R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
+          RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32, RE_MIPS_GOT_GP_PC,
+          RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC,
+          R_GOTONLY_PC, R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
+          R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
+          RE_PPC64_RELAX_TOC, RE_RISCV_ADD, RE_AARCH64_GOT_PAGE,
+          RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, RE_LOONGARCH_PLT_PAGE_PC,
+          RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -1071,7 +1078,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // direct relocation on through.
   if (LLVM_UNLIKELY(isIfunc) && ctx.arg.zIfuncNoplt) {
     std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    sym.exportDynamic = true;
+    sym.isExported = true;
     ctx.mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend,
                                           type);
     return;
@@ -1090,7 +1097,11 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      sym.setFlags(NEEDS_GOT);
+      if (expr == RE_AARCH64_AUTH_GOT || expr == RE_AARCH64_AUTH_GOT_PAGE_PC ||
+          expr == RE_AARCH64_AUTH_GOT_PC)
+        sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      else
+        sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -1765,8 +1776,11 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT)
+    if (flags & NEEDS_GOT) {
+      assert(!(flags & NEEDS_GOT_AUTH) &&
+             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
       addGotEntry(ctx, sym);
+    }
   } else if (flags & NEEDS_GOT) {
     // Redirect GOT accesses to point to the Igot.
     sym.gotInIgot = true;
@@ -1787,8 +1801,19 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     sym.allocateAux(ctx);
 
-    if (flags & NEEDS_GOT)
-      addGotEntry(ctx, sym);
+    if (flags & NEEDS_GOT) {
+      if ((flags & NEEDS_GOT_AUTH) && (flags & NEEDS_GOT_NONAUTH)) {
+        auto diag = Err(ctx);
+        diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
+             << "' requested, but only one type of GOT entry per symbol is "
+                "supported";
+        return;
+      }
+      if (flags & NEEDS_GOT_AUTH)
+        addGotAuthEntry(ctx, sym);
+      else
+        addGotEntry(ctx, sym);
+    }
     if (flags & NEEDS_PLT)
       addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                   ctx.target->pltRel, sym);

@@ -2,7 +2,7 @@
 // false negatives with the BFD linker.
 // RUN: %clangxx_asan -fuse-ld=bfd -Wl,-gc-sections -ffunction-sections -fdata-sections -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// FIXME: Confirm if bfd tests are relevant for Android, this one is broken after https://github.com/llvm/llvm-project/pull/117624.
+// Android does not use bfd.
 // UNSUPPORTED: android
 
 #include <string.h>

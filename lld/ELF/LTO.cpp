@@ -250,13 +250,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // 5) Symbols that will be referenced after linker wrapping is performed.
     r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
                             sym->referencedAfterWrap ||
-                            (r.Prevailing && sym->includeInDynsym(ctx)) ||
+                            (r.Prevailing && sym->isExported) ||
                             usedStartStop.count(objSym.getSectionName());
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
-    r.ExportDynamic =
-        sym->computeBinding(ctx) != STB_LOCAL &&
-        (ctx.arg.exportDynamic || sym->exportDynamic || sym->inDynamicList);
+    r.ExportDynamic = sym->computeBinding(ctx) != STB_LOCAL &&
+                      (ctx.arg.exportDynamic || sym->isExported);
     const auto *dr = dyn_cast<Defined>(sym);
     r.FinalDefinitionInLinkageUnit =
         (isExec || sym->visibility() != STV_DEFAULT) && dr &&

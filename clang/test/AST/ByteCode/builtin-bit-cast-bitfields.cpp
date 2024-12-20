@@ -63,7 +63,7 @@ struct bytes {
 
   constexpr unsigned char operator[](size_t index) {
     if (index < N)
-      return d[index];
+      return d[index]; // expected-note {{read of uninitialized object}}
     return -1;
   }
 };
@@ -134,18 +134,18 @@ namespace BitFields {
     enum byte : unsigned char {};
 
     constexpr BF bf = {0x3};
-    /// Requires bitcasts to composite types.
     static_assert(bit_cast<bits<2>>(bf).bits == bf.z);
     static_assert(bit_cast<unsigned char>(bf));
 
-    static_assert(__builtin_bit_cast(byte, bf));
+    static_assert(__builtin_bit_cast(byte, bf)); // expected-error {{not an integral constant expression}} \
+                                                 // expected-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'byte' is invalid}}
 
     struct M {
-      // ref-note@+1 {{subobject declared here}}
+      // expected-note@+1 {{subobject declared here}}
       unsigned char mem[sizeof(BF)];
     };
-    // ref-error@+2 {{initialized by a constant expression}}
-    // ref-note@+1 {{not initialized}}
+    // expected-error@+2 {{initialized by a constant expression}}
+    // expected-note@+1 {{not initialized}}
     constexpr M m = bit_cast<M>(bf);
 
     constexpr auto f = []() constexpr {
@@ -156,8 +156,8 @@ namespace BitFields {
 
     static_assert(f()[0] + f()[1] + f()[2] == 0xc0 + 0xff + 0xee);
     {
-      // ref-error@+2 {{initialized by a constant expression}}
-      // ref-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
+      // expected-error@+2 {{initialized by a constant expression}}
+      // expected-note@+1 {{in call to}}
       constexpr auto _bad = f()[3];
     }
 
@@ -173,8 +173,8 @@ namespace BitFields {
     };
     static_assert(g().s0 + g().s1 + g().b0 + g().b1 == 0xc0 + 0xff + 0xe + 0xe);
     {
-      // ref-error@+2 {{initialized by a constant expression}}
-      // ref-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
+      // expected-error@+2 {{initialized by a constant expression}}
+      // expected-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
       constexpr auto _bad = g().b2;
     }
   }
@@ -438,4 +438,38 @@ namespace Enums {
   static_assert(bit_cast<bits<2, unsigned char, pad>>(x) == 3);
   static_assert(
     bit_cast<X>((unsigned char)0x40).direction == X::direction::right);
+}
+
+namespace IndeterminateBits {
+  struct S {
+    unsigned a : 13;
+    unsigned   : 17;
+    unsigned b : 2;
+  };
+  constexpr unsigned A = __builtin_bit_cast(unsigned, S{12, 3}); // expected-error {{must be initialized by a constant expression}} \
+                                                                 // expected-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'unsigned int' is invalid}}
+
+
+  /// GCC refuses to compile this as soon as we access the indeterminate bits
+  /// in the static_assert. MSVC accepts it.
+  struct S2 {
+    unsigned char a : 2;
+  };
+  constexpr unsigned char B = __builtin_bit_cast(unsigned char, S2{3});
+  static_assert(B == (LITTLE_END ? 3 : 192));
+
+
+
+  struct S3 {
+    unsigned a : 13;
+    unsigned   : 17;
+    unsigned b : 2;
+  };
+
+  struct D {
+    unsigned a;
+  };
+  constexpr D s = __builtin_bit_cast(D, S3{12, 3}); // expected-error {{must be initialized by a constant expression}} \
+                                                    // expected-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'unsigned int' is invalid}}
+
 }

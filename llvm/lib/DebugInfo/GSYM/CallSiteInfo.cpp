@@ -181,7 +181,7 @@ StringMap<FunctionInfo *> CallSiteInfoLoader::buildFunctionMap() {
   StringMap<FunctionInfo *> FuncMap;
   for (auto &Func : Funcs) {
     FuncMap.try_emplace(GCreator.getString(Func.Name), &Func);
-    if (auto MFuncs = Func.MergedFunctions)
+    if (auto &MFuncs = Func.MergedFunctions)
       for (auto &MFunc : MFuncs->MergedFunctions)
         FuncMap.try_emplace(GCreator.getString(MFunc.Name), &MFunc);
   }

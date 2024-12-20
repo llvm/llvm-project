@@ -714,6 +714,7 @@ private:
 };
 } // namespace
 
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 /// Return "true" if there is an operation rewrite that matches the specified
 /// rewrite type and operation among the given rewrites.
 template <typename RewriteTy, typename R>
@@ -724,7 +725,6 @@ static bool hasRewrite(R &&rewrites, Operation *op) {
   });
 }
 
-#ifndef NDEBUG
 /// Return "true" if there is a block rewrite that matches the specified
 /// rewrite type and block among the given rewrites.
 template <typename RewriteTy, typename R>
@@ -734,7 +734,7 @@ static bool hasRewrite(R &&rewrites, Block *block) {
     return rewriteTy && rewriteTy->getBlock() == block;
   });
 }
-#endif // NDEBUG
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriterImpl
@@ -1292,9 +1292,12 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     ConversionPatternRewriter &rewriter, Block *block,
     const TypeConverter *converter,
     TypeConverter::SignatureConversion &signatureConversion) {
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // A block cannot be converted multiple times.
-  assert(!hasRewrite<BlockTypeConversionRewrite>(rewrites, block) &&
-         "block was already converted");
+  if (hasRewrite<BlockTypeConversionRewrite>(rewrites, block))
+    llvm::report_fatal_error("block was already converted");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
   OpBuilder::InsertionGuard g(rewriter);
 
   // If no arguments are being changed or added, there is nothing to do.
@@ -2236,9 +2239,9 @@ OperationLegalizer::legalizePatternResult(Operation *op, const Pattern &pattern,
                                           ConversionPatternRewriter &rewriter,
                                           RewriterState &curState) {
   auto &impl = rewriter.getImpl();
-
-#ifndef NDEBUG
   assert(impl.pendingRootUpdates.empty() && "dangling root updates");
+
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // Check that the root was either replaced or updated in place.
   auto newRewrites = llvm::drop_begin(impl.rewrites, curState.numRewrites);
   auto replacedRoot = [&] {
@@ -2247,9 +2250,9 @@ OperationLegalizer::legalizePatternResult(Operation *op, const Pattern &pattern,
   auto updatedRootInPlace = [&] {
     return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
   };
-  assert((replacedRoot() || updatedRootInPlace()) &&
-         "expected pattern to replace the root operation");
-#endif // NDEBUG
+  if (!replacedRoot() && !updatedRootInPlace())
+    llvm::report_fatal_error("expected pattern to replace the root operation");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   // Legalize each of the actions registered during application.
   RewriterState newState = impl.getCurrentState();

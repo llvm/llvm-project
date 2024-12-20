@@ -7,9 +7,8 @@
 define i32 @pack_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: pack_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 16
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    slli a1, a1, 16
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
@@ -257,9 +256,8 @@ define void @packh_i16_3(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2, ptr %p) {
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV32I-LABEL: zexth_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBKB-LABEL: zexth_i32:
@@ -273,9 +271,8 @@ define i32 @zexth_i32(i32 %a) nounwind {
 define i64 @zexth_i64(i64 %a) nounwind {
 ; RV32I-LABEL: zexth_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
@@ -291,9 +288,8 @@ define i64 @zexth_i64(i64 %a) nounwind {
 define i32 @zext_i16_to_i32(i16 %a) nounwind {
 ; RV32I-LABEL: zext_i16_to_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBKB-LABEL: zext_i16_to_i32:
@@ -307,9 +303,8 @@ define i32 @zext_i16_to_i32(i16 %a) nounwind {
 define i64 @zext_i16_to_i64(i16 %a) nounwind {
 ; RV32I-LABEL: zext_i16_to_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;

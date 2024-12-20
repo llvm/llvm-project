@@ -430,13 +430,17 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
 
   // Give --sysroot= preference, over the Apple specific behavior to also use
   // --isysroot as the syslibroot.
-  StringRef sysroot = C.getSysRoot();
-  if (sysroot != "") {
+  // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
+  // prioritise command line arguments over configuration of `DEFAULT_SYSROOT`.
+  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ)) {
     CmdArgs.push_back("-syslibroot");
-    CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
+    CmdArgs.push_back(A->getValue());
   } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     CmdArgs.push_back("-syslibroot");
     CmdArgs.push_back(A->getValue());
+  } else if (StringRef sysroot = C.getSysRoot(); sysroot != "") {
+    CmdArgs.push_back("-syslibroot");
+    CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_twolevel__namespace);
@@ -1596,6 +1600,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
              "Static sanitizer runtimes not supported");
       AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
     }
+    if (Sanitize.needsTysanRt())
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "tysan");
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 
@@ -3597,6 +3603,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
       (isTargetMacOSBased() || isTargetIOSSimulator() ||
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
+  }
+
+  if ((IsX86_64 || IsAArch64) && isTargetMacOSBased()) {
+    Res |= SanitizerKind::Type;
   }
 
   if (IsX86_64)

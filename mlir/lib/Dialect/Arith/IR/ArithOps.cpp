@@ -393,8 +393,12 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 
 OpFoldResult arith::SubIOp::fold(FoldAdaptor adaptor) {
   // subi(x,x) -> 0
-  if (getOperand(0) == getOperand(1))
-    return Builder(getContext()).getZeroAttr(getType());
+  if (getOperand(0) == getOperand(1)) {
+    auto shapedType = dyn_cast<ShapedType>(getType());
+    // We can't generate a constant with a dynamic shaped tensor.
+    if (!shapedType || shapedType.hasStaticShape())
+      return Builder(getContext()).getZeroAttr(getType());
+  }
   // subi(x,0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
@@ -952,7 +956,7 @@ void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
-  // negf(negf(x)) -> x
+  /// negf(negf(x)) -> x
   if (auto op = this->getOperand().getDefiningOp<arith::NegFOp>())
     return op.getOperand();
   return constFoldUnaryOp<FloatAttr>(adaptor.getOperands(),
@@ -980,14 +984,6 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
 OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
-    return getLhs();
-
-  // Simplifies subf(x, rhs) to x if the following conditions are met:
-  // 1. `rhs` is a denormal floating-point value.
-  // 2. The denormal mode for the operation is set to positive zero.
-  bool isPositiveZeroMode =
-      getDenormalModeAttr().getValue() == DenormalMode::positive_zero;
-  if (isPositiveZeroMode && matchPattern(adaptor.getRhs(), m_isDenormalFloat()))
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(

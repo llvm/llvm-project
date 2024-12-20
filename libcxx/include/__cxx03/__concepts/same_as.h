@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_SAME_AS_H
-#define _LIBCPP___CONCEPTS_SAME_AS_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_SAME_AS_H
+#define _LIBCPP___CXX03___CONCEPTS_SAME_AS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_same.h>
@@ -32,4 +32,4 @@ concept same_as = __same_as_impl<_Tp, _Up> && __same_as_impl<_Up, _Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_SAME_AS_H
+#endif // _LIBCPP___CXX03___CONCEPTS_SAME_AS_H

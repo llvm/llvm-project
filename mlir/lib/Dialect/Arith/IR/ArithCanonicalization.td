@@ -422,11 +422,10 @@ def TruncIShrUIMulIToMulUIExtended :
 //===----------------------------------------------------------------------===//
 
 // mulf(negf(x), negf(y)) -> mulf(x,y)
-// (retain fastmath flags and denormal mode of the original divf)
+// (retain fastmath flags of original mulf)
 def MulFOfNegF :
-    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_, $_), 
-                      (Arith_NegFOp $y, $_, $_), $fmf, $mode),
-        (Arith_MulFOp $x, $y, $fmf, $mode),
+    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
+        (Arith_MulFOp $x, $y, $fmf),
         [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
 
 //===----------------------------------------------------------------------===//
@@ -434,11 +433,10 @@ def MulFOfNegF :
 //===----------------------------------------------------------------------===//
 
 // divf(negf(x), negf(y)) -> divf(x,y)
-// (retain fastmath flags and denormal mode of the original divf)
+// (retain fastmath flags of original divf)
 def DivFOfNegF :
-    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_, $_), 
-                      (Arith_NegFOp $y, $_, $_), $fmf, $mode),
-        (Arith_DivFOp $x, $y, $fmf, $mode),
+    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
+        (Arith_DivFOp $x, $y, $fmf),
         [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
 
 #endif // ARITH_PATTERNS
