@@ -69,7 +69,7 @@ static void transplantSymbolsAtOffset(InputSection *fromIsec,
   // Ensure the symbols will still be in address order after our insertions.
   auto insertIt = llvm::upper_bound(toIsec->symbols, toOff,
                                     [](uint64_t off, const Symbol *s) {
-                                      return cast<Defined>(s)->value < off;
+                                      return cast<Defined>(s)->value > off;
                                     });
   llvm::erase_if(fromIsec->symbols, [&](Symbol *s) {
     auto *d = cast<Defined>(s);
