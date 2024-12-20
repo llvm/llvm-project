@@ -10218,6 +10218,7 @@ cc_binary(
     srcs = ["tools/mlir-vulkan-runner/mlir-vulkan-runner.cpp"],
     deps = [
         ":ArithDialect",
+        ":ArithToLLVM",
         ":BuiltinToLLVMIRTranslation",
         ":ConvertToSPIRV",
         ":ExecutionEngineUtils",
