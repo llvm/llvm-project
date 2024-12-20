@@ -12,36 +12,50 @@
 
 # RUN: yaml2obj -D ALIGN=8 %s -o %t8
 # RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/2 --remove-note=CORE/0x03 %t8 %t8o
-# RUN: llvm-readobj --segments --sections --notes %t8o | FileCheck %s -D#SIZE=64
+# RUN: llvm-readobj --segments --sections --notes %t8o | FileCheck %s -D#SIZE0=32 -D#SIZE1=32
 
 # RUN: yaml2obj -D ALIGN=4 %s -o %t4
 # RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4 %t4o
-# RUN: llvm-readobj --segments --sections --notes %t4o | FileCheck %s -D#SIZE=48
+# RUN: llvm-readobj --segments --sections --notes %t4o | FileCheck %s -D#SIZE0=24 -D#SIZE1=24
 
 # CHECK:      Sections [
 # CHECK:        Section {
-# CHECK:          Name: .note
+# CHECK:          Name: .note0
 # CHECK-NEXT:     Type: SHT_NOTE
 # CHECK-NEXT:     Flags [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address:
-# CHECK-NEXT:     Offset: [[OFFSET:0x.+]]
-# CHECK-NEXT:     Size: [[#%d,SIZE]]
+# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0:]]
+# CHECK-NEXT:     Size: [[#%d,SIZE0]]
+# CHECK:          Name: .note1
+# CHECK-NEXT:     Type: SHT_NOTE
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address:
+# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0]]
+# CHECK-NEXT:     Size: [[#%d,SIZE1]]
+# CHECK:          Name: .note2
+# CHECK-NEXT:     Type: SHT_NOTE
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address:
+# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0+SIZE1]]
+# CHECK-NEXT:     Size: 0
 
 # CHECK:      ProgramHeaders [
 # CHECK-NEXT:   ProgramHeader {
 # CHECK-NEXT:     Type: PT_NOTE
-# CHECK-NEXT:     Offset: [[OFFSET]]
+# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0]]
 # CHECK-NEXT:     VirtualAddress: 0x0
 # CHECK-NEXT:     PhysicalAddress: 0x0
-# CHECK-NEXT:     FileSize: [[#%d,SIZE]]
+# CHECK-NEXT:     FileSize: [[#%d,SIZE0+SIZE1]]
 # CHECK-NEXT:     MemSize: 0
 
 # CHECK:      NoteSections [
 # CHECK-NEXT:   NoteSection {
 # CHECK-NEXT:     Name:
-# CHECK-NEXT:     Offset: [[OFFSET]]
-# CHECK-NEXT:     Size: 0x[[#%x,SIZE]]
+# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0]]
+# CHECK-NEXT:     Size: 0x[[#%X,SIZE0+SIZE1]]
 # CHECK-NEXT:     Notes [
 # CHECK-NEXT:       {
 # CHECK-NEXT:         Owner: CORE
@@ -72,10 +86,10 @@ FileHeader:
 ProgramHeaders:
   - Type:         PT_NOTE
     MemSize:      0
-    FirstSec:     .note
-    LastSec:      .note
+    FirstSec:     .note0
+    LastSec:      .note2
 Sections:
-  - Name:         .note
+  - Name:         .note0
     Type:         SHT_NOTE
     AddressAlign: [[ALIGN]]
     Notes:
@@ -85,12 +99,20 @@ Sections:
       - Name:   CORE
         Type:   0x02
         Desc:   0202
+  - Name:         .note1
+    Type:         SHT_NOTE
+    AddressAlign: [[ALIGN]]
+    Notes:
       - Name:   CORE
         Type:   0x03
         Desc:   0303
       - Name:   CORE
         Type:   0x04
         Desc:   0404
+  - Name:         .note2
+    Type:         SHT_NOTE
+    AddressAlign: [[ALIGN]]
+    Notes:
       - Name:   LINUX
         Type:   0x01
         Desc:   0505
