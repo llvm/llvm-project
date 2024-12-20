@@ -56,10 +56,13 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc data copy((float)ArrayParam[2])
   ;
 
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
   // expected-error@+1{{OpenACC 'copy' clause is not valid on 'enter data' directive}}
 #pragma acc enter data copy(LocalInt)
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
   // expected-error@+1{{OpenACC 'pcopy' clause is not valid on 'exit data' directive}}
 #pragma acc exit data pcopy(LocalInt)
+  // expected-error@+2{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'host_data' directive}}
 #pragma acc host_data present_or_copy(LocalInt)
   ;

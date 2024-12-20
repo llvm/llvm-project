@@ -296,13 +296,15 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
-      // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
+      // 'async', 'worker', 'vector', and 'wait' have an optional IntExpr, so be
+      // tolerant of that.
       if ((ClauseKind == OpenACCClauseKind::Async ||
            ClauseKind == OpenACCClauseKind::Worker ||
            ClauseKind == OpenACCClauseKind::Vector ||
@@ -346,6 +348,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Gang ||
               ClauseKind == OpenACCClauseKind::Worker ||
@@ -400,6 +403,7 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
               ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
@@ -481,6 +485,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -492,6 +497,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -538,6 +544,7 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
               ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -576,6 +583,7 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
               ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -659,7 +667,8 @@ public:
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
   /// happen before any associated declarations or statements have been parsed.
   /// This function is only called when we are parsing a 'statement' context.
-  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
 
   /// Called after the directive, including its clauses, have been parsed and
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
@@ -675,12 +684,18 @@ public:
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  StmtResult ActOnEndStmtDirective(OpenACCDirectiveKind K,
-                                   SourceLocation StartLoc,
-                                   SourceLocation DirLoc,
-                                   SourceLocation EndLoc,
-                                   ArrayRef<OpenACCClause *> Clauses,
-                                   StmtResult AssocStmt);
+  /// LParenLoc: Location of the left paren, if it exists (not on all
+  /// constructs).
+  /// MiscLoc: First misc location, if necessary (not all constructs).
+  /// Exprs: List of expressions on the construct itself, if necessary (not all
+  /// constructs).
+  /// RParenLoc: Location of the right paren, if it exists (not on all
+  /// constructs).
+  StmtResult ActOnEndStmtDirective(
+      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+      SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
+      SourceLocation RParenLoc, SourceLocation EndLoc,
+      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.

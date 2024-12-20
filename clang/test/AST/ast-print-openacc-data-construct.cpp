@@ -10,8 +10,8 @@ void foo() {
 #pragma acc data default(none)
   ;
 
-// CHECK: #pragma acc data device_type(int)
-#pragma acc data device_type(int)
+// CHECK: #pragma acc data default(none) device_type(int)
+#pragma acc data default(none) device_type(int)
   ;
 
 // CHECK: #pragma acc enter data copyin(Var)
@@ -20,8 +20,7 @@ void foo() {
 // CHECK: #pragma acc exit data copyout(Var)
 #pragma acc exit data copyout(Var)
   ;
-// CHECK: #pragma acc host_data
-// CHECK-NOT: use_device(Var)
+// CHECK: #pragma acc host_data use_device(Var)
 #pragma acc host_data use_device(Var)
   ;
 
@@ -38,7 +37,7 @@ void foo() {
 // CHECK: #pragma acc exit data copyout(Var) if(i == array[1])
 #pragma acc exit data copyout(Var) if(i == array[1])
   ;
-// CHECK: #pragma acc host_data if(i == array[1])
+// CHECK: #pragma acc host_data use_device(Var) if(i == array[1])
 #pragma acc host_data use_device(Var) if(i == array[1])
   ;
 
@@ -114,7 +113,7 @@ void foo() {
 // CHECK: #pragma acc exit data copyout(i) finalize
 #pragma acc exit data copyout(i) finalize
 
-// CHECK: #pragma acc host_data if_present
+// CHECK: #pragma acc host_data use_device(i) if_present
 #pragma acc host_data use_device(i) if_present
   ;
 // CHECK: #pragma acc exit data copyout(i) detach(iPtr, arrayPtr[0])
@@ -126,4 +125,8 @@ void foo() {
 
 // CHECK: #pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
 #pragma acc exit data copyout(i) delete(i, array[1], array, array[1:2])
+
+// CHECK: #pragma acc host_data use_device(i)
+#pragma acc host_data use_device(i)
+  ;
 }

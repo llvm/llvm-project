@@ -952,11 +952,6 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
-  struct GEPFlagsTy {
-    char IsInBounds : 1;
-    GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
-  };
-
 private:
   struct ExactFlagsTy {
     char IsExact : 1;
@@ -983,7 +978,7 @@ private:
     WrapFlagsTy WrapFlags;
     DisjointFlagsTy DisjointFlags;
     ExactFlagsTy ExactFlags;
-    GEPFlagsTy GEPFlags;
+    GEPNoWrapFlags GEPFlags;
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     unsigned AllFlags;
@@ -1020,7 +1015,7 @@ public:
       ExactFlags.IsExact = Op->isExact();
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
       OpType = OperationType::GEPOp;
-      GEPFlags.IsInBounds = GEP->isInBounds();
+      GEPFlags = GEP->getNoWrapFlags();
     } else if (auto *PNNI = dyn_cast<PossiblyNonNegInst>(&I)) {
       OpType = OperationType::NonNegOp;
       NonNegFlags.NonNeg = PNNI->hasNonNeg();
@@ -1060,7 +1055,7 @@ public:
 protected:
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      GEPFlagsTy GEPFlags, DebugLoc DL = {})
+                      GEPNoWrapFlags GEPFlags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::GEPOp),
         GEPFlags(GEPFlags) {}
 
@@ -1097,7 +1092,7 @@ public:
       ExactFlags.IsExact = false;
       break;
     case OperationType::GEPOp:
-      GEPFlags.IsInBounds = false;
+      GEPFlags = GEPNoWrapFlags::none();
       break;
     case OperationType::FPMathOp:
       FMFs.NoNaNs = false;
@@ -1126,10 +1121,7 @@ public:
       I->setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      // TODO(gep_nowrap): Track the full GEPNoWrapFlags in VPlan.
-      cast<GetElementPtrInst>(I)->setNoWrapFlags(
-          GEPFlags.IsInBounds ? GEPNoWrapFlags::inBounds()
-                              : GEPNoWrapFlags::none());
+      cast<GetElementPtrInst>(I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
       I->setHasAllowReassoc(FMFs.AllowReassoc);
@@ -1155,11 +1147,7 @@ public:
     return CmpPredicate;
   }
 
-  bool isInBounds() const {
-    assert(OpType == OperationType::GEPOp &&
-           "recipe doesn't have inbounds flag");
-    return GEPFlags.IsInBounds;
-  }
+  GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
   /// Returns true if the recipe has fast-math flags.
   bool hasFastMathFlags() const { return OpType == OperationType::FPMathOp; }
@@ -1306,7 +1294,7 @@ public:
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
-  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
+  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPNoWrapFlags Flags,
                 DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
                             ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
@@ -1346,14 +1334,6 @@ public:
   /// Print the VPInstruction to dbgs() (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// Return true if this instruction may modify memory.
-  bool mayWriteToMemory() const {
-    // TODO: we can use attributes of the called function to rule out memory
-    //       modifications.
-    return Opcode == Instruction::Store || Opcode == Instruction::Call ||
-           Opcode == Instruction::Invoke || Opcode == SLPStore;
-  }
 
   bool hasResult() const {
     // CallInst may or may not have a result, depending on the called function.
@@ -1922,10 +1902,9 @@ class VPReverseVectorPointerRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPReverseVectorPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
-                               bool IsInBounds, DebugLoc DL)
+                               GEPNoWrapFlags GEPFlags, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPReverseVectorPointerSC,
-                            ArrayRef<VPValue *>({Ptr, VF}),
-                            GEPFlagsTy(IsInBounds), DL),
+                            ArrayRef<VPValue *>({Ptr, VF}), GEPFlags, DL),
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPReverseVectorPointerSC)
@@ -1957,8 +1936,9 @@ public:
   }
 
   VPReverseVectorPointerRecipe *clone() override {
-    return new VPReverseVectorPointerRecipe(
-        getOperand(0), getVFValue(), IndexedTy, isInBounds(), getDebugLoc());
+    return new VPReverseVectorPointerRecipe(getOperand(0), getVFValue(),
+                                            IndexedTy, getGEPNoWrapFlags(),
+                                            getDebugLoc());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1974,10 +1954,10 @@ class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
   Type *IndexedTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsInBounds,
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, GEPNoWrapFlags GEPFlags,
                         DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlagsTy(IsInBounds), DL),
+                            GEPFlags, DL),
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
@@ -1999,8 +1979,8 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, isInBounds(),
-                                     getDebugLoc());
+    return new VPVectorPointerRecipe(getOperand(0), IndexedTy,
+                                     getGEPNoWrapFlags(), getDebugLoc());
   }
 
   /// Return the cost of this VPHeaderPHIRecipe.
@@ -3833,21 +3813,6 @@ class VPlan {
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
 public:
-  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
-  /// with \p ScalarHeader wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
-      : VPlan(Entry, ScalarHeader) {
-    TripCount = TC;
-  }
-
-  /// Constructor variants that take disconnected preheader and entry blocks,
-  /// connecting them as part of construction.
-  /// FIXME: Only used to reduce the need of code changes during transition.
-  VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
-        VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader);
-  VPlan(VPBasicBlock *OriginalPreheader, VPBasicBlock *EntryVectorPreHeader,
-        VPIRBasicBlock *ScalarHeader);
-
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3856,6 +3821,18 @@ public:
     assert(ScalarHeader->getNumSuccessors() == 0 &&
            "scalar header must be a leaf node");
   }
+
+  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
+  /// with \p ScalarHeader wrapping the original header of the scalar loop.
+  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
+      : VPlan(Entry, ScalarHeader) {
+    TripCount = TC;
+  }
+
+  /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
+  /// original preheader and scalar header of \p L, to be used as entry and
+  /// scalar header blocks of the new VPlan.
+  VPlan(Loop *L);
 
   ~VPlan();
 
@@ -4047,12 +4024,6 @@ public:
     assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
     SCEVToExpansion[S] = V;
   }
-
-  /// \return The block corresponding to the original preheader.
-  /// FIXME: There's no separate preheader any longer and Entry now serves the
-  /// same purpose as the original preheader. Remove after transition.
-  VPBasicBlock *getPreheader() { return Entry; }
-  const VPBasicBlock *getPreheader() const { return Entry; }
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.

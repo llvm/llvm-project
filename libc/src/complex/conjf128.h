@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/macros/properties/complex_types.h"
-#include "src/__support/macros/properties/types.h"
 
 #if defined(LIBC_TYPES_HAS_CFLOAT128)
 

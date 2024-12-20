@@ -23,7 +23,7 @@ define void @test_corner_values() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.global.u64 %rd1, [v64];
 ; CHECK-NEXT:    add.s64 %rd2, %rd1, 8;
-; CHECK-NEXT:    mov.u64 %rd13, -1;
+; CHECK-NEXT:    mov.b64 %rd13, -1;
 ; CHECK-NEXT:    mov.b128 %rq1, {%rd13, %rd13};
 ; CHECK-NEXT:    mov.u64 %rd14, v_u128_max;
 ; CHECK-NEXT:    cvta.global.u64 %rd3, %rd14;
@@ -40,7 +40,7 @@ define void @test_corner_values() {
 ; CHECK-NEXT:    ld.global.u64 %rd15, [v64];
 ; CHECK-NEXT:    add.s64 %rd4, %rd15, 16;
 ; CHECK-NEXT:    add.s64 %rd5, %rd15, 24;
-; CHECK-NEXT:    mov.u64 %rd16, 9223372036854775807;
+; CHECK-NEXT:    mov.b64 %rd16, 9223372036854775807;
 ; CHECK-NEXT:    mov.b128 %rq2, {%rd13, %rd16};
 ; CHECK-NEXT:    mov.u64 %rd17, v_i128_max;
 ; CHECK-NEXT:    cvta.global.u64 %rd6, %rd17;
@@ -57,8 +57,8 @@ define void @test_corner_values() {
 ; CHECK-NEXT:    ld.global.u64 %rd18, [v64];
 ; CHECK-NEXT:    add.s64 %rd7, %rd18, 32;
 ; CHECK-NEXT:    add.s64 %rd8, %rd18, 40;
-; CHECK-NEXT:    mov.u64 %rd19, -9223372036854775808;
-; CHECK-NEXT:    mov.u64 %rd20, 0;
+; CHECK-NEXT:    mov.b64 %rd19, -9223372036854775808;
+; CHECK-NEXT:    mov.b64 %rd20, 0;
 ; CHECK-NEXT:    mov.b128 %rq3, {%rd20, %rd19};
 ; CHECK-NEXT:    mov.u64 %rd21, v_i128_min;
 ; CHECK-NEXT:    cvta.global.u64 %rd9, %rd21;

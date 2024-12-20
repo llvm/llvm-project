@@ -582,6 +582,15 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     //   Temp().ptr; // Here ptr might not dangle.
     if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
       return;
+    // Avoid false positives when the object is constructed from a conditional
+    // operator argument. A common case is:
+    //   // 'ptr' might not be owned by the Owner object.
+    //   std::string_view s = cond() ? Owner().ptr : sv;
+    if (const auto *Cond =
+            dyn_cast<AbstractConditionalOperator>(Arg->IgnoreImpCasts());
+        Cond && isPointerLikeType(Cond->getType()))
+      return;
+
     auto ReturnType = Callee->getReturnType();
 
     // Once we initialized a value with a non gsl-owner reference, it can no
@@ -1091,14 +1100,13 @@ enum PathLifetimeKind {
 /// supposed to lifetime-extend along.
 static PathLifetimeKind
 shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
-  PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
       return PathLifetimeKind::Extend;
-    else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
+    if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
-  return Kind;
+  return PathLifetimeKind::Extend;
 }
 
 /// Find the range for the first interesting entry in the path at or after I.

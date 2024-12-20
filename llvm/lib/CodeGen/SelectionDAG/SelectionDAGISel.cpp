@@ -1226,7 +1226,7 @@ void SelectionDAGISel::EnforceNodeIdInvariant(SDNode *Node) {
 
   while (!Nodes.empty()) {
     SDNode *N = Nodes.pop_back_val();
-    for (auto *U : N->uses()) {
+    for (auto *U : N->users()) {
       auto UId = U->getNodeId();
       if (UId > 0) {
         InvalidateNodeId(U);
@@ -2330,19 +2330,6 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
     Ops.push_back(handle.getValue());
 }
 
-/// findGlueUse - Return use of MVT::Glue value produced by the specified
-/// SDNode.
-///
-static SDNode *findGlueUse(SDNode *N) {
-  unsigned FlagResNo = N->getNumValues()-1;
-  for (SDNode::use_iterator I = N->use_begin(), E = N->use_end(); I != E; ++I) {
-    SDUse &Use = I.getUse();
-    if (Use.getResNo() == FlagResNo)
-      return Use.getUser();
-  }
-  return nullptr;
-}
-
 /// findNonImmUse - Return true if "Def" is a predecessor of "Root" via a path
 /// beyond "ImmedUse".  We may ignore chains as they are checked separately.
 static bool findNonImmUse(SDNode *Root, SDNode *Def, SDNode *ImmedUse,
@@ -2446,7 +2433,7 @@ bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
   // glueged set.
   EVT VT = Root->getValueType(Root->getNumValues()-1);
   while (VT == MVT::Glue) {
-    SDNode *GU = findGlueUse(Root);
+    SDNode *GU = Root->getGluedUser();
     if (!GU)
       break;
     Root = GU;
@@ -3806,8 +3793,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       for (unsigned i = 1, e = NodeStack.size()-1; i != e; ++i) {
         unsigned NNonChainUses = 0;
         SDNode *NS = NodeStack[i].getNode();
-        for (auto UI = NS->use_begin(), UE = NS->use_end(); UI != UE; ++UI)
-          if (UI.getUse().getValueType() != MVT::Other)
+        for (const SDUse &U : NS->uses())
+          if (U.getValueType() != MVT::Other)
             if (++NNonChainUses > 1) {
               HasMultipleUses = true;
               break;

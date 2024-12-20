@@ -329,7 +329,6 @@ endif()
 
 option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
 
-include(CMakeParseArguments)
 include(LLVMLibCCheckCpuFeatures)
 include(CheckCompilerFeatures)
 include(LLVMLibCRules)

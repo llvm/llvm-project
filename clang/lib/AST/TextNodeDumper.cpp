@@ -413,6 +413,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Independent:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Delete:
+    case OpenACCClauseKind::DeviceNum:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
@@ -425,6 +426,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Seq:
     case OpenACCClauseKind::Tile:
     case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::UseDevice:
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
@@ -2956,6 +2958,17 @@ void TextNodeDumper::VisitOpenACCExitDataConstruct(
 
 void TextNodeDumper::VisitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct *S) {
+  OS << " " << S->getDirectiveKind();
+}
+
+void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
+  OS << " " << S->getDirectiveKind();
+}
+void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
+  OS << " " << S->getDirectiveKind();
+}
+void TextNodeDumper::VisitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct *S) {
   OS << " " << S->getDirectiveKind();
 }
 

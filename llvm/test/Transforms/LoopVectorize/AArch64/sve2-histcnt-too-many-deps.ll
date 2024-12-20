@@ -99,7 +99,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; NORMAL_DEP_LIMIT-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; NORMAL_DEP_LIMIT:       scalar.ph:
-; NORMAL_DEP_LIMIT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; NORMAL_DEP_LIMIT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY1:%.*]] ]
 ; NORMAL_DEP_LIMIT-NEXT:    br label [[FOR_BODY1:%.*]]
 ; NORMAL_DEP_LIMIT:       for.body:
 ; NORMAL_DEP_LIMIT-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]

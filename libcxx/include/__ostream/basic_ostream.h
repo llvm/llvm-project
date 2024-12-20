@@ -16,6 +16,7 @@
 #  include <__exception/operations.h>
 #  include <__memory/shared_ptr.h>
 #  include <__memory/unique_ptr.h>
+#  include <__new/exceptions.h>
 #  include <__ostream/put_character_sequence.h>
 #  include <__system_error/error_code.h>
 #  include <__type_traits/conjunction.h>
@@ -26,7 +27,6 @@
 #  include <bitset>
 #  include <ios>
 #  include <locale>
-#  include <new> // for __throw_bad_alloc
 #  include <streambuf>
 #  include <string_view>
 
