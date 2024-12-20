@@ -1354,6 +1354,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
   return failedImport("Dst pattern child is an unsupported kind");
 }
 
+/// Generates code that builds the resulting instruction(s) from the destination
+/// DAG. Note that to do this we do not and should not need the source DAG.
+/// We do need to know whether a generated instruction defines a result of the
+/// source DAG; this information is available via RuleMatcher::hasOperand.
 Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     RuleMatcher &M, InstructionMatcher &InsnMatcher,
     const TreePatternNode &Dst) {
