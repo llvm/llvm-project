@@ -228,7 +228,8 @@ void ExpandModularHeadersPPCallbacks::PragmaDiagnostic(SourceLocation Loc,
 }
 void ExpandModularHeadersPPCallbacks::HasInclude(SourceLocation Loc, StringRef,
                                                  bool, OptionalFileEntryRef,
-                                                 SrcMgr::CharacteristicKind) {
+                                                 SrcMgr::CharacteristicKind,
+                                                 bool AddToDepCollector) {
   parseToLocation(Loc);
 }
 void ExpandModularHeadersPPCallbacks::PragmaOpenCLExtension(

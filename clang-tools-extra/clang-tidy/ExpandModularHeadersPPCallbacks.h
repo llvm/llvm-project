@@ -90,7 +90,8 @@ private:
   void PragmaDiagnostic(SourceLocation Loc, StringRef, diag::Severity,
                         StringRef) override;
   void HasInclude(SourceLocation Loc, StringRef, bool, OptionalFileEntryRef,
-                  SrcMgr::CharacteristicKind) override;
+                  SrcMgr::CharacteristicKind,
+                  bool AddToDepCollector = true) override;
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *,
                              SourceLocation StateLoc, unsigned) override;
   void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier,
