@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_SEMA_PARSEHLSLROOTSIGNATURE_H
 #define LLVM_CLANG_SEMA_PARSEHLSLROOTSIGNATURE_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 
@@ -35,12 +36,22 @@ private:
   // RootElements parse methods
   bool ParseRootElement();
   bool ParseRootFlags();
+  bool ParseRootParameter();
+
+  // Helper methods
+  bool ParseAssign();
+  bool ParseComma();
+  bool ParseOptComma();
+  bool ParseRegister(Register &);
+  bool ParseUnsignedInt(uint32_t &Number);
 
   // Enum methods
   template <typename EnumType>
   bool ParseEnum(SmallVector<std::pair<StringLiteral, EnumType>> Mapping,
                  EnumType &Enum);
+  bool ParseRootDescriptorFlag(RootDescriptorFlags &Flag);
   bool ParseRootFlag(RootFlags &Flag);
+  bool ParseVisibility(ShaderVisibility &Visibility);
 
   StringRef Buffer;
   SmallVector<RootElement> *Elements;

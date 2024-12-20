@@ -38,6 +38,147 @@ bool Parser::ParseRootFlags() {
   return false;
 }
 
+bool Parser::ParseRootParameter() {
+  RootParameter Parameter;
+  Parameter.Type = llvm::StringSwitch<RootType>(Token)
+                       .Case("CBV", RootType::CBV)
+                       .Case("SRV", RootType::SRV)
+                       .Case("UAV", RootType::UAV)
+                       .Case("RootConstants", RootType::Constants);
+  // Should never reach as Token was just verified in dispatch
+  // Remove any whitespace
+  Buffer = Buffer.drop_while(isspace);
+
+  // Retreive mandatory num32BitConstant arg for RootConstants
+  if (Parameter.Type == RootType::Constants) {
+    if (!Buffer.consume_front("num32BitConstants"))
+      return ReportError();
+
+    if (ParseAssign())
+      return ReportError();
+
+    if (ParseUnsignedInt(Parameter.Num32BitConstants))
+      return ReportError();
+
+    if (ParseOptComma())
+      return ReportError();
+  }
+
+  // Retrieve mandatory register
+  if (ParseRegister(Parameter.Register))
+    return ReportError();
+
+  if (ParseOptComma())
+    return ReportError();
+
+  // Parse common optional space arg
+  if (Buffer.consume_front("space")) {
+    if (ParseAssign())
+      return ReportError();
+
+    if (ParseUnsignedInt(Parameter.Space))
+      return ReportError();
+
+    if (ParseOptComma())
+      return ReportError();
+  }
+
+  // Parse common optional visibility arg
+  if (Buffer.consume_front("visibility")) {
+    if (ParseAssign())
+      return ReportError();
+
+    if (ParseVisibility(Parameter.Visibility))
+      return ReportError();
+
+    if (ParseOptComma())
+      return ReportError();
+  }
+
+  // Retreive optional flags arg for non-RootConstants
+  if (Parameter.Type != RootType::Constants && Buffer.consume_front("flags")) {
+    if (ParseAssign())
+      return ReportError();
+
+    if (ParseRootDescriptorFlag(Parameter.Flags))
+      return ReportError();
+
+    // Remove trailing whitespace
+    Buffer = Buffer.drop_while(isspace);
+  }
+
+  // Create and push the root element on the parsed elements
+  Elements->push_back(RootElement(Parameter));
+  return false;
+}
+
+// Helper Parser methods
+
+// Parses " = " with varying whitespace
+bool Parser::ParseAssign() {
+  Buffer = Buffer.drop_while(isspace);
+  if (!Buffer.starts_with('='))
+    return true;
+  Buffer = Buffer.drop_front();
+  Buffer = Buffer.drop_while(isspace);
+  return false;
+}
+
+// Parses ", " with varying whitespace
+bool Parser::ParseComma() {
+  if (!Buffer.starts_with(','))
+    return true;
+  Buffer = Buffer.drop_front();
+  Buffer = Buffer.drop_while(isspace);
+  return false;
+}
+
+// Parses ", " if possible. When successful we expect another parameter, and
+// return no error, otherwise we expect that we should be at the end of the
+// root element and return an error if this isn't the case
+bool Parser::ParseOptComma() {
+  if (!ParseComma())
+    return false;
+  Buffer = Buffer.drop_while(isspace);
+  return !Buffer.starts_with(')');
+}
+
+bool Parser::ParseRegister(Register &Register) {
+  // Parse expected register type ('b', 't', 'u', 's')
+  if (Buffer.empty())
+    return ReportError();
+
+  // Get type character
+  Token = Buffer.take_front();
+  Buffer = Buffer.drop_front();
+
+  auto MaybeType = llvm::StringSwitch<std::optional<RegisterType>>(Token)
+                       .Case("b", RegisterType::BReg)
+                       .Case("t", RegisterType::TReg)
+                       .Case("u", RegisterType::UReg)
+                       .Case("s", RegisterType::SReg)
+                       .Default(std::nullopt);
+  if (!MaybeType)
+    return ReportError();
+  Register.ViewType = *MaybeType;
+
+  if (ParseUnsignedInt(Register.Number))
+    return ReportError();
+
+  return false;
+}
+
+// Parses "[0-9+]" as an unsigned int
+bool Parser::ParseUnsignedInt(uint32_t &Number) {
+  StringRef NumString = Buffer.take_while(isdigit);
+  APInt X = APInt(32, 0);
+  if (NumString.getAsInteger(/*radix=*/10, X))
+    return true;
+  Number = X.getZExtValue();
+  Buffer = Buffer.drop_front(NumString.size());
+  return false;
+}
+
 template <typename EnumType>
 bool Parser::ParseEnum(SmallVector<std::pair<StringLiteral, EnumType>> Mapping,
                        EnumType &Enum) {
@@ -55,6 +196,18 @@ bool Parser::ParseEnum(SmallVector<std::pair<StringLiteral, EnumType>> Mapping,
   Enum = *MaybeEnum;
 
   return false;
+}
+
+bool Parser::ParseRootDescriptorFlag(RootDescriptorFlags &Flag) {
+  SmallVector<std::pair<StringLiteral, RootDescriptorFlags>> Mapping = {
+      {"0", RootDescriptorFlags::None},
+      {"DATA_VOLATILE", RootDescriptorFlags::DataVolatile},
+      {"DATA_STATIC_WHILE_SET_AT_EXECUTE",
+       RootDescriptorFlags::DataStaticWhileSetAtExecute},
+      {"DATA_STATIC", RootDescriptorFlags::DataStatic},
+  };
+
+  return ParseEnum<RootDescriptorFlags>(Mapping, Flag);
 }
 
 bool Parser::ParseRootFlag(RootFlags &Flag) {
@@ -83,16 +236,36 @@ bool Parser::ParseRootFlag(RootFlags &Flag) {
   return ParseEnum<RootFlags>(Mapping, Flag);
 }
 
+bool Parser::ParseVisibility(ShaderVisibility &Visibility) {
+  SmallVector<std::pair<StringLiteral, ShaderVisibility>> Mapping = {
+      {"SHADER_VISIBILITY_ALL", ShaderVisibility::All},
+      {"SHADER_VISIBILITY_VERTEX", ShaderVisibility::Vertex},
+      {"SHADER_VISIBILITY_HULL", ShaderVisibility::Hull},
+      {"SHADER_VISIBILITY_DOMAIN", ShaderVisibility::Domain},
+      {"SHADER_VISIBILITY_GEOMETRY", ShaderVisibility::Geometry},
+      {"SHADER_VISIBILITY_PIXEL", ShaderVisibility::Pixel},
+      {"SHADER_VISIBILITY_AMPLIFICATION", ShaderVisibility::Amplification},
+      {"SHADER_VISIBILITY_MESH", ShaderVisibility::Mesh},
+  };
+
+  return ParseEnum<ShaderVisibility>(Mapping, Visibility);
+}
+
 bool Parser::ParseRootElement() {
   // Define different ParserMethods to use StringSwitch for dispatch
   enum class ParserMethod {
     ReportError,
     ParseRootFlags,
+    ParseRootParameter,
   };
 
   // Retreive which method should be used
   auto Method = llvm::StringSwitch<ParserMethod>(Token)
                     .Case("RootFlags", ParserMethod::ParseRootFlags)
+                    .Case("RootConstants", ParserMethod::ParseRootParameter)
+                    .Case("CBV", ParserMethod::ParseRootParameter)
+                    .Case("SRV", ParserMethod::ParseRootParameter)
+                    .Case("UAV", ParserMethod::ParseRootParameter)
                     .Default(ParserMethod::ReportError);
 
   // Dispatch on the correct method
@@ -115,6 +288,7 @@ bool Parser::ParseRootElement() {
   return false;
 }
 
+// Parser entry point function
 bool Parser::Parse() {
   bool First = true;
   while (!Buffer.empty()) {
