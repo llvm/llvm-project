@@ -3738,8 +3738,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   Error setCoarseGrainMemoryImpl(void *ptr, int64_t size,
                                  bool set_attr = true) override final {
     // If the table has not yet been created, check if the gpu arch is
-    // MI200 and create it.
-    if (!IsEquippedWithGFX90A)
+    // MI200 and create it, but only if USM Map is enabled.
+    if (!IsEquippedWithGFX90A || OMPX_DisableUsmMaps)
       return Plugin::success();
     if (!CoarseGrainMemoryTable)
       CoarseGrainMemoryTable = new AMDGPUMemTypeBitFieldTable(
