@@ -2632,6 +2632,12 @@ v_sat_pk_u8_i16 v5, v1 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
 v_sat_pk_u8_i16 v127, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX12: v_sat_pk_u8_i16_dpp v127, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xc4,0xfe,0x7e,0xff,0x6f,0x05,0x30]
 
+v_sat_pk_u8_i16 v5.h, v1 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// GFX12: v_sat_pk_u8_i16_dpp v5.h, v1 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0xfa,0xc4,0x0a,0x7f,0x01,0x60,0x09,0x13]
+
+v_sat_pk_u8_i16 v127.h, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
+// GFX12: v_sat_pk_u8_i16_dpp v127.h, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xc4,0xfe,0x7f,0xff,0x6f,0x05,0x30]
+
 v_sin_f16 v5, v1 quad_perm:[3,2,1,0]
 // GFX12: v_sin_f16_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xc0,0x0a,0x7e,0x01,0x1b,0x00,0xff]
 
