@@ -2109,7 +2109,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     warnIfNoMacro(IDLoc);
 
     if (!Inst.getOperand(0).isExpr()) {
-      return Error(IDLoc, "jal needs a symbolic expression in PIC mode");
+      return Error(IDLoc, "unsupported constant in relocation");
     }
 
     const MCExpr *JalExpr = Inst.getOperand(0).getExpr();
