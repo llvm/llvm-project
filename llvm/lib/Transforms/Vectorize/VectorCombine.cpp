@@ -3041,6 +3041,8 @@ bool VectorCombine::run() {
     bool IsFixedVectorType = isa<FixedVectorType>(I.getType());
     auto Opcode = I.getOpcode();
 
+    LLVM_DEBUG(dbgs() << "VC: Visiting: " << I << '\n');
+
     // These folds should be beneficial regardless of when this pass is run
     // in the optimization pipeline.
     // The type checking is for run-time efficiency. We can avoid wasting time
