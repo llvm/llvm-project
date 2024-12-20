@@ -308,9 +308,22 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
 
 bool mlir::hasOnlyReadEffect(Operation *op) {
   if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
-    return memEffects.onlyHasEffect<MemoryEffects::Read>();
+    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      return memEffects.onlyHasEffect<MemoryEffects::Read>();
+  } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+    // Otherwise, if the op does not implement the memory effect interface and
+    // it does not have recursive side effects, then it cannot be known that the
+    // op is moveable.
+    return false;
   }
-  return false;
+
+  // Recurse into the regions and ensure that all nested ops are memory effect
+  // free.
+  for (Region &region : op->getRegions())
+    for (Operation &op : region.getOps())
+      if (!hasOnlyReadEffect(&op))
+        return false;
+  return true;
 }
 
 bool mlir::isMemoryEffectFree(Operation *op) {

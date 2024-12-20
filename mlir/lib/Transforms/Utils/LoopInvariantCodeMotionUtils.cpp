@@ -139,7 +139,7 @@ size_t mlir::moveLoopInvariantCode(
           !canBeHoisted(op, definedOutside))
         continue;
       // Can only hoist pure ops (side-effect free) when there is an op with
-      // write side effects in the loop.
+      // write and/or unknown side effects in the loop.
       if (!loopSideEffectFreeOrHasOnlyReadSideEffect && !isMemoryEffectFree(op))
         continue;
 
