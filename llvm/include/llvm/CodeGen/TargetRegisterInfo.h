@@ -1248,6 +1248,7 @@ public:
 
   virtual const TargetRegisterClass *
   getCandidateRegisterClassForSpill2Reg(const TargetRegisterInfo *TRI,
+                                        const TargetSubtargetInfo *STI,
                                         Register SpilledReg) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::getCandidateRegisterClassForSpill2Reg!");

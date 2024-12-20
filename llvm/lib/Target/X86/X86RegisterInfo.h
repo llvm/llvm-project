@@ -184,6 +184,7 @@ public:
 
   const TargetRegisterClass *
   getCandidateRegisterClassForSpill2Reg(const TargetRegisterInfo *TRI,
+                                        const TargetSubtargetInfo *STI,
                                         Register SpilledReg) const override;
 };
 

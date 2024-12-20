@@ -50,6 +50,10 @@ static cl::opt<bool>
                             cl::desc("Disable two address hints for register "
                                      "allocation"));
 
+static cl::opt<bool> Spill2RegNoAVX(
+    "spill2reg-no-avx", cl::Hidden, cl::init(false),
+    cl::desc("Don't use AVX instructions even if the targets supports them."));
+
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
@@ -1279,10 +1283,17 @@ bool X86RegisterInfo::targetSupportsSpill2Reg(
   return X86STI->hasSSE41();
 }
 
+bool useAVX(const TargetSubtargetInfo *STI) {
+  const X86Subtarget *X86STI = static_cast<const X86Subtarget *>(STI);
+  bool UseAVX = X86STI->hasAVX() && !Spill2RegNoAVX;
+  return UseAVX;
+}
+
 const TargetRegisterClass *
 X86RegisterInfo::getCandidateRegisterClassForSpill2Reg(
-    const TargetRegisterInfo *TRI, Register SpilledReg) const {
-  const TargetRegisterClass *VecRegClass =
-      TRI->getRegClass(X86::VR128RegClassID);
+    const TargetRegisterInfo *TRI, const TargetSubtargetInfo *STI,
+    Register SpilledReg) const {
+  const TargetRegisterClass *VecRegClass = TRI->getRegClass(
+      useAVX(STI) ? X86::VR128XRegClassID : X86::VR128RegClassID);
   return VecRegClass;
 }

@@ -11018,14 +11018,24 @@ bool X86InstrInfo::isSpill2RegProfitable(const MachineInstr *MI,
   return MemHeuristic && VecHeuristic;
 }
 
-static unsigned getInsertOrExtractOpcode(unsigned Bits, bool Insert) {
+extern bool useAVX(const TargetSubtargetInfo *STI);
+
+static unsigned getInsertOrExtractOpcode(unsigned Bits, bool Insert,
+                                         const TargetSubtargetInfo *STI) {
+  bool UseAVX = useAVX(STI);
   switch (Bits) {
   case 8:
   case 16:
   case 32:
-    return Insert ? X86::MOVDI2PDIrr : X86::MOVPDI2DIrr;
+    if (UseAVX)
+      return Insert ? X86::VMOVDI2PDIZrr : X86::VMOVPDI2DIZrr;
+    else
+      return Insert ? X86::MOVDI2PDIrr : X86::MOVPDI2DIrr;
   case 64:
-    return Insert ? X86::MOV64toPQIrr : X86::MOVPQIto64rr;
+    if (UseAVX)
+      return Insert ? X86::VMOV64toPQIZrr : X86::VMOVPQIto64Zrr;
+    else
+      return Insert ? X86::MOV64toPQIrr : X86::MOVPQIto64rr;
   default:
     llvm_unreachable("Unsupported bits");
   }
@@ -11063,11 +11073,11 @@ X86InstrInfo::getMovdCompatibleReg(MCRegister OldReg, uint32_t OldRegBits,
 
 MachineInstr *X86InstrInfo::spill2RegInsertToS2RReg(
     Register S2RReg, Register SrcReg, int OperationBits, MachineBasicBlock *MBB,
-    MachineBasicBlock::iterator InsertBeforeIt,
-    const TargetRegisterInfo *TRI) const {
+    MachineBasicBlock::iterator InsertBeforeIt, const TargetRegisterInfo *TRI,
+    const TargetSubtargetInfo *STI) const {
   DebugLoc DL;
   unsigned InsertOpcode =
-      getInsertOrExtractOpcode(OperationBits, true /*insert*/);
+      getInsertOrExtractOpcode(OperationBits, true /*insert*/, STI);
   const MCInstrDesc &InsertMCID = get(InsertOpcode);
   // `movd` does not support 8/16 bit operands. Instead, we use a 32-bit
   // register. For example:
@@ -11083,10 +11093,10 @@ MachineInstr *X86InstrInfo::spill2RegInsertToS2RReg(
 MachineInstr *X86InstrInfo::spill2RegExtractFromS2RReg(
     Register DstReg, Register S2RReg, int OperationBits,
     MachineBasicBlock *InsertMBB, MachineBasicBlock::iterator InsertBeforeIt,
-    const TargetRegisterInfo *TRI) const {
+    const TargetRegisterInfo *TRI, const TargetSubtargetInfo *STI) const {
   DebugLoc DL;
   unsigned ExtractOpcode =
-      getInsertOrExtractOpcode(OperationBits, false /*extract*/);
+      getInsertOrExtractOpcode(OperationBits, false /*extract*/, STI);
   const MCInstrDesc &ExtractMCID = get(ExtractOpcode);
   // `movd` does not support 8/16 bit operands. Instead, we use a 32-bit
   // register. For example:

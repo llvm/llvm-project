@@ -2307,21 +2307,19 @@ public:
   }
 
   /// Inserts \p SrcReg into the destination Spill2Reg register \p DstReg.
-  virtual MachineInstr *
-  spill2RegInsertToS2RReg(Register S2RReg, Register SrcReg, int OperationBits,
-                          MachineBasicBlock *MBB,
-                          MachineBasicBlock::iterator InsertBeforeIt,
-                          const TargetRegisterInfo *TRI) const {
+  virtual MachineInstr *spill2RegInsertToS2RReg(
+      Register S2RReg, Register SrcReg, int OperationBits,
+      MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertBeforeIt,
+      const TargetRegisterInfo *TRI, const TargetSubtargetInfo *STI) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::spill2RegInsertToS2RReg!");
   }
 
   /// Extracts from \p S2RReg into \p DstReg.
-  virtual MachineInstr *
-  spill2RegExtractFromS2RReg(Register DstReg, Register S2RReg,
-                             int OperationBits, MachineBasicBlock *InsertMBB,
-                             MachineBasicBlock::iterator InsertBeforeIt,
-                             const TargetRegisterInfo *TRI) const {
+  virtual MachineInstr *spill2RegExtractFromS2RReg(
+      Register DstReg, Register S2RReg, int OperationBits,
+      MachineBasicBlock *InsertMBB, MachineBasicBlock::iterator InsertBeforeIt,
+      const TargetRegisterInfo *TRI, const TargetSubtargetInfo *STI) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::spill2RegExtractFromS2RReg!");
   }

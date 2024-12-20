@@ -752,13 +752,15 @@ private:
   spill2RegInsertToS2RReg(Register S2RReg, Register SrcReg, int OperationBits,
                           MachineBasicBlock *MBB,
                           MachineBasicBlock::iterator InsertBeforeIt,
-                          const TargetRegisterInfo *TRI) const override;
+                          const TargetRegisterInfo *TRI,
+                          const TargetSubtargetInfo *STI) const override;
 
   MachineInstr *
   spill2RegExtractFromS2RReg(Register DstReg, Register S2RReg,
                              int OperationBits, MachineBasicBlock *InsertMBB,
                              MachineBasicBlock::iterator InsertBeforeIt,
-                             const TargetRegisterInfo *TRI) const override;
+                             const TargetRegisterInfo *TRI,
+                             const TargetSubtargetInfo *STI) const override;
 };
 } // namespace llvm
 
