@@ -4087,8 +4087,9 @@ public:
                                             SourceLocation EndLoc,
                                             ArrayRef<OpenACCClause *> Clauses,
                                             StmtResult StrBlock) {
-    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, DirLoc,
-                                                     EndLoc, Clauses, StrBlock);
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        K, BeginLoc, DirLoc, SourceLocation{}, SourceLocation{}, {},
+        SourceLocation{}, EndLoc, Clauses, StrBlock);
   }
 
   StmtResult RebuildOpenACCLoopConstruct(SourceLocation BeginLoc,
@@ -4097,7 +4098,8 @@ public:
                                          ArrayRef<OpenACCClause *> Clauses,
                                          StmtResult Loop) {
     return getSema().OpenACC().ActOnEndStmtDirective(
-        OpenACCDirectiveKind::Loop, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
+        OpenACCDirectiveKind::Loop, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, Loop);
   }
 
   StmtResult RebuildOpenACCCombinedConstruct(OpenACCDirectiveKind K,
@@ -4106,8 +4108,78 @@ public:
                                              SourceLocation EndLoc,
                                              ArrayRef<OpenACCClause *> Clauses,
                                              StmtResult Loop) {
-    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, DirLoc,
-                                                     EndLoc, Clauses, Loop);
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        K, BeginLoc, DirLoc, SourceLocation{}, SourceLocation{}, {},
+        SourceLocation{}, EndLoc, Clauses, Loop);
+  }
+
+  StmtResult RebuildOpenACCDataConstruct(SourceLocation BeginLoc,
+                                         SourceLocation DirLoc,
+                                         SourceLocation EndLoc,
+                                         ArrayRef<OpenACCClause *> Clauses,
+                                         StmtResult StrBlock) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Data, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, StrBlock);
+  }
+
+  StmtResult
+  RebuildOpenACCEnterDataConstruct(SourceLocation BeginLoc,
+                                   SourceLocation DirLoc, SourceLocation EndLoc,
+                                   ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::EnterData, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult
+  RebuildOpenACCExitDataConstruct(SourceLocation BeginLoc,
+                                  SourceLocation DirLoc, SourceLocation EndLoc,
+                                  ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::ExitData, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult RebuildOpenACCHostDataConstruct(SourceLocation BeginLoc,
+                                             SourceLocation DirLoc,
+                                             SourceLocation EndLoc,
+                                             ArrayRef<OpenACCClause *> Clauses,
+                                             StmtResult StrBlock) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::HostData, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, StrBlock);
+  }
+
+  StmtResult RebuildOpenACCInitConstruct(SourceLocation BeginLoc,
+                                         SourceLocation DirLoc,
+                                         SourceLocation EndLoc,
+                                         ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Init, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult
+  RebuildOpenACCShutdownConstruct(SourceLocation BeginLoc,
+                                  SourceLocation DirLoc, SourceLocation EndLoc,
+                                  ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Shutdown, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult RebuildOpenACCWaitConstruct(
+      SourceLocation BeginLoc, SourceLocation DirLoc, SourceLocation LParenLoc,
+      Expr *DevNumExpr, SourceLocation QueuesLoc, ArrayRef<Expr *> QueueIdExprs,
+      SourceLocation RParenLoc, SourceLocation EndLoc,
+      ArrayRef<OpenACCClause *> Clauses) {
+    llvm::SmallVector<Expr *> Exprs;
+    Exprs.push_back(DevNumExpr);
+    Exprs.insert(Exprs.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Wait, BeginLoc, DirLoc, LParenLoc, QueuesLoc,
+        Exprs, RParenLoc, EndLoc, Clauses, {});
   }
 
   ExprResult RebuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
@@ -11720,6 +11792,50 @@ void OpenACCClauseTransform<Derived>::VisitAttachClause(
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDetachClause(
+    const OpenACCDetachClause &C) {
+  llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
+
+  // Ensure each var is a pointer type.
+  VarList.erase(
+      std::remove_if(VarList.begin(), VarList.end(),
+                     [&](Expr *E) {
+                       return Self.getSema().OpenACC().CheckVarIsPointerType(
+                           OpenACCClauseKind::Detach, E);
+                     }),
+      VarList.end());
+
+  ParsedClause.setVarListDetails(VarList,
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  NewClause = OpenACCDetachClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeleteClause(
+    const OpenACCDeleteClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  NewClause = OpenACCDeleteClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitUseDeviceClause(
+    const OpenACCUseDeviceClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  NewClause = OpenACCUseDeviceClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &C) {
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
@@ -11756,6 +11872,29 @@ void OpenACCClauseTransform<Derived>::VisitNumWorkersClause(
 
   ParsedClause.setIntExprDetails(Res.get());
   NewClause = OpenACCNumWorkersClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceNumClause (
+    const OpenACCDeviceNumClause &C) {
+  Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
+  assert(IntExpr && "device_num clause constructed with invalid int expr");
+
+  ExprResult Res = Self.TransformExpr(IntExpr);
+  if (!Res.isUsable())
+    return;
+
+  Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                              C.getClauseKind(),
+                                              C.getBeginLoc(), Res.get());
+  if (!Res.isUsable())
+    return;
+
+  ParsedClause.setIntExprDetails(Res.get());
+  NewClause = OpenACCDeviceNumClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
       ParsedClause.getEndLoc());
@@ -11942,6 +12081,21 @@ void OpenACCClauseTransform<Derived>::VisitSeqClause(
                                        ParsedClause.getBeginLoc(),
                                        ParsedClause.getEndLoc());
 }
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitFinalizeClause(
+    const OpenACCFinalizeClause &C) {
+  NewClause = OpenACCFinalizeClause::Create(Self.getSema().getASTContext(),
+                                            ParsedClause.getBeginLoc(),
+                                            ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitIfPresentClause(
+    const OpenACCIfPresentClause &C) {
+  NewClause = OpenACCIfPresentClause::Create(Self.getSema().getASTContext(),
+                                             ParsedClause.getBeginLoc(),
+                                             ParsedClause.getEndLoc());
+}
 
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitReductionClause(
@@ -12037,7 +12191,8 @@ void OpenACCClauseTransform<Derived>::VisitGangClause(
   }
 
   NewClause = Self.getSema().OpenACC().CheckGangClause(
-      ExistingClauses, ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.getDirectiveKind(), ExistingClauses,
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
       TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
 }
 } // namespace
@@ -12082,8 +12237,8 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
       getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
                                               C->clauses());
 
-  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
-                                                  C->getBeginLoc()))
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
     return StmtError();
 
   // Transform Structured Block.
@@ -12109,8 +12264,8 @@ TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
       getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
                                               C->clauses());
 
-  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
-                                                  C->getBeginLoc()))
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
     return StmtError();
 
   // Transform Loop.
@@ -12135,8 +12290,8 @@ StmtResult TreeTransform<Derived>::TransformOpenACCCombinedConstruct(
       getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
                                               C->clauses());
 
-  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
-                                                  C->getBeginLoc()))
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
     return StmtError();
 
   // Transform Loop.
@@ -12150,6 +12305,166 @@ StmtResult TreeTransform<Derived>::TransformOpenACCCombinedConstruct(
   return getDerived().RebuildOpenACCCombinedConstruct(
       C->getDirectiveKind(), C->getBeginLoc(), C->getDirectiveLoc(),
       C->getEndLoc(), TransformedClauses, Loop);
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOpenACCDataConstruct(OpenACCDataConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
+      getSema().OpenACC(), C->getDirectiveKind(), C->getDirectiveLoc(),
+      C->clauses(), TransformedClauses);
+  StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
+  StrBlock = getSema().OpenACC().ActOnAssociatedStmt(
+      C->getBeginLoc(), C->getDirectiveKind(), TransformedClauses, StrBlock);
+
+  return getDerived().RebuildOpenACCDataConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses, StrBlock);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCEnterDataConstruct(
+    OpenACCEnterDataConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCEnterDataConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCExitDataConstruct(
+    OpenACCExitDataConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCExitDataConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCHostDataConstruct(
+    OpenACCHostDataConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
+      getSema().OpenACC(), C->getDirectiveKind(), C->getDirectiveLoc(),
+      C->clauses(), TransformedClauses);
+  StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
+  StrBlock = getSema().OpenACC().ActOnAssociatedStmt(
+      C->getBeginLoc(), C->getDirectiveKind(), TransformedClauses, StrBlock);
+
+  return getDerived().RebuildOpenACCHostDataConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses, StrBlock);
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOpenACCInitConstruct(OpenACCInitConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCInitConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCShutdownConstruct(
+    OpenACCShutdownConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCShutdownConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOpenACCWaitConstruct(OpenACCWaitConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  ExprResult DevNumExpr;
+  if (C->hasDevNumExpr()) {
+    DevNumExpr = getDerived().TransformExpr(C->getDevNumExpr());
+
+    if (DevNumExpr.isUsable())
+      DevNumExpr = getSema().OpenACC().ActOnIntExpr(
+          OpenACCDirectiveKind::Wait, OpenACCClauseKind::Invalid,
+          C->getBeginLoc(), DevNumExpr.get());
+  }
+
+  llvm::SmallVector<Expr *> QueueIdExprs;
+
+  for (Expr *QE : C->getQueueIdExprs()) {
+    assert(QE && "Null queue id expr?");
+    ExprResult NewEQ = getDerived().TransformExpr(QE);
+
+    if (!NewEQ.isUsable())
+      break;
+    NewEQ = getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Wait,
+                                             OpenACCClauseKind::Invalid,
+                                             C->getBeginLoc(), NewEQ.get());
+    if (NewEQ.isUsable())
+      QueueIdExprs.push_back(NewEQ.get());
+  }
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCWaitConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getLParenLoc(),
+      DevNumExpr.isUsable() ? DevNumExpr.get() : nullptr, C->getQueuesLoc(),
+      QueueIdExprs, C->getRParenLoc(), C->getEndLoc(), TransformedClauses);
 }
 
 template <typename Derived>

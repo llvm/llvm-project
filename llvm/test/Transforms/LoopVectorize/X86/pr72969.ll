@@ -86,9 +86,9 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VEC:       scalar.ph:
-; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
-; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; VEC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[VECTOR_SCEVCHECK]] ], [ 1, [[ENTRY:%.*]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
+; VEC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[VECTOR_SCEVCHECK]] ], [ 1, [[ENTRY]] ]
 ; VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; VEC:       for.body:
 ; VEC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IDX:%.*]], [[FOR_BODY]] ]

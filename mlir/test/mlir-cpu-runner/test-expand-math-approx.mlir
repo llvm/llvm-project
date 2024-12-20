@@ -18,7 +18,7 @@ func.func @func_exp2f(%a : f64) {
 func.func @exp2f() {
   // CHECK: 2
   %a = arith.constant 1.0 : f64
-  call @func_exp2f(%a) : (f64) -> ()  
+  call @func_exp2f(%a) : (f64) -> ()
 
   // CHECK-NEXT: 4
   %b = arith.constant 2.0 : f64
@@ -240,13 +240,18 @@ func.func @powf() {
   // CHECK-NEXT: -nan
   %k = arith.constant 1.0 : f64
   %k_p = arith.constant 0xfff0000001000000 : f64
-  call @func_powff64(%k, %k_p) : (f64, f64) -> ()  
+  call @func_powff64(%k, %k_p) : (f64, f64) -> ()
 
   // CHECK-NEXT: -nan
   %l = arith.constant 1.0 : f32
   %l_p = arith.constant 0xffffffff : f32
-  call @func_powff32(%l, %l_p) : (f32, f32) -> ()  
-  return  
+  call @func_powff32(%l, %l_p) : (f32, f32) -> ()
+
+  // CHECK-NEXT: 1
+  %zero = arith.constant 0.0 : f32
+  call @func_powff32(%zero, %zero) : (f32, f32) -> ()
+
+  return
 }
 
 // -------------------------------------------------------------------------- //

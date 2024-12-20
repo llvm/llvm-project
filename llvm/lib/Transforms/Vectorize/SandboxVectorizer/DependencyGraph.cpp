@@ -370,6 +370,22 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
   }
 }
 
+void DependencyGraph::notifyEraseInstr(Instruction *I) {
+  // Update the MemDGNode chain if this is a memory node.
+  if (auto *MemN = dyn_cast_or_null<MemDGNode>(getNodeOrNull(I))) {
+    auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
+    auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false);
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = NextMemN;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = PrevMemN;
+  }
+
+  InstrToNodeMap.erase(I);
+
+  // TODO: Update the dependencies.
+}
+
 Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   if (Instrs.empty())
     return {};

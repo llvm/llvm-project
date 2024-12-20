@@ -104,7 +104,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
-      .clampMaxNumElements(0, p0, 2);
+      .clampMaxNumElements(0, p0, 2)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
@@ -1082,6 +1083,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .bitcastIf(isPointerVector(0), [=](const LegalityQuery &Query) {
         // Bitcast pointers vector to i64.
         const LLT DstTy = Query.Types[0];

@@ -416,12 +416,12 @@ function(add_integration_test test_name)
       libc.test.IntegrationTest.test
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
-      libc.src.string.bcmp
-      libc.src.string.bzero
       libc.src.string.memcmp
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
+      libc.src.strings.bcmp
+      libc.src.strings.bzero
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -583,13 +583,13 @@ function(add_libc_hermetic test_name)
       libc.startup.${LIBC_TARGET_OS}.crt1
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
-      libc.src.string.bcmp
-      libc.src.string.bzero
+      libc.src.__support.StringUtil.error_to_string
       libc.src.string.memcmp
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
-      libc.src.__support.StringUtil.error_to_string
+      libc.src.strings.bcmp
+      libc.src.strings.bzero
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -766,3 +766,33 @@ function(add_libc_test test_name)
     endif()
   endif()
 endfunction(add_libc_test)
+
+# Tests all implementations that can run on the target CPU.
+function(add_libc_multi_impl_test name suite)
+  get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
+  foreach(fq_config_name IN LISTS fq_implementations)
+    get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
+    cpu_supports(can_run "${required_cpu_features}")
+    if(can_run)
+      string(FIND ${fq_config_name} "." last_dot_loc REVERSE)
+      math(EXPR name_loc "${last_dot_loc} + 1")
+      string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
+      add_libc_test(
+        ${target_name}_test
+        SUITE
+          ${suite}
+        COMPILE_OPTIONS
+          ${LIBC_COMPILE_OPTIONS_NATIVE}
+        LINK_LIBRARIES
+          LibcMemoryHelpers
+        ${ARGN}
+        DEPENDS
+          ${fq_config_name}
+          libc.src.__support.macros.sanitizer
+      )
+      get_fq_target_name(${fq_config_name}_test fq_target_name)
+    else()
+      message(STATUS "Skipping test for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
+    endif()
+  endforeach()
+endfunction()

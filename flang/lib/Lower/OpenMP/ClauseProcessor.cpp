@@ -220,6 +220,10 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
 
+bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
+}
+
 bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -453,6 +457,16 @@ bool ClauseProcessor::processPriority(
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
     result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processDetach(mlir::omp::DetachClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Detach>()) {
+    semantics::Symbol *sym = clause->v.sym();
+    mlir::Value symVal = converter.getSymbolAddress(*sym);
+    result.eventHandle = symVal;
     return true;
   }
   return false;

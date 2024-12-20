@@ -25,8 +25,7 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = trunc <vscale x 2 x i64> [[DOTSPLAT_]] to <vscale x 2 x i7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.stepvector.nxv2i8()
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i7>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i7> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i7> [[TMP8]], splat (i7 1)
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i7> [[TMP7]], splat (i7 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i7> zeroinitializer, [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -92,8 +91,7 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = trunc <vscale x 2 x i64> [[DOTSPLAT_]] to <vscale x 2 x i3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.stepvector.nxv2i8()
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i3>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i3> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i3> [[TMP8]], splat (i3 1)
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i3> [[TMP7]], splat (i3 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i3> zeroinitializer, [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

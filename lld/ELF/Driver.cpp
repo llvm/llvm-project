@@ -1410,6 +1410,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
   ctx.arg.sectionStartMap = getSectionStartMap(ctx, args);
   ctx.arg.shared = args.hasArg(OPT_shared);
+  if (args.hasArg(OPT_randomize_section_padding))
+    ctx.arg.randomizeSectionPadding =
+        args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
@@ -1894,6 +1897,9 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
                      << ": " << e.message();
   }
+
+  if (ctx.arg.osabi == ELFOSABI_OPENBSD)
+    ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
 }
 
 static bool isFormatBinary(Ctx &ctx, StringRef s) {
@@ -2452,7 +2458,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     sym = readEntry(s->file, rels.rels);
   else
     sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym(ctx))
+  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());

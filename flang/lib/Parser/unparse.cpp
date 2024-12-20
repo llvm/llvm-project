@@ -2133,23 +2133,78 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarLogicalExpr>(x.t));
   }
-  void Unparse(const OmpLinearClause::WithoutModifier &x) {
-    Walk(x.names, ", ");
-    Walk(":", x.step);
+  void Unparse(const OmpStepSimpleModifier &x) { Walk(x.v); }
+  void Unparse(const OmpStepComplexModifier &x) {
+    Word("STEP(");
+    Walk(x.v);
+    Put(")");
   }
-  void Unparse(const OmpLinearClause::WithModifier &x) {
-    Walk(x.modifier), Put("("), Walk(x.names, ","), Put(")");
-    Walk(":", x.step);
+  void Unparse(const OmpLinearClause &x) {
+    using Modifier = OmpLinearClause::Modifier;
+    auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
+    if (std::get<bool>(x.t)) { // PostModified
+      Walk(std::get<OmpObjectList>(x.t));
+      Walk(": ", modifiers);
+    } else {
+      // Unparse using pre-5.2 syntax.
+      bool HasStepModifier{false}, HasLinearModifier{false};
+
+      if (modifiers) {
+        bool NeedComma{false};
+        for (const Modifier &m : *modifiers) {
+          // Print all linear modifiers in case we need to unparse an
+          // incorrect tree.
+          if (auto *lmod{std::get_if<parser::OmpLinearModifier>(&m.u)}) {
+            if (NeedComma) {
+              Put(",");
+            }
+            Walk(*lmod);
+            HasLinearModifier = true;
+            NeedComma = true;
+          } else {
+            // If not linear-modifier, then it has to be step modifier.
+            HasStepModifier = true;
+          }
+        }
+      }
+
+      if (HasLinearModifier) {
+        Put("(");
+      }
+      Walk(std::get<OmpObjectList>(x.t));
+      if (HasLinearModifier) {
+        Put(")");
+      }
+
+      if (HasStepModifier) {
+        Put(": ");
+        bool NeedComma{false};
+        for (const Modifier &m : *modifiers) {
+          if (!std::holds_alternative<parser::OmpLinearModifier>(m.u)) {
+            if (NeedComma) {
+              Put(",");
+            }
+            common::visit([&](auto &&s) { Walk(s); }, m.u);
+            NeedComma = true;
+          }
+        }
+      }
+    }
   }
   void Unparse(const OmpReductionClause &x) {
     using Modifier = OmpReductionClause::Modifier;
-    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpInReductionClause &x) {
-    Walk(std::get<OmpReductionIdentifier>(x.t));
-    Put(":");
+    using Modifier = OmpInReductionClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpTaskReductionClause &x) {
+    using Modifier = OmpTaskReductionClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAllocateClause &x) {
@@ -2651,6 +2706,15 @@ public:
     Put(")\n");
     EndOpenMP();
   }
+  bool Pre(const OmpMessageClause &x) {
+    Walk(x.v);
+    return false;
+  }
+  void Unparse(const OpenMPErrorConstruct &x) {
+    Word("!$OMP ERROR ");
+    Walk(x.t);
+    Put("\n");
+  }
   void Unparse(const OmpSectionsDirective &x) {
     switch (x.v) {
     case llvm::omp::Directive::OMPD_sections:
@@ -2702,10 +2766,16 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OmpFailClause &x) {
+    Word("FAIL(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
   void Unparse(const OmpAtomicClause &x) {
     common::visit(common::visitors{
                       [&](const OmpMemoryOrderClause &y) { Walk(y); },
+                      [&](const OmpFailClause &y) { Walk(y); },
                       [&](const OmpClause &z) { Walk(z); },
                   },
         x.u);
@@ -2835,6 +2905,7 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
+  WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
   WALK_NESTED_ENUM(OmpDefaultClause, DataSharingAttribute) // OMP default
@@ -2846,6 +2917,7 @@ public:
   WALK_NESTED_ENUM(OmpOrderingModifier, Value) // OMP ordering-modifier
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
+  WALK_NESTED_ENUM(OmpSeverityClause, Severity) // OMP severity
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
   WALK_NESTED_ENUM(
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type

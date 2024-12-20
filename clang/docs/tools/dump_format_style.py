@@ -3,6 +3,7 @@
 # documentation in ../ClangFormatStyleOptions.rst automatically.
 # Run from the directory in which this file is located to update the docs.
 
+import argparse
 import inspect
 import os
 import re
@@ -410,8 +411,8 @@ class OptionsReader:
                     state = State.InStruct
                     enums[enum.name] = enum
                 else:
-                    # Enum member without documentation. Must be documented where the enum
-                    # is used.
+                    # Enum member without documentation. Must be documented
+                    # where the enum is used.
                     pass
             elif state == State.InNestedEnum:
                 if line.startswith("///"):
@@ -474,6 +475,10 @@ class OptionsReader:
         return options
 
 
+p = argparse.ArgumentParser()
+p.add_argument("-o", "--output", help="path of output file")
+args = p.parse_args()
+
 with open(FORMAT_STYLE_FILE) as f:
     opts = OptionsReader(f).read_options()
 with open(INCLUDE_STYLE_FILE) as f:
@@ -487,6 +492,7 @@ with open(DOC_FILE, encoding="utf-8") as f:
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
 
-output_file_path = sys.argv[1] if len(sys.argv) == 2 else DOC_FILE
-with open(output_file_path, "wb") as output:
-    output.write(contents.encode())
+with open(
+    args.output if args.output else DOC_FILE, "w", newline="", encoding="utf-8"
+) as f:
+    f.write(contents)

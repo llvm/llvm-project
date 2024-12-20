@@ -153,6 +153,9 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
+set(MLIR_LINK_MLIR_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+    "Link tools against libMLIR.so")
+
 configure_file(
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Config/mlir-config.h.cmake
   ${MLIR_INCLUDE_DIR}/mlir/Config/mlir-config.h)

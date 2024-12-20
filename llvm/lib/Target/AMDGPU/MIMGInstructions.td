@@ -1793,6 +1793,11 @@ defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
 } // End OtherPredicates = [HasImageInsts, HasGFX10_AEncoding]
 
+let SubtargetPredicate = isGFX12Plus in {
+  def : AMDGPUMnemonicAlias<"bvh_intersect_ray", "image_bvh_intersect_ray">;
+  def : AMDGPUMnemonicAlias<"bvh64_intersect_ray", "image_bvh64_intersect_ray">;
+}
+
 } // End let OtherPredicates = [HasImageInsts]
 
 /********** ========================================= **********/

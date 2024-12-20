@@ -758,9 +758,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
-      setOperationAction(
-          {ISD::SELECT_CC, ISD::VSELECT, ISD::VP_MERGE, ISD::VP_SELECT}, VT,
-          Expand);
+      setOperationAction({ISD::SELECT_CC, ISD::VSELECT, ISD::VP_SELECT}, VT,
+                         Expand);
+      setOperationAction(ISD::VP_MERGE, VT, Custom);
 
       setOperationAction({ISD::VP_CTTZ_ELTS, ISD::VP_CTTZ_ELTS_ZERO_UNDEF}, VT,
                          Custom);
@@ -1236,6 +1236,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction({ISD::VP_FP_TO_SINT, ISD::VP_FP_TO_UINT,
                               ISD::VP_SETCC, ISD::VP_TRUNCATE},
                              VT, Custom);
+
+          setOperationAction(ISD::VP_MERGE, VT, Custom);
 
           setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
           setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -2107,7 +2109,7 @@ bool RISCVTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
   // Assume target opcodes can't be scalarized.
   // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END)
+  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
     return false;
 
   // If the vector op is not supported, try to convert to scalar.
@@ -5197,6 +5199,67 @@ static bool isCompressMask(ArrayRef<int> Mask) {
   return true;
 }
 
+/// Given a shuffle where the indices are disjoint between the two sources,
+/// e.g.:
+///
+/// t2:v4i8 = vector_shuffle t0:v4i8, t1:v4i8, <2, 7, 1, 4>
+///
+/// Merge the two sources into one and do a single source shuffle:
+///
+/// t2:v4i8 = vselect t1:v4i8, t0:v4i8, <0, 1, 0, 1>
+/// t3:v4i8 = vector_shuffle t2:v4i8, undef, <2, 3, 1, 0>
+///
+/// A vselect will either be merged into a masked instruction or be lowered as a
+/// vmerge.vvm, which is cheaper than a vrgather.vv.
+static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
+                                           SelectionDAG &DAG,
+                                           const RISCVSubtarget &Subtarget) {
+  MVT VT = SVN->getSimpleValueType(0);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(SVN);
+
+  const ArrayRef<int> Mask = SVN->getMask();
+
+  // Work out which source each lane will come from.
+  SmallVector<int, 16> Srcs(Mask.size(), -1);
+
+  for (int Idx : Mask) {
+    if (Idx == -1)
+      continue;
+    unsigned SrcIdx = Idx % Mask.size();
+    int Src = (uint32_t)Idx < Mask.size() ? 0 : 1;
+    if (Srcs[SrcIdx] == -1)
+      // Mark this source as using this lane.
+      Srcs[SrcIdx] = Src;
+    else if (Srcs[SrcIdx] != Src)
+      // The other source is using this lane: not disjoint.
+      return SDValue();
+  }
+
+  SmallVector<SDValue> SelectMaskVals;
+  for (int Lane : Srcs) {
+    if (Lane == -1)
+      SelectMaskVals.push_back(DAG.getUNDEF(XLenVT));
+    else
+      SelectMaskVals.push_back(DAG.getConstant(Lane ? 0 : 1, DL, XLenVT));
+  }
+  MVT MaskVT = VT.changeVectorElementType(MVT::i1);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, SelectMaskVals);
+  SDValue Select = DAG.getNode(ISD::VSELECT, DL, VT, SelectMask,
+                               SVN->getOperand(0), SVN->getOperand(1));
+
+  // Move all indices relative to the first source.
+  SmallVector<int> NewMask(Mask.size());
+  for (unsigned I = 0; I < Mask.size(); I++) {
+    if (Mask[I] == -1)
+      NewMask[I] = -1;
+    else
+      NewMask[I] = Mask[I] % Mask.size();
+  }
+
+  return DAG.getVectorShuffle(VT, DL, Select, DAG.getUNDEF(VT), NewMask);
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -5539,6 +5602,17 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                              ? MaskIndex : -1);
     ShuffleMaskRHS.push_back(IsLHSOrUndefIndex ? -1 : (MaskIndex - NumElts));
   }
+
+  // If the mask indices are disjoint between the two sources, we can lower it
+  // as a vselect + a single source vrgather.vv. Don't do this if we think the
+  // operands may end up being lowered to something cheaper than a vrgather.vv.
+  if (!DAG.isSplatValue(V2) && !DAG.isSplatValue(V1) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS.data(), VT) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS.data(), VT) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskLHS, NumElts) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts))
+    if (SDValue V = lowerDisjointIndicesShuffle(SVN, DAG, Subtarget))
+      return V;
 
   // Try to pick a profitable operand order.
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
@@ -7420,8 +7494,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSET_ROUNDING(Op, DAG);
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
-  case ISD::VP_SELECT:
   case ISD::VP_MERGE:
+    if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
+      return lowerVPMergeMask(Op, DAG);
+    [[fallthrough]];
+  case ISD::VP_SELECT:
   case ISD::VP_ADD:
   case ISD::VP_SUB:
   case ISD::VP_MUL:
@@ -8223,10 +8300,10 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return V;
 
   if (Op.hasOneUse()) {
-    unsigned UseOpc = Op->use_begin()->getOpcode();
+    unsigned UseOpc = Op->user_begin()->getOpcode();
     if (isBinOp(UseOpc) && DAG.isSafeToSpeculativelyExecute(UseOpc)) {
-      SDNode *BinOp = *Op->use_begin();
-      if (SDValue NewSel = foldBinOpIntoSelectIfProfitable(*Op->use_begin(),
+      SDNode *BinOp = *Op->user_begin();
+      if (SDValue NewSel = foldBinOpIntoSelectIfProfitable(*Op->user_begin(),
                                                            DAG, Subtarget)) {
         DAG.ReplaceAllUsesWith(BinOp, &NewSel);
         // Opcode check is necessary because foldBinOpIntoSelectIfProfitable
@@ -10829,23 +10906,23 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     return DAG.getMergeValues({Even, Odd}, DL);
   }
 
-  // For the indices, use the same SEW to avoid an extra vsetvli
-  // TODO: If container type is larger than m1, we can consider using a splat
-  // of a constant instead of the following sequence
+  // For the indices, use the vmv.v.x of an i8 constant to fill the largest
+  // possibly mask vector, then extract the required subvector.  Doing this
+  // (instead of a vid, vmsne sequence) reduces LMUL, and allows the mask
+  // creation to be rematerialized during register allocation to reduce
+  // register pressure if needed.
 
-  // Create a vector of even indices {0, 1, 2, ...}
-  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
-  SDValue StepVec = DAG.getStepVector(DL, IdxVT);
-  // 0, 1, 0, 1, 0, 1
-  SDValue ZeroOnes =
-      DAG.getNode(ISD::AND, DL, IdxVT, StepVec, DAG.getConstant(1, DL, IdxVT));
   MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
-  SDValue EvenMask =
-      DAG.getSetCC(DL, MaskVT, ZeroOnes, DAG.getConstant(0, DL, IdxVT),
-                   ISD::CondCode::SETEQ);
-  // Have the latter be the not of the former to minimize the live range of
-  // the index vector since that might be large.
-  SDValue OddMask = DAG.getLogicalNOT(DL, EvenMask, MaskVT);
+
+  SDValue EvenSplat = DAG.getConstant(0b01010101, DL, MVT::nxv8i8);
+  EvenSplat = DAG.getBitcast(MVT::nxv64i1, EvenSplat);
+  SDValue EvenMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskVT, EvenSplat,
+                                 DAG.getVectorIdxConstant(0, DL));
+
+  SDValue OddSplat = DAG.getConstant(0b10101010, DL, MVT::nxv8i8);
+  OddSplat = DAG.getBitcast(MVT::nxv64i1, OddSplat);
+  SDValue OddMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskVT, OddSplat,
+                                DAG.getVectorIdxConstant(0, DL));
 
   // vcompress the even and odd elements into two separate vectors
   SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
@@ -12004,6 +12081,65 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op,
   if (!VT.isFixedLengthVector())
     return Result;
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
+}
+
+SDValue RISCVTargetLowering::lowerVPMergeMask(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDValue Mask = Op.getOperand(0);
+  SDValue TrueVal = Op.getOperand(1);
+  SDValue FalseVal = Op.getOperand(2);
+  SDValue VL = Op.getOperand(3);
+
+  // Use default legalization if a vector of EVL type would be legal.
+  EVT EVLVecVT = EVT::getVectorVT(*DAG.getContext(), VL.getValueType(),
+                                  VT.getVectorElementCount());
+  if (isTypeLegal(EVLVecVT))
+    return SDValue();
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    Mask = convertToScalableVector(ContainerVT, Mask, DAG, Subtarget);
+    TrueVal = convertToScalableVector(ContainerVT, TrueVal, DAG, Subtarget);
+    FalseVal = convertToScalableVector(ContainerVT, FalseVal, DAG, Subtarget);
+  }
+
+  // Promote to a vector of i8.
+  MVT PromotedVT = ContainerVT.changeVectorElementType(MVT::i8);
+
+  // Promote TrueVal and FalseVal using VLMax.
+  // FIXME: Is there a better way to do this?
+  SDValue VLMax = DAG.getRegister(RISCV::X0, XLenVT);
+  SDValue SplatOne = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, PromotedVT,
+                                 DAG.getUNDEF(PromotedVT),
+                                 DAG.getConstant(1, DL, XLenVT), VLMax);
+  SDValue SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, PromotedVT,
+                                  DAG.getUNDEF(PromotedVT),
+                                  DAG.getConstant(0, DL, XLenVT), VLMax);
+  TrueVal = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, TrueVal, SplatOne,
+                        SplatZero, DAG.getUNDEF(PromotedVT), VL);
+  // Any element past VL uses FalseVal, so use VLMax
+  FalseVal = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, FalseVal,
+                         SplatOne, SplatZero, DAG.getUNDEF(PromotedVT), VLMax);
+
+  // VP_MERGE the two promoted values.
+  SDValue VPMerge = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, Mask,
+                                TrueVal, FalseVal, FalseVal, VL);
+
+  // Convert back to mask.
+  SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
+  SDValue Result = DAG.getNode(
+      RISCVISD::SETCC_VL, DL, ContainerVT,
+      {VPMerge, DAG.getConstant(0, DL, PromotedVT), DAG.getCondCode(ISD::SETNE),
+       DAG.getUNDEF(getMaskTypeFor(ContainerVT)), TrueMask, VLMax});
+
+  if (VT.isFixedLengthVector())
+    Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
+  return Result;
 }
 
 SDValue
@@ -15552,17 +15688,15 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
     auto AppendUsersIfNeeded = [&Worklist, &Subtarget,
                                 &Inserted](const NodeExtensionHelper &Op) {
       if (Op.needToPromoteOtherUsers()) {
-        for (SDNode::use_iterator UI = Op.OrigOperand->use_begin(),
-                                  UE = Op.OrigOperand->use_end();
-             UI != UE; ++UI) {
-          SDNode *TheUse = *UI;
-          if (!NodeExtensionHelper::isSupportedRoot(TheUse, Subtarget))
+        for (SDUse &Use : Op.OrigOperand->uses()) {
+          SDNode *TheUser = Use.getUser();
+          if (!NodeExtensionHelper::isSupportedRoot(TheUser, Subtarget))
             return false;
           // We only support the first 2 operands of FMA.
-          if (UI.getOperandNo() >= 2)
+          if (Use.getOperandNo() >= 2)
             return false;
-          if (Inserted.insert(TheUse).second)
-            Worklist.push_back(TheUse);
+          if (Inserted.insert(TheUser).second)
+            Worklist.push_back(TheUser);
         }
       }
       return true;
@@ -15780,9 +15914,7 @@ static SDValue performMemPairCombine(SDNode *N,
   auto [Base1, Offset1] = ExtractBaseAndOffset(LSNode1->getOperand(OpNum));
 
   SDValue Chain = N->getOperand(0);
-  for (SDNode::use_iterator UI = Chain->use_begin(), UE = Chain->use_end();
-       UI != UE; ++UI) {
-    SDUse &Use = UI.getUse();
+  for (SDUse &Use : Chain->uses()) {
     if (Use.getUser() != N && Use.getResNo() == 0 &&
         Use.getUser()->getOpcode() == N->getOpcode()) {
       LSBaseSDNode *LSNode2 = cast<LSBaseSDNode>(Use.getUser());
@@ -16174,7 +16306,7 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
     // All users should be a shift by constant less than or equal to 32. This
     // ensures we'll do this optimization for each of them to produce an
     // add/sub+sext_inreg they can all share.
-    for (SDNode *U : N0->uses()) {
+    for (SDNode *U : N0->users()) {
       if (U->getOpcode() != ISD::SRA ||
           !isa<ConstantSDNode>(U->getOperand(1)) ||
           U->getConstantOperandVal(1) > 32)
@@ -18233,8 +18365,26 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   //   (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
   SDValue N0 = N->getOperand(0);
   EVT Ty = N0.getValueType();
+
+  // LD/ST will optimize constant Offset extraction, so when AddNode is used by
+  // LD/ST, it can still complete the folding optimization operation performed
+  // above.
+  auto isUsedByLdSt = [](const SDNode *X, const SDNode *User) {
+    for (SDNode *Use : X->users()) {
+      // This use is the one we're on right now. Skip it
+      if (Use == User || Use->getOpcode() == ISD::SELECT)
+        continue;
+      if (!isa<StoreSDNode>(Use) && !isa<LoadSDNode>(Use))
+        return false;
+    }
+    return true;
+  };
+
   if (Ty.isScalarInteger() &&
       (N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR)) {
+    if (N0.getOpcode() == ISD::ADD && !N0->hasOneUse())
+      return isUsedByLdSt(N0.getNode(), N);
+
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (C1 && C2) {
@@ -18269,6 +18419,15 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
         return false;
     }
   }
+
+  if (!N0->hasOneUse())
+    return false;
+
+  if (N0->getOpcode() == ISD::SIGN_EXTEND &&
+      N0->getOperand(0)->getOpcode() == ISD::ADD &&
+      !N0->getOperand(0)->hasOneUse())
+    return isUsedByLdSt(N0->getOperand(0).getNode(), N0.getNode());
+
   return true;
 }
 
@@ -20329,7 +20488,7 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
   if (!N->hasNUsesOfValue(1, 0))
     return false;
 
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
 
   if (Copy->getOpcode() == ISD::BITCAST) {
     return isUsedByReturnOnly(Copy, Chain);
@@ -20348,7 +20507,7 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
 
   // The copy must be used by a RISCVISD::RET_GLUE, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != RISCVISD::RET_GLUE)
       return false;
     HasRet = true;
@@ -22192,6 +22351,35 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
   return isCtpopFast(VT) ? 0 : 1;
 }
 
+bool RISCVTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  if (Subtarget.hasStdExtZalasr()) {
+    if (Subtarget.hasStdExtZtso()) {
+      // Zalasr + TSO means that atomic_load_acquire and atomic_store_release
+      // should be lowered to plain load/store. The easiest way to do this is
+      // to say we should insert fences for them, and the fence insertion code
+      // will just not insert any fences
+      auto *LI = dyn_cast<LoadInst>(I);
+      auto *SI = dyn_cast<StoreInst>(I);
+      if ((LI &&
+           (LI->getOrdering() == AtomicOrdering::SequentiallyConsistent)) ||
+          (SI &&
+           (SI->getOrdering() == AtomicOrdering::SequentiallyConsistent))) {
+        // Here, this is a load or store which is seq_cst, and needs a .aq or
+        // .rl therefore we shouldn't try to insert fences
+        return false;
+      }
+      // Here, we are a TSO inst that isn't a seq_cst load/store
+      return isa<LoadInst>(I) || isa<StoreInst>(I);
+    }
+    return false;
+  }
+  // Note that one specific case requires fence insertion for an
+  // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
+  // than this hook due to limitations in the interface here.
+  return isa<LoadInst>(I) || isa<StoreInst>(I);
+}
+
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // GISel support is in progress or complete for these opcodes.
@@ -22303,3 +22491,25 @@ namespace llvm::RISCVVIntrinsicsTable {
 #include "RISCVGenSearchableTables.inc"
 
 } // namespace llvm::RISCVVIntrinsicsTable
+
+bool RISCVTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
+
+  // If the function specifically requests inline stack probes, emit them.
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
+           "inline-asm";
+
+  return false;
+}
+
+unsigned RISCVTargetLowering::getStackProbeSize(const MachineFunction &MF,
+                                                Align StackAlign) const {
+  // The default stack probe size is 4096 if the function has no
+  // stack-probe-size attribute.
+  const Function &Fn = MF.getFunction();
+  unsigned StackProbeSize =
+      Fn.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
+  // Round down to the stack alignment.
+  StackProbeSize = alignDown(StackProbeSize, StackAlign.value());
+  return StackProbeSize ? StackProbeSize : StackAlign.value();
+}

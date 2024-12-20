@@ -1313,7 +1313,7 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg5), sizeof(u64));
   } else if (res != -1 && option == PR_GET_PDEATHSIG) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg2), sizeof(int));
-#  if !SANITIZER_ANDROID
+#  if SANITIZER_GLIBC
   } else if (res != -1 && option == PR_SET_SECCOMP &&
              arg2 == SECCOMP_MODE_FILTER) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg3), struct_sock_fprog_sz);

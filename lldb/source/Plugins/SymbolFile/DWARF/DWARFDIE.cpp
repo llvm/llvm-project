@@ -13,10 +13,12 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
+#include "LogChannelDWARF.h"
 #include "lldb/Symbol/Type.h"
 
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -172,21 +174,27 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   }
 
   if (match_addr_range) {
-    DWARFRangeList ranges =
-        m_die->GetAttributeAddressRanges(m_cu, /*check_hi_lo_pc=*/true);
-    if (ranges.FindEntryThatContains(address)) {
-      check_children = true;
-      switch (Tag()) {
-      default:
-        break;
+    if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
+            m_die->GetAttributeAddressRanges(m_cu, /*check_hi_lo_pc=*/true)) {
+      bool addr_in_range =
+          llvm::any_of(*ranges, [&](const llvm::DWARFAddressRange &r) {
+            return r.LowPC <= address && address < r.HighPC;
+          });
+      if (addr_in_range) {
+        switch (Tag()) {
+        default:
+          break;
 
-      case DW_TAG_inlined_subroutine: // Inlined Function
-      case DW_TAG_lexical_block:      // Block { } in code
-        result = *this;
-        break;
+        case DW_TAG_inlined_subroutine: // Inlined Function
+        case DW_TAG_lexical_block:      // Block { } in code
+          result = *this;
+          break;
+        }
       }
+      check_children = addr_in_range;
     } else {
-      check_children = false;
+      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                     "DIE({1:x}): {0}", GetID());
     }
   }
 
@@ -559,10 +567,11 @@ bool DWARFDIE::IsMethod() const {
 }
 
 bool DWARFDIE::GetDIENamesAndRanges(
-    const char *&name, const char *&mangled, DWARFRangeList &ranges,
-    std::optional<int> &decl_file, std::optional<int> &decl_line,
-    std::optional<int> &decl_column, std::optional<int> &call_file,
-    std::optional<int> &call_line, std::optional<int> &call_column,
+    const char *&name, const char *&mangled,
+    llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
+    std::optional<int> &decl_line, std::optional<int> &decl_column,
+    std::optional<int> &call_file, std::optional<int> &call_line,
+    std::optional<int> &call_column,
     lldb_private::DWARFExpressionList *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(

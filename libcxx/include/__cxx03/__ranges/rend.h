@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_REND_H
-#define _LIBCPP___RANGES_REND_H
+#ifndef _LIBCPP___CXX03___RANGES_REND_H
+#define _LIBCPP___CXX03___RANGES_REND_H
 
 #include <__cxx03/__concepts/class_or_enum.h>
 #include <__cxx03/__concepts/same_as.h>
@@ -120,4 +120,4 @@ inline constexpr auto crend = __crend::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_REND_H
+#endif // _LIBCPP___CXX03___RANGES_REND_H

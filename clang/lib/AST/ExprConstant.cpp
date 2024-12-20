@@ -7352,31 +7352,6 @@ class APValueToBufferConverter {
     const VectorType *VTy = Ty->castAs<VectorType>();
     QualType EltTy = VTy->getElementType();
     unsigned NElts = VTy->getNumElements();
-    unsigned EltSize =
-        VTy->isExtVectorBoolType() ? 1 : Info.Ctx.getTypeSize(EltTy);
-
-    if ((NElts * EltSize) % Info.Ctx.getCharWidth() != 0) {
-      // The vector's size in bits is not a multiple of the target's byte size,
-      // so its layout is unspecified. For now, we'll simply treat these cases
-      // as unsupported (this should only be possible with OpenCL bool vectors
-      // whose element count isn't a multiple of the byte size).
-      Info.FFDiag(BCE->getBeginLoc(),
-                  diag::note_constexpr_bit_cast_invalid_vector)
-          << Ty.getCanonicalType() << EltSize << NElts
-          << Info.Ctx.getCharWidth();
-      return false;
-    }
-
-    if (EltTy->isRealFloatingType() && &Info.Ctx.getFloatTypeSemantics(EltTy) ==
-                                           &APFloat::x87DoubleExtended()) {
-      // The layout for x86_fp80 vectors seems to be handled very inconsistently
-      // by both clang and LLVM, so for now we won't allow bit_casts involving
-      // it in a constexpr context.
-      Info.FFDiag(BCE->getBeginLoc(),
-                  diag::note_constexpr_bit_cast_unsupported_type)
-          << EltTy;
-      return false;
-    }
 
     if (VTy->isExtVectorBoolType()) {
       // Special handling for OpenCL bool vectors:
@@ -7643,28 +7618,6 @@ class BufferToAPValueConverter {
     unsigned EltSize =
         VTy->isExtVectorBoolType() ? 1 : Info.Ctx.getTypeSize(EltTy);
 
-    if ((NElts * EltSize) % Info.Ctx.getCharWidth() != 0) {
-      // The vector's size in bits is not a multiple of the target's byte size,
-      // so its layout is unspecified. For now, we'll simply treat these cases
-      // as unsupported (this should only be possible with OpenCL bool vectors
-      // whose element count isn't a multiple of the byte size).
-      Info.FFDiag(BCE->getBeginLoc(),
-                  diag::note_constexpr_bit_cast_invalid_vector)
-          << QualType(VTy, 0) << EltSize << NElts << Info.Ctx.getCharWidth();
-      return std::nullopt;
-    }
-
-    if (EltTy->isRealFloatingType() && &Info.Ctx.getFloatTypeSemantics(EltTy) ==
-                                           &APFloat::x87DoubleExtended()) {
-      // The layout for x86_fp80 vectors seems to be handled very inconsistently
-      // by both clang and LLVM, so for now we won't allow bit_casts involving
-      // it in a constexpr context.
-      Info.FFDiag(BCE->getBeginLoc(),
-                  diag::note_constexpr_bit_cast_unsupported_type)
-          << EltTy;
-      return std::nullopt;
-    }
-
     SmallVector<APValue, 4> Elts;
     Elts.reserve(NElts);
     if (VTy->isExtVectorBoolType()) {
@@ -7792,6 +7745,32 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
       !checkBitCastConstexprEligibilityType(Loc, Ctx.getBaseElementType(Ty),
                                             Info, Ctx, CheckingDest))
     return false;
+
+  if (const auto *VTy = Ty->getAs<VectorType>()) {
+    QualType EltTy = VTy->getElementType();
+    unsigned NElts = VTy->getNumElements();
+    unsigned EltSize = VTy->isExtVectorBoolType() ? 1 : Ctx.getTypeSize(EltTy);
+
+    if ((NElts * EltSize) % Ctx.getCharWidth() != 0) {
+      // The vector's size in bits is not a multiple of the target's byte size,
+      // so its layout is unspecified. For now, we'll simply treat these cases
+      // as unsupported (this should only be possible with OpenCL bool vectors
+      // whose element count isn't a multiple of the byte size).
+      Info->FFDiag(Loc, diag::note_constexpr_bit_cast_invalid_vector)
+          << QualType(VTy, 0) << EltSize << NElts << Ctx.getCharWidth();
+      return false;
+    }
+
+    if (EltTy->isRealFloatingType() &&
+        &Ctx.getFloatTypeSemantics(EltTy) == &APFloat::x87DoubleExtended()) {
+      // The layout for x86_fp80 vectors seems to be handled very inconsistently
+      // by both clang and LLVM, so for now we won't allow bit_casts involving
+      // it in a constexpr context.
+      Info->FFDiag(Loc, diag::note_constexpr_bit_cast_unsupported_type)
+          << EltTy;
+      return false;
+    }
+  }
 
   return true;
 }
@@ -10172,7 +10151,9 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       return false;
     IsNothrow = true;
   } else if (OperatorNew->isReservedGlobalPlacementOperator()) {
-    if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26) {
+    if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26 ||
+        (Info.CurrentCall->CanEvalMSConstexpr &&
+         OperatorNew->hasAttr<MSConstexprAttr>())) {
       if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
         return false;
       if (Result.Designator.Invalid)
@@ -16534,7 +16515,7 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
                                  const ASTContext &Ctx, bool &IsConst) {
   // Fast-path evaluations of integer literals, since we sometimes see files
   // containing vast quantities of these.
-  if (const IntegerLiteral *L = dyn_cast<IntegerLiteral>(Exp)) {
+  if (const auto *L = dyn_cast<IntegerLiteral>(Exp)) {
     Result.Val = APValue(APSInt(L->getValue(),
                                 L->getType()->isUnsignedIntegerType()));
     IsConst = true;
@@ -16543,6 +16524,18 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
 
   if (const auto *L = dyn_cast<CXXBoolLiteralExpr>(Exp)) {
     Result.Val = APValue(APSInt(APInt(1, L->getValue())));
+    IsConst = true;
+    return true;
+  }
+
+  if (const auto *FL = dyn_cast<FloatingLiteral>(Exp)) {
+    Result.Val = APValue(FL->getValue());
+    IsConst = true;
+    return true;
+  }
+
+  if (const auto *L = dyn_cast<CharacterLiteral>(Exp)) {
+    Result.Val = APValue(Ctx.MakeIntValue(L->getValue(), L->getType()));
     IsConst = true;
     return true;
   }

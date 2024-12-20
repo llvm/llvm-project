@@ -151,8 +151,14 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
 
+  // Some of what follows may extend to cover scalable vectors but the current
+  // implementation is fixed length specific.
+  if (!isa<FixedVectorType>(C->getType()))
+    return ConstantExpr::getBitCast(C, DestTy);
+
   // If this is a bitcast from constant vector -> vector, fold it.
-  if (!isa<ConstantDataVector>(C) && !isa<ConstantVector>(C))
+  if (!isa<ConstantDataVector>(C) && !isa<ConstantVector>(C) &&
+      !isa<ConstantInt>(C) && !isa<ConstantFP>(C))
     return ConstantExpr::getBitCast(C, DestTy);
 
   // If the element types match, IR can fold it.
@@ -194,10 +200,9 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
         IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
     // Ask IR to do the conversion now that #elts line up.
     C = ConstantExpr::getBitCast(C, SrcIVTy);
-    // If IR wasn't able to fold it, bail out.
-    if (!isa<ConstantVector>(C) &&  // FIXME: Remove ConstantVector.
-        !isa<ConstantDataVector>(C))
-      return C;
+    assert((isa<ConstantVector>(C) || // FIXME: Remove ConstantVector.
+            isa<ConstantDataVector>(C) || isa<ConstantInt>(C)) &&
+           "Constant folding cannot fail for plain fp->int bitcast!");
   }
 
   // Now we know that the input and output vectors are both integer vectors
@@ -952,7 +957,6 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   }
 
   // Try to infer inbounds for GEPs of globals.
-  // TODO(gep_nowrap): Also infer nuw flag.
   if (!NW.isInBounds() && Offset.isNonNegative()) {
     bool CanBeNull, CanBeFreed;
     uint64_t DerefBytes =
@@ -960,6 +964,10 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     if (DerefBytes != 0 && !CanBeNull && Offset.sle(DerefBytes))
       NW |= GEPNoWrapFlags::inBounds();
   }
+
+  // nusw + nneg -> nuw
+  if (NW.hasNoUnsignedSignedWrap() && Offset.isNonNegative())
+    NW |= GEPNoWrapFlags::noUnsignedWrap();
 
   // Otherwise canonicalize this to a single ptradd.
   LLVMContext &Ctx = Ptr->getContext();
@@ -1632,6 +1640,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::sqrt:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::sincos:
   case Intrinsic::pow:
   case Intrinsic::powi:
   case Intrinsic::ldexp:
@@ -3438,7 +3447,7 @@ static Constant *ConstantFoldFixedVectorCall(
     // Gather a column of constants.
     for (unsigned J = 0, JE = Operands.size(); J != JE; ++J) {
       // Some intrinsics use a scalar type for certain arguments.
-      if (isVectorIntrinsicWithScalarOpAtArg(IntrinsicID, J)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(IntrinsicID, J, /*TTI=*/nullptr)) {
         Lane[J] = Operands[J];
         continue;
       }
@@ -3533,6 +3542,40 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     if (!Result0)
       return nullptr;
     return ConstantStruct::get(StTy, Result0, Result1);
+  }
+  case Intrinsic::sincos: {
+    Type *Ty = StTy->getContainedType(0);
+    Type *TyScalar = Ty->getScalarType();
+
+    auto ConstantFoldScalarSincosCall =
+        [&](Constant *Op) -> std::pair<Constant *, Constant *> {
+      Constant *SinResult =
+          ConstantFoldScalarCall(Name, Intrinsic::sin, TyScalar, Op, TLI, Call);
+      Constant *CosResult =
+          ConstantFoldScalarCall(Name, Intrinsic::cos, TyScalar, Op, TLI, Call);
+      return std::make_pair(SinResult, CosResult);
+    };
+
+    if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
+      SmallVector<Constant *> SinResults(FVTy->getNumElements());
+      SmallVector<Constant *> CosResults(FVTy->getNumElements());
+
+      for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
+        Constant *Lane = Operands[0]->getAggregateElement(I);
+        std::tie(SinResults[I], CosResults[I]) =
+            ConstantFoldScalarSincosCall(Lane);
+        if (!SinResults[I] || !CosResults[I])
+          return nullptr;
+      }
+
+      return ConstantStruct::get(StTy, ConstantVector::get(SinResults),
+                                 ConstantVector::get(CosResults));
+    }
+
+    auto [SinResult, CosResult] = ConstantFoldScalarSincosCall(Operands[0]);
+    if (!SinResult || !CosResult)
+      return nullptr;
+    return ConstantStruct::get(StTy, SinResult, CosResult);
   }
   default:
     // TODO: Constant folding of vector intrinsics that fall through here does
