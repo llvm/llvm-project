@@ -4150,7 +4150,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     if (isa<PHINode>(I) || L->isLoopInvariant(I) || Depth > 8)
       return false;
 
-    if (auto *LI = dyn_cast<LoadInst>(I))
+    if (isa<LoadInst>(I))
       return true;
 
     return any_of(I->operands(), [&](Value *V) {
@@ -4158,7 +4158,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       return I && DependsOnLoopLoad(I, Depth + 1);
     });
   };
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Instruction *I;
   if (match(Term, m_Br(m_ICmp(Pred, m_Instruction(I), m_Value()), m_Value(),
                        m_Value())) &&
