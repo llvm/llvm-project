@@ -3007,13 +3007,12 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
       // and "(MY_PAT $b, $a)" should not be allowed in the same pattern;
       // neither should "(MY_PAT_1 $a, $b)" and "(MY_PAT_2 $a, $b)".
       auto OperandId = std::make_pair(Operator, i);
-      auto PrevOp = ComplexPatternOperands.find(Child->getName());
-      if (PrevOp != ComplexPatternOperands.end()) {
-        if (PrevOp->getValue() != OperandId)
-          error("All ComplexPattern operands must appear consistently: "
-                "in the same order in just one ComplexPattern instance.");
-      } else
-        ComplexPatternOperands[Child->getName()] = OperandId;
+      auto [PrevOp, Inserted] =
+          ComplexPatternOperands.try_emplace(Child->getName(), OperandId);
+      if (!Inserted && PrevOp->getValue() != OperandId) {
+        error("All ComplexPattern operands must appear consistently: "
+              "in the same order in just one ComplexPattern instance.");
+      }
     }
   }
 
@@ -3095,14 +3094,14 @@ bool TreePattern::InferAllTypes(
       // If we have input named node types, propagate their types to the named
       // values here.
       if (InNamedTypes) {
-        if (!InNamedTypes->count(Entry.getKey())) {
+        auto InIter = InNamedTypes->find(Entry.getKey());
+        if (InIter == InNamedTypes->end()) {
           error("Node '" + std::string(Entry.getKey()) +
                 "' in output pattern but not input pattern");
           return true;
         }
 
-        const SmallVectorImpl<TreePatternNode *> &InNodes =
-            InNamedTypes->find(Entry.getKey())->second;
+        const SmallVectorImpl<TreePatternNode *> &InNodes = InIter->second;
 
         // The input types should be fully resolved by now.
         for (TreePatternNode *Node : Nodes) {
@@ -3291,10 +3290,9 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
       if (!OpsList->getArgName(j))
         P->error("Operands list should have names for each operand!");
       StringRef ArgNameStr = OpsList->getArgNameStr(j);
-      if (!OperandsSet.count(ArgNameStr))
+      if (!OperandsSet.erase(ArgNameStr))
         P->error("'" + ArgNameStr +
                  "' does not occur in pattern or was multiply specified!");
-      OperandsSet.erase(ArgNameStr);
       Args.push_back(std::string(ArgNameStr));
     }
 
@@ -3855,7 +3853,8 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
       continue;
     }
 
-    if (!InstInputs.count(OpName)) {
+    auto InIter = InstInputs.find(OpName);
+    if (InIter == InstInputs.end()) {
       // If this is an operand with a DefaultOps set filled in, we can ignore
       // this.  When we codegen it, we will do so as always executed.
       if (Op.Rec->isSubClassOf("OperandWithDefaultOps")) {
@@ -3868,8 +3867,8 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
               " does not appear in the instruction pattern");
       continue;
     }
-    TreePatternNodePtr InVal = InstInputs[OpName];
-    InstInputs.erase(OpName); // It occurred, remove from map.
+    TreePatternNodePtr InVal = InIter->second;
+    InstInputs.erase(InIter); // It occurred, remove from map.
 
     if (InVal->isLeaf() && isa<DefInit>(InVal->getLeafValue())) {
       const Record *InRec = cast<DefInit>(InVal->getLeafValue())->getDef();

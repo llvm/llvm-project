@@ -23448,11 +23448,10 @@ static SDValue performPostLD1Combine(SDNode *N,
 
   // Check if there are other uses. If so, do not combine as it will introduce
   // an extra load.
-  for (SDNode::use_iterator UI = LD->use_begin(), UE = LD->use_end(); UI != UE;
-       ++UI) {
-    if (UI.getUse().getResNo() == 1) // Ignore uses of the chain result.
+  for (SDUse &U : LD->uses()) {
+    if (U.getResNo() == 1) // Ignore uses of the chain result.
       continue;
-    if (*UI != N)
+    if (U.getUser() != N)
       return SDValue();
   }
 
@@ -23468,11 +23467,9 @@ static SDValue performPostLD1Combine(SDNode *N,
   SDValue Addr = LD->getOperand(1);
   SDValue Vector = N->getOperand(0);
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(), UE =
-       Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (User->getOpcode() != ISD::ADD
-        || UI.getUse().getResNo() != Addr.getResNo())
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::ADD || Use.getResNo() != Addr.getResNo())
       continue;
 
     // If the increment is a constant, it must match the memory ref size.
@@ -24186,11 +24183,9 @@ static SDValue performNEONPostLDSTCombine(SDNode *N,
   SDValue Addr = N->getOperand(AddrOpIdx);
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-       UE = Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (User->getOpcode() != ISD::ADD ||
-        UI.getUse().getResNo() != Addr.getResNo())
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::ADD || Use.getResNo() != Addr.getResNo())
       continue;
 
     // Check that the add is independent of the load/store.  Otherwise, folding
@@ -26662,12 +26657,11 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
 
   // Non-null if there is exactly one user of the loaded value (ignoring chain).
   SDNode *ValOnlyUser = nullptr;
-  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end(); UI != UE;
-       ++UI) {
-    if (UI.getUse().getResNo() == 1)
+  for (SDUse &U : N->uses()) {
+    if (U.getResNo() == 1)
       continue; // Ignore chain.
     if (ValOnlyUser == nullptr)
-      ValOnlyUser = *UI;
+      ValOnlyUser = U.getUser();
     else {
       ValOnlyUser = nullptr; // Multiple non-chain uses, bail out.
       break;

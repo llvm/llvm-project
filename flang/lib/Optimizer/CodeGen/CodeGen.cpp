@@ -1341,10 +1341,10 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
 
   /// Get the address of the type descriptor global variable that was created by
   /// lowering for derived type \p recType.
-  mlir::Value getTypeDescriptor(mlir::ModuleOp mod,
-                                mlir::ConversionPatternRewriter &rewriter,
-                                mlir::Location loc,
-                                fir::RecordType recType) const {
+  template <typename ModOpTy>
+  mlir::Value
+  getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
+                    mlir::Location loc, fir::RecordType recType) const {
     std::string name =
         this->options.typeDescriptorsRenamedForAssembly
             ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
@@ -1369,7 +1369,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     return rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
   }
 
-  mlir::Value populateDescriptor(mlir::Location loc, mlir::ModuleOp mod,
+  template <typename ModOpTy>
+  mlir::Value populateDescriptor(mlir::Location loc, ModOpTy mod,
                                  fir::BaseBoxType boxTy, mlir::Type inputType,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  unsigned rank, mlir::Value eleSize,
@@ -1508,10 +1509,16 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       extraField =
           this->getExtraFromBox(loc, sourceBoxTyPair, sourceBox, rewriter);
     }
-    auto mod = box->template getParentOfType<mlir::ModuleOp>();
-    mlir::Value descriptor =
-        populateDescriptor(loc, mod, boxTy, inputType, rewriter, rank, eleSize,
-                           cfiTy, typeDesc, allocatorIdx, extraField);
+
+    mlir::Value descriptor;
+    if (auto gpuMod = box->template getParentOfType<mlir::gpu::GPUModuleOp>())
+      descriptor = populateDescriptor(loc, gpuMod, boxTy, inputType, rewriter,
+                                      rank, eleSize, cfiTy, typeDesc,
+                                      allocatorIdx, extraField);
+    else if (auto mod = box->template getParentOfType<mlir::ModuleOp>())
+      descriptor = populateDescriptor(loc, mod, boxTy, inputType, rewriter,
+                                      rank, eleSize, cfiTy, typeDesc,
+                                      allocatorIdx, extraField);
 
     return {boxTy, descriptor, eleSize};
   }
@@ -1554,11 +1561,17 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     mlir::Value extraField =
         this->getExtraFromBox(loc, inputBoxTyPair, loweredBox, rewriter);
 
-    auto mod = box->template getParentOfType<mlir::ModuleOp>();
-    mlir::Value descriptor =
-        populateDescriptor(loc, mod, boxTy, box.getBox().getType(), rewriter,
-                           rank, eleSize, cfiTy, typeDesc,
-                           /*allocatorIdx=*/kDefaultAllocator, extraField);
+    mlir::Value descriptor;
+    if (auto gpuMod = box->template getParentOfType<mlir::gpu::GPUModuleOp>())
+      descriptor =
+          populateDescriptor(loc, gpuMod, boxTy, box.getBox().getType(),
+                             rewriter, rank, eleSize, cfiTy, typeDesc,
+                             /*allocatorIdx=*/kDefaultAllocator, extraField);
+    else if (auto mod = box->template getParentOfType<mlir::ModuleOp>())
+      descriptor =
+          populateDescriptor(loc, mod, boxTy, box.getBox().getType(), rewriter,
+                             rank, eleSize, cfiTy, typeDesc,
+                             /*allocatorIdx=*/kDefaultAllocator, extraField);
 
     return {boxTy, descriptor, eleSize};
   }

@@ -296,13 +296,15 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
-      // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
+      // 'async', 'worker', 'vector', and 'wait' have an optional IntExpr, so be
+      // tolerant of that.
       if ((ClauseKind == OpenACCClauseKind::Async ||
            ClauseKind == OpenACCClauseKind::Worker ||
            ClauseKind == OpenACCClauseKind::Vector ||
@@ -346,6 +348,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Gang ||
               ClauseKind == OpenACCClauseKind::Worker ||
@@ -482,6 +485,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -493,6 +497,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
