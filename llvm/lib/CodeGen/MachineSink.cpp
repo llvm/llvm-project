@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/MachineRegisterClassInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -134,7 +135,7 @@ class MachineSinking {
   MachineBlockFrequencyInfo *MBFI = nullptr;
   const MachineBranchProbabilityInfo *MBPI = nullptr;
   AliasAnalysis *AA = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
   TargetSchedModel SchedModel;
   // Required for split critical edge
   LiveIntervals *LIS;
@@ -203,9 +204,10 @@ public:
                  MachineLoopInfo *MLI, SlotIndexes *SI, LiveIntervals *LIS,
                  MachineCycleInfo *CI, ProfileSummaryInfo *PSI,
                  MachineBlockFrequencyInfo *MBFI,
-                 const MachineBranchProbabilityInfo *MBPI, AliasAnalysis *AA)
+                 const MachineBranchProbabilityInfo *MBPI, AliasAnalysis *AA,
+                 RegisterClassInfo *RegClassInfo)
       : DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI), AA(AA),
-        LIS(LIS), SI(SI), LV(LV), MLI(MLI),
+        RegClassInfo(RegClassInfo), LIS(LIS), SI(SI), LV(LV), MLI(MLI),
         EnableSinkAndFold(EnableSinkAndFold) {}
 
   bool run(MachineFunction &MF);
@@ -305,8 +307,10 @@ public:
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineCycleInfoWrapperPass>();
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.addPreserved<MachineCycleInfoWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     if (UseBlockFreqInfo)
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
@@ -326,6 +330,7 @@ INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineSinkingLegacy, DEBUG_TYPE, "Machine code sinking",
                     false, false)
@@ -772,8 +777,9 @@ MachineSinkingPass::run(MachineFunction &MF,
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
   auto *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
+  auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassInfoAnalysis>(MF);
   MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
-                      MBFI, MBPI, AA);
+                      MBFI, MBPI, AA, RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -818,9 +824,11 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
   auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+  auto *RegClassInfo =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
   MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
-                      MBFI, MBPI, AA);
+                      MBFI, MBPI, AA, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -831,8 +839,6 @@ bool MachineSinking::run(MachineFunction &MF) {
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
-
-  RegClassInfo.runOnMachineFunction(MF);
 
   bool EverMadeChange = false;
 
@@ -1201,7 +1207,7 @@ MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB,
   RegPressureTracker RPTracker(Pressure);
 
   // Initialize the register pressure tracker.
-  RPTracker.init(MBB.getParent(), &RegClassInfo, nullptr, &MBB, MBB.end(),
+  RPTracker.init(MBB.getParent(), RegClassInfo, nullptr, &MBB, MBB.end(),
                  /*TrackLaneMasks*/ false, /*TrackUntiedDefs=*/true);
 
   for (MachineBasicBlock::const_iterator MII = MBB.instr_end(),
@@ -1237,7 +1243,7 @@ bool MachineSinking::registerPressureSetExceedsLimit(
   std::vector<unsigned> BBRegisterPressure = getBBRegisterPressure(MBB);
   for (; *PS != -1; PS++)
     if (Weight + BBRegisterPressure[*PS] >=
-        RegClassInfo.getRegPressureSetLimit(*PS))
+        RegClassInfo->getRegPressureSetLimit(*PS))
       return true;
   return false;
 }

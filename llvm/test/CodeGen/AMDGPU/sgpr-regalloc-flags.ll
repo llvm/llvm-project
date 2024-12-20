@@ -21,6 +21,7 @@
 ; DEFAULT-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
+; DEFAULT-NEXT: Machine Register Class Info Analysis
 ; DEFAULT-NEXT: SI Pre-allocate WWM Registers
 ; DEFAULT-NEXT: Live Stack Slot Analysis
 ; DEFAULT-NEXT: Greedy Register Allocator
@@ -41,6 +42,7 @@
 ; O0-NEXT: Live Interval Analysis
 ; O0-NEXT: Virtual Register Map
 ; O0-NEXT: Live Register Matrix
+; O0-NEXT: Machine Register Class Info Analysis
 ; O0-NEXT: SI Pre-allocate WWM Registers
 ; O0-NEXT: Fast Register Allocator
 ; O0-NEXT: SI Lower WWM Copies
@@ -63,6 +65,7 @@
 ; BASIC-DEFAULT-NEXT: SI lower SGPR spill instructions
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
+; BASIC-DEFAULT-NEXT: Machine Register Class Info Analysis
 ; BASIC-DEFAULT-NEXT: SI Pre-allocate WWM Registers
 ; BASIC-DEFAULT-NEXT: Live Stack Slot Analysis
 ; BASIC-DEFAULT-NEXT: Bundle Machine CFG Edges
@@ -89,6 +92,7 @@
 ; DEFAULT-BASIC-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-BASIC-NEXT: Virtual Register Map
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
+; DEFAULT-BASIC-NEXT: Machine Register Class Info Analysis
 ; DEFAULT-BASIC-NEXT: SI Pre-allocate WWM Registers
 ; DEFAULT-BASIC-NEXT: Live Stack Slot Analysis
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
@@ -117,6 +121,7 @@
 ; BASIC-BASIC-NEXT: SI lower SGPR spill instructions
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
+; BASIC-BASIC-NEXT: Machine Register Class Info Analysis
 ; BASIC-BASIC-NEXT: SI Pre-allocate WWM Registers
 ; BASIC-BASIC-NEXT: Live Stack Slot Analysis
 ; BASIC-BASIC-NEXT: Basic Register Allocator
