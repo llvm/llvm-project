@@ -2,6 +2,7 @@
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -175,12 +176,19 @@ struct BufferResultsToOutParamsOpts {
   };
 
   /// Allocation function; used to allocate a memref.
-  /// If this is empty, memref.alloc is used
-  std::optional<AllocationFn> allocationFn;
+  /// Default memref.alloc is used
+  AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
+                                 MemRefType type) {
+    return builder.create<memref::AllocOp>(loc, type).getResult();
+  };
 
   /// Memcpy function; used to create a copy between two memrefs.
-  /// If this is empty, memref.copy is used.
-  std::optional<MemCpyFn> memCpyFn;
+  /// Default memref.copy is used.
+  MemCpyFn memCpyFn = [](OpBuilder &builder, Location loc, Value from,
+                         Value to) {
+    builder.create<memref::CopyOp>(loc, from, to);
+    return success();
+  };
 
   /// If true, the pass adds a "bufferize.result" attribute to each output
   /// parameter.

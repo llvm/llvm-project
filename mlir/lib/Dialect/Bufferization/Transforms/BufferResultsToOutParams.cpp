@@ -107,10 +107,9 @@ updateFuncOp(func::FuncOp func,
 // Updates all ReturnOps in the scope of the given func::FuncOp by either
 // keeping them as return values or copying the associated buffer contents into
 // the given out-params.
-static LogicalResult updateReturnOps(func::FuncOp func,
-                                     ArrayRef<BlockArgument> appendedEntryArgs,
-                                     MemCpyFn memCpyFn,
-                                     bool hoistStaticAllocs) {
+static LogicalResult
+updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
+                const bufferization::BufferResultsToOutParamsOpts &options) {
   auto res = func.walk([&](func::ReturnOp op) {
     SmallVector<Value, 6> copyIntoOutParams;
     SmallVector<Value, 6> keepAsReturnOperands;
@@ -122,14 +121,14 @@ static LogicalResult updateReturnOps(func::FuncOp func,
     }
     OpBuilder builder(op);
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
-      if (hoistStaticAllocs &&
+      if (options.hoistStaticAllocs &&
           isa_and_nonnull<bufferization::AllocationOpInterface>(
               orig.getDefiningOp()) &&
           mlir::cast<MemRefType>(orig.getType()).hasStaticShape()) {
         orig.replaceAllUsesWith(arg);
         orig.getDefiningOp()->erase();
       } else {
-        if (failed(memCpyFn(builder, op.getLoc(), orig, arg)))
+        if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
           return WalkResult::interrupt();
       }
     }
@@ -142,8 +141,9 @@ static LogicalResult updateReturnOps(func::FuncOp func,
 
 // Updates all CallOps in the scope of the given ModuleOp by allocating
 // temporary buffers for newly introduced out params.
-static LogicalResult updateCalls(ModuleOp module, AllocationFn allocationFn,
-                                 std::function<bool(func::FuncOp *)> filterFn) {
+static LogicalResult
+updateCalls(ModuleOp module,
+            const bufferization::BufferResultsToOutParamsOpts &options) {
   bool didFail = false;
   SymbolTable symtab(module);
   module.walk([&](func::CallOp op) {
@@ -154,7 +154,7 @@ static LogicalResult updateCalls(ModuleOp module, AllocationFn allocationFn,
       didFail = true;
       return;
     }
-    if (!filterFn(&callee))
+    if (!options.filterFn(&callee))
       return;
     SmallVector<Value, 6> replaceWithNewCallResults;
     SmallVector<Value, 6> replaceWithOutParams;
@@ -177,7 +177,8 @@ static LogicalResult updateCalls(ModuleOp module, AllocationFn allocationFn,
       auto allocType =
           MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
                           AffineMap(), memrefType.getMemorySpace());
-      auto maybeOutParam = allocationFn(builder, op.getLoc(), allocType);
+      auto maybeOutParam =
+          options.allocationFn(builder, op.getLoc(), allocType);
       if (failed(maybeOutParam)) {
         op.emitError() << "failed to create allocation op";
         didFail = true;
@@ -221,24 +222,11 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
       return failure();
     if (func.isExternal())
       continue;
-    auto defaultMemCpyFn = [](OpBuilder &builder, Location loc, Value from,
-                              Value to) {
-      builder.create<memref::CopyOp>(loc, from, to);
-      return success();
-    };
-    if (failed(updateReturnOps(func, appendedEntryArgs,
-                               options.memCpyFn.value_or(defaultMemCpyFn),
-                               options.hoistStaticAllocs))) {
+    if (failed(updateReturnOps(func, appendedEntryArgs, options))) {
       return failure();
     }
   }
-  auto defaultAllocationFn = [](OpBuilder &builder, Location loc,
-                                MemRefType type) {
-    return builder.create<memref::AllocOp>(loc, type).getResult();
-  };
-  if (failed(updateCalls(module,
-                         options.allocationFn.value_or(defaultAllocationFn),
-                         options.filterFn)))
+  if (failed(updateCalls(module, options)))
     return failure();
   return success();
 }
