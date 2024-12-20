@@ -155,6 +155,7 @@ private:
                                .Case("__fp16", "h")
                                .Case("__int128_t", "LLLi")
                                .Case("_Float16", "x")
+                               .Case("__bf16", "y")
                                .Case("bool", "b")
                                .Case("char", "c")
                                .Case("constant_CFString", "F")
