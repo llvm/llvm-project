@@ -358,7 +358,7 @@ which point the driver finishes.
 
 This driver comes in two fashions:
 
-*   `applyPatternsAndFoldGreedily` ("region-based driver") applies patterns to
+*   `applyPatternsGreedily` ("region-based driver") applies patterns to
     all ops in a given region or a given container op (but not the container op
     itself). I.e., the worklist is initialized with all containing ops.
 *   `applyOpPatternsAndFold` ("op-based driver") applies patterns to the
