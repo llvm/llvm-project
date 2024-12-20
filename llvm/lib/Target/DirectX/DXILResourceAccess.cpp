@@ -81,7 +81,7 @@ static void replaceTypedBufferAccess(IntrinsicInst *II,
         // We're storing a scalar, so we need to load the current value and only
         // replace the relevant part.
         auto *Load = Builder.CreateIntrinsic(
-            ContainedType, Intrinsic::dx_typedBufferLoad,
+            ContainedType, Intrinsic::dx_resource_load_typedbuffer,
             {II->getOperand(0), II->getOperand(1)});
         // If we have an offset from seeing a GEP earlier, use it.
         Value *IndexOp = Current.Index
@@ -93,16 +93,16 @@ static void replaceTypedBufferAccess(IntrinsicInst *II,
       }
 
       auto *Inst = Builder.CreateIntrinsic(
-          Builder.getVoidTy(), Intrinsic::dx_typedBufferStore,
+          Builder.getVoidTy(), Intrinsic::dx_resource_store_typedbuffer,
           {II->getOperand(0), II->getOperand(1), V});
       SI->replaceAllUsesWith(Inst);
       DeadInsts.push_back(SI);
 
     } else if (auto *LI = dyn_cast<LoadInst>(Current.Access)) {
       IRBuilder<> Builder(LI);
-      Value *V =
-          Builder.CreateIntrinsic(ContainedType, Intrinsic::dx_typedBufferLoad,
-                                  {II->getOperand(0), II->getOperand(1)});
+      Value *V = Builder.CreateIntrinsic(
+          ContainedType, Intrinsic::dx_resource_load_typedbuffer,
+          {II->getOperand(0), II->getOperand(1)});
       if (Current.Index)
         V = Builder.CreateExtractElement(V, Current.Index);
 

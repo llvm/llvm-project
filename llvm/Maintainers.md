@@ -251,8 +251,8 @@ asb@igalia.com (email), [asb](https://github.com/asb) (GitHub)
 
 #### Sparc backend
 
-Venkatraman Govindaraju \
-venkatra@cs.wisc.edu (email), [vegovin](https://github.com/vegovin) (GitHub)
+Koakuma \
+koachan@protonmail.com (email), [koachan](https://github.com/koachan) (GitHub)
 
 #### SPIRV backend
 
@@ -320,15 +320,10 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 Benjamin Kramer \
 benny.kra@gmail.com (email), [d0k](https://github.com/d0k) (GitHub)
 
-#### IR Linker
+#### IR Linker and LTO
 
 Teresa Johnson \
 tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) (GitHub)
-
-#### LTO
-
-Peter Collingbourne \
-peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 
 #### MCJIT, Orc, RuntimeDyld, PerfJITEvents
 
@@ -456,9 +451,11 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support \
+Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
+Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
