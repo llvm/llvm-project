@@ -7617,6 +7617,46 @@ TEST_P(ImportAutoFunctions, ReturnWithUnaryTransformType) {
   EXPECT_TRUE(ToBar);
 }
 
+struct ImportConcepts : ASTImporterOptionSpecificTestBase {
+  std::vector<std::string> getExtraArgs() const override {
+    return {"-fno-delayed-template-parsing"}; // deprecated after C++20
+  }
+};
+
+TEST_P(ImportConcepts, ImportConceptDecl) {
+  Decl *FromTU = getTuDecl(
+      R"(
+        template <typename T> concept c = requires(T t) { t; };
+
+        template<class T> constexpr bool is_meowable = true;
+        template<class T> constexpr bool is_cat = true;
+        template<class T> concept Meowable = is_meowable<T>;
+        template<class T> concept BadMeowableCat = is_meowable<T> && is_cat<T>;
+        template<class T> concept GoodMeowableCat = Meowable<T> && is_cat<T>;
+      )",
+      Lang_CXX20, "input0.cc");
+
+  ConceptDecl *FromC =
+      FirstDeclMatcher<ConceptDecl>().match(FromTU, conceptDecl(hasName("c")));
+  ConceptDecl *ToC = Import(FromC, Lang_CXX20);
+  EXPECT_TRUE(ToC);
+
+  ConceptDecl *FromMeowable = FirstDeclMatcher<ConceptDecl>().match(
+      FromTU, conceptDecl(hasName("Meowable")));
+  ConceptDecl *ToMeowable = Import(FromMeowable, Lang_CXX20);
+  EXPECT_TRUE(ToMeowable);
+
+  ConceptDecl *FromBadMeowableCat = FirstDeclMatcher<ConceptDecl>().match(
+      FromTU, conceptDecl(hasName("BadMeowableCat")));
+  ConceptDecl *ToBadMeowableCat = Import(FromBadMeowableCat, Lang_CXX20);
+  EXPECT_TRUE(ToBadMeowableCat);
+
+  ConceptDecl *FromGoodMeowableCat = FirstDeclMatcher<ConceptDecl>().match(
+      FromTU, conceptDecl(hasName("GoodMeowableCat")));
+  ConceptDecl *ToGoodMeowableCat = Import(FromGoodMeowableCat, Lang_CXX20);
+  EXPECT_TRUE(ToGoodMeowableCat);
+}
+
 struct ImportSourceLocations : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ImportSourceLocations, PreserveFileIDTreeStructure) {
@@ -10370,6 +10410,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMatrixType,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportTemplateParmDeclDefaultValue,
+                         DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportConcepts,
                          DefaultTestValuesForRunOptions);
 
 // FIXME: Make ImportOpenCLPipe test work.

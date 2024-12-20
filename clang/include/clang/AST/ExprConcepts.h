@@ -61,7 +61,17 @@ private:
 
   ConceptSpecializationExpr(const ASTContext &C, ConceptReference *ConceptRef,
                             ImplicitConceptSpecializationDecl *SpecDecl,
+                            ASTConstraintSatisfaction *Satisfaction);
+
+  ConceptSpecializationExpr(const ASTContext &C, ConceptReference *ConceptRef,
+                            ImplicitConceptSpecializationDecl *SpecDecl,
                             const ConstraintSatisfaction *Satisfaction,
+                            bool Dependent,
+                            bool ContainsUnexpandedParameterPack);
+
+  ConceptSpecializationExpr(const ASTContext &C, ConceptReference *ConceptRef,
+                            ImplicitConceptSpecializationDecl *SpecDecl,
+                            ASTConstraintSatisfaction *Satisfaction,
                             bool Dependent,
                             bool ContainsUnexpandedParameterPack);
   ConceptSpecializationExpr(EmptyShell Empty);
@@ -75,10 +85,22 @@ public:
   static ConceptSpecializationExpr *
   Create(const ASTContext &C, ConceptReference *ConceptRef,
          ImplicitConceptSpecializationDecl *SpecDecl,
+         ASTConstraintSatisfaction *Satisfaction);
+
+  static ConceptSpecializationExpr *
+  Create(const ASTContext &C, ConceptReference *ConceptRef,
+         ImplicitConceptSpecializationDecl *SpecDecl,
          const ConstraintSatisfaction *Satisfaction, bool Dependent,
          bool ContainsUnexpandedParameterPack);
 
+  static ConceptSpecializationExpr *
+  Create(const ASTContext &C, ConceptReference *ConceptRef,
+         ImplicitConceptSpecializationDecl *SpecDecl,
+         ASTConstraintSatisfaction *Satisfaction, bool Dependent,
+         bool ContainsUnexpandedParameterPack);
+
   ArrayRef<TemplateArgument> getTemplateArguments() const {
+    assert(hasSpecializationDecl() && "Template Argument Decl not initialized");
     return SpecDecl->getTemplateArguments();
   }
 
@@ -113,8 +135,10 @@ public:
     return ConceptRef->getConceptNameInfo();
   }
 
+  bool hasSpecializationDecl() const { return SpecDecl != nullptr; }
+
   const ImplicitConceptSpecializationDecl *getSpecializationDecl() const {
-    assert(SpecDecl && "Template Argument Decl not initialized");
+    assert(hasSpecializationDecl() && "Template Argument Decl not initialized");
     return SpecDecl;
   }
 
@@ -444,6 +468,12 @@ public:
            "Nested requirement with non-dependent constraint must be "
            "constructed with a ConstraintSatisfaction object");
   }
+
+  NestedRequirement(Expr *Constraint,
+                    const ASTConstraintSatisfaction *Satisfaction)
+      : Requirement(RK_Nested, Constraint->isInstantiationDependent(),
+                    Constraint->containsUnexpandedParameterPack()),
+        Constraint(Constraint), Satisfaction(Satisfaction) {}
 
   NestedRequirement(ASTContext &C, Expr *Constraint,
                     const ConstraintSatisfaction &Satisfaction)
