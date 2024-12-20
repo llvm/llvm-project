@@ -23,6 +23,11 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::ProcessSP process_sp) {
                       SWIGTYPE_p_lldb__SBProcess);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::ModuleSP module_sp) {
+  return ToSWIGHelper(new lldb::SBModule(std::move(module_sp)),
+                      SWIGTYPE_p_lldb__SBModule);
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp) {
   return ToSWIGHelper(new lldb::SBThreadPlan(std::move(thread_plan_sp)),
                       SWIGTYPE_p_lldb__SBThreadPlan);
