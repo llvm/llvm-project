@@ -5070,8 +5070,6 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__opencl_atomic_init:
   case AO__c11_atomic_load:
   case AO__atomic_load_n:
-  case AO__atomic_test_and_set:
-  case AO__atomic_clear:
     return 2;
 
   case AO__scoped_atomic_load_n:

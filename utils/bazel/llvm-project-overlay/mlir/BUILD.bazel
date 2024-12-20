@@ -3269,6 +3269,7 @@ cc_library(
     local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
         ":ArithTransforms",
+        ":ArithToLLVM",
         ":BufferizationTransforms",
         ":ConversionPasses",
         ":FuncDialect",
@@ -10218,6 +10219,7 @@ cc_binary(
     srcs = ["tools/mlir-vulkan-runner/mlir-vulkan-runner.cpp"],
     deps = [
         ":ArithDialect",
+        ":ArithToLLVM",
         ":BuiltinToLLVMIRTranslation",
         ":ConvertToSPIRV",
         ":ExecutionEngineUtils",
