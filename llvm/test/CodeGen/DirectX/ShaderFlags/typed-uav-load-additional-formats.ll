@@ -16,8 +16,8 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK: Function multicomponent : 0x00002000
 define <4 x float> @multicomponent() #0 {
   %res = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-      @llvm.dx.handle.fromBinding(i32 0, i32 0, i32 1, i32 0, i1 false)
-  %val = call <4 x float> @llvm.dx.typedBufferLoad(
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %val = call <4 x float> @llvm.dx.resource.load.typedbuffer(
       target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %res, i32 0)
   ret <4 x float> %val
 }
@@ -25,8 +25,8 @@ define <4 x float> @multicomponent() #0 {
 ; CHECK: Function onecomponent : 0x00000000
 define float @onecomponent() #0 {
   %res = call target("dx.TypedBuffer", float, 1, 0, 0)
-      @llvm.dx.handle.fromBinding(i32 0, i32 0, i32 1, i32 0, i1 false)
-  %val = call float @llvm.dx.typedBufferLoad(
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %val = call float @llvm.dx.resource.load.typedbuffer(
       target("dx.TypedBuffer", float, 1, 0, 0) %res, i32 0)
   ret float %val
 }
@@ -34,8 +34,8 @@ define float @onecomponent() #0 {
 ; CHECK: Function noload : 0x00000000
 define void @noload(<4 x float> %val) #0 {
   %res = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-      @llvm.dx.handle.fromBinding(i32 0, i32 0, i32 1, i32 0, i1 false)
-  call void @llvm.dx.typedBufferStore(
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  call void @llvm.dx.resource.store.typedbuffer(
       target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %res, i32 0,
       <4 x float> %val)
   ret void

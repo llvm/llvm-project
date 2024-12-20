@@ -932,7 +932,7 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   bool IsAdd = N->getOpcode() == ISD::UADDO;
   bool IsVALU = N->isDivergent();
 
-  for (SDNode::use_iterator UI = N->use_begin(), E = N->use_end(); UI != E;
+  for (SDNode::user_iterator UI = N->user_begin(), E = N->user_end(); UI != E;
        ++UI)
     if (UI.getUse().getResNo() == 1) {
       if ((IsAdd && (UI->getOpcode() != ISD::UADDO_CARRY)) ||
@@ -2394,6 +2394,9 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
            Subtarget->hasScalarCompareEq64();
   }
 
+  if ((VT == MVT::f16 || VT == MVT::f32) && Subtarget->hasSALUFloatInsts())
+    return true;
+
   return false;
 }
 
@@ -3754,7 +3757,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   bool AllUsesAcceptSReg = true;
   for (SDNode::use_iterator U = N->use_begin(), E = SDNode::use_end();
     Limit < 10 && U != E; ++U, ++Limit) {
-    const TargetRegisterClass *RC = getOperandRegClass(*U, U.getOperandNo());
+    const TargetRegisterClass *RC =
+        getOperandRegClass(U->getUser(), U->getOperandNo());
 
     // If the register class is unknown, it could be an unknown
     // register class that needs to be an SGPR, e.g. an inline asm
@@ -3764,16 +3768,17 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
 
     if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass) {
       AllUsesAcceptSReg = false;
-      SDNode * User = *U;
+      SDNode *User = U->getUser();
       if (User->isMachineOpcode()) {
         unsigned Opc = User->getMachineOpcode();
         const MCInstrDesc &Desc = SII->get(Opc);
         if (Desc.isCommutable()) {
-          unsigned OpIdx = Desc.getNumDefs() + U.getOperandNo();
+          unsigned OpIdx = Desc.getNumDefs() + U->getOperandNo();
           unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;
           if (SII->findCommutedOpIndices(Desc, OpIdx, CommuteIdx1)) {
             unsigned CommutedOpNo = CommuteIdx1 - Desc.getNumDefs();
-            const TargetRegisterClass *CommutedRC = getOperandRegClass(*U, CommutedOpNo);
+            const TargetRegisterClass *CommutedRC =
+                getOperandRegClass(U->getUser(), CommutedOpNo);
             if (CommutedRC == &AMDGPU::VS_32RegClass ||
                 CommutedRC == &AMDGPU::VS_64RegClass)
               AllUsesAcceptSReg = true;
