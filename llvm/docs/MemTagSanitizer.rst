@@ -30,8 +30,8 @@ Usage
 
 Compile and link your program with the ``-fsanitize=memtag`` flag. This
 will only work when targeting AArch64 Android with the memory tagging extension.
-One possible way to achieve that is to add ``-target
-aarch64-linux-android -march=armv8+memtag`` to your compilation flags.
+One possible way to achieve that is to add ``--target=aarch64-linux-android -march=armv8+memtag``
+to your compilation flags.
 
 Note that doing this will override existing flags of the same type. Assuming that
 you are already targeting AArch64 Android, an alternative is to add
