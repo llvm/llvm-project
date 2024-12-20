@@ -1532,11 +1532,14 @@ SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
   SmallVector<SDValue, 16> Ops;
   unsigned NumOperands = Node->getNumOperands();
   MVT VectorIdxType = TLI.getVectorIdxTy(DAG.getDataLayout());
+  EVT VectorValueType = Node->getOperand(0).getValueType();
+  EVT ElementValueType = VectorValueType.getVectorElementType();
+  if (ElementValueType !=
+      TLI.getTypeToTransformTo(*DAG.getContext(), ElementValueType)) {
+    return ExpandVectorBuildThroughStack(Node);
+  }
   for (unsigned I = 0; I < NumOperands; ++I) {
     SDValue SubOp = Node->getOperand(I);
-    EVT VectorValueType = SubOp.getValueType();
-    EVT ElementValueType = TLI.getTypeToTransformTo(
-        *DAG.getContext(), VectorValueType.getVectorElementType());
     unsigned NumSubElem = VectorValueType.getVectorNumElements();
     for (unsigned Idx = 0; Idx < NumSubElem; ++Idx) {
       Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElementValueType,
@@ -1548,14 +1551,17 @@ SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
 }
 
 SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
-  assert(Node->getOpcode() == ISD::BUILD_VECTOR && "Unexpected opcode!");
+  assert((Node->getOpcode() == ISD::BUILD_VECTOR ||
+          Node->getOpcode() == ISD::CONCAT_VECTORS) &&
+         "Unexpected opcode!");
 
   // We can't handle this case efficiently.  Allocate a sufficiently
   // aligned object on the stack, store each operand into it, then load
   // the result as a vector.
   // Create the stack frame object.
   EVT VT = Node->getValueType(0);
-  EVT MemVT = VT.getVectorElementType();
+  EVT MemVT = isa<BuildVectorSDNode>(Node) ? VT.getVectorElementType()
+                                           : Node->getOperand(0).getValueType();
   SDLoc dl(Node);
   SDValue FIPtr = DAG.CreateStackTemporary(VT);
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
@@ -1569,7 +1575,8 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
   // If the destination vector element type of a BUILD_VECTOR is narrower than
   // the source element type, only store the bits necessary.
-  bool Truncate = MemVT.bitsLT(Node->getOperand(0).getValueType());
+  bool Truncate = isa<BuildVectorSDNode>(Node) &&
+                  MemVT.bitsLT(Node->getOperand(0).getValueType());
 
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
