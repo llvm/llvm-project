@@ -3953,14 +3953,16 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
     // Note that this is applicable to both signed and unsigned min/max.
     SDValue X;
+    SDValue S0;
     if (LegalOperations &&
-        sd_match(N1,
-                 m_OneUse(m_AnyOf(m_SMax(m_Value(X), m_Neg(m_Deferred(X))),
-                                  m_UMax(m_Value(X), m_Neg(m_Deferred(X))))))) {
+        sd_match(N1, m_OneUse(m_AnyOf(
+                         m_SMax(m_Value(X),
+                                m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0))),
+                         m_UMax(m_Value(X), m_AllOf(m_Neg(m_Deferred(X)),
+                                                    m_Value(S0))))))) {
       unsigned MinOpc = N1->getOpcode() == ISD::SMAX ? ISD::SMIN : ISD::UMIN;
       if (hasOperation(MinOpc, VT))
-        return DAG.getNode(MinOpc, DL, VT, X,
-                           DAG.getNode(ISD::SUB, DL, VT, N0, X));
+        return DAG.getNode(MinOpc, DL, VT, X, S0);
     }
 
     // Fold neg(splat(neg(x)) -> splat(x)
