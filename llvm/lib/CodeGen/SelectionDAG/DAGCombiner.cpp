@@ -3951,18 +3951,36 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
     // Similar to the previous rule, but this time targeting an expanded abs.
     // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
-    // Note that this is applicable to both signed and unsigned min/max.
+    // as well as
+    // (sub 0, (min X, (sub 0, X))) --> (max X, (sub 0, X))
+    // Note that these two are applicable to both signed and unsigned min/max.
     SDValue X;
     SDValue S0;
+    auto NegPat = m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0));
     if (LegalOperations &&
-        sd_match(N1, m_OneUse(m_AnyOf(
-                         m_SMax(m_Value(X),
-                                m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0))),
-                         m_UMax(m_Value(X), m_AllOf(m_Neg(m_Deferred(X)),
-                                                    m_Value(S0))))))) {
-      unsigned MinOpc = N1->getOpcode() == ISD::SMAX ? ISD::SMIN : ISD::UMIN;
-      if (hasOperation(MinOpc, VT))
-        return DAG.getNode(MinOpc, DL, VT, X, S0);
+        sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
+                                      m_UMax(m_Value(X), NegPat),
+                                      m_SMin(m_Value(X), NegPat),
+                                      m_UMin(m_Value(X), NegPat))))) {
+      unsigned NewOpc = 0;
+      switch (N1->getOpcode()) {
+      case ISD::SMAX:
+        NewOpc = ISD::SMIN;
+        break;
+      case ISD::UMAX:
+        NewOpc = ISD::UMIN;
+        break;
+      case ISD::SMIN:
+        NewOpc = ISD::SMAX;
+        break;
+      case ISD::UMIN:
+        NewOpc = ISD::UMAX;
+        break;
+      default:
+        llvm_unreachable("unrecognized opcode");
+      }
+      if (hasOperation(NewOpc, VT))
+        return DAG.getNode(NewOpc, DL, VT, X, S0);
     }
 
     // Fold neg(splat(neg(x)) -> splat(x)
