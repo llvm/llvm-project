@@ -9,18 +9,15 @@
 #include "../assembly.h"
 
 .set FEAT_SVE_BIT, 30
+.set FEAT_SME_BIT, 42
 .set SVCR_PSTATE_SM_BIT, 0
 
 #if !defined(__APPLE__)
-#define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
-#define TPIDR2_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
 #define CPU_FEATS_SYMBOL SYMBOL_NAME(__aarch64_cpu_features)
 #define CPU_FEATS_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_cpu_features)
 #else
 // MachO requires @page/@pageoff directives because the global is defined
 // in a different file. Otherwise this file may fail to build.
-#define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@page
-#define TPIDR2_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@pageoff
 #define CPU_FEATS_SYMBOL SYMBOL_NAME(__aarch64_cpu_features)@page
 #define CPU_FEATS_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_cpu_features)@pageoff
 #endif
@@ -43,7 +40,7 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_offset w30, -24
   .cfi_offset w29, -32
   .cfi_offset 46, -16
-  bl  __arm_sme_state
+  bl  SYMBOL_NAME(__arm_sme_state)
   tbz  x0, #0, 2f
 1:
   smstop sm
@@ -57,15 +54,15 @@ END_COMPILERRT_FUNCTION(do_abort)
 // __arm_sme_state fills the result registers based on a local
 // that is set as part of the compiler-rt startup code.
 //   __aarch64_has_sme_and_tpidr2_el0
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
+DEFINE_COMPILERRT_FUNCTION(__arm_sme_state)
   .variant_pcs __arm_sme_state
   BTI_C
   mov x0, xzr
   mov x1, xzr
 
-  adrp  x16, TPIDR2_SYMBOL
-  ldrb w16, [x16, TPIDR2_SYMBOL_OFFSET]
-  cbz w16, 1f
+  adrp x16, CPU_FEATS_SYMBOL
+  ldr x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tbz x16, #FEAT_SME_BIT, 1f
 0:
   orr x0, x0, #0xC000000000000000
   mrs x16, SVCR
@@ -73,9 +70,9 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
   mrs x1, TPIDR2_EL0
 1:
   ret
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_sme_state)
+END_COMPILERRT_FUNCTION(__arm_sme_state)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
+DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
   .variant_pcs __arm_tpidr2_restore
   BTI_C
   // If TPIDR2_EL0 is nonnull, the subroutine aborts in some platform-specific
@@ -109,16 +106,16 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
   ret
 2:
   b  SYMBOL_NAME(do_abort)
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_restore)
+END_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
+DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_save)
   .variant_pcs __arm_tpidr2_save
   BTI_C
   // If the current thread does not have access to TPIDR2_EL0, the subroutine
   // does nothing.
-  adrp  x14, TPIDR2_SYMBOL
-  ldrb w14, [x14, TPIDR2_SYMBOL_OFFSET]
-  cbz w14, 1f
+  adrp x14, CPU_FEATS_SYMBOL
+  ldr x14, [x14, CPU_FEATS_SYMBOL_OFFSET]
+  tbz x14, #FEAT_SME_BIT, 1f
 
   // If TPIDR2_EL0 is null, the subroutine does nothing.
   mrs x16, TPIDR2_EL0
@@ -150,16 +147,17 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
   ret
 2:
   b  SYMBOL_NAME(do_abort)
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_save)
+END_COMPILERRT_FUNCTION(__arm_tpidr2_save)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
+DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
+  .cfi_startproc
   .variant_pcs __arm_za_disable
   BTI_C
   // If the current thread does not have access to SME, the subroutine does
   // nothing.
-  adrp  x14, TPIDR2_SYMBOL
-  ldrb w14, [x14, TPIDR2_SYMBOL_OFFSET]
-  cbz w14, 0f
+  adrp x14, CPU_FEATS_SYMBOL
+  ldr x14, [x14, CPU_FEATS_SYMBOL_OFFSET]
+  tbz x14, #FEAT_SME_BIT, 0f
 
   // Otherwise, the subroutine behaves as if it did the following:
   // * Call __arm_tpidr2_save.
@@ -169,7 +167,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
   .cfi_def_cfa w29, 16
   .cfi_offset w30, -8
   .cfi_offset w29, -16
-  bl  __arm_tpidr2_save
+  bl  SYMBOL_NAME(__arm_tpidr2_save)
 
   // * Set TPIDR2_EL0 to null.
   msr TPIDR2_EL0, xzr
@@ -184,18 +182,17 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
   .cfi_restore w29
 0:
   ret
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_za_disable)
+  .cfi_endproc
+END_COMPILERRT_FUNCTION(__arm_za_disable)
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
+DEFINE_COMPILERRT_FUNCTION(__arm_get_current_vg)
   .variant_pcs __arm_get_current_vg
   BTI_C
 
   adrp    x17, CPU_FEATS_SYMBOL
-  ldr     w17, [x17, CPU_FEATS_SYMBOL_OFFSET]
+  ldr     x17, [x17, CPU_FEATS_SYMBOL_OFFSET]
   tbnz    w17, #FEAT_SVE_BIT, 1f
-  adrp    x17, TPIDR2_SYMBOL
-  ldrb    w17, [x17, TPIDR2_SYMBOL_OFFSET]
-  cbz     x17, 2f
+  tbz     x17, #FEAT_SME_BIT, 2f
 0:
   mrs     x17, SVCR
   tbz     x17, #SVCR_PSTATE_SM_BIT, 2f
@@ -205,7 +202,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
 2:
   mov     x0, xzr
   ret
-END_COMPILERRT_OUTLINE_FUNCTION(__arm_get_current_vg)
+END_COMPILERRT_FUNCTION(__arm_get_current_vg)
 
 NO_EXEC_STACK_DIRECTIVE
 

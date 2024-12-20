@@ -10719,7 +10719,16 @@ Value *CodeGenFunction::EmitSVEDupX(Value *Scalar, llvm::Type *Ty) {
       cast<llvm::VectorType>(Ty)->getElementCount(), Scalar);
 }
 
-Value *CodeGenFunction::EmitSVEDupX(Value* Scalar) {
+Value *CodeGenFunction::EmitSVEDupX(Value *Scalar) {
+  if (auto *Ty = Scalar->getType(); Ty->isVectorTy()) {
+#ifndef NDEBUG
+    auto *VecTy = cast<llvm::VectorType>(Ty);
+    ElementCount EC = VecTy->getElementCount();
+    assert(EC.isScalar() && VecTy->getElementType() == Int8Ty &&
+           "Only <1 x i8> expected");
+#endif
+    Scalar = Builder.CreateExtractElement(Scalar, uint64_t(0));
+  }
   return EmitSVEDupX(Scalar, getSVEVectorForElementType(Scalar->getType()));
 }
 
@@ -19426,6 +19435,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getStepIntrinsic(),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_all_true: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(Op->getType()->isIntegerTy(1) &&
+           "Intrinsic WaveActiveAllTrue operand must be a bool");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAllTrueIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_any_true: {
     Value *Op = EmitScalarExpr(E->getArg(0));

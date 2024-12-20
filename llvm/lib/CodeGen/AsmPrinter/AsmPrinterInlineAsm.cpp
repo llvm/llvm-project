@@ -313,10 +313,9 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         }
         if (Error) {
           const Function &Fn = MI->getMF()->getFunction();
-          DiagnosticInfoInlineAsm DI(LocCookie,
-                                     "invalid operand in inline asm: '" +
-                                         Twine(AsmStr) + "'");
-          Fn.getContext().diagnose(DI);
+          Fn.getContext().diagnose(DiagnosticInfoInlineAsm(
+              LocCookie,
+              "invalid operand in inline asm: '" + Twine(AsmStr) + "'"));
         }
       }
       break;

@@ -126,7 +126,6 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       switch (UserMI->getOpcode()) {
       default:
-        // TODO: Add vector
         return false;
 
       case LoongArch::ADD_W:
@@ -162,6 +161,10 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case LoongArch::MOVGR2FCSR:
       case LoongArch::MOVGR2FRH_W:
       case LoongArch::MOVGR2FR_W_64:
+      case LoongArch::VINSGR2VR_W:
+      case LoongArch::XVINSGR2VR_W:
+      case LoongArch::VREPLGR2VR_W:
+      case LoongArch::XVREPLGR2VR_W:
         if (Bits >= 32)
           break;
         return false;
@@ -175,14 +178,37 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
           break;
         return false;
       case LoongArch::MOVGR2CF:
+      case LoongArch::VREPLVE_D:
+      case LoongArch::XVREPLVE_D:
         if (Bits >= 1)
           break;
         return false;
+      case LoongArch::VREPLVE_W:
+      case LoongArch::XVREPLVE_W:
+        if (Bits >= 2)
+          break;
+        return false;
+      case LoongArch::VREPLVE_H:
+      case LoongArch::XVREPLVE_H:
+        if (Bits >= 3)
+          break;
+        return false;
+      case LoongArch::VREPLVE_B:
+      case LoongArch::XVREPLVE_B:
+        if (Bits >= 4)
+          break;
+        return false;
       case LoongArch::EXT_W_B:
+      case LoongArch::VINSGR2VR_B:
+      case LoongArch::VREPLGR2VR_B:
+      case LoongArch::XVREPLGR2VR_B:
         if (Bits >= 8)
           break;
         return false;
       case LoongArch::EXT_W_H:
+      case LoongArch::VINSGR2VR_H:
+      case LoongArch::VREPLGR2VR_H:
+      case LoongArch::XVREPLGR2VR_H:
         if (Bits >= 16)
           break;
         return false;
@@ -435,7 +461,8 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
   case LoongArch::MOVCF2GR:
   case LoongArch::MOVFRH2GR_S:
   case LoongArch::MOVFR2GR_S_64:
-    // TODO: Add vector
+  case LoongArch::VPICKVE2GR_W:
+  case LoongArch::XVPICKVE2GR_W:
     return true;
   // Special cases that require checking operands.
   // shifting right sufficiently makes the value 32-bit sign-extended

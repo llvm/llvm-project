@@ -1221,6 +1221,10 @@ public:
   /// Return if printer should use unique SSA IDs.
   bool shouldPrintUniqueSSAIDs() const;
 
+  /// Return if the printer should use NameLocs as prefixes when printing SSA
+  /// IDs
+  bool shouldUseNameLocAsPrefix() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1254,6 +1258,9 @@ private:
 
   /// Print unique SSA IDs for values, block arguments and naming conflicts
   bool printUniqueSSAIDsFlag : 1;
+
+  /// Print SSA IDs using NameLocs as prefixes
+  bool useNameLocAsPrefix : 1;
 };
 
 //===----------------------------------------------------------------------===//

@@ -3233,8 +3233,8 @@ def err_attribute_too_few_arguments : Error<
   "%0 attribute takes at least %1 argument%s1">;
 def err_attribute_invalid_vector_type : Error<"invalid vector element type %0">;
 def err_attribute_invalid_bitint_vector_type : Error<
-  "'_BitInt' vector element width must be %select{a power of 2|"
-  "at least as wide as 'CHAR_BIT'}0">;
+  "'_BitInt' %select{vector|matrix}0 element width must be %select{a power of 2|"
+  "at least as wide as 'CHAR_BIT'}1">;
 def err_attribute_invalid_matrix_type : Error<"invalid matrix element type %0">;
 def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
@@ -5863,10 +5863,10 @@ def err_pack_expansion_without_parameter_packs : Error<
   "pack expansion does not contain any unexpanded parameter packs">;
 def err_pack_expansion_length_conflict : Error<
   "pack expansion contains parameter packs %0 and %1 that have different "
-  "lengths (%2 vs. %3)">;
+  "lengths (%2 vs. %select{|at least }3%4))">;
 def err_pack_expansion_length_conflict_multilevel : Error<
   "pack expansion contains parameter pack %0 that has a different "
-  "length (%1 vs. %2) from outer parameter packs">;
+  "length (%1 vs. %select{|at least }2%3) from outer parameter packs">;
 def err_pack_expansion_length_conflict_partial : Error<
   "pack expansion contains parameter pack %0 that has a different "
   "length (at least %1 vs. %2) from outer parameter packs">;
@@ -10237,16 +10237,16 @@ def warn_dangling_pointer_assignment : Warning<
    InGroup<DanglingAssignment>;
 def warn_dangling_reference_captured : Warning<
    "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings
 def warn_comparison_always : Warning<
-  "%select{self-|array }0comparison always evaluates to "
+  "%select{self-|array |pointer }0comparison always evaluates to "
   "%select{a constant|true|false|'std::strong_ordering::equal'}1">,
   InGroup<TautologicalCompare>;
 def warn_comparison_bitwise_always : Warning<
@@ -12324,6 +12324,8 @@ def warn_noderef_to_dereferenceable_pointer : Warning<
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
+def err_builtin_assume_aligned_invalid_arg : Error<
+  "non-pointer argument to '__builtin_assume_aligned' is not allowed">;
 
 def err_builtin_is_within_lifetime_invalid_arg : Error<
   "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "
@@ -12667,8 +12669,8 @@ def err_acc_int_expr_requires_integer
 def err_acc_int_expr_incomplete_class_type
     : Error<"OpenACC integer expression has incomplete class type %0">;
 def err_acc_int_expr_explicit_conversion
-    : Error<"OpenACC integer expression type %0 requires explicit conversion "
-            "to %1">;
+    : Error<"OpenACC integer expression requires explicit conversion "
+            "from %0 to %1">;
 def note_acc_int_expr_conversion
     : Note<"conversion to %select{integral|enumeration}0 type %1">;
 def err_acc_int_expr_multiple_conversions
@@ -12682,6 +12684,9 @@ def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element,%select{| member of a composite variable,}0 or composite "
             "variable member">;
+def err_acc_not_a_var_ref_use_device
+    : Error<"OpenACC variable in 'use_device' clause is not a valid variable "
+            "name or array name">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -12801,6 +12806,8 @@ def err_acc_loop_terminating_condition
 def err_acc_loop_not_monotonic
     : Error<"OpenACC '%0' variable must monotonically increase or decrease "
             "('++', '--', or compound assignment)">;
+def err_acc_construct_one_clause_of
+    : Error<"OpenACC '%0' construct must have at least one %1 clause">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

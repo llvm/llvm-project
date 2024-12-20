@@ -4,6 +4,7 @@ Implementation Status
 .. toctree::
    :maxdepth: 1
 
+   arpa/inet
    assert
    complex
    ctype
@@ -21,6 +22,7 @@ Implementation Status
    stdlib
    string
    strings
+   sys/mman
    threads
    time
    uchar

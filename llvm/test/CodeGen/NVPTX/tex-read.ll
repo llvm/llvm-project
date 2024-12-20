@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
-target triple = "nvptx-unknown-nvcl"
+target triple = "nvptx64-unknown-nvcl"
 
 declare { float, float, float, float } @llvm.nvvm.tex.1d.v4f32.s32(i64, i64, i32)
 

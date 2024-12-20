@@ -412,8 +412,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
 
   UnrollState Unroller(Plan, UF, Ctx);
 
-  Unroller.unrollBlock(Plan.getPreheader());
-
   // Iterate over all blocks in the plan starting from Entry, and unroll
   // recipes inside them. This includes the vector preheader and middle blocks,
   // which may set up or post-process per-part values.

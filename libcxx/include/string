@@ -1881,11 +1881,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __clear_and_shrink() _NOEXCEPT;
 
 private:
-  template <class _Alloc>
-  inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool friend
-  operator==(const basic_string<char, char_traits<char>, _Alloc>& __lhs,
-             const basic_string<char, char_traits<char>, _Alloc>& __rhs) _NOEXCEPT;
-
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __shrink_or_extend(size_type __target_capacity);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS bool
@@ -3842,36 +3837,9 @@ template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT {
-#  if _LIBCPP_STD_VER >= 20
-  return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
-#  else
   size_t __lhs_sz = __lhs.size();
   return __lhs_sz == __rhs.size() && _Traits::compare(__lhs.data(), __rhs.data(), __lhs_sz) == 0;
-#  endif
 }
-
-template <class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
-operator==(const basic_string<char, char_traits<char>, _Allocator>& __lhs,
-           const basic_string<char, char_traits<char>, _Allocator>& __rhs) _NOEXCEPT {
-  size_t __sz = __lhs.size();
-  if (__sz != __rhs.size())
-    return false;
-  return char_traits<char>::compare(__lhs.data(), __rhs.data(), __sz) == 0;
-}
-
-#  if _LIBCPP_STD_VER <= 17
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool
-operator==(const _CharT* __lhs, const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT {
-  typedef basic_string<_CharT, _Traits, _Allocator> _String;
-  _LIBCPP_ASSERT_NON_NULL(__lhs != nullptr, "operator==(char*, basic_string): received nullptr");
-  size_t __lhs_len = _Traits::length(__lhs);
-  if (__lhs_len != __rhs.size())
-    return false;
-  return __rhs.compare(0, _String::npos, __lhs, __lhs_len) == 0;
-}
-#  endif // _LIBCPP_STD_VER <= 17
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
@@ -3889,6 +3857,14 @@ operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT*
     return false;
   return __lhs.compare(0, _String::npos, __rhs, __rhs_len) == 0;
 }
+
+#  if _LIBCPP_STD_VER <= 17
+template <class _CharT, class _Traits, class _Allocator>
+inline _LIBCPP_HIDE_FROM_ABI bool
+operator==(const _CharT* __lhs, const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT {
+  return __rhs == __lhs;
+}
+#  endif // _LIBCPP_STD_VER <= 17
 
 #  if _LIBCPP_STD_VER >= 20
 

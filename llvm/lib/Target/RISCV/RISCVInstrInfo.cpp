@@ -430,7 +430,9 @@ void RISCVInstrInfo::copyPhysRegVector(
     if (UseVMV) {
       const MCInstrDesc &Desc = DefMBBI->getDesc();
       MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
-      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+      unsigned Log2SEW =
+          DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc)).getImm();
+      MIB.addImm(Log2SEW ? Log2SEW : 3);                        // SEW
       MIB.addImm(0);                                            // tu, mu
       MIB.addReg(RISCV::VL, RegState::Implicit);
       MIB.addReg(RISCV::VTYPE, RegState::Implicit);
@@ -2449,6 +2451,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
         OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
       const MachineOperand &MO = MI.getOperand(Index);
+      if (MO.isReg()) {
+        ErrInfo = "Expected a non-register operand.";
+        return false;
+      }
       if (MO.isImm()) {
         int64_t Imm = MO.getImm();
         bool Ok;
@@ -2568,7 +2574,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = (Imm & (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) == Imm;
           break;
         case RISCVOp::OPERAND_SEW:
-          Ok = Imm == 0 || (Imm >= 3 && Imm <= 6);
+          Ok = (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
+          break;
+        case RISCVOp::OPERAND_SEW_MASK:
+          Ok = Imm == 0;
           break;
         case RISCVOp::OPERAND_VEC_RM:
           assert(RISCVII::hasRoundModeOp(Desc.TSFlags));
@@ -3188,33 +3197,39 @@ std::string RISCVInstrInfo::createMIROperandComment(
   if (!Op.isImm())
     return std::string();
 
+  const MCInstrDesc &Desc = MI.getDesc();
+  if (OpIdx >= Desc.getNumOperands())
+    return std::string();
+
   std::string Comment;
   raw_string_ostream OS(Comment);
 
-  uint64_t TSFlags = MI.getDesc().TSFlags;
+  const MCOperandInfo &OpInfo = Desc.operands()[OpIdx];
 
   // Print the full VType operand of vsetvli/vsetivli instructions, and the SEW
   // operand of vector codegen pseudos.
-  if ((MI.getOpcode() == RISCV::VSETVLI || MI.getOpcode() == RISCV::VSETIVLI ||
-       MI.getOpcode() == RISCV::PseudoVSETVLI ||
-       MI.getOpcode() == RISCV::PseudoVSETIVLI ||
-       MI.getOpcode() == RISCV::PseudoVSETVLIX0) &&
-      OpIdx == 2) {
-    unsigned Imm = MI.getOperand(OpIdx).getImm();
+  switch (OpInfo.OperandType) {
+  case RISCVOp::OPERAND_VTYPEI10:
+  case RISCVOp::OPERAND_VTYPEI11: {
+    unsigned Imm = Op.getImm();
     RISCVVType::printVType(Imm, OS);
-  } else if (RISCVII::hasSEWOp(TSFlags) &&
-             OpIdx == RISCVII::getSEWOpNum(MI.getDesc())) {
-    unsigned Log2SEW = MI.getOperand(OpIdx).getImm();
+    break;
+  }
+  case RISCVOp::OPERAND_SEW:
+  case RISCVOp::OPERAND_SEW_MASK: {
+    unsigned Log2SEW = Op.getImm();
     unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
     assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
     OS << "e" << SEW;
-  } else if (RISCVII::hasVecPolicyOp(TSFlags) &&
-             OpIdx == RISCVII::getVecPolicyOpNum(MI.getDesc())) {
-    unsigned Policy = MI.getOperand(OpIdx).getImm();
+    break;
+  }
+  case RISCVOp::OPERAND_VEC_POLICY:
+    unsigned Policy = Op.getImm();
     assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
     OS << (Policy & RISCVII::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
+    break;
   }
 
   return Comment;
@@ -4232,4 +4247,85 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
   if (!LHS.isImm() || !RHS.isImm())
     return false;
   return LHS.getImm() <= RHS.getImm();
+}
+
+namespace {
+class RISCVPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
+  const MachineInstr *LHS;
+  const MachineInstr *RHS;
+  SmallVector<MachineOperand, 3> Cond;
+
+public:
+  RISCVPipelinerLoopInfo(const MachineInstr *LHS, const MachineInstr *RHS,
+                         const SmallVectorImpl<MachineOperand> &Cond)
+      : LHS(LHS), RHS(RHS), Cond(Cond.begin(), Cond.end()) {}
+
+  bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
+    // Make the instructions for loop control be placed in stage 0.
+    // The predecessors of LHS/RHS are considered by the caller.
+    if (LHS && MI == LHS)
+      return true;
+    if (RHS && MI == RHS)
+      return true;
+    return false;
+  }
+
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &CondParam) override {
+    // A branch instruction will be inserted as "if (Cond) goto epilogue".
+    // Cond is normalized for such use.
+    // The predecessors of the branch are assumed to have already been inserted.
+    CondParam = Cond;
+    return {};
+  }
+
+  void setPreheader(MachineBasicBlock *NewPreheader) override {}
+
+  void adjustTripCount(int TripCountAdjust) override {}
+
+  void disposed() override {}
+};
+} // namespace
+
+std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+RISCVInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return nullptr;
+
+  // Infinite loops are not supported
+  if (TBB == LoopBB && FBB == LoopBB)
+    return nullptr;
+
+  // Must be conditional branch
+  if (FBB == nullptr)
+    return nullptr;
+
+  assert((TBB == LoopBB || FBB == LoopBB) &&
+         "The Loop must be a single-basic-block loop");
+
+  // Normalization for createTripCountGreaterCondition()
+  if (TBB == LoopBB)
+    reverseBranchCondition(Cond);
+
+  const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+  auto FindRegDef = [&MRI](MachineOperand &Op) -> const MachineInstr * {
+    if (!Op.isReg())
+      return nullptr;
+    Register Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      return nullptr;
+    return MRI.getVRegDef(Reg);
+  };
+
+  const MachineInstr *LHS = FindRegDef(Cond[1]);
+  const MachineInstr *RHS = FindRegDef(Cond[2]);
+  if (LHS && LHS->isPHI())
+    return nullptr;
+  if (RHS && RHS->isPHI())
+    return nullptr;
+
+  return std::make_unique<RISCVPipelinerLoopInfo>(LHS, RHS, Cond);
 }

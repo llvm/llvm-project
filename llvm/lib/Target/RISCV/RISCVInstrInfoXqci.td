@@ -14,6 +14,13 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def uimm5nonzero : RISCVOp<XLenVT>,
+                   ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
+  let DecoderMethod = "decodeUImmNonZeroOperand<5>";
+  let OperandType = "OPERAND_UIMM5_NONZERO";
+}
+
 def uimm11 : RISCVUImmLeafOp<11>;
 
 //===----------------------------------------------------------------------===//
@@ -25,37 +32,105 @@ def uimm11 : RISCVUImmLeafOp<11>;
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
-class QCILoad_ScaleIdx<bits<4> func4, string opcodestr>
+class QCILoad_ScaleIdx<bits<4> funct4, string opcodestr>
     : RVInstRBase<0b111, OPC_CUSTOM_0,
                   (outs GPR:$rd), (ins GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
                   opcodestr, "$rd, $rs1, $rs2, $shamt"> {
   bits<3> shamt;
-  let Inst{31-28} = func4;
+  let Inst{31-28} = funct4;
   let Inst{27-25} = shamt;
 }
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 // rd corresponds to the source for the store 'rs3' described in the spec.
-class QCIStore_ScaleIdx<bits<4> func4, string opcodestr>
+class QCIStore_ScaleIdx<bits<4> funct4, string opcodestr>
     : RVInstRBase<0b110, OPC_CUSTOM_1, (outs),
                   (ins GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
                   opcodestr, "$rd, $rs1, $rs2, $shamt"> {
   bits<3> shamt;
-  let Inst{31-28} = func4;
+  let Inst{31-28} = funct4;
   let Inst{27-25} = shamt;
 }
 }
 
-class QCIRVInstR<bits<4> func4, string opcodestr>
-    : RVInstR<{0b000, func4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+class QCIRVInstR<bits<4> funct4, string opcodestr>
+    : RVInstR<{0b000, funct4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
               (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1"> {
   let rs2 = 0;
 }
 
-class QCIRVInstRR<bits<5> func5, DAGOperand InTyRs1, string opcodestr>
-    : RVInstR<{0b00, func5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
+    : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
               (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTIICC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2),
+               opcodestr, "$rd, $rs1, $simm1, $simm2"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> simm1;
+  bits<5> simm2;
+
+  let rs3 = simm2;
+  let rs2 = simm1;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTICC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b01, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2),
+               opcodestr, "$rd, $rs1, $rs2, $simm2"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> simm2;
+
+  let rs3 = simm2;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTCCI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, GPRNoX0:$rs3),
+               opcodestr, "$rd, $imm, $rs2, $rs3"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> imm;
+
+  let rs1 = imm;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTICCI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b11, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2),
+               opcodestr, "$rd, $imm, $rs2, $simm2"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> imm;
+  bits<5> simm2;
+
+  let rs3 = simm2;
+  let rs1 = imm;
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class QCILoadMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
+    : RVInstRBase<0b111, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+                  (ins GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
+                  opcodestr, "$rd, $rs2, ${imm}(${rs1})"> {
+  bits<7> imm;
+  let Inst{31-25} = {funct2, imm{6-2}};
+}
+
+
+// rd corresponds to the source for the store 'rs3' described in the spec.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
+    : RVInstRBase<0b111, OPC_CUSTOM_1, (outs),
+                  (ins GPR:$rd, GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
+                  opcodestr, "$rd, $rs2, ${imm}(${rs1})"> {
+  bits<7> imm;
+  let Inst{31-25} = {funct2, imm{6-2}};
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -108,3 +183,45 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_NORMEU : QCIRVInstR<0b1001, "qc.normeu">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcia, IsRV32], DecoderNamespace = "Xqcia"
+
+let Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics" in {
+  def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">;
+  def QC_SELECTIINE : QCISELECTIICC <0b011, "qc.selectiine">;
+  def QC_SELECTIEQ  : QCISELECTICC  <0b010, "qc.selectieq">;
+  def QC_SELECTINE  : QCISELECTICC  <0b011, "qc.selectine">;
+  def QC_SELECTEQI  : QCISELECTCCI  <0b010, "qc.selecteqi">;
+  def QC_SELECTNEI  : QCISELECTCCI  <0b011, "qc.selectnei">;
+  def QC_SELECTIEQI : QCISELECTICCI <0b010, "qc.selectieqi">;
+  def QC_SELECTINEI : QCISELECTICCI <0b011, "qc.selectinei">;
+} // Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics"
+
+let Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm" in {
+    def QC_SWM : QCIStoreMultiple<0b00, GPRNoX0, "qc.swm">;
+    def QC_SWMI : QCIStoreMultiple<0b01, uimm5nonzero, "qc.swmi">;
+    def QC_SETWM : QCIStoreMultiple<0b10, GPRNoX0, "qc.setwm">;
+    def QC_SETWMI : QCIStoreMultiple<0b11, uimm5nonzero, "qc.setwmi">;
+
+    def QC_LWM : QCILoadMultiple<0b00, GPRNoX0, "qc.lwm">;
+    def QC_LWMI : QCILoadMultiple<0b01, uimm5nonzero, "qc.lwmi">;
+} // Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm"
+
+//===----------------------------------------------------------------------===//
+// Aliases
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXqcilsm, IsRV32] in {
+let EmitPriority = 0 in {
+  def : InstAlias<"qc.swm $rs3, $rs2, (${rs1})",
+                  (QC_SWM GPR:$rs3, GPR:$rs1, GPRNoX0:$rs2, 0)>;
+  def : InstAlias<"qc.swmi $rs3, $length, (${rs1})",
+                  (QC_SWMI GPR:$rs3, GPR:$rs1, uimm5nonzero:$length, 0)>;
+  def : InstAlias<"qc.setwm $rs3, $rs2, (${rs1})",
+                  (QC_SETWM GPR:$rs3, GPR:$rs1, GPRNoX0:$rs2, 0)>;
+  def : InstAlias<"qc.setwmi $rs3, $length, (${rs1})",
+                  (QC_SETWMI GPR:$rs3, GPR:$rs1, uimm5nonzero:$length, 0)>;
+  def : InstAlias<"qc.lwm $rd, $rs2, (${rs1})",
+                  (QC_LWM GPRNoX0:$rd, GPR:$rs1, GPRNoX0:$rs2, 0)>;
+  def : InstAlias<"qc.lwmi $rd, $length, (${rs1})",
+                  (QC_LWMI GPRNoX0:$rd, GPR:$rs1, uimm5nonzero:$length, 0)>;
+} // EmitPriority = 0
+} // Predicates = [HasVendorXqcilsm, IsRV32]

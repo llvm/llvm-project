@@ -136,6 +136,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
   ECase(NT_ARM_FPMR);
+  ECase(NT_ARM_GCS);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
   ECase(NT_SIGINFO);

@@ -16,9 +16,25 @@ class Function;
 
 /// A pass to instrument code and perform run-time bounds checking on loads,
 /// stores, and other memory intrinsics.
-struct BoundsCheckingPass : PassInfoMixin<BoundsCheckingPass> {
+class BoundsCheckingPass : public PassInfoMixin<BoundsCheckingPass> {
+public:
+  enum class ReportingMode {
+    Trap,
+    MinRuntime,
+    MinRuntimeAbort,
+    FullRuntime,
+    FullRuntimeAbort,
+  };
+
+private:
+  ReportingMode Mode = ReportingMode::Trap;
+
+public:
+  BoundsCheckingPass(ReportingMode Mode) : Mode(Mode) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

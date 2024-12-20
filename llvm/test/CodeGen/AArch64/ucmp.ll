@@ -79,20 +79,18 @@ define i8 @ucmp.8.128(i128 %x, i128 %y) nounwind {
 ;
 ; CHECK-GI-LABEL: ucmp.8.128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w8, w9, w8, eq
+; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
+; CHECK-GI-NEXT:    cmp x0, x2
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    cmp x1, x3
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    csel w9, w9, w10, eq
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    cset w8, ne
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w9, lo
-; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w10, lo
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w9, w10, w9, eq
 ; CHECK-GI-NEXT:    tst w9, #0x1
 ; CHECK-GI-NEXT:    csinv w0, w8, wzr, eq
 ; CHECK-GI-NEXT:    ret
@@ -151,22 +149,20 @@ define <1 x i64> @ucmp.1.64.65(<1 x i65> %x, <1 x i65> %y) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    and x8, x1, #0x1
 ; CHECK-GI-NEXT:    and x9, x3, #0x1
-; CHECK-GI-NEXT:    cmp x8, x9
+; CHECK-GI-NEXT:    cmp x0, x2
 ; CHECK-GI-NEXT:    cset w10, hi
-; CHECK-GI-NEXT:    cmp x0, x2
+; CHECK-GI-NEXT:    cmp x8, x9
 ; CHECK-GI-NEXT:    cset w11, hi
-; CHECK-GI-NEXT:    cmp x8, x9
-; CHECK-GI-NEXT:    csel w10, w11, w10, eq
-; CHECK-GI-NEXT:    tst w10, #0x1
-; CHECK-GI-NEXT:    cset x10, ne
-; CHECK-GI-NEXT:    cmp x8, x9
-; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    csel w10, w10, w11, eq
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    cset w11, lo
 ; CHECK-GI-NEXT:    cmp x8, x9
-; CHECK-GI-NEXT:    csel w8, w12, w11, eq
+; CHECK-GI-NEXT:    cset w8, lo
+; CHECK-GI-NEXT:    csel w8, w11, w8, eq
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    cset x9, ne
 ; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csinv x8, x10, xzr, eq
+; CHECK-GI-NEXT:    csinv x8, x9, xzr, eq
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    ret
   %1 = call <1 x i64> @llvm.ucmp(<1 x i65> %x, <1 x i65> %y)
@@ -174,88 +170,48 @@ define <1 x i64> @ucmp.1.64.65(<1 x i65> %x, <1 x i65> %y) {
 }
 
 define <8 x i8> @u_v8i8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-SD-LABEL: u_v8i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    cmhi v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    sub v0.8b, v0.8b, v2.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: u_v8i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.8b, #1
-; CHECK-GI-NEXT:    cmhi v3.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    movi d4, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    and v2.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    bsl v0.8b, v4.8b, v2.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: u_v8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmhi v2.8b, v0.8b, v1.8b
+; CHECK-NEXT:    cmhi v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    sub v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    ret
 entry:
   %c = call <8 x i8> @llvm.ucmp(<8 x i8> %a, <8 x i8> %b)
   ret <8 x i8> %c
 }
 
 define <16 x i8> @u_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-SD-LABEL: u_v16i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    cmhi v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    sub v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: u_v16i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.16b, #1
-; CHECK-GI-NEXT:    cmhi v3.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    movi v4.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: u_v16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmhi v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    sub v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
 entry:
   %c = call <16 x i8> @llvm.ucmp(<16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %c
 }
 
 define <4 x i16> @u_v4i16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-SD-LABEL: u_v4i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    cmhi v0.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sub v0.4h, v0.4h, v2.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: u_v4i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.4h, #1
-; CHECK-GI-NEXT:    cmhi v3.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    movi d4, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v0.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    and v2.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    bsl v0.8b, v4.8b, v2.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: u_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmhi v2.4h, v0.4h, v1.4h
+; CHECK-NEXT:    cmhi v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    sub v0.4h, v0.4h, v2.4h
+; CHECK-NEXT:    ret
 entry:
   %c = call <4 x i16> @llvm.ucmp(<4 x i16> %a, <4 x i16> %b)
   ret <4 x i16> %c
 }
 
 define <8 x i16> @u_v8i16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: u_v8i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    cmhi v0.8h, v1.8h, v0.8h
-; CHECK-SD-NEXT:    sub v0.8h, v0.8h, v2.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: u_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.8h, #1
-; CHECK-GI-NEXT:    cmhi v3.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    movi v4.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v0.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: u_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmhi v2.8h, v0.8h, v1.8h
+; CHECK-NEXT:    cmhi v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    sub v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ret
 entry:
   %c = call <8 x i16> @llvm.ucmp(<8 x i16> %a, <8 x i16> %b)
   ret <8 x i16> %c
@@ -274,16 +230,12 @@ define <16 x i16> @u_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: u_v16i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v4.8h, #1
-; CHECK-GI-NEXT:    cmhi v5.8h, v0.8h, v2.8h
-; CHECK-GI-NEXT:    cmhi v6.8h, v1.8h, v3.8h
-; CHECK-GI-NEXT:    movi v7.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmhi v4.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    cmhi v5.8h, v1.8h, v3.8h
 ; CHECK-GI-NEXT:    cmhi v0.8h, v2.8h, v0.8h
 ; CHECK-GI-NEXT:    cmhi v1.8h, v3.8h, v1.8h
-; CHECK-GI-NEXT:    and v5.16b, v4.16b, v5.16b
-; CHECK-GI-NEXT:    and v4.16b, v4.16b, v6.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v7.16b, v5.16b
-; CHECK-GI-NEXT:    bsl v1.16b, v7.16b, v4.16b
+; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v4.8h
+; CHECK-GI-NEXT:    sub v1.8h, v1.8h, v5.8h
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <16 x i16> @llvm.ucmp(<16 x i16> %a, <16 x i16> %b)
@@ -291,44 +243,24 @@ entry:
 }
 
 define <2 x i32> @u_v2i32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-SD-LABEL: u_v2i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    cmhi v0.2s, v1.2s, v0.2s
-; CHECK-SD-NEXT:    sub v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: u_v2i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2s, #1
-; CHECK-GI-NEXT:    cmhi v3.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    movi d4, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    and v2.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    bsl v0.8b, v4.8b, v2.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: u_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmhi v2.2s, v0.2s, v1.2s
+; CHECK-NEXT:    cmhi v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    sub v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    ret
 entry:
   %c = call <2 x i32> @llvm.ucmp(<2 x i32> %a, <2 x i32> %b)
   ret <2 x i32> %c
 }
 
 define <4 x i32> @u_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: u_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    cmhi v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    sub v0.4s, v0.4s, v2.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: u_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.4s, #1
-; CHECK-GI-NEXT:    cmhi v3.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    movi v4.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: u_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmhi v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    sub v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ret
 entry:
   %c = call <4 x i32> @llvm.ucmp(<4 x i32> %a, <4 x i32> %b)
   ret <4 x i32> %c
@@ -347,16 +279,12 @@ define <8 x i32> @u_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: u_v8i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v4.4s, #1
-; CHECK-GI-NEXT:    cmhi v5.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    cmhi v6.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    movi v7.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmhi v4.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    cmhi v5.4s, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    cmhi v0.4s, v2.4s, v0.4s
 ; CHECK-GI-NEXT:    cmhi v1.4s, v3.4s, v1.4s
-; CHECK-GI-NEXT:    and v5.16b, v4.16b, v5.16b
-; CHECK-GI-NEXT:    and v4.16b, v4.16b, v6.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v7.16b, v5.16b
-; CHECK-GI-NEXT:    bsl v1.16b, v7.16b, v4.16b
+; CHECK-GI-NEXT:    sub v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    sub v1.4s, v1.4s, v5.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <8 x i32> @llvm.ucmp(<8 x i32> %a, <8 x i32> %b)
@@ -364,23 +292,12 @@ entry:
 }
 
 define <2 x i64> @u_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-SD-LABEL: u_v2i64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    cmhi v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    sub v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: u_v2i64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI17_0
-; CHECK-GI-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    movi v4.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI17_0]
-; CHECK-GI-NEXT:    cmhi v0.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    and v2.16b, v3.16b, v2.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: u_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    cmhi v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    sub v0.2d, v0.2d, v2.2d
+; CHECK-NEXT:    ret
 entry:
   %c = call <2 x i64> @llvm.ucmp(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
@@ -399,17 +316,12 @@ define <4 x i64> @u_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; CHECK-GI-LABEL: u_v4i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI18_0
 ; CHECK-GI-NEXT:    cmhi v4.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    cmhi v6.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI18_0]
-; CHECK-GI-NEXT:    movi v7.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmhi v5.2d, v1.2d, v3.2d
 ; CHECK-GI-NEXT:    cmhi v0.2d, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    cmhi v1.2d, v3.2d, v1.2d
-; CHECK-GI-NEXT:    and v4.16b, v5.16b, v4.16b
-; CHECK-GI-NEXT:    and v5.16b, v5.16b, v6.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v7.16b, v4.16b
-; CHECK-GI-NEXT:    bsl v1.16b, v7.16b, v5.16b
+; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v4.2d
+; CHECK-GI-NEXT:    sub v1.2d, v1.2d, v5.2d
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <4 x i64> @llvm.ucmp(<4 x i64> %a, <4 x i64> %b)
@@ -434,16 +346,13 @@ define <16 x i8> @signOf_neon(<8 x i16> %s0_lo, <8 x i16> %s0_hi, <8 x i16> %s1_
 ; CHECK-GI-NEXT:    cmhi v5.8h, v1.8h, v3.8h
 ; CHECK-GI-NEXT:    cmhi v0.8h, v2.8h, v0.8h
 ; CHECK-GI-NEXT:    cmhi v1.8h, v3.8h, v1.8h
-; CHECK-GI-NEXT:    movi v2.16b, #1
-; CHECK-GI-NEXT:    movi v3.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    uzp1 v4.16b, v4.16b, v5.16b
 ; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    shl v1.16b, v4.16b, #7
+; CHECK-GI-NEXT:    uzp1 v1.16b, v4.16b, v5.16b
 ; CHECK-GI-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-GI-NEXT:    sshr v1.16b, v1.16b, #7
+; CHECK-GI-NEXT:    shl v1.16b, v1.16b, #7
 ; CHECK-GI-NEXT:    sshr v0.16b, v0.16b, #7
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-GI-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    sshr v1.16b, v1.16b, #7
+; CHECK-GI-NEXT:    sub v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = shufflevector <8 x i16> %s0_lo, <8 x i16> %s0_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

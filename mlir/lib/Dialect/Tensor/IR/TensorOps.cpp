@@ -2012,7 +2012,8 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
 
     // Only constant dimension values are supported.
     std::optional<int64_t> dim = dimOp.getConstantIndex();
-    if (!dim.has_value())
+    if (!dim.has_value() ||
+        dim.value() >= collapseShapeOp.getResultType().getRank())
       return failure();
 
     // Skip static dims. These are folded to constant ops.

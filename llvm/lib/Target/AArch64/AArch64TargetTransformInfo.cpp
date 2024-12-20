@@ -2782,22 +2782,39 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::TRUNCATE, MVT::v16i32, MVT::v16i64, 4}, // 4 x uzp1
 
       // Truncations on nxvmiN
-      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i16, 1},
-      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i32, 1},
-      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i64, 1},
-      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i16, 1},
-      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i32, 1},
-      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i64, 2},
-      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 1},
-      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 3},
-      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 5},
-      {ISD::TRUNCATE, MVT::nxv16i1, MVT::nxv16i8, 1},
-      {ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 1},
-      {ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 1},
-      {ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 1},
-      {ISD::TRUNCATE, MVT::nxv4i32, MVT::nxv4i64, 2},
-      {ISD::TRUNCATE, MVT::nxv8i16, MVT::nxv8i32, 3},
-      {ISD::TRUNCATE, MVT::nxv8i32, MVT::nxv8i64, 6},
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i8, 2},
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i16, 2},
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i32, 2},
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i64, 2},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i8, 2},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i16, 2},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i32, 2},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i64, 5},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i8, 2},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 2},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 5},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 11},
+      {ISD::TRUNCATE, MVT::nxv16i1, MVT::nxv16i8, 2},
+      {ISD::TRUNCATE, MVT::nxv2i8, MVT::nxv2i16, 0},
+      {ISD::TRUNCATE, MVT::nxv2i8, MVT::nxv2i32, 0},
+      {ISD::TRUNCATE, MVT::nxv2i8, MVT::nxv2i64, 0},
+      {ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 0},
+      {ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i64, 0},
+      {ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 0},
+      {ISD::TRUNCATE, MVT::nxv4i8, MVT::nxv4i16, 0},
+      {ISD::TRUNCATE, MVT::nxv4i8, MVT::nxv4i32, 0},
+      {ISD::TRUNCATE, MVT::nxv4i8, MVT::nxv4i64, 1},
+      {ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 0},
+      {ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i64, 1},
+      {ISD::TRUNCATE, MVT::nxv4i32, MVT::nxv4i64, 1},
+      {ISD::TRUNCATE, MVT::nxv8i8, MVT::nxv8i16, 0},
+      {ISD::TRUNCATE, MVT::nxv8i8, MVT::nxv8i32, 1},
+      {ISD::TRUNCATE, MVT::nxv8i8, MVT::nxv8i64, 3},
+      {ISD::TRUNCATE, MVT::nxv8i16, MVT::nxv8i32, 1},
+      {ISD::TRUNCATE, MVT::nxv8i16, MVT::nxv8i64, 3},
+      {ISD::TRUNCATE, MVT::nxv16i8, MVT::nxv16i16, 1},
+      {ISD::TRUNCATE, MVT::nxv16i8, MVT::nxv16i32, 3},
+      {ISD::TRUNCATE, MVT::nxv16i8, MVT::nxv16i64, 7},
 
       // The number of shll instructions for the extension.
       {ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i16, 3},
@@ -3647,7 +3664,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     // If VecPred is not set, check if we can get a predicate from the context
     // instruction, if its type matches the requested ValTy.
     if (VecPred == CmpInst::BAD_ICMP_PREDICATE && I && I->getType() == ValTy) {
-      CmpInst::Predicate CurrentPred;
+      CmpPredicate CurrentPred;
       if (match(I, m_Select(m_Cmp(CurrentPred, m_Value(), m_Value()), m_Value(),
                             m_Value())))
         VecPred = CurrentPred;

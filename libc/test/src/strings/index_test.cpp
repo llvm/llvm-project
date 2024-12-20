@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "StrchrTest.h"
+#include "test/src/string/StrchrTest.h"
 
-#include "src/string/index.h"
+#include "src/strings/index.h"
 #include "test/UnitTest/Test.h"
 
 STRCHR_TEST(Index, LIBC_NAMESPACE::index)
