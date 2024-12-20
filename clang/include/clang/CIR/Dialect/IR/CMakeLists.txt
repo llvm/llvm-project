@@ -31,7 +31,3 @@ add_public_tablegen_target(MLIRCIREnumsGen)
 clang_tablegen(CIRBuiltinsLowering.inc -gen-cir-builtins-lowering
                SOURCE CIROps.td
                TARGET CIRBuiltinsLowering)
-
-clang_tablegen(CIRTBAANameLowering.inc -gen-cir-tbaa-name-lowering
-               SOURCE CIRTypes.td
-               TARGET CIRTBAANameLowering)

@@ -1099,9 +1099,5 @@ public:
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_CLASSES_DECLARE
 
-#define GET_TBAANAME_LOWERING_FUNCTIONS_DECLARE
-#include "clang/CIR/Dialect/IR/CIRTBAANameLowering.inc"
-#undef GET_TBAANAME_LOWERING_FUNCTIONS_DECLARE
-
 } // namespace direct
 } // namespace cir

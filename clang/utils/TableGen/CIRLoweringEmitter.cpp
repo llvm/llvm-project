@@ -16,10 +16,6 @@ std::string ClassDeclaration;
 std::string ClassDefinitions;
 std::string ClassList;
 
-std::string TBAANameFunctionDeclaration;
-std::string TBAANameFunctionDefinitions;
-std::string TBAANameClassList;
-
 void GenerateLowering(const Record *Operation) {
   using namespace std::string_literals;
   std::string Name = Operation->getName().str();
@@ -72,24 +68,6 @@ CIR)C++" +
 
   ClassList += ", CIR" + Name + "Lowering\n";
 }
-
-void GenerateTBAANameLowering(const Record *def) {
-  using namespace std::string_literals;
-  std::string Name = def->getValueAsString("cppClassName").str();
-  std::string TBAAName = def->getValueAsString("tbaaName").str();
-  TBAANameFunctionDeclaration += "llvm::StringRef getTBAAName(cir::";
-  TBAANameFunctionDeclaration += Name + " ty);";
-  TBAANameFunctionDeclaration += "\n";
-  TBAANameFunctionDefinitions += "llvm::StringRef getTBAAName(cir::";
-  TBAANameFunctionDefinitions += Name + " ty) {";
-  TBAANameFunctionDefinitions += "  return \"" + TBAAName + "\";";
-  TBAANameFunctionDefinitions += "}";
-  TBAANameFunctionDefinitions += "\n";
-  TBAANameClassList += "\n";
-  TBAANameClassList += "cir::";
-  TBAANameClassList += Name;
-  TBAANameClassList += ", ";
-}
 } // namespace
 
 void clang::EmitCIRBuiltinsLowering(const RecordKeeper &Records,
@@ -106,26 +84,4 @@ void clang::EmitCIRBuiltinsLowering(const RecordKeeper &Records,
   OS << "#ifdef GET_BUILTIN_LOWERING_CLASSES_DEF\n"
      << ClassDefinitions << "\n#endif\n";
   OS << "#ifdef GET_BUILTIN_LOWERING_LIST\n" << ClassList << "\n#endif\n";
-}
-
-void clang::EmitCIRTBAANameLowering(const RecordKeeper &Records,
-                                    raw_ostream &OS) {
-  emitSourceFileHeader("Lowering of ClangIR TBAA Name", OS);
-
-  for (const auto *Builtin :
-       Records.getAllDerivedDefinitions("TBAALoweringInfo")) {
-    if (!Builtin->getValueAsString("tbaaName").empty())
-      GenerateTBAANameLowering(Builtin);
-  }
-
-  OS << "#ifdef GET_TBAANAME_LOWERING_FUNCTIONS_DECLARE\n"
-     << TBAANameFunctionDeclaration << "\n#endif\n";
-  OS << "#ifdef GET_TBAANAME_LOWERING_FUNCTIONS_DEF\n"
-     << TBAANameFunctionDefinitions << "\n#endif\n";
-  // remove last `, `
-  if (!TBAANameClassList.empty()) {
-    TBAANameClassList.resize(TBAANameClassList.size() - 2);
-  }
-  OS << "#ifdef GET_TBAANAME_LOWERING_LIST\n"
-     << TBAANameClassList << "\n#endif\n";
 }
