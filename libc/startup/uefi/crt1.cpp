@@ -12,12 +12,16 @@
 #include "include/llvm-libc-types/EFI_SYSTEM_TABLE.h"
 #include "src/__support/macros/config.h"
 
+EFI_HANDLE efi_image_handle;
+EFI_SYSTEM_TABLE *efi_system_table;
+
 extern "C" int main(int argc, char **argv, char **envp);
 
 extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle,
                               EFI_SYSTEM_TABLE *SystemTable) {
-  (void)ImageHandle;
-  (void)SystemTable;
+  efi_image_handle = ImageHandle;
+  efi_system_table = SystemTable;
+
   main(0, NULL, NULL);
   // TODO: convert the return value of main to EFI_STATUS
   return 0; // TODO: EFI_SUCCESS
