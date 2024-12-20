@@ -95,7 +95,7 @@ TEST_P(AttributeParserJSONOutput, Empty) {
   // Parse and emit JSON. Pretty-printing is controlled by the
   // test parameter.
   auto [Err, Output] = this->parse(Section, GetParam());
-  EXPECT_FALSE(bool{Err}) << toString(std::move(Err));
+  EXPECT_FALSE(bool{Err}) << Output << '\n' << toString(std::move(Err));
   // Check that 'Output' is valid JSON.
   Error JsonErr = json::parse(Output).takeError();
   EXPECT_FALSE(bool{JsonErr}) << Output << '\n' << toString(std::move(JsonErr));
@@ -112,7 +112,7 @@ TEST_P(AttributeParserJSONOutput, SingleSubsection) {
       16,                                 // value (16 uleb128)
   };
   auto [Err, Output] = this->parse(Section, GetParam());
-  EXPECT_FALSE(bool{Err}) << toString(std::move(Err));
+  EXPECT_FALSE(bool{Err}) << Output << '\n' << toString(std::move(Err));
   // Check that 'Output' is valid JSON.
   Error JsonErr = json::parse(Output).takeError();
   EXPECT_FALSE(bool{JsonErr}) << Output << '\n' << toString(std::move(JsonErr));
