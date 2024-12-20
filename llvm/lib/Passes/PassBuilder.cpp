@@ -1284,7 +1284,7 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
 Expected<BoundsCheckingPass::BoundsCheckingOptions>
 parseBoundsCheckingOptions(StringRef Params) {
   BoundsCheckingPass::BoundsCheckingOptions Options(
-      BoundsCheckingPass::ReportingMode::Trap, true);
+      BoundsCheckingPass::ReportingMode::Trap, false);
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
@@ -1298,18 +1298,8 @@ parseBoundsCheckingOptions(StringRef Params) {
       Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntime;
     } else if (ParamName == "min-rt-abort") {
       Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
-    } else if (ParamName.consume_front("merge=")) {
-      if (ParamName == "true")
-        Options.Merge = true;
-      else if (ParamName == "false")
-        Options.Merge = false;
-      else {
-        return make_error<StringError>(
-            formatv("invalid BoundsChecking pass merge parameter: '{0}' ",
-                    ParamName)
-                .str(),
-            inconvertibleErrorCode());
-      }
+    } else if (ParamName == "merge") {
+      Options.Merge = true;
     } else {
       return make_error<StringError>(
           formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)

@@ -445,11 +445,6 @@ New Compiler Flags
 - The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
   starting from C++26, this warning is enabled as an error by default.
 
-- ``-fsanitize-merge`` (default) and ``-fno-sanitize-merge`` have been added for
-  fine-grained, unified control of which UBSan checks can potentially be merged
-  by the compiler (for example,
-  ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
-
 Deprecated Compiler Flags
 -------------------------
 
@@ -489,11 +484,6 @@ Removed Compiler Flags
   derivatives) is now removed, since it's no longer possible to suppress the
   diagnostic (see above). Users can expect an `unknown warning` diagnostic if
   it's still in use.
-- The experimental flags '-ubsan-unique-traps' and
-  '-bounds-checking-unique-traps' have been removed. The combination of the
-  two flags is equivalent to '-fno-sanitize-merge' with no parameters.
-  '-bounds-checking-unique-traps' can be selectively controlled via
-  '-f(no-)sanitize-merge=local-bounds'.
 
 Attribute Changes in Clang
 --------------------------
@@ -1211,6 +1201,11 @@ Sanitizers
   aliasing rules.
 
 - Implemented ``-f[no-]sanitize-trap=local-bounds``, and ``-f[no-]sanitize-recover=local-bounds``.
+
+- ``-fsanitize-merge`` (default) and ``-fno-sanitize-merge`` have been added for
+  fine-grained, unified control of which UBSan checks can potentially be merged
+  by the compiler (for example,
+  ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
 Python Binding Changes
 ----------------------

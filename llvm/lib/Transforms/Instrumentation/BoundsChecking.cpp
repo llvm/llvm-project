@@ -305,19 +305,22 @@ void BoundsCheckingPass::printPipeline(
       OS, MapClassName2PassName);
   switch (Options.Mode) {
   case ReportingMode::Trap:
-    OS << "<trap>";
+    OS << "<trap";
     break;
   case ReportingMode::MinRuntime:
-    OS << "<min-rt>";
+    OS << "<min-rt";
     break;
   case ReportingMode::MinRuntimeAbort:
-    OS << "<min-rt-abort>";
+    OS << "<min-rt-abort";
     break;
   case ReportingMode::FullRuntime:
-    OS << "<rt>";
+    OS << "<rt";
     break;
   case ReportingMode::FullRuntimeAbort:
-    OS << "<rt-abort>";
+    OS << "<rt-abort";
     break;
   }
+  if (Options.Merge)
+    OS << ";merge";
+  OS << ">";
 }
