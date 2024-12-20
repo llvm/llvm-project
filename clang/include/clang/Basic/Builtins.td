@@ -1977,16 +1977,16 @@ def AtomicNandFetch : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
-def AtomicTestAndSet : Builtin {
+def AtomicTestAndSet : AtomicBuiltin {
   let Spellings = ["__atomic_test_and_set"];
-  let Attributes = [NoThrow];
-  let Prototype = "bool(void volatile*, int)";
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
-def AtomicClear : Builtin {
+def AtomicClear : AtomicBuiltin {
   let Spellings = ["__atomic_clear"];
-  let Attributes = [NoThrow];
-  let Prototype = "void(void volatile*, int)";
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 def AtomicThreadFence : Builtin {
@@ -4760,6 +4760,12 @@ def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_asdouble"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLWaveActiveAllTrue : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_all_true"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
 }
 
 def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {

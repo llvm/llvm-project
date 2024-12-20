@@ -77,6 +77,7 @@
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -735,6 +736,11 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Type)) {
+      MPM.addPass(ModuleTypeSanitizerPass());
+      MPM.addPass(createModuleToFunctionPassAdaptor(TypeSanitizerPass()));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
 
@@ -1023,7 +1029,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
       PB.registerScalarOptimizerLateEPCallback(
           [](FunctionPassManager &FPM, OptimizationLevel Level) {
-            FPM.addPass(BoundsCheckingPass());
+            FPM.addPass(
+                BoundsCheckingPass(BoundsCheckingPass::ReportingMode::Trap));
           });
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already

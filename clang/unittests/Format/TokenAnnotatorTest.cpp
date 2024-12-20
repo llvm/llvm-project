@@ -2277,6 +2277,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 
+  Tokens = annotate("Class<Type>{foo}->func(arg);");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown); // Not FunctionLBrace
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[7], tok::arrow, TT_Unknown);
+
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");
   Tokens = annotate("emit foo()->bar;", Style);

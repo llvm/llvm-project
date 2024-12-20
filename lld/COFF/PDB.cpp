@@ -1012,7 +1012,7 @@ static void warnUnusable(InputFile *f, Error e, bool shouldWarn) {
     consumeError(std::move(e));
     return;
   }
-  auto diag = Warn(f->ctx);
+  auto diag = Warn(f->symtab.ctx);
   diag << "Cannot use debug info for '" << f << "' [LNK4099]";
   if (e)
     diag << "\n>>> failed to load reference " << std::move(e);

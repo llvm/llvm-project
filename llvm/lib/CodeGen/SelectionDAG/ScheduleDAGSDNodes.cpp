@@ -388,7 +388,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
 
       // There are either zero or one users of the Glue result.
       bool HasGlueUse = false;
-      for (SDNode *U : N->uses())
+      for (SDNode *U : N->users())
         if (GlueVal.isOperandOf(U)) {
           HasGlueUse = true;
           assert(N->getNodeId() == -1 && "Node already inserted!");
