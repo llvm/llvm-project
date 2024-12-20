@@ -1030,7 +1030,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       PB.registerScalarOptimizerLateEPCallback(
           [this](FunctionPassManager &FPM, OptimizationLevel Level) {
             BoundsCheckingPass::ReportingMode Mode;
-            bool Merge = CodeGenOpts.SanitizeMergeHandlers.has(SanitizerKind::LocalBounds);
+            bool Merge = CodeGenOpts.SanitizeMergeHandlers.has(
+                SanitizerKind::LocalBounds);
 
             if (CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
               Mode = BoundsCheckingPass::ReportingMode::Trap;

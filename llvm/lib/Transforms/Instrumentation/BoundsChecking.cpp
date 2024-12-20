@@ -43,7 +43,8 @@ STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
 using BuilderTy = IRBuilder<TargetFolder>;
 
-BoundsCheckingPass::BoundsCheckingOptions::BoundsCheckingOptions(ReportingMode Mode, bool Merge)
+BoundsCheckingPass::BoundsCheckingOptions::BoundsCheckingOptions(
+    ReportingMode Mode, bool Merge)
     : Mode(Mode), Merge(Merge) {}
 
 /// Gets the conditions under which memory accessing instructions will overflow.
@@ -291,7 +292,8 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE, ReportingOpts(Options.Mode, Options.Merge)))
+  if (!addBoundsChecking(F, TLI, SE,
+                         ReportingOpts(Options.Mode, Options.Merge)))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

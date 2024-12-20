@@ -1283,7 +1283,8 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
 
 Expected<BoundsCheckingPass::BoundsCheckingOptions>
 parseBoundsCheckingOptions(StringRef Params) {
-  BoundsCheckingPass::BoundsCheckingOptions Options (BoundsCheckingPass::ReportingMode::Trap, true);
+  BoundsCheckingPass::BoundsCheckingOptions Options(
+      BoundsCheckingPass::ReportingMode::Trap, true);
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');

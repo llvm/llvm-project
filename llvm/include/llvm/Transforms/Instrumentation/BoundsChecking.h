@@ -40,8 +40,8 @@ public:
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
-  private:
-    BoundsCheckingOptions Options;
+private:
+  BoundsCheckingOptions Options;
 };
 
 } // end namespace llvm
