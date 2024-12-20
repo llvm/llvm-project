@@ -98,6 +98,9 @@ private:
   /// Helper for generateCode(). It eplaces stack spills or reloads with movs
   /// to \p LI.reg().
   void replaceStackWithReg(StackSlotDataEntry &Entry, Register VectorReg);
+  /// Updates the live-ins of MBBs after we emit the new spill2reg instructions
+  /// and the vector registers become live from register spills to reloads.
+  void updateLiveIns(StackSlotDataEntry &Entry, MCRegister VectorReg);
   /// Updates \p LRU with the liveness of physical registers around the spills
   /// and reloads in \p Entry.
   void calculateLiveRegs(StackSlotDataEntry &Entry, LiveRegUnits &LRU);
@@ -110,6 +113,9 @@ private:
 
   /// Map from a stack slot to the corresponding spills and reloads.
   DenseMap<int, StackSlotDataEntry> StackSlotData;
+  /// The registers used by each block (from LiveRegUnits). This is needed for
+  /// finding free physical registers in the generateCode().
+  DenseMap<const MachineBasicBlock *, LiveRegUnits> LRUs;
 
   MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -168,7 +174,16 @@ void Spill2Reg::collectSpillsAndReloads() {
   // If any spill/reload for a stack slot is found not to be eligible for
   // spill-to-reg, then that stack slot is disabled.
   for (MachineBasicBlock &MBB : *MF) {
-    for (MachineInstr &MI : MBB) {
+    // Initialize AccumMBBLRU for keeping track of physical registers used
+    // across the whole MBB.
+    LiveRegUnits AccumMBBLRU(*TRI);
+    AccumMBBLRU.addLiveOuts(MBB);
+
+    // Collect spills/reloads
+    for (MachineInstr &MI : llvm::reverse(MBB)) {
+      // Update the LRU state as we move upwards.
+      AccumMBBLRU.accumulate(MI);
+
       int StackSlot;
       if (const MachineOperand *MO = TII->isStoreToStackSlotMO(MI, StackSlot)) {
         MachineInstr *Spill = &MI;
@@ -202,6 +217,8 @@ void Spill2Reg::collectSpillsAndReloads() {
           }
       }
     }
+
+    LRUs.insert(std::make_pair(&MBB, AccumMBBLRU));
   }
 }
 
@@ -227,6 +244,26 @@ Spill2Reg::tryGetFreePhysicalReg(const TargetRegisterClass *RegClass,
   return std::nullopt;
 }
 
+/// Perform a bottom-up depth-first traversal from \p MBB at \p MI towards its
+/// predecessors blocks. Visited marks the visited blocks. \p Fn is the
+/// callback function called in pre-order. If \p Fn returns true we stop the
+/// traversal.
+// TODO: Use df_iterator
+static void DFS(MachineBasicBlock *MBB, DenseSet<MachineBasicBlock *> &Visited,
+                std::function<bool(MachineBasicBlock *)> Fn) {
+  // Skip visited to avoid infinite loops.
+  if (Visited.count(MBB))
+    return;
+  Visited.insert(MBB);
+
+  // Preorder.
+  if (Fn(MBB))
+    return;
+
+  // Depth-first across predecessors.
+  for (MachineBasicBlock *PredMBB : MBB->predecessors())
+    DFS(PredMBB, Visited, Fn);
+}
 // Replace stack-based spills/reloads with register-based ones.
 void Spill2Reg::replaceStackWithReg(StackSlotDataEntry &Entry,
                                     Register VectorReg) {
@@ -238,6 +275,9 @@ void Spill2Reg::replaceStackWithReg(StackSlotDataEntry &Entry,
     TII->spill2RegInsertToS2RReg(
         VectorReg, OldReg, SpillData.SpillBits, StackSpill->getParent(),
         /*InsertBeforeIt=*/StackSpill->getIterator(), TRI);
+
+    // Mark VectorReg as live in the instr's BB.
+    LRUs[StackSpill->getParent()].addReg(VectorReg);
 
     // Spill to stack is no longer needed.
     StackSpill->eraseFromParent();
@@ -253,6 +293,9 @@ void Spill2Reg::replaceStackWithReg(StackSlotDataEntry &Entry,
         OldReg, VectorReg, ReloadData.SpillBits, StackReload->getParent(),
         /*InsertBeforeIt=*/StackReload->getIterator(), TRI);
 
+    // Mark VectorReg as live in the instr's BB.
+    LRUs[StackReload->getParent()].addReg(VectorReg);
+
     // Reload from stack is no longer needed.
     StackReload->eraseFromParent();
     assert(OldReg.isPhysical() && "Otherwise we need to removeInterval()");
@@ -261,7 +304,113 @@ void Spill2Reg::replaceStackWithReg(StackSlotDataEntry &Entry,
 
 void Spill2Reg::calculateLiveRegs(StackSlotDataEntry &Entry,
                                   LiveRegUnits &LRU) {
-  // TODO: Unimplemented
+  // Collect the parent MBBs of Spills for fast lookup.
+  DenseSet<MachineBasicBlock *> SpillMBBs(Entry.Spills.size());
+  DenseSet<MachineInstr *> Spills(Entry.Spills.size());
+  for (const auto &Data : Entry.Spills) {
+    SpillMBBs.insert(Data.MI->getParent());
+    Spills.insert(Data.MI);
+  }
+
+  /// Walk up the instructions in \p MI's block, accumulating the used registers
+  /// into \p LRU, and stopping at a spill or the top of the BB.
+  /// \Returns true if a spill was found, false otherwise.
+  /// This is used for computing the registers in two cases:
+  /// 1. between a reload and a spill (or BB top), and
+  /// 2. from the bottom of the BB to a spill.
+  //   bb:
+  //     ...
+  //     spill ^
+  //     ...   | Accumulate from MI to spill, or top of the BB.
+  //     MI    -
+  auto AccumulateLRUUntilSpillFn = [&Spills, &SpillMBBs](MachineInstr *MI,
+                                                         LiveRegUnits &LRU) {
+    MachineBasicBlock *MBB = MI->getParent();
+    bool IsSpillBlock = SpillMBBs.count(MBB);
+    // Else walk up the BB, starting from MI, looking for any spill.
+    for (MachineInstr *CurrMI = MI; CurrMI != nullptr;
+         CurrMI = CurrMI->getPrevNode()) {
+      LRU.accumulate(*CurrMI);
+      // If a spill is found then return true to end the recursion.
+      if (IsSpillBlock && Spills.count(CurrMI))
+        return true;
+    }
+    return false;
+  };
+
+  // Accumulates all register units used in \p MBB. If the block contains a
+  // spill we walk from the bottom to the spill. If it's an intermediate block,
+  // we get the registers from the LRUs map. \Return true once a spill is found.
+  auto AccumulateLRUFn = [&SpillMBBs, &LRU, AccumulateLRUUntilSpillFn,
+                          this](MachineBasicBlock *MBB) {
+    if (SpillMBBs.count(MBB)) {
+      // If this is a spill block, then walk bottom-up until the spill.
+      assert(!MBB->empty() && "How can it be a spill block and empty?");
+      // Add all MBB's live-outs.
+      LRU.addLiveOuts(*MBB);
+      bool FoundSpill = AccumulateLRUUntilSpillFn(&*MBB->rbegin(), LRU);
+      assert(FoundSpill && "Spill block but we couldn't find spill!");
+      // We return true to stop the recursion.
+      return true;
+    }
+    // Else this is an intermediate block between the spills and reloads and
+    // there is no spill in it, then use the pre-computed LRU to avoid walking
+    // it again. This improves compilation time.
+    LRU.addUnits(LRUs[MBB].getBitVector());
+    // We return false to continue the recursion.
+    return false;
+  };
+
+  /// \Returns the live-outs at \p Reload by starting with the block's live-outs
+  /// and stepping backwards until we reach \p Reload.
+  auto GetReloadLRU = [this](MachineInstr *Reload) {
+    LiveRegUnits ReloadLRU(*TRI);
+    MachineBasicBlock *MBB = Reload->getParent();
+    ReloadLRU.addLiveOuts(*MBB);
+    // Start at the bottom of the BB and walk up until we find `Reload`.
+    for (MachineInstr &MI : llvm::reverse(*MBB)) {
+      if (&MI == Reload)
+        break;
+      // We use stepBackward() instead of accumulate because we need to remove
+      // the killed values from the live-outs.
+      ReloadLRU.stepBackward(MI);
+    }
+    return ReloadLRU;
+  };
+
+  // Start from each Reload and walk up the CFG with a depth-first traversal,
+  // looking for spills. Upon finding a spill we don't go beyond that point. In
+  // the meantime we accumulate the registers used. This is then used to find
+  // free physical registers.
+  DenseSet<MachineBasicBlock *> Visited;
+  for (const auto &ReloadData : Entry.Reloads) {
+    MachineInstr *Reload = ReloadData.MI;
+    // Add the Reload's LRU to the total LRU for the whole Spill-Reload range.
+    //   bb:
+    //    ...
+    //    reload %stack.0 ^
+    //    ...             | Compute live-outs at `reload` by stepping backwards
+    //    ret             -
+    LiveRegUnits ReloadLiveOuts = GetReloadLRU(Reload);
+    // Now accumulate into `ReloadLiveOuts` by walking upwards from `Reload`
+    // until we reach the first spill or the top of the BB.
+    //   bb:
+    //    ...
+    //    spill %stack..0 ^
+    //    ...             | Accumulate into ReloadLiveOuts
+    //    reload %stack.0 -
+    //    ...
+    //    ret
+    bool FoundSpill = AccumulateLRUUntilSpillFn(Reload, ReloadLiveOuts);
+    LRU.addUnits(ReloadLiveOuts.getBitVector());
+
+    // If we did not find a spill then we need to look for it. Traverse the CFG
+    // bottom-up accumulating LRUs until we reach the Spills.
+    if (!FoundSpill) {
+      for (MachineBasicBlock *PredMBB : Reload->getParent()->predecessors())
+        DFS(PredMBB, Visited, AccumulateLRUFn);
+    }
+  }
 }
 
 void Spill2Reg::generateCode() {
@@ -292,7 +441,10 @@ void Spill2Reg::generateCode() {
   }
 }
 
-void Spill2Reg::cleanup() { StackSlotData.clear(); }
+void Spill2Reg::cleanup() {
+  StackSlotData.clear();
+  LRUs.clear();
+}
 
 bool Spill2Reg::run() {
   // Walk over each instruction in the code keeping track of the processor's

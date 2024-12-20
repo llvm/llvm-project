@@ -67,66 +67,66 @@ body:             |
     ; MEM0: $eax = MOV32rm $rip, 1, $noreg, @D0, $noreg :: (dereferenceable load (s32) from @D0)
     ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D1, $noreg :: (dereferenceable load (s32) from @D1)
-    ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM0-NEXT: $xmm5 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D2, $noreg :: (dereferenceable load (s32) from @D2)
-    ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM0-NEXT: $xmm2 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D3, $noreg :: (dereferenceable load (s32) from @D3)
-    ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM0-NEXT: $xmm6 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D4, $noreg :: (dereferenceable load (s32) from @D4)
-    ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM0-NEXT: $xmm3 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D5, $noreg :: (dereferenceable load (s32) from @D5)
-    ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM0-NEXT: $xmm7 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D6, $noreg :: (dereferenceable load (s32) from @D6)
-    ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM0-NEXT: $xmm4 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D7, $noreg :: (dereferenceable load (s32) from @D7)
-    ; MEM0-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM0-NEXT: $xmm1 = MOVDI2PDIrr $eax
     ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U0, $noreg, killed renamable $eax :: (store (s32) into @U0)
-    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm5
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U1, $noreg, killed renamable $eax :: (store (s32) into @U1)
-    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm2
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U2, $noreg, killed renamable $eax :: (store (s32) into @U2)
-    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm6
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U3, $noreg, killed renamable $eax :: (store (s32) into @U3)
-    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm3
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U4, $noreg, killed renamable $eax :: (store (s32) into @U4)
-    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm7
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U5, $noreg, killed renamable $eax :: (store (s32) into @U5)
-    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm4
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U6, $noreg, killed renamable $eax :: (store (s32) into @U6)
-    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM0-NEXT: $eax = MOVPDI2DIrr $xmm1
     ; MEM0-NEXT: MOV32mr $rip, 1, $noreg, @U7, $noreg, killed renamable $eax :: (store (s32) into @U7)
     ; MEM0-NEXT: RET 0
     ; MEM50-LABEL: name: func
     ; MEM50: $eax = MOV32rm $rip, 1, $noreg, @D0, $noreg :: (dereferenceable load (s32) from @D0)
     ; MEM50-NEXT: MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $eax :: (store (s32) into %stack.0)
     ; MEM50-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D1, $noreg :: (dereferenceable load (s32) from @D1)
-    ; MEM50-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM50-NEXT: $xmm3 = MOVDI2PDIrr $eax
     ; MEM50-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D2, $noreg :: (dereferenceable load (s32) from @D2)
     ; MEM50-NEXT: $xmm0 = MOVDI2PDIrr $eax
     ; MEM50-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D3, $noreg :: (dereferenceable load (s32) from @D3)
-    ; MEM50-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM50-NEXT: $xmm4 = MOVDI2PDIrr $eax
     ; MEM50-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D4, $noreg :: (dereferenceable load (s32) from @D4)
-    ; MEM50-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM50-NEXT: $xmm1 = MOVDI2PDIrr $eax
     ; MEM50-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D5, $noreg :: (dereferenceable load (s32) from @D5)
-    ; MEM50-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM50-NEXT: $xmm5 = MOVDI2PDIrr $eax
     ; MEM50-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D6, $noreg :: (dereferenceable load (s32) from @D6)
-    ; MEM50-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM50-NEXT: $xmm2 = MOVDI2PDIrr $eax
     ; MEM50-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D7, $noreg :: (dereferenceable load (s32) from @D7)
     ; MEM50-NEXT: MOV32mr %stack.7, 1, $noreg, 0, $noreg, killed renamable $eax :: (store (s32) into %stack.7)
     ; MEM50-NEXT: $eax = MOV32rm %stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0)
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U0, $noreg, killed renamable $eax :: (store (s32) into @U0)
-    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm3
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U1, $noreg, killed renamable $eax :: (store (s32) into @U1)
     ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm0
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U2, $noreg, killed renamable $eax :: (store (s32) into @U2)
-    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm4
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U3, $noreg, killed renamable $eax :: (store (s32) into @U3)
-    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm1
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U4, $noreg, killed renamable $eax :: (store (s32) into @U4)
-    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm5
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U5, $noreg, killed renamable $eax :: (store (s32) into @U5)
-    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM50-NEXT: $eax = MOVPDI2DIrr $xmm2
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U6, $noreg, killed renamable $eax :: (store (s32) into @U6)
     ; MEM50-NEXT: $eax = MOV32rm %stack.7, 1, $noreg, 0, $noreg :: (load (s32) from %stack.7)
     ; MEM50-NEXT: MOV32mr $rip, 1, $noreg, @U7, $noreg, killed renamable $eax :: (store (s32) into @U7)
@@ -141,7 +141,7 @@ body:             |
     ; MEM100-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D3, $noreg :: (dereferenceable load (s32) from @D3)
     ; MEM100-NEXT: MOV32mr %stack.3, 1, $noreg, 0, $noreg, killed renamable $eax :: (store (s32) into %stack.3)
     ; MEM100-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D4, $noreg :: (dereferenceable load (s32) from @D4)
-    ; MEM100-NEXT: $xmm0 = MOVDI2PDIrr $eax
+    ; MEM100-NEXT: $xmm1 = MOVDI2PDIrr $eax
     ; MEM100-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D5, $noreg :: (dereferenceable load (s32) from @D5)
     ; MEM100-NEXT: MOV32mr %stack.5, 1, $noreg, 0, $noreg, killed renamable $eax :: (store (s32) into %stack.5)
     ; MEM100-NEXT: $eax = MOV32rm $rip, 1, $noreg, @D6, $noreg :: (dereferenceable load (s32) from @D6)
@@ -156,7 +156,7 @@ body:             |
     ; MEM100-NEXT: MOV32mr $rip, 1, $noreg, @U2, $noreg, killed renamable $eax :: (store (s32) into @U2)
     ; MEM100-NEXT: $eax = MOV32rm %stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %stack.3)
     ; MEM100-NEXT: MOV32mr $rip, 1, $noreg, @U3, $noreg, killed renamable $eax :: (store (s32) into @U3)
-    ; MEM100-NEXT: $eax = MOVPDI2DIrr $xmm0
+    ; MEM100-NEXT: $eax = MOVPDI2DIrr $xmm1
     ; MEM100-NEXT: MOV32mr $rip, 1, $noreg, @U4, $noreg, killed renamable $eax :: (store (s32) into @U4)
     ; MEM100-NEXT: $eax = MOV32rm %stack.5, 1, $noreg, 0, $noreg :: (load (s32) from %stack.5)
     ; MEM100-NEXT: MOV32mr $rip, 1, $noreg, @U5, $noreg, killed renamable $eax :: (store (s32) into @U5)
