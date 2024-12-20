@@ -127,9 +127,11 @@ enum {
 // Versioning
 enum { EV_NONE = 0, EV_CURRENT = 1 };
 
-// Machine architectures
-// See current registered ELF machine architectures at:
-//    http://www.uxsglobal.com/developers/gabi/latest/ch4.eheader.html
+// Machine architectures.
+// At the time of writing, the list of registered machine architectures is
+// at https://groups.google.com/g/generic-abi/c/0kORSDcyhTE/m/ZRf_PvcHAAAJ
+// Please refer to https://groups.google.com/g/generic-abi for any further
+// updates.
 enum {
   EM_NONE = 0,           // No machine
   EM_M32 = 1,            // AT&T WE 32100
