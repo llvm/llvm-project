@@ -257,7 +257,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkPriority(op, result);
         checkUntied(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
@@ -272,6 +271,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkLinear(op, result);
         checkOrder(op, result);
+      })
+      .Case([&](omp::TaskloopOp op) {
+        // TODO: Add other clauses check
+        checkPriority(op, result);
+        checkUntied(op, result);
       })
       .Case([&](omp::ParallelOp op) { checkAllocate(op, result); })
       .Case([&](omp::SimdOp op) {
@@ -1775,7 +1779,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(taskOp.getFinal()),
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dds,
           taskOp.getMergeable(),
-          moduleTranslation.lookupValue(taskOp.getEventHandle()));
+          moduleTranslation.lookupValue(taskOp.getEventHandle()),
+          moduleTranslation.lookupValue(taskOp.getPriority()));
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();

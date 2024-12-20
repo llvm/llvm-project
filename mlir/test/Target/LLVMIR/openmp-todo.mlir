@@ -429,17 +429,6 @@ llvm.func @task_in_reduction(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @task_priority(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause priority in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task priority(%x : i32) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @task_untied() {
   // expected-error@below {{not yet implemented: Unhandled clause untied in omp.task operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}
