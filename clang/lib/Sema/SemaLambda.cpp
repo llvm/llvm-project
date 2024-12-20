@@ -1196,47 +1196,29 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
       // FIXME: we should create the init capture variable and mark it invalid
       // in this case.
-// Check if the initializer type is invalid or unusable
-if (C->InitCaptureType.get().isNull() && !C->Init.isUsable()) {
-    Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type)
-        << C->Id;  // Provide more context by including the capture name
-    continue; 
-}
+      if (C->InitCaptureType.get().isNull() && !C->Init.isUsable()) {
+        Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type); // 
+        continue; // 
+      }
 
-// Check if there are unexpanded parameter packs
-if (C->Init.get()->containsUnexpandedParameterPack() &&
-    !C->InitCaptureType.get()->getAs<PackExpansionType>()) {
-    Diag(C->Loc, diag::err_pack_expansion_mismatch)
-        << C->Id;  // Include the problematic capture for context
-    DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
-}
+      if (C->Init.get()->containsUnexpandedParameterPack() &&
+          !C->InitCaptureType.get()->getAs<PackExpansionType>())
+        DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
 
-// Determine the appropriate initialization style
-unsigned InitStyle;
-switch (C->InitKind) {
-case LambdaCaptureInitKind::NoInit:
-    Diag(C->Loc, diag::err_unsupported_lambda_capture_no_init)
-        << C->Id;  // Mention the capture name causing the issue
-    llvm_unreachable("not an init-capture?");
-
-case LambdaCaptureInitKind::CopyInit:
-    InitStyle = VarDecl::CInit;
-    Diag(C->Loc, diag::note_lambda_capture_copy_init)
-        << C->Id;  // Note about using copy initialization
-    break;
-
-case LambdaCaptureInitKind::DirectInit:
-    InitStyle = VarDecl::CallInit;
-    Diag(C->Loc, diag::note_lambda_capture_direct_init)
-        << C->Id;  // Note about using direct initialization
-    break;
-
-case LambdaCaptureInitKind::ListInit:
-    InitStyle = VarDecl::ListInit;
-    Diag(C->Loc, diag::note_lambda_capture_list_init)
-        << C->Id;  // Note about using list initialization
-    break;
-}
+      unsigned InitStyle;
+      switch (C->InitKind) {
+      case LambdaCaptureInitKind::NoInit:
+        llvm_unreachable("not an init-capture?");
+      case LambdaCaptureInitKind::CopyInit:
+        InitStyle = VarDecl::CInit;
+        break;
+      case LambdaCaptureInitKind::DirectInit:
+        InitStyle = VarDecl::CallInit;
+        break;
+      case LambdaCaptureInitKind::ListInit:
+        InitStyle = VarDecl::ListInit;
+        break;
+      }
       Var = createLambdaInitCaptureVarDecl(C->Loc, C->InitCaptureType.get(),
                                            C->EllipsisLoc, C->Id, InitStyle,
                                            C->Init.get(), Method);
