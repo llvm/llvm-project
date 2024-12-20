@@ -651,6 +651,7 @@ MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
     ENUM_TO_CSTR(FacebookAbortReason);
     ENUM_TO_CSTR(FacebookThreadName);
     ENUM_TO_CSTR(FacebookLogcat);
+    ENUM_TO_CSTR(LLDBGenerated);
   }
   return "unknown stream type";
 }

@@ -344,6 +344,16 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
+DataExtractor ProcessMinidump::GetAuxvData() {
+  std::optional<llvm::ArrayRef<uint8_t>> auxv =
+      m_minidump_parser->GetStream(StreamType::LinuxAuxv);
+  if (!auxv)
+    return DataExtractor();
+
+  return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
+                       GetAddressByteSize(), GetAddressByteSize());
+}
+
 bool ProcessMinidump::IsLLDBMinidump() {
   // If we've already checked, return the cached value
   if (m_is_lldb_generated.has_value())
@@ -375,16 +385,6 @@ DynamicLoader *ProcessMinidump::GetDynamicLoader() {
   if (IsLLDBMinidump())
     return PostMortemProcess::GetDynamicLoader();
   return nullptr;
-}
-
-DataExtractor ProcessMinidump::GetAuxvData() {
-  std::optional<llvm::ArrayRef<uint8_t>> auxv =
-      m_minidump_parser->GetStream(StreamType::LinuxAuxv);
-  if (!auxv)
-    return DataExtractor();
-
-  return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
-                       GetAddressByteSize(), GetAddressByteSize());
 }
 
 void ProcessMinidump::BuildMemoryRegions() {
