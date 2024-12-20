@@ -1447,11 +1447,12 @@ public:
 
   /// Is this a vector list with the type implicit (presumably attached to the
   /// instruction itself)?
-  template <RegKind VectorKind, unsigned NumRegs>
+  template <RegKind VectorKind, unsigned NumRegs, bool IsConsecutive = false>
   bool isImplicitlyTypedVectorList() const {
     return Kind == k_VectorList && VectorList.Count == NumRegs &&
            VectorList.NumElements == 0 &&
-           VectorList.RegisterKind == VectorKind;
+           VectorList.RegisterKind == VectorKind &&
+           (!IsConsecutive || (VectorList.Stride == 1));
   }
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
@@ -1866,9 +1867,12 @@ public:
     VecListIdx_PReg = 3,
   };
 
-  template <VecListIndexType RegTy, unsigned NumRegs>
+  template <VecListIndexType RegTy, unsigned NumRegs,
+            bool IsConsecutive = false>
   void addVectorListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
+    assert((!IsConsecutive || (getVectorListStride() == 1)) &&
+           "Expected consecutive registers");
     static const unsigned FirstRegs[][5] = {
       /* DReg */ { AArch64::Q0,
                    AArch64::D0,       AArch64::D0_D1,
