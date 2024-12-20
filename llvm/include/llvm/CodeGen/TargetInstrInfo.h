@@ -298,6 +298,11 @@ public:
     return isLoadFromStackSlot(MI, FrameIndex);
   }
 
+  virtual const MachineOperand *isLoadFromStackSlotMO(const MachineInstr &MI,
+                                                      int &FrameIndex) const {
+    llvm_unreachable("target did not implement");
+  }
+
   /// Check for post-frame ptr elimination stack locations as well.
   /// This uses a heuristic so it isn't reliable for correctness.
   virtual Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
@@ -323,6 +328,11 @@ public:
   virtual Register isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex) const {
     return 0;
+  }
+
+  virtual const MachineOperand *isStoreToStackSlotMO(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+    llvm_unreachable("target did not implement");
   }
 
   /// Optional extension of isStoreToStackSlot that returns the number of

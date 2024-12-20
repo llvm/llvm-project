@@ -1254,3 +1254,25 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
   return true;
 }
+
+bool X86RegisterInfo::isLegalToSpill2Reg(Register Reg,
+                                         const TargetRegisterInfo *TRI,
+                                         const MachineRegisterInfo *MRI) const {
+  // Skip instructions like `$k1 = KMOVWkm %stack.1` because replacing stack
+  // with xmm0 results in an illegal instruction `movq  %k1, %xmm0`.
+  if (X86::VK16RegClass.contains(Reg))
+    return false;
+
+  switch (TRI->getRegSizeInBits(Reg, *MRI)) {
+  case 64:
+  case 32:
+    return true;
+  }
+  return false;
+}
+
+bool X86RegisterInfo::targetSupportsSpill2Reg(
+    const TargetSubtargetInfo *STI) const {
+  const X86Subtarget *X86STI = static_cast<const X86Subtarget *>(STI);
+  return X86STI->hasSSE41();
+}

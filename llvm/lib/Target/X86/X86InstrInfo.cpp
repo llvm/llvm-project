@@ -691,13 +691,27 @@ Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return X86InstrInfo::isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
+const MachineOperand *
+X86InstrInfo::isLoadFromStackSlotMO(const MachineInstr &MI, int &FrameIndex,
+                                    unsigned &MemBytes) const {
+  if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
+    if (MI.getOperand(0).getSubReg() == 0 && isFrameOperand(MI, 1, FrameIndex))
+      return &MI.getOperand(0);
+  return nullptr;
+}
+
+const MachineOperand *
+X86InstrInfo::isLoadFromStackSlotMO(const MachineInstr &MI,
+                                    int &FrameIndex) const {
+  unsigned UnusedMemBytes;
+  return isLoadFromStackSlotMO(MI, FrameIndex, UnusedMemBytes);
+}
+
 Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex,
                                            unsigned &MemBytes) const {
-  if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
-    if (MI.getOperand(0).getSubReg() == 0 && isFrameOperand(MI, 1, FrameIndex))
-      return MI.getOperand(0).getReg();
-  return 0;
+  const MachineOperand *MO = isLoadFromStackSlotMO(MI, FrameIndex, MemBytes);
+  return MO != nullptr ? (unsigned)MO->getReg() : 0;
 }
 
 Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
@@ -719,10 +733,30 @@ Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
   return 0;
 }
 
+const MachineOperand *
+X86InstrInfo::isStoreToStackSlotMO(const MachineInstr &MI, int &FrameIndex,
+                                   unsigned &MemBytes) const {
+  if (isFrameStoreOpcode(MI.getOpcode(), MemBytes))
+    if (MI.getOperand(X86::AddrNumOperands).getSubReg() == 0 &&
+        isFrameOperand(MI, 0, FrameIndex))
+      return &MI.getOperand(X86::AddrNumOperands);
+  return nullptr;
+}
+
+const MachineOperand *
+X86InstrInfo::isStoreToStackSlotMO(const MachineInstr &MI,
+                                   int &FrameIndex) const {
+  unsigned UnusedMemBytes;
+  return isStoreToStackSlotMO(MI, FrameIndex, UnusedMemBytes);
+}
+
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   unsigned Dummy;
-  return X86InstrInfo::isStoreToStackSlot(MI, FrameIndex, Dummy);
+  const auto *MO = X86InstrInfo::isStoreToStackSlotMO(MI, FrameIndex, Dummy);
+  if (MO != nullptr)
+    return MO->getReg();
+  return 0;
 }
 
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
