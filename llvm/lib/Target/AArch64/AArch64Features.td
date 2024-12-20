@@ -872,9 +872,9 @@ def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
   !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
 def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
-  [HasV8_9aOps, HasV9_3aOps, FeatureSVE2p1],
+  [HasV8_9aOps, HasV9_3aOps],
   !listconcat(HasV9_3aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
-    FeatureRASv2])>;
+    FeatureRASv2, FeatureSVE2p1])>;
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
