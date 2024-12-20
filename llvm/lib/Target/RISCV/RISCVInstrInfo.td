@@ -448,20 +448,10 @@ def GIImmSubFrom32 : GICustomOperandRenderer<"renderImmSubFrom32">,
 // in which imm = imm0 + imm1 and both imm0 and imm1 are simm12. We make imm0
 // as large as possible and imm1 as small as possible so that we might be able
 // to use c.addi for the small immediate.
-def AddiPair : PatLeaf<(imm), [{
-  if (!N->hasOneUse())
-    return false;
+def AddiPair : ImmLeaf<XLenVT, [{
   // The immediate operand must be in range [-4096,-2049] or [2048,4094].
-  int64_t Imm = N->getSExtValue();
   return (-4096 <= Imm && Imm <= -2049) || (2048 <= Imm && Imm <= 4094);
-}]> {
-  let GISelPredicateCode = [{
-    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
-      return false;
-    int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
-    return (-4096 <= Imm && Imm <= -2049) || (2048 <= Imm && Imm <= 4094);
-  }];
-}
+}]>;
 
 // Return imm - (imm < 0 ? -2048 : 2047).
 def AddiPairImmSmall : SDNodeXForm<imm, [{
@@ -500,55 +490,23 @@ def GIXLenSubTrailingOnes : GICustomOperandRenderer<"renderXLenSubTrailingOnes">
 
 // Checks if this mask is a non-empty sequence of ones starting at the
 // most/least significant bit with the remainder zero and exceeds simm32/simm12.
-def LeadingOnesMask : PatLeaf<(imm), [{
-  if (!N->hasOneUse())
-    return false;
-  return !isInt<32>(N->getSExtValue()) && isMask_64(~N->getSExtValue());
-}], TrailingZeros> {
-  let GISelPredicateCode = [{
-    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
-      return false;
-    const auto &MO = MI.getOperand(1);
-    return !isInt<32>(MO.getCImm()->getSExtValue()) && 
-           isMask_64(~MO.getCImm()->getSExtValue());
-  }];
-}
+def LeadingOnesMask : ImmLeaf<XLenVT, [{
+  return !isInt<32>(Imm) && isMask_64(~Imm);
+}], TrailingZeros>;
 
-def TrailingOnesMask : PatLeaf<(imm), [{
-  if (!N->hasOneUse())
-    return false;
-  return !isInt<12>(N->getSExtValue()) && isMask_64(N->getZExtValue());
-}], XLenSubTrailingOnes> {
-  let GISelPredicateCode = [{
-    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
-      return false;
-    const auto &MO = MI.getOperand(1);
-    return !isInt<12>(MO.getCImm()->getSExtValue()) &&
-           isMask_64(MO.getCImm()->getZExtValue());
-  }];
-}
+def TrailingOnesMask : IntImmLeaf<XLenVT, [{
+  return !isInt<12>(Imm.getSExtValue()) && isMask_64(Imm.getZExtValue());
+}], XLenSubTrailingOnes>;
 
 // Similar to LeadingOnesMask, but only consider leading ones in the lower 32
 // bits.
-def LeadingOnesWMask : PatLeaf<(imm), [{
-  if (!N->hasOneUse())
-    return false;
+def LeadingOnesWMask : ImmLeaf<XLenVT, [{
   // If the value is a uint32 but not an int32, it must have bit 31 set and
   // bits 63:32 cleared. After that we're looking for a shifted mask but not
   // an all ones mask.
-  int64_t Imm = N->getSExtValue();
   return !isInt<32>(Imm) && isUInt<32>(Imm) && isShiftedMask_64(Imm) &&
          Imm != UINT64_C(0xffffffff);
-}], TrailingZeros> {
-  let GISelPredicateCode = [{
-    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
-      return false;
-    const auto &MO = MI.getOperand(1);
-    int64_t Imm = MO.getCImm()->getSExtValue();
-    return !isInt<32>(Imm) && isUInt<32>(Imm) && isShiftedMask_64(Imm) &&
-           Imm != UINT64_C(0xffffffff);
-  }];
-}
+}], TrailingZeros>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
@@ -1358,6 +1316,14 @@ def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
   return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
 }]>;
 
+class immop_oneuse<ImmLeaf leaf> : PatLeaf<(leaf), [{
+  return N->hasOneUse();
+}]> {
+  let GISelPredicateCode = [{
+    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+  }];
+}
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -1395,10 +1361,12 @@ def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),
                 (ImmSubFromXLen (XLenVT 1)))>;
 
 // AND with leading/trailing ones mask exceeding simm32/simm12.
-def : Pat<(i64 (and GPR:$rs, LeadingOnesMask:$mask)),
-          (SLLI (i64 (SRLI $rs, LeadingOnesMask:$mask)), LeadingOnesMask:$mask)>;
-def : Pat<(XLenVT (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (XLenVT (SLLI $rs, TrailingOnesMask:$mask)), TrailingOnesMask:$mask)>;
+def : Pat<(i64 (and GPR:$rs, immop_oneuse<LeadingOnesMask>:$mask)),
+          (SLLI (i64 (SRLI $rs, (TrailingZeros imm:$mask))),
+                (TrailingZeros imm:$mask))>;
+def : Pat<(XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)),
+          (SRLI (XLenVT (SLLI $rs, (XLenSubTrailingOnes imm:$mask))),
+                (XLenSubTrailingOnes imm:$mask))>;
 
 // Match both a plain shift and one where the shift amount is masked (this is
 // typically introduced when the legalizer promotes the shift amount and
@@ -1989,8 +1957,9 @@ def u32simm12 : ImmLeaf<XLenVT, [{
 
 let Predicates = [IsRV64] in {
 
-def : Pat<(i64 (and GPR:$rs, LeadingOnesWMask:$mask)),
-          (SLLI (i64 (SRLIW $rs, LeadingOnesWMask:$mask)), LeadingOnesWMask:$mask)>;
+def : Pat<(i64 (and GPR:$rs, immop_oneuse<LeadingOnesWMask>:$mask)),
+          (SLLI (i64 (SRLIW $rs, (TrailingZeros imm:$mask))),
+                (TrailingZeros imm:$mask))>;
 
 /// sext and zext
 
@@ -2089,15 +2058,15 @@ def KCFI_CHECK
 }
 
 /// Simple optimization
-def : Pat<(XLenVT (add GPR:$rs1, (AddiPair:$rs2))),
-          (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
-                (AddiPairImmSmall GPR:$rs2))>;
+def : Pat<(XLenVT (add GPR:$rs1, immop_oneuse<AddiPair>:$rs2)),
+          (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
+                (AddiPairImmSmall imm:$rs2))>;
 
 let Predicates = [IsRV64] in {
 // Select W instructions if only the lower 32-bits of the result are used.
-def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
-          (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
-                 (AddiPairImmSmall AddiPair:$rs2))>;
+def : Pat<(binop_allwusers<add> GPR:$rs1, immop_oneuse<AddiPair>:$rs2),
+          (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
+                 (AddiPairImmSmall imm:$rs2))>;
 }
 
 //===----------------------------------------------------------------------===//
