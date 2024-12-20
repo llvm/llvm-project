@@ -92,8 +92,7 @@ declare !dbg !19 void @_Z2f3v()
 
   TargetLibraryInfoWrapperPass WrapperPass;
   auto &TLI = WrapperPass.getTLI(*F);
-  auto IsPresentInProfile = [](uint64_t) { return true; };
-  auto Calls = extractCallsFromIR(*M, TLI, IsPresentInProfile);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly one caller.
   ASSERT_THAT(Calls, SizeIs(1));
@@ -194,8 +193,7 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
 
   TargetLibraryInfoWrapperPass WrapperPass;
   auto &TLI = WrapperPass.getTLI(*F);
-  auto IsPresentInProfile = [](uint64_t) { return true; };
-  auto Calls = extractCallsFromIR(*M, TLI, IsPresentInProfile);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly 4 callers.
   ASSERT_THAT(Calls, SizeIs(4));
@@ -290,8 +288,7 @@ attributes #2 = { builtin allocsize(0) }
 
   TargetLibraryInfoWrapperPass WrapperPass;
   auto &TLI = WrapperPass.getTLI(*F);
-  auto IsPresentInProfile = [](uint64_t) { return true; };
-  auto Calls = extractCallsFromIR(*M, TLI, IsPresentInProfile);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly one caller.
   ASSERT_THAT(Calls, SizeIs(1));
@@ -407,8 +404,7 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
 
   TargetLibraryInfoWrapperPass WrapperPass;
   auto &TLI = WrapperPass.getTLI(*F);
-  auto IsPresentInProfile = [](uint64_t) { return true; };
-  auto Calls = extractCallsFromIR(*M, TLI, IsPresentInProfile);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   uint64_t GUIDFoo = IndexedMemProfRecord::getGUID("_Z3foov");
   uint64_t GUIDBar = IndexedMemProfRecord::getGUID("_Z3barv");

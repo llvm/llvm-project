@@ -2,9 +2,6 @@
 ;; This test case is taken from memprof_missing_leaf.ll with the profile
 ;; drifted.
 
-;; Avoid failures on big-endian systems that can't read the profile properly
-; REQUIRES: x86_64-linux
-
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof_missing_leaf.yaml -o %t/memprof_missing_leaf.memprofdata
 ; RUN: opt < %t/memprof_missing_leaf.ll -passes='memprof-use<profile-filename=%t/memprof_missing_leaf.memprofdata>' -memprof-salvage-stale-profile -S | FileCheck %s
@@ -19,8 +16,6 @@ HeapProfileRecords:
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       1
-          TotalLifetime:   0
-          TotalLifetimeAccessDensity: 0
     CallSites:       []
 ...
 ;--- memprof_missing_leaf.ll
