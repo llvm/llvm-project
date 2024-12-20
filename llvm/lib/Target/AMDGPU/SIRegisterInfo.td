@@ -907,10 +907,10 @@ multiclass SRegClass<int numRegs,
 
     def SReg_ # suffix # !if(hasNull, "_XNULL", ""):
       SIRegisterClass<"AMDGPU", regTypes, 32,
-                    !con(!dag(add, [!cast<RegisterClass>(sgprName)], ["sgpr"]),
-                    !if(hasTTMP,
-                        !dag(add, [!cast<RegisterClass>(ttmpName)], ["ttmp"]),
-                        (add)))> {
+                      !con((add !cast<RegisterClass>(sgprName)),
+                           !if(hasTTMP,
+                               (add !cast<RegisterClass>(ttmpName)),
+                               (add)))> {
       let isAllocatable = 0;
       let BaseClassOrder = !mul(numRegs, 32);
     }
@@ -918,7 +918,7 @@ multiclass SRegClass<int numRegs,
     if hasNull then {
       def SReg_ # suffix :
         SIRegisterClass<"AMDGPU", regTypes, 32,
-                      !dag(add, [!cast<RegisterClass>("SReg_" # suffix # "_XNULL"), !cast<Register>("SGPR_NULL" # suffix)], ["RegClass", "NullReg"])> {
+                        (add !cast<RegisterClass>("SReg_" # suffix # "_XNULL"), !cast<Register>("SGPR_NULL" # suffix))> {
         let isAllocatable = 0;
         let BaseClassOrder = !mul(numRegs, 32);
       }
