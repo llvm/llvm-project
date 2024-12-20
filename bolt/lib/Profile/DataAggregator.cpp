@@ -2097,6 +2097,8 @@ std::error_code DataAggregator::parseMMapEvents() {
            << "\" for profile matching\n";
     NameToUse = BuildIDBinaryName;
   }
+  if (BC->IsLinuxKernel)
+    NameToUse = "[kernel.kallsyms]";
 
   auto Range = GlobalMMapInfo.equal_range(NameToUse);
   for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range))) {
@@ -2145,7 +2147,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     // Update mapping size.
     const uint64_t EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
     const uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
-    if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
+    if (!BC->IsLinuxKernel && Size > BinaryMMapInfo[MMapInfo.PID].Size)
       BinaryMMapInfo[MMapInfo.PID].Size = Size;
   }
 
