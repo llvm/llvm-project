@@ -48,7 +48,9 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 Arthur Eubanks \
 aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub)
 Mircea Trofin (esp. ML inliner) \
-mtrofin@google.com (email), [mtrofin](https://github.com/mtrofin) (GitHub)
+mtrofin@google.com (email), [mtrofin](https://github.com/mtrofin) (GitHub) \
+Kazu Hirata (esp. module inliner and inline order) \
+kazu@google.com (email), [kazutakahirata](https://github.com/kazutakahirata) (GitHub)
 
 #### InstCombine, InstSimplify, ValueTracking, ConstantFold
 
