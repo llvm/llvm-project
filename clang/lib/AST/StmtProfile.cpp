@@ -2645,6 +2645,11 @@ void OpenACCClauseProfiler::VisitAsyncClause(const OpenACCAsyncClause &Clause) {
     Profiler.VisitStmt(Clause.getIntExpr());
 }
 
+void OpenACCClauseProfiler::VisitDeviceNumClause(
+    const OpenACCDeviceNumClause &Clause) {
+  Profiler.VisitStmt(Clause.getIntExpr());
+}
+
 void OpenACCClauseProfiler::VisitWorkerClause(
     const OpenACCWorkerClause &Clause) {
   if (Clause.hasIntExpr())
@@ -2747,6 +2752,19 @@ void StmtProfiler::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
   // VisitStmt covers 'children', so the exprs inside of it are covered.
   VisitStmt(S);
 
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
+  VisitStmt(S);
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct *S) {
+  VisitStmt(S);
   OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
 }

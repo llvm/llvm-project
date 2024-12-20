@@ -574,6 +574,8 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
     return false;
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
@@ -606,6 +608,8 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::HostData:
   case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
     return 0;
   case OpenACCDirectiveKind::Invalid:
     llvm_unreachable("Shouldn't be creating a scope for an invalid construct");
@@ -1081,6 +1085,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // TODO OpenACC: as we implement the 'rest' of the above, this 'if' should
       // be removed leaving just the 'setIntExprDetails'.
       if (ClauseKind == OpenACCClauseKind::NumWorkers ||
+          ClauseKind == OpenACCClauseKind::DeviceNum ||
           ClauseKind == OpenACCClauseKind::VectorLength)
         ParsedClause.setIntExprDetails(IntExpr.get());
 

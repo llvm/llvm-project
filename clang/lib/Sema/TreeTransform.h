@@ -4151,6 +4151,24 @@ public:
         SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, StrBlock);
   }
 
+  StmtResult RebuildOpenACCInitConstruct(SourceLocation BeginLoc,
+                                         SourceLocation DirLoc,
+                                         SourceLocation EndLoc,
+                                         ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Init, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult
+  RebuildOpenACCShutdownConstruct(SourceLocation BeginLoc,
+                                  SourceLocation DirLoc, SourceLocation EndLoc,
+                                  ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Shutdown, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
   StmtResult RebuildOpenACCWaitConstruct(
       SourceLocation BeginLoc, SourceLocation DirLoc, SourceLocation LParenLoc,
       Expr *DevNumExpr, SourceLocation QueuesLoc, ArrayRef<Expr *> QueueIdExprs,
@@ -11860,6 +11878,29 @@ void OpenACCClauseTransform<Derived>::VisitNumWorkersClause(
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceNumClause (
+    const OpenACCDeviceNumClause &C) {
+  Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
+  assert(IntExpr && "device_num clause constructed with invalid int expr");
+
+  ExprResult Res = Self.TransformExpr(IntExpr);
+  if (!Res.isUsable())
+    return;
+
+  Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                              C.getClauseKind(),
+                                              C.getBeginLoc(), Res.get());
+  if (!Res.isUsable())
+    return;
+
+  ParsedClause.setIntExprDetails(Res.get());
+  NewClause = OpenACCDeviceNumClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
   Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
@@ -12346,6 +12387,40 @@ StmtResult TreeTransform<Derived>::TransformOpenACCHostDataConstruct(
   return getDerived().RebuildOpenACCHostDataConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
       TransformedClauses, StrBlock);
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOpenACCInitConstruct(OpenACCInitConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCInitConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCShutdownConstruct(
+    OpenACCShutdownConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCShutdownConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
 }
 
 template <typename Derived>
