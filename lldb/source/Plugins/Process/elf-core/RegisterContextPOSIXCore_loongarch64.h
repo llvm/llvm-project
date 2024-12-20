@@ -46,9 +46,17 @@ protected:
 
   bool ReadFPR() override;
 
+  bool ReadLSX() override;
+
+  bool ReadLASX() override;
+
   bool WriteGPR() override;
 
   bool WriteFPR() override;
+
+  bool WriteLSX() override;
+
+  bool WriteLASX() override;
 
 private:
   lldb_private::DataExtractor m_gpr;
