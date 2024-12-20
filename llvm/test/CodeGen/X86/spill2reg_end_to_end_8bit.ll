@@ -67,7 +67,7 @@ define dso_local void @_Z5spillv() local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movzbl D0(%rip), %eax
+; CHECK-NEXT:    movb D0(%rip), %al
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    movzbl D1(%rip), %ecx
 ; CHECK-NEXT:    movzbl D2(%rip), %edx
@@ -83,12 +83,12 @@ define dso_local void @_Z5spillv() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movzbl D12(%rip), %r15d
 ; CHECK-NEXT:    movzbl D13(%rip), %r12d
 ; CHECK-NEXT:    movzbl D14(%rip), %r13d
-; CHECK-NEXT:    movzbl D15(%rip), %eax
+; CHECK-NEXT:    movb D15(%rip), %al
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movb D16(%rip), %al
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; CHECK-NEXT:    movzbl D16(%rip), %eax
-; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; CHECK-NEXT:    movzbl D17(%rip), %eax
-; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    movb D17(%rip), %al
+; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movzbl D18(%rip), %eax
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    #APP
@@ -109,11 +109,11 @@ define dso_local void @_Z5spillv() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movb %r15b, U12(%rip)
 ; CHECK-NEXT:    movb %r12b, U13(%rip)
 ; CHECK-NEXT:    movb %r13b, U14(%rip)
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movb %al, U15(%rip)
 ; CHECK-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
 ; CHECK-NEXT:    movb %al, U16(%rip)
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    movb %al, U17(%rip)
 ; CHECK-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
 ; CHECK-NEXT:    movb %al, U18(%rip)

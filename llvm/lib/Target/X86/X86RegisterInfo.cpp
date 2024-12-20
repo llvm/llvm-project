@@ -1266,6 +1266,8 @@ bool X86RegisterInfo::isLegalToSpill2Reg(Register Reg,
   switch (TRI->getRegSizeInBits(Reg, *MRI)) {
   case 64:
   case 32:
+  case 16:
+  case 8:
     return true;
   }
   return false;
