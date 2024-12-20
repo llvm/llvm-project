@@ -192,7 +192,11 @@ struct ForkLaunchInfo {
     }
 
     // Start tracing this child that is about to exec.
+#ifdef _AIX
+    if (ptrace64(PT_TRACE_ME, 0, 0, 0, nullptr) == -1)
+#else
     if (ptrace(PT_TRACE_ME, 0, nullptr, 0) == -1)
+#endif
       ExitWithError(error_fd, "ptrace");
   }
 
