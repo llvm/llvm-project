@@ -38,6 +38,11 @@ static cl::desc desc(StringRef description) { return {description.ltrim()}; }
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
+static cl::extrahelp ClangTidyParameterFileHelp(R"(
+Parameters files:
+  A large number of options or source files can be passed as parameter files
+  by use '@parameter-file' in the command line.
+)");
 static cl::extrahelp ClangTidyHelp(R"(
 Configuration files:
   clang-tidy attempts to read configuration for each source file from a
