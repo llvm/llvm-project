@@ -69,6 +69,10 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_sys "darwin")
   endif()
 
+  if(target_sys STREQUAL "unknown")
+    list(GET triple_comps 2 target_sys)
+  endif()
+
   # Setting OS name for GPU architectures.
   list(GET triple_comps -1 gpu_target_sys)
   if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda")
@@ -187,6 +191,8 @@ elseif(LIBC_TARGET_OS STREQUAL "windows")
   set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "gpu")
   set(LIBC_TARGET_OS_IS_GPU TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "uefi")
+  set(LIBC_TARGET_OS_IS_UEFI TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target operating system ${LIBC_TARGET_OS}")

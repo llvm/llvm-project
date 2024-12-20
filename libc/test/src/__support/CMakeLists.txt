@@ -1,6 +1,6 @@
 add_custom_target(libc-support-tests)
 
-if(NOT LIBC_TARGET_OS_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_GPU AND NOT LIBC_TARGET_OS_IS_UEFI)
   add_libc_test(
     block_test
     SUITE
@@ -251,7 +251,7 @@ add_libc_test(
 
 # FIXME: We shouldn't have regular executables created because we could be
 #        cross-compiling the tests and running through an emulator.
-if(NOT LIBC_TARGET_OS_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_GPU AND NOT LIBC_TARGET_OS_IS_UEFI)
   add_executable(
     libc_str_to_float_comparison_test
     str_to_float_comparison_test.cpp

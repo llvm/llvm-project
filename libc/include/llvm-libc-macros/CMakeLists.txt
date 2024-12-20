@@ -333,3 +333,9 @@ add_macro_header(
   HDR
     poll-macros.h
 )
+
+add_macro_header(
+  EFIAPI_macros
+  HDR
+    EFIAPI-macros.h
+)
