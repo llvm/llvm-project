@@ -108,6 +108,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 static CallInst *InsertTrap(BuilderTy &IRB) {
   if (!DebugTrapBB)
     return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
+  // FIXME: Ideally we would use the SanitizerHandler::OutOfBounds constant.
   return IRB.CreateIntrinsic(
       Intrinsic::ubsantrap, {},
       ConstantInt::get(IRB.getInt8Ty(),
@@ -255,8 +256,10 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     CallInst *TrapCall = Opts.UseTrap
                              ? InsertTrap(IRB)
                              : InsertCall(IRB, Opts.MayReturn, Opts.Name);
-      // Ideally we would use the SanitizerHandler::OutOfBounds constant
+    if (DebugTrapBB) {
+      // FIXME: Pass option form clang.
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+    }
 
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);
