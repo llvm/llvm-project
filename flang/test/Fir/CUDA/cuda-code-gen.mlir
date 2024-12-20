@@ -8,7 +8,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
     %c48 = arith.constant 48 : index
     %1 = fir.convert %c48 : (index) -> i64
     %2 = fir.convert %0 : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
-    %3 = fir.call @_FortranACUFAllocDesciptor(%1, %2, %c4_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
+    %3 = fir.call @_FortranACUFAllocDescriptor(%1, %2, %c4_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %4 = fir.convert %3 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %5 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
     %6 = fircg.ext_embox %5(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -18,13 +18,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
   }
 
   // CHECK-LABEL: llvm.func @_QQmain()
-  // CHECK-COUNT-2: llvm.call @_FortranACUFAllocDesciptor 
+  // CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor 
 
   fir.global linkonce @_QQclX3C737464696E3E00 constant : !fir.char<1,8> {
     %0 = fir.string_lit "<stdin>\00"(8) : !fir.char<1,8>
     fir.has_value %0 : !fir.char<1,8>
   }
-  func.func private @_FortranACUFAllocDesciptor(i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>> attributes {fir.runtime}
+  func.func private @_FortranACUFAllocDescriptor(i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>> attributes {fir.runtime}
 }
 
 // -----
@@ -55,7 +55,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
 
 // CHECK-LABEL: llvm.func @_QQmain()
 // CHECK: llvm.call @_FortranACUFMemAlloc
-// CHECK: llvm.call @_FortranACUFAllocDesciptor
+// CHECK: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -73,7 +73,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %c72 = arith.constant 72 : index
     %3 = fir.convert %c72 : (index) -> i64
     %4 = fir.convert %2 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
-    %5 = fir.call @_FortranACUFAllocDesciptor(%3, %4, %c14_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
+    %5 = fir.call @_FortranACUFAllocDescriptor(%3, %4, %c14_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %6 = fir.convert %5 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %7 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
     %8 = fircg.ext_embox %7(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
@@ -83,7 +83,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %c48 = arith.constant 48 : index
     %10 = fir.convert %c48 : (index) -> i64
     %11 = fir.convert %9 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
-    %12 = fir.call @_FortranACUFAllocDesciptor(%10, %11, %c20_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
+    %12 = fir.call @_FortranACUFAllocDescriptor(%10, %11, %c20_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %13 = fir.convert %12 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %14 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
     %15 = fircg.ext_embox %14(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, index) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
@@ -120,9 +120,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %0 = fir.string_lit "dummy.mlir\00"(11) : !fir.char<1,11>
     fir.has_value %0 : !fir.char<1,11>
   }
-  func.func private @_FortranACUFAllocDesciptor(i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>> attributes {fir.runtime}
+  func.func private @_FortranACUFAllocDescriptor(i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>> attributes {fir.runtime}
   func.func private @_FortranACUFAllocatableAllocate(!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32 attributes {fir.runtime}
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-4: llvm.call @_FortranACUFAllocDesciptor
+// CHECK-COUNT-4: llvm.call @_FortranACUFAllocDescriptor
