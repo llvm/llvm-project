@@ -979,6 +979,8 @@ Arm and AArch64 Support
 
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
+  For AArch64:
+
   * FUJITSU-MONAKA (fujitsu-monaka)
 
 Android Support
