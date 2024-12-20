@@ -282,6 +282,7 @@ private:
 
   FileIOResult read_unlocked_fbf(uint8_t *data, size_t len);
   FileIOResult read_unlocked_nbf(uint8_t *data, size_t len);
+  FileIOResult copy_data_from_buf(uint8_t *data, size_t len);
 
   constexpr void adjust_buf() {
     if (read_allowed() && (buf == nullptr || bufsize == 0)) {

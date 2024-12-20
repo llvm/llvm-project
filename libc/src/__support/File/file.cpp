@@ -200,7 +200,7 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
   }
 }
 
-FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
+FileIOResult File::copy_data_from_buf(uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
   cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data), len);
 
@@ -220,12 +220,22 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   for (size_t i = 0; i < available_data; ++i)
     dataref[i] = bufref[i + pos];
   read_limit = pos = 0; // Reset the pointers.
+
+  return available_data;
+}
+
+FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
+  // Read data from the buffer first.
+  size_t available_data = copy_data_from_buf(data, len);
+  if (available_data == len)
+    return available_data;
+
   // Update the dataref to reflect that fact that we have already
   // copied |available_data| into |data|.
-  dataref = cpp::span<uint8_t>(dataref.data() + available_data,
-                               dataref.size() - available_data);
-
   size_t to_fetch = len - available_data;
+  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
+                             to_fetch);
+
   if (to_fetch > bufsize) {
     auto result = platform_read(this, dataref.data(), to_fetch);
     size_t fetched_size = result.value;
@@ -245,7 +255,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   read_limit += fetched_size;
   size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
   for (size_t i = 0; i < transfer_size; ++i)
-    dataref[i] = bufref[i];
+    dataref[i] = buf[i];
   pos += transfer_size;
   if (result.has_error() || fetched_size < to_fetch) {
     if (!result.has_error())
@@ -257,15 +267,23 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
 }
 
 FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
-  auto result = platform_read(this, data, len);
+  // Check whether there is a character in the ungetc buffer.
+  size_t available_data = copy_data_from_buf(data, len);
+  if (available_data == len)
+    return available_data;
 
-  if (result.has_error() || result < len) {
+  // Directly copy the data into |data|.
+  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
+                             len - available_data);
+  auto result = platform_read(this, dataref.data(), dataref.size());
+
+  if (result.has_error() || result < dataref.size()) {
     if (!result.has_error())
       eof = true;
     else
       err = true;
   }
-  return result;
+  return {result + available_data, result.has_error()};
 }
 
 int File::ungetc_unlocked(int c) {
