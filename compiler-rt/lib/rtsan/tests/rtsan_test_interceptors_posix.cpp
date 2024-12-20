@@ -353,6 +353,31 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
+TEST_F(RtsanFileTest, OpenMemstreamDiesWhenRealtime) {
+  char *buffer;
+  size_t size;
+  auto Func = [&buffer, &size]() {
+    FILE *f = open_memstream(&buffer, &size);
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "open_memstream");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, FmemOpenDiesWhenRealtime) {
+  char buffer[1024];
+  auto Func = [&buffer]() {
+    FILE *f = fmemopen(&buffer, sizeof(buffer), "w");
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fmemopen");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 class RtsanOpenedFileTest : public RtsanFileTest {
 protected:
   void SetUp() override {
