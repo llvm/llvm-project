@@ -2321,7 +2321,7 @@ lldb::addr_t SwiftLanguageRuntime::GetAsyncContext(RegisterContext *regctx) {
   auto arch = regctx->CalculateTarget()->GetArchitecture();
   if (auto regnums = GetAsyncUnwindRegisterNumbers(arch.GetMachine())) {
     auto reg = regctx->ConvertRegisterKindToRegisterNumber(
-        RegisterKind::eRegisterKindDWARF, regnums->async_ctx_regnum);
+        regnums->GetRegisterKind(), regnums->async_ctx_regnum);
     return regctx->ReadRegisterAsUnsigned(reg, LLDB_INVALID_ADDRESS);
   }
 
