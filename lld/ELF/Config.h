@@ -378,7 +378,7 @@ struct Config {
   uint8_t zStartStopVisibility;
   bool zText;
   bool zRetpolineplt;
-  bool zWxneeded;
+  bool zWxneeded = false;
   DiscardPolicy discard;
   GnuStackKind zGnustack;
   ICFLevel icf;

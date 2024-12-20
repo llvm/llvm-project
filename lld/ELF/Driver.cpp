@@ -1503,7 +1503,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);
   ctx.arg.zStartStopVisibility = getZStartStopVisibility(ctx, args);
   ctx.arg.zText = getZFlag(args, "text", "notext", true);
-  ctx.arg.zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(ctx, args);
   ctx.arg.power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
 
@@ -1898,8 +1897,10 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
                      << ": " << e.message();
   }
 
-  if (ctx.arg.osabi == ELFOSABI_OPENBSD)
+  if (ctx.arg.osabi == ELFOSABI_OPENBSD) {
     ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
+    ctx.arg.zWxneeded = hasZOption(args, "wxneeded");
+  }
 }
 
 static bool isFormatBinary(Ctx &ctx, StringRef s) {
