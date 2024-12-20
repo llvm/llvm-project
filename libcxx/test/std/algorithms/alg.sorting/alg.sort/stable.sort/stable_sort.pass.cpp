@@ -13,6 +13,7 @@
 //     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=80000000
 
 #include <algorithm>
 #include <array>
