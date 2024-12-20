@@ -55,13 +55,11 @@ struct InputStream {
   explicit InputStream(StreamDescriptor descriptor)
       : descriptor(std::move(descriptor)) {};
 
-  bool read_full(std::optional<std::ofstream> &log, size_t length,
-                 std::string &text);
+  bool read_full(std::ofstream *log, size_t length, std::string &text);
 
-  bool read_line(std::optional<std::ofstream> &log, std::string &line);
+  bool read_line(std::ofstream *log, std::string &line);
 
-  bool read_expected(std::optional<std::ofstream> &log,
-                     llvm::StringRef expected);
+  bool read_expected(std::ofstream *log, llvm::StringRef expected);
 };
 
 struct OutputStream {

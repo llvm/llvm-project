@@ -41,6 +41,7 @@
 #include <cassert>
 #include <climits>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1101,14 +1102,7 @@ void request_disconnect(DAP &dap, const llvm::json::Object &request) {
     dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
     dap.progress_event_thread.join();
   }
-  if (dap.stdout_forward_thread.joinable()) {
-    dap.pout.Close();
-    dap.stdout_forward_thread.join();
-  }
-  if (dap.stderr_forward_thread.joinable()) {
-    dap.perr.Close();
-    dap.stderr_forward_thread.join();
-  }
+  dap.StopIO();
   dap.disconnecting = true;
 }
 
@@ -1881,10 +1875,22 @@ void request_initialize(DAP &dap, const llvm::json::Object &request) {
   // Do not source init files until in/out/err are configured.
   dap.debugger = lldb::SBDebugger::Create(false);
   dap.debugger.SetInputFile(dap.in);
-  dap.debugger.SetOutputFile(
-      lldb::SBFile(dap.pout.GetWriteFileDescriptor(), "w", false));
-  dap.debugger.SetErrorFile(
-      lldb::SBFile(dap.perr.GetWriteFileDescriptor(), "w", false));
+  auto out_fd = dap.out.GetWriteFileDescriptor();
+  if (llvm::Error err = out_fd.takeError()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  dap.debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
+  auto err_fd = dap.err.GetWriteFileDescriptor();
+  if (llvm::Error err = err_fd.takeError()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  dap.debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
 
   auto interp = dap.debugger.GetCommandInterpreter();
 
@@ -4934,6 +4940,23 @@ static void redirection_test() {
   fflush(stderr);
 }
 
+/// Duplicates a file descriptor, setting FD_CLOEXEC if applicable.
+static int DuplicateFileDescriptor(int fildes) {
+  int fd = ::dup(fildes);
+  if (fd == -1)
+    return fd;
+
+#if defined(FD_CLOEXEC)
+  int flags = ::fcntl(fd, F_GETFD);
+  if (flags == -1)
+    return -1;
+  if (::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) != 0)
+    return -1;
+#else
+  return fd;
+#endif
+}
+
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
 #if !defined(__APPLE__)
@@ -5036,8 +5059,8 @@ int main(int argc, char *argv[]) {
 
   StreamDescriptor input;
   StreamDescriptor output;
-  std::optional<std::FILE *> redirectOut = std::nullopt;
-  std::optional<std::FILE *> redirectErr = std::nullopt;
+  std::FILE *redirectOut = nullptr;
+  std::FILE *redirectErr = nullptr;
   if (portno != -1) {
     printf("Listening on port %i...\n", portno);
     SOCKET socket_fd = AcceptConnection(log, portno);
@@ -5058,7 +5081,7 @@ int main(int argc, char *argv[]) {
     assert(result);
 #endif
 
-    int stdout_fd = dup(fileno(stdout));
+    int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
     if (stdout_fd == -1) {
       llvm::errs() << "Failed to configure stdout redirect: "
                    << lldb_private::Status::FromErrno().takeError() << "\n";
@@ -5072,7 +5095,7 @@ int main(int argc, char *argv[]) {
     output = StreamDescriptor::from_file(stdout_fd, false);
   }
 
-  DAP dap = DAP(program_path.str(), log, default_repl_mode, std::move(input),
+  DAP dap = DAP(program_path.str(), &*log, default_repl_mode, std::move(input),
                 std::move(output));
 
   // stdout/stderr redirection to the IDE's console

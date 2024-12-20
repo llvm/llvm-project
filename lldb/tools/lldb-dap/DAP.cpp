@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "OutputRedirector.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -49,8 +50,8 @@ using namespace lldb_dap;
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef path, std::optional<std::ofstream> &log,
-         ReplMode repl_mode, StreamDescriptor input, StreamDescriptor output)
+DAP::DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
+         StreamDescriptor input, StreamDescriptor output)
     : debug_adaptor_path(path), log(log), input(std::move(input)),
       output(std::move(output)), broadcaster("lldb-dap"),
       exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
@@ -178,61 +179,53 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   return nullptr;
 }
 
-llvm::Error DAP::ConfigureIO(std::optional<std::FILE *> overrideOut,
-                             std::optional<std::FILE *> overrideErr) {
+llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   auto *inull = lldb_private::FileSystem::Instance().Fopen(
       lldb_private::FileSystem::DEV_NULL, "w");
   in = lldb::SBFile(inull, true);
 
-  lldb_private::Status status;
-  status = pout.CreateNew(/*child_process_inherit=*/false);
-  if (status.Fail())
-    return status.takeError();
-  status = perr.CreateNew(/*child_process_inherit=*/false);
-  if (status.Fail())
-    return status.takeError();
+  if (auto Error = out.RedirectTo([this](llvm::StringRef output) {
+        SendOutput(OutputType::Stdout, output);
+      }))
+    return Error;
 
   if (overrideOut) {
-    if (dup2(pout.GetWriteFileDescriptor(), fileno(*overrideOut)) == -1) {
+    auto fd = out.GetWriteFileDescriptor();
+    if (auto Error = fd.takeError())
+      return Error;
+
+    if (dup2(*fd, fileno(overrideOut)) == -1)
       return llvm::make_error<llvm::StringError>(
           llvm::errnoAsErrorCode(),
-          llvm::formatv("override fd=%d failed", fileno(*overrideOut))
+          llvm::formatv("override fd=%d failed", fileno(overrideOut))
               .str()
               .c_str());
-    }
   }
+
+  if (auto Error = err.RedirectTo([this](llvm::StringRef output) {
+        SendOutput(OutputType::Stderr, output);
+      }))
+    return Error;
 
   if (overrideErr) {
-    if (dup2(perr.GetWriteFileDescriptor(), fileno(*overrideErr)) == -1) {
+    auto fd = err.GetWriteFileDescriptor();
+    if (auto Error = fd.takeError())
+      return Error;
+
+    if (dup2(*fd, fileno(overrideErr)) == -1)
       return llvm::make_error<llvm::StringError>(
           llvm::errnoAsErrorCode(),
-          llvm::formatv("override fd=%d failed", fileno(*overrideErr))
+          llvm::formatv("override fd=%d failed", fileno(overrideErr))
               .str()
               .c_str());
-    }
   }
 
-  auto forwarder = [&](lldb_private::Pipe &pipe, OutputType outputType) {
-    char buffer[4098];
-    size_t bytes_read;
-    while (pipe.CanRead()) {
-      lldb_private::Status error = pipe.ReadWithTimeout(
-          &buffer, sizeof(buffer), std::chrono::seconds(1), bytes_read);
-      if (error.Success()) {
-        // zero bytes returned on EOF.
-        if (bytes_read == 0)
-          break;
-        SendOutput(outputType, llvm::StringRef(buffer, bytes_read));
-      }
-    }
-  };
-
-  stdout_forward_thread =
-      std::thread(forwarder, std::ref(pout), OutputType::Stdout);
-  stderr_forward_thread =
-      std::thread(forwarder, std::ref(perr), OutputType::Stderr);
-
   return llvm::Error::success();
+}
+
+void DAP::StopIO() {
+  out.Stop();
+  err.Stop();
 }
 
 // Send the JSON in "json_str" to the "out" stream. Correctly send the

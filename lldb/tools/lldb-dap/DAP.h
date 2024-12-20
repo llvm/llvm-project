@@ -14,6 +14,7 @@
 #include "FunctionBreakpoint.h"
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
+#include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "SourceBreakpoint.h"
 #include "lldb/API/SBBroadcaster.h"
@@ -27,7 +28,6 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
-#include "lldb/Host/Pipe.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -140,12 +140,12 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 
 struct DAP {
   llvm::StringRef debug_adaptor_path;
-  std::optional<std::ofstream> &log;
+  std::ofstream *log;
   InputStream input;
   OutputStream output;
   lldb::SBFile in;
-  lldb_private::Pipe pout;
-  lldb_private::Pipe perr;
+  OutputRedirector out;
+  OutputRedirector err;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   Variables variables;
@@ -205,8 +205,8 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(llvm::StringRef path, std::optional<std::ofstream> &log,
-      ReplMode repl_mode, StreamDescriptor input, StreamDescriptor output);
+  DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
+      StreamDescriptor input, StreamDescriptor output);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
@@ -217,8 +217,10 @@ struct DAP {
   ///
   /// Errors in this operation will be printed to the log file and the IDE's
   /// console output as well.
-  llvm::Error ConfigureIO(std::optional<std::FILE *> overrideOut,
-                          std::optional<std::FILE *> overrideErr);
+  llvm::Error ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr);
+
+  /// Stop the redirected IO threads and associated pipes.
+  void StopIO();
 
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
