@@ -259,7 +259,6 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
 
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
                        MacroBuilder &Builder) {
-  Builder.defineMacro("__UEFI__");
   Builder.defineMacro("_WIN32");
   if (Triple.isArch64Bit())
     Builder.defineMacro("_WIN64");
