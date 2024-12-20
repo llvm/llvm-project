@@ -198,13 +198,9 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
   TestDependencyScanningAction Action(Deps);
   Tool.run(&Action);
   using llvm::sys::path::convert_to_slash;
-  ASSERT_EQ(Deps.size(), 6u);
+  ASSERT_EQ(Deps.size(), 2u);
   EXPECT_EQ(convert_to_slash(Deps[0]), "/root/test.cpp");
-  EXPECT_EQ(convert_to_slash(Deps[1]), "/root/header.h");
-  EXPECT_EQ(convert_to_slash(Deps[2]), "/root/symlink.h");
-  EXPECT_EQ(convert_to_slash(Deps[3]), "/root/test.cpp");
-  EXPECT_EQ(convert_to_slash(Deps[4]), "/root/header.h");
-  EXPECT_EQ(convert_to_slash(Deps[5]), "/root/symlink.h");
+  EXPECT_EQ(convert_to_slash(Deps[1]), "/root/test.cpp");
 }
 
 TEST(DependencyScanner, ScanDepsWithFS) {

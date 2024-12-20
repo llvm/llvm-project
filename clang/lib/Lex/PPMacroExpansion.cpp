@@ -1256,7 +1256,8 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
     SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;
     if (File)
       FileType = PP.getHeaderSearchInfo().getFileDirFlavor(*File);
-    Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
+    Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType,
+                          false);
   }
 
   // Get the result value.  A result of true means the file exists.

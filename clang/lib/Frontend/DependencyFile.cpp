@@ -104,15 +104,17 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
 
   void HasInclude(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
                   OptionalFileEntryRef File,
-                  SrcMgr::CharacteristicKind FileType) override {
+                  SrcMgr::CharacteristicKind FileType,
+                  bool AddToDepCollector = true) override {
     if (!File)
       return;
     StringRef Filename =
         llvm::sys::path::remove_leading_dotslash(File->getName());
-    DepCollector.maybeAddDependency(Filename, /*FromModule=*/false,
-                                    /*IsSystem=*/isSystem(FileType),
-                                    /*IsModuleFile=*/false,
-                                    /*IsMissing=*/false);
+    if (AddToDepCollector)
+      DepCollector.maybeAddDependency(Filename, /*FromModule=*/false,
+                                      /*IsSystem=*/isSystem(FileType),
+                                      /*IsModuleFile=*/false,
+                                      /*IsMissing=*/false);
   }
 
   void EndOfMainFile() override {

@@ -33,7 +33,7 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -mode preprocess | FileCheck %s
 
 // CHECK: tu.c
-// CHECK-NEXT: header1.h
-// CHECK-NEXT: header2.h
-// CHECK-NEXT: header3.h
-// CHECK-NEXT: header4.h
+// CHECK-NOT: header1.h
+// CHECK-NOT: header2.h
+// CHECK-NOT: header3.h
+// CHECK-NOT: header4.h

@@ -15,14 +15,17 @@ PPCallbacks::~PPCallbacks() = default;
 
 void PPCallbacks::HasInclude(SourceLocation Loc, StringRef FileName,
                              bool IsAngled, OptionalFileEntryRef File,
-                             SrcMgr::CharacteristicKind FileType) {}
+                             SrcMgr::CharacteristicKind FileType,
+                             bool AddToDepCollector) {}
 
 // Out of line key method.
 PPChainedCallbacks::~PPChainedCallbacks() = default;
 
 void PPChainedCallbacks::HasInclude(SourceLocation Loc, StringRef FileName,
                                     bool IsAngled, OptionalFileEntryRef File,
-                                    SrcMgr::CharacteristicKind FileType) {
-  First->HasInclude(Loc, FileName, IsAngled, File, FileType);
-  Second->HasInclude(Loc, FileName, IsAngled, File, FileType);
+                                    SrcMgr::CharacteristicKind FileType,
+                                    bool AddToDepCollector) {
+  First->HasInclude(Loc, FileName, IsAngled, File, FileType, AddToDepCollector);
+  Second->HasInclude(Loc, FileName, IsAngled, File, FileType,
+                     AddToDepCollector);
 }
