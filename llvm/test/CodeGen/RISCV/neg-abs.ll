@@ -273,8 +273,7 @@ define i32 @expanded_neg_abs32(i32 %x) {
 ; RV32ZBB-LABEL: expanded_neg_abs32:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    neg a1, a0
-; RV32ZBB-NEXT:    max a0, a1, a0
-; RV32ZBB-NEXT:    neg a0, a0
+; RV32ZBB-NEXT:    min a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64I-LABEL: expanded_neg_abs32:
@@ -315,8 +314,7 @@ define i32 @expanded_neg_abs32_unsigned(i32 %x) {
 ; RV32ZBB-LABEL: expanded_neg_abs32_unsigned:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    neg a1, a0
-; RV32ZBB-NEXT:    maxu a0, a1, a0
-; RV32ZBB-NEXT:    neg a0, a0
+; RV32ZBB-NEXT:    minu a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64I-LABEL: expanded_neg_abs32_unsigned:
@@ -405,8 +403,7 @@ define i64 @expanded_neg_abs64(i64 %x) {
 ; RV64ZBB-LABEL: expanded_neg_abs64:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    neg a1, a0
-; RV64ZBB-NEXT:    max a0, a1, a0
-; RV64ZBB-NEXT:    neg a0, a0
+; RV64ZBB-NEXT:    min a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %n = sub i64 0, %x
   %t = call i64 @llvm.smax.i64(i64 %n, i64 %x)
@@ -476,8 +473,7 @@ define i64 @expanded_neg_abs64_unsigned(i64 %x) {
 ; RV64ZBB-LABEL: expanded_neg_abs64_unsigned:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    neg a1, a0
-; RV64ZBB-NEXT:    maxu a0, a1, a0
-; RV64ZBB-NEXT:    neg a0, a0
+; RV64ZBB-NEXT:    minu a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %n = sub i64 0, %x
   %t = call i64 @llvm.umax.i64(i64 %n, i64 %x)
