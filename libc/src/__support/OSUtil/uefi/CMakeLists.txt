@@ -6,6 +6,7 @@ add_object_library(
   HDRS
     io.h
   DEPENDS
+    libc.include.uefi
     libc.src.__support.common
     libc.src.__support.CPP.string_view
 )

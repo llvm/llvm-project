@@ -20,6 +20,7 @@
 #include "EFI_MEMORY_TYPE.h"
 #include "EFI_OPEN_PROTOCOL_INFORMATION_ENTRY.h"
 #include "EFI_PHYSICAL_ADDRESS.h"
+#include "EFI_STATUS.h"
 #include "EFI_TABLE_HEADER.h"
 #include "EFI_TIMER_DELAY.h"
 #include "EFI_TPL.h"

@@ -7,16 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/exit.h"
+#include "include/llvm-libc-macros/stdlib-macros.h"
 #include "src/__support/macros/config.h"
+#include <Uefi.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 [[noreturn]] void exit(int status) {
-  (void)status;
-  // TODO: call boot services to exit
-  while (true) {
-  }
+  efi_system_table->BootServices->Exit(efi_image_handle, status, 0, NULL);
+  while (true)
+    ;
 }
 
 } // namespace internal
