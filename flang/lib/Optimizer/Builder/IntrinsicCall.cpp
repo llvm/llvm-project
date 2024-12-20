@@ -646,6 +646,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"syncthreads", &I::genSyncThreads, {}, /*isElemental=*/false},
+    {"syncthreads_and", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
+    {"syncthreads_count", &I::genSyncThreadsCount, {}, /*isElemental=*/false},
+    {"syncthreads_or", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
     {"system",
      &I::genSystem,
      {{{"command", asBox}, {"exitstat", asBox, handleDynamicOptional}}},
@@ -655,6 +659,9 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"count", asAddr}, {"count_rate", asAddr}, {"count_max", asAddr}}},
      /*isElemental=*/false},
     {"tand", &I::genTand},
+    {"threadfence", &I::genThreadFence, {}, /*isElemental=*/false},
+    {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
+    {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -683,6 +690,20 @@ static constexpr IntrinsicHandler handlers[]{
        {"kind", asValue}}},
      /*isElemental=*/true},
 };
+
+template <std::size_t N>
+static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
+  // Replace by std::sorted when C++20 is default (will be constexpr).
+  const IntrinsicHandler *lastSeen{nullptr};
+  bool isSorted{true};
+  for (const auto &x : array) {
+    if (lastSeen)
+      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
+    lastSeen = &x;
+  }
+  return isSorted;
+}
+static_assert(isSorted(handlers) && "map must be sorted");
 
 static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
   auto compare = [](const IntrinsicHandler &handler, llvm::StringRef name) {
@@ -7423,6 +7444,52 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
                       resultType, args);
 }
 
+// SYNCTHREADS
+void IntrinsicLibrary::genSyncThreads(llvm::ArrayRef<fir::ExtendedValue> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0";
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {}, {});
+  auto funcOp = builder.createFunction(loc, funcName, funcType);
+  llvm::SmallVector<mlir::Value> noArgs;
+  builder.create<fir::CallOp>(loc, funcOp, noArgs);
+}
+
+// SYNCTHREADS_AND
+mlir::Value
+IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
+// SYNCTHREADS_COUNT
+mlir::Value
+IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
+// SYNCTHREADS_OR
+mlir::Value
+IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
+                                   llvm::ArrayRef<mlir::Value> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
 // SYSTEM
 fir::ExtendedValue
 IntrinsicLibrary::genSystem(std::optional<mlir::Type> resultType,
@@ -7551,6 +7618,38 @@ IntrinsicLibrary::genTranspose(mlir::Type resultType,
   // Read result from mutable fir.box and add it to the list of temps to be
   // finalized by the StatementContext.
   return readAndAddCleanUp(resultMutableBox, resultType, "TRANSPOSE");
+}
+
+// THREADFENCE
+void IntrinsicLibrary::genThreadFence(llvm::ArrayRef<fir::ExtendedValue> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.gl";
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {}, {});
+  auto funcOp = builder.createFunction(loc, funcName, funcType);
+  llvm::SmallVector<mlir::Value> noArgs;
+  builder.create<fir::CallOp>(loc, funcOp, noArgs);
+}
+
+// THREADFENCE_BLOCK
+void IntrinsicLibrary::genThreadFenceBlock(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.cta";
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {}, {});
+  auto funcOp = builder.createFunction(loc, funcName, funcType);
+  llvm::SmallVector<mlir::Value> noArgs;
+  builder.create<fir::CallOp>(loc, funcOp, noArgs);
+}
+
+// THREADFENCE_SYSTEM
+void IntrinsicLibrary::genThreadFenceSystem(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.sys";
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {}, {});
+  auto funcOp = builder.createFunction(loc, funcName, funcType);
+  llvm::SmallVector<mlir::Value> noArgs;
+  builder.create<fir::CallOp>(loc, funcOp, noArgs);
 }
 
 // TRIM

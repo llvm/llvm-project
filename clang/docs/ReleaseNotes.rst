@@ -272,6 +272,8 @@ C++23 Feature Support
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
   supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
+  
+- ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -442,6 +444,9 @@ New Compiler Flags
 
 - The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
   starting from C++26, this warning is enabled as an error by default.
+
+- clang-cl and clang-dxc now support ``-fdiagnostics-color=[auto|never|always]``
+  in addition to ``-f[no-]color-diagnostics``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -698,6 +703,36 @@ Improvements to Clang's diagnostics
       return ptr + index < ptr; // warning
     }
 
+- Fix -Wdangling false positives on conditional operators (#120206).
+
+- Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
+  Objective-C. Clang now emits a diagnostic message instead of hanging.
+
+- The :doc:`ThreadSafetyAnalysis` now supports passing scoped capabilities into functions:
+  an attribute on the scoped capability parameter indicates both the expected associated capabilities and,
+  like in the case of attributes on the function declaration itself, their state before and after the call.
+
+  .. code-block:: c++
+
+    #include "mutex.h"
+
+    Mutex mu1, mu2;
+    int a GUARDED_BY(mu1);
+
+    void require(MutexLocker& scope REQUIRES(mu1)) {
+      scope.Unlock();
+      a = 0; // Warning!  Requires mu1.
+      scope.Lock();
+    }
+
+    void testParameter() {
+      MutexLocker scope(&mu1), scope2(&mu2);
+      require(scope2); // Warning! Mutex managed by 'scope2' is 'mu2' instead of 'mu1'
+      require(scope); // OK.
+      scope.Unlock();
+      require(scope); // Warning!  Requires mu1.
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -848,6 +883,7 @@ Bug Fixes to C++ Support
 - Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 - Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
+- Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1196,6 +1232,13 @@ Sanitizers
 - Introduced an experimental Type Sanitizer, activated by using the
   ``-fsanitize=type`` flag. This sanitizer detects violations of C/C++ type-based
   aliasing rules.
+
+- Implemented ``-f[no-]sanitize-trap=local-bounds``, and ``-f[no-]sanitize-recover=local-bounds``.
+
+- ``-fsanitize-merge`` (default) and ``-fno-sanitize-merge`` have been added for
+  fine-grained, unified control of which UBSan checks can potentially be merged
+  by the compiler (for example,
+  ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
 Python Binding Changes
 ----------------------
