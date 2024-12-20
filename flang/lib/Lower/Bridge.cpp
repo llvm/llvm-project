@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
-#include "DirectivesCommon.h"
+
 #include "flang/Common/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -22,6 +22,7 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Cuda.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
 #include "flang/Lower/IterationSpace.h"
@@ -556,8 +557,8 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
-  fir::ExtendedValue
-  symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) {
+  fir::ExtendedValue symBoxToExtendedValue(
+      const Fortran::lower::SymbolBox &symBox) override final {
     return symBox.match(
         [](const Fortran::lower::SymbolBox::Intrinsic &box)
             -> fir::ExtendedValue { return box.getAddr(); },
@@ -3113,7 +3114,7 @@ private:
   }
 
   /// Generate FIR for a SELECT CASE statement.
-  /// The selector may have CHARACTER, INTEGER, or LOGICAL type.
+  /// The selector may have CHARACTER, INTEGER, UNSIGNED, or LOGICAL type.
   void genFIR(const Fortran::parser::SelectCaseStmt &stmt) {
     Fortran::lower::pft::Evaluation &eval = getEval();
     Fortran::lower::pft::Evaluation *parentConstruct = eval.parentConstruct;
@@ -3149,6 +3150,10 @@ private:
         selector = builder->createConvert(loc, builder->getI1Type(), selector);
     }
     mlir::Type selectType = selector.getType();
+    if (selectType.isUnsignedInteger())
+      selectType = mlir::IntegerType::get(
+          builder->getContext(), selectType.getIntOrFloatBitWidth(),
+          mlir::IntegerType::SignednessSemantics::Signless);
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Value> valueList;
     llvm::SmallVector<mlir::Block *> blockList;
@@ -3162,9 +3167,10 @@ private:
       else if (isLogicalSelector)
         valueList.push_back(builder->createConvert(
             loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
-      else
+      else {
         valueList.push_back(builder->createIntegerConstant(
             loc, selectType, *Fortran::evaluate::ToInt64(*expr)));
+      }
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {

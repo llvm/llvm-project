@@ -49,7 +49,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
 ; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK-NOT:   LV: Not vectorizing
+; CHECK:  LV: Not vectorizing: Some exit values in loop with uncountable exit not supported yet.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -163,6 +163,42 @@ loop.inc:
 
 loop.end:
   %retval = phi i64 [ %index, %loop ], [ %ld2, %loop.inc ]
+  ret i64 %retval
+}
+
+
+define i64 @one_uncountable_two_countable_same_exit_phi_of_consts() {
+; CHECK-LABEL: LV: Checking a loop in 'one_uncountable_two_countable_same_exit_phi_of_consts'
+; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 61
+; CHECK-NEXT:  LV: We can vectorize this loop!
+; CHECK-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops requiring a scalar epilogue is unsupported.
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %cmp1 = icmp ne i64 %index, 64
+  br i1 %cmp1, label %search, label %loop.end
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.end, label %loop.inc
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 128
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ 0, %loop ], [ 1, %search ], [ 0, %loop.inc ]
   ret i64 %retval
 }
 

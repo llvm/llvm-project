@@ -2555,6 +2555,21 @@ def fno_sanitize_trap : Flag<["-"], "fno-sanitize-trap">, Group<f_clang_Group>,
                         Alias<fno_sanitize_trap_EQ>, AliasArgs<["all"]>,
                         Visibility<[ClangOption, CLOption]>,
                         HelpText<"Disable trapping for all sanitizers">;
+def fsanitize_merge_handlers_EQ
+    : CommaJoined<["-"], "fsanitize-merge=">,
+      Group<f_clang_Group>,
+      HelpText<"Allow compiler to merge handlers for specified sanitizers">;
+def fno_sanitize_merge_handlers_EQ
+    : CommaJoined<["-"], "fno-sanitize-merge=">,
+      Group<f_clang_Group>,
+      HelpText<"Do not allow compiler to merge handlers for specified sanitizers">;
+def fsanitize_merge_handlers : Flag<["-"], "fsanitize-merge">, Group<f_clang_Group>,
+                     Alias<fsanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
+                     HelpText<"Allow compiler to merge handlers for all sanitizers">;
+def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_clang_Group>,
+                        Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
+                        Visibility<[ClangOption, CLOption]>,
+                        HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
 def fsanitize_undefined_trap_on_error
     : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fsanitize_trap_EQ>, AliasArgs<["undefined"]>;
@@ -6913,6 +6928,7 @@ defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing undersco
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
+defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;

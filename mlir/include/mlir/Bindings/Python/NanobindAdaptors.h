@@ -64,7 +64,7 @@ static nanobind::object mlirApiObjectToCapsule(nanobind::handle apiObject) {
 /// Casts object <-> MlirAffineMap.
 template <>
 struct type_caster<MlirAffineMap> {
-  NB_TYPE_CASTER(MlirAffineMap, const_name("MlirAffineMap"));
+  NB_TYPE_CASTER(MlirAffineMap, const_name("MlirAffineMap"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToAffineMap(capsule.ptr());
@@ -87,7 +87,7 @@ struct type_caster<MlirAffineMap> {
 /// Casts object <-> MlirAttribute.
 template <>
 struct type_caster<MlirAttribute> {
-  NB_TYPE_CASTER(MlirAttribute, const_name("MlirAttribute"));
+  NB_TYPE_CASTER(MlirAttribute, const_name("MlirAttribute"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToAttribute(capsule.ptr());
@@ -108,7 +108,7 @@ struct type_caster<MlirAttribute> {
 /// Casts object -> MlirBlock.
 template <>
 struct type_caster<MlirBlock> {
-  NB_TYPE_CASTER(MlirBlock, const_name("MlirBlock"));
+  NB_TYPE_CASTER(MlirBlock, const_name("MlirBlock"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToBlock(capsule.ptr());
@@ -119,7 +119,7 @@ struct type_caster<MlirBlock> {
 /// Casts object -> MlirContext.
 template <>
 struct type_caster<MlirContext> {
-  NB_TYPE_CASTER(MlirContext, const_name("MlirContext"));
+  NB_TYPE_CASTER(MlirContext, const_name("MlirContext"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     if (src.is_none()) {
       // Gets the current thread-bound context.
@@ -139,7 +139,7 @@ struct type_caster<MlirContext> {
 /// Casts object <-> MlirDialectRegistry.
 template <>
 struct type_caster<MlirDialectRegistry> {
-  NB_TYPE_CASTER(MlirDialectRegistry, const_name("MlirDialectRegistry"));
+  NB_TYPE_CASTER(MlirDialectRegistry, const_name("MlirDialectRegistry"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToDialectRegistry(capsule.ptr());
@@ -159,7 +159,7 @@ struct type_caster<MlirDialectRegistry> {
 /// Casts object <-> MlirLocation.
 template <>
 struct type_caster<MlirLocation> {
-  NB_TYPE_CASTER(MlirLocation, const_name("MlirLocation"));
+  NB_TYPE_CASTER(MlirLocation, const_name("MlirLocation"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     if (src.is_none()) {
       // Gets the current thread-bound context.
@@ -185,7 +185,7 @@ struct type_caster<MlirLocation> {
 /// Casts object <-> MlirModule.
 template <>
 struct type_caster<MlirModule> {
-  NB_TYPE_CASTER(MlirModule, const_name("MlirModule"));
+  NB_TYPE_CASTER(MlirModule, const_name("MlirModule"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToModule(capsule.ptr());
@@ -206,7 +206,7 @@ struct type_caster<MlirModule> {
 template <>
 struct type_caster<MlirFrozenRewritePatternSet> {
   NB_TYPE_CASTER(MlirFrozenRewritePatternSet,
-                 const_name("MlirFrozenRewritePatternSet"));
+                 const_name("MlirFrozenRewritePatternSet"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
@@ -225,7 +225,7 @@ struct type_caster<MlirFrozenRewritePatternSet> {
 /// Casts object <-> MlirOperation.
 template <>
 struct type_caster<MlirOperation> {
-  NB_TYPE_CASTER(MlirOperation, const_name("MlirOperation"));
+  NB_TYPE_CASTER(MlirOperation, const_name("MlirOperation"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToOperation(capsule.ptr());
@@ -247,7 +247,7 @@ struct type_caster<MlirOperation> {
 /// Casts object <-> MlirValue.
 template <>
 struct type_caster<MlirValue> {
-  NB_TYPE_CASTER(MlirValue, const_name("MlirValue"));
+  NB_TYPE_CASTER(MlirValue, const_name("MlirValue"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToValue(capsule.ptr());
@@ -270,7 +270,7 @@ struct type_caster<MlirValue> {
 /// Casts object -> MlirPassManager.
 template <>
 struct type_caster<MlirPassManager> {
-  NB_TYPE_CASTER(MlirPassManager, const_name("MlirPassManager"));
+  NB_TYPE_CASTER(MlirPassManager, const_name("MlirPassManager"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToPassManager(capsule.ptr());
@@ -281,7 +281,7 @@ struct type_caster<MlirPassManager> {
 /// Casts object <-> MlirTypeID.
 template <>
 struct type_caster<MlirTypeID> {
-  NB_TYPE_CASTER(MlirTypeID, const_name("MlirTypeID"));
+  NB_TYPE_CASTER(MlirTypeID, const_name("MlirTypeID"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToTypeID(capsule.ptr());
@@ -303,7 +303,7 @@ struct type_caster<MlirTypeID> {
 /// Casts object <-> MlirType.
 template <>
 struct type_caster<MlirType> {
-  NB_TYPE_CASTER(MlirType, const_name("MlirType"));
+  NB_TYPE_CASTER(MlirType, const_name("MlirType"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     nanobind::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToType(capsule.ptr());

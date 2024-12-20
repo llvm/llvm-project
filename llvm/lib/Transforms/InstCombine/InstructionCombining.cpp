@@ -3131,26 +3131,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  // The single (non-zero) index of an inbounds GEP of a base object cannot
-  // be negative.
-  auto HasOneNonZeroIndex = [&]() {
-    bool FoundNonZero = false;
-    for (Value *Idx : GEP.indices()) {
-      auto *C = dyn_cast<Constant>(Idx);
-      if (C && C->isNullValue())
-        continue;
-      if (FoundNonZero)
-        return false;
-      FoundNonZero = true;
-    }
-    return true;
-  };
-  if (GEP.isInBounds() && !GEP.hasNoUnsignedWrap() && isBaseOfObject(PtrOp) &&
-      HasOneNonZeroIndex()) {
-    GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
-    return &GEP;
-  }
-
   // nusw + nneg -> nuw
   if (GEP.hasNoUnsignedSignedWrap() && !GEP.hasNoUnsignedWrap() &&
       all_of(GEP.indices(), [&](Value *Idx) {
