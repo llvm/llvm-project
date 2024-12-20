@@ -1211,6 +1211,11 @@ def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
 def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
            (MOV64toPQIrm  addr:$src)>; // load atomic <2 x i32,float>
 
+def : Pat<(v2i64 (atomic_load_128_v2i64 addr:$src)),
+           (VMOVAPDrm addr:$src)>; // load atomic <2 x i64>
+def : Pat<(v4i32 (atomic_load_128_v4i32 addr:$src)),
+           (VMOVAPDrm addr:$src)>; // load atomic <4 x i32>
+
 // Floating point loads/stores.
 def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (MOVSSmr addr:$dst, FR32:$src)>, Requires<[UseSSE1]>;
