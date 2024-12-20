@@ -2114,8 +2114,8 @@ LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 namespace {
-LogicalResult parseObject(AsmParser &odsParser, CompilationTarget &format,
-                          StringAttr &object) {
+ParseResult parseObject(AsmParser &odsParser, CompilationTarget &format,
+                        StringAttr &object) {
   std::optional<CompilationTarget> formatResult;
   StringRef enumKeyword;
   auto loc = odsParser.getCurrentLocation();
@@ -2483,7 +2483,7 @@ KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
 //===----------------------------------------------------------------------===//
 
 TargetOptions::TargetOptions(
-    StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    StringRef toolkitPath, ArrayRef<Attribute> librariesToLink,
     StringRef cmdOptions, StringRef elfSection,
     CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
@@ -2491,14 +2491,14 @@ TargetOptions::TargetOptions(
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
-    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
+    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, librariesToLink,
                     cmdOptions, elfSection, compilationTarget,
                     getSymbolTableCallback, initialLlvmIRCallback,
                     linkedLlvmIRCallback, optimizedLlvmIRCallback,
                     isaCallback) {}
 
 TargetOptions::TargetOptions(
-    TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    TypeID typeID, StringRef toolkitPath, ArrayRef<Attribute> librariesToLink,
     StringRef cmdOptions, StringRef elfSection,
     CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
@@ -2506,7 +2506,7 @@ TargetOptions::TargetOptions(
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
-    : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
+    : toolkitPath(toolkitPath.str()), librariesToLink(librariesToLink),
       cmdOptions(cmdOptions.str()), elfSection(elfSection.str()),
       compilationTarget(compilationTarget),
       getSymbolTableCallback(getSymbolTableCallback),
@@ -2519,7 +2519,9 @@ TypeID TargetOptions::getTypeID() const { return typeID; }
 
 StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
+ArrayRef<Attribute> TargetOptions::getLibrariesToLink() const {
+  return librariesToLink;
+}
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
 

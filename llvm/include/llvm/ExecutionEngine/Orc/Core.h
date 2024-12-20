@@ -200,6 +200,11 @@ public:
 
   SymbolLookupSet() = default;
 
+  SymbolLookupSet(std::initializer_list<value_type> Elems) {
+    for (auto &E : Elems)
+      Symbols.push_back(std::move(E));
+  }
+
   explicit SymbolLookupSet(
       SymbolStringPtr Name,
       SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {

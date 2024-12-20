@@ -268,7 +268,6 @@ namespace std {
 #  include <__verbose_abort>
 #  include <initializer_list>
 #  include <limits>
-#  include <new>
 #  include <version>
 
 // standard-mandated includes

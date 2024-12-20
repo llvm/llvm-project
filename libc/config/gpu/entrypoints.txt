@@ -257,6 +257,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # time.h entrypoints
     libc.src.time.clock
     libc.src.time.clock_gettime
+    libc.src.time.timespec_get
     libc.src.time.nanosleep
 
     # wchar.h entrypoints

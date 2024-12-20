@@ -68,3 +68,10 @@ RUN apt-get update && \
 
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
+
+# Create a new user to avoid test failures related to a lack of expected
+# permissions issues in some tests. Set the user id to 1001 as that is the
+# user id that Github Actions uses to perform the checkout action.
+RUN useradd gha -u 1001 -m -s /bin/bash
+USER gha
+

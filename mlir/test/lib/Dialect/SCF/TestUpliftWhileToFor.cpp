@@ -34,7 +34,7 @@ struct TestSCFUpliftWhileToFor
     MLIRContext *ctx = op->getContext();
     RewritePatternSet patterns(ctx);
     scf::populateUpliftWhileToForPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       signalPassFailure();
   }
 };

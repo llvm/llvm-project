@@ -35,24 +35,6 @@ LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
   algorithms.
 - `Fuzzing <https://github.com/llvm/llvm-project/tree/main/libc/fuzzing>`__
 
-Platform Support
-================
-
-Most development is currently targeting Linux on x86_64, aarch64, arm, and
-RISC-V. Embedded/baremetal targets are supported on arm and RISC-V, and Windows
-and MacOS have limited support (may be broken).  The Fuchsia platform is
-slowly replacing functions from its bundled libc with functions from this
-project.
-
-LLVM-libc does not guarantee backward compatibility with operating systems that have reached their EOL.
-Compatibility patches for obsolete operating systems will not be accepted.
-
-For Linux, we support kernel versions as listed on `kernel.org <https://kernel.org/>`_, including
-``longterm`` (not past EOL date), ``stable``, and ``mainline`` versions. We actively adopt new features
-from ``linux-next``.
-
-For Windows, we plan to support products within their lifecycle. Please refer to 
-`Search Product and Services Lifecycle Information <https://learn.microsoft.com/en-us/lifecycle/products/?products=windows>`_ for more information.
 
 .. toctree::
    :hidden:
@@ -70,9 +52,17 @@ For Windows, we plan to support products within their lifecycle. Please refer to
    :maxdepth: 1
    :caption: Status
 
-   compiler_support
    headers/index.rst
    c23
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Support
+
+   arch_support
+   platform_support
+   compiler_support
 
 .. toctree::
    :hidden:
