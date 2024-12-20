@@ -3752,7 +3752,8 @@ ExprEngine::getEagerlyAssumeBifurcationTags() {
 /// If the last EagerlyAssume attempt was successful (i.e. the true and false
 /// cases were both feasible), this state trait stores the expression where it
 /// happened; otherwise this holds nullptr.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful, const Expr *)
+REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful,
+                                 const Expr *)
 
 void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
                                               ExplodedNodeSet &Src,
