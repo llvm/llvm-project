@@ -738,6 +738,8 @@
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
 // RUN:     -ftrivial-auto-var-init=zero \
+// RUN:     -fwrapv \
+// RUN:     -fno-wrapv \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 
