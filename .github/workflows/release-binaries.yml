@@ -122,7 +122,11 @@ jobs:
 
         # Detect necessary CMake flags
         target="${{ runner.os }}-${{ runner.arch }}"
-        echo "enable-pgo=false" >> $GITHUB_OUTPUT
+        if [ "${{ runner.os }}" = "Linux" ]; then
+          echo "enable-pgo=true" >> $GITHUB_OUTPUT
+        else
+          echo "enable-pgo=false" >> $GITHUB_OUTPUT
+        fi
         target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
