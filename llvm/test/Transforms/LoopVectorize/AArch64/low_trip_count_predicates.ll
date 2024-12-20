@@ -35,6 +35,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; DEBUG: LV: can fold tail by masking.
 ; DEBUG: Executing best plan with VF=vscale x 16, UF=1
 
+; TODO: Clean up unused add instruction computing the end value of the
+; induction, which gets created during execution of the main plan once
+; VPlan's scope includes both vector loops.
 define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef %val) {
 ; CHECK-VS1-LABEL: define void @low_vf_ic_is_better(
 ; CHECK-VS1-SAME: ptr nocapture noundef [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {

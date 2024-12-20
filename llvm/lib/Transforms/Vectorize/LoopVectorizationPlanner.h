@@ -232,8 +232,8 @@ public:
   }
 
   /// Convert the input value \p Current to the corresponding value of an
-  /// induction with different start and step values, using Start + Current *
-  /// Step.
+  /// induction with \p Start and \p Step values, using \p Start + \p Current *
+  /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPValue *Current, VPValue *Step,

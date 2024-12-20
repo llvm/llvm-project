@@ -65,9 +65,9 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP6]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT99:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END12:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP64:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[IND_END9:%.*]] = add i64 8, [[TMP64]]
+; CHECK-NEXT:    [[IND_END12:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP6]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
@@ -158,9 +158,9 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[CMP_N40:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC32]]
 ; CHECK-NEXT:    br i1 [[CMP_N40]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK43:%.*]]
 ; CHECK:       vec.epilog.iter.check43:
-; CHECK-NEXT:    [[IND_END58:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[TMP42:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[IND_END55:%.*]] = add i64 8, [[TMP42]]
+; CHECK-NEXT:    [[IND_END58:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[N_VEC_REMAINING49:%.*]] = sub i64 [[TMP28]], [[N_VEC32]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_VEC_REMAINING49]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label [[VEC_EPILOG_SCALAR_PH41]], label [[VEC_EPILOG_PH42]]
