@@ -313,10 +313,9 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
   }
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
-  GET_CALLER_PC_BP_SP;
-
+ALWAYS_INLINE
+static void __tysan_check_internal(void *addr, int size, tysan_type_descriptor *td, int flags,
+                                   uptr pc, uptr bp, uptr sp) {
   bool IsRead = flags & 1;
   bool IsWrite = flags & 2;
   const char *AccessStr;
@@ -360,6 +359,12 @@ __tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
+  GET_CALLER_PC_BP_SP;
+  __tysan_check_internal(addr, size, td, flags, pc, bp, sp);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
                                       bool sanitizeFunction,
                                       uint64_t accessSize, int flags) {
@@ -379,18 +384,22 @@ __tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
         // We're about to set the type. Make sure that all bytes in the value
         // are also of unknown type.
         bool isAllUnknownTD = GetNotAllUnkTD((uint64_t)shadowData, accessSize);
-        if (isAllUnknownTD)
-          __tysan_check(ptr, accessSize, td, flags);
+        if (isAllUnknownTD) {
+          GET_CALLER_PC_BP_SP;
+          __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
+        }
         SetShadowType(td, shadowData, accessSize);
       } else {
-        __tysan_check(ptr, accessSize, td, flags);
+        GET_CALLER_PC_BP_SP;
+        __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
       }
     } else {
       // We appear to have the right type. Make sure that all other bytes in
       // the type are still marked as interior bytes. If not, call the runtime.
       bool isNotAllBadTD = GetNotAllBadTD((uint64_t)shadowData, accessSize);
       if (isNotAllBadTD) {
-        __tysan_check(ptr, accessSize, td, flags);
+        GET_CALLER_PC_BP_SP;
+        __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
       }
     }
   } else if (shadowIsNull) {
