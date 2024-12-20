@@ -79,6 +79,10 @@ struct TestSCFIfUtilsPass
   StringRef getDescription() const final { return "test scf.if utils"; }
   explicit TestSCFIfUtilsPass() = default;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<func::FuncDialect>();
+  }
+
   void runOnOperation() override {
     int count = 0;
     getOperation().walk([&](scf::IfOp ifOp) {
