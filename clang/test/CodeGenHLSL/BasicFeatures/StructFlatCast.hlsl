@@ -5,6 +5,22 @@ struct S {
   float Y;
 };
 
+// struct truncation to a scalar
+// CHECK-LABEL: define void {{.*}}call0
+// CHECK: [[s:%.*]] = alloca %struct.S, align 4
+// CHECK-NEXT: [[A:%.*]] = alloca i32, align 4
+// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 4
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[s]], ptr align 4 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[s]], i32 8, i1 false)
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 1
+// CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G1]], align 4
+// CHECK-NEXT: store i32 [[L]], ptr [[A]], align 4
+export void call0() {
+  S s = {1,2};
+  int A = (int)s;
+}
+
 // struct from vector
 // CHECK-LABEL: define void {{.*}}call1
 // CHECK: [[A:%.*]] = alloca <2 x i32>, align 8
