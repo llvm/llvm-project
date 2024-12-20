@@ -3315,14 +3315,14 @@ multiclass sve_fp_z2op_p_zd_c<bit U, string asm, string int_op, SDPatternOperato
   def _DtoH : sve_fp_z2op_p_zd<{ 0b011011, U }, asm, ZPR64, ZPR16>;
   def _DtoD : sve_fp_z2op_p_zd<{ 0b111011, U }, asm, ZPR64, ZPR64>;
 
-  def : SVE_3_Op_UndefZero_Pat<nxv4f32, !cast<SDPatternOperator>(int_op # _f32i64), nxv4f32, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _DtoS)>;
-  def : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(int_op # _f64i32), nxv2f64, nxv2i1, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
-  def : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(int_op # _f16i32), nxv8f16, nxv4i1, nxv4i32, !cast<Instruction>(NAME # _StoH)>;
-  def : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(int_op # _f16i64), nxv8f16, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _DtoH)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv4f32, !cast<SDPatternOperator>(int_op # _f32i64), nxv4f32, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _DtoS)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(int_op # _f64i32), nxv2f64, nxv2i1, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(int_op # _f16i32), nxv8f16, nxv4i1, nxv4i32, !cast<Instruction>(NAME # _StoH)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(int_op # _f16i64), nxv8f16, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _DtoH)>;
 
-  def : SVE_1_Op_PassthruUndefZero_Pat<nxv8f16, ir_op, nxv8i1,nxv8i16, !cast<Instruction>(NAME # _HtoH)>;
-  def : SVE_1_Op_PassthruUndefZero_Pat<nxv4f32, ir_op, nxv4i1,nxv4i32, !cast<Instruction>(NAME # _StoS)>;
-  def : SVE_1_Op_PassthruUndefZero_Pat<nxv2f64, ir_op, nxv2i1,nxv2i64, !cast<Instruction>(NAME # _DtoD)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv8f16, ir_op, nxv8i1,nxv8i16, !cast<Instruction>(NAME # _HtoH)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv4f32, ir_op, nxv4i1,nxv4i32, !cast<Instruction>(NAME # _StoS)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv2f64, ir_op, nxv2i1,nxv2i64, !cast<Instruction>(NAME # _DtoD)>;
 }
 
 multiclass sve_fp_z2op_p_zd_d_flogb<string asm> {
