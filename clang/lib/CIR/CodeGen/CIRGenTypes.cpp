@@ -321,22 +321,7 @@ bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType Ty) {
     return true;
 
   // Incomplete types cannot be converted.
-  if (TT->isIncompleteType())
-    return false;
-
-  // If this is an enum, then it is always safe to convert.
-  const RecordType *RT = dyn_cast<RecordType>(TT);
-  if (!RT)
-    return true;
-
-  // Otherwise, we have to be careful.  If it is a struct that we're in the
-  // process of expanding, then we can't convert the function type.  That's ok
-  // though because we must be in a pointer context under the struct, so we can
-  // just convert it to a dummy type.
-  //
-  // We decide this by checking whether ConvertRecordDeclType returns us an
-  // opaque type for a struct that we know is defined.
-  return isSafeToConvert(RT->getDecl(), *this);
+  return !TT->isIncompleteType();
 }
 
 /// Code to verify a given function type is complete, i.e. the return type and
