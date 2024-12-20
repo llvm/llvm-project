@@ -127,7 +127,7 @@ public:
     std::optional<lldb::user_id_t> debugger_id;
 
     /// The origin of the progress event, wheter it is internal or external.
-    Progress::Origin origin;
+    Origin origin;
   };
 
 private:
@@ -145,7 +145,7 @@ private:
   const ProgressData m_progress_data;
 
   /// The origin of this progress event.
-  const Progress::Origin m_origin;
+  const Origin m_origin;
 
   /// How much work ([0...m_total]) that has been completed.
   std::atomic<uint64_t> m_completed = 0;
