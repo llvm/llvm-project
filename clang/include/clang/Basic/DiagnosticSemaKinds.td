@@ -3423,7 +3423,7 @@ def warn_typecheck_vector_element_sizes_not_equal : Warning<
 def err_ext_vector_component_exceeds_length : Error<
   "vector component access exceeds type %0">;
 def err_ext_vector_component_name_illegal : Error<
-  "illegal vector component name '%0'">;
+  "illegal vector component name %0">;
 def err_attribute_address_space_negative : Error<
   "address space is negative">;
 def err_attribute_address_space_too_high : Error<
@@ -5863,10 +5863,10 @@ def err_pack_expansion_without_parameter_packs : Error<
   "pack expansion does not contain any unexpanded parameter packs">;
 def err_pack_expansion_length_conflict : Error<
   "pack expansion contains parameter packs %0 and %1 that have different "
-  "lengths (%2 vs. %3)">;
+  "lengths (%2 vs. %select{|at least }3%4))">;
 def err_pack_expansion_length_conflict_multilevel : Error<
   "pack expansion contains parameter pack %0 that has a different "
-  "length (%1 vs. %2) from outer parameter packs">;
+  "length (%1 vs. %select{|at least }2%3) from outer parameter packs">;
 def err_pack_expansion_length_conflict_partial : Error<
   "pack expansion contains parameter pack %0 that has a different "
   "length (at least %1 vs. %2) from outer parameter packs">;
@@ -12324,6 +12324,8 @@ def warn_noderef_to_dereferenceable_pointer : Warning<
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
+def err_builtin_assume_aligned_invalid_arg : Error<
+  "non-pointer argument to '__builtin_assume_aligned' is not allowed">;
 
 def err_builtin_is_within_lifetime_invalid_arg : Error<
   "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "
@@ -12667,8 +12669,8 @@ def err_acc_int_expr_requires_integer
 def err_acc_int_expr_incomplete_class_type
     : Error<"OpenACC integer expression has incomplete class type %0">;
 def err_acc_int_expr_explicit_conversion
-    : Error<"OpenACC integer expression type %0 requires explicit conversion "
-            "to %1">;
+    : Error<"OpenACC integer expression requires explicit conversion "
+            "from %0 to %1">;
 def note_acc_int_expr_conversion
     : Note<"conversion to %select{integral|enumeration}0 type %1">;
 def err_acc_int_expr_multiple_conversions

@@ -1,4 +1,5 @@
-//===- PybindUtils.h - Utilities for interop with pybind11 ------*- C++ -*-===//
+//===- NanobindUtils.h - Utilities for interop with nanobind ------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,13 +10,21 @@
 #ifndef MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 #define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 
+#include <nanobind/nanobind.h>
+
 #include "mlir-c/Support.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+template <>
+struct std::iterator_traits<nanobind::detail::fast_iterator> {
+  using value_type = nanobind::handle;
+  using reference = const value_type;
+  using pointer = void;
+  using difference_type = std::ptrdiff_t;
+  using iterator_category = std::forward_iterator_tag;
+};
 
 namespace mlir {
 namespace python {
@@ -54,14 +63,14 @@ private:
 } // namespace python
 } // namespace mlir
 
-namespace pybind11 {
+namespace nanobind {
 namespace detail {
 
 template <typename DefaultingTy>
 struct MlirDefaultingCaster {
-  PYBIND11_TYPE_CASTER(DefaultingTy, _(DefaultingTy::kTypeDescription));
+  NB_TYPE_CASTER(DefaultingTy, const_name(DefaultingTy::kTypeDescription));
 
-  bool load(pybind11::handle src, bool) {
+  bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     if (src.is_none()) {
       // Note that we do want an exception to propagate from here as it will be
       // the most informative.
@@ -76,20 +85,20 @@ struct MlirDefaultingCaster {
     // code to produce nice error messages (other than "Cannot cast...").
     try {
       value = DefaultingTy{
-          pybind11::cast<typename DefaultingTy::ReferrentTy &>(src)};
+          nanobind::cast<typename DefaultingTy::ReferrentTy &>(src)};
       return true;
     } catch (std::exception &) {
       return false;
     }
   }
 
-  static handle cast(DefaultingTy src, return_value_policy policy,
-                     handle parent) {
-    return pybind11::cast(src, policy);
+  static handle from_cpp(DefaultingTy src, rv_policy policy,
+                         cleanup_list *cleanup) noexcept {
+    return nanobind::cast(src, policy);
   }
 };
 } // namespace detail
-} // namespace pybind11
+} // namespace nanobind
 
 //------------------------------------------------------------------------------
 // Conversion utilities.
@@ -100,7 +109,7 @@ namespace mlir {
 /// Accumulates into a python string from a method that accepts an
 /// MlirStringCallback.
 struct PyPrintAccumulator {
-  pybind11::list parts;
+  nanobind::list parts;
 
   void *getUserData() { return this; }
 
@@ -108,15 +117,15 @@ struct PyPrintAccumulator {
     return [](MlirStringRef part, void *userData) {
       PyPrintAccumulator *printAccum =
           static_cast<PyPrintAccumulator *>(userData);
-      pybind11::str pyPart(part.data,
+      nanobind::str pyPart(part.data,
                            part.length); // Decodes as UTF-8 by default.
       printAccum->parts.append(std::move(pyPart));
     };
   }
 
-  pybind11::str join() {
-    pybind11::str delim("", 0);
-    return delim.attr("join")(parts);
+  nanobind::str join() {
+    nanobind::str delim("", 0);
+    return nanobind::cast<nanobind::str>(delim.attr("join")(parts));
   }
 };
 
@@ -124,21 +133,21 @@ struct PyPrintAccumulator {
 /// or binary.
 class PyFileAccumulator {
 public:
-  PyFileAccumulator(const pybind11::object &fileObject, bool binary)
+  PyFileAccumulator(const nanobind::object &fileObject, bool binary)
       : pyWriteFunction(fileObject.attr("write")), binary(binary) {}
 
   void *getUserData() { return this; }
 
   MlirStringCallback getCallback() {
     return [](MlirStringRef part, void *userData) {
-      pybind11::gil_scoped_acquire acquire;
+      nanobind::gil_scoped_acquire acquire;
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
       if (accum->binary) {
         // Note: Still has to copy and not avoidable with this API.
-        pybind11::bytes pyBytes(part.data, part.length);
+        nanobind::bytes pyBytes(part.data, part.length);
         accum->pyWriteFunction(pyBytes);
       } else {
-        pybind11::str pyStr(part.data,
+        nanobind::str pyStr(part.data,
                             part.length); // Decodes as UTF-8 by default.
         accum->pyWriteFunction(pyStr);
       }
@@ -146,7 +155,7 @@ public:
   }
 
 private:
-  pybind11::object pyWriteFunction;
+  nanobind::object pyWriteFunction;
   bool binary;
 };
 
@@ -163,17 +172,17 @@ struct PySinglePartStringAccumulator {
       assert(!accum->invoked &&
              "PySinglePartStringAccumulator called back multiple times");
       accum->invoked = true;
-      accum->value = pybind11::str(part.data, part.length);
+      accum->value = nanobind::str(part.data, part.length);
     };
   }
 
-  pybind11::str takeValue() {
+  nanobind::str takeValue() {
     assert(invoked && "PySinglePartStringAccumulator not called back");
     return std::move(value);
   }
 
 private:
-  pybind11::str value;
+  nanobind::str value;
   bool invoked = false;
 };
 
@@ -208,7 +217,7 @@ private:
 template <typename Derived, typename ElementTy>
 class Sliceable {
 protected:
-  using ClassTy = pybind11::class_<Derived>;
+  using ClassTy = nanobind::class_<Derived>;
 
   /// Transforms `index` into a legal value to access the underlying sequence.
   /// Returns <0 on failure.
@@ -237,7 +246,7 @@ protected:
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
   /// of bounds.
-  pybind11::object getItem(intptr_t index) {
+  nanobind::object getItem(intptr_t index) {
     // Negative indices mean we count from the end.
     index = wrapIndex(index);
     if (index < 0) {
@@ -250,20 +259,20 @@ protected:
           ->getRawElement(linearizeIndex(index))
           .maybeDownCast();
     else
-      return pybind11::cast(
+      return nanobind::cast(
           static_cast<Derived *>(this)->getRawElement(linearizeIndex(index)));
   }
 
   /// Returns a new instance of the pseudo-container restricted to the given
   /// slice. Returns a nullptr object on failure.
-  pybind11::object getItemSlice(PyObject *slice) {
+  nanobind::object getItemSlice(PyObject *slice) {
     ssize_t start, stop, extraStep, sliceLength;
     if (PySlice_GetIndicesEx(slice, length, &start, &stop, &extraStep,
                              &sliceLength) != 0) {
       PyErr_SetString(PyExc_IndexError, "index out of range");
       return {};
     }
-    return pybind11::cast(static_cast<Derived *>(this)->slice(
+    return nanobind::cast(static_cast<Derived *>(this)->slice(
         startIndex + start * step, sliceLength, step * extraStep));
   }
 
@@ -279,7 +288,7 @@ public:
     // Negative indices mean we count from the end.
     index = wrapIndex(index);
     if (index < 0) {
-      throw pybind11::index_error("index out of range");
+      throw nanobind::index_error("index out of range");
     }
 
     return static_cast<Derived *>(this)->getRawElement(linearizeIndex(index));
@@ -304,39 +313,38 @@ public:
   }
 
   /// Binds the indexing and length methods in the Python class.
-  static void bind(pybind11::module &m) {
-    auto clazz = pybind11::class_<Derived>(m, Derived::pyClassName,
-                                           pybind11::module_local())
+  static void bind(nanobind::module_ &m) {
+    auto clazz = nanobind::class_<Derived>(m, Derived::pyClassName)
                      .def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
 
     // Manually implement the sequence protocol via the C API. We do this
-    // because it is approx 4x faster than via pybind11, largely because that
+    // because it is approx 4x faster than via nanobind, largely because that
     // formulation requires a C++ exception to be thrown to detect end of
     // sequence.
     // Since we are in a C-context, any C++ exception that happens here
     // will terminate the program. There is nothing in this implementation
     // that should throw in a non-terminal way, so we forgo further
     // exception marshalling.
-    // See: https://github.com/pybind/pybind11/issues/2842
+    // See: https://github.com/pybind/nanobind/issues/2842
     auto heap_type = reinterpret_cast<PyHeapTypeObject *>(clazz.ptr());
     assert(heap_type->ht_type.tp_flags & Py_TPFLAGS_HEAPTYPE &&
            "must be heap type");
     heap_type->as_sequence.sq_length = +[](PyObject *rawSelf) -> Py_ssize_t {
-      auto self = pybind11::cast<Derived *>(rawSelf);
+      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
       return self->length;
     };
     // sq_item is called as part of the sequence protocol for iteration,
     // list construction, etc.
     heap_type->as_sequence.sq_item =
         +[](PyObject *rawSelf, Py_ssize_t index) -> PyObject * {
-      auto self = pybind11::cast<Derived *>(rawSelf);
+      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
       return self->getItem(index).release().ptr();
     };
     // mp_subscript is used for both slices and integer lookups.
     heap_type->as_mapping.mp_subscript =
         +[](PyObject *rawSelf, PyObject *rawSubscript) -> PyObject * {
-      auto self = pybind11::cast<Derived *>(rawSelf);
+      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
       Py_ssize_t index = PyNumber_AsSsize_t(rawSubscript, PyExc_IndexError);
       if (!PyErr_Occurred()) {
         // Integer indexing.
