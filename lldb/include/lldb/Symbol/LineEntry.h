@@ -128,7 +128,10 @@ struct LineEntry {
   ///
   /// \param[in] target_sp
   ///     Shared pointer to the target this LineEntry belongs to.
-  void ApplyFileMappings(lldb::TargetSP target_sp);
+  ///
+  /// \param[in] module_sp
+  ///     Shared pointer to the module this LineEntry belongs to.
+  void ApplyFileMappings(lldb::TargetSP target_sp, lldb::ModuleSP module_sp);
 
   /// Helper to access the file.
   const FileSpec &GetFile() const { return file_sp->GetSpecOnly(); }

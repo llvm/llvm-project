@@ -1696,6 +1696,51 @@ void Platform::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
   }
 }
 
+void Platform::CallResolveSourceFileCallbackIfSet(
+    const lldb::ModuleSP &module_sp, const FileSpec &original_source_file_spec,
+    FileSpec &resolved_source_file_spec, bool *did_create_ptr) {
+  if (!m_resolve_source_file_callback) {
+    // Resolve source file callback is not set.
+    return;
+  }
+
+  Status error = m_resolve_source_file_callback(
+      module_sp, original_source_file_spec, resolved_source_file_spec);
+
+  // Resolve source file callback is set and called. Check the error.
+  Log *log = GetLog(LLDBLog::Platform);
+  if (error.Fail()) {
+    LLDB_LOGF(log, "%s: Resolve source file callback failed: %s",
+              LLVM_PRETTY_FUNCTION, error.AsCString());
+    return;
+  }
+
+  if (!resolved_source_file_spec) {
+    LLDB_LOGF(log,
+              "%s: Resolve source file callback did not set "
+              "resolved_source_file_spec",
+              LLVM_PRETTY_FUNCTION);
+    return;
+  }
+
+  // If the callback returned a source file, it should exist.
+  if (resolved_source_file_spec &&
+      !FileSystem::Instance().Exists(resolved_source_file_spec)) {
+    LLDB_LOGF(log,
+              "%s: Resolve source file callback set a non-existent file to "
+              "source_file_spec: %s",
+              LLVM_PRETTY_FUNCTION,
+              resolved_source_file_spec.GetPath().c_str());
+    // Clear source_file_spec for the error.
+    resolved_source_file_spec.Clear();
+    return;
+  }
+
+  if (did_create_ptr) {
+    *did_create_ptr = true;
+  }
+}
+
 bool Platform::GetCachedSharedModule(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
                                      bool *did_create_ptr) {
@@ -2102,6 +2147,16 @@ void Platform::SetLocateModuleCallback(LocateModuleCallback callback) {
 
 Platform::LocateModuleCallback Platform::GetLocateModuleCallback() const {
   return m_locate_module_callback;
+}
+
+void Platform::SetResolveSourceFileCallback(
+    ResolveSourceFileCallback callback) {
+  m_resolve_source_file_callback = callback;
+}
+
+Platform::ResolveSourceFileCallback
+Platform::GetResolveSourceFileCallback() const {
+  return m_resolve_source_file_callback;
 }
 
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {
