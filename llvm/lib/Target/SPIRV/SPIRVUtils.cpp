@@ -194,6 +194,19 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
   return It;
 }
 
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
+  MachineBasicBlock::iterator I = MBB->end();
+  if (I == MBB->begin())
+    return I;
+  --I;
+  while (I->isTerminator() || I->isDebugValue()) {
+    if (I == MBB->begin())
+      break;
+    --I;
+  }
+  return I;
+}
+
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {

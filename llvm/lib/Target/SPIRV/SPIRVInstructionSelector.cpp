@@ -431,6 +431,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       }
       MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
+      GR.invalidateMachineInstr(&I);
       I.removeFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
@@ -445,6 +446,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     // erase it
     LLVM_DEBUG(dbgs() << "Instruction is folded and dead.\n");
     salvageDebugInfo(*MRI, I);
+    GR.invalidateMachineInstr(&I);
     I.eraseFromParent();
     return true;
   }
@@ -464,6 +466,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     if (HasDefs) // Make all vregs 64 bits (for SPIR-V IDs).
       for (unsigned i = 0; i < I.getNumDefs(); ++i)
         MRI->setType(I.getOperand(i).getReg(), LLT::scalar(64));
+    GR.invalidateMachineInstr(&I);
     I.removeFromParent();
     return true;
   }
@@ -2253,8 +2256,10 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
   } else {
     Opcode = SPIRV::OpKill;
     // OpKill must be the last operation of any basic block.
-    MachineInstr *NextI = I.getNextNode();
-    NextI->removeFromParent();
+    if (MachineInstr *NextI = I.getNextNode()) {
+      GR.invalidateMachineInstr(NextI);
+      NextI->removeFromParent();
+    }
   }
 
   MachineBasicBlock &BB = *I.getParent();
@@ -2959,6 +2964,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::s_clamp, GL::SClamp);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
+  case Intrinsic::spv_wave_all:
+    return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
   case Intrinsic::spv_wave_is_first_lane:
@@ -2980,14 +2987,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
-  case Intrinsic::spv_handle_fromBinding: {
+  case Intrinsic::spv_resource_handlefrombinding: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
-  case Intrinsic::spv_typedBufferStore: {
+  case Intrinsic::spv_resource_store_typedbuffer: {
     selectImageWriteIntrinsic(I);
     return true;
   }
-  case Intrinsic::spv_typedBufferLoad: {
+  case Intrinsic::spv_resource_load_typedbuffer: {
     selectReadImageIntrinsic(ResVReg, ResType, I);
     return true;
   }

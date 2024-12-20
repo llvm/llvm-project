@@ -27,71 +27,35 @@
 ##   x = 10;
 ##   return x;
 ## }
-	.text
 	.file	"main.cpp"
 	.file	0 "gnu_tls_push" "main.cpp" md5 0x551db97d5e23dc6a81abdc5ade4d9d71
-	.globl	main                            # -- Begin function main
-	.p2align	4, 0x90
+	.globl	main
 	.type	main,@function
-main:                                   # @main
+main:
 .Lfunc_begin0:
-	.loc	0 2 0                           # main.cpp:2:0
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	movl	$0, -4(%rbp)
-.Ltmp0:
-	.loc	0 3 3 prologue_end              # main.cpp:3:3
-	movq	%fs:0, %rax
-	leaq	x@TPOFF(%rax), %rax
-	.loc	0 3 5 is_stmt 0                 # main.cpp:3:5
-	movl	$10, (%rax)
-	.loc	0 4 10 is_stmt 1                # main.cpp:4:10
-	movq	%fs:0, %rax
-	leaq	x@TPOFF(%rax), %rax
-	movl	(%rax), %eax
-	.loc	0 4 3 epilogue_begin is_stmt 0  # main.cpp:4:3
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
+	.loc	0 2 0
+	.loc	0 3 3 prologue_end
+	.loc	0 3 5 is_stmt 0
+	.loc	0 4 10 is_stmt 1
+	.loc	0 4 3 epilogue_begin is_stmt 0
 	retq
-.Ltmp1:
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main
-	.cfi_endproc
-                                        # -- End function
-	.section	.text._ZTW1x,"axG",@progbits,_ZTW1x,comdat
-	.hidden	_ZTW1x                          # -- Begin function _ZTW1x
+
+	.hidden	_ZTW1x
 	.weak	_ZTW1x
-	.p2align	4, 0x90
 	.type	_ZTW1x,@function
-_ZTW1x:                                 # @_ZTW1x
+_ZTW1x:
 .Lfunc_begin1:
-	.cfi_startproc
-# %bb.0:
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	movq	%fs:0, %rax
-	leaq	x@TPOFF(%rax), %rax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
 	retq
 .Lfunc_end1:
 	.size	_ZTW1x, .Lfunc_end1-_ZTW1x
-	.cfi_endproc
-                                        # -- End function
-	.type	x,@object                       # @x
+
+	.type	x,@object
 	.section	.tbss,"awT",@nobits
 	.globl	x
-	.p2align	2, 0x0
 x:
-	.long	0                               # 0x0
+	.long	0
 	.size	x, 4
 
 	.section	.debug_abbrev,"",@progbits

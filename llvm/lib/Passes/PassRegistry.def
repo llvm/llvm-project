@@ -22,7 +22,8 @@ MODULE_ANALYSIS("callgraph", CallGraphAnalysis())
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
 MODULE_ANALYSIS("ctx-prof-analysis", CtxProfAnalysis())
 MODULE_ANALYSIS("dxil-metadata", DXILMetadataAnalysis())
-MODULE_ANALYSIS("dxil-resource", DXILResourceAnalysis())
+MODULE_ANALYSIS("dxil-resource-binding", DXILResourceBindingAnalysis())
+MODULE_ANALYSIS("dxil-resource-type", DXILResourceTypeAnalysis())
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
 MODULE_ANALYSIS("ir-similarity", IRSimilarityAnalysis())
 MODULE_ANALYSIS("last-run-tracking", LastRunTrackingAnalysis())
@@ -114,7 +115,6 @@ MODULE_PASS("partial-inliner", PartialInlinerPass())
 MODULE_PASS("pgo-icall-prom", PGOIndirectCallPromotion())
 MODULE_PASS("pgo-instr-gen", PGOInstrumentationGen())
 MODULE_PASS("pgo-instr-use", PGOInstrumentationUse())
-MODULE_PASS("poison-checking", PoisonCheckingPass())
 MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass(TM))
 MODULE_PASS("print", PrintModulePass(errs()))
 MODULE_PASS("print-callgraph", CallGraphPrinterPass(errs()))
@@ -127,7 +127,8 @@ MODULE_PASS("print-must-be-executed-contexts",
 MODULE_PASS("print-profile-summary", ProfileSummaryPrinterPass(errs()))
 MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(errs()))
 MODULE_PASS("print<dxil-metadata>", DXILMetadataAnalysisPrinterPass(errs()))
-MODULE_PASS("print<dxil-resource>", DXILResourcePrinterPass(errs()))
+MODULE_PASS("print<dxil-resource-binding>",
+            DXILResourceBindingPrinterPass(errs()))
 MODULE_PASS("print<inline-advisor>", InlineAdvisorAnalysisPrinterPass(errs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(errs()))
 MODULE_PASS("print<reg-usage>", PhysicalRegisterUsageInfoPrinterPass(errs()))
@@ -155,6 +156,7 @@ MODULE_PASS("strip-nonlinetable-debuginfo", StripNonLineTableDebugInfoPass())
 MODULE_PASS("trigger-crash-module", TriggerCrashModulePass())
 MODULE_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
+MODULE_PASS("tysan-module", ModuleTypeSanitizerPass())
 MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("view-callgraph", CallGraphViewerPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
@@ -339,7 +341,6 @@ FUNCTION_PASS("assume-builder", AssumeBuilderPass())
 FUNCTION_PASS("assume-simplify", AssumeSimplifyPass())
 FUNCTION_PASS("atomic-expand", AtomicExpandPass(TM))
 FUNCTION_PASS("bdce", BDCEPass())
-FUNCTION_PASS("bounds-checking", BoundsCheckingPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
 FUNCTION_PASS("callbr-prepare", CallBrPreparePass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
@@ -480,6 +481,7 @@ FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("trigger-crash-function", TriggerCrashFunctionPass())
 FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
+FUNCTION_PASS("tysan", TypeSanitizerPass())
 FUNCTION_PASS("typepromotion", TypePromotionPass(TM))
 FUNCTION_PASS("unify-loop-exits", UnifyLoopExitsPass())
 FUNCTION_PASS("vector-combine", VectorCombinePass())
@@ -620,6 +622,12 @@ FUNCTION_PASS_WITH_PARAMS(
       return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
     },
     parseWinEHPrepareOptions, "demote-catchswitch-only")
+FUNCTION_PASS_WITH_PARAMS(
+    "bounds-checking", "BoundsCheckingPass",
+    [](BoundsCheckingPass::ReportingMode Mode) {
+      return BoundsCheckingPass(Mode);
+    },
+    parseBoundsCheckingOptions, "trap")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

@@ -316,6 +316,7 @@ def FeatureStdExtZfa
 def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
                    AssemblerPredicate<(all_of FeatureStdExtZfa),
                                       "'Zfa' (Additional Floating-Point)">;
+def NoStdExtZfa : Predicate<"!Subtarget->hasStdExtZfa()">;
 
 def FeatureStdExtZfinx
     : RISCVExtension<1, 0, "Float in Integer", [FeatureStdExtZicsr]>;
@@ -1384,7 +1385,7 @@ def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()"
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
 def TuneMIPSP8700
-    : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "Others",
+    : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",
                        "MIPS p8700 processor">;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",

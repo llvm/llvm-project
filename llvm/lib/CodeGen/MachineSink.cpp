@@ -1098,7 +1098,7 @@ bool MachineSinking::registerPressureSetExceedsLimit(
   std::vector<unsigned> BBRegisterPressure = getBBRegisterPressure(MBB);
   for (; *PS != -1; PS++)
     if (Weight + BBRegisterPressure[*PS] >=
-        TRI->getRegPressureSetLimit(*MBB.getParent(), *PS))
+        RegClassInfo.getRegPressureSetLimit(*PS))
       return true;
   return false;
 }

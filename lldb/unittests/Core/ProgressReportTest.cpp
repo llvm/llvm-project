@@ -225,14 +225,14 @@ TEST_F(ProgressReportTest, TestFiniteOverflow) {
   ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   EXPECT_TRUE(data->IsFinite());
-  EXPECT_EQ(data->GetCompleted(), 0);
-  EXPECT_EQ(data->GetTotal(), 10);
+  EXPECT_EQ(data->GetCompleted(), 0U);
+  EXPECT_EQ(data->GetTotal(), 10U);
 
   ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   EXPECT_TRUE(data->IsFinite());
-  EXPECT_EQ(data->GetCompleted(), 10);
-  EXPECT_EQ(data->GetTotal(), 10);
+  EXPECT_EQ(data->GetCompleted(), 10U);
+  EXPECT_EQ(data->GetTotal(), 10U);
 
   ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
 }
@@ -254,7 +254,7 @@ TEST_F(ProgressReportTest, TestNonDeterministicOverflow) {
   ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   EXPECT_FALSE(data->IsFinite());
-  EXPECT_EQ(data->GetCompleted(), 0);
+  EXPECT_EQ(data->GetCompleted(), 0U);
   EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
 
   ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
@@ -295,20 +295,20 @@ TEST_F(ProgressReportTest, TestMinimumReportTime) {
   ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   EXPECT_TRUE(data->IsFinite());
-  EXPECT_EQ(data->GetCompleted(), 0);
-  EXPECT_EQ(data->GetTotal(), 20);
+  EXPECT_EQ(data->GetCompleted(), 0U);
+  EXPECT_EQ(data->GetTotal(), 20U);
 
   ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   EXPECT_TRUE(data->IsFinite());
-  EXPECT_EQ(data->GetCompleted(), 11);
-  EXPECT_EQ(data->GetTotal(), 20);
+  EXPECT_EQ(data->GetCompleted(), 11U);
+  EXPECT_EQ(data->GetTotal(), 20U);
 
   ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
   EXPECT_TRUE(data->IsFinite());
-  EXPECT_EQ(data->GetCompleted(), 20);
-  EXPECT_EQ(data->GetTotal(), 20);
+  EXPECT_EQ(data->GetCompleted(), 20U);
+  EXPECT_EQ(data->GetTotal(), 20U);
 
   ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
 }

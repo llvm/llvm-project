@@ -3447,7 +3447,7 @@ static Constant *ConstantFoldFixedVectorCall(
     // Gather a column of constants.
     for (unsigned J = 0, JE = Operands.size(); J != JE; ++J) {
       // Some intrinsics use a scalar type for certain arguments.
-      if (isVectorIntrinsicWithScalarOpAtArg(IntrinsicID, J)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(IntrinsicID, J, /*TTI=*/nullptr)) {
         Lane[J] = Operands[J];
         continue;
       }

@@ -80,15 +80,13 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) present_or_copy(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'use_device' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) use_device(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) attach(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'delete' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) delete(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
@@ -172,8 +170,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) num_workers(1)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'device_num' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) device_num(1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'default_async' may not follow a 'device_type' clause in a 'loop' construct}}

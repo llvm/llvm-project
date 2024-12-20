@@ -54,8 +54,8 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[IND_END]], 1
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOAD_VAL:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[VECTOR_SCEVCHECK]] ], [ 1, [[PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ 1, [[VECTOR_SCEVCHECK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CONV:%.*]] = phi i64 [ [[CONV2:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

@@ -3,6 +3,7 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/OperatorKinds.h"
 
 namespace clang::dataflow {
@@ -34,32 +35,45 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
     // there should at least be a const overload as well.
     if (!MD->isConst() || MD->getNumParams() != 0)
       continue;
-    if (MD->getOverloadedOperator() == OO_Star &&
-        MD->getReturnType()->isReferenceType()) {
-      HasStar = true;
-      StarReturnType = MD->getReturnType()
-                           .getNonReferenceType()
-                           ->getCanonicalTypeUnqualified();
-    } else if (MD->getOverloadedOperator() == OO_Arrow &&
-               MD->getReturnType()->isPointerType()) {
-      HasArrow = true;
-      ArrowReturnType =
-          MD->getReturnType()->getPointeeType()->getCanonicalTypeUnqualified();
-    } else {
+    switch (MD->getOverloadedOperator()) {
+    case OO_Star:
+      if (MD->getReturnType()->isReferenceType()) {
+        HasStar = true;
+        StarReturnType = MD->getReturnType()
+                             .getNonReferenceType()
+                             ->getCanonicalTypeUnqualified();
+      }
+      break;
+    case OO_Arrow:
+      if (MD->getReturnType()->isPointerType()) {
+        HasArrow = true;
+        ArrowReturnType = MD->getReturnType()
+                              ->getPointeeType()
+                              ->getCanonicalTypeUnqualified();
+      }
+      break;
+    case OO_None: {
       IdentifierInfo *II = MD->getIdentifier();
       if (II == nullptr)
         continue;
-      if (II->isStr("get") && MD->getReturnType()->isPointerType()) {
-        HasGet = true;
-        GetReturnType = MD->getReturnType()
-                            ->getPointeeType()
-                            ->getCanonicalTypeUnqualified();
-      } else if (II->isStr("value") && MD->getReturnType()->isReferenceType()) {
-        HasValue = true;
-        ValueReturnType = MD->getReturnType()
-                              .getNonReferenceType()
+      if (II->isStr("get")) {
+        if (MD->getReturnType()->isPointerType()) {
+          HasGet = true;
+          GetReturnType = MD->getReturnType()
+                              ->getPointeeType()
                               ->getCanonicalTypeUnqualified();
+        }
+      } else if (II->isStr("value")) {
+        if (MD->getReturnType()->isReferenceType()) {
+          HasValue = true;
+          ValueReturnType = MD->getReturnType()
+                                .getNonReferenceType()
+                                ->getCanonicalTypeUnqualified();
+        }
       }
+    } break;
+    default:
+      break;
     }
   }
 
@@ -105,26 +119,27 @@ AST_MATCHER(clang::CXXRecordDecl, smartPointerClassWithGetOrValue) {
 
 namespace clang::dataflow {
 
-ast_matchers::internal::Matcher<Stmt> isSmartPointerLikeOperatorStar() {
+ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
       callee(cxxMethodDecl(parameterCountIs(0), returns(referenceType()),
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
 
-ast_matchers::internal::Matcher<Stmt> isSmartPointerLikeOperatorArrow() {
+ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("->"),
       callee(cxxMethodDecl(parameterCountIs(0), returns(pointerType()),
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
-ast_matchers::internal::Matcher<Stmt> isSmartPointerLikeValueMethodCall() {
+
+ast_matchers::StatementMatcher isSmartPointerLikeValueMethodCall() {
   return cxxMemberCallExpr(callee(
       cxxMethodDecl(parameterCountIs(0), returns(referenceType()),
                     hasName("value"), ofClass(smartPointerClassWithValue()))));
 }
 
-ast_matchers::internal::Matcher<Stmt> isSmartPointerLikeGetMethodCall() {
+ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall() {
   return cxxMemberCallExpr(callee(
       cxxMethodDecl(parameterCountIs(0), returns(pointerType()), hasName("get"),
                     ofClass(smartPointerClassWithGet()))));

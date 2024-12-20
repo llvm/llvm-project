@@ -34,8 +34,10 @@ void uses() {
 #pragma acc kernels dtype(MACRO)
   while(1);
 
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
   // expected-error@+1{{OpenACC 'device_type' clause is not valid on 'enter data' directive}}
 #pragma acc enter data device_type(I)
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
   // expected-error@+1{{OpenACC 'dtype' clause is not valid on 'enter data' directive}}
 #pragma acc enter data dtype(I)
 
@@ -91,16 +93,14 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels device_type(*) present_or_copy(Var)
   while(1);
-  // expected-error@+2{{OpenACC clause 'use_device' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) use_device(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'attach' may not follow a 'device_type' clause in a 'kernels' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels device_type(*) attach(Var)
   while(1);
-  // expected-error@+2{{OpenACC clause 'delete' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) delete(Var)
   while(1);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'kernels' directive}}
@@ -195,8 +195,7 @@ void uses() {
   while(1);
 #pragma acc kernels device_type(*) num_workers(1)
   while(1);
-  // expected-error@+2{{OpenACC clause 'device_num' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) device_num(1)
   while(1);
   // expected-error@+2{{OpenACC clause 'default_async' may not follow a 'device_type' clause in a 'kernels' construct}}

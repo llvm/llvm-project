@@ -5340,7 +5340,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
   if (!N->hasNUsesOfValue(1, 0))
     return false;
 
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() != ISD::CopyToReg)
     return false;
 
@@ -5351,7 +5351,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
 
   // The copy must be used by a LoongArchISD::RET, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != LoongArchISD::RET)
       return false;
     HasRet = true;

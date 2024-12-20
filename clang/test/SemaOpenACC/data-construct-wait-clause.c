@@ -14,9 +14,8 @@ void uses() {
 
 #pragma acc exit data copyout(arr[0]) wait(getS(), getI())
 
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented}}
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'host_data' directive}}
-#pragma acc host_data use_device(arr[0]) wait(getS(), getI())
+#pragma acc host_data use_device(arr) wait(getS(), getI())
   ;
 
 #pragma acc data copyin(arr[0]) wait(devnum:getS(): getI())

@@ -82,6 +82,7 @@ public:
     Others,
     SiFive7,
     VentanaVeyron,
+    MIPSP8700,
   };
   // clang-format on
 private:
@@ -322,6 +323,10 @@ public:
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
+
+  bool enableMachinePipeliner() const override;
+
+  bool useDFAforSMS() const override { return false; }
 
   bool useAA() const override;
 

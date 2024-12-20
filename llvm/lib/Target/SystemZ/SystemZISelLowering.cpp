@@ -2910,7 +2910,7 @@ static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
                                  Comparison &C) {
   if (C.CCMask == SystemZ::CCMASK_CMP_EQ ||
       C.CCMask == SystemZ::CCMASK_CMP_NE) {
-    for (SDNode *N : C.Op0->uses()) {
+    for (SDNode *N : C.Op0->users()) {
       if (N->getOpcode() == ISD::SUB &&
           ((N->getOperand(0) == C.Op0 && N->getOperand(1) == C.Op1) ||
            (N->getOperand(0) == C.Op1 && N->getOperand(1) == C.Op0))) {
@@ -2936,7 +2936,7 @@ static void adjustForFNeg(Comparison &C) {
     return;
   auto *C1 = dyn_cast<ConstantFPSDNode>(C.Op1);
   if (C1 && C1->isZero()) {
-    for (SDNode *N : C.Op0->uses()) {
+    for (SDNode *N : C.Op0->users()) {
       if (N->getOpcode() == ISD::FNEG) {
         C.Op0 = SDValue(N, 0);
         C.CCMask = SystemZ::reverseCCMask(C.CCMask);
@@ -2960,7 +2960,7 @@ static void adjustForLTGFR(Comparison &C) {
     if (C1 && C1->getZExtValue() == 32) {
       SDValue ShlOp0 = C.Op0.getOperand(0);
       // See whether X has any SIGN_EXTEND_INREG uses.
-      for (SDNode *N : ShlOp0->uses()) {
+      for (SDNode *N : ShlOp0->users()) {
         if (N->getOpcode() == ISD::SIGN_EXTEND_INREG &&
             cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32) {
           C.Op0 = SDValue(N, 0);
@@ -7105,19 +7105,18 @@ static bool isI128MovedToParts(LoadSDNode *LD, SDNode *&LoPart,
   LoPart = HiPart = nullptr;
 
   // Scan through all users.
-  for (SDNode::use_iterator UI = LD->use_begin(), UIEnd = LD->use_end();
-       UI != UIEnd; ++UI) {
+  for (SDUse &Use : LD->uses()) {
     // Skip the uses of the chain.
-    if (UI.getUse().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
     // Verify every user is a TRUNCATE to i64 of the low or high half.
-    SDNode *User = *UI;
+    SDNode *User = Use.getUser();
     bool IsLoPart = true;
     if (User->getOpcode() == ISD::SRL &&
         User->getOperand(1).getOpcode() == ISD::Constant &&
         User->getConstantOperandVal(1) == 64 && User->hasOneUse()) {
-      User = *User->use_begin();
+      User = *User->user_begin();
       IsLoPart = false;
     }
     if (User->getOpcode() != ISD::TRUNCATE || User->getValueType(0) != MVT::i64)
@@ -7141,14 +7140,13 @@ static bool isF128MovedToParts(LoadSDNode *LD, SDNode *&LoPart,
   LoPart = HiPart = nullptr;
 
   // Scan through all users.
-  for (SDNode::use_iterator UI = LD->use_begin(), UIEnd = LD->use_end();
-       UI != UIEnd; ++UI) {
+  for (SDUse &Use : LD->uses()) {
     // Skip the uses of the chain.
-    if (UI.getUse().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
     // Verify every user is an EXTRACT_SUBREG of the low or high half.
-    SDNode *User = *UI;
+    SDNode *User = Use.getUser();
     if (!User->hasOneUse() || !User->isMachineOpcode() ||
         User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return false;
@@ -7238,15 +7236,13 @@ SDValue SystemZTargetLowering::combineLOAD(
 
   SDValue Replicate;
   SmallVector<SDNode*, 8> OtherUses;
-  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
-       UI != UE; ++UI) {
-    if (UI->getOpcode() == SystemZISD::REPLICATE) {
+  for (SDUse &Use : N->uses()) {
+    if (Use.getUser()->getOpcode() == SystemZISD::REPLICATE) {
       if (Replicate)
         return SDValue(); // Should never happen
-      Replicate = SDValue(*UI, 0);
-    }
-    else if (UI.getUse().getResNo() == 0)
-      OtherUses.push_back(*UI);
+      Replicate = SDValue(Use.getUser(), 0);
+    } else if (Use.getResNo() == 0)
+      OtherUses.push_back(Use.getUser());
   }
   if (!Replicate || OtherUses.empty())
     return SDValue();
@@ -7289,7 +7285,7 @@ static bool isVectorElementSwap(ArrayRef<int> M, EVT VT) {
 }
 
 static bool isOnlyUsedByStores(SDValue StoredVal, SelectionDAG &DAG) {
-  for (auto *U : StoredVal->uses()) {
+  for (auto *U : StoredVal->users()) {
     if (StoreSDNode *ST = dyn_cast<StoreSDNode>(U)) {
       EVT CurrMemVT = ST->getMemoryVT().getScalarType();
       if (CurrMemVT.isRound() && CurrMemVT.getStoreSize() <= 16)
@@ -7668,13 +7664,13 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
       Op0.getOperand(1).getOpcode() == ISD::Constant &&
       Op0.getConstantOperandVal(1) == 0) {
     SDValue Vec = Op0.getOperand(0);
-    for (auto *U : Vec->uses()) {
+    for (auto *U : Vec->users()) {
       if (U != Op0.getNode() && U->hasOneUse() &&
           U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
           U->getConstantOperandVal(1) == 1) {
-        SDValue OtherRound = SDValue(*U->use_begin(), 0);
+        SDValue OtherRound = SDValue(*U->user_begin(), 0);
         if (OtherRound.getOpcode() == N->getOpcode() &&
             OtherRound.getOperand(OpNo) == SDValue(U, 0) &&
             OtherRound.getValueType() == MVT::f32) {
@@ -7732,13 +7728,13 @@ SDValue SystemZTargetLowering::combineFP_EXTEND(
       Op0.getOperand(1).getOpcode() == ISD::Constant &&
       Op0.getConstantOperandVal(1) == 0) {
     SDValue Vec = Op0.getOperand(0);
-    for (auto *U : Vec->uses()) {
+    for (auto *U : Vec->users()) {
       if (U != Op0.getNode() && U->hasOneUse() &&
           U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
           U->getConstantOperandVal(1) == 2) {
-        SDValue OtherExtend = SDValue(*U->use_begin(), 0);
+        SDValue OtherExtend = SDValue(*U->user_begin(), 0);
         if (OtherExtend.getOpcode() == N->getOpcode() &&
             OtherExtend.getOperand(OpNo) == SDValue(U, 0) &&
             OtherExtend.getValueType() == MVT::f64) {

@@ -654,8 +654,10 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       // There is a potential that the model could be adversarial and
       // continually evict live ranges over and over again, leading to a
       // large amount of compile time being spent in regalloc. If we hit the
-      // threshold, prevent the range from being evicted.
-      if (IntfCascade >= MaxCascade)
+      // threshold, prevent the range from being evicted. We still let the
+      // range through if it is urgent as we are required to produce an
+      // eviction if the candidate is not spillable.
+      if (IntfCascade >= MaxCascade && !Urgent)
         return false;
 
       // Only evict older cascades or live ranges without a cascade.
