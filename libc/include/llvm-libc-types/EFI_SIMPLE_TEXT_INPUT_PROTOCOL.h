@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_TYPES_EFI_SIMPLE_TEXT_INPUT_PROTOCOL_H
 #define LLVM_LIBC_TYPES_EFI_SIMPLE_TEXT_INPUT_PROTOCOL_H
 
+#include "../llvm-libc-macros/EFIAPI-macros.h"
 #include "../llvm-libc-macros/stdint-macros.h"
+#include "EFI_EVENT.h"
 #include "EFI_STATUS.h"
 #include "char16_t.h"
 

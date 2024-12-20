@@ -370,6 +370,10 @@ add_subdirectory(StringUtil)
 add_subdirectory(GPU)
 add_subdirectory(RPC)
 
+if(LIBC_TARGET_OS_IS_UEFI)
+  add_subdirectory(UEFI)
+endif()
+
 # Thread support is used by other "File". So, we add the "threads"
 # before "File".
 add_subdirectory(threads)

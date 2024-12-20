@@ -240,26 +240,28 @@ add_entrypoint_object(
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
-add_entrypoint_object(
-  remove
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.remove
-)
+if(NOT LIBC_TARGET_OS_IS_UEFI)
+  add_entrypoint_object(
+    remove
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.remove
+  )
 
-add_entrypoint_object(
-  rename
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.rename
-)
+  add_entrypoint_object(
+    rename
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.rename
+  )
 
-add_entrypoint_object(
-  fdopen
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.fdopen
-)
+  add_entrypoint_object(
+    fdopen
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.fdopen
+  )
+endif()
 
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)

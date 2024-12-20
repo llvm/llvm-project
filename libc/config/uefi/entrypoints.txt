@@ -152,6 +152,19 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_trailing_zeros_ull
     libc.src.stdbit.stdc_trailing_zeros_us
 
+    # stdio.h entrypoints
+    libc.src.stdio.getchar
+    libc.src.stdio.printf
+    libc.src.stdio.putchar
+    libc.src.stdio.puts
+    libc.src.stdio.snprintf
+    libc.src.stdio.sprintf
+    libc.src.stdio.asprintf
+    libc.src.stdio.vprintf
+    libc.src.stdio.vsnprintf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.vasprintf
+
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
