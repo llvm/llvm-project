@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
@@ -73,6 +74,8 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   // Convert Func to LLVM (always needed).
   pm.addPass(createConvertFuncToLLVMPass());
+  // Convert Arith to LLVM (always needed).
+  pm.addPass(createArithToLLVMConversionPass());
   // Convert Index to LLVM (always needed).
   pm.addPass(createConvertIndexToLLVMPass());
   // Convert remaining unrealized_casts (always needed).
