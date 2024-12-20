@@ -739,6 +739,22 @@ private:
   /// \returns the index of operand that is commuted with \p Idx1. If the method
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+
+  bool isSpill2RegProfitable(const MachineInstr *MI,
+                             const TargetRegisterInfo *TRI,
+                             const MachineRegisterInfo *MRI) const override;
+
+  MachineInstr *
+  spill2RegInsertToS2RReg(Register S2RReg, Register SrcReg, int OperationBits,
+                          MachineBasicBlock *MBB,
+                          MachineBasicBlock::iterator InsertBeforeIt,
+                          const TargetRegisterInfo *TRI) const override;
+
+  MachineInstr *
+  spill2RegExtractFromS2RReg(Register DstReg, Register S2RReg,
+                             int OperationBits, MachineBasicBlock *InsertMBB,
+                             MachineBasicBlock::iterator InsertBeforeIt,
+                             const TargetRegisterInfo *TRI) const override;
 };
 } // namespace llvm
 

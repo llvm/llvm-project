@@ -14,6 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "AllocationOrder.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -65,6 +67,13 @@ private:
     SmallVector<MIData, 1> Spills;
     SmallVector<MIData, 1> Reloads;
 
+    /// \Returns the register class of the register being spilled.
+    const TargetRegisterClass *
+    getSpilledRegClass(const TargetInstrInfo *TII,
+                       const TargetRegisterInfo *TRI) const {
+      auto Reg0 = Spills.front().MO->getReg();
+      return TRI->getCandidateRegisterClassForSpill2Reg(TRI, Reg0);
+    }
 #ifndef NDEBUG
     LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -72,6 +81,22 @@ private:
   /// Look for candidates for spill2reg. These candidates are in places with
   /// high memory unit contention. Fills in StackSlotData.
   void collectSpillsAndReloads();
+  /// \Returns if \p MI is profitable to apply spill-to-reg by checking whether
+  /// this would remove pipeline bubbles.
+  bool isProfitable(const MachineInstr *MI) const;
+  /// \Returns true if any stack-based spill/reload in \p Entry is profitable
+  /// to replace with a reg-based spill/reload.
+  bool allAccessesProfitable(const StackSlotDataEntry &Entry) const;
+  /// Look for a free physical register in \p LRU of reg class \p RegClass.
+  std::optional<MCRegister>
+  tryGetFreePhysicalReg(const TargetRegisterClass *RegClass,
+                        const LiveRegUnits &LRU);
+  /// Helper for generateCode(). It eplaces stack spills or reloads with movs
+  /// to \p LI.reg().
+  void replaceStackWithReg(StackSlotDataEntry &Entry, Register VectorReg);
+  /// Updates \p LRU with the liveness of physical registers around the spills
+  /// and reloads in \p Entry.
+  void calculateLiveRegs(StackSlotDataEntry &Entry, LiveRegUnits &LRU);
   /// Replace spills to stack with spills to registers (same for reloads).
   void generateCode();
   /// Cleanup data structures once the pass is finished.
@@ -87,6 +112,7 @@ private:
   MachineFrameInfo *MFI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  RegisterClassInfo RegClassInfo;
 };
 
 } // namespace
@@ -111,6 +137,8 @@ bool Spill2Reg::runOnMachineFunction(MachineFunction &MFn) {
   // Enable only if the target supports the appropriate vector instruction set.
   if (!TRI->targetSupportsSpill2Reg(&MF->getSubtarget()))
     return false;
+
+  RegClassInfo.runOnMachineFunction(MFn);
 
   return run();
 }
@@ -173,7 +201,65 @@ void Spill2Reg::collectSpillsAndReloads() {
   }
 }
 
-void Spill2Reg::generateCode() { llvm_unreachable("Unimplemented"); }
+bool Spill2Reg::isProfitable(const MachineInstr *MI) const {
+  // TODO: Unimplemented.
+  return true;
+}
+
+bool Spill2Reg::allAccessesProfitable(const StackSlotDataEntry &Entry) const {
+  auto IsProfitable = [this](const auto &MID) { return isProfitable(MID.MI); };
+  return llvm::all_of(Entry.Spills, IsProfitable) &&
+         llvm::all_of(Entry.Reloads, IsProfitable);
+}
+
+std::optional<MCRegister>
+Spill2Reg::tryGetFreePhysicalReg(const TargetRegisterClass *RegClass,
+                                 const LiveRegUnits &LRU) {
+  auto Order = RegClassInfo.getOrder(RegClass);
+  for (auto I = Order.begin(), E = Order.end(); I != E; ++I) {
+    MCRegister PhysVectorReg = *I;
+    if (LRU.available(PhysVectorReg))
+      return PhysVectorReg;
+  }
+  return std::nullopt;
+}
+
+// Replace stack-based spills/reloads with register-based ones.
+void Spill2Reg::replaceStackWithReg(StackSlotDataEntry &Entry,
+                                    Register VectorReg) {
+  // TODO: Unimplemented
+}
+
+void Spill2Reg::calculateLiveRegs(StackSlotDataEntry &Entry,
+                                  LiveRegUnits &LRU) {
+  // TODO: Unimplemented
+}
+
+void Spill2Reg::generateCode() {
+  for (auto &Pair : StackSlotData) {
+    StackSlotDataEntry &Entry = Pair.second;
+    // Skip if this stack slot was disabled during data collection.
+    if (Entry.Disable)
+      continue;
+
+    // We decide to spill2reg if any of the spills/reloads are in a hotspot.
+    if (!allAccessesProfitable(Entry))
+      continue;
+
+    // Calculate liveness for Entry.
+    LiveRegUnits LRU(*TRI);
+    calculateLiveRegs(Entry, LRU);
+
+    // Look for a physical register that is not in LRU.
+    std::optional<MCRegister> PhysVectorRegOpt =
+        tryGetFreePhysicalReg(Entry.getSpilledRegClass(TII, TRI), LRU);
+    if (!PhysVectorRegOpt)
+      continue;
+
+    // Replace stack accesses with register accesses.
+    replaceStackWithReg(Entry, *PhysVectorRegOpt);
+  }
+}
 
 void Spill2Reg::cleanup() { StackSlotData.clear(); }
 

@@ -181,6 +181,10 @@ public:
                           const MachineRegisterInfo *MRI) const override;
 
   bool targetSupportsSpill2Reg(const TargetSubtargetInfo *STI) const override;
+
+  const TargetRegisterClass *
+  getCandidateRegisterClassForSpill2Reg(const TargetRegisterInfo *TRI,
+                                        Register SpilledReg) const override;
 };
 
 } // End llvm namespace

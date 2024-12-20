@@ -2298,6 +2298,34 @@ public:
     llvm_unreachable("unknown number of operands necessary");
   }
 
+  /// \Returns true if it is profitable to perform spill2reg on \p MI.
+  virtual bool isSpill2RegProfitable(const MachineInstr *MI,
+                                     const TargetRegisterInfo *TRI,
+                                     const MachineRegisterInfo *MRI) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::isSpill2RegProfitable!");
+  }
+
+  /// Inserts \p SrcReg into the destination Spill2Reg register \p DstReg.
+  virtual MachineInstr *
+  spill2RegInsertToS2RReg(Register S2RReg, Register SrcReg, int OperationBits,
+                          MachineBasicBlock *MBB,
+                          MachineBasicBlock::iterator InsertBeforeIt,
+                          const TargetRegisterInfo *TRI) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::spill2RegInsertToS2RReg!");
+  }
+
+  /// Extracts from \p S2RReg into \p DstReg.
+  virtual MachineInstr *
+  spill2RegExtractFromS2RReg(Register DstReg, Register S2RReg,
+                             int OperationBits, MachineBasicBlock *InsertMBB,
+                             MachineBasicBlock::iterator InsertBeforeIt,
+                             const TargetRegisterInfo *TRI) const {
+    llvm_unreachable("Target didn't implement "
+                     "TargetInstrInfo::spill2RegExtractFromS2RReg!");
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

@@ -1276,3 +1276,11 @@ bool X86RegisterInfo::targetSupportsSpill2Reg(
   const X86Subtarget *X86STI = static_cast<const X86Subtarget *>(STI);
   return X86STI->hasSSE41();
 }
+
+const TargetRegisterClass *
+X86RegisterInfo::getCandidateRegisterClassForSpill2Reg(
+    const TargetRegisterInfo *TRI, Register SpilledReg) const {
+  const TargetRegisterClass *VecRegClass =
+      TRI->getRegClass(X86::VR128RegClassID);
+  return VecRegClass;
+}
