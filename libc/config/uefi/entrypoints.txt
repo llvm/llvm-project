@@ -1,4 +1,6 @@
 set(TARGET_LIBC_ENTRYPOINTS
+    libc.src.compiler.__stack_chk_fail
+
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
@@ -152,6 +154,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
+    libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.aligned_alloc
     libc.src.stdlib.atof
