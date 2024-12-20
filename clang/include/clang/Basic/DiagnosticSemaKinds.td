@@ -55,65 +55,8 @@ def warn_pointer_abs : Warning<
 
 def err_invalid_lambda_capture_initializer_type : Error<
     "invalid initializer type for lambda capture">;
-
 def err_expected_identifier_for_lambda_capture : Error<
     "expected identifier for lambda capture">;
-  
-def err_lambda_capture_unsupported_type : Error<
-    "unsupported type %0 for lambda capture initializer">;
-
-def err_lambda_capture_uninitialized : Error<
-    "lambda capture '%0' must be initialized">;
-
-def err_lambda_capture_invalid_expression : Error<
-    "invalid expression for initializing lambda capture '%0'">;
-
-def note_lambda_capture_here : Note<
-    "lambda capture '%0' declared here">;
-
-def err_lambda_capture_multiple_initializers : Error<
-    "lambda capture '%0' has multiple initializers">;
-
-def note_possible_fix_lambda_initializer : Note<
-    "consider initializing lambda capture '%0' with a valid expression">;
-
-def err_lambda_capture_invalid_syntax : Error<
-    "syntax error in lambda capture list">;
-
-def warn_lambda_capture_unused : Warning<
-    "lambda capture '%0' is unused">, InGroup<UnusedLambdaCapture>, DefaultIgnore;
-  
-def err_pack_expansion_mismatch : Error<
-  "parameter pack expansion does not match expected type for lambda capture">;
-
-def err_unsupported_lambda_capture_no_init : Error<
-  "lambda capture without initializer is not supported">;
-
-def note_lambda_capture_copy_init : Note<
-  "lambda capture uses copy initialization">;
-
-def note_lambda_capture_direct_init : Note<
-  "lambda capture uses direct initialization">;
-
-def note_lambda_capture_list_init : Note<
-  "lambda capture uses list initialization">;
-
-// New Additions for Improved Diagnostics
-
-def err_lambda_capture_unsupported_template : Error<
-    "lambda capture cannot capture template types directly">;
-
-def err_lambda_capture_missing_type_specifier : Error<
-    "missing type specifier in lambda capture initializer">;
-
-def err_lambda_capture_must_be_constexpr : Error<
-    "lambda capture initializer must be a constexpr expression">;
-
-def note_lambda_capture_default_value : Note<
-    "default value used for lambda capture '%0'">;
-
-def warn_lambda_capture_may_be_unused : Warning<
-    "lambda capture '%0' might be unused">, InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
 def warn_max_unsigned_zero : Warning<
   "taking the max of "
