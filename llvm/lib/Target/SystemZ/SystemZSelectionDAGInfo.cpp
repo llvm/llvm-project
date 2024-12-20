@@ -23,21 +23,8 @@ bool SystemZSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
 }
 
 bool SystemZSelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
-  switch (static_cast<SystemZISD::NodeType>(Opcode)) {
-  default:
-    return false;
-  case SystemZISD::STRICT_FCMP:
-  case SystemZISD::STRICT_FCMPS:
-  case SystemZISD::STRICT_VFCMPE:
-  case SystemZISD::STRICT_VFCMPH:
-  case SystemZISD::STRICT_VFCMPHE:
-  case SystemZISD::STRICT_VFCMPES:
-  case SystemZISD::STRICT_VFCMPHS:
-  case SystemZISD::STRICT_VFCMPHES:
-  case SystemZISD::STRICT_VEXTEND:
-  case SystemZISD::STRICT_VROUND:
-    return true;
-  }
+  return Opcode >= SystemZISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= SystemZISD::LAST_STRICTFP_OPCODE;
 }
 
 static unsigned getMemMemLenAdj(unsigned Op) {

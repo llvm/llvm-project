@@ -307,7 +307,8 @@ enum NodeType : unsigned {
 
   // Strict variants of scalar floating-point comparisons.
   // Quiet and signaling versions.
-  STRICT_FCMP,
+  FIRST_STRICTFP_OPCODE,
+  STRICT_FCMP = FIRST_STRICTFP_OPCODE,
   STRICT_FCMPS,
 
   // Strict variants of vector floating-point comparisons.
@@ -322,6 +323,7 @@ enum NodeType : unsigned {
   // Strict variants of VEXTEND and VROUND.
   STRICT_VEXTEND,
   STRICT_VROUND,
+  LAST_STRICTFP_OPCODE = STRICT_VROUND,
 
   // Wrappers around the inner loop of an 8- or 16-bit ATOMIC_SWAP or
   // ATOMIC_LOAD_<op>.

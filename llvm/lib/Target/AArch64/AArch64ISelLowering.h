@@ -477,8 +477,10 @@ enum NodeType : unsigned {
   MSRR,
 
   // Strict (exception-raising) floating point comparison
-  STRICT_FCMP,
+  FIRST_STRICTFP_OPCODE,
+  STRICT_FCMP = FIRST_STRICTFP_OPCODE,
   STRICT_FCMPE,
+  LAST_STRICTFP_OPCODE = STRICT_FCMPE,
 
   // NEON Load/Store with post-increment base updates
   FIRST_MEMORY_OPCODE,

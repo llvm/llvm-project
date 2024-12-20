@@ -484,7 +484,8 @@ namespace llvm {
     XXMFACC,
 
     // Constrained conversion from floating point to int
-    STRICT_FCTIDZ,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCTIDZ = FIRST_STRICTFP_OPCODE,
     STRICT_FCTIWZ,
     STRICT_FCTIDUZ,
     STRICT_FCTIWUZ,
@@ -497,6 +498,7 @@ namespace llvm {
 
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
+    LAST_STRICTFP_OPCODE = STRICT_FADDRTZ,
 
     /// SETBC - The ISA 3.1 (P10) SETBC instruction.
     SETBC,

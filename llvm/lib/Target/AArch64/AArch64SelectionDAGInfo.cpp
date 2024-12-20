@@ -29,13 +29,8 @@ bool AArch64SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
 }
 
 bool AArch64SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
-  switch (static_cast<AArch64ISD::NodeType>(Opcode)) {
-  default:
-    return false;
-  case AArch64ISD::STRICT_FCMP:
-  case AArch64ISD::STRICT_FCMPE:
-    return true;
-  }
+  return Opcode >= AArch64ISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= AArch64ISD::LAST_STRICTFP_OPCODE;
 }
 
 SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
