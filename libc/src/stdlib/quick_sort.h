@@ -24,8 +24,9 @@ namespace internal {
 // https://github.com/Voultapher/sort-research-rs/blob/main/writeup/lomcyc_partition/text.md.
 // Simplified to avoid having to stack allocate.
 template <typename A, typename F>
-size_t partition_lomuto_branchless(const A &array, const void *pivot,
-                                   const F &is_less) {
+LIBC_INLINE size_t partition_lomuto_branchless(const A &array,
+                                               const void *pivot,
+                                               const F &is_less) {
   const size_t array_len = array.len();
 
   size_t left = 0;
@@ -49,8 +50,8 @@ size_t partition_lomuto_branchless(const A &array, const void *pivot,
 // cyclic permutation is to have more efficient swapping, but we don't
 // know the element size so this isn't applicable here either.
 template <typename A, typename F>
-size_t partition_hoare_branchy(const A &array, const void *pivot,
-                               const F &is_less) {
+LIBC_INLINE size_t partition_hoare_branchy(const A &array, const void *pivot,
+                                           const F &is_less) {
   const size_t array_len = array.len();
 
   size_t left = 0;
@@ -78,7 +79,8 @@ size_t partition_hoare_branchy(const A &array, const void *pivot,
 }
 
 template <typename A, typename F>
-size_t partition(const A &array, size_t pivot_index, const F &is_less) {
+LIBC_INLINE size_t partition(const A &array, size_t pivot_index,
+                             const F &is_less) {
   // Place the pivot at the beginning of the array.
   if (pivot_index != 0) {
     array.swap(0, pivot_index);
@@ -104,8 +106,8 @@ size_t partition(const A &array, size_t pivot_index, const F &is_less) {
 }
 
 template <typename A, typename F>
-void quick_sort_impl(A &array, const void *ancestor_pivot, size_t limit,
-                     const F &is_less) {
+LIBC_INLINE void quick_sort_impl(A &array, const void *ancestor_pivot,
+                                 size_t limit, const F &is_less) {
   while (true) {
     const size_t array_len = array.len();
     if (array_len <= 1)
@@ -167,7 +169,8 @@ void quick_sort_impl(A &array, const void *ancestor_pivot, size_t limit,
 
 constexpr size_t ilog2(size_t n) { return cpp::bit_width(n) - 1; }
 
-template <typename A, typename F> void quick_sort(A &array, const F &is_less) {
+template <typename A, typename F>
+LIBC_INLINE void quick_sort(A &array, const F &is_less) {
   const void *ancestor_pivot = nullptr;
   // Limit the number of imbalanced partitions to `2 * floor(log2(len))`.
   // The binary OR by one is used to eliminate the zero-check in the logarithm.

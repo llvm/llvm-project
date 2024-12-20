@@ -10,8 +10,6 @@
 #include "src/stdlib/qsort.h"
 #include "test/UnitTest/Test.h"
 
-#include <iostream>
-
 class SortingTest : public LIBC_NAMESPACE::testing::Test {
 
   using SortingRoutine = void (*)(void *array, size_t array_len,

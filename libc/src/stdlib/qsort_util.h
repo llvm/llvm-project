@@ -32,8 +32,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <bool USE_QUICKSORT, typename F>
-void unstable_sort_impl(void *array, size_t array_len, size_t elem_size,
-                        const F &is_less) {
+LIBC_INLINE void unstable_sort_impl(void *array, size_t array_len,
+                                    size_t elem_size, const F &is_less) {
   if (array == nullptr || array_len == 0 || elem_size == 0)
     return;
 
@@ -68,13 +68,10 @@ void unstable_sort_impl(void *array, size_t array_len, size_t elem_size,
 }
 
 template <typename F>
-void unstable_sort(void *array, size_t array_len, size_t elem_size,
-                   const F &is_less) {
-#if LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT
-  unstable_sort_impl<true, F>(array, array_len, elem_size, is_less);
-#elif LIBC_QSORT_IMPL == LIBC_QSORT_HEAP_SORT
-  unstable_sort_impl<false, F>(array, array_len, elem_size, is_less);
-#endif
+LIBC_INLINE void unstable_sort(void *array, size_t array_len, size_t elem_size,
+                               const F &is_less) {
+#define USE_QUICK_SORT ((LIBC_QSORT_IMPL) == (LIBC_QSORT_QUICK_SORT))
+  unstable_sort_impl<USE_QUICK_SORT, F>(array, array_len, elem_size, is_less);
 }
 
 } // namespace internal

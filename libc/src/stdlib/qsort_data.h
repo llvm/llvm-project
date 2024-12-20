@@ -27,7 +27,7 @@ class ArrayGenericSize {
   }
 
 public:
-  ArrayGenericSize(void *a, size_t s, size_t e)
+  LIBC_INLINE ArrayGenericSize(void *a, size_t s, size_t e)
       : array_base(reinterpret_cast<cpp::byte *>(a)), array_len(s),
         elem_size(e) {}
 
@@ -35,7 +35,7 @@ public:
 
   LIBC_INLINE void *get(size_t i) const { return get_internal(i); }
 
-  void swap(size_t i, size_t j) const {
+  LIBC_INLINE void swap(size_t i, size_t j) const {
     // It's possible to use 8 byte blocks with `uint64_t`, but that
     // generates more machine code as the remainder loop gets
     // unrolled, plus 4 byte operations are more likely to be
@@ -97,7 +97,7 @@ template <size_t ELEM_SIZE> class ArrayFixedSize {
   }
 
 public:
-  ArrayFixedSize(void *a, size_t s)
+  LIBC_INLINE ArrayFixedSize(void *a, size_t s)
       : array_base(reinterpret_cast<cpp::byte *>(a)), array_len(s) {}
 
   // Beware this function is used a heuristic for cheap to swap types, so

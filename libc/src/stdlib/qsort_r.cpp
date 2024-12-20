@@ -20,10 +20,11 @@ LLVM_LIBC_FUNCTION(void, qsort_r,
                     int (*compare)(const void *, const void *, void *),
                     void *arg)) {
 
-  internal::unstable_sort(array, array_size, elem_size,
-                          [compare, arg](const void *a, const void *b) -> bool {
-                            return compare(a, b, arg) < 0;
-                          });
+  const auto is_less = [compare, arg](const void *a, const void *b) -> bool {
+    return compare(a, b, arg) < 0;
+  };
+
+  internal::unstable_sort(array, array_size, elem_size, is_less);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -19,7 +19,7 @@ namespace internal {
 // Follow the implementation in https://en.wikipedia.org/wiki/Heapsort.
 
 template <typename A, typename F>
-void heap_sort(const A &array, const F &is_less) {
+LIBC_INLINE void heap_sort(const A &array, const F &is_less) {
   size_t end = array.len();
   size_t start = end / 2;
 
