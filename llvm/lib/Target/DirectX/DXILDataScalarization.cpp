@@ -10,7 +10,6 @@
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -33,7 +32,6 @@ public:
   bool runOnModule(Module &M) override;
   DXILDataScalarizationLegacy() : ModulePass(ID) {}
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
   static char ID; // Pass identification.
 };
 
@@ -276,16 +274,11 @@ PreservedAnalyses DXILDataScalarization::run(Module &M,
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceAnalysis>();
   return PA;
 }
 
 bool DXILDataScalarizationLegacy::runOnModule(Module &M) {
   return findAndReplaceVectors(M);
-}
-
-void DXILDataScalarizationLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILDataScalarizationLegacy::ID = 0;

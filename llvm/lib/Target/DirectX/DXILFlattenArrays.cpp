@@ -14,7 +14,6 @@
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -38,7 +37,6 @@ public:
   bool runOnModule(Module &M) override;
   DXILFlattenArraysLegacy() : ModulePass(ID) {}
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
   static char ID; // Pass identification.
 };
 
@@ -419,16 +417,11 @@ PreservedAnalyses DXILFlattenArrays::run(Module &M, ModuleAnalysisManager &) {
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceAnalysis>();
   return PA;
 }
 
 bool DXILFlattenArraysLegacy::runOnModule(Module &M) {
   return flattenArrays(M);
-}
-
-void DXILFlattenArraysLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILFlattenArraysLegacy::ID = 0;

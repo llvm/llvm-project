@@ -646,7 +646,7 @@ defm V_MAD_I32_I16 : VOP3Inst <"v_mad_i32_i16", VOP3_Profile<VOP_I32_I16_I16_I32
 defm V_CVT_PKNORM_I16_F16 : VOP3Inst <"v_cvt_pknorm_i16_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
 defm V_CVT_PKNORM_U16_F16 : VOP3Inst <"v_cvt_pknorm_u16_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
 
-defm V_PACK_B32_F16 : VOP3Inst <"v_pack_b32_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
+defm V_PACK_B32_F16 : VOP3Inst_t16 <"v_pack_b32_f16", VOP_B32_F16_F16>;
 
 let isReMaterializable = 1 in {
 defm V_SUB_I32 : VOP3Inst <"v_sub_i32", VOP3_Profile<VOP_I32_I32_I32_ARITH>>;
@@ -1754,7 +1754,7 @@ defm V_MIN_U16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x30
 defm V_MIN_I16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x30c, "v_min_i16">;
 defm V_ADD_NC_I16          : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x30d, "v_add_nc_i16", "V_ADD_I16">;
 defm V_SUB_NC_I16          : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x30e, "v_sub_nc_i16", "V_SUB_I16">;
-defm V_PACK_B32_F16        : VOP3_Realtriple_gfx11_gfx12<0x311>;
+defm V_PACK_B32_F16        : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x311, "v_pack_b32_f16">;
 defm V_CVT_PK_NORM_I16_F16 : VOP3_Realtriple_with_name_gfx11_gfx12<0x312, "V_CVT_PKNORM_I16_F16" , "v_cvt_pk_norm_i16_f16" >;
 defm V_CVT_PK_NORM_U16_F16 : VOP3_Realtriple_with_name_gfx11_gfx12<0x313, "V_CVT_PKNORM_U16_F16" , "v_cvt_pk_norm_u16_f16" >;
 defm V_SUB_NC_I32          : VOP3_Realtriple_with_name_gfx11_gfx12<0x325, "V_SUB_I32", "v_sub_nc_i32">;
