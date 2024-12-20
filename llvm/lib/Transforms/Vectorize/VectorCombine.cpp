@@ -2259,7 +2259,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         all_of(drop_begin(Item), [Item](InstLane &IL) {
           Value *FrontV = Item.front().first->get();
           Use *U = IL.first;
-          return !U || U->get() == FrontV;
+          return !U || (isa<Constant>(U->get()) &&
+                        cast<Constant>(U->get())->getSplatValue() ==
+                            cast<Constant>(FrontV)->getSplatValue());
         })) {
       SplatLeafs.insert(FrontU);
       continue;
@@ -2289,7 +2291,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
           return false;
       if (auto *CI = dyn_cast<CastInst>(V))
-        if (CI->getSrcTy() != cast<CastInst>(FrontV)->getSrcTy())
+        if (CI->getSrcTy()->getScalarType() !=
+            cast<CastInst>(FrontV)->getSrcTy()->getScalarType())
           return false;
       if (auto *SI = dyn_cast<SelectInst>(V))
         if (!isa<VectorType>(SI->getOperand(0)->getType()) ||
@@ -2314,7 +2317,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
         continue;
-      } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontU)) {
+      } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst, FPToSIInst,
+                     FPToUIInst, SIToFPInst, UIToFPInst>(FrontU)) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         continue;
       } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontU)) {
