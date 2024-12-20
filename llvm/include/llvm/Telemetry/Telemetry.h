@@ -44,6 +44,8 @@ public:
 
   template <typename T, typename = typename T::mapped_type>
   void write(StringRef KeyName, const T &Map) {
+    static_assert(std::is_convertible_v<typename T::key_type, StringRef>,
+                  "KeyType must be convertible to string");
     beginObject(KeyName);
     for (const auto &KeyVal : Map)
       write(KeyVal.first, KeyVal.second);
