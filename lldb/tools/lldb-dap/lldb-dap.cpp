@@ -141,7 +141,7 @@ lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
   }
 }
 
-SOCKET AcceptConnection(std::optional<std::ofstream> &log, int portno) {
+SOCKET AcceptConnection(std::ofstream *log, int portno) {
   // Accept a socket connection from any host on "portno".
   SOCKET newsockfd = -1;
   struct sockaddr_in serv_addr, cli_addr;
@@ -5045,10 +5045,10 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  std::optional<std::ofstream> log = std::nullopt;
+  std::unique_ptr<std::ofstream> log = nullptr;
   const char *log_file_path = getenv("LLDBDAP_LOG");
   if (log_file_path)
-    log.emplace(log_file_path);
+    log.reset(new std::ofstream(log_file_path));
 
   // Initialize LLDB first before we do anything.
   lldb::SBDebugger::Initialize();
@@ -5063,7 +5063,7 @@ int main(int argc, char *argv[]) {
   std::FILE *redirectErr = nullptr;
   if (portno != -1) {
     printf("Listening on port %i...\n", portno);
-    SOCKET socket_fd = AcceptConnection(log, portno);
+    SOCKET socket_fd = AcceptConnection(log.get(), portno);
     if (socket_fd < 0)
       return EXIT_FAILURE;
 
@@ -5095,8 +5095,8 @@ int main(int argc, char *argv[]) {
     output = StreamDescriptor::from_file(stdout_fd, false);
   }
 
-  DAP dap = DAP(program_path.str(), &*log, default_repl_mode, std::move(input),
-                std::move(output));
+  DAP dap = DAP(program_path.str(), log.get(), default_repl_mode,
+                std::move(input), std::move(output));
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
@@ -5118,8 +5118,8 @@ int main(int argc, char *argv[]) {
 
   bool CleanExit = true;
   if (auto Err = dap.Loop()) {
-    if (dap.log)
-      *dap.log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
+    if (log)
+      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
     CleanExit = false;
   }
 
