@@ -171,9 +171,16 @@ rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### AArch64 backend
 
+David Green \
+david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
+Sander de Smalen (esp. scalable vectorization/SVE/SME) \
+sander.desmalen@arm.com (email), [sdesmalen-arm](https://github.com/sdesmalen-arm) (GitHub) \
+Amara Emerson (esp. GlobalISel) \
+amara@apple.com (email), [aemerson](https://github.com/aemerson) (GitHub) \
+Sjoerd Meijer \
+smeijer@nvidia.com (email), [sjoerdmeijer](https://github.com/sjoerdmeijer) (GitHub) \
 Tim Northover \
 t.p.northover@gmail.com (email), [TNorthover](https://github.com/TNorthover) (GitHub)
-.
 
 #### AMDGPU backend
 
