@@ -34,8 +34,8 @@ public:
   virtual void write(StringRef KeyName, bool Value) = 0;
   virtual void write(StringRef KeyName, int Value) = 0;
   virtual void write(StringRef KeyName, unsigned int Value) = 0;
-  virtual void write(StringRef KeyName, unsigned long Value) = 0;
   virtual void write(StringRef KeyName, long Value) = 0;
+  virtual void write(StringRef KeyName, unsigned long Value) = 0;
   virtual void write(StringRef KeyName, long long Value) = 0;
   virtual void write(StringRef KeyName, unsigned long long Value) = 0;
   virtual void write(StringRef KeyName, StringRef Value) = 0;
