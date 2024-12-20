@@ -713,3 +713,47 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
+
+// For lldb::SBPlatformResolveSourceFileCallback
+%typemap(in) (lldb::SBPlatformResolveSourceFileCallback callback, void *callback_baton) {
+  if (!($input == Py_None ||
+       PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+        PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+        SWIG_fail;
+       }
+
+  if ($input == Py_None) {
+    $1 = nullptr;
+    $2 = nullptr;
+  } else {
+    PythonCallable callable = Retain<PythonCallable>($input);
+    if (!callable.IsValid()) {
+      PyErr_SetString(PyExc_TypeError, "Need a valid callable object");
+      SWIG_fail;
+    }
+
+  llvm::Expected<PythonCallable::ArgInfo> arg_info = callable.GetArgInfo();
+  if (!arg_info) {
+    PyErr_SetString(PyExc_TypeError,
+                      ("Could not get arguments: " +
+                          llvm::toString(arg_info.takeError())).c_str());
+      SWIG_fail;
+  }
+
+  if (arg_info.get().max_positional_args != 3) {
+    PyErr_SetString(PyExc_TypeError, "Expected 3 argument callable object");
+    SWIG_fail;
+  }
+
+    Py_INCREF($input);
+
+    $1 = LLDBSwigPythonCallResolveSourceFileCallback;
+    $2 = $input;
+  }
+}
+
+%typemap(typecheck) (lldb::SBPlatformResolveSourceFileCallback callback,
+                     void *callback_baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}
