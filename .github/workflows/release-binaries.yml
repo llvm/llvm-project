@@ -126,8 +126,8 @@ jobs:
           echo "enable-pgo=true" >> $GITHUB_OUTPUT
         else
           echo "enable-pgo=false" >> $GITHUB_OUTPUT
+          target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         fi
-        target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
