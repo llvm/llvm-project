@@ -1043,7 +1043,7 @@ auto buildTransferMatchSwitch() {
           [](const CXXOperatorCallExpr *E,
              const MatchFinder::MatchResult &Result,
              LatticeTransferState &State) {
-            transferSmartPointerLikeDeref(
+            transferSmartPointerLikeCachedDeref(
                 E,
                 dyn_cast_or_null<RecordStorageLocation>(
                     getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
@@ -1054,7 +1054,7 @@ auto buildTransferMatchSwitch() {
           [](const CXXOperatorCallExpr *E,
              const MatchFinder::MatchResult &Result,
              LatticeTransferState &State) {
-            transferSmartPointerLikeGet(
+            transferSmartPointerLikeCachedGet(
                 E,
                 dyn_cast_or_null<RecordStorageLocation>(
                     getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
@@ -1064,7 +1064,7 @@ auto buildTransferMatchSwitch() {
           isSmartPointerLikeValueMethodCall(),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
              LatticeTransferState &State) {
-            transferSmartPointerLikeDeref(
+            transferSmartPointerLikeCachedDeref(
                 E, getImplicitObjectLocation(*E, State.Env), State,
                 [](StorageLocation &Loc) {});
           })
@@ -1072,7 +1072,7 @@ auto buildTransferMatchSwitch() {
           isSmartPointerLikeGetMethodCall(),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
              LatticeTransferState &State) {
-            transferSmartPointerLikeGet(
+            transferSmartPointerLikeCachedGet(
                 E, getImplicitObjectLocation(*E, State.Env), State,
                 [](StorageLocation &Loc) {});
           })

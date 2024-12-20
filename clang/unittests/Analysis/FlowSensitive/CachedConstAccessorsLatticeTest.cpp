@@ -160,8 +160,6 @@ TEST_F(CachedConstAccessorsLatticeTest,
   const FunctionDecl *Callee = CE->getDirectCallee();
   ASSERT_NE(Callee, nullptr);
   QualType Type = Callee->getReturnType();
-  Type.dump();
-  CE->dump();
   StorageLocation &Loc1 = Lattice.getOrCreateConstMethodReturnStorageLocation(
       Loc, Callee, Type, Env, NopInit);
   auto NotCalled = [](StorageLocation &) {

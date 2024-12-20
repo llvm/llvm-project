@@ -68,38 +68,40 @@ ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall();
 /// Returns the "canonical" callee for smart pointer operators (`*` and `->`)
 /// as a key for caching.
 ///
-/// We choose `operator *` as the canonical one, since it needs a
+/// We choose `*` as the canonical one, since it needs a
 /// StorageLocation anyway.
 ///
-/// Note: there may be multiple `operator*` (one const, one non-const)
-/// we pick the const one, which the above provided matchers require to exist.
+/// Note: there may be multiple `operator*` (one const, one non-const).
+/// We pick the const one, which the above provided matchers require to exist.
 const FunctionDecl *
 getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE);
 
-/// A transfer function for `operator*` (and `value`) calls.
+/// A transfer function for `operator*` (and `value`) calls
+/// that can be cached.
 ///
 /// Requirements:
 ///
 /// - LatticeT should use the `CachedConstAccessorsLattice` mixin.
 template <typename LatticeT>
-void transferSmartPointerLikeDeref(
+void transferSmartPointerLikeCachedDeref(
     const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
     llvm::function_ref<void(StorageLocation &)> InitializeLoc);
 
-/// A transfer function for `operator->` (and `get`) calls.
+/// A transfer function for `operator->` (and `get`) calls
+/// that can be cached.
 ///
 /// Requirements:
 ///
 /// - LatticeT should use the `CachedConstAccessorsLattice` mixin.
 template <typename LatticeT>
-void transferSmartPointerLikeGet(
+void transferSmartPointerLikeCachedGet(
     const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
     llvm::function_ref<void(StorageLocation &)> InitializeLoc);
 
 template <typename LatticeT>
-void transferSmartPointerLikeDeref(
+void transferSmartPointerLikeCachedDeref(
     const CallExpr *DerefExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
     llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
@@ -113,7 +115,7 @@ void transferSmartPointerLikeDeref(
     return;
   const FunctionDecl *CanonicalCallee =
       getCanonicalSmartPointerLikeOperatorCallee(DerefExpr);
-  // This shouldn't really happen, as we should at least find `Callee` itself.
+  // This shouldn't happen, as we should at least find `Callee` itself.
   assert(CanonicalCallee != nullptr);
   if (CanonicalCallee != Callee) {
     // When using the provided matchers, we should always get a reference to
@@ -136,7 +138,7 @@ void transferSmartPointerLikeDeref(
 }
 
 template <typename LatticeT>
-void transferSmartPointerLikeGet(
+void transferSmartPointerLikeCachedGet(
     const CallExpr *GetExpr, RecordStorageLocation *SmartPointerLoc,
     TransferState<LatticeT> &State,
     llvm::function_ref<void(StorageLocation &)> InitializeLoc) {
