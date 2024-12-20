@@ -58,6 +58,7 @@
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
+// CHECK-NEXT:     FEAT_SVE2p1                                            Enable Scalable Vector Extension 2.1 instructions
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
