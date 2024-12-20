@@ -1562,8 +1562,7 @@ Error IRLinker::run() {
   bool EnableDLWarning = true;
   bool EnableTripleWarning = true;
   if (SrcTriple.isNVPTX() && DstTriple.isNVPTX()) {
-    std::string ModuleId = SrcM->getModuleIdentifier();
-    StringRef FileName = llvm::sys::path::filename(ModuleId);
+    StringRef FileName = SrcM->getSourceFileName();
     bool SrcIsLibDevice =
         FileName.starts_with("libdevice") && FileName.ends_with(".10.bc");
     bool SrcHasLibDeviceDL =
