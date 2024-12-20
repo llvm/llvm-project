@@ -1698,8 +1698,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   // We are going to permute multiple sources and the result will be in multiple
   // destinations. Providing an accurate cost only for splits where the element
   // type remains the same.
-  if ((Kind == TTI::SK_PermuteSingleSrc || Kind == TTI::SK_PermuteTwoSrc) &&
-      LT.first != 1) {
+  if (Kind == TTI::SK_PermuteSingleSrc && LT.first != 1) {
     MVT LegalVT = LT.second;
     if (LegalVT.isVector() &&
         LegalVT.getVectorElementType().getSizeInBits() ==
@@ -1783,6 +1782,14 @@ InstructionCost X86TTIImpl::getShuffleCost(
     }
 
     return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
+  }
+
+  // For 2-input shuffles, we must account for splitting the 2 inputs into many.
+  if (Kind == TTI::SK_PermuteTwoSrc && !IsInLaneShuffle && LT.first != 1) {
+    // We assume that source and destination have the same vector type.
+    InstructionCost NumOfDests = LT.first;
+    InstructionCost NumOfShufflesPerDest = LT.first * 2 - 1;
+    LT.first = NumOfDests * NumOfShufflesPerDest;
   }
 
   static const CostTblEntry AVX512VBMIShuffleTbl[] = {
