@@ -791,7 +791,10 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         return mlir::success();
       }
       if (mlir::isa<mlir::IntegerType>(toTy)) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
+        if (toTy.isUnsignedInteger())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToUIOp>(convert, toTy, op0);
+        else
+          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
         return mlir::success();
       }
     } else if (mlir::isa<mlir::IntegerType>(fromTy)) {
@@ -804,7 +807,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
           rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
           return mlir::success();
         }
-        if (fromFirTy == i1Type) {
+        if (fromFirTy == i1Type || fromFirTy.isUnsignedInteger()) {
           rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(convert, toTy, op0);
           return mlir::success();
         }
@@ -813,7 +816,10 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       }
       // Integer to floating point conversion.
       if (isFloatingPointTy(toTy)) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
+        if (fromTy.isUnsignedInteger())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::UIToFPOp>(convert, toTy, op0);
+        else
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
         return mlir::success();
       }
       // Integer to pointer conversion.

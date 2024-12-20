@@ -2370,8 +2370,7 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
     } else {
       Ctx.dump(R.Count, OS);
 
-      if (R.Kind == CounterMappingRegion::BranchRegion ||
-          R.Kind == CounterMappingRegion::MCDCBranchRegion) {
+      if (R.isBranch()) {
         OS << ", ";
         Ctx.dump(R.FalseCount, OS);
       }

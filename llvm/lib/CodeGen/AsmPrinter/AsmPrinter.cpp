@@ -3690,10 +3690,11 @@ static void emitGlobalConstantArray(const DataLayout &DL,
 
 static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
 
-static void emitGlobalConstantVector(const DataLayout &DL,
-                                     const ConstantVector *CV, AsmPrinter &AP,
+static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
+                                     AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
-  Type *ElementType = CV->getType()->getElementType();
+  auto *VTy = cast<FixedVectorType>(CV->getType());
+  Type *ElementType = VTy->getElementType();
   uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
   uint64_t ElementAllocSizeInBits = DL.getTypeAllocSizeInBits(ElementType);
   uint64_t EmittedSize;
@@ -3706,7 +3707,7 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     Type *IntT =
         IntegerType::get(CV->getContext(), DL.getTypeSizeInBits(CV->getType()));
     ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
-        ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT), DL));
+        ConstantExpr::getBitCast(const_cast<Constant *>(CV), IntT), DL));
     if (!CI) {
       report_fatal_error(
           "Cannot lower vector global with unusual element type");
@@ -3715,12 +3716,11 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     emitGlobalConstantLargeInt(CI, AP);
     EmittedSize = DL.getTypeStoreSize(CV->getType());
   } else {
-    for (unsigned I = 0, E = CV->getType()->getNumElements(); I != E; ++I) {
+    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
       emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
-      emitGlobalConstantImpl(DL, CV->getOperand(I), AP);
+      emitGlobalConstantImpl(DL, CV->getAggregateElement(I), AP);
     }
-    EmittedSize =
-        DL.getTypeAllocSize(ElementType) * CV->getType()->getNumElements();
+    EmittedSize = DL.getTypeAllocSize(ElementType) * VTy->getNumElements();
   }
 
   unsigned Size = DL.getTypeAllocSize(CV->getType());
@@ -3990,8 +3990,10 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
+    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
     if (StoreSize <= 8) {
       if (AP.isVerbose())
         AP.OutStreamer->getCommentOS()
@@ -4008,8 +4010,12 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return;
   }
 
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV))
-    return emitGlobalConstantFP(CFP, AP);
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
+    else
+      return emitGlobalConstantFP(CFP, AP);
+  }
 
   if (isa<ConstantPointerNull>(CV)) {
     AP.OutStreamer->emitIntValue(0, Size);
@@ -4041,8 +4047,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     }
   }
 
-  if (const ConstantVector *V = dyn_cast<ConstantVector>(CV))
-    return emitGlobalConstantVector(DL, V, AP, AliasList);
+  if (isa<ConstantVector>(CV))
+    return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.

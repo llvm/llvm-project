@@ -1350,13 +1350,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
 
   // Handle the case where the MVT/register class is omitted in the dest pattern
   // but MVT exists in the source pattern.
-  if (isa<UnsetInit>(DstChild.getLeafValue())) {
-    for (const TreePatternNode &SrcChild : Src.children()) {
-      if (SrcChild.getName() == DstChild.getName()) {
-        DstMIBuilder.addRenderer<CopyRenderer>(SrcChild.getName());
-        return InsertPt;
-      }
-    }
+  if (isa<UnsetInit>(DstChild.getLeafValue()) &&
+      Rule.hasOperand(DstChild.getName())) {
+    DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+    return InsertPt;
   }
   return failedImport("Dst pattern child is an unsupported kind");
 }

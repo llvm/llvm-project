@@ -23,7 +23,13 @@ struct Equality {
   using Type2 = CppTypeFor<CAT2, KIND2>;
   RT_API_ATTRS bool operator()(const Descriptor &array,
       const SubscriptValue at[], const Descriptor &target) const {
-    return *array.Element<Type1>(at) == *target.OffsetElement<Type2>();
+    if constexpr (KIND1 >= KIND2) {
+      return *array.Element<Type1>(at) ==
+          static_cast<Type1>(*target.OffsetElement<Type2>());
+    } else {
+      return static_cast<Type2>(*array.Element<Type1>(at)) ==
+          *target.OffsetElement<Type2>();
+    }
   }
 };
 
@@ -158,6 +164,12 @@ struct NumericFindlocHelper {
             targetKind, terminator, result, x, target, kind, dim, mask, back,
             terminator);
         break;
+      case TypeCategory::Unsigned:
+        ApplyIntegerKind<
+            HELPER<CAT, KIND, TypeCategory::Unsigned>::template Functor, void>(
+            targetKind, terminator, result, x, target, kind, dim, mask, back,
+            terminator);
+        break;
       case TypeCategory::Real:
         ApplyFloatingPointKind<
             HELPER<CAT, KIND, TypeCategory::Real>::template Functor, void>(
@@ -224,6 +236,12 @@ void RTDEF(Findloc)(Descriptor &result, const Descriptor &x,
   switch (xType->first) {
   case TypeCategory::Integer:
     ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Integer,
+                         TotalNumericFindlocHelper>::template Functor,
+        void>(xType->second, terminator, targetType->first, targetType->second,
+        result, x, target, kind, 0, mask, back, terminator);
+    break;
+  case TypeCategory::Unsigned:
+    ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Unsigned,
                          TotalNumericFindlocHelper>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, 0, mask, back, terminator);
@@ -314,6 +332,12 @@ void RTDEF(FindlocDim)(Descriptor &result, const Descriptor &x,
   switch (xType->first) {
   case TypeCategory::Integer:
     ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Integer,
+                         PartialNumericFindlocHelper>::template Functor,
+        void>(xType->second, terminator, targetType->first, targetType->second,
+        result, x, target, kind, dim, mask, back, terminator);
+    break;
+  case TypeCategory::Unsigned:
+    ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Unsigned,
                          PartialNumericFindlocHelper>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, dim, mask, back, terminator);
