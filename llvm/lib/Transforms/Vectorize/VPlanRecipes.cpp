@@ -3427,7 +3427,7 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
-  // If this reduction is fed by a scaled reduction then it should output a
+  // If this phi is fed by a scaled reduction then it should output a
   // vector with fewer elements than the VF.
   ElementCount VF = State.VF.divideCoefficientBy(VFScaleFactor);
 
