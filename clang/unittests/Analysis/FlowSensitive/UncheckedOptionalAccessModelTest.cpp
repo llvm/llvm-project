@@ -3787,8 +3787,6 @@ TEST_P(UncheckedOptionalAccessTest, SmartPointerAccessorMixed) {
 
       const T& operator*() const&;
       T& operator*() &;
-      const T&& operator*() const&&;
-      T&& operator*() &&;
 
       const T* operator->() const;
       T* operator->();
