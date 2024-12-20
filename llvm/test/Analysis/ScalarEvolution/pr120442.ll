@@ -2,34 +2,33 @@
 
 declare void @llvm.assume(i1)
 
-define void @pr120442() {
+; Checks that the presence of assumptions does not interfere with
+; exiting loop guard collection via following loop predecessors.
+define void @pr120442(i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: 'pr120442'
 ; CHECK-NEXT:  Determining loop execution counts for: @pr120442
-; CHECK-NEXT:  Loop %bb2: backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %bb2: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %bb2: symbolic max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %bb2: Trip multiple is 1
-; CHECK-NEXT:  Loop %bb1: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %bb1: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %bb1: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %inner.header: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %inner.header: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %inner.header: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %inner.header: Trip multiple is 1
+entry:
+  call void @llvm.assume(i1 %c.1)
+  call void @llvm.assume(i1 %c.2)
+  br label %outer.header
+
+outer.header:
+  %phi7 = phi i32 [ 0, %bb ], [ 0, %entry ]
+  br label %inner.header
+
 bb:
-  call void @llvm.assume(i1 false)
-  call void @llvm.assume(i1 false)
-  br label %bb6
+  br i1 false, label %outer.header, label %bb
 
-bb1:
-  br label %bb2
-
-bb2:
-  %phi = phi i32 [ %add, %bb2 ], [ 0, %bb1 ]
+inner.header:
+  %phi = phi i32 [ %add, %inner.header ], [ 0, %outer.header ]
   %add = add i32 %phi, 1
   %icmp = icmp ugt i32 %add, 0
-  br i1 %icmp, label %bb1, label %bb2
+  br i1 %icmp, label %exit, label %inner.header
 
-bb5:
-  br i1 false, label %bb6, label %bb5
-
-bb6:
-  %phi7 = phi i32 [ 0, %bb5 ], [ 0, %bb ]
-  br label %bb1
+exit:
+  ret void
 }
