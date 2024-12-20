@@ -43,7 +43,7 @@ add_llvm_unittest(IRTests
   ShuffleVectorInstTest.cpp
   StructuralHashTest.cpp
   TimePassesTest.cpp
-  DroppedVariableStatsTest.cpp
+  DroppedVariableStatsIRTest.cpp
   TypesTest.cpp
   UseTest.cpp
   UserTest.cpp
@@ -51,6 +51,7 @@ add_llvm_unittest(IRTests
   ValueMapTest.cpp
   ValueTest.cpp
   VectorBuilderTest.cpp
+  VectorTypeUtilsTest.cpp
   VectorTypesTest.cpp
   VerifierTest.cpp
   VFABIDemanglerTest.cpp

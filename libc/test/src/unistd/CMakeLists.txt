@@ -218,6 +218,20 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  pipe2_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    pipe2_test.cpp
+  DEPENDS
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.unistd.close
+    libc.src.unistd.pipe2
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   rmdir_test
   SUITE
     libc_unistd_unittests

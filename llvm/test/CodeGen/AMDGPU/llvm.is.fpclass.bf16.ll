@@ -14,12 +14,12 @@
 define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX7CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX7CHECK:       ; %bb.0:
-; GFX7CHECK-NEXT:    s_load_dword s4, s[2:3], 0xb
-; GFX7CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; GFX7CHECK-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GFX7CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX7CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7CHECK-NEXT:    s_mov_b32 s2, -1
 ; GFX7CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7CHECK-NEXT:    s_and_b32 s4, s4, 0x7fff
+; GFX7CHECK-NEXT:    s_and_b32 s4, s6, 0x7fff
 ; GFX7CHECK-NEXT:    s_cmpk_gt_i32 s4, 0x7f80
 ; GFX7CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
@@ -28,10 +28,10 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ;
 ; GFX8CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX8CHECK:       ; %bb.0:
-; GFX8CHECK-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; GFX8CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX8CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX8CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX8CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX8CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, s0
@@ -42,11 +42,11 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ;
 ; GFX9CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX9CHECK:       ; %bb.0:
-; GFX9CHECK-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; GFX9CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX9CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX9CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX9CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX9CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX9CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[2:3]
@@ -56,11 +56,11 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX10CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_clause 0x1
-; GFX10CHECK-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; GFX10CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX10CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX10CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX10CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX10CHECK-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
@@ -70,11 +70,11 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX11CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_clause 0x1
-; GFX11CHECK-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX11CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX11CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX11CHECK-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2

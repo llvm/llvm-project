@@ -14,12 +14,14 @@
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
 #include "../ExprConstShared.h"
+#include "BitcastBuffer.h"
 #include "Boolean.h"
 #include "DynamicAllocator.h"
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
+#include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -39,13 +41,6 @@ namespace interp {
 
 using APSInt = llvm::APSInt;
 using FixedPointSemantics = llvm::FixedPointSemantics;
-
-/// Convert a value to an APValue.
-template <typename T>
-bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
-  R = V.toAPValue(S.getASTContext());
-  return true;
-}
 
 /// Checks if the variable has externally defined storage.
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -162,6 +157,8 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
+bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
+                  bool TargetIsUCharOrByte);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -273,8 +270,14 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
       *NumElements > MaxElements) {
     if (!IsNoThrow) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-          << NumElements->toDiagnosticString(S.getASTContext());
+
+      if (NumElements->isSigned() && NumElements->isNegative()) {
+        S.FFDiag(Loc, diag::note_constexpr_new_negative)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      } else {
+        S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      }
     }
     return false;
   }
@@ -290,7 +293,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 
 /// Interpreter entry point.
-bool Interpret(InterpState &S, APValue &Result);
+bool Interpret(InterpState &S);
 
 /// Interpret a builtin function.
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -312,20 +315,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
                               const Function *Func);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
+bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
-
-  // Make sure returned pointers are live. We might be trying to return a
-  // pointer or reference to a local variable.
-  // Just return false, since a diagnostic has already been emitted in Sema.
-  if constexpr (std::is_same_v<T, Pointer>) {
-    // FIXME: We could be calling isLive() here, but the emitted diagnostics
-    // seem a little weird, at least if the returned expression is of
-    // pointer type.
-    // Null pointers are considered live here.
-    if (!Ret.isZero() && !Ret.isLive())
-      return false;
-  }
 
   assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
@@ -340,13 +331,13 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    if (!ReturnValue<T>(S, Ret, Result))
-      return false;
+    // The topmost frame should come from an EvalEmitter,
+    // which has its own implementation of the Ret<> instruction.
   }
   return true;
 }
 
-inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
+inline bool RetVoid(InterpState &S, CodePtr &PC) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
@@ -2430,9 +2421,11 @@ static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool Null(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
-  // Note: Desc can be null.
-  S.Stk.push<T>(0, Desc);
+inline bool Null(InterpState &S, CodePtr OpPC, uint64_t Value,
+                 const Descriptor *Desc) {
+  // FIXME(perf): This is a somewhat often-used function and the value of a
+  // null pointer is almost always 0.
+  S.Stk.push<T>(Value, Desc);
   return true;
 }
 
@@ -2506,50 +2499,52 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
         S, OpPC, LHS, RHS);
   }
 
-  if constexpr (Dir == ShiftDir::Left) {
-    if (LHS.isNegative() && !S.getLangOpts().CPlusPlus20) {
-      // C++11 [expr.shift]p2: A signed left shift must have a non-negative
-      // operand, and must not overflow the corresponding unsigned type.
-      // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
-      // E1 x 2^E2 module 2^N.
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.CCEDiag(Loc, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-      if (!S.noteUndefinedBehavior())
-        return false;
-    }
-  }
-
   if (!CheckShift<Dir>(S, OpPC, LHS, RHS, Bits))
     return false;
 
   // Limit the shift amount to Bits - 1. If this happened,
   // it has already been diagnosed by CheckShift() above,
   // but we still need to handle it.
+  // Note that we have to be extra careful here since we're doing the shift in
+  // any case, but we need to adjust the shift amount or the way we do the shift
+  // for the potential error cases.
   typename LT::AsUnsigned R;
+  unsigned MaxShiftAmount = LHS.bitWidth() - 1;
   if constexpr (Dir == ShiftDir::Left) {
-    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                                LT::AsUnsigned::from(Bits - 1), Bits, &R);
-    else
+    if (Compare(RHS, RT::from(MaxShiftAmount, RHS.bitWidth())) ==
+        ComparisonCategoryResult::Greater) {
+      if (LHS.isNegative())
+        R = LT::AsUnsigned::zero(LHS.bitWidth());
+      else {
+        RHS = RT::from(LHS.countLeadingZeros(), RHS.bitWidth());
+        LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                                  LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+      }
+    } else if (LHS.isNegative()) {
+      if (LHS.isMin()) {
+        R = LT::AsUnsigned::zero(LHS.bitWidth());
+      } else {
+        // If the LHS is negative, perform the cast and invert the result.
+        typename LT::AsUnsigned LHSU = LT::AsUnsigned::from(-LHS);
+        LT::AsUnsigned::shiftLeft(LHSU, LT::AsUnsigned::from(RHS, Bits), Bits,
+                                  &R);
+        R = -R;
+      }
+    } else {
+      // The good case, a simple left shift.
       LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
                                 LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+    }
   } else {
-    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                                 LT::AsUnsigned::from(Bits - 1), Bits, &R);
-    else
-      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                                 LT::AsUnsigned::from(RHS, Bits), Bits, &R);
-  }
-
-  // We did the shift above as unsigned. Restore the sign bit if we need to.
-  if constexpr (Dir == ShiftDir::Right) {
-    if (LHS.isSigned() && LHS.isNegative()) {
-      typename LT::AsUnsigned SignBit;
-      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(1, Bits),
-                                LT::AsUnsigned::from(Bits - 1, Bits), Bits,
-                                &SignBit);
-      LT::AsUnsigned::bitOr(R, SignBit, Bits, &R);
+    // Right shift.
+    if (Compare(RHS, RT::from(MaxShiftAmount, RHS.bitWidth())) ==
+        ComparisonCategoryResult::Greater) {
+      R = LT::AsUnsigned::from(-1);
+    } else {
+      // Do the shift on potentially signed LT, then convert to unsigned type.
+      LT A;
+      LT::shiftRight(LHS, LT::from(RHS, Bits), Bits, &A);
+      R = LT::AsUnsigned::from(A);
     }
   }
 
@@ -3033,6 +3028,65 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
   return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
+                        uint32_t ResultBitWidth,
+                        const llvm::fltSemantics *Sem) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+
+  if (!CheckLoad(S, OpPC, FromPtr))
+    return false;
+
+  if constexpr (std::is_same_v<T, Pointer>) {
+    // The only pointer type we can validly bitcast to is nullptr_t.
+    S.Stk.push<Pointer>();
+    return true;
+  } else {
+
+    size_t BuffSize = ResultBitWidth / 8;
+    llvm::SmallVector<std::byte> Buff(BuffSize);
+    bool HasIndeterminateBits = false;
+
+    Bits FullBitWidth(ResultBitWidth);
+    Bits BitWidth = FullBitWidth;
+
+    if constexpr (std::is_same_v<T, Floating>) {
+      assert(Sem);
+      BitWidth = Bits(llvm::APFloatBase::getSizeInBits(*Sem));
+    }
+
+    if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BitWidth, FullBitWidth,
+                   HasIndeterminateBits))
+      return false;
+
+    if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
+      return false;
+
+    if constexpr (std::is_same_v<T, Floating>) {
+      assert(Sem);
+      S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+    } else {
+      assert(!Sem);
+      S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
+    }
+    return true;
+  }
+}
+
+inline bool BitCast(InterpState &S, CodePtr OpPC) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+  Pointer &ToPtr = S.Stk.peek<Pointer>();
+
+  if (!CheckLoad(S, OpPC, FromPtr))
+    return false;
+
+  if (!DoBitCastPtr(S, OpPC, FromPtr, ToPtr))
+    return false;
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

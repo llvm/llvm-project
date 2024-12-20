@@ -1,4 +1,4 @@
-; RUN: llc %s -O0 -march=sparc -mcpu=leon3 -mattr=+detectroundchange -o - 2>&1 | grep "detect rounding changes"
+; RUN: llc %s -O0 -mtriple=sparc -mcpu=leon3 -mattr=+detectroundchange -o - 2>&1 | grep "detect rounding changes"
 
 ; Function Attrs: nounwind
 declare i32 @fesetround(i32)

@@ -163,7 +163,7 @@ struct BufferResultsToOutParamsOpts {
 
   // Filter function; returns true if the function should be converted.
   // Defaults to true, i.e. all functions are converted.
-  llvm::function_ref<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
+  std::function<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
     return true;
   };
 
@@ -199,10 +199,6 @@ std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
 
 /// Drop all memref function results that are equivalent to a function argument.
 LogicalResult dropEquivalentBufferResults(ModuleOp module);
-
-/// Creates a pass that finalizes a partial bufferization by removing remaining
-/// bufferization.to_tensor and bufferization.to_memref operations.
-std::unique_ptr<OperationPass<func::FuncOp>> createFinalizingBufferizePass();
 
 /// Create a pass that bufferizes all ops that implement BufferizableOpInterface
 /// with One-Shot Bufferize.

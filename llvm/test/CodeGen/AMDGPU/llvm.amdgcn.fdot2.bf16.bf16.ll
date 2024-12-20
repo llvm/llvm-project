@@ -8,7 +8,7 @@ declare bfloat @llvm.amdgcn.fdot2.bf16.bf16(<2 x bfloat> %a, <2 x bfloat> %b, bf
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[6:7]
@@ -34,7 +34,7 @@ entry:
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16_dpp(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16_dpp:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_load_b32 v0, off, s2
 ; GFX11-NEXT:    scratch_load_u16 v1, off, s3

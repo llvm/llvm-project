@@ -7,53 +7,53 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_SHARED_PTR_H
-#define _LIBCPP___MEMORY_SHARED_PTR_H
+#ifndef _LIBCPP___CXX03___MEMORY_SHARED_PTR_H
+#define _LIBCPP___CXX03___MEMORY_SHARED_PTR_H
 
-#include <__compare/compare_three_way.h>
-#include <__compare/ordering.h>
-#include <__config>
-#include <__exception/exception.h>
-#include <__functional/binary_function.h>
-#include <__functional/operations.h>
-#include <__functional/reference_wrapper.h>
-#include <__fwd/ostream.h>
-#include <__iterator/access.h>
-#include <__memory/addressof.h>
-#include <__memory/allocation_guard.h>
-#include <__memory/allocator.h>
-#include <__memory/allocator_destructor.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/auto_ptr.h>
-#include <__memory/compressed_pair.h>
-#include <__memory/construct_at.h>
-#include <__memory/pointer_traits.h>
-#include <__memory/uninitialized_algorithms.h>
-#include <__memory/unique_ptr.h>
-#include <__type_traits/add_lvalue_reference.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/disjunction.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_bounded_array.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_unbounded_array.h>
-#include <__type_traits/nat.h>
-#include <__type_traits/negation.h>
-#include <__type_traits/remove_extent.h>
-#include <__type_traits/remove_reference.h>
-#include <__utility/declval.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
-#include <__verbose_abort>
-#include <cstddef>
-#include <new>
-#include <typeinfo>
+#include <__cxx03/__compare/compare_three_way.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__exception/exception.h>
+#include <__cxx03/__functional/binary_function.h>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__functional/reference_wrapper.h>
+#include <__cxx03/__fwd/ostream.h>
+#include <__cxx03/__iterator/access.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocation_guard.h>
+#include <__cxx03/__memory/allocator.h>
+#include <__cxx03/__memory/allocator_destructor.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__memory/auto_ptr.h>
+#include <__cxx03/__memory/compressed_pair.h>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__memory/uninitialized_algorithms.h>
+#include <__cxx03/__memory/unique_ptr.h>
+#include <__cxx03/__type_traits/add_lvalue_reference.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/disjunction.h>
+#include <__cxx03/__type_traits/is_array.h>
+#include <__cxx03/__type_traits/is_bounded_array.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/is_unbounded_array.h>
+#include <__cxx03/__type_traits/nat.h>
+#include <__cxx03/__type_traits/negation.h>
+#include <__cxx03/__type_traits/remove_extent.h>
+#include <__cxx03/__type_traits/remove_reference.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/__verbose_abort>
+#include <__cxx03/cstddef>
+#include <__cxx03/new>
+#include <__cxx03/typeinfo>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
-#  include <__atomic/memory_order.h>
+#  include <__cxx03/__atomic/memory_order.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -61,7 +61,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1691,4 +1691,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_SHARED_PTR_H
+#endif // _LIBCPP___CXX03___MEMORY_SHARED_PTR_H

@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
-#define _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_FILESYSTEM_ERROR_H
+#define _LIBCPP___CXX03___FILESYSTEM_FILESYSTEM_ERROR_H
 
-#include <__config>
-#include <__filesystem/path.h>
-#include <__memory/shared_ptr.h>
-#include <__system_error/error_code.h>
-#include <__system_error/system_error.h>
-#include <__utility/forward.h>
-#include <__verbose_abort>
-#include <string>
+#include <__cxx03/__config>
+#include <__cxx03/__filesystem/path.h>
+#include <__cxx03/__memory/shared_ptr.h>
+#include <__cxx03/__system_error/error_code.h>
+#include <__cxx03/__system_error/system_error.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__verbose_abort>
+#include <__cxx03/string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -85,4 +85,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_FILESYSTEM_ERROR_H

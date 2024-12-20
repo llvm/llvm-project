@@ -169,8 +169,8 @@ public:
 
   void emitGNUAttribute(unsigned Tag, unsigned Value) override;
 
-  StringRef getMnemonic(MCInst &MI) override {
-    auto [Ptr, Bits] = InstPrinter->getMnemonic(&MI);
+  StringRef getMnemonic(const MCInst &MI) const override {
+    auto [Ptr, Bits] = InstPrinter->getMnemonic(MI);
     assert((Bits != 0 || Ptr == nullptr) &&
            "Invalid char pointer for instruction with no mnemonic");
     return Ptr;
@@ -376,6 +376,7 @@ public:
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
+  void emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
 
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
@@ -2177,6 +2178,15 @@ void MCAsmStreamer::emitCFIMTETaggedFrame() {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFIValOffset(int64_t Register, int64_t Offset,
+                                     SMLoc Loc) {
+  MCStreamer::emitCFIValOffset(Register, Offset, Loc);
+  OS << "\t.cfi_val_offset ";
+  EmitRegisterName(Register);
+  OS << ", " << Offset;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitWinCFIStartProc(Symbol, Loc);
 
@@ -2418,10 +2428,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
-  assert(getCurrentSectionOnly() &&
-         "Cannot emit contents before setting section!");
-
-  if (!MAI->usesDwarfFileAndLocDirectives())
+  if (!MAI->usesDwarfFileAndLocDirectives() && CurFrag)
     // Now that a machine instruction has been assembled into this section, make
     // a line entry for any .loc directive that has been seen.
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());

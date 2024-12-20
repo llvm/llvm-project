@@ -166,6 +166,12 @@ def parse_args():
         help="Write XUnit-compatible XML test reports to the specified file",
     )
     execution_group.add_argument(
+        "--report-failures-only",
+        help="Only include unresolved, timed out, failed"
+        " and unexpectedly passed tests in the report",
+        action="store_true",
+    )
+    execution_group.add_argument(
         "--resultdb-output",
         type=lit.reports.ResultDBReport,
         help="Write LuCI ResultDB compatible JSON to the specified file",
@@ -175,12 +181,15 @@ def parse_args():
         type=lit.reports.TimeTraceReport,
         help="Write Chrome tracing compatible JSON to the specified file",
     )
+    # This option only exists for the benefit of LLVM's Buildkite CI pipelines.
+    # As soon as it is not needed, it should be removed. Its help text would be:
+    # When enabled, lit will add a unique element to the output file name,
+    # before the extension. For example "results.xml" will become
+    # "results.<something>.xml". The "<something>" is not ordered in any
+    # way and is chosen so that existing files are not overwritten. [Default: Off]
     execution_group.add_argument(
         "--use-unique-output-file-name",
-        help="When enabled, lit will add a unique element to the output file name, "
-        'before the extension. For example "results.xml" will become '
-        '"results.<something>.xml". The "<something>" is not ordered in any '
-        "way and is chosen so that existing files are not overwritten. [Default: Off]",
+        help=argparse.SUPPRESS,
         action="store_true",
     )
     execution_group.add_argument(

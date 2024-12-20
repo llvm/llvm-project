@@ -588,10 +588,18 @@ Error CheckLargeFunctions::runOnFunctions(BinaryContext &BC) {
     uint64_t HotSize, ColdSize;
     std::tie(HotSize, ColdSize) =
         BC.calculateEmittedSize(BF, /*FixBranches=*/false);
-    if (HotSize > BF.getMaxSize()) {
+    uint64_t MainFragmentSize = HotSize;
+    if (BF.hasIslandsInfo()) {
+      MainFragmentSize +=
+          offsetToAlignment(BF.getAddress() + MainFragmentSize,
+                            Align(BF.getConstantIslandAlignment()));
+      MainFragmentSize += BF.estimateConstantIslandSize();
+    }
+    if (MainFragmentSize > BF.getMaxSize()) {
       if (opts::PrintLargeFunctions)
-        BC.outs() << "BOLT-INFO: " << BF << " size exceeds allocated space by "
-                  << (HotSize - BF.getMaxSize()) << " bytes\n";
+        BC.outs() << "BOLT-INFO: " << BF << " size of " << MainFragmentSize
+                  << " bytes exceeds allocated space by "
+                  << (MainFragmentSize - BF.getMaxSize()) << " bytes\n";
       BF.setSimple(false);
     }
   };
@@ -1549,10 +1557,48 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         "BOLT-INFO: inference found an exact match for %.2f%% of basic blocks"
         " (%zu out of %zu stale) responsible for %.2f%% samples"
         " (%zu out of %zu stale)\n",
-        100.0 * BC.Stats.NumMatchedBlocks / BC.Stats.NumStaleBlocks,
-        BC.Stats.NumMatchedBlocks, BC.Stats.NumStaleBlocks,
-        100.0 * BC.Stats.MatchedSampleCount / BC.Stats.StaleSampleCount,
-        BC.Stats.MatchedSampleCount, BC.Stats.StaleSampleCount);
+        100.0 * BC.Stats.NumExactMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumExactMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.ExactMatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.ExactMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found an exact pseudo probe match for %.2f%% of "
+        "basic blocks (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumPseudoProbeExactMatchedBlocks /
+            BC.Stats.NumStaleBlocks,
+        BC.Stats.NumPseudoProbeExactMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.PseudoProbeExactMatchedSampleCount /
+            BC.Stats.StaleSampleCount,
+        BC.Stats.PseudoProbeExactMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found a loose pseudo probe match for %.2f%% of "
+        "basic blocks (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumPseudoProbeLooseMatchedBlocks /
+            BC.Stats.NumStaleBlocks,
+        BC.Stats.NumPseudoProbeLooseMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.PseudoProbeLooseMatchedSampleCount /
+            BC.Stats.StaleSampleCount,
+        BC.Stats.PseudoProbeLooseMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found a call match for %.2f%% of basic "
+        "blocks"
+        " (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumCallMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumCallMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.CallMatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.CallMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found a loose match for %.2f%% of basic "
+        "blocks"
+        " (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumLooseMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumLooseMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.LooseMatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.LooseMatchedSampleCount, BC.Stats.StaleSampleCount);
   }
 
   if (const uint64_t NumUnusedObjects = BC.getNumUnusedProfiledObjects()) {

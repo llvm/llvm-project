@@ -431,6 +431,7 @@ public:
   bool usesThreadWrapperFunction(const VarDecl *VD) const override {
     return getContext().getLangOpts().isCompatibleWithMSVC(
                LangOptions::MSVC2019_5) &&
+           CGM.getCodeGenOpts().TlsGuards &&
            (!isEmittedWithConstantInitializer(VD) || mayNeedDestruction(VD));
   }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
@@ -529,31 +530,29 @@ public:
     if (ClassHierarchyDescriptorType)
       return ClassHierarchyDescriptorType;
     // Forward-declare RTTIClassHierarchyDescriptor to break a cycle.
-    ClassHierarchyDescriptorType = llvm::StructType::create(
-        CGM.getLLVMContext(), "rtti.ClassHierarchyDescriptor");
     llvm::Type *FieldTypes[] = {CGM.IntTy, CGM.IntTy, CGM.IntTy,
                                 getImageRelativeType(CGM.UnqualPtrTy)};
-    ClassHierarchyDescriptorType->setBody(FieldTypes);
+    ClassHierarchyDescriptorType =
+        llvm::StructType::create(FieldTypes, "rtti.ClassHierarchyDescriptor");
     return ClassHierarchyDescriptorType;
   }
 
   llvm::StructType *getCompleteObjectLocatorType() {
     if (CompleteObjectLocatorType)
       return CompleteObjectLocatorType;
-    CompleteObjectLocatorType = llvm::StructType::create(
-        CGM.getLLVMContext(), "rtti.CompleteObjectLocator");
     llvm::Type *FieldTypes[] = {
         CGM.IntTy,
         CGM.IntTy,
         CGM.IntTy,
         getImageRelativeType(CGM.Int8PtrTy),
         getImageRelativeType(CGM.UnqualPtrTy),
-        getImageRelativeType(CompleteObjectLocatorType),
+        getImageRelativeType(CGM.VoidTy),
     };
     llvm::ArrayRef<llvm::Type *> FieldTypesRef(FieldTypes);
     if (!isImageRelative())
       FieldTypesRef = FieldTypesRef.drop_back();
-    CompleteObjectLocatorType->setBody(FieldTypesRef);
+    CompleteObjectLocatorType =
+        llvm::StructType::create(FieldTypesRef, "rtti.CompleteObjectLocator");
     return CompleteObjectLocatorType;
   }
 
@@ -3455,7 +3454,7 @@ llvm::Value *MicrosoftCXXABI::EmitNonNullMemberPointerConversion(
   if (inheritanceModelHasOnlyOneField(IsFunc, DstInheritance)) {
     Dst = FirstField;
   } else {
-    Dst = llvm::UndefValue::get(ConvertMemberPointerType(DstTy));
+    Dst = llvm::PoisonValue::get(ConvertMemberPointerType(DstTy));
     unsigned Idx = 0;
     Dst = Builder.CreateInsertValue(Dst, FirstField, Idx++);
     if (inheritanceModelHasNVOffsetField(IsFunc, DstInheritance))

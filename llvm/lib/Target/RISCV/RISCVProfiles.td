@@ -45,9 +45,7 @@ defvar RVA22U64Features = !listconcat(RVA20U64BaseFeatures,
                                       [FeatureStdExtZa64rs,
                                        FeatureStdExtZihpm,
                                        FeatureStdExtZihintpause,
-                                       FeatureStdExtZba,
-                                       FeatureStdExtZbb,
-                                       FeatureStdExtZbs,
+                                       FeatureStdExtB,
                                        FeatureStdExtZic64b,
                                        FeatureStdExtZicbom,
                                        FeatureStdExtZicbop,
@@ -92,9 +90,7 @@ defvar RVB23U64Features = !listconcat(RVA20U64BaseFeatures,
                                       [FeatureStdExtZihpm,
                                        FeatureStdExtZa64rs,
                                        FeatureStdExtZihintpause,
-                                       FeatureStdExtZba,
-                                       FeatureStdExtZbb,
-                                       FeatureStdExtZbs,
+                                       FeatureStdExtB,
                                        FeatureStdExtZic64b,
                                        FeatureStdExtZicbom,
                                        FeatureStdExtZicbop,
@@ -128,9 +124,7 @@ defvar RVB23S64Features = !listconcat(RVB23U64Features,
 defvar RVM23U32Features = [Feature32Bit,
                            FeatureStdExtI,
                            FeatureStdExtM,
-                           FeatureStdExtZba,
-                           FeatureStdExtZbb,
-                           FeatureStdExtZbs,
+                           FeatureStdExtB,
                            FeatureStdExtZicond,
                            FeatureStdExtZihintpause,
                            FeatureStdExtZihintntl,
@@ -163,6 +157,6 @@ def RVA22U64 : RISCVProfile<"rva22u64", RVA22U64Features>;
 def RVA22S64 : RISCVProfile<"rva22s64", RVA22S64Features>;
 def RVA23U64 : RISCVProfile<"rva23u64", RVA23U64Features>;
 def RVA23S64 : RISCVProfile<"rva23s64", RVA23S64Features>;
-def RVB23U64 : RISCVExperimentalProfile<"rvb23u64", RVB23U64Features>;
-def RVB23S64 : RISCVExperimentalProfile<"rvb23s64", RVB23S64Features>;
+def RVB23U64 : RISCVProfile<"rvb23u64", RVB23U64Features>;
+def RVB23S64 : RISCVProfile<"rvb23s64", RVB23S64Features>;
 def RVM23U32 : RISCVExperimentalProfile<"rvm23u32", RVM23U32Features>;

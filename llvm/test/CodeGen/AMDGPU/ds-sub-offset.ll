@@ -54,7 +54,7 @@ entry:
 define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.val) #0 {
 ; CI-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; CI:       ; %bb.0: ; %entry
-; CI-NEXT:    s_load_dword s0, s[2:3], 0x0
+; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; CI-NEXT:    s_mov_b64 vcc, 0
@@ -74,7 +74,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ;
 ; GFX9-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX9-NEXT:    s_mov_b64 vcc, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_sub_u32_e32 v3, 0, v0
@@ -91,7 +91,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ;
 ; GFX10-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x7b
@@ -107,7 +107,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ;
 ; GFX11-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -135,7 +135,7 @@ entry:
 define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy.val) #0 {
 ; CI-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s0, s[2:3], 0x0
+; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; CI-NEXT:    s_mov_b64 vcc, 0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; CI-NEXT:    v_mov_b32_e32 v2, 0
@@ -154,7 +154,7 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ;
 ; GFX9-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX9-NEXT:    s_mov_b64 vcc, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0x7b
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
@@ -170,7 +170,7 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ;
 ; GFX10-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0x7b
@@ -185,7 +185,7 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ;
 ; GFX11-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0x7b :: v_dual_mov_b32 v3, 0
@@ -527,7 +527,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
 define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit(float %dummy.val) #1 {
 ; CI-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s0, s[2:3], 0x0
+; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0x3fb, v0
 ; CI-NEXT:    s_mov_b64 vcc, 0
@@ -548,7 +548,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ;
 ; GFX9-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX9-NEXT:    s_mov_b64 vcc, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_sub_u32_e32 v3, 0x3fb, v0
@@ -566,7 +566,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ;
 ; GFX10-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0
@@ -584,7 +584,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v3, 0x7b

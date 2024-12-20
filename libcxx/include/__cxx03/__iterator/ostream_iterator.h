@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
-#define _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_OSTREAM_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_OSTREAM_ITERATOR_H
 
-#include <__config>
-#include <__fwd/ostream.h>
-#include <__fwd/string.h>
-#include <__iterator/iterator.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/addressof.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/ostream.h>
+#include <__cxx03/__fwd/string.h>
+#include <__cxx03/__iterator/iterator.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -72,4 +72,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_OSTREAM_ITERATOR_H

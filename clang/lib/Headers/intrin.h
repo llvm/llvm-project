@@ -330,33 +330,33 @@ static __inline__ void __DEFAULT_FN_ATTRS __halt(void) {
   __asm__ volatile("hlt");
 }
 
-static inline unsigned char __inbyte(unsigned short port) {
+static __inline__ unsigned char __inbyte(unsigned short port) {
   unsigned char ret;
   __asm__ __volatile__("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
-static inline unsigned short __inword(unsigned short port) {
+static __inline__ unsigned short __inword(unsigned short port) {
   unsigned short ret;
   __asm__ __volatile__("inw %w1, %w0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
-static inline unsigned long __indword(unsigned short port) {
+static __inline__ unsigned long __indword(unsigned short port) {
   unsigned long ret;
   __asm__ __volatile__("inl %w1, %k0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
-static inline void __outbyte(unsigned short port, unsigned char data) {
+static __inline__ void __outbyte(unsigned short port, unsigned char data) {
   __asm__ __volatile__("outb %b0, %w1" : : "a"(data), "Nd"(port));
 }
 
-static inline void __outword(unsigned short port, unsigned short data) {
+static __inline__ void __outword(unsigned short port, unsigned short data) {
   __asm__ __volatile__("outw %w0, %w1" : : "a"(data), "Nd"(port));
 }
 
-static inline void __outdword(unsigned short port, unsigned long data) {
+static __inline__ void __outdword(unsigned short port, unsigned long data) {
   __asm__ __volatile__("outl %k0, %w1" : : "a"(data), "Nd"(port));
 }
 #endif
@@ -395,6 +395,16 @@ unsigned char __readx18byte(unsigned long offset);
 unsigned short __readx18word(unsigned long offset);
 unsigned long __readx18dword(unsigned long offset);
 unsigned __int64 __readx18qword(unsigned long offset);
+
+void __addx18byte(unsigned long offset, unsigned char data);
+void __addx18word(unsigned long offset, unsigned short data);
+void __addx18dword(unsigned long offset, unsigned long data);
+void __addx18qword(unsigned long offset, unsigned __int64 data);
+
+void __incx18byte(unsigned long offset);
+void __incx18word(unsigned long offset);
+void __incx18dword(unsigned long offset);
+void __incx18qword(unsigned long offset);
 
 double _CopyDoubleFromInt64(__int64);
 float _CopyFloatFromInt32(__int32);

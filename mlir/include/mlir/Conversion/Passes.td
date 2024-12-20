@@ -22,12 +22,20 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
     This is a generic pass to convert to LLVM, it uses the
     `ConvertToLLVMPatternInterface` dialect interface to delegate to dialects
     the injection of conversion patterns.
+
+    If `dynamic` is set to `true`, the pass will look for
+    `ConvertToLLVMAttrInterface` attributes and use them to further configure
+    the conversion process. This option also uses the `DataLayoutAnalysis`
+    analysis to configure the type converter. Enabling this option incurs in
+    extra overhead.
   }];
 
   let constructor = "mlir::createConvertToLLVMPass()";
   let options = [
     ListOption<"filterDialects", "filter-dialects", "std::string",
                "Test conversion patterns of only the specified dialects">,
+    Option<"useDynamic", "dynamic", "bool", "false",
+           "Use op conversion attributes to configure the conversion">,
   ];
 }
 
@@ -543,14 +551,11 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleOp"> {
   let summary =
     "Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations";
-  let dependentDialects = [
-    "LLVM::LLVMDialect",
-    "spirv::SPIRVDialect",
-  ];
+  let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
-    Option<"indexBitwidth", "index-bitwidth", "unsigned",
-           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"use64bitIndex", "use-64bit-index",
+           "bool", /*default=*/"false",
+           "Use 64-bit integers to convert index types">,
   ];
 }
 
@@ -875,6 +880,29 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// MeshToMPI
+//===----------------------------------------------------------------------===//
+
+def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
+  let summary = "Convert Mesh dialect to MPI dialect.";
+  let constructor = "mlir::createConvertMeshToMPIPass()";
+  let description = [{
+    This pass converts communication operations from the Mesh dialect to the
+    MPI dialect.
+    If it finds a global named "static_mpi_rank" it will use that splat value
+    instead of calling MPI_Comm_rank. This allows optimizations like constant
+    shape propagation and fusion because shard/partition sizes depend on the
+    rank.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "mpi::MPIDialect",
+    "scf::SCFDialect",
+    "bufferization::BufferizationDialect"
   ];
 }
 

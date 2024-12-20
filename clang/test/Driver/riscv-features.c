@@ -29,12 +29,6 @@
 // DEFAULT-NOT: "-target-feature" "-save-restore"
 // DEFAULT-NOT: "-target-feature" "+save-restore"
 
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mforced-sw-shadow-stack 2>&1 | FileCheck %s -check-prefix=FORCE-SW-SCS
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-forced-sw-shadow-stack 2>&1 | FileCheck %s -check-prefix=NO-FORCE-SW-SCS
-// FORCE-SW-SCS: "-target-feature" "+forced-sw-shadow-stack"
-// NO-FORCE-SW-SCS: "-target-feature" "-forced-sw-shadow-stack"
-// DEFAULT-NOT: "-target-feature" "+forced-sw-shadow-stack"
-
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefixes=FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-scalar-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-SCALAR-UNALIGNED-ACCESS

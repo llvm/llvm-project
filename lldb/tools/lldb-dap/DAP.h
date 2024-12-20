@@ -63,7 +63,7 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(const llvm::json::Object &command);
+typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
 typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
@@ -116,22 +116,28 @@ struct Variables {
 };
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct DAP {
-  std::string debug_adaptor_path;
+  llvm::StringRef debug_adaptor_path;
   InputStream input;
   OutputStream output;
   lldb::SBDebugger debugger;
@@ -171,7 +177,7 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  std::map<std::string, RequestCallback> request_handlers;
+  std::map<std::string, RequestCallback, std::less<>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -192,7 +198,7 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP();
+  DAP(llvm::StringRef path, ReplMode repl_mode);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
@@ -346,8 +352,6 @@ private:
   // JSON bytes.
   void SendJSON(const std::string &json_str);
 };
-
-extern DAP g_dap;
 
 } // namespace lldb_dap
 

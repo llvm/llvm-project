@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STDINT_H
+#ifndef _LIBCPP___CXX03_STDINT_H
 // AIX system headers need stdint.h to be re-enterable while _STD_TYPES_T
 // is defined until an inclusion of it without _STD_TYPES_T occurs, in which
 // case the header guard macro is defined.
 #if !defined(_AIX) || !defined(_STD_TYPES_T)
-#  define _LIBCPP_STDINT_H
+#  define _LIBCPP___CXX03_STDINT_H
 #endif // _STD_TYPES_T
 
 /*
@@ -103,7 +103,7 @@ Macros:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -124,4 +124,4 @@ Macros:
 #  include_next <stdint.h>
 #endif
 
-#endif // _LIBCPP_STDINT_H
+#endif // _LIBCPP___CXX03_STDINT_H

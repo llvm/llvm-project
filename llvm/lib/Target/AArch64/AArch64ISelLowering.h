@@ -273,6 +273,12 @@ enum NodeType : unsigned {
   UADDLV,
   SADDLV,
 
+  // Wide adds
+  SADDWT,
+  SADDWB,
+  UADDWT,
+  UADDWB,
+
   // Add Pairwise of two vectors
   ADDP,
   // Add Long Pairwise
@@ -474,10 +480,6 @@ enum NodeType : unsigned {
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCMPE,
 
-  // SME ZA loads and stores
-  SME_ZA_LDR,
-  SME_ZA_STR,
-
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,
@@ -515,11 +517,9 @@ enum NodeType : unsigned {
   STILP,
   STNP,
 
-  // Memory Operations
-  MOPS_MEMSET,
-  MOPS_MEMSET_TAGGING,
-  MOPS_MEMCOPY,
-  MOPS_MEMMOVE,
+  // SME ZA loads and stores
+  SME_ZA_LDR,
+  SME_ZA_STR,
 };
 
 } // end namespace AArch64ISD
@@ -985,6 +985,8 @@ public:
 
   bool shouldExpandCttzElements(EVT VT) const override;
 
+  bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const override;
+
   /// If a change in streaming mode is required on entry to/return from a
   /// function call it emits and returns the corresponding SMSTART or SMSTOP
   /// node. \p Condition should be one of the enum values from
@@ -1346,6 +1348,10 @@ private:
   unsigned getMinimumJumpTableEntries() const override;
 
   bool softPromoteHalfType() const override { return true; }
+
+  bool shouldScalarizeBinop(SDValue VecOp) const override {
+    return VecOp.getOpcode() == ISD::SETCC;
+  }
 };
 
 namespace AArch64 {
