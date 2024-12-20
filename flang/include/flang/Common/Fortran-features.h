@@ -12,6 +12,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include <optional>
 #include <vector>
 
 namespace Fortran::common {
@@ -48,11 +49,12 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ImpliedDoIndexScope, DistinctCommonSizes, OddIndexVariableRestrictions,
     IndistinguishableSpecifics, SubroutineAndFunctionSpecifics,
     EmptySequenceType, NonSequenceCrayPointee, BranchIntoConstruct,
-    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
+    BadBranchTarget, HollerithPolymorphic, ListDirectedSize,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
-    SavedLocalInSpecExpr)
+    SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
+    IgnoreIrrelevantAttributes, Unsigned)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -62,94 +64,26 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
     LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
     FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
-    FoldingFailure, FoldingLimit, Interoperability, Bounds, Preprocessing,
-    Scanning, OpenAccUsage, ProcPointerCompatibility, VoidMold,
-    KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
+    FoldingFailure, FoldingLimit, Interoperability, CharacterInteroperability,
+    Bounds, Preprocessing, Scanning, OpenAccUsage, ProcPointerCompatibility,
+    VoidMold, KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
     IgnoreTKRUsage, ExternalInterfaceMismatch, DefinedOperatorArgs, Final,
-    ZeroDoStep, UnusedForallIndex, OpenMPUsage, ModuleFile, DataLength,
-    IgnoredDirective, HomonymousSpecific, HomonymousResult,
-    IgnoredIntrinsicFunctionType, PreviousScalarUse,
-    RedeclaredInaccessibleComponent, ImplicitShared, IndexVarRedefinition,
-    IncompatibleImplicitInterfaces, BadTypeForTarget,
-    VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg)
+    ZeroDoStep, UnusedForallIndex, OpenMPUsage, DataLength, IgnoredDirective,
+    HomonymousSpecific, HomonymousResult, IgnoredIntrinsicFunctionType,
+    PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
+    IndexVarRedefinition, IncompatibleImplicitInterfaces, BadTypeForTarget,
+    VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
+    MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
 
+std::optional<LanguageFeature> FindLanguageFeature(const char *);
+std::optional<UsageWarning> FindUsageWarning(const char *);
+
 class LanguageFeatureControl {
 public:
-  LanguageFeatureControl() {
-    // These features must be explicitly enabled by command line options.
-    disable_.set(LanguageFeature::OldDebugLines);
-    disable_.set(LanguageFeature::OpenACC);
-    disable_.set(LanguageFeature::OpenMP);
-    disable_.set(LanguageFeature::CUDA); // !@cuf
-    disable_.set(LanguageFeature::CudaManaged);
-    disable_.set(LanguageFeature::CudaUnified);
-    disable_.set(LanguageFeature::ImplicitNoneTypeNever);
-    disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
-    disable_.set(LanguageFeature::DefaultSave);
-    disable_.set(LanguageFeature::SaveMainProgram);
-    // These features, if enabled, conflict with valid standard usage,
-    // so there are disabled here by default.
-    disable_.set(LanguageFeature::BackslashEscapes);
-    disable_.set(LanguageFeature::LogicalAbbreviations);
-    disable_.set(LanguageFeature::XOROperator);
-    disable_.set(LanguageFeature::OldStyleParameter);
-    // These warnings are enabled by default, but only because they used
-    // to be unconditional.  TODO: prune this list
-    warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
-    warnLanguage_.set(LanguageFeature::RedundantAttribute);
-    warnLanguage_.set(LanguageFeature::SubroutineAndFunctionSpecifics);
-    warnLanguage_.set(LanguageFeature::EmptySequenceType);
-    warnLanguage_.set(LanguageFeature::NonSequenceCrayPointee);
-    warnLanguage_.set(LanguageFeature::BranchIntoConstruct);
-    warnLanguage_.set(LanguageFeature::BadBranchTarget);
-    warnLanguage_.set(LanguageFeature::ConvertedArgument);
-    warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
-    warnLanguage_.set(LanguageFeature::ListDirectedSize);
-    warnUsage_.set(UsageWarning::ShortArrayActual);
-    warnUsage_.set(UsageWarning::FoldingException);
-    warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
-    warnUsage_.set(UsageWarning::FoldingValueChecks);
-    warnUsage_.set(UsageWarning::FoldingFailure);
-    warnUsage_.set(UsageWarning::FoldingLimit);
-    warnUsage_.set(UsageWarning::Interoperability);
-    warnUsage_.set(UsageWarning::Bounds);
-    warnUsage_.set(UsageWarning::Preprocessing);
-    warnUsage_.set(UsageWarning::Scanning);
-    warnUsage_.set(UsageWarning::OpenAccUsage);
-    warnUsage_.set(UsageWarning::ProcPointerCompatibility);
-    warnUsage_.set(UsageWarning::VoidMold);
-    warnUsage_.set(UsageWarning::KnownBadImplicitInterface);
-    warnUsage_.set(UsageWarning::EmptyCase);
-    warnUsage_.set(UsageWarning::CaseOverflow);
-    warnUsage_.set(UsageWarning::CUDAUsage);
-    warnUsage_.set(UsageWarning::IgnoreTKRUsage);
-    warnUsage_.set(UsageWarning::ExternalInterfaceMismatch);
-    warnUsage_.set(UsageWarning::DefinedOperatorArgs);
-    warnUsage_.set(UsageWarning::Final);
-    warnUsage_.set(UsageWarning::ZeroDoStep);
-    warnUsage_.set(UsageWarning::UnusedForallIndex);
-    warnUsage_.set(UsageWarning::OpenMPUsage);
-    warnUsage_.set(UsageWarning::ModuleFile);
-    warnUsage_.set(UsageWarning::DataLength);
-    warnUsage_.set(UsageWarning::IgnoredDirective);
-    warnUsage_.set(UsageWarning::HomonymousSpecific);
-    warnUsage_.set(UsageWarning::HomonymousResult);
-    warnUsage_.set(UsageWarning::IgnoredIntrinsicFunctionType);
-    warnUsage_.set(UsageWarning::PreviousScalarUse);
-    warnUsage_.set(UsageWarning::RedeclaredInaccessibleComponent);
-    warnUsage_.set(UsageWarning::ImplicitShared);
-    warnUsage_.set(UsageWarning::IndexVarRedefinition);
-    warnUsage_.set(UsageWarning::IncompatibleImplicitInterfaces);
-    warnUsage_.set(UsageWarning::BadTypeForTarget);
-    warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
-    warnUsage_.set(UsageWarning::UndefinedFunctionResult);
-    warnUsage_.set(UsageWarning::UselessIomsg);
-    // New warnings, on by default
-    warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
-  }
+  LanguageFeatureControl();
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
 
   void Enable(LanguageFeature f, bool yes = true) { disable_.set(f, !yes); }

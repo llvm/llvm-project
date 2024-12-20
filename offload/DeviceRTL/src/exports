@@ -15,4 +15,5 @@ malloc
 free
 memcmp
 printf
+__llvm_rpc_client
 __assert_fail

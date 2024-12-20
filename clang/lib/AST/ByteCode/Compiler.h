@@ -125,12 +125,15 @@ public:
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
+  bool VisitFixedPointLiteral(const FixedPointLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitComplexBinOp(const BinaryOperator *E);
   bool VisitVectorBinOp(const BinaryOperator *E);
+  bool VisitFixedPointBinOp(const BinaryOperator *E);
+  bool VisitFixedPointUnaryOperator(const UnaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E, unsigned BuiltinID);
@@ -299,7 +302,8 @@ protected:
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
+  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                const ValueDecl *ExtendingDecl = nullptr);
   unsigned allocateTemporary(const Expr *E);
 
 private:
@@ -321,6 +325,7 @@ private:
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
+  bool visitZeroArrayInitializer(QualType T, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
@@ -364,11 +369,13 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-  bool emitRecordDestruction(const Record *R);
-  bool emitDestruction(const Descriptor *Desc);
+  bool emitRecordDestruction(const Record *R, SourceInfo Loc);
+  bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
 
@@ -540,7 +547,7 @@ public:
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;
 
-        if (!this->Ctx->emitDestruction(Local.Desc))
+        if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
           return false;
 
         if (!this->Ctx->emitPopPtr(E))

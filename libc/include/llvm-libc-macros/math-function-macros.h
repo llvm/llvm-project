@@ -11,6 +11,19 @@
 
 #include "math-macros.h"
 
+#ifndef __cplusplus
+#define issignaling(x)                                                         \
+  _Generic((x),                                                                \
+      float: issignalingf,                                                     \
+      double: issignaling,                                                     \
+      long double: issignalingl)(x)
+#define iscanonical(x)                                                         \
+  _Generic((x),                                                                \
+      float: iscanonicalf,                                                     \
+      double: iscanonical,                                                     \
+      long double: iscanonicall)(x)
+#endif
+
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
 #define isnan(x) __builtin_isnan(x)

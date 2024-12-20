@@ -14,9 +14,9 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[STEP_ADD]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[STEP_ADD1]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
@@ -27,23 +27,17 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i64>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i64> [[STEP_ADD]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i64> [[STEP_ADD1]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i64> [[STEP_ADD2]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD4]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD5]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD6]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP22]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], 1
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 4)
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], splat (i64 128)
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD4]], splat (i64 128)
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD5]], splat (i64 128)
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD6]], splat (i64 128)
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], 1
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[TMP28]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i64, ptr [[TMP28]], i32 4
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i64, ptr [[TMP28]], i32 8
@@ -53,7 +47,7 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP14]], ptr [[TMP34]], i32 4, <4 x i1> [[TMP18]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP15]], ptr [[TMP35]], i32 4, <4 x i1> [[TMP19]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD2]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -116,9 +110,6 @@ define void @iv.4_used_as_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 4
@@ -128,19 +119,13 @@ define void @iv.4_used_as_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP3]], 4
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD1]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD2]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD3]], <i64 128, i64 128, i64 128, i64 128>
-; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[TMP12]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP13]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP14]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], splat (i64 128)
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD1]], splat (i64 128)
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD2]], splat (i64 128)
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD3]], splat (i64 128)
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP15]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[TMP24]], i32 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[TMP24]], i32 8

@@ -304,6 +304,27 @@
 // AMX-COMPLEX: "-target-feature" "+amx-complex"
 // NO-AMX-COMPLEX: "-target-feature" "-amx-complex"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-transpose %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TRANSPOSE %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-transpose %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TRANSPOSE %s
+// AMX-TRANSPOSE: "-target-feature" "+amx-transpose"
+// NO-AMX-TRANSPOSE: "-target-feature" "-amx-transpose"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-avx512 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-AVX512 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-avx512 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-AVX512 %s
+// AMX-AVX512: "-target-feature" "+amx-avx512"
+// NO-AMX-AVX512: "-target-feature" "-amx-avx512"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-tf32 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TF32 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-tf32 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TF32 %s
+// AMX-TF32: "-target-feature" "+amx-tf32"
+// NO-AMX-TF32: "-target-feature" "-amx-tf32"
+
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"
@@ -403,6 +424,11 @@
 // RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
 // USERMSR: "-target-feature" "+usermsr"
 // NO-USERMSR: "-target-feature" "-usermsr"
+
+// RUN: %clang --target=i386 -mmovrs %s -### -o %t.o 2>&1 | FileCheck -check-prefix=MOVRS %s
+// RUN: %clang --target=i386 -mno-movrs %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-MOVRS %s
+// MOVRS: "-target-feature" "+movrs"
+// NO-MOVRS: "-target-feature" "-movrs"
 
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s

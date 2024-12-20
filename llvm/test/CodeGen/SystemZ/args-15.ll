@@ -8,4 +8,6 @@ define i32 @callee_MissingRetAttr() {
   ret i32 -1
 }
 
-; CHECK: Narrow integer argument must have a valid extension type.
+; CHECK: ERROR: Missing extension attribute of returned value from function:
+; CHECK: i32 @callee_MissingRetAttr()
+; CHECK: UNREACHABLE executed

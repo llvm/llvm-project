@@ -28,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
 #include <cstdint>
@@ -410,7 +411,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
           OperandRecords.push_back(Op.Rec);
           ++CurrentOffset;
         } else {
-          for (Init *Arg : MIOI->getArgs()) {
+          for (const Init *Arg : MIOI->getArgs()) {
             OperandRecords.push_back(cast<DefInit>(Arg)->getDef());
             ++CurrentOffset;
           }
@@ -711,7 +712,7 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "bool " << Rec->getValueAsString("FunctionName");
     OS << "(const MCInst &MI) {\n";
 
-    OS.indent(PE.getIndentLevel() * 2);
+    OS << PE.getIndent();
     PE.expandStatement(OS, Rec->getValueAsDef("Body"));
     OS << "\n}\n\n";
   }
@@ -914,7 +915,7 @@ void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
     }
 
     OS << " {\n";
-    OS.indent(PE.getIndentLevel() * 2);
+    OS << PE.getIndent();
     PE.expandStatement(OS, Rec->getValueAsDef("Body"));
     OS << "\n}\n\n";
   }
@@ -934,14 +935,15 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   const Record *InstrInfo = Target.getInstructionSet();
 
   // Collect all of the operand info records.
-  Records.startTimer("Collect operand info");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Collect operand info");
   OperandInfoListTy OperandInfoList;
   OperandInfoMapTy OperandInfoMap;
   unsigned OperandInfoSize =
       CollectOperandInfo(OperandInfoList, OperandInfoMap);
 
   // Collect all of the instruction's implicit uses and defs.
-  Records.startTimer("Collect uses/defs");
+  Timer.startTimer("Collect uses/defs");
   std::map<std::vector<const Record *>, unsigned> EmittedLists;
   std::vector<std::vector<const Record *>> ImplicitLists;
   unsigned ImplicitListSize = 0;
@@ -979,7 +981,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "namespace llvm {\n\n";
 
   // Emit all of the MCInstrDesc records in reverse ENUM ordering.
-  Records.startTimer("Emit InstrDesc records");
+  Timer.startTimer("Emit InstrDesc records");
   OS << "static_assert(sizeof(MCOperandInfo) % sizeof(MCPhysReg) == 0);\n";
   OS << "static constexpr unsigned " << TargetName << "ImpOpBase = sizeof "
      << TargetName << "InstrTable::OperandInfo / (sizeof(MCPhysReg));\n\n";
@@ -998,13 +1000,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "  }, {\n";
 
   // Emit all of the operand info records.
-  Records.startTimer("Emit operand info");
+  Timer.startTimer("Emit operand info");
   EmitOperandInfo(OS, OperandInfoList);
 
   OS << "  }, {\n";
 
   // Emit all of the instruction's implicit uses and defs.
-  Records.startTimer("Emit uses/defs");
+  Timer.startTimer("Emit uses/defs");
   for (auto &List : ImplicitLists) {
     OS << "    /* " << EmittedLists[List] << " */";
     for (auto &Reg : List)
@@ -1015,7 +1017,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "  }\n};\n\n";
 
   // Emit the array of instruction names.
-  Records.startTimer("Emit instruction names");
+  Timer.startTimer("Emit instruction names");
   InstrNames.layout();
   InstrNames.emitStringLiteralDef(OS, Twine("extern const char ") + TargetName +
                                           "InstrNameData[]");
@@ -1076,7 +1078,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   }
 
   // MCInstrInfo initialization routine.
-  Records.startTimer("Emit initialization routine");
+  Timer.startTimer("Emit initialization routine");
   OS << "static inline void Init" << TargetName
      << "MCInstrInfo(MCInstrInfo *II) {\n";
   OS << "  II->InitMCInstrInfo(" << TargetName << "Descs.Insts, " << TargetName
@@ -1156,22 +1158,22 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   OS << "#endif // GET_INSTRINFO_CTOR_DTOR\n\n";
 
-  Records.startTimer("Emit operand name mappings");
+  Timer.startTimer("Emit operand name mappings");
   emitOperandNameMappings(OS, Target, NumberedInstructions);
 
-  Records.startTimer("Emit operand type mappings");
+  Timer.startTimer("Emit operand type mappings");
   emitOperandTypeMappings(OS, Target, NumberedInstructions);
 
-  Records.startTimer("Emit logical operand size mappings");
+  Timer.startTimer("Emit logical operand size mappings");
   emitLogicalOperandSizeMappings(OS, TargetName, NumberedInstructions);
 
-  Records.startTimer("Emit logical operand type mappings");
+  Timer.startTimer("Emit logical operand type mappings");
   emitLogicalOperandTypeMappings(OS, TargetName, NumberedInstructions);
 
-  Records.startTimer("Emit helper methods");
+  Timer.startTimer("Emit helper methods");
   emitMCIIHelperMethods(OS, TargetName);
 
-  Records.startTimer("Emit verifier methods");
+  Timer.startTimer("Emit verifier methods");
   emitFeatureVerifier(OS, Target);
 }
 
@@ -1294,7 +1296,7 @@ void InstrInfoEmitter::emitRecord(
     OS << "|(1ULL<<MCID::Authenticated)";
 
   // Emit all of the target-specific flags...
-  BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
+  const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
   if (!TSF)
     PrintFatalError(Inst.TheDef->getLoc(), "no TSFlags?");
   uint64_t Value = 0;
@@ -1357,11 +1359,12 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "#endif // GET_INSTRINFO_SCHED_ENUM\n\n";
 }
 
-static void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS) {
-  RK.startTimer("Analyze DAG patterns");
-  InstrInfoEmitter(RK).run(OS);
-  RK.startTimer("Emit map table");
-  EmitMapTable(RK, OS);
+static void EmitInstrInfo(const RecordKeeper &Records, raw_ostream &OS) {
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Analyze DAG patterns");
+  InstrInfoEmitter(Records).run(OS);
+  Timer.startTimer("Emit map table");
+  EmitMapTable(Records, OS);
 }
 
 static TableGen::Emitter::Opt X("gen-instr-info", EmitInstrInfo,

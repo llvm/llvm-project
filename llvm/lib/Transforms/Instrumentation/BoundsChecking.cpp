@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -27,7 +28,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 #include <utility>
 
 using namespace llvm;
@@ -105,6 +105,30 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   return Or;
 }
 
+static CallInst *InsertTrap(BuilderTy &IRB) {
+  if (!DebugTrapBB)
+    return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
+  // FIXME: Ideally we would use the SanitizerHandler::OutOfBounds constant.
+  return IRB.CreateIntrinsic(
+      Intrinsic::ubsantrap, {},
+      ConstantInt::get(IRB.getInt8Ty(),
+                       IRB.GetInsertBlock()->getParent()->size()));
+}
+
+static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {
+  Function *Fn = IRB.GetInsertBlock()->getParent();
+  LLVMContext &Ctx = Fn->getContext();
+  llvm::AttrBuilder B(Ctx);
+  B.addAttribute(llvm::Attribute::NoUnwind);
+  if (!MayReturn)
+    B.addAttribute(llvm::Attribute::NoReturn);
+  FunctionCallee Callee = Fn->getParent()->getOrInsertFunction(
+      Name,
+      llvm::AttributeList::get(Ctx, llvm::AttributeList::FunctionIndex, B),
+      Type::getVoidTy(Ctx));
+  return IRB.CreateCall(Callee);
+}
+
 /// Adds run-time bounds checks to memory accessing instructions.
 ///
 /// \p Or is the condition that should guard the trap.
@@ -127,20 +151,53 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   BasicBlock *Cont = OldBB->splitBasicBlock(SplitI);
   OldBB->getTerminator()->eraseFromParent();
 
+  BasicBlock *TrapBB = GetTrapBB(IRB, Cont);
+
   if (C) {
     // If we have a constant zero, unconditionally branch.
     // FIXME: We should really handle this differently to bypass the splitting
     // the block.
-    BranchInst::Create(GetTrapBB(IRB), OldBB);
+    BranchInst::Create(TrapBB, OldBB);
     return;
   }
 
   // Create the conditional branch.
-  BranchInst::Create(GetTrapBB(IRB), Cont, Or, OldBB);
+  BranchInst::Create(TrapBB, Cont, Or, OldBB);
 }
 
+struct ReportingOpts {
+  bool MayReturn = false;
+  bool UseTrap = false;
+  bool MinRuntime = false;
+  StringRef Name;
+
+  ReportingOpts(BoundsCheckingPass::ReportingMode Mode) {
+    switch (Mode) {
+    case BoundsCheckingPass::ReportingMode::Trap:
+      UseTrap = true;
+      break;
+    case BoundsCheckingPass::ReportingMode::MinRuntime:
+      Name = "__ubsan_handle_local_out_of_bounds_minimal";
+      MinRuntime = true;
+      MayReturn = true;
+      break;
+    case BoundsCheckingPass::ReportingMode::MinRuntimeAbort:
+      Name = "__ubsan_handle_local_out_of_bounds_minimal_abort";
+      MinRuntime = true;
+      break;
+    case BoundsCheckingPass::ReportingMode::FullRuntime:
+      Name = "__ubsan_handle_local_out_of_bounds";
+      MayReturn = true;
+      break;
+    case BoundsCheckingPass::ReportingMode::FullRuntimeAbort:
+      Name = "__ubsan_handle_local_out_of_bounds_abort";
+      break;
+    }
+  }
+};
+
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
-                              ScalarEvolution &SE) {
+                              ScalarEvolution &SE, const ReportingOpts &Opts) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -181,38 +238,44 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   // Create a trapping basic block on demand using a callback. Depending on
   // flags, this will either create a single block for the entire function or
   // will create a fresh block every time it is called.
-  BasicBlock *TrapBB = nullptr;
-  auto GetTrapBB = [&TrapBB](BuilderTy &IRB) {
+  BasicBlock *ReuseTrapBB = nullptr;
+  auto GetTrapBB = [&ReuseTrapBB, &Opts](BuilderTy &IRB, BasicBlock *Cont) {
     Function *Fn = IRB.GetInsertBlock()->getParent();
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
 
-    if (TrapBB && SingleTrapBB && !DebugTrapBB)
-      return TrapBB;
+    // Create a trapping basic block on demand using a callback. Depending on
+    // flags, this will either create a single block for the entire function or
+    // will create a fresh block every time it is called.
+    if (ReuseTrapBB)
+      return ReuseTrapBB;
 
-    TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
+    BasicBlock *TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
     IRB.SetInsertPoint(TrapBB);
 
-    Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
-
-    CallInst *TrapCall;
+    CallInst *TrapCall = Opts.UseTrap
+                             ? InsertTrap(IRB)
+                             : InsertCall(IRB, Opts.MayReturn, Opts.Name);
     if (DebugTrapBB) {
-      TrapCall =
-          IRB.CreateCall(F, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
-    } else {
-      TrapCall = IRB.CreateCall(F, {});
+      // FIXME: Pass option form clang.
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     }
 
-    TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);
-    IRB.CreateUnreachable();
+    if (Opts.MayReturn) {
+      IRB.CreateBr(Cont);
+    } else {
+      TrapCall->setDoesNotReturn();
+      IRB.CreateUnreachable();
+    }
+
+    if (!Opts.MayReturn && SingleTrapBB && !DebugTrapBB)
+      ReuseTrapBB = TrapBB;
 
     return TrapBB;
   };
 
-  // Add the checks.
   for (const auto &Entry : TrapInfo) {
     Instruction *Inst = Entry.first;
     BuilderTy IRB(Inst->getParent(), BasicBlock::iterator(Inst), TargetFolder(DL));
@@ -226,8 +289,31 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE))
+  if (!addBoundsChecking(F, TLI, SE, ReportingOpts(Mode)))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
+}
+
+void BoundsCheckingPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<BoundsCheckingPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  switch (Mode) {
+  case ReportingMode::Trap:
+    OS << "<trap>";
+    break;
+  case ReportingMode::MinRuntime:
+    OS << "<min-rt>";
+    break;
+  case ReportingMode::MinRuntimeAbort:
+    OS << "<min-rt-abort>";
+    break;
+  case ReportingMode::FullRuntime:
+    OS << "<rt>";
+    break;
+  case ReportingMode::FullRuntimeAbort:
+    OS << "<rt-abort>";
+    break;
+  }
 }

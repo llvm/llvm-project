@@ -27,11 +27,22 @@ using namespace llvm;
 namespace {
 
 class XtensaDAGToDAGISel : public SelectionDAGISel {
+  const XtensaSubtarget *Subtarget = nullptr;
+
 public:
-  XtensaDAGToDAGISel(XtensaTargetMachine &TM, CodeGenOptLevel OptLevel)
+  explicit XtensaDAGToDAGISel(XtensaTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(TM, OptLevel) {}
 
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    Subtarget = &MF.getSubtarget<XtensaSubtarget>();
+    return SelectionDAGISel::runOnMachineFunction(MF);
+  }
+
   void Select(SDNode *Node) override;
+
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
   // For load/store instructions generate (base+offset) pair from
   // memory address. The offset must be a multiple of scale argument.
@@ -211,4 +222,23 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
   }
 
   SelectCode(Node);
+}
+
+bool XtensaDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
+  switch (ConstraintID) {
+  default:
+    llvm_unreachable("Unexpected asm memory constraint");
+  case InlineAsm::ConstraintCode::m: {
+    SDValue Base, Offset;
+
+    selectMemRegAddr(Op, Base, Offset, 4);
+    OutOps.push_back(Base);
+    OutOps.push_back(Offset);
+
+    return false;
+  }
+  }
+  return false;
 }

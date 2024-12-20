@@ -1,91 +1,57 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: ld.lld %t.o -r -o %t-rel
-# RUN: llvm-readobj -S --section-data %t-rel | FileCheck %s
+# RUN: ld.lld %t.o -r -o %t.ro
+# RUN: llvm-readelf -S %t.ro | FileCheck %s
+# RUN: llvm-objdump -s %t.ro | FileCheck %s --check-prefix=OBJDUMP
 
-# When linker generates a relocatable object it does string merging in the same
-# way as for regular link. It should keep SHF_MERGE flag and set proper sh_entsize
-# value so that final link can perform the final merging optimization.
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=CHECK-PDE
 
-# CHECK:      Section {
-# CHECK:        Index:
-# CHECK:        Name: .rodata.1 (
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK-NEXT:   Flags [
-# CHECK-NEXT:     SHF_ALLOC
-# CHECK-NEXT:     SHF_MERGE
-# CHECK-NEXT:   ]
-# CHECK-NEXT:   Address:
-# CHECK-NEXT:   Offset:
-# CHECK-NEXT:   Size: 4
-# CHECK-NEXT:   Link: 0
-# CHECK-NEXT:   Info: 0
-# CHECK-NEXT:   AddressAlignment: 4
-# CHECK-NEXT:   EntrySize: 4
-# CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 42000000
-# CHECK-NEXT:   )
-# CHECK-NEXT: }
-# CHECK:      Section {
-# CHECK:        Index:
-# CHECK:        Name: .rodata.2 (
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK-NEXT:   Flags [
-# CHECK-NEXT:     SHF_ALLOC
-# CHECK-NEXT:     SHF_MERGE
-# CHECK-NEXT:   ]
-# CHECK-NEXT:   Address:
-# CHECK-NEXT:   Offset:
-# CHECK-NEXT:   Size: 8
-# CHECK-NEXT:   Link: 0
-# CHECK-NEXT:   Info: 0
-# CHECK-NEXT:   AddressAlignment: 8
-# CHECK-NEXT:   EntrySize: 8
-# CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 42000000 42000000
-# CHECK-NEXT:   )
-# CHECK-NEXT: }
-# CHECK:      Section {
-# CHECK:        Index:
-# CHECK:        Name: .data
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK-NEXT:   Flags [
-# CHECK-NEXT:     SHF_ALLOC
-# CHECK-NEXT:     SHF_WRITE
-# CHECK-NEXT:   ]
-# CHECK-NEXT:   Address:
-# CHECK-NEXT:   Offset:
-# CHECK-NEXT:   Size: 16
-# CHECK-NEXT:   Link: 0
-# CHECK-NEXT:   Info: 0
-# CHECK-NEXT:   AddressAlignment: 1
-# CHECK-NEXT:   EntrySize: 0
-# CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 42000000 42000000 42000000 42000000
-# CHECK-NEXT:   )
-# CHECK-NEXT: }
+# CHECK:       [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT:  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+# CHECK-NEXT:  [ 1] .text             PROGBITS        0000000000000000 000040 000000 00  AX  0   0  4
+# CHECK-NEXT:  [ 2] .rodata.1         PROGBITS        0000000000000000 000040 000004 04  AM  0   0  4
+# CHECK-NEXT:  [ 3] .rodata.2         PROGBITS        0000000000000000 000048 000008 08  AM  0   0  8
+# CHECK-NEXT:  [ 4] .rodata.cst8      PROGBITS        0000000000000000 000050 000010 08  AM  0   0  1
+# CHECK-NEXT:  [ 5] .rela.rodata.cst8 RELA            0000000000000000 000068 000030 18   I  9   4  8
+# CHECK-NEXT:  [ 6] .cst4             PROGBITS        0000000000000000 000060 000008 04  AM  0   0  1
+# CHECK-NEXT:  [ 7] .rela.cst4        RELA            0000000000000000 000098 000030 18   I  9   6  8
 
-        .section        .rodata.1,"aM",@progbits,4
-        .align  4
-        .global foo
+# OBJDUMP:      Contents of section .rodata.1:
+# OBJDUMP-NEXT:  0000 42000000                             B...
+# OBJDUMP-NEXT: Contents of section .rodata.2:
+# OBJDUMP-NEXT:  0000 42000000 42000000                    B...B...
+# OBJDUMP-NEXT: Contents of section .rodata.cst8:
+# OBJDUMP-NEXT:  0000 00000000 00000000 00000000 00000000  ................
+# OBJDUMP:      Contents of section .cst4:
+# OBJDUMP-NEXT:  0000 00000000 00000000                    ........
+
+# CHECK-PDE: [ 2] .cst4             PROGBITS        0000000000200140 000140 000008 04  AM  0   0  1
+
 foo:
-        .long   0x42
-        .long   0x42
-        .long   0x42
 
-        .section        .rodata.2,"aM",@progbits,8
-        .align  8
-        .global bar
-bar:
-        .long   0x42
-        .long   0x42
-        .long   0x42
-        .long   0x42
+.section        .rodata.1,"aM",@progbits,4
+.align  4
+.long 0x42
+.long 0x42
+.long 0x42
 
-        .data
-        .global gar
-zed:
-        .long   0x42
-        .long   0x42
-        .long   0x42
-        .long   0x42
+.section        .rodata.2,"aM",@progbits,8
+.align  8
+.long   0x42
+.long   0x42
+.long   0x42
+.long   0x42
+
+## Test that we keep a SHT_REL[A] section which relocates a SHF_MERGE section
+## in -r mode. The relocated SHF_MERGE section is handled as non-mergeable.
+.section .rodata.cst8,"aM",@progbits,8,unique,0
+.quad foo
+
+.section .rodata.cst8,"aM",@progbits,8,unique,1
+.quad foo
+
+.section .cst4,"aM",@progbits,4,unique,0
+.long foo
+.section .cst4,"aM",@progbits,4,unique,1
+.long foo

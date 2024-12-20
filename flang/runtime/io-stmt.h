@@ -455,6 +455,7 @@ public:
   RT_API_ATTRS MutableModes &mutableModes();
   RT_API_ATTRS ConnectionState &GetConnectionState();
   RT_API_ATTRS int asynchronousID() const { return asynchronousID_; }
+  RT_API_ATTRS void set_destroy(bool yes = true) { destroy_ = yes; }
   RT_API_ATTRS int EndIoStatement();
   RT_API_ATTRS ExternalFileUnit *GetExternalFileUnit() const { return &unit_; }
   RT_API_ATTRS void SetAsynchronous();
@@ -463,6 +464,7 @@ public:
 private:
   ExternalFileUnit &unit_;
   int asynchronousID_{-1};
+  bool destroy_{false};
 };
 
 template <Direction DIR>

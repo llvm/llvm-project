@@ -274,6 +274,15 @@ namespace NowThrowNew {
   static_assert(erroneous_array_bound_nothrow2(-1) == 0);// expected-error {{not an integral constant expression}}
   static_assert(!erroneous_array_bound_nothrow2(1LL << 62));// expected-error {{not an integral constant expression}}
 
+  constexpr bool erroneous_array_bound(long long n) {
+    delete[] new int[n]; // both-note {{array bound -1 is negative}} both-note {{array bound 4611686018427387904 is too large}}
+    return true;
+  }
+  static_assert(erroneous_array_bound(3));
+  static_assert(erroneous_array_bound(0));
+  static_assert(erroneous_array_bound(-1)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(erroneous_array_bound(1LL << 62)); // both-error {{constant expression}} both-note {{in call}}
+
   constexpr bool evaluate_nothrow_arg() {
     bool ok = false;
     delete new ((ok = true, std::nothrow)) int;
@@ -552,8 +561,6 @@ namespace DeleteThis {
                                                // both-note {{in call to 'super_secret_double_delete()'}}
 }
 
-/// FIXME: This is currently diagnosed, but should work.
-/// If the destructor for S is _not_ virtual however, it should fail.
 namespace CastedDelete {
   struct S {
     constexpr S(int *p) : p(p) {}
@@ -567,11 +574,20 @@ namespace CastedDelete {
 
   constexpr int vdtor_1() {
     int a;
-    delete (S*)new T(&a); // expected-note {{delete of pointer to subobject}}
+    delete (S*)new T(&a);
     return a;
   }
-  static_assert(vdtor_1() == 1); // expected-error {{not an integral constant expression}} \
-                                 // expected-note {{in call to}}
+  static_assert(vdtor_1() == 1);
+
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+      struct S {};
+      struct T : S {};
+      S *p = new T();
+      delete p; // both-note 2{{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+      return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -776,6 +792,50 @@ namespace Placement {
     return r;
   }
   static_assert(ok2()== 0);
+}
+
+constexpr bool virt_delete(bool global) {
+  struct A {
+    virtual constexpr ~A() {}
+  };
+  struct B : A {
+    void operator delete(void *);
+    constexpr ~B() {}
+  };
+
+  A *p = new B;
+  if (global)
+    ::delete p;
+  else
+    delete p; // both-note {{call to class-specific 'operator delete'}}
+  return true;
+}
+static_assert(virt_delete(true));
+static_assert(virt_delete(false)); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+
+
+namespace ToplevelScopeInTemplateArg {
+  class string {
+  public:
+    char *mem;
+    constexpr string() {
+      this->mem = new char(1);
+    }
+    constexpr ~string() {
+      delete this->mem;
+    }
+    constexpr unsigned size() const { return 4; }
+  };
+
+
+  template <unsigned N>
+  void test() {};
+
+  void f() {
+      test<string().size()>();
+      static_assert(string().size() == 4);
+  }
 }
 
 #else

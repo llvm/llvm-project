@@ -30,10 +30,21 @@
 //   * llvm.nvvm.max.ui  --> select(x ule y, x, y)
 //   * llvm.nvvm.max.ull --> ibid.
 //   * llvm.nvvm.h2f     --> llvm.convert.to.fp16.f32
-//   * llvm.nvvm.bitcast.f2i  --> bitcast
-//   * llvm.nvvm.bitcast.i2f  --> ibid.
-//   * llvm.nvvm.bitcast.d2ll --> ibid.
-//   * llvm.nvvm.bitcast.ll2d --> ibid.
+//   * llvm.nvvm.bitcast.f2i         --> bitcast
+//   * llvm.nvvm.bitcast.i2f         --> ibid.
+//   * llvm.nvvm.bitcast.d2ll        --> ibid.
+//   * llvm.nvvm.bitcast.ll2d        --> ibid.
+//   * llvm.nvvm.ptr.gen.to.global   --> addrspacecast
+//   * llvm.nvvm.ptr.gen.to.shared   --> ibid.
+//   * llvm.nvvm.ptr.gen.to.constant --> ibid.
+//   * llvm.nvvm.ptr.gen.to.local    --> ibid.
+//   * llvm.nvvm.ptr.global.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.shared.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.constant.to.gen --> ibid.
+//   * llvm.nvvm.ptr.local.to.gen    --> ibid.
+//   * llvm.nvvm.ldg.global.i        --> load addrspace(1) !load.invariant
+//   * llvm.nvvm.ldg.global.f        --> ibid.
+//   * llvm.nvvm.ldg.global.p        --> ibid.
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
@@ -556,6 +567,93 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
+class CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_g2s_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // dst_smem_ptr
+                           llvm_shared_ptr_ty,  // mbarrier_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                           Im2ColOffsetsTy,     // im2col offsets
+                          [llvm_i16_ty,         // cta_mask
+                           llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty,          // Flag for cta_mask
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 5);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>,
+        ImmArg<ArgIndex<!add(FlagsStartIdx, 1)>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim # "d";
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_ptr_ty],     // tensormap_ptr
+                           TensorDimsTy,     // actual tensor dims
+                           Im2ColOffsetsTy,  // im2col offsets
+                          [llvm_i64_ty,      // cache_hint
+                           llvm_i1_ty]       // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 2);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode, string op> {
+  string Suffix = op # "_" # mode # "_" # dim # "d";
+  string Name = "int_nvvm_cp_async_bulk_tensor_reduce_" # Suffix;
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -739,6 +837,13 @@ let TargetPrefix = "nvvm" in {
         [IntrNoMem]>;
   def int_nvvm_div_rp_d : ClangBuiltin<"__nvvm_div_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
+        [IntrNoMem]>;
+
+  def int_nvvm_div_full : ClangBuiltin<"__nvvm_div_full">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+  def int_nvvm_div_full_ftz : ClangBuiltin<"__nvvm_div_full_ftz">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
 
 //
@@ -1071,6 +1176,24 @@ let TargetPrefix = "nvvm" in {
             [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
     }
   }
+
+//
+// Funnel-shift
+//
+  foreach direction = ["l", "r"] in
+    def int_nvvm_fsh # direction # _clamp :
+      DefaultAttrsIntrinsic<[llvm_anyint_ty],
+        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+//
+// FLO - Find Leading One
+//
+  foreach sign = ["s", "u"] in
+    def int_nvvm_flo_ # sign :
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
+        [llvm_anyint_ty, llvm_i1_ty],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
 //
 // Convert
@@ -1586,55 +1709,6 @@ def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
-
-// Generated within nvvm. Use for ldg on sm_35 or later.  Second arg is the
-// pointer's alignment.
-def int_nvvm_ldg_global_i : Intrinsic<[llvm_anyint_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.i">;
-def int_nvvm_ldg_global_f : Intrinsic<[llvm_anyfloat_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.f">;
-def int_nvvm_ldg_global_p : Intrinsic<[llvm_anyptr_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.p">;
-
-// Use for generic pointers
-// - These intrinsics are used to convert address spaces.
-// - The input pointer and output pointer must have the same type, except for
-//   the address-space. (This restriction is not enforced here as there is
-//   currently no way to describe it).
-// - This complements the llvm bitcast, which can be used to cast one type
-//   of pointer to another type of pointer, while the address space remains
-//   the same.
-def int_nvvm_ptr_local_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.local.to.gen">;
-def int_nvvm_ptr_shared_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.shared.to.gen">;
-def int_nvvm_ptr_global_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.global.to.gen">;
-def int_nvvm_ptr_constant_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.constant.to.gen">;
-
-def int_nvvm_ptr_gen_to_global: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.global">;
-def int_nvvm_ptr_gen_to_shared: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.shared">;
-def int_nvvm_ptr_gen_to_local: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.local">;
-def int_nvvm_ptr_gen_to_constant: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.constant">;
 
 // Used in nvvm internally to help address space opt and ptx code generation
 // This is for params that are passed to kernel functions by pointer by-val.
@@ -4866,5 +4940,29 @@ def int_nvvm_setmaxnreg_dec_sync_aligned_u32
 // Exit
 def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
+
+// Intrinsics for Tensor Copy using TMA
+// G2S -> From Global to Shared memory variants
+// S2G -> From Shared to Global memory variants
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach g2s = [CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, mode>] in
+      def g2s.Name : DefaultAttrsIntrinsic<[], g2s.ArgsTy, g2s.IntrProp>;
+    foreach s2g = [CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, mode>] in
+      def s2g.Name : DefaultAttrsIntrinsic<[], s2g.ArgsTy, s2g.IntrProp>;
+    foreach prefetch = [CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>] in
+      def prefetch.Name : DefaultAttrsIntrinsic<[], prefetch.ArgsTy, prefetch.IntrProp>;
+  }
+}
+
+// Intrinsics for TMA Copy with reduction
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in {
+      foreach reduce = [CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode, red_op>] in
+        def reduce.Name : DefaultAttrsIntrinsic<[], reduce.ArgsTy, reduce.IntrProp>;
+    }
+  }
+}
 
 } // let TargetPrefix = "nvvm"

@@ -127,9 +127,11 @@ enum {
 // Versioning
 enum { EV_NONE = 0, EV_CURRENT = 1 };
 
-// Machine architectures
-// See current registered ELF machine architectures at:
-//    http://www.uxsglobal.com/developers/gabi/latest/ch4.eheader.html
+// Machine architectures.
+// At the time of writing, the list of registered machine architectures is
+// at https://groups.google.com/g/generic-abi/c/0kORSDcyhTE/m/ZRf_PvcHAAAJ
+// Please refer to https://groups.google.com/g/generic-abi for any further
+// updates.
 enum {
   EM_NONE = 0,           // No machine
   EM_M32 = 1,            // AT&T WE 32100
@@ -811,7 +813,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F   = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_GFX950          = 0x04f,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50   = 0x050,
   EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
   EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
@@ -820,13 +822,14 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56   = 0x056,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X58   = 0x058,
+  EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
   EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
+  EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC  = 0x05f,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1723,6 +1726,7 @@ enum : unsigned {
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
   NT_ARM_FPMR = 0x40e,
+  NT_ARM_GCS = 0x410,
 
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,

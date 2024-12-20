@@ -237,3 +237,34 @@ constexpr bool e_v = true;
 static_assert(e_v<bool>);
 
 } // namespace GH73885
+
+namespace GH84020 {
+
+struct B {
+  template <typename S> void foo();
+  void bar();
+};
+
+template <typename T, typename S> struct A : T {
+  void foo() {
+    static_assert(requires { T::template foo<S>(); });
+    static_assert(requires { T::bar(); });
+  }
+};
+
+template class A<B, double>;
+
+} // namespace GH84020
+
+namespace GH110785 {
+
+struct Foo {
+  static void f(auto) requires(false) {}
+  void f(int) {}
+
+  static_assert([](auto v) {
+    return requires { f(v); };
+  } (0) == false);
+};
+
+} // namespace GH110785

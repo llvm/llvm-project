@@ -215,6 +215,7 @@ public:
         isRegisterDereferenced, // FA = [reg]
         isDWARFExpression,      // FA = eval(dwarf_expr)
         isRaSearch,             // FA = SP + offset + ???
+        isConstant,             // FA = constant
       };
 
       FAValue() : m_value() {}
@@ -258,6 +259,15 @@ public:
         m_value.expr.opcodes = opcodes;
         m_value.expr.length = len;
       }
+
+      bool IsConstant() const { return m_type == isConstant; }
+
+      void SetIsConstant(uint64_t constant) {
+        m_type = isConstant;
+        m_value.constant = constant;
+      }
+
+      uint64_t GetConstant() const { return m_value.constant; }
 
       uint32_t GetRegisterNumber() const {
         if (m_type == isRegisterDereferenced || m_type == isRegisterPlusOffset)
@@ -329,6 +339,8 @@ public:
         } expr;
         // For m_type == isRaSearch
         int32_t ra_search_offset;
+        // For m_type = isConstant
+        uint64_t constant;
       } m_value;
     }; // class FAValue
 
@@ -369,6 +381,13 @@ public:
                                        bool can_replace);
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
+
+    /// This method does not make a copy of the \a opcodes memory, it is
+    /// assumed to have the same lifetime as the Module this UnwindPlan will
+    /// be registered in.
+    bool SetRegisterLocationToIsDWARFExpression(uint32_t reg_num,
+                                                const uint8_t *opcodes,
+                                                uint32_t len, bool can_replace);
 
     bool SetRegisterLocationToIsConstant(uint32_t reg_num, uint64_t constant,
                                          bool can_replace);

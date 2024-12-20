@@ -41,7 +41,7 @@
 ; CHECK-LABEL: .Ltmp0:
 ; CHECK:       bl      "?func2@@YAHXZ
 
-; CHECK:        [[CATCHRETDEST:.LBB0_[0-9]+]]:      // %catchret.dest
+; CHECK:        [[CATCHRETDEST:.LBB0_[0-9]+]]:      // Block address taken
 
 ; Check the catch funclet.
 ; CHECK-LABEL: "?catch$4@?0??func@@YAHXZ@4HA":

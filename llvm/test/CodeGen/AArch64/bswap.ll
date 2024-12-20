@@ -60,7 +60,6 @@ define i128 @bswap_i16_to_i128_anyext(i16 %a) {
 ; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    bfi x8, x8, #32, #32
 ; CHECK-GI-NEXT:    and x8, x8, #0xffff
 ; CHECK-GI-NEXT:    lsl x1, x8, #48
 ; CHECK-GI-NEXT:    ret
@@ -179,8 +178,6 @@ define <2 x i16> @bswap_v2i16(<2 x i16> %a){
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret

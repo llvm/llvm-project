@@ -814,8 +814,8 @@ llvm::SmallVector<llvm::StringRef> ancestorNamespaces(llvm::StringRef NS) {
 
 // Checks whether \p FileName is a valid spelling of main file.
 bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
-  auto FE = SM.getFileManager().getFile(FileName);
-  return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
+  auto FE = SM.getFileManager().getOptionalFileRef(FileName);
+  return FE && FE == SM.getFileEntryRefForID(SM.getMainFileID());
 }
 
 } // namespace
