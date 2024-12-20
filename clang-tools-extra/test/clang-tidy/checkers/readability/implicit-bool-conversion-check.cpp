@@ -1,18 +1,18 @@
 // RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t -- -- -std=c23
-// RUN: %check_clang_tidy -check-suffix=TO-BOOL-FALSE %s readability-implicit-bool-conversion %t -- \
-// RUN:     -config='{CheckOptions: { \
-// RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: false, \
-// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: true \
-// RUN:     }}' -- -std=c23
-// RUN: %check_clang_tidy -check-suffix=FROM-BOOL-FALSE %s readability-implicit-bool-conversion %t -- \
+// RUN: %check_clang_tidy -check-suffix=TO-BOOL %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: true, \
-// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: false \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: true \
 // RUN:     }}' -- -std=c23
-// RUN: %check_clang_tidy -check-suffix=TO-AND-FROM-BOOL-FALSE %s readability-implicit-bool-conversion %t -- \
+// RUN: %check_clang_tidy -check-suffix=FROM-BOOL %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
-// RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: false, \
-// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: false \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: true, \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: true \
+// RUN:     }}' -- -std=c23
+// RUN: %check_clang_tidy -check-suffix=TO-BOOL,FROM-BOOL %s readability-implicit-bool-conversion %t -- \
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsToBool: true, \
+// RUN:         readability-implicit-bool-conversion.CheckConversionsFromBool: true \
 // RUN:     }}' -- -std=c23
 
 
@@ -21,15 +21,15 @@
 // ==========================================================
 void TestConversionsToBool() {
   int x = 42;
-  if (x) // CHECK-MESSAGES: :[[@LINE]]:8: warning: implicit conversion 'int' -> 'bool'
+  if (x) // CHECK-MESSAGES-TO-BOOL: :[[@LINE]]:8: warning: implicit conversion 'int' -> 'bool'
     (void)0;
 
   float f = 3.14;
-  if (f) // CHECK-MESSAGES: :[[@LINE]]:8: warning: implicit conversion 'float' -> 'bool'
+  if (f) // CHECK-MESSAGES-TO-BOOL: :[[@LINE]]:8: warning: implicit conversion 'float' -> 'bool'
     (void)0;
 
   int *p = nullptr;
-  if (p) // CHECK-MESSAGES: :[[@LINE]]:8: warning: implicit conversion 'int *' -> 'bool'
+  if (p) // CHECK-MESSAGES-TO-BOOL: :[[@LINE]]:8: warning: implicit conversion 'int *' -> 'bool'
     (void)0;
 
   // Pointer-to-member
@@ -37,7 +37,7 @@ void TestConversionsToBool() {
     int member;
   };
   int S::*ptr = nullptr;
-  if (ptr) // CHECK-MESSAGES: :[[@LINE]]:8: warning: implicit conversion 'int S::*' -> 'bool'
+  if (ptr) // CHECK-MESSAGES-TO-BOOL: :[[@LINE]]:8: warning: implicit conversion 'int S::*' -> 'bool'
     (void)0;
 }
 
@@ -47,20 +47,20 @@ void TestConversionsToBool() {
 void TestConversionsFromBool() {
   bool b = true;
 
-  int x = b; // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
-  float f = b; // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'float'
+  int x = b; // CHECK-MESSAGES-FROM-BOOL: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
+  float f = b; // CHECK-MESSAGES-FROM-BOOL: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'float'
 }
 
 // ==========================================================
-// Test Case: Mixed Configurations (ToBool=false, FromBool=true)
+// Test Case: Mixed Configurations (ToBool=true, FromBool=true)
 // ==========================================================
 void TestMixedConfig() {
   int x = 42;
-  if (x) // No warning: CheckConversionsToBool=false
+  if (x) // CHECK-MESSAGES-TO-BOOL: :[[@LINE]]:8: warning: implicit conversion 'int' -> 'bool'
     (void)0;
 
   bool b = true;
-  int y = b; // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
+  int y = b; // CHECK-MESSAGES-FROM-BOOL: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
 }
 
 // ==========================================================
@@ -82,11 +82,11 @@ void TestEdgeCases() {
   bool b = true;
 
   // Nested implicit casts
-  int x = (b ? 1 : 0); // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
+  int x = (b ? 1 : 0); // CHECK-MESSAGES-FROM-BOOL: :[[@LINE]]:13: warning: implicit conversion 'bool' -> 'int'
 
   // Function returns implicit bool
   auto ReturnBool = []() -> bool { return true; };
-  int y = ReturnBool(); // CHECK-MESSAGES: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
+  int y = ReturnBool(); // CHECK-MESSAGES-FROM-BOOL: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
 
   // Explicit casts (no diagnostics)
   int z = static_cast<int>(b); // No warning: explicit cast
