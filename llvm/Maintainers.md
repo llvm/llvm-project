@@ -251,8 +251,8 @@ asb@igalia.com (email), [asb](https://github.com/asb) (GitHub)
 
 #### Sparc backend
 
-Venkatraman Govindaraju \
-venkatra@cs.wisc.edu (email), [vegovin](https://github.com/vegovin) (GitHub)
+Koakuma \
+koachan@protonmail.com (email), [koachan](https://github.com/koachan) (GitHub)
 
 #### SPIRV backend
 
@@ -459,6 +459,7 @@ Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https:/
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
+Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
