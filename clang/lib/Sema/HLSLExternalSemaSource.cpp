@@ -1027,6 +1027,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
         .addArraySubscriptOperators()
+        .addLoadMethods()
         .completeDefinition();
   });
 
@@ -1037,6 +1038,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
         .addArraySubscriptOperators()
+        .addLoadMethods()
         .addIncrementCounterMethod()
         .addDecrementCounterMethod()
         .completeDefinition();
@@ -1072,6 +1074,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/true, /*RawBuffer=*/true)
         .addArraySubscriptOperators()
+        .addLoadMethods()
         .addIncrementCounterMethod()
         .addDecrementCounterMethod()
         .completeDefinition();

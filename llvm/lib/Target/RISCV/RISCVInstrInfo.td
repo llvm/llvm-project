@@ -454,7 +454,14 @@ def AddiPair : PatLeaf<(imm), [{
   // The immediate operand must be in range [-4096,-2049] or [2048,4094].
   int64_t Imm = N->getSExtValue();
   return (-4096 <= Imm && Imm <= -2049) || (2048 <= Imm && Imm <= 4094);
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
+      return false;
+    int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+    return (-4096 <= Imm && Imm <= -2049) || (2048 <= Imm && Imm <= 4094);
+  }];
+}
 
 // Return imm - (imm < 0 ? -2048 : 2047).
 def AddiPairImmSmall : SDNodeXForm<imm, [{
@@ -463,6 +470,8 @@ def AddiPairImmSmall : SDNodeXForm<imm, [{
   return CurDAG->getSignedTargetConstant(Imm - Adj, SDLoc(N),
                                          N->getValueType(0));
 }]>;
+def GIAddiPairImmSmall : GICustomOperandRenderer<"renderAddiPairImmSmall">,
+                         GISDNodeXFormEquiv<AddiPairImmSmall>;
 
 // Return -2048 if immediate is negative or 2047 if positive. These are the
 // largest simm12 values.
@@ -470,6 +479,8 @@ def AddiPairImmLarge : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
   return CurDAG->getSignedTargetConstant(Imm, SDLoc(N), N->getValueType(0));
 }]>;
+def GIAddiPairImmLarge : GICustomOperandRenderer<"renderAddiPairImmLarge">,
+                         GISDNodeXFormEquiv<AddiPairImmLarge>;
 
 def TrailingZeros : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(llvm::countr_zero(N->getZExtValue()),
@@ -537,7 +548,6 @@ def LeadingOnesWMask : PatLeaf<(imm), [{
     return !isInt<32>(Imm) && isUInt<32>(Imm) && isShiftedMask_64(Imm) &&
            Imm != UINT64_C(0xffffffff);
   }];
-
 }
 
 //===----------------------------------------------------------------------===//
