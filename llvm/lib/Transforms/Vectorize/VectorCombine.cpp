@@ -138,6 +138,7 @@ private:
   }
 
   void eraseInstruction(Instruction &I) {
+    LLVM_DEBUG(dbgs() << "VC: Erasing: " << I << '\n');
     for (Value *Op : I.operands())
       Worklist.pushValue(Op);
     Worklist.remove(&I);
