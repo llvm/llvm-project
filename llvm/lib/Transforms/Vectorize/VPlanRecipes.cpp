@@ -3427,7 +3427,9 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
-  auto VF = State.VF.divideCoefficientBy(VFScaleFactor);
+  // If this reduction is fed by a scaled reduction then it should output a
+  // vector with fewer elements than the VF.
+  ElementCount VF = State.VF.divideCoefficientBy(VFScaleFactor);
 
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
