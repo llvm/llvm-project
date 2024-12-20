@@ -8293,6 +8293,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitVectorExtractLastActive(I, Intrinsic);
     return;
   }
+  case Intrinsic::dereferenceable:
+    setValue(&I, getValue(I.getArgOperand(0)));
+    return;
   }
 }
 

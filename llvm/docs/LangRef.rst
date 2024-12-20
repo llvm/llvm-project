@@ -29153,6 +29153,45 @@ attach various forms of information to operands that dominate specific
 uses.  It is not meant for general use, only for building temporary
 renaming forms that require value splits at certain points.
 
+.. _int_dereferenceable:
+
+'``llvm.dereferenceable``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.dereferenceable(ptr %p, i64 <size>)
+
+Overview:
+"""""""""
+
+The ``llvm.dereferenceable`` allows the optimizer to assume that the returned
+pointer is dereferenceable at the point the intrinsic is called.
+
+Arguments:
+""""""""""
+
+The arguments of the call are the pointer which will be marked as
+dereferenceable and the number of bytes known to be dereferenceable. ``<size>``
+must be a constant.
+
+Semantics:
+""""""""""
+
+The intrinsic returns the input pointer. The returned pointer is dereferenceable
+at the point the intrinsic is called. A pointer that is dereferenceable can be
+loaded from speculatively without a risk of trapping. This implies that the
+input pointer is not null and neither undef or poison. The number of bytes known
+to be dereferenceable is provided as second argument. It is legal for the number
+of bytes to be less than the size of the pointee type.
+
+The semantics above match the semantics of the ``dereferenceable(<n>)``
+parameter attribute.
+
+
 .. _type.test:
 
 '``llvm.type.test``' Intrinsic

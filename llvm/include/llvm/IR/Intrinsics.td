@@ -954,6 +954,10 @@ def int_call_preallocated_teardown : DefaultAttrsIntrinsic<[], [llvm_token_ty]>;
 def int_callbr_landingpad : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                                       [IntrNoMerge]>;
 
+// Attach dereferenceability information to a pointer.
+def int_dereferenceable: DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty],
+                             [IntrInaccessibleMemOnly, ImmArg<ArgIndex<1>>]>;
+
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 
