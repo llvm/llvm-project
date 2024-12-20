@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SwiftLanguageRuntimeImpl.h"
 #include "SwiftLanguageRuntime.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"

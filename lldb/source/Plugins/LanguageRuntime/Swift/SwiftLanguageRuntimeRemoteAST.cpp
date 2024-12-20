@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "LLDBMemoryReader.h"
 #include "ReflectionContextInterface.h"
-#include "SwiftLanguageRuntimeImpl.h"
+#include "SwiftLanguageRuntime.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
@@ -59,7 +59,7 @@ public:
 namespace lldb_private {
 
 swift::remoteAST::RemoteASTContext &
-SwiftLanguageRuntimeImpl::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
+SwiftLanguageRuntime::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
   // If we already have a remote AST context for this AST context,
   // return it.
   ThreadSafeASTContext ast_ctx = swift_ast_ctx.GetASTContext();
@@ -77,13 +77,12 @@ SwiftLanguageRuntimeImpl::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
   return remote_ast;
 }
 
-void SwiftLanguageRuntimeImpl::ReleaseAssociatedRemoteASTContext(
+void SwiftLanguageRuntime::ReleaseAssociatedRemoteASTContext(
     swift::ASTContext *ctx) {
   m_remote_ast_contexts.erase(ctx);
 }
 
-std::optional<uint64_t>
-SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
+std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name) {
   auto scratch_ctx =
@@ -181,7 +180,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
 }
 
 #ifndef NDEBUG
-ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
+ConstString SwiftLanguageRuntime::GetDynamicTypeName_ClassRemoteAST(
     ValueObject &in_value, lldb::addr_t instance_ptr) {
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
@@ -218,7 +217,7 @@ ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
 }
 
 std::optional<std::pair<CompilerType, Address>>
-SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialRemoteAST(
+SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
     ValueObject &in_value, CompilerType existential_type, bool use_local_buffer,
     lldb::addr_t existential_address) {
   // Dynamic type resolution in RemoteAST might pull in other Swift
@@ -264,7 +263,7 @@ SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialRemoteAST(
 }
 #endif
 
-CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
+CompilerType SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
     StackFrame &stack_frame, CompilerType base_type) {
   LLDB_SCOPED_TIMER();
 
@@ -276,7 +275,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
                                      base_type.GetMangledTypeName());
 
   Status error;
-  auto &target = m_process.GetTarget();
+  auto &target = GetProcess().GetTarget();
 
   // A failing Clang import in a module context permanently damages
   // that module context.  Binding archetypes can trigger an import of
@@ -436,13 +435,13 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
   return base_type;
 }
 
-SwiftLanguageRuntimeImpl::MetadataPromise::MetadataPromise(
-    ValueObject &for_object, SwiftLanguageRuntimeImpl &runtime,
+SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
+    ValueObject &for_object, SwiftLanguageRuntime &runtime,
     lldb::addr_t location)
     : m_for_object_sp(for_object.GetSP()), m_swift_runtime(runtime),
       m_metadata_location(location) {}
 
-CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
+CompilerType SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(
     const SymbolContext &sc, Status *error) {
   if (error)
     error->Clear();
@@ -493,10 +492,10 @@ CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
   }
 }
 
-SwiftLanguageRuntimeImpl::MetadataPromiseSP
-SwiftLanguageRuntimeImpl::GetMetadataPromise(const SymbolContext &sc,
-                                             lldb::addr_t addr,
-                                             ValueObject &for_object) {
+SwiftLanguageRuntime::MetadataPromiseSP
+SwiftLanguageRuntime::GetMetadataPromise(const SymbolContext &sc,
+                                         lldb::addr_t addr,
+                                         ValueObject &for_object) {
   auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
       for_object.GetTargetSP());
   if (!scratch_ctx)
@@ -515,15 +514,15 @@ SwiftLanguageRuntimeImpl::GetMetadataPromise(const SymbolContext &sc,
   if (iter != m_promises_map.end())
     return iter->second;
 
-  SwiftLanguageRuntimeImpl::MetadataPromiseSP promise_sp(
-      new SwiftLanguageRuntimeImpl::MetadataPromise(for_object, *this, addr));
+  SwiftLanguageRuntime::MetadataPromiseSP promise_sp(
+      new SwiftLanguageRuntime::MetadataPromise(for_object, *this, addr));
   m_promises_map.insert({key, promise_sp});
   return promise_sp;
 }
 
-SwiftLanguageRuntimeImpl::MetadataPromiseSP
-SwiftLanguageRuntimeImpl::GetPromiseForTypeNameAndFrame(const char *type_name,
-                                                        StackFrame *frame) {
+SwiftLanguageRuntime::MetadataPromiseSP
+SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
+                                                    StackFrame *frame) {
   if (!frame || !type_name || !type_name[0])
     return nullptr;
 
