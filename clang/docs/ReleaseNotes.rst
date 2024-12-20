@@ -1206,6 +1206,8 @@ Sanitizers
   ``-fsanitize=type`` flag. This sanitizer detects violations of C/C++ type-based
   aliasing rules.
 
+- Implemented ``-f[no-]sanitize-trap=local-bounds``, and ``-f[no-]sanitize-recover=local-bounds``.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
