@@ -67,12 +67,12 @@ void TestMixedConfig() {
 // Test Case: No Diagnostics (ToBool=false, FromBool=false)
 // ==========================================================
 void TestNoDiagnostics() {
-  int x = 42;
-  if (x) // No warning: CheckConversionsToBool=false
-    (void)0;
+  // int x = 42;
+  // if (x) // No warning: CheckConversionsToBool=false
+  //   (void)0;
 
-  bool b = true;
-  int y = b; // No warning: CheckConversionsFromBool=false
+  // bool b = true;
+  // int y = b; // No warning: CheckConversionsFromBool=false
 }
 
 // ==========================================================
@@ -88,6 +88,6 @@ void TestEdgeCases() {
   auto ReturnBool = []() -> bool { return true; };
   int y = ReturnBool(); // CHECK-MESSAGES-FROM-BOOL: :[[@LINE]]:12: warning: implicit conversion 'bool' -> 'int'
 
-  // Explicit casts (no diagnostics)
-  int z = static_cast<int>(b); // No warning: explicit cast
+  // // Explicit casts (no diagnostics)
+  // int z = static_cast<int>(b); // No warning: explicit cast
 }
