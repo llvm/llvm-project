@@ -806,6 +806,7 @@ cc_library(
     deps = [
         "//mlir:AffineToStandard",
         "//mlir:ArithToLLVM",
+        "//mlir:ControlFlowToLLVM",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:IR",
