@@ -2075,27 +2075,27 @@ defm IMAGE_LOAD_PCK             : MIMG_NoSampler <mimgopc<0x02, 0x02, 0x02, 0x02
 defm IMAGE_LOAD_PCK_SGN         : MIMG_NoSampler <mimgopc<0x03, 0x03, 0x03, 0x03>, "image_load_pck_sgn", 0>;
 defm IMAGE_LOAD_MIP_PCK         : MIMG_NoSampler <mimgopc<0x04, 0x04, 0x04, 0x04>, "image_load_mip_pck", 0, 1>;
 defm IMAGE_LOAD_MIP_PCK_SGN     : MIMG_NoSampler <mimgopc<0x05, 0x05, 0x05, 0x05>, "image_load_mip_pck_sgn", 0, 1>;
-defm IMAGE_STORE                : MIMG_Store <mimgopc<0x06, 0x06, 0x06, 0x08>, "image_store", 1>;
-defm IMAGE_STORE_MIP            : MIMG_Store <mimgopc<0x07, 0x07, 0x07, 0x09>, "image_store_mip", 1, 1>;
-defm IMAGE_STORE_PCK            : MIMG_Store <mimgopc<0x08, 0x08, 0x08, 0x0a>, "image_store_pck", 0>;
-defm IMAGE_STORE_MIP_PCK        : MIMG_Store <mimgopc<0x09, 0x09, 0x09, 0x0b>, "image_store_mip_pck", 0, 1>;
+defm IMAGE_STORE                : MIMG_Store <mimgopc<0x08, 0x06, 0x06, 0x08>, "image_store", 1>;
+defm IMAGE_STORE_MIP            : MIMG_Store <mimgopc<0x09, 0x07, 0x07, 0x09>, "image_store_mip", 1, 1>;
+defm IMAGE_STORE_PCK            : MIMG_Store <mimgopc<0x0a, 0x08, 0x08, 0x0a>, "image_store_pck", 0>;
+defm IMAGE_STORE_MIP_PCK        : MIMG_Store <mimgopc<0x0b, 0x09, 0x09, 0x0b>, "image_store_mip_pck", 0, 1>;
 
-defm IMAGE_GET_RESINFO          : MIMG_NoSampler <mimgopc<0x17, 0x17, 0x17, 0x0e, 0x0e, 0x0e>, "image_get_resinfo", 0, 1, 1>;
+defm IMAGE_GET_RESINFO          : MIMG_NoSampler <mimgopc<0x0e, 0x17, 0x17, 0x0e, 0x0e, 0x0e>, "image_get_resinfo", 0, 1, 1>;
 
-defm IMAGE_ATOMIC_SWAP          : MIMG_Atomic <mimgopc<0x0a, 0x0a, 0x0a, 0x0f, 0x10, 0x0f>, "image_atomic_swap">;
-defm IMAGE_ATOMIC_CMPSWAP       : MIMG_Atomic <mimgopc<0x0b, 0x0b, 0x0b, 0x10, 0x11, 0x10>, "image_atomic_cmpswap", 1>;
-defm IMAGE_ATOMIC_ADD           : MIMG_Atomic_Renamed <mimgopc<0x0c, 0x0c, 0x0c, 0x11, 0x12, 0x11>, "image_atomic_add", "image_atomic_add_uint">;
-defm IMAGE_ATOMIC_SUB           : MIMG_Atomic_Renamed <mimgopc<0x0d, 0x0d, 0x0d, 0x12, 0x13, 0x12>, "image_atomic_sub", "image_atomic_sub_uint">;
+defm IMAGE_ATOMIC_SWAP          : MIMG_Atomic <mimgopc<0x0f, 0x0a, 0x0a, 0x0f, 0x10, 0x0f>, "image_atomic_swap">;
+defm IMAGE_ATOMIC_CMPSWAP       : MIMG_Atomic <mimgopc<0x10, 0x0b, 0x0b, 0x10, 0x11, 0x10>, "image_atomic_cmpswap", 1>;
+defm IMAGE_ATOMIC_ADD           : MIMG_Atomic_Renamed <mimgopc<0x11, 0x0c, 0x0c, 0x11, 0x12, 0x11>, "image_atomic_add", "image_atomic_add_uint">;
+defm IMAGE_ATOMIC_SUB           : MIMG_Atomic_Renamed <mimgopc<0x12, 0x0d, 0x0d, 0x12, 0x13, 0x12>, "image_atomic_sub", "image_atomic_sub_uint">;
 defm IMAGE_ATOMIC_RSUB          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x13>, "image_atomic_rsub">;
-defm IMAGE_ATOMIC_SMIN          : MIMG_Atomic_Renamed <mimgopc<0x0e, 0x0e, 0x0e, 0x14>, "image_atomic_smin", "image_atomic_min_int">;
-defm IMAGE_ATOMIC_UMIN          : MIMG_Atomic_Renamed <mimgopc<0x0f, 0x0f, 0x0f, 0x15>, "image_atomic_umin", "image_atomic_min_uint">;
-defm IMAGE_ATOMIC_SMAX          : MIMG_Atomic_Renamed <mimgopc<0x10, 0x10, 0x10, 0x16>, "image_atomic_smax", "image_atomic_max_int">;
-defm IMAGE_ATOMIC_UMAX          : MIMG_Atomic_Renamed <mimgopc<0x11, 0x11, 0x11, 0x17>, "image_atomic_umax", "image_atomic_max_uint">;
-defm IMAGE_ATOMIC_AND           : MIMG_Atomic <mimgopc<0x12, 0x12, 0x12, 0x18>, "image_atomic_and">;
-defm IMAGE_ATOMIC_OR            : MIMG_Atomic <mimgopc<0x13, 0x13, 0x13, 0x19>, "image_atomic_or">;
-defm IMAGE_ATOMIC_XOR           : MIMG_Atomic <mimgopc<0x14, 0x14, 0x14, 0x1a>, "image_atomic_xor">;
-defm IMAGE_ATOMIC_INC           : MIMG_Atomic_Renamed <mimgopc<0x15, 0x15, 0x15, 0x1b>, "image_atomic_inc", "image_atomic_inc_uint">;
-defm IMAGE_ATOMIC_DEC           : MIMG_Atomic_Renamed <mimgopc<0x16, 0x16, 0x16, 0x1c>, "image_atomic_dec", "image_atomic_dec_uint">;
+defm IMAGE_ATOMIC_SMIN          : MIMG_Atomic_Renamed <mimgopc<0x14, 0x0e, 0x0e, 0x14>, "image_atomic_smin", "image_atomic_min_int">;
+defm IMAGE_ATOMIC_UMIN          : MIMG_Atomic_Renamed <mimgopc<0x15, 0x0f, 0x0f, 0x15>, "image_atomic_umin", "image_atomic_min_uint">;
+defm IMAGE_ATOMIC_SMAX          : MIMG_Atomic_Renamed <mimgopc<0x16, 0x10, 0x10, 0x16>, "image_atomic_smax", "image_atomic_max_int">;
+defm IMAGE_ATOMIC_UMAX          : MIMG_Atomic_Renamed <mimgopc<0x17, 0x11, 0x11, 0x17>, "image_atomic_umax", "image_atomic_max_uint">;
+defm IMAGE_ATOMIC_AND           : MIMG_Atomic <mimgopc<0x18, 0x12, 0x12, 0x18>, "image_atomic_and">;
+defm IMAGE_ATOMIC_OR            : MIMG_Atomic <mimgopc<0x19, 0x13, 0x13, 0x19>, "image_atomic_or">;
+defm IMAGE_ATOMIC_XOR           : MIMG_Atomic <mimgopc<0x1a, 0x14, 0x14, 0x1a>, "image_atomic_xor">;
+defm IMAGE_ATOMIC_INC           : MIMG_Atomic_Renamed <mimgopc<0x1b, 0x15, 0x15, 0x1b>, "image_atomic_inc", "image_atomic_inc_uint">;
+defm IMAGE_ATOMIC_DEC           : MIMG_Atomic_Renamed <mimgopc<0x1c, 0x16, 0x16, 0x1c>, "image_atomic_dec", "image_atomic_dec_uint">;
 defm IMAGE_ATOMIC_FCMPSWAP      : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x1d, MIMG.NOP>, "image_atomic_fcmpswap", 1, 1>;
 defm IMAGE_ATOMIC_FMIN          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x1e, MIMG.NOP>, "image_atomic_fmin", 0, 1>;
 defm IMAGE_ATOMIC_FMAX          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x1f, MIMG.NOP>, "image_atomic_fmax", 0, 1>;
@@ -2147,77 +2147,77 @@ let AssemblerPredicate = isGFX12Plus in {
 #ifdef LLPC_BUILD_NPI
 def IMAGE_ATOMIC_MIN_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_flt", "image_atomic_min_num_flt", 0, 1>;
-defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", "image_atomic_min_flt", 0, 1>;
+defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1e, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", "image_atomic_min_flt", 0, 1>;
 
 def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
-defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
+defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1f, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
 
 defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1, 1>;
 defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1, 1>;
 defm RTS_READ_VERTEX        : MIMG_RTS<mimgopc<0x0f4, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex", 1, 0, 0>;
 
-defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x1b, 0x20>, AMDGPUSample>;
+defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x20, 0x1b, 0x1b, 0x20>, AMDGPUSample>;
 #else /* LLPC_BUILD_NPI */
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x20>, AMDGPUSample>;
 #endif /* LLPC_BUILD_NPI */
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts] in {
 #ifdef LLPC_BUILD_NPI
-defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x40, 0x40, 0x40, 0x21>, AMDGPUSample_cl>;
-defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x1c, 0x1c, 0x1c, 0x22>, AMDGPUSample_d>;
-defm IMAGE_SAMPLE_D_CL          : MIMG_Sampler <mimgopc<0x41, 0x41, 0x41, 0x23>, AMDGPUSample_d_cl>;
-defm IMAGE_SAMPLE_L             : MIMG_Sampler <mimgopc<0x1d, 0x1d, 0x1d, 0x24>, AMDGPUSample_l>;
-defm IMAGE_SAMPLE_B             : MIMG_Sampler_WQM <mimgopc<0x1e, 0x1e, 0x1e, 0x25>, AMDGPUSample_b>;
-defm IMAGE_SAMPLE_B_CL          : MIMG_Sampler_WQM <mimgopc<0x42, 0x42, 0x42, 0x26>, AMDGPUSample_b_cl>;
-defm IMAGE_SAMPLE_LZ            : MIMG_Sampler <mimgopc<0x1f, 0x1f, 0x1f, 0x27>, AMDGPUSample_lz>;
-defm IMAGE_SAMPLE_C             : MIMG_Sampler_WQM <mimgopc<0x20, 0x20, 0x20, 0x28>, AMDGPUSample_c>;
-defm IMAGE_SAMPLE_C_CL          : MIMG_Sampler_WQM <mimgopc<0x43, 0x43, 0x43, 0x29>, AMDGPUSample_c_cl>;
-defm IMAGE_SAMPLE_C_D           : MIMG_Sampler <mimgopc<0x21, 0x21, 0x21, 0x2a>, AMDGPUSample_c_d>;
-defm IMAGE_SAMPLE_C_D_CL        : MIMG_Sampler <mimgopc<0x44, 0x44, 0x44, 0x2b>, AMDGPUSample_c_d_cl>;
-defm IMAGE_SAMPLE_C_L           : MIMG_Sampler <mimgopc<0x22, 0x22, 0x22, 0x2c>, AMDGPUSample_c_l>;
-defm IMAGE_SAMPLE_C_B           : MIMG_Sampler_WQM <mimgopc<0x23, 0x23, 0x23, 0x2d>, AMDGPUSample_c_b>;
-defm IMAGE_SAMPLE_C_B_CL        : MIMG_Sampler_WQM <mimgopc<0x45, 0x45, 0x45, 0x2e>, AMDGPUSample_c_b_cl>;
-defm IMAGE_SAMPLE_C_LZ          : MIMG_Sampler <mimgopc<0x24, 0x24, 0x24, 0x2f>, AMDGPUSample_c_lz>;
-defm IMAGE_SAMPLE_O             : MIMG_Sampler_WQM <mimgopc<0x25, 0x25, 0x25, 0x30>, AMDGPUSample_o>;
-defm IMAGE_SAMPLE_CL_O          : MIMG_Sampler_WQM <mimgopc<0x46, 0x46, 0x46, 0x31>, AMDGPUSample_cl_o>;
-defm IMAGE_SAMPLE_D_O           : MIMG_Sampler <mimgopc<0x26, 0x26, 0x26, 0x32>, AMDGPUSample_d_o>;
-defm IMAGE_SAMPLE_D_CL_O        : MIMG_Sampler <mimgopc<0x47, 0x47, 0x47, 0x33>, AMDGPUSample_d_cl_o>;
-defm IMAGE_SAMPLE_L_O           : MIMG_Sampler <mimgopc<0x27, 0x27, 0x27, 0x34>, AMDGPUSample_l_o>;
-defm IMAGE_SAMPLE_B_O           : MIMG_Sampler_WQM <mimgopc<0x28, 0x28, 0x28, 0x35>, AMDGPUSample_b_o>;
-defm IMAGE_SAMPLE_B_CL_O        : MIMG_Sampler_WQM <mimgopc<0x48, 0x48, 0x48, 0x36>, AMDGPUSample_b_cl_o>;
-defm IMAGE_SAMPLE_LZ_O          : MIMG_Sampler <mimgopc<0x29, 0x29, 0x29, 0x37>, AMDGPUSample_lz_o>;
-defm IMAGE_SAMPLE_C_O           : MIMG_Sampler_WQM <mimgopc<0x2a, 0x2a, 0x2a, 0x38>, AMDGPUSample_c_o>;
-defm IMAGE_SAMPLE_C_CL_O        : MIMG_Sampler_WQM <mimgopc<0x49, 0x49, 0x49, 0x39>, AMDGPUSample_c_cl_o>;
-defm IMAGE_SAMPLE_C_D_O         : MIMG_Sampler <mimgopc<0x2b, 0x2b, 0x2b, 0x3a>, AMDGPUSample_c_d_o>;
-defm IMAGE_SAMPLE_C_D_CL_O      : MIMG_Sampler <mimgopc<0x4a, 0x4a, 0x4a, 0x3b>, AMDGPUSample_c_d_cl_o>;
-defm IMAGE_SAMPLE_C_L_O         : MIMG_Sampler <mimgopc<0x2c, 0x2c, 0x2c, 0x3c>, AMDGPUSample_c_l_o>;
-defm IMAGE_SAMPLE_C_B_CL_O      : MIMG_Sampler_WQM <mimgopc<0x4b, 0x4b, 0x4b, 0x3e>, AMDGPUSample_c_b_cl_o>;
-defm IMAGE_SAMPLE_C_B_O         : MIMG_Sampler_WQM <mimgopc<0x2d, 0x2d, 0x2d, 0x3d>, AMDGPUSample_c_b_o>;
-defm IMAGE_SAMPLE_C_LZ_O        : MIMG_Sampler <mimgopc<0x2e, 0x2e, 0x2e, 0x3f>, AMDGPUSample_c_lz_o>;
-defm IMAGE_GATHER4              : MIMG_Gather_WQM <mimgopc<0x2f, 0x2f, 0x2f, 0x40>, AMDGPUSample>;
-defm IMAGE_GATHER4_CL           : MIMG_Gather_WQM <mimgopc<0x60, 0x60, 0x60, 0x41>, AMDGPUSample_cl>;
-defm IMAGE_GATHER4_L            : MIMG_Gather <mimgopc<0x30, 0x30, 0x30, 0x44>, AMDGPUSample_l>;
-defm IMAGE_GATHER4_B            : MIMG_Gather_WQM <mimgopc<0x31, 0x31, 0x31, 0x45>, AMDGPUSample_b>;
-defm IMAGE_GATHER4_B_CL         : MIMG_Gather_WQM <mimgopc<0x61, 0x61, 0x61, 0x46>, AMDGPUSample_b_cl>;
-defm IMAGE_GATHER4_LZ           : MIMG_Gather <mimgopc<0x32, 0x32, 0x32, 0x47>, AMDGPUSample_lz>;
-defm IMAGE_GATHER4_C            : MIMG_Gather_WQM <mimgopc<0x33, 0x33, 0x33, 0x48>, AMDGPUSample_c>;
-defm IMAGE_GATHER4_C_CL         : MIMG_Gather_WQM <mimgopc<0x62, 0x62, 0x62, 0x49>, AMDGPUSample_c_cl>;
-defm IMAGE_GATHER4_C_L          : MIMG_Gather <mimgopc<0x63, 0x63, 0x63, 0x4c>, AMDGPUSample_c_l>;
-defm IMAGE_GATHER4_C_B          : MIMG_Gather_WQM <mimgopc<0x64, 0x64, 0x64, 0x4d>, AMDGPUSample_c_b>;
-defm IMAGE_GATHER4_C_B_CL       : MIMG_Gather_WQM <mimgopc<0x65, 0x65, 0x65, 0x4e>, AMDGPUSample_c_b_cl>;
-defm IMAGE_GATHER4_C_LZ         : MIMG_Gather <mimgopc<0x34, 0x34, 0x34, 0x4f>, AMDGPUSample_c_lz>;
-defm IMAGE_GATHER4_O            : MIMG_Gather_WQM <mimgopc<0x35, 0x35, 0x35, 0x50>, AMDGPUSample_o>;
+defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x21, 0x40, 0x40, 0x21>, AMDGPUSample_cl>;
+defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x22, 0x1c, 0x1c, 0x22>, AMDGPUSample_d>;
+defm IMAGE_SAMPLE_D_CL          : MIMG_Sampler <mimgopc<0x23, 0x41, 0x41, 0x23>, AMDGPUSample_d_cl>;
+defm IMAGE_SAMPLE_L             : MIMG_Sampler <mimgopc<0x24, 0x1d, 0x1d, 0x24>, AMDGPUSample_l>;
+defm IMAGE_SAMPLE_B             : MIMG_Sampler_WQM <mimgopc<0x25, 0x1e, 0x1e, 0x25>, AMDGPUSample_b>;
+defm IMAGE_SAMPLE_B_CL          : MIMG_Sampler_WQM <mimgopc<0x26, 0x42, 0x42, 0x26>, AMDGPUSample_b_cl>;
+defm IMAGE_SAMPLE_LZ            : MIMG_Sampler <mimgopc<0x27, 0x1f, 0x1f, 0x27>, AMDGPUSample_lz>;
+defm IMAGE_SAMPLE_C             : MIMG_Sampler_WQM <mimgopc<0x28, 0x20, 0x20, 0x28>, AMDGPUSample_c>;
+defm IMAGE_SAMPLE_C_CL          : MIMG_Sampler_WQM <mimgopc<0x29, 0x43, 0x43, 0x29>, AMDGPUSample_c_cl>;
+defm IMAGE_SAMPLE_C_D           : MIMG_Sampler <mimgopc<0x2a, 0x21, 0x21, 0x2a>, AMDGPUSample_c_d>;
+defm IMAGE_SAMPLE_C_D_CL        : MIMG_Sampler <mimgopc<0x2b, 0x44, 0x44, 0x2b>, AMDGPUSample_c_d_cl>;
+defm IMAGE_SAMPLE_C_L           : MIMG_Sampler <mimgopc<0x2c, 0x22, 0x22, 0x2c>, AMDGPUSample_c_l>;
+defm IMAGE_SAMPLE_C_B           : MIMG_Sampler_WQM <mimgopc<0x2d, 0x23, 0x23, 0x2d>, AMDGPUSample_c_b>;
+defm IMAGE_SAMPLE_C_B_CL        : MIMG_Sampler_WQM <mimgopc<0x2e, 0x45, 0x45, 0x2e>, AMDGPUSample_c_b_cl>;
+defm IMAGE_SAMPLE_C_LZ          : MIMG_Sampler <mimgopc<0x2f, 0x24, 0x24, 0x2f>, AMDGPUSample_c_lz>;
+defm IMAGE_SAMPLE_O             : MIMG_Sampler_WQM <mimgopc<0x30, 0x25, 0x25, 0x30>, AMDGPUSample_o>;
+defm IMAGE_SAMPLE_CL_O          : MIMG_Sampler_WQM <mimgopc<0x31, 0x46, 0x46, 0x31>, AMDGPUSample_cl_o>;
+defm IMAGE_SAMPLE_D_O           : MIMG_Sampler <mimgopc<0x32, 0x26, 0x26, 0x32>, AMDGPUSample_d_o>;
+defm IMAGE_SAMPLE_D_CL_O        : MIMG_Sampler <mimgopc<0x33, 0x47, 0x47, 0x33>, AMDGPUSample_d_cl_o>;
+defm IMAGE_SAMPLE_L_O           : MIMG_Sampler <mimgopc<0x34, 0x27, 0x27, 0x34>, AMDGPUSample_l_o>;
+defm IMAGE_SAMPLE_B_O           : MIMG_Sampler_WQM <mimgopc<0x35, 0x28, 0x28, 0x35>, AMDGPUSample_b_o>;
+defm IMAGE_SAMPLE_B_CL_O        : MIMG_Sampler_WQM <mimgopc<0x36, 0x48, 0x48, 0x36>, AMDGPUSample_b_cl_o>;
+defm IMAGE_SAMPLE_LZ_O          : MIMG_Sampler <mimgopc<0x37, 0x29, 0x29, 0x37>, AMDGPUSample_lz_o>;
+defm IMAGE_SAMPLE_C_O           : MIMG_Sampler_WQM <mimgopc<0x38, 0x2a, 0x2a, 0x38>, AMDGPUSample_c_o>;
+defm IMAGE_SAMPLE_C_CL_O        : MIMG_Sampler_WQM <mimgopc<0x39, 0x49, 0x49, 0x39>, AMDGPUSample_c_cl_o>;
+defm IMAGE_SAMPLE_C_D_O         : MIMG_Sampler <mimgopc<0x3a, 0x2b, 0x2b, 0x3a>, AMDGPUSample_c_d_o>;
+defm IMAGE_SAMPLE_C_D_CL_O      : MIMG_Sampler <mimgopc<0x3b, 0x4a, 0x4a, 0x3b>, AMDGPUSample_c_d_cl_o>;
+defm IMAGE_SAMPLE_C_L_O         : MIMG_Sampler <mimgopc<0x3c, 0x2c, 0x2c, 0x3c>, AMDGPUSample_c_l_o>;
+defm IMAGE_SAMPLE_C_B_CL_O      : MIMG_Sampler_WQM <mimgopc<0x3e, 0x4b, 0x4b, 0x3e>, AMDGPUSample_c_b_cl_o>;
+defm IMAGE_SAMPLE_C_B_O         : MIMG_Sampler_WQM <mimgopc<0x3d, 0x2d, 0x2d, 0x3d>, AMDGPUSample_c_b_o>;
+defm IMAGE_SAMPLE_C_LZ_O        : MIMG_Sampler <mimgopc<0x3f, 0x2e, 0x2e, 0x3f>, AMDGPUSample_c_lz_o>;
+defm IMAGE_GATHER4              : MIMG_Gather_WQM <mimgopc<0x40, 0x2f, 0x2f, 0x40>, AMDGPUSample>;
+defm IMAGE_GATHER4_CL           : MIMG_Gather_WQM <mimgopc<0x41, 0x60, 0x60, 0x41>, AMDGPUSample_cl>;
+defm IMAGE_GATHER4_L            : MIMG_Gather <mimgopc<0x44, 0x30, 0x30, 0x44>, AMDGPUSample_l>;
+defm IMAGE_GATHER4_B            : MIMG_Gather_WQM <mimgopc<0x45, 0x31, 0x31, 0x45>, AMDGPUSample_b>;
+defm IMAGE_GATHER4_B_CL         : MIMG_Gather_WQM <mimgopc<0x46, 0x61, 0x61, 0x46>, AMDGPUSample_b_cl>;
+defm IMAGE_GATHER4_LZ           : MIMG_Gather <mimgopc<0x47, 0x32, 0x32, 0x47>, AMDGPUSample_lz>;
+defm IMAGE_GATHER4_C            : MIMG_Gather_WQM <mimgopc<0x48, 0x33, 0x33, 0x48>, AMDGPUSample_c>;
+defm IMAGE_GATHER4_C_CL         : MIMG_Gather_WQM <mimgopc<0x49, 0x62, 0x62, 0x49>, AMDGPUSample_c_cl>;
+defm IMAGE_GATHER4_C_L          : MIMG_Gather <mimgopc<0x4c, 0x63, 0x63, 0x4c>, AMDGPUSample_c_l>;
+defm IMAGE_GATHER4_C_B          : MIMG_Gather_WQM <mimgopc<0x4d, 0x64, 0x64, 0x4d>, AMDGPUSample_c_b>;
+defm IMAGE_GATHER4_C_B_CL       : MIMG_Gather_WQM <mimgopc<0x4e, 0x65, 0x65, 0x4e>, AMDGPUSample_c_b_cl>;
+defm IMAGE_GATHER4_C_LZ         : MIMG_Gather <mimgopc<0x4f, 0x34, 0x34, 0x4f>, AMDGPUSample_c_lz>;
+defm IMAGE_GATHER4_O            : MIMG_Gather_WQM <mimgopc<0x50, 0x35, 0x35, 0x50>, AMDGPUSample_o>;
 defm IMAGE_GATHER4_CL_O         : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x51>, AMDGPUSample_cl_o>;
 defm IMAGE_GATHER4_L_O          : MIMG_Gather <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x54>, AMDGPUSample_l_o>;
 defm IMAGE_GATHER4_B_O          : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x55>, AMDGPUSample_b_o>;
 defm IMAGE_GATHER4_B_CL_O       : MIMG_Gather <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x56>, AMDGPUSample_b_cl_o>;
-defm IMAGE_GATHER4_LZ_O         : MIMG_Gather <mimgopc<0x36, 0x36, 0x36, 0x57>, AMDGPUSample_lz_o>;
+defm IMAGE_GATHER4_LZ_O         : MIMG_Gather <mimgopc<0x57, 0x36, 0x36, 0x57>, AMDGPUSample_lz_o>;
 defm IMAGE_GATHER4_C_O          : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x58>, AMDGPUSample_c_o>;
 defm IMAGE_GATHER4_C_CL_O       : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x59>, AMDGPUSample_c_cl_o>;
 defm IMAGE_GATHER4_C_L_O        : MIMG_Gather <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x5c>, AMDGPUSample_c_l_o>;
 defm IMAGE_GATHER4_C_B_O        : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x5d>, AMDGPUSample_c_b_o>;
 defm IMAGE_GATHER4_C_B_CL_O     : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x5e>, AMDGPUSample_c_b_cl_o>;
-defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x37, 0x37, 0x5f>, AMDGPUSample_c_lz_o>;
+defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x5f, 0x37, 0x37, 0x5f>, AMDGPUSample_c_lz_o>;
 #else /* LLPC_BUILD_NPI */
 defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x40, 0x40, 0x21>, AMDGPUSample_cl>;
 defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x1c, 0x1c, 0x22>, AMDGPUSample_d>;
@@ -2278,13 +2278,13 @@ defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x37, 0x5f>, AMDGPU
 
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts, isGFX9Plus] in
 #ifdef LLPC_BUILD_NPI
-defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x90, 0x90, 0x61, 0x42>, AMDGPUSample, 1, "image_gather4h">;
+defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x61, 0x90, 0x90, 0x61, 0x42>, AMDGPUSample, 1, "image_gather4h">;
 #else /* LLPC_BUILD_NPI */
 defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x90, 0x61, 0x42>, AMDGPUSample, 1, "image_gather4h">;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x38, 0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
+defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x60, 0x38, 0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
 #else /* LLPC_BUILD_NPI */
 defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
 #endif /* LLPC_BUILD_NPI */
@@ -2312,14 +2312,14 @@ defm IMAGE_SAMPLE_C_CD_CL_O     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6f
 
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts, HasG16] in {
 #ifdef LLPC_BUILD_NPI
-defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0x39, 0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0x5f, 0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
-defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0x3a, 0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0x54, 0x54, 0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 1>;
-defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0x3b, 0x3b, 0x3b, 0xb2>, AMDGPUSample_d_o, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0x55, 0x55, 0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 1>;
-defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0x3c, 0x3c, 0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0x56, 0x56, 0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0xa2, 0x39, 0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0xa3, 0x5f, 0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
+defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0xaa, 0x3a, 0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0xab, 0x54, 0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 1>;
+defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0xb2, 0x3b, 0x3b, 0xb2>, AMDGPUSample_d_o, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0xb3, 0x55, 0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0xba, 0x3c, 0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0xbb, 0x56, 0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 1>;
 defm IMAGE_SAMPLE_CD_G16        : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0xe8>, AMDGPUSample_cd, 0, 1>;
 defm IMAGE_SAMPLE_CD_CL_G16     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0xe9>, AMDGPUSample_cd_cl, 0, 1>;
 defm IMAGE_SAMPLE_C_CD_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0xea>, AMDGPUSample_c_cd, 0, 1>;
@@ -2360,7 +2360,7 @@ defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x80>, "ima
 
 let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding] in {
 #ifdef LLPC_BUILD_NPI
-defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, 0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
+defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x80, 0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
 #else /* LLPC_BUILD_NPI */
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
 #endif /* LLPC_BUILD_NPI */
@@ -2656,12 +2656,12 @@ class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
   string AsmOperands = " $vaddr0, $vaddr1"#!if(UpTo2D, "", ", $vaddr2, $vaddr3")#"$r128$cpol";
 }
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 def TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds">;
 def TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds">;
 def TENSOR_LOAD_TO_LDS_D2    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds", 1>;
 def TENSOR_STORE_FROM_LDS_D2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
-} // End SubtargetPredicate = isGFX1210Plus.
+} // End SubtargetPredicate = isGFX1250Plus.
 
 class TensorPat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
   (node v4i32:$vaddr0, v8i32:$vaddr1, v4i32:$vaddr2, v4i32:$vaddr3, (i32 timm:$cpol)),
@@ -2673,7 +2673,7 @@ class TensorD2Pat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
   (inst $vaddr0, $vaddr1, 1, $cpol)
 >;
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 def : TensorPat   <TENSOR_LOAD_TO_LDS, int_amdgcn_tensor_load_to_lds>;
 def : TensorPat   <TENSOR_STORE_FROM_LDS, int_amdgcn_tensor_store_from_lds>;
 def : TensorD2Pat <TENSOR_LOAD_TO_LDS_D2, int_amdgcn_tensor_load_to_lds_d2>;
@@ -2707,16 +2707,16 @@ class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = p
   let dim = 1;   // sp3
 }
 
-multiclass VIMAGE_TENSOR_Real_gfx1210<bits<8> op> {
-  let AssemblerPredicate = isGFX1210Plus, DecoderNamespace = "GFX1210" in {
+multiclass VIMAGE_TENSOR_Real_gfx1250<bits<8> op> {
+  let AssemblerPredicate = isGFX1250Plus, DecoderNamespace = "GFX1250" in {
     foreach DSuffix = ["_D2", ""] in {
       defvar ps = !cast<VIMAGE_TENSOR_Pseudo>(NAME # DSuffix);
-      def DSuffix # _gfx1210 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
-                SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1210>;
+      def DSuffix # _gfx1250 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
+                SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250>;
     }
   }
 }
 
-defm TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Real_gfx1210<0xc4>;
-defm TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Real_gfx1210<0xc5>;
+defm TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Real_gfx1250<0xc4>;
+defm TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Real_gfx1250<0xc5>;
 #endif /* LLPC_BUILD_NPI */

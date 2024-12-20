@@ -178,7 +178,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
 #if LLPC_BUILD_NPI
-  bool AllowSameVGPR = ST.hasGFX1210Insts();
+  bool AllowSameVGPR = ST.hasGFX1250Insts();
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI

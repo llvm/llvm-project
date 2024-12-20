@@ -53,7 +53,7 @@ set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803"
                              "gfx1150;gfx1151;gfx1152;gfx1153"
 if (LLPC_BUILD_NPI)
                              "gfx12-generic"
-                             "gfx1210")
+                             "gfx12-5-generic;gfx1250;gfx1251")
 else()
                              "gfx12-generic")
 endif()

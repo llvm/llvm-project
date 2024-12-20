@@ -107,7 +107,7 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_HS_TESSFACTOR"},       ID_HS_TESSFACTOR_GFX11Plus, isGFX11Plus},
   {{"MSG_DEALLOC_VGPRS"},       ID_DEALLOC_VGPRS_GFX11Plus, isGFX11Plus},
 #if LLPC_BUILD_NPI
-  {{"MSG_SAVEWAVE_HAS_TDM"},    ID_SAVEWAVE_HAS_TDM,        isGFX1210Plus},
+  {{"MSG_SAVEWAVE_HAS_TDM"},    ID_SAVEWAVE_HAS_TDM,        isGFX1250Plus},
 #else /* LLPC_BUILD_NPI */
   {{""}},
 #endif /* LLPC_BUILD_NPI */
@@ -122,7 +122,7 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
 #if LLPC_BUILD_NPI
   {{"MSG_RTN_GET_CLUSTER_BARRIER_STATE"}, ID_RTN_GET_CLUSTER_BARRIER_STATE,
-                                                            isGFX1210Only},
+                                                            isGFX1250Only},
   {{"MSG_RTN_GET_SEMA1"},       ID_RTN_GET_SEMA1,           isGFX13Plus},
   {{"MSG_RTN_GET_SEMA2"},       ID_RTN_GET_SEMA2,           isGFX13Plus},
   {{"MSG_RTN_GET_SEMA3"},       ID_RTN_GET_SEMA3,           isGFX13Plus},

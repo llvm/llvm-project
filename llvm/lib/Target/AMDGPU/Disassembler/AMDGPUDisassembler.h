@@ -304,8 +304,8 @@ public:
   bool isGFX12() const;
   bool isGFX12Plus() const;
 #if LLPC_BUILD_NPI
-  bool isGFX1210Plus() const;
-  bool isGFX1210Only() const;
+  bool isGFX1250Plus() const;
+  bool isGFX1250Only() const;
   bool isGFX13() const;
   bool isGFX13Plus() const;
 #endif /* LLPC_BUILD_NPI */

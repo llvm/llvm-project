@@ -152,9 +152,9 @@ static const OffloadArchToStringMap arch_names[] = {
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
 #if LLPC_BUILD_NPI
-    GFX(1210), // gfx1210
-    GFX(1211), // gfx1211
-    {OffloadArch::GFX12_1_GENERIC, "gfx12-1-generic", "compute_amdgcn"},
+    GFX(1250), // gfx1250
+    GFX(1251), // gfx1251
+    {OffloadArch::GFX12_5_GENERIC, "gfx12-5-generic", "compute_amdgcn"},
     GFX(1300), // gfx1300
     GFX(1301), // gfx1301
     GFX(1302), // gfx1302

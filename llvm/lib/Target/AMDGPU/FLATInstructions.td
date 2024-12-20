@@ -367,7 +367,7 @@ multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
 }
 
 #ifdef LLPC_BUILD_NPI
-// Async loads, introduced in gfx1210, will store directly
+// Async loads, introduced in gfx1250, will store directly
 // to a DS address in vdst (they will not use M0 for DS addess).
 class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0> : FLAT_Pseudo<
 #else /* LLPC_BUILD_NPI */
@@ -1407,7 +1407,7 @@ let SubtargetPredicate = isGFX12Plus in {
 } // End SubtargetPredicate = isGFX12Plus
 
 #ifdef LLPC_BUILD_NPI
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 
 let Uses = [M0, EXEC, ASYNCcnt] in {
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
@@ -1426,7 +1426,7 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B128  :  FLAT_Global_STORE_LDS_Pseudo<"global_s
 
 def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
-} // End SubtargetPredicate = isGFX1210Plus
+} // End SubtargetPredicate = isGFX1250Plus
 
 #endif /* LLPC_BUILD_NPI */
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte", VGPR_32>;
@@ -1494,7 +1494,7 @@ defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_d
 
 #ifdef LLPC_BUILD_NPI
 
-let SubtargetPredicate = isGFX121xOnly in {
+let SubtargetPredicate = isGFX125xOnly in {
 defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
 defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VReg_64>;
 defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VReg_128>;
@@ -1502,15 +1502,15 @@ defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128",
 defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
 defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
-} // End SubtargetPredicate = isGFX121xOnly
+} // End SubtargetPredicate = isGFX125xOnly
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
 defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
 defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
 defm CLUSTER_LOAD_B128        : FLAT_Global_Load_Pseudo <"cluster_load_b128", VReg_128>;
 } // End Uses = [M0, EXEC]
-} // End SubtargetPredicate = isGFX1210Plus.
+} // End SubtargetPredicate = isGFX1250Plus.
 
 #endif /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX12Plus in {
@@ -1543,14 +1543,14 @@ let SubtargetPredicate = isGFX12Plus in {
 } // End SubtargetPredicate = isGFX12Plus
 
 #ifdef LLPC_BUILD_NPI
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot1210 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot1250 in {
   let Mnemonic = "global_load_tr_b128" in
   defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
   let Mnemonic = "global_load_tr_b64" in
   defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
 }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1210Plus in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus in {
   defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VReg_96>;
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VReg_64>;
 }
@@ -2624,18 +2624,18 @@ let OtherPredicates = [isGFX12Plus] in {
 #ifdef LLPC_BUILD_NPI
 }
 
-let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot1210] in {
+let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot1250] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr_b64, i32>;
   foreach vt = [v4i16, v4f16, v4bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
 }
 
-let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1210Plus] in {
+let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1250Plus] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
-let OtherPredicates = [isGFX121xOnly] in {
+let OtherPredicates = [isGFX125xOnly] in {
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
@@ -2643,9 +2643,9 @@ let OtherPredicates = [isGFX121xOnly] in {
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
   defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
-} // End SubtargetPredicate = isGFX121xOnly
+} // End SubtargetPredicate = isGFX125xOnly
 
-let OtherPredicates = [isGFX1210Plus] in {
+let OtherPredicates = [isGFX1250Plus] in {
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
@@ -3894,7 +3894,7 @@ multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
 
 #ifdef LLPC_BUILD_NPI
 multiclass VGLOBAL_Real_AllAddr_gfx1200<bits<8> op> {
-  let AssemblerPredicate = isGFX12Not12_10 in {
+  let AssemblerPredicate = isGFX12Not12_50 in {
     defm "" : VFLAT_Real_gfx12<op>;
     defm _SADDR : VFLAT_Real_gfx12<op>;
   }
@@ -4192,97 +4192,97 @@ defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;
 #ifdef LLPC_BUILD_NPI
 
 //===----------------------------------------------------------------------===//
-// GFX1210
+// GFX1250
 //===----------------------------------------------------------------------===//
 
-multiclass VFLAT_Real_gfx1210<bits<8> op,
+multiclass VFLAT_Real_gfx1250<bits<8> op,
                               string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  def _gfx1210 : VFLAT_Real<op, ps, name>,
-                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1210> {
-    let AssemblerPredicate = isGFX121xOnly;
-    let DecoderNamespace = "GFX1210";
+  def _gfx1250 : VFLAT_Real<op, ps, name>,
+                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250> {
+    let AssemblerPredicate = isGFX125xOnly;
+    let DecoderNamespace = "GFX1250";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
     let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
   }
 }
 
-multiclass VFLAT_Aliases_gfx1210<string name> {
+multiclass VFLAT_Aliases_gfx1250<string name> {
   defvar ps = get_FLAT_ps<NAME>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX121xOnly]>;
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX125xOnly]>;
 }
 
-multiclass VFLAT_Real_Base_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Aliases_gfx1210<name> {
-  defm "" : VFLAT_Real_gfx1210<op, name>;
+multiclass VFLAT_Real_Base_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Aliases_gfx1250<name> {
+  defm "" : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_RTN_gfx1210<bits<8> op, string name> {
-  defm _RTN : VFLAT_Real_gfx1210<op, name>;
+multiclass VFLAT_Real_RTN_gfx1250<bits<8> op, string name> {
+  defm _RTN : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_SADDR_gfx1210<bits<8> op, string name> {
-  defm _SADDR : VFLAT_Real_gfx1210<op, name>;
+multiclass VFLAT_Real_SADDR_gfx1250<bits<8> op, string name> {
+  defm _SADDR : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_SADDR_RTN_gfx1210<bits<8> op, string name> {
-  defm _SADDR_RTN : VFLAT_Real_gfx1210<op, name>;
+multiclass VFLAT_Real_SADDR_RTN_gfx1250<bits<8> op, string name> {
+  defm _SADDR_RTN : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_AllAddr_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Real_Base_gfx1210<op, name>,
-  VFLAT_Real_SADDR_gfx1210<op, name>;
+multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Real_Base_gfx1250<op, name>,
+  VFLAT_Real_SADDR_gfx1250<op, name>;
 
-multiclass VFLAT_Real_Atomics_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Real_AllAddr_gfx1210<op, name>,
-  VFLAT_Real_RTN_gfx1210<op, name>,
-  VFLAT_Real_SADDR_RTN_gfx1210<op, name>;
+multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Real_AllAddr_gfx1250<op, name>,
+  VFLAT_Real_RTN_gfx1250<op, name>,
+  VFLAT_Real_SADDR_RTN_gfx1250<op, name>;
 
-defm TENSOR_SAVE                      : VFLAT_Real_gfx1210<0x06e>;
-defm TENSOR_STOP                      : VFLAT_Real_gfx1210<0x06f>;
+defm TENSOR_SAVE                      : VFLAT_Real_gfx1250<0x06e>;
+defm TENSOR_STOP                      : VFLAT_Real_gfx1250<0x06f>;
 
-defm FLAT_PREFETCH_B8                 : VFLAT_Real_AllAddr_gfx1210<0x05d>;
-defm GLOBAL_PREFETCH_B8               : VFLAT_Real_AllAddr_gfx1210<0x05d>;
+defm FLAT_PREFETCH_B8                 : VFLAT_Real_AllAddr_gfx1250<0x05d>;
+defm GLOBAL_PREFETCH_B8               : VFLAT_Real_AllAddr_gfx1250<0x05d>;
 
-defm FLAT_LOAD_MONITOR_B32            : VFLAT_Real_AllAddr_gfx1210<0x070>;
-defm FLAT_LOAD_MONITOR_B64            : VFLAT_Real_AllAddr_gfx1210<0x071>;
-defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_AllAddr_gfx1210<0x072>;
+defm FLAT_LOAD_MONITOR_B32            : VFLAT_Real_AllAddr_gfx1250<0x070>;
+defm FLAT_LOAD_MONITOR_B64            : VFLAT_Real_AllAddr_gfx1250<0x071>;
+defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_AllAddr_gfx1250<0x072>;
 
-defm GLOBAL_LOAD_MONITOR_B32          : VFLAT_Real_AllAddr_gfx1210<0x070>;
-defm GLOBAL_LOAD_MONITOR_B64          : VFLAT_Real_AllAddr_gfx1210<0x071>;
-defm GLOBAL_LOAD_MONITOR_B128         : VFLAT_Real_AllAddr_gfx1210<0x072>;
-defm CLUSTER_LOAD_B32                 : VFLAT_Real_AllAddr_gfx1210<0x067>;
-defm CLUSTER_LOAD_B64                 : VFLAT_Real_AllAddr_gfx1210<0x068>;
-defm CLUSTER_LOAD_B128                : VFLAT_Real_AllAddr_gfx1210<0x069>;
+defm GLOBAL_LOAD_MONITOR_B32          : VFLAT_Real_AllAddr_gfx1250<0x070>;
+defm GLOBAL_LOAD_MONITOR_B64          : VFLAT_Real_AllAddr_gfx1250<0x071>;
+defm GLOBAL_LOAD_MONITOR_B128         : VFLAT_Real_AllAddr_gfx1250<0x072>;
+defm CLUSTER_LOAD_B32                 : VFLAT_Real_AllAddr_gfx1250<0x067>;
+defm CLUSTER_LOAD_B64                 : VFLAT_Real_AllAddr_gfx1250<0x068>;
+defm CLUSTER_LOAD_B128                : VFLAT_Real_AllAddr_gfx1250<0x069>;
 
-defm CLUSTER_LOAD_ASYNC_TO_LDS_B8     : VFLAT_Real_AllAddr_gfx1210<0x6a>;
-defm CLUSTER_LOAD_ASYNC_TO_LDS_B32    : VFLAT_Real_AllAddr_gfx1210<0x6b>;
-defm CLUSTER_LOAD_ASYNC_TO_LDS_B64    : VFLAT_Real_AllAddr_gfx1210<0x6c>;
-defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VFLAT_Real_AllAddr_gfx1210<0x6d>;
-defm GLOBAL_LOAD_ASYNC_TO_LDS_B8      : VFLAT_Real_AllAddr_gfx1210<0x5f>;
-defm GLOBAL_LOAD_ASYNC_TO_LDS_B32     : VFLAT_Real_AllAddr_gfx1210<0x60>;
-defm GLOBAL_LOAD_ASYNC_TO_LDS_B64     : VFLAT_Real_AllAddr_gfx1210<0x61>;
-defm GLOBAL_LOAD_ASYNC_TO_LDS_B128    : VFLAT_Real_AllAddr_gfx1210<0x62>;
-defm GLOBAL_STORE_ASYNC_FROM_LDS_B8   : VFLAT_Real_AllAddr_gfx1210<0x63>;
-defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VFLAT_Real_AllAddr_gfx1210<0x64>;
-defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VFLAT_Real_AllAddr_gfx1210<0x65>;
-defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VFLAT_Real_AllAddr_gfx1210<0x66>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B8     : VFLAT_Real_AllAddr_gfx1250<0x6a>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B32    : VFLAT_Real_AllAddr_gfx1250<0x6b>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B64    : VFLAT_Real_AllAddr_gfx1250<0x6c>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VFLAT_Real_AllAddr_gfx1250<0x6d>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B8      : VFLAT_Real_AllAddr_gfx1250<0x5f>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B32     : VFLAT_Real_AllAddr_gfx1250<0x60>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B64     : VFLAT_Real_AllAddr_gfx1250<0x61>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B128    : VFLAT_Real_AllAddr_gfx1250<0x62>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B8   : VFLAT_Real_AllAddr_gfx1250<0x63>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VFLAT_Real_AllAddr_gfx1250<0x64>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VFLAT_Real_AllAddr_gfx1250<0x65>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VFLAT_Real_AllAddr_gfx1250<0x66>;
 
-defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1210<0x057, "global_load_tr16_b128">;
-defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1210<0x058, "global_load_tr8_b64">;
+defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
+defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;
 
-defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1210<0x075>;
-defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1210<0x074>;
+defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1250<0x075>;
+defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1250<0x074>;
 
-defm FLAT_ATOMIC_ADD_F64              : VFLAT_Real_Atomics_gfx1210<0x055>;
-defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx1210<0x05b, "flat_atomic_min_num_f64">;
-defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx1210<0x05c, "flat_atomic_max_num_f64">;
+defm FLAT_ATOMIC_ADD_F64              : VFLAT_Real_Atomics_gfx1250<0x055>;
+defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx1250<0x05b, "flat_atomic_min_num_f64">;
+defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx1250<0x05c, "flat_atomic_max_num_f64">;
 
-defm GLOBAL_ATOMIC_ADD_F64            : VFLAT_Real_Atomics_gfx1210<0x055>;
-defm GLOBAL_ATOMIC_MIN_F64            : VFLAT_Real_Atomics_gfx1210<0x05b, "global_atomic_min_num_f64">;
-defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1210<0x05c, "global_atomic_max_num_f64">;
+defm GLOBAL_ATOMIC_ADD_F64            : VFLAT_Real_Atomics_gfx1250<0x055>;
+defm GLOBAL_ATOMIC_MIN_F64            : VFLAT_Real_Atomics_gfx1250<0x05b, "global_atomic_min_num_f64">;
+defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1250<0x05c, "global_atomic_max_num_f64">;
 
 //===----------------------------------------------------------------------===//
 // GFX13

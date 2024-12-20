@@ -188,7 +188,7 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
 #if LLPC_BUILD_NPI
     return true;
   }
-  // gfx121x only support FeatureWavefrontSize32.
+  // gfx125x only support FeatureWavefrontSize32.
   if (!ST->supportsWave64() && ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize64);
 #endif /* LLPC_BUILD_NPI */

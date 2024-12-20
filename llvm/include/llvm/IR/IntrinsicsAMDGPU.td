@@ -4544,7 +4544,7 @@ def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
 
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
-// gfx1210 intrinsics
+// gfx1250 intrinsics
 // ===----------------------------------------------------------------------===//
 
 // Vanilla cluster sync-barrier
@@ -4822,7 +4822,7 @@ class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD, LLVMType scale_ty>
      ImmArg<ArgIndex<10>>, ImmArg<ArgIndex<11>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1210 = {
+defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
 def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f64_16x16x8_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
@@ -4860,7 +4860,7 @@ class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType I
     [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]
 >;
 
-defset list<Intrinsic> AMDGPUSWMMACIntrinsicsGFX1210 = {
+defset list<Intrinsic> AMDGPUSWMMACIntrinsicsGFX1250 = {
 def int_amdgcn_swmmac_f32_16x16x64_f16      : AMDGPUSWmmacIntrinsicABIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f32_16x16x64_bf16     : AMDGPUSWmmacIntrinsicABIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f16_16x16x64_f16      : AMDGPUSWmmacIntrinsicABIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;

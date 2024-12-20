@@ -1701,9 +1701,9 @@ public:
   bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
 
 #if LLPC_BUILD_NPI
-  bool isGFX1210Only() const { return AMDGPU::isGFX1210Only(getSTI()); }
+  bool isGFX1250Only() const { return AMDGPU::isGFX1250Only(getSTI()); }
 
-  bool isGFX1210Plus() const { return AMDGPU::isGFX1210Plus(getSTI()); }
+  bool isGFX1250Plus() const { return AMDGPU::isGFX1250Plus(getSTI()); }
 
   bool isGFX13() const { return AMDGPU::isGFX13(getSTI()); }
 
@@ -3202,7 +3202,7 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
     return AMDGPU::NoRegister;
   }
 
-  if (RegKind == IS_VGPR && !isGFX1210Plus() && RegIdx + RegWidth / 32 > 256) {
+  if (RegKind == IS_VGPR && !isGFX1250Plus() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
 #endif /* LLPC_BUILD_NPI */
     return MCRegister();
@@ -4349,11 +4349,11 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
   // On GFX12+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
   bool SkipSrc =
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
-      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1210 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
-      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1210 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
-  bool AllowSameVGPR = isGFX1210Plus();
+  bool AllowSameVGPR = isGFX1250Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
     for (auto OpName : {OpName::src0X, OpName::src0Y}) {
@@ -4505,7 +4505,7 @@ bool AMDGPUAsmParser::tryVOPD(const MCInst &Inst) {
 // form but switch to VOPD3 otherwise.
 bool AMDGPUAsmParser::tryAnotherVOPDEncoding(const MCInst &Inst) {
   const unsigned Opcode = Inst.getOpcode();
-  if (!isGFX1210Plus() || !isVOPD(Opcode))
+  if (!isGFX1250Plus() || !isVOPD(Opcode))
     return false;
 
   if (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3)
@@ -5596,9 +5596,10 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
 #if LLPC_BUILD_NPI
-  // TODO: Workaround for now. FeatureGFX1210Insts is added to GFX13, but GFX13 is not required
-  // VGPRAlignment.
-  if ((!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1210Insts]) || isGFX13())
+  // TODO: Workaround for now. FeatureGFX1250Insts is added to GFX13, but GFX13
+  // is not required VGPRAlignment.
+  if ((!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1250Insts]) ||
+      isGFX13())
     return true;
 
   unsigned Opc = Inst.getOpcode();
@@ -5769,7 +5770,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   if (isGFX13() && (CPol & CPol::CFS) && !validateCFSBits(Inst, Operands, CPol))
     return false;
 
-  if (!isGFX1210Plus()) {
+  if (!isGFX1250Plus()) {
     if (CPol & CPol::SCAL) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
@@ -6881,14 +6882,14 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                     "enabled user SGPRs");
 
 #if LLPC_BUILD_NPI
-
-  if (isGFX1210Plus()) {
-    if (!isUInt<COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+  if (isGFX1250Plus()) {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
-      COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT, getContext());
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
   } else {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
@@ -7641,7 +7642,7 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
       }
 
 #if LLPC_BUILD_NPI
-      // NV bit exists on GFX12+, but does something starting from GFX1210.
+      // NV bit exists on GFX12+, but does something starting from GFX1250.
       // Allow parsing on all GFX12 and fail on validation for better
       // diagnostics.
       if (ResNV.isNoMatch()) {
@@ -10005,13 +10006,13 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx13 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx13 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp_gfx1210 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp_gfx1250 ||
         Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp_gfx13 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp8_gfx1210 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp8_gfx1250 ||
         Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp8_gfx13 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp_gfx1210 ||
+        Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp_gfx1250 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp_gfx13 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp8_gfx1210 ||
+        Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp8_gfx1250 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp8_gfx13)) {
 #else /* LLPC_BUILD_NPI */
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12)) {

@@ -62,7 +62,7 @@ unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
 #if LLPC_BUILD_NPI
   // VOP3PX/VOP3PX2 encoding.
   if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
-      STI->hasFeature(AMDGPU::FeatureGFX1210Insts))
+      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
 #else /* LLPC_BUILD_NPI */
   // VOP3PX encoding.
   if (STI->hasFeature(AMDGPU::FeatureGFX950Insts))

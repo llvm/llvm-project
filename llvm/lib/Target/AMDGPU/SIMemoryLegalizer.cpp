@@ -662,9 +662,10 @@ protected:
 public:
 #if LLPC_BUILD_NPI
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {
-    // GFX120x and GFX121x memory models greatly overlap, and in some cases
+    // GFX120x and GFX125x memory models greatly overlap, and in some cases
     // the behavior is the same if assuming GFX120x in CU mode.
-    assert((ST.hasGFX1210Insts() && !ST.hasGFX13Insts()) ? ST.isCuModeEnabled() : true);
+    assert((ST.hasGFX1250Insts() && !ST.hasGFX13Insts()) ? ST.isCuModeEnabled()
+                                                         : true);
   }
 #else /* LLPC_BUILD_NPI */
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
@@ -2486,18 +2487,18 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     case SIAtomicScope::WORKGROUP:
 #if LLPC_BUILD_NPI
       // GFX120x:
-      //   In WGP mode the waves of a work-group can be executing on either CU of
-      //   the WGP. Therefore need to wait for operations to complete to ensure
-      //   they are visible to waves in the other CU as the L0 is per CU.
+      //   In WGP mode the waves of a work-group can be executing on either CU
+      //   of the WGP. Therefore need to wait for operations to complete to
+      //   ensure they are visible to waves in the other CU as the L0 is per CU.
       //   Otherwise in CU mode and all waves of a work-group are on the same CU
       //   which shares the same L0.
       //
-      // GFX121x:
+      // GFX125x:
       //   CU$ has two ports. To ensure operations are visible at the workgroup
       //   level, we need to ensure all operations in this port have completed
       //   so the other SIMDs in the WG can see them. There is no ordering
       //   guarantee between the ports.
-      if (!isWorkGroupSharingL0() || ST.hasGFX1210Insts()) {
+      if (!isWorkGroupSharingL0() || ST.hasGFX1250Insts()) {
 #else /* LLPC_BUILD_NPI */
       // In WGP mode the waves of a work-group can be executing on either CU of
       // the WGP. Therefore need to wait for operations to complete to ensure
@@ -2617,10 +2618,10 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     // GFX12:
     //  In WGP mode the waves of a work-group can be executing on either CU of
     //  the WGP. Therefore we need to invalidate the L0 which is per CU.
-    //  Otherwise in CU mode all waves of a work-group are on the same CU, and so
-    //  the L0 does not need to be invalidated.
+    //  Otherwise in CU mode all waves of a work-group are on the same CU, and
+    //  so the L0 does not need to be invalidated.
     //
-    // GFX121x has a shared CU$, so no invalidates are required.
+    // GFX125x has a shared CU$, so no invalidates are required.
     if (isWorkGroupSharingL0())
 #else /* LLPC_BUILD_NPI */
     // In WGP mode the waves of a work-group can be executing on either CU of
@@ -2684,7 +2685,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   //   Emitting it for lower scopes is a slow no-op, so we omit it
   //   for performance.
   //
-  // gfx121x:
+  // gfx125x:
   //    stores can also report completion from CU$ so we must emit
   //    global_wb at device scope as well to ensure stores reached
   //    the right cache level.
@@ -2699,7 +2700,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
     break;
   case SIAtomicScope::AGENT:
 #if LLPC_BUILD_NPI
-    if (ST.hasGFX1210Insts()) {
+    if (ST.hasGFX1250Insts()) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
         .addImm(AMDGPU::CPol::SCOPE_DEV);
     }
@@ -2775,7 +2776,7 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
 bool SIGfx12CacheControl::expandSystemScopeStore(
     MachineBasicBlock::iterator &MI) const {
 #if LLPC_BUILD_NPI
-  if (ST.hasGFX1210Insts())
+  if (ST.hasGFX1250Insts())
     return false;
 
   // Only required on gfx120x.

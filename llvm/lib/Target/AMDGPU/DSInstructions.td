@@ -853,7 +853,7 @@ defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32
 } // let SubtargetPredicate = isGFX12Plus
 
 #ifdef LLPC_BUILD_NPI
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 
 let WaveSizePredicate = isWave32, mayStore = 0 in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
@@ -878,7 +878,7 @@ def : GCNPat<
   (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
 >;
 
-} //let SubtargetPredicate = isGFX1210Plus
+} //let SubtargetPredicate = isGFX1250Plus
 
 #endif /* LLPC_BUILD_NPI */
 let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
@@ -1349,13 +1349,13 @@ class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPa
 >;
 
 #ifdef LLPC_BUILD_NPI
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1210Plus in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus in {
   def : DSLoadTrPat <DS_LOAD_TR8_B64,   v2i32,  int_amdgcn_ds_load_tr8_b64>;
   def : DSLoadTrPat <DS_LOAD_TR4_B64,   v2i32,  int_amdgcn_ds_load_tr4_b64>;
   def : DSLoadTrPat <DS_LOAD_TR6_B96,   v3i32,  int_amdgcn_ds_load_tr6_b96>;
   foreach vt = [v8i16, v8f16, v8bf16] in
     def : DSLoadTrPat <DS_LOAD_TR16_B128, vt,  int_amdgcn_ds_load_tr16_b128>;
-} //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1210Plus
+} //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus
 
 #endif /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasGFX950Insts in {
@@ -1510,8 +1510,8 @@ let AssemblerPredicate = isGFX12Plus in {
 
 #ifdef LLPC_BUILD_NPI
 // Aliases that have existed since these instructions were introduced.
-def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1210Plus]>;
-def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1210Plus]>;
+def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1250Plus]>;
+def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250Plus]>;
 
 //===----------------------------------------------------------------------===//
 // GFX13.

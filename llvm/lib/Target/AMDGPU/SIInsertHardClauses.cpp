@@ -45,7 +45,7 @@ namespace {
 
 enum HardClauseType {
 #if LLPC_BUILD_NPI
-  // For GFX10 and GFX1210:
+  // For GFX10 and GFX1250:
 #else /* LLPC_BUILD_NPI */
   // For GFX10:
 #endif /* LLPC_BUILD_NPI */
@@ -109,7 +109,7 @@ public:
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
 #if LLPC_BUILD_NPI
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
-          ST->hasGFX1210Insts()) {
+          ST->hasGFX1250Insts()) {
 #else /* LLPC_BUILD_NPI */
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
 #endif /* LLPC_BUILD_NPI */

@@ -142,7 +142,7 @@ def : GCNPat <
 } // End SubtargetPredicate = isGFX11Only
 
 #ifdef LLPC_BUILD_NPI
-let SubtargetPredicate = isGFX12PlusNot1210 in {
+let SubtargetPredicate = isGFX12PlusNot1250 in {
 #else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX12Plus in {
 #endif /* LLPC_BUILD_NPI */
@@ -161,7 +161,7 @@ def : GCNPat <
 >;
 
 #ifdef LLPC_BUILD_NPI
-} // End SubtargetPredicate = isGFX12PlusNot1210.
+} // End SubtargetPredicate = isGFX12PlusNot1250.
 #else /* LLPC_BUILD_NPI */
 } // End SubtargetPredicate = isGFX12Only
 #endif /* LLPC_BUILD_NPI */

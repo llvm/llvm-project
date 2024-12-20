@@ -437,7 +437,7 @@ class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   let Inst{14} = !if(p.HasOpSel, src0_modifiers{3}, 0);
 }
 
-class VOP3a_ScaleSel_gfx1210<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
+class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   bits<3> scale_sel;
 
   let Inst{13-11} = scale_sel;
@@ -2174,11 +2174,11 @@ multiclass VOP3_BITOP3_Real_Base<GFXGen Gen, bits<10> op, bit isSingle = 0> {
   }
 }
 
-multiclass VOP3Only_ScaleSel_Real_gfx1210<bits<10> op> {
+multiclass VOP3Only_ScaleSel_Real_gfx1250<bits<10> op> {
   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
-  def _e64_gfx1210 :
-    VOP3_Real_Gen<ps, GFX1210Gen>,
-    VOP3a_ScaleSel_gfx1210<op, ps.Pfl>;
+  def _e64_gfx1250 :
+    VOP3_Real_Gen<ps, GFX1250Gen>,
+    VOP3a_ScaleSel_gfx1250<op, ps.Pfl>;
 }
 
 #endif /* LLPC_BUILD_NPI */
@@ -2240,32 +2240,32 @@ multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = g
   VOP3Only_Realtriple<GFX12Gen, gfx12Op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
 
-multiclass VOP3Only_Real_Base_gfx1210<bits<10> op> :
-  VOP3_Real_Base<GFX1210Gen, op, NAME, 1/*IsSingle*/>;
+multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
+  VOP3_Real_Base<GFX1250Gen, op, NAME, 1/*IsSingle*/>;
 
-multiclass VOP3Only_Real_Base_gfx1210_gfx13<bits<10> gfx1210Op, bits<10> op> :
-  VOP3Only_Real_Base_gfx1210<gfx1210Op>,
+multiclass VOP3Only_Real_Base_gfx1250_gfx13<bits<10> gfx1250Op, bits<10> op> :
+  VOP3Only_Real_Base_gfx1250<gfx1250Op>,
   VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
 
-multiclass VOP3Only_Realtriple_gfx1210<bits<10> op, bit isSingle = 0> :
-  VOP3_Realtriple<GFX1210Gen, op, isSingle>;
+multiclass VOP3Only_Realtriple_gfx1250<bits<10> op, bit isSingle = 0> :
+  VOP3_Realtriple<GFX1250Gen, op, isSingle>;
 
-multiclass VOP3Only_Realtriple_gfx1210_gfx13<
-    bits<10> gfx1210Op, bits<10> op = gfx1210Op> :
-  VOP3_Realtriple<GFX1210Gen, gfx1210Op>,
+multiclass VOP3Only_Realtriple_gfx1250_gfx13<
+    bits<10> gfx1250Op, bits<10> op = gfx1250Op> :
+  VOP3_Realtriple<GFX1250Gen, gfx1250Op>,
   VOP3_Realtriple<GFX13Gen, op>;
 
-multiclass VOP3Only_Realtriple_gfx1210_DPP8_gfx13<bits<10> op> :
-  VOP3_Realtriple<GFX1210Gen, op>,
+multiclass VOP3Only_Realtriple_gfx1250_DPP8_gfx13<bits<10> op> :
+  VOP3_Realtriple<GFX1250Gen, op>,
   VOP3_Realtriple_DPP8<GFX13Gen, op>;
 
-multiclass VOP3Only_Realtriple_gfx1210_NO_DPP_gfx13<bits<10> op> :
-  VOP3_Realtriple<GFX1210Gen, op>,
+multiclass VOP3Only_Realtriple_gfx1250_NO_DPP_gfx13<bits<10> op> :
+  VOP3_Realtriple<GFX1250Gen, op>,
   VOP3_Real_Base<GFX13Gen, op>;
 
-multiclass VOP3Only_Realtriple_t16_gfx1210_gfx13<
-    bits<10> gfx1210Op, bits<10> op> :
-  VOP3Only_Realtriple<GFX1210Gen, gfx1210Op>,
+multiclass VOP3Only_Realtriple_t16_gfx1250_gfx13<
+    bits<10> gfx1250Op, bits<10> op> :
+  VOP3Only_Realtriple<GFX1250Gen, gfx1250Op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
 #else /* LLPC_BUILD_NPI */
 multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
@@ -2351,8 +2351,8 @@ multiclass VOP3_Real_BITOP3<GFXGen gen, bits<10> op, bit isSingle = 0> :
   VOP3_BITOP3_Real_dpp_Base<gen, op>,
   VOP3_BITOP3_Real_dpp8_Base<gen, op>;
 
-multiclass VOP3_Real_BITOP3_gfx1210_gfx13<bits<10> op, bit isSingle = 0> :
-  VOP3_Real_BITOP3<GFX1210Gen, op, isSingle>,
+multiclass VOP3_Real_BITOP3_gfx1250_gfx13<bits<10> op, bit isSingle = 0> :
+  VOP3_Real_BITOP3<GFX1250Gen, op, isSingle>,
   VOP3_Real_BITOP3<GFX13Gen, op, isSingle>;
 #else /* LLPC_BUILD_NPI */
 multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,

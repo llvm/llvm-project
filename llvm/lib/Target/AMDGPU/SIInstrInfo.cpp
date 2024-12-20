@@ -9830,7 +9830,7 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
 #if LLPC_BUILD_NPI
-    return ST.hasGFX1210Insts() ? SIEncodingFamily::GFX1210
+    return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
   case AMDGPUSubtarget::GFX13:
     return SIEncodingFamily::GFX13;
@@ -9929,10 +9929,10 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
 #if LLPC_BUILD_NPI
-  if (MCOp == (uint16_t)-1 && ST.hasGFX1210Insts())
+  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())
     MCOp =
         AMDGPU::getMCOpcode(Opcode, ST.getGeneration() == AMDGPUSubtarget::GFX13
-                                        ? SIEncodingFamily::GFX1210
+                                        ? SIEncodingFamily::GFX1250
                                         : SIEncodingFamily::GFX12);
 
 #endif /* LLPC_BUILD_NPI */

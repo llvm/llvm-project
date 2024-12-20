@@ -1697,7 +1697,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomic.legalFor({{S32, FlatPtr}});
 
 #if LLPC_BUILD_NPI
-  if (ST.hasGFX90AInsts() || ST.hasGFX1210Insts()) {
+  if (ST.hasGFX90AInsts() || ST.hasGFX1250Insts()) {
 #else /* LLPC_BUILD_NPI */
   if (ST.hasGFX90AInsts()) {
 #endif /* LLPC_BUILD_NPI */
@@ -7815,31 +7815,31 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
 #if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
-    return ST.hasGFX1210Insts() &&
+    return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_id_y:
-    return ST.hasGFX1210Insts() &&
+    return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_id_z:
-    return ST.hasGFX1210Insts() &&
+    return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
-    return ST.hasGFX1210Insts() &&
+    return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
-    return ST.hasGFX1210Insts() &&
+    return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
-    return ST.hasGFX1210Insts() &&
+    return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
-    return ST.hasGFX1210Insts() &&
+    return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B,
                AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID);

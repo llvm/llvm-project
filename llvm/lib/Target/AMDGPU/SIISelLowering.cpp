@@ -9931,43 +9931,43 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
 #if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
-    return Subtarget->hasGFX1210Insts()
+    return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_y:
-    return Subtarget->hasGFX1210Insts()
+    return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_z:
-    return Subtarget->hasGFX1210Insts()
+    return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
-    return Subtarget->hasGFX1210Insts()
+    return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
-    return Subtarget->hasGFX1210Insts()
+    return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
-    return Subtarget->hasGFX1210Insts()
+    return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
-    return Subtarget->hasGFX1210Insts()
+    return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID)

@@ -350,9 +350,9 @@ def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUWMMAIntrinsicsGFX12 in
 def : SourceOfDivergence<intr>;
 #ifdef LLPC_BUILD_NPI
-foreach intr = AMDGPUWMMAIntrinsicsGFX1210 in
+foreach intr = AMDGPUWMMAIntrinsicsGFX1250 in
 def : SourceOfDivergence<intr>;
-foreach intr = AMDGPUSWMMACIntrinsicsGFX1210 in
+foreach intr = AMDGPUSWMMACIntrinsicsGFX1250 in
 def : SourceOfDivergence<intr>;
 #endif /* LLPC_BUILD_NPI */
 

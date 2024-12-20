@@ -5502,7 +5502,7 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto &TTI = S.Context.getTargetInfo();
   auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
-      (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1210)) {
+      (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1250)) {
     S.Diag(AL.getLoc(), diag::err_cuda_cluster_dims_not_supported);
     return;
   }

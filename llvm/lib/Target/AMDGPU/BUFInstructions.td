@@ -3347,7 +3347,7 @@ defm BUFFER_DISCARD_B128        : MUBUF_Real_Discard_gfx13<0x04d>;
 defm BUFFER_DISCARD_B1024       : MUBUF_Real_Discard_gfx13<0x04e>;
 
 //===----------------------------------------------------------------------===//
-// MUBUF - GFX11, GFX12, GFX1210.
+// MUBUF - GFX11, GFX12, GFX1250.
 #else /* LLPC_BUILD_NPI */
 // MUBUF - GFX11, GFX12.
 #endif /* LLPC_BUILD_NPI */

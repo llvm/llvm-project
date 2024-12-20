@@ -517,10 +517,10 @@ def FeatureGFX12Insts : SubtargetFeature<"gfx12-insts",
 >;
 
 #ifdef LLPC_BUILD_NPI
-def FeatureGFX1210Insts : SubtargetFeature<"gfx1210-insts",
-  "GFX1210Insts",
+def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
+  "GFX1250Insts",
   "true",
-  "Additional instructions for GFX1210+"
+  "Additional instructions for GFX1250+"
 >;
 
 def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
@@ -989,10 +989,10 @@ def FeatureFlatAtomicFaddF32Inst
 >;
 
 #ifdef LLPC_BUILD_NPI
-def FeatureGFX1211GEMMInsts : SubtargetFeature<"gfx1211-gemm-insts",
-  "HasGFX1211GEMMInsts",
+def FeatureGFX1251GEMMInsts : SubtargetFeature<"gfx1251-gemm-insts",
+  "HasGFX1251GEMMInsts",
   "true",
-  "Has additional gfx1211 DGEMM and F16 GEMM instructions"
+  "Has additional gfx1251 DGEMM and F16 GEMM instructions"
 >;
 
 #endif /* LLPC_BUILD_NPI */
@@ -2069,7 +2069,7 @@ def FeatureISAVersion12 : FeatureSet<
 
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,
-   FeatureGFX1210Insts,
+   FeatureGFX1250Insts,
    FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
@@ -2127,7 +2127,7 @@ def FeatureISAVersion12_11 : FeatureSet<
   !listconcat(FeatureISAVersion12_10.Features,
   [FullRate64Ops,
    FeatureDPALU_DPP,
-   FeatureGFX1211GEMMInsts])>;
+   FeatureGFX1251GEMMInsts])>;
 #else /* LLPC_BUILD_NPI */
    ]>;
 #endif /* LLPC_BUILD_NPI */
@@ -2143,7 +2143,7 @@ def FeatureISAVersion12_1_Generic: FeatureSet<
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
-   FeatureGFX1210Insts,
+   FeatureGFX1250Insts,
    FeatureAddressableLocalMemorySize327680,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
@@ -2517,9 +2517,9 @@ def isGFX12Only :
 #ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX13Insts))>;
 
-def isGFX12Not12_10 :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1210Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1210Insts))>;
+def isGFX12Not12_50 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
 #else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 #endif /* LLPC_BUILD_NPI */
@@ -2529,26 +2529,26 @@ def isGFX12Plus :
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
 #ifdef LLPC_BUILD_NPI
-def isGFX12PlusNot1210 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1210Insts())">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1210Insts)))>;
+def isGFX12PlusNot1250 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
 
-def isGFX121xOnly :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1210Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX1210Insts, (not FeatureGFX13Insts))>;
+def isGFX125xOnly :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
-def isGFX1210Plus :
-  Predicate<"Subtarget->hasGFX1210Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX1210Insts)>;
+def isGFX1250Plus :
+  Predicate<"Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
 
-def isNotGFX1210Plus :
-  Predicate<"!Subtarget->hasGFX1210Insts()">,
-  AssemblerPredicate<(all_of (not FeatureGFX1210Insts))>;
+def isNotGFX1250Plus :
+  Predicate<"!Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
-def isGFX940orGFX1210orGFX13Plus :
-  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1210Insts() || "
+def isGFX940orGFX1250orGFX13Plus :
+  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1250Insts() || "
             "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX1210Insts,
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX1250Insts,
                              FeatureGFX13Insts)>;
 
 def isGFX13Only :
@@ -2605,7 +2605,7 @@ def HasAtomicFMinFMaxF64FlatInsts :
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
 #ifdef LLPC_BUILD_NPI
-  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1210Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1250Insts)>;
 #else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
 #endif /* LLPC_BUILD_NPI */
@@ -2654,22 +2654,22 @@ def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
 #ifdef LLPC_BUILD_NPI
 def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1250Insts))>;
 
 def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1250Insts))>;
 
 #endif /* LLPC_BUILD_NPI */
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
 #ifdef LLPC_BUILD_NPI
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX1210Insts)))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX1250Insts)))>;
 #else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
 #endif /* LLPC_BUILD_NPI */
 
 def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
 #ifdef LLPC_BUILD_NPI
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1250Insts))>;
 #else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 #endif /* LLPC_BUILD_NPI */
@@ -2766,23 +2766,23 @@ def HasFmaakFmamkF32Insts :
 #ifdef LLPC_BUILD_NPI
 def HasFmaakFmamkF64Insts :
   Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasSGetShaderCyclesInst :
   Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
-  AssemblerPredicate<(any_of FeatureGFX1210Insts, FeatureGFX13Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1250Insts, FeatureGFX13Insts)>;
 
 #endif /* LLPC_BUILD_NPI */
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
@@ -2940,9 +2940,9 @@ def HasFlatAtomicFaddF32Inst
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
 #ifdef LLPC_BUILD_NPI
-def HasGFX1211GEMMInsts
-  : Predicate<"Subtarget->hasGFX1211GEMMInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX1211GEMMInsts)>;
+def HasGFX1251GEMMInsts
+  : Predicate<"Subtarget->hasGFX1251GEMMInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX1251GEMMInsts)>;
 
 #endif /* LLPC_BUILD_NPI */
 def HasDefaultComponentZero
@@ -2957,7 +2957,7 @@ def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
 
 #ifdef LLPC_BUILD_NPI
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
-  AssemblerPredicate<(any_of FeatureGFX1210Insts, FeatureGFX13Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1250Insts, FeatureGFX13Insts)>;
 
 #endif /* LLPC_BUILD_NPI */
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
@@ -3040,7 +3040,7 @@ def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
 #ifdef LLPC_BUILD_NPI
 def HasVectorPrefetch :
   Predicate<"Subtarget->hasVectorPrefetch()">,
-  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 #endif /* LLPC_BUILD_NPI */
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,

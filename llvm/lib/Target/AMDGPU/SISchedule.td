@@ -109,8 +109,8 @@ def GFX10SpeedModel : SISchedMachineModel;
 def GFX11SpeedModel : SISchedMachineModel;
 def GFX12SpeedModel : SISchedMachineModel;
 #ifdef LLPC_BUILD_NPI
-def GFX1210SpeedModel : SISchedMachineModel;
-def GFX1211SpeedModel : SISchedMachineModel;
+def GFX1250SpeedModel : SISchedMachineModel;
+def GFX1251SpeedModel : SISchedMachineModel;
 #endif /* LLPC_BUILD_NPI */
 
 // XXX: Are the resource counts correct?
@@ -470,7 +470,7 @@ def : InstRW<[WriteCopy], (instrs COPY)>;
 }  // End SchedModel = GFX12SpeedModel
 #ifdef LLPC_BUILD_NPI
 
-multiclass GFX121xCommonWriteRes {
+multiclass GFX125xCommonWriteRes {
 
 let ReleaseAtCycles = [8] in
 def : HWWriteRes<WriteXDL2PassWMMA, [HWXDL], 8>;
@@ -503,10 +503,10 @@ def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_(FP8|BF8|BF16|F
 def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_(IU8|IU4)_w32")>;
 def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_WMMA_.*_16X16X128_F8F6F4_w32")>;
 def : InstRW<[Write4PassWMMA],    (instregex "^V_WMMA_F32_16X16X4_F32_w32")>;
-} // End GFX121xCommonWriteRes
+} // End GFX125xCommonWriteRes
 
-let SchedModel = GFX1210SpeedModel in {
-defm : GFX121xCommonWriteRes;
+let SchedModel = GFX1250SpeedModel in {
+defm : GFX125xCommonWriteRes;
 
 def : HWWriteRes<Write64Bit,             [HWVALU, HWRC],   7>;
 def : HWWriteRes<WriteIntMul,            [HWVALU, HWRC],   11>;
@@ -514,10 +514,10 @@ def : HWWriteRes<WriteDouble,            [HWVALU, HWRC],   32>;
 def : HWWriteRes<WriteDoubleAdd,         [HWVALU, HWRC],   32>;
 def : HWWriteRes<WriteDoubleCvt,         [HWVALU, HWRC],   32>;
 def : HWWriteRes<WriteTrans64,           [HWVALU, HWTransVALU, HWRC], 38>;
-} // SchedModel = GFX1210SpeedModel
+} // SchedModel = GFX1250SpeedModel
 
-let SchedModel = GFX1211SpeedModel in {
-defm : GFX121xCommonWriteRes;
+let SchedModel = GFX1251SpeedModel in {
+defm : GFX125xCommonWriteRes;
 
 def : HWWriteRes<Write64Bit,             [HWVALU, HWRC],   6>;
 def : HWWriteRes<WriteIntMul,            [HWVALU, HWRC],   8>;
@@ -528,5 +528,5 @@ def : HWWriteRes<WriteTrans64,           [HWVALU, HWTransVALU, HWRC], 7>;
 
 def : InstRW<[Write8PassWMMA],  (instregex "^V_WMMA_F64_16X16X4_F64")>;
 def : InstRW<[Write16PassWMMA], (instregex "^V_WMMA_F64_16X16X8_F64")>;
-} // SchedModel = GFX1211SpeedModel
+} // SchedModel = GFX1251SpeedModel
 #endif /* LLPC_BUILD_NPI */
