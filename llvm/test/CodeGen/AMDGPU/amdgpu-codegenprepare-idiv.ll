@@ -10096,4 +10096,3 @@ define i64 @udiv_i64_9divbits(i8 %size) {
   %div = udiv i64 %num, 10
   ret i64 %div
 }
-

@@ -499,16 +499,16 @@ for.exit:                                 ; preds = %for.body
 
 @a = external local_unnamed_addr global i32, align 4
 
-; FIXME: Load hoisted out of the loop across memory barriers.
+; Make sure the load is not hoisted out of the loop across memory barriers.
 define i32 @load_between_memory_barriers() {
 ; CHECK-LABEL: load_between_memory_barriers:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
-; CHECK-NEXT:    ldr w0, [x8]
 ; CHECK-NEXT:  .LBB8_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    //MEMBARRIER
+; CHECK-NEXT:    ldr w0, [x8]
 ; CHECK-NEXT:    //MEMBARRIER
 ; CHECK-NEXT:    cbz w0, .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %exit

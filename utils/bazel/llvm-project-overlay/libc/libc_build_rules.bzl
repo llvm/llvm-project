@@ -74,7 +74,6 @@ def libc_function(
             for.
       srcs: The .cpp files which contain the function implementation.
       weak: Make the symbol corresponding to the libc function "weak".
-      deps: The list of target dependencies if any.
       copts: The list of options to add to the C++ compilation command.
       local_defines: The preprocessor defines which will be prepended with -D
                      and passed to the compile command of this target but not
@@ -117,11 +116,11 @@ def libc_function(
     func_attrs = [
         "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'",
     ] if weak else []
-        
-    local_defines = (local_defines
-                    + ["LIBC_COPT_PUBLIC_PACKAGING"]
-                    + ["LLVM_LIBC_FUNCTION_ATTR='[[gnu::visibility(\"default\")]]'"]
-                    + func_attrs)
+
+    local_defines = (local_defines +
+                     ["LIBC_COPT_PUBLIC_PACKAGING"] +
+                     ["LLVM_LIBC_FUNCTION_ATTR='[[gnu::visibility(\"default\")]]'"] +
+                     func_attrs)
     _libc_library(
         name = name,
         hidden = True,
@@ -138,9 +137,6 @@ def libc_math_function(
 
     Args:
       name: The name of the function.
-      specializations: List of machine specializations available for this
-                       function. Possible specializations are "generic",
-                       "aarch64" and "x86_64".
       additional_deps: Other deps like helper cc_library targes used by the
                        math function.
     """

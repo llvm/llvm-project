@@ -34,13 +34,14 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+// Create prefix string literals used in Options.td
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr OptTable::Info optInfo[] = {
@@ -65,7 +66,8 @@ static constexpr OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
+MachOOptTable::MachOOptTable()
+    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -267,6 +269,26 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     newFile = file;
     if (newFile->exportingFile)
       newFile->parseLoadCommands(mbref);
+  }
+
+  if (explicitlyLinked && !newFile->allowableClients.empty()) {
+    bool allowed = std::any_of(
+        newFile->allowableClients.begin(), newFile->allowableClients.end(),
+        [&](StringRef allowableClient) {
+          // We only do a prefix match to match LD64's behaviour.
+          return allowableClient.starts_with(config->clientName);
+        });
+
+    // TODO: This behaviour doesn't quite match the latest available source
+    // release of LD64 (ld64-951.9), which allows "parents" and "siblings"
+    // to link to libraries even when they're not explicitly named as
+    // allowable clients. However, behaviour around this seems to have
+    // changed in the latest release of Xcode (ld64-1115.7.3), so it's not
+    // clear what the correct thing to do is yet.
+    if (!allowed)
+      error("cannot link directly with '" +
+            sys::path::filename(newFile->installName) + "' because " +
+            config->clientName + " is not an allowed client");
   }
   return newFile;
 }

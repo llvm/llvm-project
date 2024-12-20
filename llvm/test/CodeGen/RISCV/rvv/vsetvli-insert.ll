@@ -377,8 +377,8 @@ entry:
 define <vscale x 1 x double> @test19(<vscale x 1 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: test19:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v9, v8

@@ -44,7 +44,7 @@ using namespace llvm::sys;
 using namespace llvm::wasm;
 
 namespace lld::wasm {
-Configuration *config;
+ConfigWrapper config;
 Ctx ctx;
 
 void errorOrWarn(const llvm::Twine &msg) {
@@ -54,11 +54,16 @@ void errorOrWarn(const llvm::Twine &msg) {
     error(msg);
 }
 
+Ctx::Ctx() : arg(config.c) {}
+
 void Ctx::reset() {
+  arg.~Config();
+  new (&arg) Config();
   objectFiles.clear();
   stubFiles.clear();
   sharedFiles.clear();
   bitcodeFiles.clear();
+  lazyBitcodeFiles.clear();
   syntheticFunctions.clear();
   syntheticGlobals.clear();
   syntheticTables.clear();
@@ -91,12 +96,15 @@ static void initLLVM() {
 
 class LinkerDriver {
 public:
+  LinkerDriver(Ctx &);
   void linkerMain(ArrayRef<const char *> argsArr);
 
 private:
   void createFiles(opt::InputArgList &args);
   void addFile(StringRef path);
   void addLibrary(StringRef name);
+
+  Ctx &ctx;
 
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
@@ -121,30 +129,30 @@ static bool hasZOption(opt::InputArgList &args, StringRef key) {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *ctx = new CommonLinkerContext;
+  auto *context = new CommonLinkerContext;
 
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.cleanupCallback = []() { wasm::ctx.reset(); };
-  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
-  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
-                                 "-error-limit=0 to see all errors)";
+  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  context->e.cleanupCallback = []() { ctx.reset(); };
+  context->e.logName = args::getFilenameWithoutExe(args[0]);
+  context->e.errorLimitExceededMsg =
+      "too many errors emitted, stopping now (use "
+      "-error-limit=0 to see all errors)";
 
-  config = make<Configuration>();
   symtab = make<SymbolTable>();
 
   initLLVM();
-  LinkerDriver().linkerMain(args);
+  LinkerDriver(ctx).linkerMain(args);
 
   return errorCount() == 0;
 }
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
@@ -172,7 +180,8 @@ static constexpr opt::OptTable::Info optInfo[] = {
 namespace {
 class WasmOptTable : public opt::GenericOptTable {
 public:
-  WasmOptTable() : opt::GenericOptTable(optInfo) {}
+  WasmOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
@@ -1254,6 +1263,8 @@ static void checkZOptions(opt::InputArgList &args) {
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
+LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -1322,10 +1333,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Fail early if the output file or map file is not writable. If a user has a
   // long link, e.g. due to a large LTO link, they do not wish to run it and
   // find that it failed because there was a mistake in their command-line.
-  if (auto e = tryCreateFile(config->outputFile))
-    error("cannot open output file " + config->outputFile + ": " + e.message());
-  if (auto e = tryCreateFile(config->mapFile))
-    error("cannot open map file " + config->mapFile + ": " + e.message());
+  if (auto e = tryCreateFile(ctx.arg.outputFile))
+    error("cannot open output file " + ctx.arg.outputFile + ": " + e.message());
+  if (auto e = tryCreateFile(ctx.arg.mapFile))
+    error("cannot open map file " + ctx.arg.mapFile + ": " + e.message());
   if (errorCount())
     return;
 
@@ -1334,11 +1345,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     symtab->trace(arg->getValue());
 
   for (auto *arg : args.filtered(OPT_export_if_defined))
-    config->exportedSymbols.insert(arg->getValue());
+    ctx.arg.exportedSymbols.insert(arg->getValue());
 
   for (auto *arg : args.filtered(OPT_export)) {
-    config->exportedSymbols.insert(arg->getValue());
-    config->requiredExports.push_back(arg->getValue());
+    ctx.arg.exportedSymbols.insert(arg->getValue());
+    ctx.arg.requiredExports.push_back(arg->getValue());
   }
 
   createSyntheticSymbols();
@@ -1356,17 +1367,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle the `--export <sym>` options
   // This works like --undefined but also exports the symbol if its found
-  for (auto &iter : config->exportedSymbols)
+  for (auto &iter : ctx.arg.exportedSymbols)
     handleUndefined(iter.first(), "--export");
 
   Symbol *entrySym = nullptr;
-  if (!config->relocatable && !config->entry.empty()) {
-    entrySym = handleUndefined(config->entry, "--entry");
+  if (!ctx.arg.relocatable && !ctx.arg.entry.empty()) {
+    entrySym = handleUndefined(ctx.arg.entry, "--entry");
     if (entrySym && entrySym->isDefined())
       entrySym->forceExport = true;
     else
       error("entry symbol not defined (pass --no-entry to suppress): " +
-            config->entry);
+            ctx.arg.entry);
   }
 
   // If the user code defines a `__wasm_call_dtors` function, remember it so
@@ -1374,10 +1385,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // `__wasm_call_ctors` which we synthesize, `__wasm_call_dtors` is defined
   // by libc/etc., because destructors are registered dynamically with
   // `__cxa_atexit` and friends.
-  if (!config->relocatable && !config->shared &&
+  if (!ctx.arg.relocatable && !ctx.arg.shared &&
       !WasmSym::callCtors->isUsedInRegularObj &&
-      WasmSym::callCtors->getName() != config->entry &&
-      !config->exportedSymbols.count(WasmSym::callCtors->getName())) {
+      WasmSym::callCtors->getName() != ctx.arg.entry &&
+      !ctx.arg.exportedSymbols.count(WasmSym::callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
@@ -1435,7 +1446,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   writeWhyExtract();
 
   // Bail out if normal linked output is skipped due to LTO.
-  if (config->thinLTOIndexOnly)
+  if (ctx.arg.thinLTOIndexOnly)
     return;
 
   createOptionalSymbols();
@@ -1450,13 +1461,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!wrapped.empty())
     wrapSymbols(wrapped);
 
-  for (auto &iter : config->exportedSymbols) {
+  for (auto &iter : ctx.arg.exportedSymbols) {
     Symbol *sym = symtab->find(iter.first());
     if (sym && sym->isDefined())
       sym->forceExport = true;
   }
 
-  if (!config->relocatable && !ctx.isPic) {
+  if (!ctx.arg.relocatable && !ctx.isPic) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();

@@ -38,7 +38,6 @@
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <new>
 #include <tuple>
 #include <typeinfo>
 

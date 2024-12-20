@@ -55,6 +55,8 @@ write_cmake_config("lit_common_configured") {
     "COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER_PYBOOL=False",
     "COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG_PYBOOL=True",
     "COMPILER_RT_INTERCEPT_LIBDISPATCH_PYBOOL=False",
+    "COMPILER_RT_RESOLVED_EXEC_OUTPUT_DIR=" +
+        rebase_path("$root_build_dir/bin"),
     "COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR=" +
         rebase_path(crt_current_out_dir),
     "COMPILER_RT_RESOLVED_OUTPUT_DIR=" + rebase_path(crt_current_out_dir),

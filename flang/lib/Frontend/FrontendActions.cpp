@@ -836,8 +836,8 @@ void CodeGenAction::generateLLVMIR() {
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
-  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
-    config.NSWOnLoopVarInc = true;
+  if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
+    config.NSWOnLoopVarInc = false;
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());

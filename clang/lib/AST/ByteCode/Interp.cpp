@@ -27,7 +27,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
+static bool RetValue(InterpState &S, CodePtr &Pt) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }
 
@@ -1205,11 +1205,10 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S, CallResult)) {
+  if (Interpret(S)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
@@ -1270,11 +1269,10 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame.get();
 
   InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
-  APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S, CallResult)) {
+  if (Interpret(S)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
@@ -1362,7 +1360,10 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID) {
-  if (S.checkingPotentialConstantExpression())
+  // A little arbitrary, but the current interpreter allows evaluation
+  // of builtin functions in this mode, with some exceptions.
+  if (BuiltinID == Builtin::BI__builtin_operator_new &&
+      S.checkingPotentialConstantExpression())
     return false;
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
@@ -1370,9 +1371,15 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame.get();
 
   if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
-    NewFrame.release();
+    // Release ownership of NewFrame to prevent it from being deleted.
+    NewFrame.release(); // Frame was deleted already.
+    // Ensure that S.Current is correctly reset to the previous frame.
+    assert(S.Current == FrameBefore);
     return true;
   }
+
+  // Interpreting the function failed somehow. Reset to
+  // previous state.
   S.Current = FrameBefore;
   return false;
 }
@@ -1475,10 +1482,11 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   assert(E);
-  const auto &Loc = S.Current->getSource(OpPC);
 
   if (S.getLangOpts().CPlusPlus26)
     return true;
+
+  const auto &Loc = S.Current->getSource(OpPC);
 
   if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
@@ -1588,10 +1596,10 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
-#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma optimize("", off)
 #endif
-bool Interpret(InterpState &S, APValue &Result) {
+bool Interpret(InterpState &S) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
   // to return from this function and thus terminate
@@ -1616,7 +1624,7 @@ bool Interpret(InterpState &S, APValue &Result) {
   }
 }
 // https://github.com/llvm/llvm-project/issues/102513
-#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma optimize("", on)
 #endif
 

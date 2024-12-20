@@ -429,7 +429,7 @@ bool WebAssemblyTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
   // Assume target opcodes can't be scalarized.
   // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END)
+  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
     return false;
 
   // If the vector op is not supported, try to convert to scalar.
@@ -768,7 +768,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                                     MF.getContext(), Subtarget)
                               : WebAssembly::getOrCreateFunctionTableSymbol(
                                     MF.getContext(), Subtarget);
-    if (Subtarget->hasReferenceTypes()) {
+    if (Subtarget->hasCallIndirectOverlong()) {
       MIB.addSym(Table);
     } else {
       // For the MVP there is at most one table whose number is 0, but we can't
@@ -2088,6 +2088,17 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
       }
     }
     return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
+  }
+
+  case Intrinsic::thread_pointer: {
+    MVT PtrVT = getPointerTy(DAG.getDataLayout());
+    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                                       : WebAssembly::GLOBAL_GET_I32;
+    const char *TlsBase = MF.createExternalSymbolName("__tls_base");
+    return SDValue(
+        DAG.getMachineNode(GlobalGet, DL, PtrVT,
+                           DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
+        0);
   }
   }
 }

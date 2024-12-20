@@ -564,7 +564,7 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
             ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
             : LoongArch::R1;
 
-    bool UseGOT = Func.isGlobal() && !Func.getGlobal()->isDSOLocal();
+    bool UseGOT = Func.getTargetFlags() == LoongArchII::MO_CALL_PLT;
     unsigned MO = UseGOT ? LoongArchII::MO_GOT_PC_HI : LoongArchII::MO_PCREL_LO;
     unsigned LAOpcode = UseGOT ? LoongArch::LDX_D : LoongArch::ADD_D;
     expandLargeAddressLoad(MBB, MBBI, NextMBBI, LAOpcode, MO, Func, AddrReg,

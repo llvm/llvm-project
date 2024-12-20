@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_NEW
-#define _LIBCPP_NEW
+#ifndef _LIBCPP___CXX03_NEW
+#define _LIBCPP___CXX03_NEW
 
 /*
     new synopsis
@@ -359,4 +359,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_NEW
+#endif // _LIBCPP___CXX03_NEW

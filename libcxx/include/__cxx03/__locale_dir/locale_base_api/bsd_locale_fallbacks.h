@@ -10,8 +10,8 @@
 // of those functions for non-BSD platforms.
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
+#ifndef _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
+#define _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 
 #include <__cxx03/__locale_dir/locale_base_api/locale_guard.h>
 #include <__cxx03/cstdio>
@@ -123,4 +123,4 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __libcpp_sscanf_l(
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
+#endif // _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H

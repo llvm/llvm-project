@@ -1315,7 +1315,7 @@ using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
 using TypeIdSummaryMapTy =
-    std::multimap<GlobalValue::GUID, std::pair<std::string, TypeIdSummary>>;
+    std::multimap<GlobalValue::GUID, std::pair<StringRef, TypeIdSummary>>;
 
 /// The following data structures summarize type metadata information.
 /// For type metadata overview see https://llvm.org/docs/TypeMetadata.html.
@@ -1351,6 +1351,9 @@ private:
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
 
+  BumpPtrAllocator TypeIdSaverAlloc;
+  UniqueStringSaver TypeIdSaver;
+
   /// Mapping from type identifier GUIDs to type identifier and its summary
   /// information. Produced by thin link.
   TypeIdSummaryMapTy TypeIdMap;
@@ -1359,7 +1362,7 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+  std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
@@ -1455,8 +1458,9 @@ public:
   // See HaveGVs variable comment.
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
                      bool UnifiedLTO = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
-        UnifiedLTO(UnifiedLTO), Saver(Alloc) {}
+      : TypeIdSaver(TypeIdSaverAlloc), HaveGVs(HaveGVs),
+        EnableSplitLTOUnit(EnableSplitLTOUnit), UnifiedLTO(UnifiedLTO),
+        Saver(Alloc) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
@@ -1829,8 +1833,8 @@ public:
     for (auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return TypeIdPair.second;
-    auto It = TypeIdMap.insert(
-        {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
+    auto It = TypeIdMap.insert({GlobalValue::getGUID(TypeId),
+                                {TypeIdSaver.save(TypeId), TypeIdSummary()}});
     return It->second.second;
   }
 
@@ -1859,7 +1863,7 @@ public:
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[std::string(TypeId)];
+    return TypeIdCompatibleVtableMap[TypeIdSaver.save(TypeId)];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
@@ -1909,6 +1913,11 @@ public:
 
   /// Checks if we can import global variable from another module.
   bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
+
+  /// Same as above but checks whether the global var is importable as a
+  /// declaration.
+  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs,
+                          bool &CanImportDecl) const;
 };
 
 /// GraphTraits definition to build SCC for the index

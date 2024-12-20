@@ -28,6 +28,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -276,11 +277,10 @@ class BinaryContext {
   void deregisterSectionName(const BinarySection &Section);
 
 public:
-  static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(Triple TheTriple, StringRef InputFileName,
-                      SubtargetFeatures *Features, bool IsPIC,
-                      std::unique_ptr<DWARFContext> DwCtx,
-                      JournalingStreams Logger);
+  static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
+      Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
+      StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
+      std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -372,6 +372,7 @@ public:
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
   void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
+  std::shared_ptr<orc::SymbolStringPool> getSymbolStringPool() { return SSP; }
   /// Return true if relocations against symbol with a given name
   /// must be created.
   bool forceSymbolRelocations(StringRef SymbolName) const;
@@ -631,6 +632,8 @@ public:
 
   std::unique_ptr<Triple> TheTriple;
 
+  std::shared_ptr<orc::SymbolStringPool> SSP;
+
   const Target *TheTarget;
 
   std::string TripleName;
@@ -807,8 +810,10 @@ public:
 
   BinaryContext(std::unique_ptr<MCContext> Ctx,
                 std::unique_ptr<DWARFContext> DwCtx,
-                std::unique_ptr<Triple> TheTriple, const Target *TheTarget,
-                std::string TripleName, std::unique_ptr<MCCodeEmitter> MCE,
+                std::unique_ptr<Triple> TheTriple,
+                std::shared_ptr<orc::SymbolStringPool> SSP,
+                const Target *TheTarget, std::string TripleName,
+                std::unique_ptr<MCCodeEmitter> MCE,
                 std::unique_ptr<MCObjectFileInfo> MOFI,
                 std::unique_ptr<const MCAsmInfo> AsmInfo,
                 std::unique_ptr<const MCInstrInfo> MII,
