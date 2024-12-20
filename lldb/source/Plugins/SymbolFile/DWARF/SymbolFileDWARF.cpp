@@ -482,6 +482,13 @@ static ConstString GetDWARFMachOSegmentName() {
   return g_dwarf_section_name;
 }
 
+llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &
+SymbolFileDWARF::GetDIEToType() {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetDIEToType();
+  return m_die_to_type;
+}
+
 llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
 SymbolFileDWARF::GetForwardDeclCompilerTypeToDIE() {
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
@@ -1593,7 +1600,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   DWARFASTParser *dwarf_ast = GetDWARFParser(*def_die.GetCU());
   if (!dwarf_ast)
     return false;
-  Type *type = decl_die.GetDWARF()->GetDIEToType().lookup(decl_die.GetDIE());
+  Type *type = GetDIEToType().lookup(decl_die.GetDIE());
   assert(type);
 
   if (decl_die != def_die) {
