@@ -524,7 +524,7 @@ class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> 
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
                      !eq(Scatter, 4) : (outs DstRC64:$vdst, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4));
 
-  field RegisterOperand SSrcOp = getVOPMSSrcForVT<ArgTy[4]>.ret; 
+  field RegisterOperand SSrcOp = getVOPMSSrcForVT<ArgTy[4]>.ret;
 
   let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs),
                            (ins Src0RC64:$src0, SSrcOp:$ssrc, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs));
@@ -582,23 +582,24 @@ class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolowe
 
 class VOPM_Pseudo_Indexing <VOPProfile P, list<dag> pattern = [], string opName = !tolower(NAME)> : VOPM_Pseudo <P, pattern, opName> {}
 
-def V_MOV_2SRC_B64               : VOPM_Pseudo_Indexing<VOPM_I64_I32_I32>;
-def V_BPERMUTE_B32               : VOPM_Pseudo_Indexing<VOPM_I32_I32_I32,
-                                               [(set i32:$vdst, (int_amdgcn_bpermute_b32 i32:$src0, i32:$src1))]>;
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
+  def V_MOV_2SRC_B64               : VOPM_Pseudo_Indexing<VOPM_I64_I32_I32>;
+  def V_BPERMUTE_B32               : VOPM_Pseudo_Indexing<VOPM_I32_I32_I32,
+                                                 [(set i32:$vdst, (int_amdgcn_bpermute_b32 i32:$src0, i32:$src1))]>;
+  def V_PERMUTE_PAIR_GENSGPR_B32   : VOPM_Pseudo_Indexing<VOPM_I32_I32_I64,
+                                                 [(set i32:$vdst, (int_amdgcn_permute_pair_gensgpr_b32 i32:$src0, i64:$src1))]>;
+  def V_PERMUTE_PAIR_BCAST_B32     : VOPM_Pseudo_Indexing<VOPM_I32_I32_AUX,
+                                                 [(set i32:$vdst, (int_amdgcn_permute_pair_bcast_b32 i32:$src0, timm:$aux_data))]>;
+  def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo_Indexing<VOPM_I32_I32_I32_AUX,
+                                                         [(set i32:$vdst, (int_amdgcn_permute_pair_2src_rotate_group_b32 i32:$src0, i32:$src1, timm:$aux_data))]>;
 
-def V_PERMUTE_PAIR_GENSGPR_B32   : VOPM_Pseudo_Indexing<VOPM_I32_I32_I64,
-                                               [(set i32:$vdst, (int_amdgcn_permute_pair_gensgpr_b32 i32:$src0, i64:$src1))]>;
-def V_PERMUTE_PAIR_BCAST_B32     : VOPM_Pseudo_Indexing<VOPM_I32_I32_AUX,
-                                               [(set i32:$vdst, (int_amdgcn_permute_pair_bcast_b32 i32:$src0, timm:$aux_data))]>;
-def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo_Indexing<VOPM_I32_I32_I32_AUX,
-                                                       [(set i32:$vdst, (int_amdgcn_permute_pair_2src_rotate_group_b32 i32:$src0, i32:$src1, timm:$aux_data))]>;
-
-let SchedRW = [Write32Bit, Write32Bit] in {
-  def V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32_I32,
-                                                         [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pair_2src_interleave_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
-  def V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32_I32,
-                                                         [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pack_tensor_2src_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
-}
+  let SchedRW = [Write32Bit, Write32Bit] in {
+    def V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32_I32,
+                                                           [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pair_2src_interleave_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
+    def V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32_I32,
+                                                           [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pack_tensor_2src_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
+  }
+} // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 multiclass VOPM_Conv_MultiPseudos_1x1_Iter<string ProfilePrefix> {
   def _ITER_1 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_ITER_1")>;
@@ -670,45 +671,47 @@ multiclass VOPM_Cvt_To_Tensor_MultiPseudos<string ProfilePrefix> {
 
 defm V_CVT_TO_TENSOR : VOPM_Cvt_To_Tensor_MultiPseudos<"VOPM_CVT_TO_TENSOR">;
 
-def V_SCALE_BIAS_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  f32, untyped, f32], 1>,
-                                            [(set v4f32:$vdst, (int_amdgcn_scale_bias_activate_f32 v4f32:$src0, f32:$ssrc, f32:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  v2f16, untyped, f16], 1>,
-                                            [(set v8f16:$vdst, (int_amdgcn_scale_bias_activate_f16 v8f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, v2bf16, untyped, bf16], 1>,
-                                            [(set v8bf16:$vdst, (int_amdgcn_scale_bias_activate_bf16 v8bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
+  def V_SCALE_BIAS_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  f32, untyped, f32], 1>,
+                                              [(set v4f32:$vdst, (int_amdgcn_scale_bias_activate_f32 v4f32:$src0, f32:$ssrc, f32:$src1, timm:$aux_data, i1:$clamp))]>;
+  def V_SCALE_BIAS_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  v2f16, untyped, f16], 1>,
+                                              [(set v8f16:$vdst, (int_amdgcn_scale_bias_activate_f16 v8f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+  def V_SCALE_BIAS_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, v2bf16, untyped, bf16], 1>,
+                                              [(set v8bf16:$vdst, (int_amdgcn_scale_bias_activate_bf16 v8bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
 
-let SchedRW = [Write32Bit, Write32Bit] in {
-def V_SCALE_BIAS_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  v2f16, v2f16, f16], 2>,
-                                                     [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_scale_bias_activate_scatter2_f16 v4f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  v2bf16, v2bf16, bf16], 2>,
-                                                      [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_scale_bias_activate_scatter2_bf16 v4bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
-}
-let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
-def V_SCALE_BIAS_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  v2f16, v2f16, f16], 4>,
-                                                     [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_scale_bias_activate_scatter4_f16 v8f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
-def V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  v2bf16, v2bf16, bf16], 4>,
-                                                      [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_scale_bias_activate_scatter4_bf16 v8bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
-}
+  let SchedRW = [Write32Bit, Write32Bit] in {
+  def V_SCALE_BIAS_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  v2f16, v2f16, f16], 2>,
+                                                       [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_scale_bias_activate_scatter2_f16 v4f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+  def V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  v2bf16, v2bf16, bf16], 2>,
+                                                        [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_scale_bias_activate_scatter2_bf16 v4bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+  }
+  let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
+  def V_SCALE_BIAS_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  v2f16, v2f16, f16], 4>,
+                                                       [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_scale_bias_activate_scatter4_f16 v8f16:$src0, f16:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+  def V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  v2bf16, v2bf16, bf16], 4>,
+                                                        [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_scale_bias_activate_scatter4_bf16 v8bf16:$src0, bf16:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+  }
 
-def V_UNIFORM_SCALE_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  untyped, untyped, f32], 1>,
-                                               [(set v4f32:$vdst, (int_amdgcn_uniform_scale_activate_f32 v4f32:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  untyped, untyped, f16], 1>,
-                                               [(set v8f16:$vdst, (int_amdgcn_uniform_scale_activate_f16 v8f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, untyped, untyped, bf16], 1>,
-                                                [(set v8bf16:$vdst, (int_amdgcn_uniform_scale_activate_bf16 v8bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+  def V_UNIFORM_SCALE_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  untyped, untyped, f32], 1>,
+                                                 [(set v4f32:$vdst, (int_amdgcn_uniform_scale_activate_f32 v4f32:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+  def V_UNIFORM_SCALE_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  untyped, untyped, f16], 1>,
+                                                 [(set v8f16:$vdst, (int_amdgcn_uniform_scale_activate_f16 v8f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+  def V_UNIFORM_SCALE_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, untyped, untyped, bf16], 1>,
+                                                  [(set v8bf16:$vdst, (int_amdgcn_uniform_scale_activate_bf16 v8bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
 
-let SchedRW = [Write32Bit, Write32Bit] in {
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  untyped, v2f16, f16], 2>,
-                                                        [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_f16 v4f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  untyped, v2bf16, bf16], 2>,
-                                                         [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_bf16 v4bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
-}
-let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  untyped, v2f16, f16], 4>,
-                                                        [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_f16 v8f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
-def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  untyped, v2bf16, bf16], 4>,
-                                                         [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_bf16 v8bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
-}
+  let SchedRW = [Write32Bit, Write32Bit] in {
+  def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  untyped, v2f16, f16], 2>,
+                                                          [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_f16 v4f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+  def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  untyped, v2bf16, bf16], 2>,
+                                                           [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_bf16 v4bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+  }
+  let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
+  def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  untyped, v2f16, f16], 4>,
+                                                          [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_f16 v8f16:$src0, f16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+  def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  untyped, v2bf16, bf16], 4>,
+                                                           [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_bf16 v8bf16:$src0, bf16:$ssrc, timm:$aux_data, i1:$clamp))]>;
+  }
+} // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 multiclass VOPM_WMMA_Pseudo<VOPM_WMMA_Profile P> {
   defvar Instr = !tolower(NAME);
@@ -1451,7 +1454,6 @@ defm V_FMA_FROM_TENSOR_BF16_BF16 : FMA_Tensor_Real <0x67>;
 // VOPM Patterns
 //===----------------------------------------------------------------------===//
 
-
 class 1X1_IT_1<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !setdagop(P.ConvFrag, node), [{ return (((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() >> 12)&3) == 0; }] >;
 class 1X1_IT_2<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !setdagop(P.ConvFrag, node), [{ return (((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() >> 12)&3) == 1; }] >;
 class 1X1_IT_3<SDPatternOperator node, Conv_Profile P> : PatFrag<P.ConvFrag, !setdagop(P.ConvFrag, node), [{ return (((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() >> 12)&3) == 2; }] >;
@@ -1500,23 +1502,25 @@ multiclass ConvPatMultiFilters_VOPM<string TypeNames, string NodePrefix> {
   defm _3x3 : ConvPatMulti3x3_VOPM<"V_CONVOLVE_" # TypeNames # "_3x3", !cast<SDPatternOperator>(NodePrefix # "_3x3"), "VOPM_CONV_" # TypeNames # "_3x3">;
 }
 
-defm : ConvPatMultiFilters_VOPM<"F16_F16", "int_amdgcn_convolve_f16_f16">;
-defm : ConvPatMultiFilters_VOPM<"BF16_BF16", "int_amdgcn_convolve_bf16_bf16">;
-defm : ConvPatMultiFilters_VOPM<"F16_FP8", "int_amdgcn_convolve_f16_fp8">;
-defm : ConvPatMultiFilters_VOPM<"F16_BF8", "int_amdgcn_convolve_f16_bf8">;
-defm : ConvPatMultiFilters_VOPM<"F16_IU8", "int_amdgcn_convolve_f16_iu8">;
-defm : ConvPatMultiFilters_VOPM<"F16_IU4", "int_amdgcn_convolve_f16_iu4">;
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
+  defm : ConvPatMultiFilters_VOPM<"F16_F16", "int_amdgcn_convolve_f16_f16">;
+  defm : ConvPatMultiFilters_VOPM<"BF16_BF16", "int_amdgcn_convolve_bf16_bf16">;
+  defm : ConvPatMultiFilters_VOPM<"F16_FP8", "int_amdgcn_convolve_f16_fp8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_BF8", "int_amdgcn_convolve_f16_bf8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_IU8", "int_amdgcn_convolve_f16_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_IU4", "int_amdgcn_convolve_f16_iu4">;
 
-defm : ConvPatMultiFilters_VOPM<"F32_F16", "int_amdgcn_convolve_f32_f16">;
-defm : ConvPatMultiFilters_VOPM<"F32_BF16", "int_amdgcn_convolve_f32_bf16">;
-defm : ConvPatMultiFilters_VOPM<"F32_FP8", "int_amdgcn_convolve_f32_fp8">;
-defm : ConvPatMultiFilters_VOPM<"F32_BF8", "int_amdgcn_convolve_f32_bf8">;
-defm : ConvPatMultiFilters_VOPM<"F32_IU8", "int_amdgcn_convolve_f32_iu8">;
-defm : ConvPatMultiFilters_VOPM<"F32_IU4", "int_amdgcn_convolve_f32_iu4">;
-defm : ConvPatMultiFilters_VOPM<"I32_IU8", "int_amdgcn_convolve_i32_iu8">;
-defm : ConvPatMultiFilters_VOPM<"I32_IU4", "int_amdgcn_convolve_i32_iu4">;
-defm : ConvPatMultiFilters_VOPM<"F32I32_IU8", "int_amdgcn_convolve_f32i32_iu8">;
-defm : ConvPatMultiFilters_VOPM<"F32I32_IU4", "int_amdgcn_convolve_f32i32_iu4">;
+  defm : ConvPatMultiFilters_VOPM<"F32_F16", "int_amdgcn_convolve_f32_f16">;
+  defm : ConvPatMultiFilters_VOPM<"F32_BF16", "int_amdgcn_convolve_f32_bf16">;
+  defm : ConvPatMultiFilters_VOPM<"F32_FP8", "int_amdgcn_convolve_f32_fp8">;
+  defm : ConvPatMultiFilters_VOPM<"F32_BF8", "int_amdgcn_convolve_f32_bf8">;
+  defm : ConvPatMultiFilters_VOPM<"F32_IU8", "int_amdgcn_convolve_f32_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"F32_IU4", "int_amdgcn_convolve_f32_iu4">;
+  defm : ConvPatMultiFilters_VOPM<"I32_IU8", "int_amdgcn_convolve_i32_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"I32_IU4", "int_amdgcn_convolve_i32_iu4">;
+  defm : ConvPatMultiFilters_VOPM<"F32I32_IU8", "int_amdgcn_convolve_f32i32_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"F32I32_IU4", "int_amdgcn_convolve_f32i32_iu4">;
+} // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 multiclass WMMAPat_VOPM<string Inst, SDPatternOperator node, VOPM_WMMA_Profile P> {
   def : GCNPat <(P.DstVT !setdagop(P.WmmaInPat, node)),
@@ -1530,7 +1534,7 @@ class SWMMACPat_VOPM<Instruction Inst, SDPatternOperator node, VOPM_SWMMAC_Profi
   GCNPat <(P.DstVT !setdagop(P.SwmmacInPat, node)),
           (P.DstVT !setdagop(P.SwmmacOutPat, Inst))>;
 
-let SubtargetPredicate = isGFX13Plus in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
   defm : WMMAPat_VOPM<"V_WMMA_BF16_16X16X16_BF16",   int_amdgcn_wmma_bf16_16x16x16_bf16_clamp,   VOPM_WMMA_BF16_BF16_X16>;
   defm : WMMAPat_VOPM<"V_WMMA_F16_16X16X16_F16",     int_amdgcn_wmma_f16_16x16x16_f16_clamp,     VOPM_WMMA_F16_F16_X16>;
   defm : WMMAPat_VOPM<"V_WMMA_F32_16X16X16_BF16",    int_amdgcn_wmma_f32_16x16x16_bf16_clamp,    VOPM_WMMA_F32_BF16_X16>;
@@ -1609,7 +1613,7 @@ let SubtargetPredicate = isGFX13Plus in {
   def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X64_IU4_twoaddr, int_amdgcn_swmmac_i32_16x16x64_iu4_clamp,         VOPM_SWMMAC_I32_IU4_X64>;
   def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X64_IU8_twoaddr, int_amdgcn_swmmac_i32_16x16x64_iu8_clamp,         VOPM_SWMMAC_I32_IU8_X64>;
   def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X128_IU4_twoaddr, int_amdgcn_swmmac_i32_16x16x128_iu4_clamp,       VOPM_SWMMAC_I32_IU4_X128>;
-}
+} // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 class REGULAR_8x4 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<P.FmaFromTensorFrag, !setdagop(P.FmaFromTensorFrag, node),
 	[{ return ((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() & 7) == 0; }]
@@ -1656,31 +1660,32 @@ multiclass FmaFromTensorPatMultiDeq_VOPM<string TypeNames, string NodeName, stri
   defm : FmaFromTensorPatMulti_VOPM<"V_FMA_FROM_TENSOR_" # TypeNames, !cast<SDPatternOperator>(NodeName), "VOPM_FMA_FROM_TENSOR_" # ProfileSuffix, DeqSupported>;
 }
 
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_I4", "int_amdgcn_fma_from_tensor_f32_i4", "F32_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_U4", "int_amdgcn_fma_from_tensor_f32_u4", "F32_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_I8", "int_amdgcn_fma_from_tensor_f32_i8", "F32_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_U8", "int_amdgcn_fma_from_tensor_f32_u8", "F32_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_FP8", "int_amdgcn_fma_from_tensor_f32_fp8", "F32_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_BF8", "int_amdgcn_fma_from_tensor_f32_bf8", "F32_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_F16", "int_amdgcn_fma_from_tensor_f32_f16", "F32_F16">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F32_BF16", "int_amdgcn_fma_from_tensor_f32_bf16", "F32_BF16">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_I4", "int_amdgcn_fma_from_tensor_f16_i4", "F16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_U4", "int_amdgcn_fma_from_tensor_f16_u4", "F16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_I8", "int_amdgcn_fma_from_tensor_f16_i8", "F16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_U8", "int_amdgcn_fma_from_tensor_f16_u8", "F16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_FP8", "int_amdgcn_fma_from_tensor_f16_fp8", "F16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF8", "int_amdgcn_fma_from_tensor_f16_bf8", "F16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_F16", "int_amdgcn_fma_from_tensor_f16_f16", "F16_F16", 0>;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF16", "int_amdgcn_fma_from_tensor_f16_bf16", "F16_BF16">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_I4", "int_amdgcn_fma_from_tensor_bf16_i4", "BF16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_U4", "int_amdgcn_fma_from_tensor_bf16_u4", "BF16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_I8", "int_amdgcn_fma_from_tensor_bf16_i8", "BF16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_U8", "int_amdgcn_fma_from_tensor_bf16_u8", "BF16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_FP8", "int_amdgcn_fma_from_tensor_bf16_fp8", "BF16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF8", "int_amdgcn_fma_from_tensor_bf16_bf8", "BF16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_F16", "int_amdgcn_fma_from_tensor_bf16_f16", "BF16_F16">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF16", "int_amdgcn_fma_from_tensor_bf16_bf16", "BF16_BF16", 0>;
-
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_I4", "int_amdgcn_fma_from_tensor_f32_i4", "F32_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_U4", "int_amdgcn_fma_from_tensor_f32_u4", "F32_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_I8", "int_amdgcn_fma_from_tensor_f32_i8", "F32_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_U8", "int_amdgcn_fma_from_tensor_f32_u8", "F32_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_FP8", "int_amdgcn_fma_from_tensor_f32_fp8", "F32_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_BF8", "int_amdgcn_fma_from_tensor_f32_bf8", "F32_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_F16", "int_amdgcn_fma_from_tensor_f32_f16", "F32_F16">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F32_BF16", "int_amdgcn_fma_from_tensor_f32_bf16", "F32_BF16">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_I4", "int_amdgcn_fma_from_tensor_f16_i4", "F16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_U4", "int_amdgcn_fma_from_tensor_f16_u4", "F16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_I8", "int_amdgcn_fma_from_tensor_f16_i8", "F16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_U8", "int_amdgcn_fma_from_tensor_f16_u8", "F16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_FP8", "int_amdgcn_fma_from_tensor_f16_fp8", "F16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF8", "int_amdgcn_fma_from_tensor_f16_bf8", "F16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_F16", "int_amdgcn_fma_from_tensor_f16_f16", "F16_F16", 0>;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF16", "int_amdgcn_fma_from_tensor_f16_bf16", "F16_BF16">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_I4", "int_amdgcn_fma_from_tensor_bf16_i4", "BF16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_U4", "int_amdgcn_fma_from_tensor_bf16_u4", "BF16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_I8", "int_amdgcn_fma_from_tensor_bf16_i8", "BF16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_U8", "int_amdgcn_fma_from_tensor_bf16_u8", "BF16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_FP8", "int_amdgcn_fma_from_tensor_bf16_fp8", "BF16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF8", "int_amdgcn_fma_from_tensor_bf16_bf8", "BF16_4B_OR_8B">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_F16", "int_amdgcn_fma_from_tensor_bf16_f16", "BF16_F16">;
+  defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF16", "int_amdgcn_fma_from_tensor_bf16_bf16", "BF16_BF16", 0>;
+} // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 //===----------------------------------------------------------------------===//
 // VOPM Utils

@@ -2996,6 +2996,12 @@ void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
 // TODO-GFX13: Move to tablegen?
 void AMDGPUDAGToDAGISel::SelectCvtTensor(SDNode *N, unsigned IntrID) {
 
+  // Only supported with wave32.
+  if (Subtarget->isWave64()) {
+    SelectCode(N); // Emit default error.
+    return;
+  }
+
   enum class Shape {
     Pixel_8x4x8,
     Pixel_4x4x8,
