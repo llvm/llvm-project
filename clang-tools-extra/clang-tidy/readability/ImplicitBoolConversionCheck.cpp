@@ -260,16 +260,16 @@ ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
       AllowPointerConditions(Options.get("AllowPointerConditions", false)),
       UseUpperCaseLiteralSuffix(
           Options.get("UseUpperCaseLiteralSuffix", false)),
-      CheckConversionsToBool(Options.get("CheckConversionsToBool", true)),
-      CheckConversionsFromBool(Options.get("CheckConversionsFromBool", true)) {}
+      CheckConversionToBool(Options.get("CheckConversionToBool", true)),
+      CheckConversionFromBool(Options.get("CheckConversionFromBool", true)) {}
 
 void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
   Options.store(Opts, "UseUpperCaseLiteralSuffix", UseUpperCaseLiteralSuffix);
-  Options.store(Opts, "CheckConversionsToBool", CheckConversionsToBool);
-  Options.store(Opts, "CheckConversionsFromBool", CheckConversionsFromBool);
+  Options.store(Opts, "CheckConversionToBool", CheckConversionToBool);
+  Options.store(Opts, "CheckConversionFromBool", CheckConversionFromBool);
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
