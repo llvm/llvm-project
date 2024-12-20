@@ -329,3 +329,16 @@ class C {
   MaybeUnusedTypedef t; // no-warning
 };
 }
+
+namespace GH62472 {
+class [[gnu::warn_unused]] S {
+public:
+  S();
+};
+
+class C {
+private:
+  const int i = 0; // expected-warning {{private field 'i' is not used}}
+  const S s;       // expected-warning {{private field 's' is not used}}
+};
+}
