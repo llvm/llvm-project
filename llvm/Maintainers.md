@@ -327,7 +327,7 @@ tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) 
 
 #### Library layering
 
-Nakamura Takumi \
+Takumi Nakamura \
 geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub)
 
 #### MCJIT, Orc, RuntimeDyld, PerfJITEvents
