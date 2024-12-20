@@ -305,7 +305,7 @@ private:
   /// ```
   /// SPE branch events will have 'ADDR' set to a branch target address while
   /// other perf or SPE events will have it set to zero.
-  ErrorOr<std::pair<PerfBasicSample,PerfBasicSample>> parseSpeAsBasicSamples();
+  ErrorOr<std::pair<PerfBasicSample, PerfBasicSample>> parseSpeAsBasicSamples();
 
   /// Parse a single perf sample containing a PID associated with an IP and
   /// address.
