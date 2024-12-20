@@ -190,6 +190,17 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
 
   prev_op = FileOp::READ;
 
+  if (bufmode == _IONBF) { // unbuffered.
+    return read_unlocked_nbf(static_cast<uint8_t *>(data), len);
+  } else if (bufmode == _IOFBF) { // fully buffered
+    return read_unlocked_fbf(static_cast<uint8_t *>(data), len);
+  } else /*if (bufmode == _IOLBF) */ { // line buffered
+    // There is no line buffered mode for read. Use fully buffer instead.
+    return read_unlocked_fbf(static_cast<uint8_t *>(data), len);
+  }
+}
+
+FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
   cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data), len);
 
@@ -243,6 +254,18 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
       err = true;
   }
   return {transfer_size + available_data, result.error};
+}
+
+FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
+  auto result = platform_read(this, data, len);
+
+  if (result.has_error() || result < len) {
+    if (!result.has_error())
+      eof = true;
+    else
+      err = true;
+  }
+  return result;
 }
 
 int File::ungetc_unlocked(int c) {
