@@ -8439,8 +8439,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
       // N.B. we deliberately do pass getGEPNoWrapFlags here, because this
       // transform can invalidate `inbounds`.
       VectorPtr = new VPReverseVectorPointerRecipe(
-          Ptr, &Plan.getVF(), getLoadStoreType(I),
-          GEPNoWrapFlags::none(),
+          Ptr, &Plan.getVF(), getLoadStoreType(I), GEPNoWrapFlags::none(),
           I->getDebugLoc());
     else
       VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
