@@ -20393,6 +20393,8 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitFROUND(MI, BB, Subtarget);
   case RISCV::PROBED_STACKALLOC_DYN:
     return emitDynamicProbedAlloc(MI, BB);
+  case RISCV::PseudoCV_SHUFFLE_SCI_B:
+    return emitCV_SHUFFLE_SCI_B(MI, BB, Subtarget);
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while jal call instruction (where statepoint will be lowered at the end)

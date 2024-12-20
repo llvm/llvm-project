@@ -1052,9 +1052,9 @@ let Predicates = [HasVendorXCVsimd] in {
 
   defm SHUFFLE : PatCorevGprGprHB<"shuffle">;
   def : PatCorevGprTImm<"shuffle_sci_h", "SHUFFLE_SCI_H">;
-
-  def CV_SHUFFLE_SCI_B_PSEUDO : Pseudo<(outs GPR:$rd), (ins GPR:$rs, cv_imm8:$imm), []>;
-  def : PatGprImm<int_riscv_cv_simd_shuffle_sci_b, CV_SHUFFLE_SCI_B_PSEUDO, cv_imm8>;
+  let usesCustomInserter = 1 in
+  def PseudoCV_SHUFFLE_SCI_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs, cv_imm8:$imm), []>;
+  def : PatGprImm<int_riscv_cv_simd_shuffle_sci_b, PseudoCV_SHUFFLE_SCI_B, cv_imm8>;
 
   def : Pat<(int_riscv_cv_simd_shuffle2_h GPR:$rs1, GPR:$rs2, GPR:$rd),
             (CV_SHUFFLE2_H GPR:$rd, GPR:$rs1, GPR:$rs2)>;
