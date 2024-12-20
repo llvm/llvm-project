@@ -260,16 +260,16 @@ ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
       AllowPointerConditions(Options.get("AllowPointerConditions", false)),
       UseUpperCaseLiteralSuffix(
           Options.get("UseUpperCaseLiteralSuffix", false)),
-      CheckConversionToBool(Options.get("CheckConversionToBool", true)),
-      CheckConversionFromBool(Options.get("CheckConversionFromBool", true)) {}
+      CheckConversionsToBool(Options.get("CheckConversionsToBool", true)),
+      CheckConversionsFromBool(Options.get("CheckConversionsFromBool", true)) {}
 
 void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
   Options.store(Opts, "UseUpperCaseLiteralSuffix", UseUpperCaseLiteralSuffix);
-  Options.store(Opts, "CheckConversionToBool", CheckConversionToBool);
-  Options.store(Opts, "CheckConversionFromBool", CheckConversionFromBool);
+  Options.store(Opts, "CheckConversionsToBool", CheckConversionsToBool);
+  Options.store(Opts, "CheckConversionsFromBool", CheckConversionsFromBool);
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
@@ -295,7 +295,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto IsInCompilerGeneratedFunction = hasAncestor(namedDecl(anyOf(
       isImplicit(), functionDecl(isDefaulted()), functionTemplateDecl())));
 
-  if (CheckConversionToBool) {
+  if (CheckConversionsToBool) {
     auto ComparisonInCall = allOf(
         hasParent(callExpr()),
         hasSourceExpression(binaryOperator(hasAnyOperatorName("==", "!="))));
@@ -331,7 +331,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
         this);
   }
 
-  if (CheckConversionFromBool) {
+  if (CheckConversionsFromBool) {
 
     auto BoolComparison = binaryOperator(hasAnyOperatorName("==", "!="),
                                          hasLHS(ImplicitCastFromBool),
