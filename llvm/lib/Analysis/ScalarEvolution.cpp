@@ -15081,8 +15081,19 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N, ScalarEvolution &SE) {
   }
 
   // Only add predicate if it is not already implied by this union predicate.
-  if (!implies(N, SE))
-    Preds.push_back(N);
+  if (implies(N, SE))
+    return;
+
+  // Build a new vector containing the current predicates, except the ones that
+  // are implied by the new predicate N.
+  SmallVector<const SCEVPredicate *> PrunedPreds;
+  for (auto *P : Preds) {
+    if (N->implies(P, SE))
+      continue;
+    PrunedPreds.push_back(P);
+  }
+  Preds = std::move(PrunedPreds);
+  Preds.push_back(N);
 }
 
 PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
