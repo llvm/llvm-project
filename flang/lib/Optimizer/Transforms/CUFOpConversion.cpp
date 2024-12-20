@@ -342,7 +342,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
     // Convert descriptor allocations to function call.
     auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(op.getInType());
     mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocDesciptor)>(loc, builder);
+        fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocDescriptor)>(loc, builder);
     auto fTy = func.getFunctionType();
     mlir::Value sourceLine =
         fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
