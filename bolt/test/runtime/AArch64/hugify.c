@@ -7,7 +7,6 @@ int g2;
 static int sg1 = 1;
 static int sg2;
 
-
 int main(int argc, char **argv) {
   printf("Hello world %p = %d , %p = %d\n", &g1, g1, &sg1, sg1);
   printf("%p = %d , %p = %d\n", &g2, g2, &sg2, sg2);

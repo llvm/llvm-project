@@ -5,9 +5,7 @@
  */
 #include <stdio.h>
 
-int foo(int x) {
-  return x + 1;
-}
+int foo(int x) { return x + 1; }
 
 int fib(int x) {
   if (x < 2)
@@ -15,9 +13,7 @@ int fib(int x) {
   return fib(x - 1) + fib(x - 2);
 }
 
-int bar(int x) {
-  return x - 1;
-}
+int bar(int x) { return x - 1; }
 
 int main(int argc, char **argv) {
   printf("fib(%d) = %d\n", argc, fib(argc));

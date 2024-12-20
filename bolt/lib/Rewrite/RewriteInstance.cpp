@@ -5868,14 +5868,14 @@ void RewriteInstance::rewriteFile() {
     if (!Section.isFinalized() || !Section.getOutputData()) {
       LLVM_DEBUG(if (opts::Verbosity > 1) {
         dbgs() << "BOLT-INFO: new section is finalized or !getOutputData, skip "
-                   << Section.getName() << '\n';
+               << Section.getName() << '\n';
       });
       continue;
     }
     if (Section.isLinkOnly()) {
       LLVM_DEBUG(if (opts::Verbosity > 1) {
         dbgs() << "BOLT-INFO: new section is link only, skip "
-                   << Section.getName() << '\n';
+               << Section.getName() << '\n';
       });
       continue;
     }
@@ -5885,8 +5885,8 @@ void RewriteInstance::rewriteFile() {
                  << "\n data at 0x"
                  << Twine::utohexstr(Section.getAllocAddress()) << "\n of size "
                  << Section.getOutputSize() << "\n at offset "
-                 << Section.getOutputFileOffset()
-                 << " with content size " << Section.getOutputContents().size() << '\n';
+                 << Section.getOutputFileOffset() << " with content size "
+                 << Section.getOutputContents().size() << '\n';
     OS.seek(Section.getOutputFileOffset());
     Section.write(OS);
   }
