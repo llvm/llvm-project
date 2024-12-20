@@ -65,11 +65,35 @@ private:
       /// differs across accesses to the same stack slot.
       unsigned SpillBits = 0;
 #ifndef NDEBUG
-      LLVM_DUMP_METHOD void dump() const;
+      LLVM_DUMP_METHOD virtual void dump() const;
+      virtual ~MIData() {}
+#endif
+    };
+
+    struct MIDataWithLiveIn : public MIData {
+      MIDataWithLiveIn(MachineInstr *MI, const MachineOperand *MO,
+                       unsigned SpillBits)
+          : MIData(MI, MO, SpillBits) {}
+      /// We set this to false to mark the vector register associated to this
+      /// reload as definitely not live-in. This is useful in blocks with both
+      /// spill and reload of the same stack slot, like in the example:
+      /// \verbatim
+      ///  bb:
+      ///    spill %stack.0
+      ///    reload %stack.0
+      /// \endverbatim
+      /// This information is used during `updateLiveIns()`. We are collecting
+      /// this information during `collectSpillsAndReloads()` because we are
+      /// already walking through the code there. Otherwise we would need to
+      /// walk throught the code again in `updateLiveIns()` just to check for
+      /// other spills in the block, which would waste compilation time.
+      bool IsLiveIn = true;
+#ifndef NDEBUG
+      LLVM_DUMP_METHOD virtual void dump() const override;
 #endif
     };
     SmallVector<MIData, 1> Spills;
-    SmallVector<MIData, 1> Reloads;
+    SmallVector<MIDataWithLiveIn, 1> Reloads;
 
     /// \Returns the register class of the register being spilled.
     const TargetRegisterClass *
@@ -78,6 +102,7 @@ private:
       auto Reg0 = Spills.front().MO->getReg();
       return TRI->getCandidateRegisterClassForSpill2Reg(TRI, Reg0);
     }
+
 #ifndef NDEBUG
     LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -194,6 +219,16 @@ void Spill2Reg::collectSpillsAndReloads() {
         }
         unsigned SpillBits = TRI->getRegSizeInBits(MO->getReg(), *MRI);
         Entry.Spills.emplace_back(Spill, MO, SpillBits);
+
+        // If any of the reloads collected so far is in the same MBB then mark
+        // it as non live-in. This is used in `updateLiveIns()` where we update
+        // the liveins of MBBs to include the new vector register. Doing this
+        // now avoids an MBB walk in `updateLiveIns()` which should save
+        // compilation time.
+        // TODO: Perhaps use a MapVector for Entry.Reloads for fast lookup?
+        for (auto &MID : Entry.Reloads)
+          if (MID.MI->getParent() == &MBB)
+            MID.IsLiveIn = false;
       } else if (const MachineOperand *MO =
                      TII->isLoadFromStackSlotMO(MI, StackSlot)) {
         MachineInstr *Reload = &MI;
@@ -205,6 +240,18 @@ void Spill2Reg::collectSpillsAndReloads() {
         assert(Reload->getRestoreSize(TII) && "Expected reload");
         unsigned SpillBits = TRI->getRegSizeInBits(MO->getReg(), *MRI);
         Entry.Reloads.emplace_back(Reload, MO, SpillBits);
+
+        // Even though the default value of `IsLiveIn` is true, we still need to
+        // eagerly mark the reloads in this BB as live-in. This is needed when
+        // we have multiple reloads from the same slot in the same BB with
+        // spills to the same slot in between that are set to false when
+        // visiting a reload.
+        //   reload %stack.0 <- IsLiveIn = true
+        //   spill  %stack.0 <- IsLiveIn = false
+        //   reload %stack.0 <- IsLiveIn = true
+        for (auto &MID : Entry.Reloads)
+          if (MID.MI->getParent() == &MBB)
+            MID.IsLiveIn = true;
       } else {
         // This should capture uses of the stack in instructions that access
         // memory (e.g., folded spills/reloads) and non-memory instructions,
@@ -264,6 +311,49 @@ static void DFS(MachineBasicBlock *MBB, DenseSet<MachineBasicBlock *> &Visited,
   for (MachineBasicBlock *PredMBB : MBB->predecessors())
     DFS(PredMBB, Visited, Fn);
 }
+
+void Spill2Reg::updateLiveIns(StackSlotDataEntry &Entry, MCRegister VectorReg) {
+  // Collect the parent MBBs of Spills for fast lookup.
+  DenseSet<MachineBasicBlock *> SpillMBBs(Entry.Spills.size());
+  DenseSet<MachineInstr *> Spills(Entry.Spills.size());
+  for (const auto &Data : Entry.Spills) {
+    SpillMBBs.insert(Data.MI->getParent());
+    Spills.insert(Data.MI);
+  }
+
+  auto AddLiveInIfRequired = [VectorReg, &SpillMBBs](MachineBasicBlock *MBB) {
+    // If there is a spill in this MBB then we don't need to add a live-in.
+    // This works even if there is a reload above the spill, like this:
+    //   reload stack.0
+    //   spill  stack.0
+    // because the live-in due to the reload is handled at a separate walk.
+    if (SpillMBBs.count(MBB))
+      // Return true to stop the recursion.
+      return true;
+    // If there are no spills in this block then the register is live-in.
+    if (!MBB->isLiveIn(VectorReg))
+      MBB->addLiveIn(VectorReg);
+    // Return false to continue the recursion.
+    return false;
+  };
+
+  // Update the MBB live-ins. These are used for the live regs calculation.
+  DenseSet<MachineBasicBlock *> Visited;
+  for (const auto &ReloadData : Entry.Reloads) {
+    MachineInstr *Reload = ReloadData.MI;
+    MachineBasicBlock *MBB = Reload->getParent();
+    // From a previous walk in MBB we know whether the reload is live-in, or
+    // whether the value comes from an earlier spill in the same MBB.
+    if (!ReloadData.IsLiveIn)
+      continue;
+    if (!MBB->isLiveIn(VectorReg))
+      MBB->addLiveIn(VectorReg);
+
+    for (MachineBasicBlock *PredMBB : Reload->getParent()->predecessors())
+      DFS(PredMBB, Visited, AddLiveInIfRequired);
+  }
+}
+
 // Replace stack-based spills/reloads with register-based ones.
 void Spill2Reg::replaceStackWithReg(StackSlotDataEntry &Entry,
                                     Register VectorReg) {
@@ -434,6 +524,12 @@ void Spill2Reg::generateCode() {
     if (!PhysVectorRegOpt)
       continue;
 
+    // Update the MBB live-ins. These are used for the live regs calculation.
+    // Collect the parent MBBs of Spills for fast lookup.
+    // NOTE: We do that before calling replaceStackWithReg() because it will
+    // remove the spill/reload instructions from Entry.
+    updateLiveIns(Entry, *PhysVectorRegOpt);
+
     // Replace stack accesses with register accesses.
     replaceStackWithReg(Entry, *PhysVectorRegOpt);
 
@@ -461,6 +557,10 @@ bool Spill2Reg::run() {
 #ifndef NDEBUG
 void Spill2Reg::StackSlotDataEntry::MIData::dump() const {
   dbgs() << "  (" << *MO << ") " << *MI;
+}
+
+void Spill2Reg::StackSlotDataEntry::MIDataWithLiveIn::dump() const {
+  dbgs() << "  (" << *MO << ") " << *MI << " IsLiveIn: " << IsLiveIn;
 }
 
 void Spill2Reg::StackSlotDataEntry::dump() const {
