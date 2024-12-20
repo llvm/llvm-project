@@ -1533,14 +1533,10 @@ SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
   unsigned NumOperands = Node->getNumOperands();
   MVT VectorIdxType = TLI.getVectorIdxTy(DAG.getDataLayout());
   EVT VectorValueType = Node->getOperand(0).getValueType();
-  EVT ElementValueType = VectorValueType.getVectorElementType();
-  if (ElementValueType !=
-      TLI.getTypeToTransformTo(*DAG.getContext(), ElementValueType)) {
-    return ExpandVectorBuildThroughStack(Node);
-  }
+  unsigned NumSubElem = VectorValueType.getVectorNumElements();
+  EVT ElementValueType = TLI.getTypeToTransformTo(*DAG.getContext(), VectorValueType.getVectorElementType());
   for (unsigned I = 0; I < NumOperands; ++I) {
     SDValue SubOp = Node->getOperand(I);
-    unsigned NumSubElem = VectorValueType.getVectorNumElements();
     for (unsigned Idx = 0; Idx < NumSubElem; ++Idx) {
       Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElementValueType,
                                 SubOp,
