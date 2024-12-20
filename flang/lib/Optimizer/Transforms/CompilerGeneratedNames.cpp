@@ -49,7 +49,7 @@ void CompilerGeneratedNamesConversionPass::runOnOperation() {
         mlir::SymbolTable::getSymbolAttrName());
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (deconstructedName.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
-         !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
+        !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
       std::string newName =
           fir::NameUniquer::replaceSpecialSymbols(symName.getValue().str());
       if (newName != symName) {
