@@ -1,8 +1,12 @@
 #include "lib.h"
 
-extern Foo getString();
+template <typename T> struct BarImpl {
+  using Ref = BarImpl<T> *;
 
-int main() {
-  FooImpl<char> *foo = getString().impl;
-  return 0;
-}
+  Ref Create() { return new BarImpl<T>(); }
+};
+
+BarImpl<char> gMainLocalDef;
+FooImpl<char> *gMainExternalDef = nullptr;
+
+int main() { return 0; }

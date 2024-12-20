@@ -6,10 +6,5 @@ template <typename T> struct FooImpl {
   Ref Create() { return new FooImpl<T>(); }
 };
 
-Foo getString() {
-  FooImpl<char> impl;
-  Foo ret;
-  ret.impl = impl.Create();
-
-  return ret;
-}
+FooImpl<char> gLibLocalDef;
+BarImpl<char> *gLibExternalDef = nullptr;

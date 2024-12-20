@@ -6,28 +6,35 @@ from lldbsuite.test import lldbutil
 
 class TestCaseTypedefToOuterFwd(TestBase):
     """
-    We are stopped in main.o, which only sees a forward declaration
-    of FooImpl. We then try to get the FooImpl::Ref typedef (whose
-    definition is in lib.o). Make sure we correctly resolve this
-    typedef.
+    We a global variable whose type is forward declared. We then
+    try to get the Ref typedef (whose definition is in either main.o
+    or lib.o). Make sure we correctly resolve this typedef.
+
+    We test this for two cases, where the definition lives
+    in main.o or lib.o.
     """
 
-    def test(self):
-        self.build()
-        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
-            self, "return", lldb.SBFileSpec("main.cpp")
-        )
+    def check_global_var(self, target, name: str):
+        var = target.FindFirstGlobalVariable(name)
+        self.assertSuccess(var.GetError(), f"Found {name}")
 
-        foo = thread.frames[0].FindVariable("foo")
-        self.assertSuccess(foo.GetError(), "Found foo")
+        var_type = var.GetType()
+        self.assertTrue(var_type)
 
-        foo_type = foo.GetType()
-        self.assertTrue(foo_type)
-
-        impl = foo_type.GetPointeeType()
+        impl = var_type.GetPointeeType()
         self.assertTrue(impl)
 
         ref = impl.FindDirectNestedType("Ref")
         self.assertTrue(ref)
 
-        self.assertEqual(ref.GetCanonicalType(), foo_type)
+        self.assertEqual(ref.GetCanonicalType(), var_type)
+
+    def test_definition_in_main(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.check_global_var(target, "gLibExternalDef")
+
+    def test_definition_in_lib(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.check_global_var(target, "gMainExternalDef")

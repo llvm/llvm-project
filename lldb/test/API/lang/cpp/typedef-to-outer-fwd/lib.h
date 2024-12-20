@@ -2,9 +2,6 @@
 #define LIB_H_IN
 
 template <typename T> struct FooImpl;
-
-struct Foo {
-  FooImpl<char> *impl = nullptr;
-};
+template <typename T> struct BarImpl;
 
 #endif // LIB_H_IN
