@@ -851,6 +851,7 @@ template <typename V1_t, typename V2_t>
 inline SDShuffle_maskMatch<V1_t, V2_t>
 m_ShuffleSpecificMask(const V1_t &v1, const V2_t &v2, ArrayRef<int> mask) {
   return SDShuffle_maskMatch<V1_t, V2_t>(v1, v2, mask);
+}
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_ExtractElt(const LHS &Vec, const RHS &Idx) {
