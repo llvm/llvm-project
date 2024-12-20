@@ -134,10 +134,15 @@ public:
   using MCPlusBuilder::MCPlusBuilder;
 
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
+  MCPhysReg getFramePointer() const override { return AArch64::FP; }
 
-  bool isPush(const MCInst &Inst) const override { return false; }
+  bool isPush(const MCInst &Inst) const override {
+    return isStoreToStack(Inst);
+  };
 
-  bool isPop(const MCInst &Inst) const override { return false; }
+  bool isPop(const MCInst &Inst) const override {
+    return isLoadFromStack(Inst);
+  };
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
@@ -244,59 +249,207 @@ public:
   }
 
   bool isLDRB(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRBBpost ||
-            Inst.getOpcode() == AArch64::LDRBBpre ||
-            Inst.getOpcode() == AArch64::LDRBBroW ||
-            Inst.getOpcode() == AArch64::LDRBBroX ||
-            Inst.getOpcode() == AArch64::LDRBBui ||
-            Inst.getOpcode() == AArch64::LDRSBWpost ||
-            Inst.getOpcode() == AArch64::LDRSBWpre ||
-            Inst.getOpcode() == AArch64::LDRSBWroW ||
-            Inst.getOpcode() == AArch64::LDRSBWroX ||
-            Inst.getOpcode() == AArch64::LDRSBWui ||
-            Inst.getOpcode() == AArch64::LDRSBXpost ||
-            Inst.getOpcode() == AArch64::LDRSBXpre ||
-            Inst.getOpcode() == AArch64::LDRSBXroW ||
-            Inst.getOpcode() == AArch64::LDRSBXroX ||
-            Inst.getOpcode() == AArch64::LDRSBXui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRBpost:
+    case AArch64::LDRBBpost:
+    case AArch64::LDRBBpre:
+    case AArch64::LDRBBroW:
+    case AArch64::LDRBroW:
+    case AArch64::LDRBroX:
+    case AArch64::LDRBBroX:
+    case AArch64::LDRBBui:
+    case AArch64::LDRBui:
+    case AArch64::LDRBpre:
+    case AArch64::LDRSBWpost:
+    case AArch64::LDRSBWpre:
+    case AArch64::LDRSBWroW:
+    case AArch64::LDRSBWroX:
+    case AArch64::LDRSBWui:
+    case AArch64::LDRSBXpost:
+    case AArch64::LDRSBXpre:
+    case AArch64::LDRSBXroW:
+    case AArch64::LDRSBXroX:
+    case AArch64::LDRSBXui:
+    case AArch64::LDURBi:
+    case AArch64::LDURBBi:
+    case AArch64::LDURSBWi:
+    case AArch64::LDURSBXi:
+    case AArch64::LDTRBi:
+    case AArch64::LDTRSBWi:
+    case AArch64::LDTRSBXi:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool isLDRH(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRHHpost ||
-            Inst.getOpcode() == AArch64::LDRHHpre ||
-            Inst.getOpcode() == AArch64::LDRHHroW ||
-            Inst.getOpcode() == AArch64::LDRHHroX ||
-            Inst.getOpcode() == AArch64::LDRHHui ||
-            Inst.getOpcode() == AArch64::LDRSHWpost ||
-            Inst.getOpcode() == AArch64::LDRSHWpre ||
-            Inst.getOpcode() == AArch64::LDRSHWroW ||
-            Inst.getOpcode() == AArch64::LDRSHWroX ||
-            Inst.getOpcode() == AArch64::LDRSHWui ||
-            Inst.getOpcode() == AArch64::LDRSHXpost ||
-            Inst.getOpcode() == AArch64::LDRSHXpre ||
-            Inst.getOpcode() == AArch64::LDRSHXroW ||
-            Inst.getOpcode() == AArch64::LDRSHXroX ||
-            Inst.getOpcode() == AArch64::LDRSHXui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRHpost:
+    case AArch64::LDRHHpost:
+    case AArch64::LDRHHpre:
+    case AArch64::LDRHroW:
+    case AArch64::LDRHHroW:
+    case AArch64::LDRHroX:
+    case AArch64::LDRHHroX:
+    case AArch64::LDRHHui:
+    case AArch64::LDRHui:
+    case AArch64::LDRHpre:
+    case AArch64::LDRSHWpost:
+    case AArch64::LDRSHWpre:
+    case AArch64::LDRSHWroW:
+    case AArch64::LDRSHWroX:
+    case AArch64::LDRSHWui:
+    case AArch64::LDRSHXpost:
+    case AArch64::LDRSHXpre:
+    case AArch64::LDRSHXroW:
+    case AArch64::LDRSHXroX:
+    case AArch64::LDRSHXui:
+    case AArch64::LDURHi:
+    case AArch64::LDURHHi:
+    case AArch64::LDURSHWi:
+    case AArch64::LDURSHXi:
+    case AArch64::LDTRHi:
+    case AArch64::LDTRSHWi:
+    case AArch64::LDTRSHXi:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool isLDRW(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRWpost ||
-            Inst.getOpcode() == AArch64::LDRWpre ||
-            Inst.getOpcode() == AArch64::LDRWroW ||
-            Inst.getOpcode() == AArch64::LDRWroX ||
-            Inst.getOpcode() == AArch64::LDRWui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRWpost:
+    case AArch64::LDRWpre:
+    case AArch64::LDRWroW:
+    case AArch64::LDRWroX:
+    case AArch64::LDRWui:
+    case AArch64::LDRWl:
+    case AArch64::LDRSWl:
+    case AArch64::LDURWi:
+    case AArch64::LDRSWpost:
+    case AArch64::LDRSWpre:
+    case AArch64::LDRSWroW:
+    case AArch64::LDRSWroX:
+    case AArch64::LDRSWui:
+    case AArch64::LDURSWi:
+    case AArch64::LDTRWi:
+    case AArch64::LDTRSWi:
+    case AArch64::LDPWi:
+    case AArch64::LDPWpost:
+    case AArch64::LDPWpre:
+    case AArch64::LDPSWi:
+    case AArch64::LDPSWpost:
+    case AArch64::LDPSWpre:
+    case AArch64::LDNPWi:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool isLDRX(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRXpost ||
-            Inst.getOpcode() == AArch64::LDRXpre ||
-            Inst.getOpcode() == AArch64::LDRXroW ||
-            Inst.getOpcode() == AArch64::LDRXroX ||
-            Inst.getOpcode() == AArch64::LDRXui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRXpost:
+    case AArch64::LDRXpre:
+    case AArch64::LDRXroW:
+    case AArch64::LDRXroX:
+    case AArch64::LDRXui:
+    case AArch64::LDRXl:
+    case AArch64::LDURXi:
+    case AArch64::LDTRXi:
+    case AArch64::LDNPXi:
+    case AArch64::LDPXi:
+    case AArch64::LDPXpost:
+    case AArch64::LDPXpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
+  }
+
+  bool isLDRS(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRSl:
+    case AArch64::LDRSui:
+    case AArch64::LDRSroW:
+    case AArch64::LDRSroX:
+    case AArch64::LDURSi:
+    case AArch64::LDPSi:
+    case AArch64::LDNPSi:
+    case AArch64::LDRSpre:
+    case AArch64::LDRSpost:
+    case AArch64::LDPSpost:
+    case AArch64::LDPSpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
+  }
+
+  bool isLDRD(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRDl:
+    case AArch64::LDRDui:
+    case AArch64::LDRDpre:
+    case AArch64::LDRDpost:
+    case AArch64::LDRDroW:
+    case AArch64::LDRDroX:
+    case AArch64::LDURDi:
+    case AArch64::LDPDi:
+    case AArch64::LDNPDi:
+    case AArch64::LDPDpost:
+    case AArch64::LDPDpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
+  }
+
+  bool isLDRQ(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRQui:
+    case AArch64::LDRQl:
+    case AArch64::LDRQpre:
+    case AArch64::LDRQpost:
+    case AArch64::LDRQroW:
+    case AArch64::LDRQroX:
+    case AArch64::LDURQi:
+    case AArch64::LDPQi:
+    case AArch64::LDNPQi:
+    case AArch64::LDPQpost:
+    case AArch64::LDPQpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool mayLoad(const MCInst &Inst) const override {
-    return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst);
+    return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst) ||
+           isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
   }
 
   bool isAArch64ExclusiveLoad(const MCInst &Inst) const override {
@@ -340,8 +493,7 @@ public:
       if (!Operand.isReg())
         continue;
       unsigned Reg = Operand.getReg();
-      if (Reg == AArch64::SP || Reg == AArch64::WSP || Reg == AArch64::FP ||
-          Reg == AArch64::W29)
+      if (Reg == AArch64::SP || Reg == AArch64::WSP)
         return true;
     }
     return false;
@@ -1170,7 +1322,209 @@ public:
     Inst.addOperand(MCOperand::createImm(0));
   }
 
-  bool mayStore(const MCInst &Inst) const override { return false; }
+  bool isStorePair(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+
+    auto isStorePairImmOffset = [&]() {
+      switch (opcode) {
+      case AArch64::STPWi:
+      case AArch64::STPXi:
+      case AArch64::STPSi:
+      case AArch64::STPDi:
+      case AArch64::STPQi:
+      case AArch64::STNPWi:
+      case AArch64::STNPXi:
+      case AArch64::STNPSi:
+      case AArch64::STNPDi:
+      case AArch64::STNPQi:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStorePairPostIndex = [&]() {
+      switch (opcode) {
+      case AArch64::STPWpost:
+      case AArch64::STPXpost:
+      case AArch64::STPSpost:
+      case AArch64::STPDpost:
+      case AArch64::STPQpost:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStorePairPreIndex = [&]() {
+      switch (opcode) {
+      case AArch64::STPWpre:
+      case AArch64::STPXpre:
+      case AArch64::STPSpre:
+      case AArch64::STPDpre:
+      case AArch64::STPQpre:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    return isStorePairImmOffset() || isStorePairPostIndex() ||
+           isStorePairPreIndex();
+  }
+
+  bool isStoreReg(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+
+    auto isStoreRegUnscaleImm = [&]() {
+      switch (opcode) {
+      case AArch64::STURBi:
+      case AArch64::STURBBi:
+      case AArch64::STURHi:
+      case AArch64::STURHHi:
+      case AArch64::STURWi:
+      case AArch64::STURXi:
+      case AArch64::STURSi:
+      case AArch64::STURDi:
+      case AArch64::STURQi:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegScaledImm = [&]() {
+      switch (opcode) {
+      case AArch64::STRBui:
+      case AArch64::STRBBui:
+      case AArch64::STRHui:
+      case AArch64::STRHHui:
+      case AArch64::STRWui:
+      case AArch64::STRXui:
+      case AArch64::STRSui:
+      case AArch64::STRDui:
+      case AArch64::STRQui:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegImmPostIndexed = [&]() {
+      switch (opcode) {
+      case AArch64::STRBpost:
+      case AArch64::STRBBpost:
+      case AArch64::STRHpost:
+      case AArch64::STRHHpost:
+      case AArch64::STRWpost:
+      case AArch64::STRXpost:
+      case AArch64::STRSpost:
+      case AArch64::STRDpost:
+      case AArch64::STRQpost:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegImmPreIndexed = [&]() {
+      switch (opcode) {
+      case AArch64::STRBpre:
+      case AArch64::STRBBpre:
+      case AArch64::STRHpre:
+      case AArch64::STRHHpre:
+      case AArch64::STRWpre:
+      case AArch64::STRXpre:
+      case AArch64::STRSpre:
+      case AArch64::STRDpre:
+      case AArch64::STRQpre:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegUnscaleUnpriv = [&]() {
+      switch (opcode) {
+      case AArch64::STTRBi:
+      case AArch64::STTRHi:
+      case AArch64::STTRWi:
+      case AArch64::STTRXi:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegTrunc = [&]() {
+      switch (opcode) {
+      case AArch64::STRBBroW:
+      case AArch64::STRBBroX:
+      case AArch64::STRBroW:
+      case AArch64::STRBroX:
+      case AArch64::STRDroW:
+      case AArch64::STRDroX:
+      case AArch64::STRHHroW:
+      case AArch64::STRHHroX:
+      case AArch64::STRHroW:
+      case AArch64::STRHroX:
+      case AArch64::STRQroW:
+      case AArch64::STRQroX:
+      case AArch64::STRSroW:
+      case AArch64::STRSroX:
+      case AArch64::STRWroW:
+      case AArch64::STRWroX:
+      case AArch64::STRXroW:
+      case AArch64::STRXroX:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    return isStoreRegUnscaleImm() || isStoreRegScaledImm() ||
+           isStoreRegImmPreIndexed() || isStoreRegImmPostIndexed() ||
+           isStoreRegUnscaleUnpriv() || isStoreRegTrunc();
+  }
+
+  bool mayStore(const MCInst &Inst) const override {
+    return isStorePair(Inst) || isStoreReg(Inst) ||
+           isAArch64ExclusiveStore(Inst);
+  }
+
+  bool isStoreToStack(const MCInst &Inst) const {
+    if (!mayStore(Inst))
+      return false;
+
+    for (const MCOperand &Operand : useOperands(Inst)) {
+      if (!Operand.isReg())
+        continue;
+
+      unsigned Reg = Operand.getReg();
+      if (Reg == AArch64::SP || Reg == AArch64::WSP)
+        return true;
+    }
+
+    return false;
+  }
 
   void createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
                         bool IsTailCall) override {
