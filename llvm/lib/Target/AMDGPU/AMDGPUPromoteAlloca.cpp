@@ -674,7 +674,17 @@ static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
   //
   // We could handle more complicated cases, but it'd make things a lot more
   // complicated.
-  if (isa<FixedVectorType>(AccessTy)) {
+
+  // If both are pointer types, verify if they are compatible to copy across
+  // address spaces.
+  bool canCopyAcrossAddressSpaces = true;
+  if (AccessTy->isPtrOrPtrVectorTy() && VecTy->isPtrOrPtrVectorTy()) {
+    if (DL.getPointerSize(AccessTy->getPointerAddressSpace()) !=
+        DL.getPointerSize(VecTy->getPointerAddressSpace()))
+      canCopyAcrossAddressSpaces = false;
+  }
+
+  if (isa<FixedVectorType>(AccessTy) && canCopyAcrossAddressSpaces) {
     TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
     TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
     return AccTS.isKnownMultipleOf(VecTS);
@@ -796,23 +806,17 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       if (!IsSimple)
         return RejectUser(Inst, "not a simple load or store");
 
-      // If the access type is a pointer, reject the address spaces with
-      // different pointer sizes.
-      // store <2 x ptr> %arg, ptr addrspace(5) %alloca - Reject.
-      // %tmp = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca - ok.
-      if (AccessTy->isPtrOrPtrVectorTy()) {
-        if (DL->getPointerSize(getLoadStoreAddressSpace(Inst)) !=
-            DL->getPointerSize(AccessTy->getPointerAddressSpace()))
-          return RejectUser(Inst, "pointers to incompatible address spaces");
-      }
-
       Ptr = Ptr->stripPointerCasts();
 
-      // Alloca already accessed as vector.
-      if (Ptr == &Alloca && DL->getTypeStoreSize(Alloca.getAllocatedType()) ==
-                                DL->getTypeStoreSize(AccessTy)) {
-        WorkList.push_back(Inst);
-        continue;
+      // Since the size of pointer is different across address spaces, let the
+      // isSupportedAccessType() handle the pointer load and store accesses.
+      if (!AccessTy->isPtrOrPtrVectorTy() || !VectorTy->isPtrOrPtrVectorTy()) {
+        // Alloca already accessed as vector.
+        if (Ptr == &Alloca &&
+            DL->getTypeStoreSize(AllocaTy) == DL->getTypeStoreSize(AccessTy)) {
+          WorkList.push_back(Inst);
+          continue;
+        }
       }
 
       if (!isSupportedAccessType(VectorTy, AccessTy, *DL))

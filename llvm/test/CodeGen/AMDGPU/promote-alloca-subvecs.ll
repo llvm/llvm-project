@@ -218,35 +218,38 @@ entry:
   ret void
 }
 
-define void @test_different_type_subvector_ptrs(<2 x ptr addrspace(3)> %val.0, <4 x ptr addrspace(3)> %val.1) {
+define void @test_different_type_subvector_ptrs(<2 x ptr addrspace(1)> %val.0, <4 x ptr addrspace(3)> %val.1) {
 ; CHECK-LABEL: define void @test_different_type_subvector_ptrs
-; CHECK-SAME: (<2 x ptr addrspace(3)> [[VAL_0:%.*]], <4 x ptr addrspace(3)> [[VAL_1:%.*]]) {
+; CHECK-SAME: (<2 x ptr addrspace(1)> [[VAL_0:%.*]], <4 x ptr addrspace(3)> [[VAL_1:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(3)> [[VAL_0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x i64> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> undef, i64 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <1 x i64> poison, i64 [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr <2 x i32> [[TMP5]] to <2 x ptr addrspace(3)>
-; CHECK-NEXT:    [[DUMMYUSER:%.*]] = freeze <2 x ptr addrspace(3)> [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[VAL_1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP7]] to <2 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP11]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP13]], i64 [[TMP11]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <2 x i64> [[TMP14]] to <4 x i32>
-; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr <4 x i32> [[TMP15]] to <4 x ptr addrspace(3)>
-; CHECK-NEXT:    [[DUMMYUSER_1:%.*]] = freeze <4 x ptr addrspace(3)> [[TMP16]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[VAL_0]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> undef, i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i64> [[TMP6]] to <2 x ptr addrspace(1)>
+; CHECK-NEXT:    [[DUMMYUSER:%.*]] = freeze <2 x ptr addrspace(1)> [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[VAL_1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i32> [[TMP8]] to <2 x i64>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> [[TMP11]], i64 [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> poison, i64 [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> [[TMP14]], i64 [[TMP12]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i64> [[TMP15]] to <4 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr <4 x i32> [[TMP16]] to <4 x ptr addrspace(3)>
+; CHECK-NEXT:    [[DUMMYUSER_1:%.*]] = freeze <4 x ptr addrspace(3)> [[TMP17]]
+; CHECK-NEXT:    ret void
+;
 entry:
   %stack = alloca [4 x i64], align 4, addrspace(5)
 
-  store <2 x ptr addrspace(3)> %val.0, ptr addrspace(5) %stack
-  %reload = load <2 x ptr addrspace(3)>, ptr addrspace(5) %stack
-  %dummyuser = freeze <2 x ptr addrspace(3)> %reload
+  store <2 x ptr addrspace(1)> %val.0, ptr addrspace(5) %stack
+  %reload = load <2 x ptr addrspace(1)>, ptr addrspace(5) %stack
+  %dummyuser = freeze <2 x ptr addrspace(1)> %reload
 
   store <4 x ptr addrspace(3)> %val.1, ptr addrspace(5) %stack
   %reload.1 = load <4 x ptr addrspace(3)>, ptr addrspace(5) %stack
