@@ -10,10 +10,7 @@ import os
 import posixpath
 import threading
 import time
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
+from urllib.request import urlopen
 import webbrowser
 
 # How long to wait for server to start.
