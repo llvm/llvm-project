@@ -464,7 +464,7 @@ Passes that utilize rewrite patterns should aim to provide a common set of
 options and toggles to simplify the debugging experience when switching between
 different passes/projects/etc. To aid in this endeavor, MLIR provides a common
 set of utilities that can be easily included when defining a custom pass. These
-are defined in `mlir/RewritePassUtil.td`; an example usage is shown below:
+are defined in `mlir/Rewrite/PassUtil.td`; an example usage is shown below:
 
 ```tablegen
 def MyRewritePass : Pass<"..."> {
