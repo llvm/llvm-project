@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_LOCALE
-#define _LIBCPP_LOCALE
+#ifndef _LIBCPP___CXX03_LOCALE
+#define _LIBCPP___CXX03_LOCALE
 
 /*
     locale synopsis
@@ -187,33 +187,33 @@ template <class charT> class messages_byname;
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
-#  include <__algorithm/copy.h>
-#  include <__algorithm/equal.h>
-#  include <__algorithm/find.h>
-#  include <__algorithm/max.h>
-#  include <__algorithm/reverse.h>
-#  include <__algorithm/unwrap_iter.h>
-#  include <__assert>
-#  include <__iterator/access.h>
-#  include <__iterator/back_insert_iterator.h>
-#  include <__iterator/istreambuf_iterator.h>
-#  include <__iterator/ostreambuf_iterator.h>
-#  include <__locale>
-#  include <__memory/unique_ptr.h>
-#  include <__type_traits/make_unsigned.h>
-#  include <cerrno>
-#  include <cstdio>
-#  include <cstdlib>
-#  include <ctime>
-#  include <ios>
-#  include <limits>
-#  include <new>
-#  include <streambuf>
-#  include <version>
+#  include <__cxx03/__algorithm/copy.h>
+#  include <__cxx03/__algorithm/equal.h>
+#  include <__cxx03/__algorithm/find.h>
+#  include <__cxx03/__algorithm/max.h>
+#  include <__cxx03/__algorithm/reverse.h>
+#  include <__cxx03/__algorithm/unwrap_iter.h>
+#  include <__cxx03/__assert>
+#  include <__cxx03/__iterator/access.h>
+#  include <__cxx03/__iterator/back_insert_iterator.h>
+#  include <__cxx03/__iterator/istreambuf_iterator.h>
+#  include <__cxx03/__iterator/ostreambuf_iterator.h>
+#  include <__cxx03/__locale>
+#  include <__cxx03/__memory/unique_ptr.h>
+#  include <__cxx03/__type_traits/make_unsigned.h>
+#  include <__cxx03/cerrno>
+#  include <__cxx03/cstdio>
+#  include <__cxx03/cstdlib>
+#  include <__cxx03/ctime>
+#  include <__cxx03/ios>
+#  include <__cxx03/limits>
+#  include <__cxx03/new>
+#  include <__cxx03/streambuf>
+#  include <__cxx03/version>
 
 // TODO: Fix __bsd_locale_defaults.h
 // NOLINTBEGIN(libcpp-robust-against-adl)
@@ -222,18 +222,18 @@ template <class charT> class messages_byname;
 // Most unix variants have catopen.  These are the specific ones that don't.
 #    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
 #      define _LIBCPP_HAS_CATOPEN 1
-#      include <nl_types.h>
+#      include <__cxx03/nl_types.h>
 #    endif
 #  endif
 
 #  ifdef _LIBCPP_LOCALE__L_EXTENSIONS
-#    include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
+#    include <__cxx03/__locale_dir/locale_base_api/bsd_locale_defaults.h>
 #  else
-#    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
+#    include <__cxx03/__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 #  endif
 
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    include <xlocale.h>
+#    include <__cxx03/xlocale.h>
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -241,7 +241,7 @@ template <class charT> class messages_byname;
 #  endif
 
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#  include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -3754,14 +3754,14 @@ _LIBCPP_POP_MACROS
 #endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <atomic>
-#  include <concepts>
-#  include <cstdarg>
-#  include <iterator>
-#  include <mutex>
-#  include <stdexcept>
-#  include <type_traits>
-#  include <typeinfo>
+#  include <__cxx03/atomic>
+#  include <__cxx03/concepts>
+#  include <__cxx03/cstdarg>
+#  include <__cxx03/iterator>
+#  include <__cxx03/mutex>
+#  include <__cxx03/stdexcept>
+#  include <__cxx03/type_traits>
+#  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_LOCALE
+#endif // _LIBCPP___CXX03_LOCALE

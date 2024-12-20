@@ -911,9 +911,9 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
                   std::move(*Req), Status, SubstitutedConstraintExpr);
         else
           R = new (Record.getContext()) concepts::ExprRequirement(
-                  E.get<concepts::Requirement::SubstitutionDiagnostic *>(),
-                  RK == concepts::Requirement::RK_Simple, NoexceptLoc,
-                  std::move(*Req));
+              cast<concepts::Requirement::SubstitutionDiagnostic *>(E),
+              RK == concepts::Requirement::RK_Simple, NoexceptLoc,
+              std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
         ASTContext &C = Record.getContext();
@@ -2191,7 +2191,7 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
   E->TransformedExpressions = Record.readInt();
-  E->ExpandedToEmptyPack = Record.readInt();
+  E->FullySubstituted = Record.readInt();
   E->EllipsisLoc = readSourceLocation();
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
@@ -2836,12 +2836,64 @@ void ASTStmtReader::VisitOpenACCAssociatedStmtConstruct(
 void ASTStmtReader::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
-  S->findAndSetChildLoops();
 }
 
 void ASTStmtReader::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
+  S->ParentComputeConstructKind = Record.readEnum<OpenACCDirectiveKind>();
+}
+
+void ASTStmtReader::VisitOpenACCCombinedConstruct(OpenACCCombinedConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
+}
+
+void ASTStmtReader::VisitOpenACCDataConstruct(OpenACCDataConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
+}
+
+void ASTStmtReader::VisitOpenACCEnterDataConstruct(
+    OpenACCEnterDataConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+}
+
+void ASTStmtReader::VisitOpenACCExitDataConstruct(OpenACCExitDataConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+}
+
+void ASTStmtReader::VisitOpenACCInitConstruct(OpenACCInitConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+}
+
+void ASTStmtReader::VisitOpenACCShutdownConstruct(OpenACCShutdownConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+}
+
+void ASTStmtReader::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
+}
+
+void ASTStmtReader::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
+  VisitStmt(S);
+  // Consume the count of Expressions.
+  (void)Record.readInt();
+  VisitOpenACCConstructStmt(S);
+  S->LParenLoc = Record.readSourceLocation();
+  S->RParenLoc = Record.readSourceLocation();
+  S->QueuesLoc = Record.readSourceLocation();
+
+  for (unsigned I = 0; I < S->NumExprs; ++I) {
+    S->getExprPtr()[I] = cast_if_present<Expr>(Record.readSubStmt());
+    assert((I == 0 || S->getExprPtr()[I] != nullptr) &&
+           "Only first expression should be null");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -4312,6 +4364,47 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OPENACC_LOOP_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCLoopConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_COMBINED_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCCombinedConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_DATA_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCDataConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_ENTER_DATA_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCEnterDataConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_EXIT_DATA_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCExitDataConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_HOST_DATA_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCHostDataConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_WAIT_CONSTRUCT: {
+      unsigned NumExprs = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OpenACCWaitConstruct::CreateEmpty(Context, NumExprs, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_INIT_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCInitConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_SHUTDOWN_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCShutdownConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
     case EXPR_REQUIRES: {

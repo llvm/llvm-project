@@ -20,10 +20,10 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -376,7 +376,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
     for (TemplateArgument::pack_iterator
              XA = X.pack_begin(),
              XAEnd = X.pack_end(), YA = Y.pack_begin(), YAEnd = Y.pack_end();
-         XA != XAEnd; ++XA, ++YA) {
+         XA != XAEnd; ++XA) {
       if (YA != YAEnd) {
         TemplateArgument Merged = checkDeducedTemplateArguments(
             Context, DeducedTemplateArgument(*XA, X.wasDeducedFromArrayBound()),
@@ -384,6 +384,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
         if (Merged.isNull() && !(XA->isNull() && YA->isNull()))
           return DeducedTemplateArgument();
         NewPack.push_back(Merged);
+        ++YA;
       } else {
         NewPack.push_back(*XA);
       }
@@ -1743,7 +1744,8 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // C++ [temp.deduct.conv]p4:
       //   If the original A is a reference type, A can be more cv-qualified
       //   than the deduced A
-      if (!A.getQualifiers().compatiblyIncludes(P.getQualifiers()))
+      if (!A.getQualifiers().compatiblyIncludes(P.getQualifiers(),
+                                                S.getASTContext()))
         return TemplateDeductionResult::NonDeducedMismatch;
 
       // Strip out all extra qualifiers from the argument to figure out the
@@ -3139,6 +3141,20 @@ template<>
 struct IsPartialSpecialization<VarTemplatePartialSpecializationDecl> {
   static constexpr bool value = true;
 };
+template <typename TemplateDeclT>
+static bool DeducedArgsNeedReplacement(TemplateDeclT *Template) {
+  return false;
+}
+template <>
+bool DeducedArgsNeedReplacement<VarTemplatePartialSpecializationDecl>(
+    VarTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
+template <>
+bool DeducedArgsNeedReplacement<ClassTemplatePartialSpecializationDecl>(
+    ClassTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
 
 template <typename TemplateDeclT>
 static TemplateDeductionResult
@@ -3149,10 +3165,23 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
 
+  std::optional<ArrayRef<TemplateArgument>> Innermost;
+  // If we don't need to replace the deduced template arguments,
+  // we can add them immediately as the inner-most argument list.
+  if (!DeducedArgsNeedReplacement(Template))
+    Innermost = CanonicalDeducedArgs;
+
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      Template, Template->getDeclContext(), /*Final=*/false,
-      /*Innermost=*/CanonicalDeducedArgs, /*RelativeToPrimary=*/true,
-      /*ForConstraintInstantiation=*/true);
+      Template, Template->getDeclContext(), /*Final=*/false, Innermost,
+      /*RelativeToPrimary=*/true, /*Pattern=*/
+      nullptr, /*ForConstraintInstantiation=*/true);
+
+  // getTemplateInstantiationArgs picks up the non-deduced version of the
+  // template args when this is a variable template partial specialization and
+  // not class-scope explicit specialization, so replace with Deduced Args
+  // instead of adding to inner-most.
+  if (!Innermost)
+    MLTAL.replaceInnermostTemplateArguments(Template, CanonicalDeducedArgs);
 
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),
@@ -3745,7 +3774,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
 
     if (AQuals == DeducedAQuals) {
       // Qualifiers match; there's nothing to do.
-    } else if (!DeducedAQuals.compatiblyIncludes(AQuals)) {
+    } else if (!DeducedAQuals.compatiblyIncludes(AQuals, S.getASTContext())) {
       return Failed();
     } else {
       // Qualifiers are compatible, so have the argument type adopt the
@@ -6451,8 +6480,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
 }
 
 namespace {
-struct MarkUsedTemplateParameterVisitor :
-    RecursiveASTVisitor<MarkUsedTemplateParameterVisitor> {
+struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
   llvm::SmallBitVector &Used;
   unsigned Depth;
 
@@ -6460,23 +6488,22 @@ struct MarkUsedTemplateParameterVisitor :
                                    unsigned Depth)
       : Used(Used), Depth(Depth) { }
 
-  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) {
+  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) override {
     if (T->getDepth() == Depth)
       Used[T->getIndex()] = true;
     return true;
   }
 
-  bool TraverseTemplateName(TemplateName Template) {
+  bool TraverseTemplateName(TemplateName Template) override {
     if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
             Template.getAsTemplateDecl()))
       if (TTP->getDepth() == Depth)
         Used[TTP->getIndex()] = true;
-    RecursiveASTVisitor<MarkUsedTemplateParameterVisitor>::
-        TraverseTemplateName(Template);
+    DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(E->getDecl()))
       if (NTTP->getDepth() == Depth)
         Used[NTTP->getIndex()] = true;

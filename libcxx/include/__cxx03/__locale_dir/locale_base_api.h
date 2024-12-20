@@ -6,27 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
-#define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
+#ifndef _LIBCPP___CXX03___LOCALE_DIR_LOCALE_BASE_API_H
+#define _LIBCPP___CXX03___LOCALE_DIR_LOCALE_BASE_API_H
 
 #if defined(_LIBCPP_MSVCRT_LIKE)
-#  include <__locale_dir/locale_base_api/win32.h>
+#  include <__cxx03/__locale_dir/locale_base_api/win32.h>
 #elif defined(_AIX) || defined(__MVS__)
-#  include <__locale_dir/locale_base_api/ibm.h>
+#  include <__cxx03/__locale_dir/locale_base_api/ibm.h>
 #elif defined(__ANDROID__)
-#  include <__locale_dir/locale_base_api/android.h>
+#  include <__cxx03/__locale_dir/locale_base_api/android.h>
 #elif defined(__sun__)
-#  include <__locale_dir/locale_base_api/solaris.h>
+#  include <__cxx03/__locale_dir/locale_base_api/solaris.h>
 #elif defined(_NEWLIB_VERSION)
-#  include <__locale_dir/locale_base_api/newlib.h>
+#  include <__cxx03/__locale_dir/locale_base_api/newlib.h>
 #elif defined(__OpenBSD__)
-#  include <__locale_dir/locale_base_api/openbsd.h>
+#  include <__cxx03/__locale_dir/locale_base_api/openbsd.h>
 #elif defined(__Fuchsia__)
-#  include <__locale_dir/locale_base_api/fuchsia.h>
+#  include <__cxx03/__locale_dir/locale_base_api/fuchsia.h>
 #elif defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC)
-#  include <__locale_dir/locale_base_api/musl.h>
+#  include <__cxx03/__locale_dir/locale_base_api/musl.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-#  include <xlocale.h>
+#  include <__cxx03/xlocale.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -95,4 +95,4 @@ except that locale_t is used instead of the current global locale.
 The variadic functions may be implemented as templates with a parameter pack instead of variadic functions.
 */
 
-#endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
+#endif // _LIBCPP___CXX03___LOCALE_DIR_LOCALE_BASE_API_H

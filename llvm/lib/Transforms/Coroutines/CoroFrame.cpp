@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoroInternal.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/StackLifetime.h"
@@ -1134,7 +1133,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           bool AllowUnresolved = false;
           // This dbg.declare is preserved for all coro-split function
           // fragments. It will be unreachable in the main function, and
-          // processed by coro::salvageDebugInfo() by CoroCloner.
+          // processed by coro::salvageDebugInfo() by the Cloner.
           if (UseNewDbgInfoFormat) {
             DbgVariableRecord *NewDVR = new DbgVariableRecord(
                 ValueAsMetadata::get(CurrentReload), DDI->getVariable(),

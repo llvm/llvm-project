@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -verify-machineinstrs -simplify-mir -mtriple=powerpc64-ibm-aix-xcoff \
-# RUN:   -debug-only=regalloc %s -o - 2>&1 | FileCheck %s
+# RUN:  -mcpu=ppc -debug-only=regalloc %s -o - 2>&1 | FileCheck %s
 
 ---
 name: i64
@@ -17,6 +17,5 @@ body: |
     BLR8 implicit $lr8, implicit undef $rm, implicit $x3, implicit $f1
 ...
 # CHECK-DAG: AllocationOrder(VFRC) = [ $vf2 $vf3 $vf4 $vf5 $vf0 $vf1 $vf6 $vf7 $vf8 $vf9 $vf10 $vf11 $vf12 $vf13 $vf14 $vf15 $vf16 $vf17 $vf18 $vf19 $vf31 $vf30 $vf29 $vf28 $vf27 $vf26 $vf25 $vf24 $vf23 $vf22 $vf21 $vf20 ]
-# CHECK-DAG: AllocationOrder(G8RC_and_G8RC_NOX0) = [ $x3 $x4 $x5 $x6 $x7 $x8 $x9 $x10 $x11 $x12 $x31 $x30 $x29 $x28 $x27 $x26 $x25 $x24 $x23 $x22 $x21 $x20 $x19 $x18 $x17 $x16 $x15 $x1
-# CHECK-DAG: 4 ]
+# CHECK-DAG: AllocationOrder(G8RC_and_G8RC_NOX0) = [ $x3 $x4 $x5 $x6 $x7 $x8 $x9 $x10 $x11 $x12 $x2 $x31 $x30 $x29 $x28 $x27 $x26 $x25 $x24 $x23 $x22 $x21 $x20 $x19 $x18 $x17 $x16 $x15 $x14 ]
 # CHECK-DAG: AllocationOrder(F8RC) = [ $f0 $f1 $f2 $f3 $f4 $f5 $f6 $f7 $f8 $f9 $f10 $f11 $f12 $f13 $f31 $f30 $f29 $f28 $f27 $f26 $f25 $f24 $f23 $f22 $f21 $f20 $f19 $f18 $f17 $f16 $f15 $f14 ]

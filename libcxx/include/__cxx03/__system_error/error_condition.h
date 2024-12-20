@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
-#define _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
+#define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
 
-#include <__compare/ordering.h>
-#include <__config>
-#include <__functional/hash.h>
-#include <__functional/unary_function.h>
-#include <__system_error/errc.h>
-#include <__system_error/error_category.h>
-#include <cstddef>
-#include <string>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/hash.h>
+#include <__cxx03/__functional/unary_function.h>
+#include <__cxx03/__system_error/errc.h>
+#include <__cxx03/__system_error/error_category.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -127,4 +127,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<error_condition> : public __unary_function<erro
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#endif // _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H

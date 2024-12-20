@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonInstrInfo.h"
-#include "Hexagon.h"
 #include "HexagonFrameLowering.h"
 #include "HexagonHazardRecognizer.h"
 #include "HexagonRegisterInfo.h"
@@ -30,7 +29,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -46,7 +44,6 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

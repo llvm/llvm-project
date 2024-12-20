@@ -715,7 +715,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(pm, level);
+  fir::createHLFIRToFIRPassPipeline(
+      pm,
+      ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP),
+      level);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   if (!mlir::succeeded(pm.run(*mlirModule))) {
@@ -828,8 +832,12 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMax = vsr->second;
   }
 
-  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
-    config.NSWOnLoopVarInc = true;
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP))
+    config.EnableOpenMP = true;
+
+  if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
+    config.NSWOnLoopVarInc = false;
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());

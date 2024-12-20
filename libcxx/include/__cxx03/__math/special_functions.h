@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
-#define _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
+#ifndef _LIBCPP___CXX03___MATH_SPECIAL_FUNCTIONS_H
+#define _LIBCPP___CXX03___MATH_SPECIAL_FUNCTIONS_H
 
-#include <__config>
-#include <__math/copysign.h>
-#include <__math/traits.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_integral.h>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__math/copysign.h>
+#include <__cxx03/__math/traits.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -81,4 +81,4 @@ _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
+#endif // _LIBCPP___CXX03___MATH_SPECIAL_FUNCTIONS_H

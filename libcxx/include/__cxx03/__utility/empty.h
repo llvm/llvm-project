@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_EMPTY_H
-#define _LIBCPP___UTILITY_EMPTY_H
+#ifndef _LIBCPP___CXX03___UTILITY_EMPTY_H
+#define _LIBCPP___CXX03___UTILITY_EMPTY_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,4 +21,4 @@ struct __empty {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_EMPTY_H
+#endif // _LIBCPP___CXX03___UTILITY_EMPTY_H

@@ -79,7 +79,7 @@ public:
 
   static constexpr size_t sizeToAlloc(unsigned NumBits) {
     assert(NumBits < 20 && "Tries should have fewer than ~1M slots");
-    size_t Count = 1u << NumBits;
+    unsigned Count = 1u << NumBits;
     return totalSizeToAlloc<LazyAtomicPointer<TrieNode>>(Count);
   }
 
@@ -424,7 +424,7 @@ unsigned ThreadSafeTrieRawHashMapBase::getNumSlotUsed(
     return 0;
   unsigned Num = 0;
   for (unsigned I = 0, E = S->size(); I < E; ++I)
-    if (auto *E = S->load(I))
+    if (S->load(I))
       ++Num;
   return Num;
 }

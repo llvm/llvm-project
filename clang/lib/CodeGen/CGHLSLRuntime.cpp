@@ -306,6 +306,16 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
       continue;
 
     llvm::hlsl::ResourceClass RC = AttrResType->getAttrs().ResourceClass;
+    if (RC == llvm::hlsl::ResourceClass::UAV ||
+        RC == llvm::hlsl::ResourceClass::SRV)
+      // UAVs and SRVs have already been converted to use LLVM target types,
+      // we can disable generating of these resource annotations. This will
+      // enable progress on structured buffers with user defined types this
+      // resource annotations code does not handle and it crashes.
+      // This whole function is going to be removed as soon as cbuffers are
+      // converted to target types (llvm/llvm-project #114126).
+      return;
+
     bool IsROV = AttrResType->getAttrs().IsROV;
     llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
     llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
@@ -378,6 +388,15 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     llvm::Function *ThreadIDIntrinsic =
         CGM.getIntrinsic(getThreadIdIntrinsic());
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
+  }
+  if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+    llvm::Function *GroupThreadIDIntrinsic =
+        CGM.getIntrinsic(getGroupThreadIdIntrinsic());
+    return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
+  }
+  if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
+    llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(Intrinsic::dx_group_id);
+    return buildVectorInput(B, GroupIDIntrinsic, Ty);
   }
   assert(false && "Unhandled parameter attribute");
   return nullptr;
@@ -493,13 +512,17 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
       IP = Token->getNextNode();
     }
     IRBuilder<> B(IP);
-    for (auto *Fn : CtorFns)
-      B.CreateCall(FunctionCallee(Fn), {}, OB);
+    for (auto *Fn : CtorFns) {
+      auto CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
 
     // Insert global dtors before the terminator of the last instruction
     B.SetInsertPoint(F.back().getTerminator());
-    for (auto *Fn : DtorFns)
-      B.CreateCall(FunctionCallee(Fn), {}, OB);
+    for (auto *Fn : DtorFns) {
+      auto CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
   }
 
   // No need to keep global ctors/dtors for non-lib profile after call to

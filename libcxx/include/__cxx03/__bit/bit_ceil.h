@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BIT_CEIL_H
-#define _LIBCPP___BIT_BIT_CEIL_H
+#ifndef _LIBCPP___CXX03___BIT_BIT_CEIL_H
+#define _LIBCPP___CXX03___BIT_BIT_CEIL_H
 
-#include <__assert>
-#include <__bit/countl.h>
-#include <__concepts/arithmetic.h>
-#include <__config>
-#include <limits>
+#include <__cxx03/__assert>
+#include <__cxx03/__bit/countl.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,4 +51,4 @@ template <__libcpp_unsigned_integer _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BIT_CEIL_H
+#endif // _LIBCPP___CXX03___BIT_BIT_CEIL_H

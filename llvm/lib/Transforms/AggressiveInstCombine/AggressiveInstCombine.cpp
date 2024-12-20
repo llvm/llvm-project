@@ -803,8 +803,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
-                                    Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),

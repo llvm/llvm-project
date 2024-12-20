@@ -630,13 +630,8 @@ define void @pr59677(i32 %x, ptr %out) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vmovd %eax, %xmm0
-; X86-NEXT:    orl $1, %eax
-; X86-NEXT:    vmovd %eax, %xmm1
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
@@ -651,10 +646,6 @@ define void @pr59677(i32 %x, ptr %out) nounwind {
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    vmovd %edi, %xmm0
-; X64-NEXT:    orl $1, %edi
-; X64-NEXT:    vmovd %edi, %xmm1
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    callq sinf@PLT

@@ -17,6 +17,6 @@
 
 #include <__config>
 
-#if defined(_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+#if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 #  error Availability annotations should be enabled on Apple platforms in the system configuration!
 #endif

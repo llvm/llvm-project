@@ -307,6 +307,14 @@ def OpenACCAssociatedStmtConstruct
     : StmtNode<OpenACCConstructStmt, /*abstract=*/1>;
 def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 def OpenACCLoopConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCCombinedConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCDataConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCEnterDataConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCExitDataConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCHostDataConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCWaitConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCInitConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCShutdownConstruct : StmtNode<OpenACCConstructStmt>;
 
 // OpenACC Additional Expressions.
 def OpenACCAsteriskSizeExpr : StmtNode<Expr>;

@@ -29,8 +29,7 @@ LLVM_LIBC_FUNCTION(int, sscanf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  scanf_core::ReadBuffer rb{const_cast<char *>(buffer),
-                            cpp::numeric_limits<size_t>::max()};
+  scanf_core::ReadBuffer rb{buffer, cpp::numeric_limits<size_t>::max()};
   scanf_core::Reader reader(&rb);
   int ret_val = scanf_core::scanf_main(&reader, format, args);
   // This is done to avoid including stdio.h in the internals. On most systems

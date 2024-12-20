@@ -310,9 +310,9 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   Mangled mangled = GetMangledForPDBFunc(pdb_func);
 
-  FunctionSP func_sp =
-      std::make_shared<Function>(&comp_unit, pdb_func.getSymIndexId(),
-                                 func_type_uid, mangled, func_type, func_range);
+  FunctionSP func_sp = std::make_shared<Function>(
+      &comp_unit, pdb_func.getSymIndexId(), func_type_uid, mangled, func_type,
+      AddressRanges{func_range});
 
   comp_unit.AddFunction(func_sp);
 
@@ -402,46 +402,32 @@ static size_t ParseFunctionBlocksForPDBSymbol(
   assert(pdb_symbol && parent_block);
 
   size_t num_added = 0;
-  switch (pdb_symbol->getSymTag()) {
-  case PDB_SymType::Block:
-  case PDB_SymType::Function: {
-    Block *block = nullptr;
+
+  if (!is_top_parent) {
+    // Ranges for the top block were parsed together with the function.
+    if (pdb_symbol->getSymTag() != PDB_SymType::Block)
+      return num_added;
+
     auto &raw_sym = pdb_symbol->getRawSymbol();
-    if (auto *pdb_func = llvm::dyn_cast<PDBSymbolFunc>(pdb_symbol)) {
-      if (pdb_func->hasNoInlineAttribute())
-        break;
-      if (is_top_parent)
-        block = parent_block;
-      else
-        break;
-    } else if (llvm::isa<PDBSymbolBlock>(pdb_symbol)) {
-      auto uid = pdb_symbol->getSymIndexId();
-      if (parent_block->FindBlockByID(uid))
-        break;
-      if (raw_sym.getVirtualAddress() < func_file_vm_addr)
-        break;
+    assert(llvm::isa<PDBSymbolBlock>(pdb_symbol));
+    auto uid = pdb_symbol->getSymIndexId();
+    if (parent_block->FindBlockByID(uid))
+      return num_added;
+    if (raw_sym.getVirtualAddress() < func_file_vm_addr)
+      return num_added;
 
-      auto block_sp = std::make_shared<Block>(pdb_symbol->getSymIndexId());
-      parent_block->AddChild(block_sp);
-      block = block_sp.get();
-    } else
-      llvm_unreachable("Unexpected PDB symbol!");
-
+    Block *block = parent_block->CreateChild(pdb_symbol->getSymIndexId()).get();
     block->AddRange(Block::Range(
         raw_sym.getVirtualAddress() - func_file_vm_addr, raw_sym.getLength()));
     block->FinalizeRanges();
-    ++num_added;
+  }
+  auto results_up = pdb_symbol->findAllChildren();
+  if (!results_up)
+    return num_added;
 
-    auto results_up = pdb_symbol->findAllChildren();
-    if (!results_up)
-      break;
-    while (auto symbol_up = results_up->getNext()) {
-      num_added += ParseFunctionBlocksForPDBSymbol(
-          func_file_vm_addr, symbol_up.get(), block, false);
-    }
-  } break;
-  default:
-    break;
+  while (auto symbol_up = results_up->getNext()) {
+    num_added += ParseFunctionBlocksForPDBSymbol(
+        func_file_vm_addr, symbol_up.get(), parent_block, false);
   }
   return num_added;
 }

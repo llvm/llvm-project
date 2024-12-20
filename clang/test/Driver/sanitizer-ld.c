@@ -132,18 +132,78 @@
 // RUN:     -resource-dir=%S/Inputs/empty_resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-CXX %s
-//
+
+// RUN: %clangxx -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform -fsanitize=address \
+// RUN:     -resource-dir=%S/Inputs/empty_resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -fsanitize-link-c++-runtime \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-CXX %s
+
 // CHECK-ASAN-LINUX-CXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-ASAN-LINUX-CXX-NOT: "-lc"
-// CHECK-ASAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
-// CHECK-ASAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
+// CHECK-ASAN-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
+// CHECK-ASAN-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
 // CHECK-ASAN-LINUX-CXX-NOT: "--dynamic-list"
-// CHECK-ASAN-LINUX-CXX: "--export-dynamic"
-// CHECK-ASAN-LINUX-CXX: stdc++
-// CHECK-ASAN-LINUX-CXX: "-lpthread"
-// CHECK-ASAN-LINUX-CXX: "-lrt"
-// CHECK-ASAN-LINUX-CXX: "-ldl"
-// CHECK-ASAN-LINUX-CXX: "-lresolv"
+// CHECK-ASAN-LINUX-CXX-SAME: "--export-dynamic"
+// CHECK-ASAN-LINUX-CXX-SAME: "-lstdc++"
+// CHECK-ASAN-LINUX-CXX-SAME: "-lpthread"
+// CHECK-ASAN-LINUX-CXX-SAME: "-lrt"
+// CHECK-ASAN-LINUX-CXX-SAME: "-ldl"
+// CHECK-ASAN-LINUX-CXX-SAME: "-lresolv"
+// CHECK-ASAN-LINUX-CXX-SAME: "-lc"
+
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform -fsanitize=address \
+// RUN:     -resource-dir=%S/Inputs/empty_resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -fno-sanitize-link-c++-runtime \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-CNOCXX %s
+
+// CHECK-ASAN-LINUX-CNOCXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-LINUX-CNOCXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
+// CHECK-ASAN-LINUX-CNOCXX-NOT: libclang_rt.asan_cxx
+// CHECK-ASAN-LINUX-CNOCXX-SAME: "--export-dynamic"
+// CHECK-ASAN-LINUX-CNOCXX-NOT: stdc++
+// CHECK-ASAN-LINUX-CNOCXX-SAME: "-lpthread"
+// CHECK-ASAN-LINUX-CNOCXX-SAME: "-lrt"
+// CHECK-ASAN-LINUX-CNOCXX-SAME: "-ldl"
+// CHECK-ASAN-LINUX-CNOCXX-SAME: "-lresolv"
+// CHECK-ASAN-LINUX-CNOCXX-SAME: "-lc"
+
+// RUN: %clangxx -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform -fsanitize=address \
+// RUN:     -resource-dir=%S/Inputs/empty_resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -fno-sanitize-link-c++-runtime \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-NOCXX %s
+
+// CHECK-ASAN-LINUX-NOCXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-LINUX-NOCXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
+// CHECK-ASAN-LINUX-NOCXX-NOT: libclang_rt.asan_cxx
+// CHECK-ASAN-LINUX-NOCXX-SAME: "--export-dynamic"
+// CHECK-ASAN-LINUX-NOCXX-SAME: "-lstdc++"
+// CHECK-ASAN-LINUX-NOCXX-SAME: "-lpthread"
+// CHECK-ASAN-LINUX-NOCXX-SAME: "-lrt"
+// CHECK-ASAN-LINUX-NOCXX-SAME: "-ldl"
+// CHECK-ASAN-LINUX-NOCXX-SAME: "-lresolv"
+// CHECK-ASAN-LINUX-NOCXX-SAME: "-lc"
+
+// RUN: %clangxx -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform -fsanitize=address \
+// RUN:     -resource-dir=%S/Inputs/empty_resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -nostdlib++ \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-NOSTDCXX %s
+
+// CHECK-ASAN-LINUX-NOSTDCXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: libclang_rt.asan_cxx
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: "--export-dynamic"
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: "-lpthread"
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: "-lrt"
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: "-ldl"
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: "-lresolv"
+// CHECK-ASAN-LINUX-NOSTDCXX-SAME: "-lc"
 
 // RUN: %clang -### %s -o /dev/null -fsanitize=address \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
@@ -273,6 +333,29 @@
 // CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan.so"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lresolv"
+
+
+// RUN: %clangxx %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
+// RUN:     -fsanitize=type \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-TYSAN-LINUX-CXX %s
+//
+// CHECK-TYSAN-LINUX-CXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-TYSAN-LINUX-CXX-NOT: stdc++
+// CHECK-TYSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.tysan{{[^.]*}}.a" "--no-whole-archive"
+// CHECK-TYSAN-LINUX-CXX: stdc++
+
+// RUN: %clangxx -fsanitize=type -### %s 2>&1 \
+// RUN:     -mmacosx-version-min=10.6 \
+// RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-TYSAN-DARWIN-CXX %s
+// CHECK-TYSAN-DARWIN-CXX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-TYSAN-DARWIN-CXX: libclang_rt.tysan_osx_dynamic.dylib
+// CHECK-TYSAN-DARWIN-CXX-NOT: -lc++abi
 
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \

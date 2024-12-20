@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
-#define _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#define _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H
 
-#include <__config>
-#include <__functional/binary_function.h>
-#include <__functional/invoke.h>
-#include <__functional/unary_function.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_same.h>
-#include <__utility/declval.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/binary_function.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/unary_function.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -228,4 +228,4 @@ struct __invoke_return {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H

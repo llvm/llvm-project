@@ -14,10 +14,10 @@
 //  If Extent is not equal to dynamic_extent, then count shall be equal to Extent.
 //
 
-
-#include <span>
 #include <cassert>
+#include <cstddef>
 #include <iterator>
+#include <span>
 #include <type_traits>
 
 template <std::size_t Extent>

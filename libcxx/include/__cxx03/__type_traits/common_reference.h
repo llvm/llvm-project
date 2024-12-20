@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H
-#define _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_COMMON_REFERENCE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_COMMON_REFERENCE_H
 
-#include <__config>
-#include <__type_traits/common_type.h>
-#include <__type_traits/copy_cv.h>
-#include <__type_traits/copy_cvref.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_cvref.h>
-#include <__type_traits/remove_reference.h>
-#include <__utility/declval.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/copy_cv.h>
+#include <__cxx03/__type_traits/copy_cvref.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/remove_cv.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__type_traits/remove_reference.h>
+#include <__cxx03/__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -190,4 +190,4 @@ struct common_reference {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_COMMON_REFERENCE_H

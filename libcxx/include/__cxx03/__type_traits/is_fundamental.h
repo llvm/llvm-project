@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_FUNDAMENTAL_H
-#define _LIBCPP___TYPE_TRAITS_IS_FUNDAMENTAL_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_FUNDAMENTAL_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_FUNDAMENTAL_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_null_pointer.h>
-#include <__type_traits/is_void.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_null_pointer.h>
+#include <__cxx03/__type_traits/is_void.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,4 +45,4 @@ inline constexpr bool is_fundamental_v = is_fundamental<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_FUNDAMENTAL_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_FUNDAMENTAL_H

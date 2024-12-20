@@ -1829,7 +1829,7 @@ void testConstEscapeThroughAnotherField(void) {
 } // no-warning
 
 // PR15623
-int testNoCheckerDataPropogationFromLogicalOpOperandToOpResult(void) {
+int testNoCheckerDataPropagationFromLogicalOpOperandToOpResult(void) {
    char *param = malloc(10);
    char *value = malloc(10);
    int ok = (param && value);

@@ -152,7 +152,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   #pragma omp masked taskloop simd linear (S1) // expected-error {{'S1' does not refer to a value}}
   for (int k = 0; k < argc; ++k) ++k;
 #if defined(OMP52)
-  // omp52-error@+3{{step simple modifier is exclusive and can't be use with 'val', 'uval' or 'ref' modifier}}
+  // omp52-error@+3{{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
   // expected-error@+2 {{linear variable with incomplete type 'S1'}}
   // expected-error@+1 {{argument of a linear clause should be of integral or pointer type, not 'S2'}}
   #pragma omp masked taskloop simd linear (a, b: val, B::ib)

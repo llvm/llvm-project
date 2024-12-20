@@ -15,7 +15,6 @@
 #include "AMDGPUCallLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
-#include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -228,13 +227,6 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     auto AddrReg = MIRBuilder.buildPtrAdd(PtrTy, SPReg, OffsetReg);
     MPO = MachinePointerInfo::getStack(MF, Offset);
     return AddrReg.getReg(0);
-  }
-
-  void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
-    MIB.addUse(PhysReg, RegState::Implicit);
-    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
-    MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
@@ -472,9 +464,7 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
-  const Module *M = MF.getFunction().getParent();
-  if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
+  if (UserSGPRInfo.hasQueuePtr()) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
@@ -530,6 +520,12 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   // TODO: Align down to dword alignment and extract bits for extending loads.
   for (auto &Arg : F.args()) {
+    // TODO: Add support for kernarg preload.
+    if (Arg.hasAttribute("amdgpu-hidden-argument")) {
+      LLVM_DEBUG(dbgs() << "Preloading hidden arguments is not supported\n");
+      return false;
+    }
+
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);

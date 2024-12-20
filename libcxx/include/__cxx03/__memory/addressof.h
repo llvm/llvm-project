@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ADDRESSOF_H
-#define _LIBCPP___MEMORY_ADDRESSOF_H
+#ifndef _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
+#define _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -58,4 +58,4 @@ _Tp* addressof(const _Tp&&) noexcept = delete;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ADDRESSOF_H
+#endif // _LIBCPP___CXX03___MEMORY_ADDRESSOF_H

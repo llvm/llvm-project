@@ -16,8 +16,8 @@ define void @ld_div2_urem3_1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <8 x i64> [[VEC_IND]], <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = urem <8 x i64> [[TMP1]], <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <8 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = urem <8 x i64> [[TMP1]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> [[TMP2]], i32 1
@@ -50,12 +50,12 @@ define void @ld_div2_urem3_1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <8 x i64> [[TMP31]], i64 [[TMP24]], i32 5
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <8 x i64> [[TMP32]], i64 [[TMP25]], i32 6
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x i64> [[TMP33]], i64 [[TMP26]], i32 7
-; CHECK-NEXT:    [[TMP35:%.*]] = add nsw <8 x i64> [[TMP34]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[TMP35:%.*]] = add nsw <8 x i64> [[TMP34]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i64, ptr [[TMP36]], i32 0
 ; CHECK-NEXT:    store <8 x i64> [[TMP35]], ptr [[TMP37]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -108,9 +108,9 @@ define void @ld_div2_urem3_2(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <8 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv <8 x i64> [[TMP1]], <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = urem <8 x i64> [[TMP2]], <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <8 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <8 x i64> [[TMP1]], splat (i64 2)
+; CHECK-NEXT:    [[TMP3:%.*]] = urem <8 x i64> [[TMP2]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i64> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i64> [[TMP3]], i32 1
@@ -143,12 +143,12 @@ define void @ld_div2_urem3_2(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <8 x i64> [[TMP32]], i64 [[TMP25]], i32 5
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x i64> [[TMP33]], i64 [[TMP26]], i32 6
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <8 x i64> [[TMP34]], i64 [[TMP27]], i32 7
-; CHECK-NEXT:    [[TMP36:%.*]] = add nsw <8 x i64> [[TMP35]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[TMP36:%.*]] = add nsw <8 x i64> [[TMP35]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i64, ptr [[TMP37]], i32 0
 ; CHECK-NEXT:    store <8 x i64> [[TMP36]], ptr [[TMP38]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP39]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
@@ -201,7 +201,7 @@ define void @ld_div4(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <8 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <8 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i64> [[TMP1]], i32 1
@@ -234,12 +234,12 @@ define void @ld_div4(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <8 x i64> [[TMP30]], i64 [[TMP23]], i32 5
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <8 x i64> [[TMP31]], i64 [[TMP24]], i32 6
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <8 x i64> [[TMP32]], i64 [[TMP25]], i32 7
-; CHECK-NEXT:    [[TMP34:%.*]] = add nsw <8 x i64> [[TMP33]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[TMP34:%.*]] = add nsw <8 x i64> [[TMP33]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i64, ptr [[TMP35]], i32 0
 ; CHECK-NEXT:    store <8 x i64> [[TMP34]], ptr [[TMP36]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP37]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
@@ -296,7 +296,7 @@ define void @ld_div8_urem3(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i64> [[BROADCAST_SPLAT]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i64> [[BROADCAST_SPLAT]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    store <8 x i64> [[TMP5]], ptr [[TMP7]], align 8

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_PRINT
-#define _LIBCPP_PRINT
+#ifndef _LIBCPP___CXX03_PRINT
+#define _LIBCPP___CXX03_PRINT
 
 /*
 namespace std {
@@ -33,17 +33,17 @@ namespace std {
 }
 */
 
-#include <__assert>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__system_error/system_error.h>
-#include <__utility/forward.h>
-#include <cerrno>
-#include <cstdio>
-#include <format>
-#include <string>
-#include <string_view>
-#include <version>
+#include <__cxx03/__assert>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__system_error/system_error.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/cerrno>
+#include <__cxx03/cstdio>
+#include <__cxx03/format>
+#include <__cxx03/string>
+#include <__cxx03/string_view>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -399,4 +399,4 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_ar
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_PRINT
+#endif // _LIBCPP___CXX03_PRINT

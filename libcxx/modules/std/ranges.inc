@@ -125,18 +125,18 @@ export namespace std {
     } // namespace views
 #endif // _LIBCPP_STD_VER >= 23
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
     // [range.istream], istream view
     using std::ranges::basic_istream_view;
     using std::ranges::istream_view;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     using std::ranges::wistream_view;
 #  endif
 
     namespace views {
       using std::ranges::views::istream;
     }
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
     // Note: This declaration not in the synopsis or explicitly in the wording.
     // However it is needed for the range adaptors.

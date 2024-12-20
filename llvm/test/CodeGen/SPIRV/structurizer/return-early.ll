@@ -1,5 +1,8 @@
-; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s --match-full-lines
+; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
+
+; CHECK-DAG:         OpName %[[#reg_0:]] "reg2"
+; CHECK-DAG:         OpName %[[#reg_1:]] "reg1"
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"
@@ -36,37 +39,41 @@ while.body:
     i32 5, label %sw.bb2
   ]
 
-; CHECK: %[[#case_1]] = OpLabel
-; CHECK:                OpBranch %[[#switch_end]]
-sw.bb:
-  store i32 1, ptr %a, align 4
-  br label %while.end
-
-; CHECK: %[[#case_2]] = OpLabel
-; CHECK:                OpBranch %[[#switch_end]]
-sw.bb1:
-  store i32 3, ptr %a, align 4
-  br label %while.end
-
 ; CHECK: %[[#case_5]] = OpLabel
+; CHECK:                OpStore %[[#reg_0]] %[[#]]
 ; CHECK:                OpBranch %[[#switch_end]]
 sw.bb2:
   store i32 5, ptr %a, align 4
   br label %while.end
 
+; CHECK: %[[#case_2]] = OpLabel
+; CHECK:                OpStore %[[#reg_0]] %[[#]]
+; CHECK:                OpBranch %[[#switch_end]]
+sw.bb1:
+  store i32 3, ptr %a, align 4
+  br label %while.end
+
+; CHECK: %[[#case_1]] = OpLabel
+; CHECK:                OpStore %[[#reg_0]] %[[#]]
+; CHECK:                OpBranch %[[#switch_end]]
+sw.bb:
+  store i32 1, ptr %a, align 4
+  br label %while.end
+
 ; CHECK: %[[#switch_end]] = OpLabel
-; CHECK:       %[[#phi:]] = OpPhi %[[#type:]] %[[#A:]] %[[#while_body]] %[[#B:]] %[[#case_5]] %[[#B:]] %[[#case_2]] %[[#B:]] %[[#case_1]]
-; CHECK:       %[[#tmp:]] = OpIEqual %[[#type:]] %[[#A]] %[[#phi]]
+; CHECK:       %[[#val:]] = OpLoad %[[#]] %[[#reg_0]]
+; CHECK:       %[[#tmp:]] = OpIEqual %[[#type:]] %[[#]] %[[#val]]
 ; CHECK:                    OpBranchConditional %[[#tmp]] %[[#sw_default:]] %[[#while_end]]
 
 ; CHECK: %[[#sw_default]] = OpLabel
-; CHECK:                    OpStore %[[#A:]] %[[#B:]] Aligned 4
+; CHECK:                    OpStore %[[#]] %[[#B:]] Aligned 4
 ; CHECK:                    OpBranch %[[#for_cond:]]
 sw.default:
   store i32 0, ptr %i, align 4
   br label %for.cond
 
 ; CHECK: %[[#for_cond]] = OpLabel
+; CHECK:                  OpStore %[[#reg_1]] %[[#]]
 ; CHECK:                  OpSelectionMerge %[[#for_merge:]] None
 ; CHECK-NEXT:             OpBranchConditional %[[#cond:]] %[[#for_merge]] %[[#for_end:]]
 for.cond:
@@ -76,13 +83,14 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.end
 
 ; CHECK: %[[#for_end]] = OpLabel
+; CHECK:                 OpStore %[[#reg_1]] %[[#]]
 ; CHECK:                 OpBranch %[[#for_merge]]
 for.end:
   br label %while.end
 
 ; CHECK: %[[#for_merge]] = OpLabel
-; CHECK:      %[[#phi:]] = OpPhi %[[#type:]] %[[#A:]] %[[#for_cond]] %[[#B:]] %[[#for_end]]
-; CHECK:      %[[#tmp:]] = OpIEqual %[[#type:]] %[[#A]] %[[#phi]]
+; CHECK:      %[[#val:]] = OpLoad %[[#]] %[[#reg_1]]
+; CHECK:      %[[#tmp:]] = OpIEqual %[[#type:]] %[[#]] %[[#val]]
 ; CHECK:                   OpBranchConditional %[[#tmp]] %[[#for_body:]] %[[#while_end]]
 
 ; CHECK: %[[#for_body]] = OpLabel
