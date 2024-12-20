@@ -4976,7 +4976,8 @@ bool X86DAGToDAGISel::tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc,
   };
 
   auto canUseKMOV = [&]() {
-    if (Src0.getOpcode() != X86ISD::VBROADCAST)
+    if (Src0.getOpcode() != X86ISD::VBROADCAST &&
+        Src0.getOpcode() != X86ISD::VBROADCAST_LOAD)
       return false;
 
     if (Src1.getOpcode() != ISD::LOAD ||
@@ -4994,20 +4995,18 @@ bool X86DAGToDAGISel::tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc,
     if (!ConstVecType)
       return false;
 
-    for (unsigned i = 0, e = ConstVecType->getNumElements(), k = 1; i != e;
-         ++i, k *= 2) {
-      const auto *Element = ConstVec->getAggregateElement(i);
+    for (unsigned I = 0, E = ConstVecType->getNumElements(); I != E; ++I) {
+      const auto *Element = ConstVec->getAggregateElement(I);
       if (llvm::isa<llvm::UndefValue>(Element)) {
-        for (unsigned j = i + 1; j != e; ++j) {
-          if (!llvm::isa<llvm::UndefValue>(ConstVec->getAggregateElement(j)))
+        for (unsigned J = I + 1; J != E; ++J) {
+          if (!llvm::isa<llvm::UndefValue>(ConstVec->getAggregateElement(J)))
             return false;
         }
-        return i != 0;
+        return I != 0;
       }
 
-      if (Element->getUniqueInteger() != k) {
+      if (Element->getUniqueInteger() != 1 << I)
         return false;
-      }
     }
 
     return true;
@@ -5024,10 +5023,10 @@ bool X86DAGToDAGISel::tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc,
   MVT ResVT = Setcc.getSimpleValueType();
   if (CanFoldLoads) {
     if (canUseKMOV()) {
-      auto Op = Src0.getOperand(0);
-      if (Op.getSimpleValueType() == MVT::i8) {
+      auto Op = Src0.getOpcode() == X86ISD::VBROADCAST ? Src0.getOperand(0)
+                                                       : Src0.getOperand(1);
+      if (Op.getSimpleValueType() == MVT::i8)
         Op = SDValue(CurDAG->getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Op));
-      }
       CNode = CurDAG->getMachineNode(
           ResVT.getVectorNumElements() <= 8 ? X86::KMOVBkr : X86::KMOVWkr, dl,
           ResVT, Op);
