@@ -115,7 +115,7 @@ protected:
 #define STMT_RANGE(BASE, FIRST, LAST)
 #define LAST_STMT_RANGE(BASE, FIRST, LAST)                                     \
   static_assert(                                                               \
-      llvm::isInt<NumStmtBits>(StmtClass::LAST##Class),                        \
+      llvm::isUInt<NumStmtBits>(StmtClass::LAST##Class),                       \
       "The number of 'StmtClass'es is strictly bounded under two to "          \
       "the power of 'NumStmtBits'");
 #define ABSTRACT_STMT(STMT)
