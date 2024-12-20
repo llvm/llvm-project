@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
@@ -91,6 +92,7 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
       createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(createArithToLLVMConversionPass());
+  pm.addPass(createConvertControlFlowToLLVMPass());
 
   // Finalize GPU code generation.
   if (gpuCodegen) {
