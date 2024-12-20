@@ -638,7 +638,7 @@ void MCELFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
                                      bool OverwriteExisting) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute, Contents)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::NumericAttribute;
@@ -655,7 +655,7 @@ void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
 void MCELFStreamer::setAttributeItem(unsigned Attribute, StringRef Value,
                                      bool OverwriteExisting) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute, Contents)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::TextAttribute;
@@ -673,7 +673,7 @@ void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
                                       StringRef StringValue,
                                       bool OverwriteExisting) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute, Contents)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::NumericAndTextAttributes;
@@ -689,9 +689,8 @@ void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
 }
 
 MCELFStreamer::AttributeItem *
-MCELFStreamer::getAttributeItem(unsigned Attribute,
-                                SmallVector<AttributeItem, 64> &Attributes) {
-  for (AttributeItem &Item : Attributes)
+MCELFStreamer::getAttributeItem(unsigned Attribute) {
+  for (AttributeItem &Item : Contents)
     if (Item.Tag == Attribute)
       return &Item;
   return nullptr;

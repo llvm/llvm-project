@@ -10,10 +10,8 @@
 #define LLVM_MC_MCELFSTREAMER_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/Support/ARMBuildAttributes.h"
 
 namespace llvm {
 
@@ -141,8 +139,7 @@ public:
   }
 
 private:
-  AttributeItem *getAttributeItem(unsigned Attribute,
-                                  SmallVector<AttributeItem, 64> &Attributes);
+  AttributeItem *getAttributeItem(unsigned Attribute);
   size_t calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) const;
   void createAttributesSection(StringRef Vendor, const Twine &Section,
                                unsigned Type, MCSection *&AttributeSection,

@@ -34,7 +34,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 #include "llvm/Support/AArch64BuildAttributes.h"
-#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -48,7 +47,6 @@ class AArch64ELFStreamer;
 class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   formatted_raw_ostream &OS;
   std::string VendorTag;
-  bool IsVerboseAsm;
 
   void emitInst(uint32_t Inst) override;
 
@@ -287,8 +285,7 @@ public:
 
 AArch64TargetAsmStreamer::AArch64TargetAsmStreamer(MCStreamer &S,
                                                    formatted_raw_ostream &OS)
-    : AArch64TargetStreamer(S), OS(OS), VendorTag("eabi"),
-      IsVerboseAsm(S.isVerboseAsm()) {}
+    : AArch64TargetStreamer(S), OS(OS) {}
 
 void AArch64TargetAsmStreamer::emitInst(uint32_t Inst) {
   OS << "\t.inst\t0x" << Twine::utohexstr(Inst) << "\n";

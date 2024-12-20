@@ -19,13 +19,10 @@
 #define LLVM_SUPPORT_ARMBUILDATTRIBUTES_H
 
 #include "llvm/Support/ELFAttributes.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Record.h"
 
 namespace llvm {
-class StringRef;
-
 namespace ARMBuildAttrs {
+
 const TagNameMap &getARMAttributeTags();
 
 enum SpecialAttr {
