@@ -21838,7 +21838,8 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
     return SDValue();
 
   bool ExtOpIsSigned = Ext.getOpcode() == ISD::SIGN_EXTEND;
-  unsigned BottomOpcode = ExtOpIsSigned ? AArch64ISD::SADDWB : AArch64ISD::UADDWB;
+  unsigned BottomOpcode =
+      ExtOpIsSigned ? AArch64ISD::SADDWB : AArch64ISD::UADDWB;
   unsigned TopOpcode = ExtOpIsSigned ? AArch64ISD::SADDWT : AArch64ISD::UADDWT;
   SDValue BottomNode = DAG.getNode(BottomOpcode, DL, AccVT, Acc, ExtOp);
   return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, ExtOp);
