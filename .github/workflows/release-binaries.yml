@@ -151,7 +151,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04)
+          ubuntu-22.04*)
             runs_on="depot-${{ inputs.runs-on }}-16"
             multi_stage="false"
             ;;
