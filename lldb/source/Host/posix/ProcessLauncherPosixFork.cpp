@@ -21,8 +21,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <sstream>
 #include <csignal>
+#include <sstream>
 
 #ifdef __ANDROID__
 #include <android/api-level.h>
@@ -47,8 +47,7 @@ static void write_string(int error_fd, const char *str) {
   (void)r;
 }
 
-[[noreturn]] static void ExitWithError(int error_fd,
-                                       const char *operation) {
+[[noreturn]] static void ExitWithError(int error_fd, const char *operation) {
   int err = errno;
   write_string(error_fd, operation);
   write_string(error_fd, " failed: ");

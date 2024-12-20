@@ -70,6 +70,11 @@ void defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
                                 const Fortran::semantics::Symbol &sym,
                                 Fortran::lower::SymMap &symMap);
 
+/// Call clone initialization runtime routine to initialize \p sym's value.
+void initializeCloneAtRuntime(Fortran::lower::AbstractConverter &converter,
+                              const Fortran::semantics::Symbol &sym,
+                              Fortran::lower::SymMap &symMap);
+
 /// Create a fir::GlobalOp given a module variable definition. This is intended
 /// to be used when lowering a module definition, not when lowering variables
 /// used from a module. For used variables instantiateVariable must directly be

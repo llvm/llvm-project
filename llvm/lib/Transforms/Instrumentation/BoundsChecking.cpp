@@ -255,6 +255,8 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     CallInst *TrapCall = Opts.UseTrap
                              ? InsertTrap(IRB)
                              : InsertCall(IRB, Opts.MayReturn, Opts.Name);
+      // Ideally we would use the SanitizerHandler::OutOfBounds constant
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
 
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);
