@@ -212,11 +212,13 @@ set(files
   __atomic/atomic_sync.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
-  __atomic/cxx_atomic_impl.h
   __atomic/fence.h
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
+  __atomic/support.h
+  __atomic/support/c11.h
+  __atomic/support/gcc.h
   __atomic/to_gcc_order.h
   __bit/bit_cast.h
   __bit/bit_ceil.h
@@ -358,6 +360,7 @@ set(files
   __filesystem/space_info.h
   __filesystem/u8path.h
   __flat_map/flat_map.h
+  __flat_map/key_value_iterator.h
   __flat_map/sorted_unique.h
   __format/buffer.h
   __format/concepts.h
@@ -500,12 +503,11 @@ set(files
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
-  __locale_dir/locale_base_api/win32.h
-  __locale_dir/locale_guard.h
   __locale_dir/pad_and_output.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
+  __locale_dir/support/windows.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -578,6 +580,16 @@ set(files
   __mutex/once_flag.h
   __mutex/tag_types.h
   __mutex/unique_lock.h
+  __new/align_val_t.h
+  __new/allocate.h
+  __new/destroying_delete_t.h
+  __new/exceptions.h
+  __new/global_new_delete.h
+  __new/interference_size.h
+  __new/launder.h
+  __new/new_handler.h
+  __new/nothrow_t.h
+  __new/placement_new_delete.h
   __node_handle
   __numeric/accumulate.h
   __numeric/adjacent_difference.h
@@ -761,6 +773,7 @@ set(files
   __type_traits/decay.h
   __type_traits/dependent_type.h
   __type_traits/desugars_to.h
+  __type_traits/detected_or.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h

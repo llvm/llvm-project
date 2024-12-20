@@ -98,8 +98,10 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
@@ -130,6 +132,7 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TailDuplication.h"
@@ -217,11 +220,11 @@
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
-#include "llvm/Transforms/Instrumentation/PoisonChecking.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
@@ -309,6 +312,7 @@
 #include "llvm/Transforms/Utils/DXILUpgrade.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/HelloWorld.h"
 #include "llvm/Transforms/Utils/IRNormalizer.h"
@@ -1277,9 +1281,31 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
   return Opts;
 }
 
-Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
-  RealtimeSanitizerOptions Result;
-  return Result;
+Expected<BoundsCheckingPass::ReportingMode>
+parseBoundsCheckingOptions(StringRef Params) {
+  BoundsCheckingPass::ReportingMode Mode =
+      BoundsCheckingPass::ReportingMode::Trap;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    if (ParamName == "trap") {
+      Mode = BoundsCheckingPass::ReportingMode::Trap;
+    } else if (ParamName == "rt") {
+      Mode = BoundsCheckingPass::ReportingMode::FullRuntime;
+    } else if (ParamName == "rt-abort") {
+      Mode = BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+    } else if (ParamName == "min-rt") {
+      Mode = BoundsCheckingPass::ReportingMode::MinRuntime;
+    } else if (ParamName == "min-rt-abort") {
+      Mode = BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Mode;
 }
 
 } // namespace

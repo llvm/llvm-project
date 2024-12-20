@@ -1593,8 +1593,12 @@ namespace substitution_test {
     void unlockData()  UNLOCK_FUNCTION(mu);
 
     void doSomething() EXCLUSIVE_LOCKS_REQUIRED(mu)  { }
+    void operator()()  EXCLUSIVE_LOCKS_REQUIRED(mu)  { }
+
+    MyData operator+(const MyData& other) const SHARED_LOCKS_REQUIRED(mu, other.mu);
   };
 
+  MyData operator-(const MyData& a, const MyData& b) SHARED_LOCKS_REQUIRED(a.mu, b.mu);
 
   class DataLocker {
   public:
@@ -1606,6 +1610,27 @@ namespace substitution_test {
   class Foo {
   public:
     void foo(MyData* d) EXCLUSIVE_LOCKS_REQUIRED(d->mu) { }
+
+    void subst(MyData& d) {
+      d.doSomething(); // expected-warning {{calling function 'doSomething' requires holding mutex 'd.mu' exclusively}}
+      d();             // expected-warning {{calling function 'operator()' requires holding mutex 'd.mu' exclusively}}
+      d.operator()();  // expected-warning {{calling function 'operator()' requires holding mutex 'd.mu' exclusively}}
+
+      d.lockData();
+      d.doSomething();
+      d();
+      d.operator()();
+      d.unlockData();
+    }
+
+    void binop(MyData& a, MyData& b) EXCLUSIVE_LOCKS_REQUIRED(a.mu) {
+      a + b; // expected-warning {{calling function 'operator+' requires holding mutex 'b.mu'}}
+             // expected-note@-1 {{found near match 'a.mu'}}
+      b + a; // expected-warning {{calling function 'operator+' requires holding mutex 'b.mu'}}
+             // expected-note@-1 {{found near match 'a.mu'}}
+      a - b; // expected-warning {{calling function 'operator-' requires holding mutex 'b.mu'}}
+             // expected-note@-1 {{found near match 'a.mu'}}
+    }
 
     void bar1(MyData* d) {
       d->lockData();
@@ -5172,8 +5197,12 @@ class Foo {
     };
 
     func1();  // expected-warning {{calling function 'operator()' requires holding mutex 'mu_' exclusively}}
+    func1.operator()();  // expected-warning {{calling function 'operator()' requires holding mutex 'mu_' exclusively}}
     func2();
+    func2.operator()();
     func3();
+    mu_.Unlock();
+    func3.operator()();
     mu_.Unlock();
   }
 };

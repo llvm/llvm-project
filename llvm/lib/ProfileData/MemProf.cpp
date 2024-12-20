@@ -290,7 +290,7 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
   return Result;
 }
 
-CallStackId hashCallStack(ArrayRef<FrameId> CS) {
+CallStackId IndexedMemProfData::hashCallStack(ArrayRef<FrameId> CS) const {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
       HashBuilder;
   for (FrameId F : CS)
@@ -335,8 +335,7 @@ template <typename FrameIdTy>
 LinearCallStackId CallStackRadixTreeBuilder<FrameIdTy>::encodeCallStack(
     const llvm::SmallVector<FrameIdTy> *CallStack,
     const llvm::SmallVector<FrameIdTy> *Prev,
-    std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
-        MemProfFrameIndexes) {
+    const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes) {
   // Compute the length of the common root prefix between Prev and CallStack.
   uint32_t CommonLen = 0;
   if (Prev) {
@@ -381,8 +380,7 @@ template <typename FrameIdTy>
 void CallStackRadixTreeBuilder<FrameIdTy>::build(
     llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
         &&MemProfCallStackData,
-    std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
-        MemProfFrameIndexes,
+    const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes,
     llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram) {
   // Take the vector portion of MemProfCallStackData.  The vector is exactly
   // what we need to sort.  Also, we no longer need its lookup capability.
@@ -510,6 +508,7 @@ void CallStackRadixTreeBuilder<FrameIdTy>::build(
 
 // Explicitly instantiate class with the utilized FrameIdTy.
 template class CallStackRadixTreeBuilder<FrameId>;
+template class CallStackRadixTreeBuilder<LinearFrameId>;
 
 template <typename FrameIdTy>
 llvm::DenseMap<FrameIdTy, FrameStat>
@@ -532,22 +531,9 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
 template llvm::DenseMap<FrameId, FrameStat> computeFrameHistogram<FrameId>(
     llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
         &MemProfCallStackData);
-
-void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
-  for (const auto &AS : Record.AllocSites) {
-    assert(AS.CSId == hashCallStack(AS.CallStack));
-    (void)AS;
-  }
-}
-
-void verifyFunctionProfileData(
-    const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
-        &FunctionProfileData) {
-  for (const auto &[GUID, Record] : FunctionProfileData) {
-    (void)GUID;
-    verifyIndexedMemProfRecord(Record);
-  }
-}
-
+template llvm::DenseMap<LinearFrameId, FrameStat>
+computeFrameHistogram<LinearFrameId>(
+    llvm::MapVector<CallStackId, llvm::SmallVector<LinearFrameId>>
+        &MemProfCallStackData);
 } // namespace memprof
 } // namespace llvm

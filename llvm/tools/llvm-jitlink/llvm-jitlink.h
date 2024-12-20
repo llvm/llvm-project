@@ -15,9 +15,9 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
@@ -33,20 +33,14 @@ namespace llvm {
 struct Session {
 
   struct LazyLinkingSupport {
-    LazyLinkingSupport(std::unique_ptr<orc::EPCIndirectionUtils> EPCIU,
-                       std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+    LazyLinkingSupport(std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+                       std::unique_ptr<orc::LazyReexportsManager> LRMgr,
                        orc::ObjectLinkingLayer &ObjLinkingLayer)
-        : EPCIU(std::move(EPCIU)), RSMgr(std::move(RSMgr)),
-          LazyObjLinkingLayer(ObjLinkingLayer,
-                              this->EPCIU->getLazyCallThroughManager(),
-                              *this->RSMgr) {}
-    ~LazyLinkingSupport() {
-      if (auto Err = EPCIU->cleanup())
-        LazyObjLinkingLayer.getExecutionSession().reportError(std::move(Err));
-    }
+        : RSMgr(std::move(RSMgr)), LRMgr(std::move(LRMgr)),
+          LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
 
-    std::unique_ptr<orc::EPCIndirectionUtils> EPCIU;
     std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
+    std::unique_ptr<orc::LazyReexportsManager> LRMgr;
     orc::LazyObjectLinkingLayer LazyObjLinkingLayer;
   };
 
@@ -78,7 +72,6 @@ struct Session {
     using LinkGraph = jitlink::LinkGraph;
     using GetSymbolTargetFunction =
         unique_function<Expected<Symbol &>(LinkGraph &G, jitlink::Block &)>;
-
     Error registerGOTEntry(LinkGraph &G, Symbol &Sym,
                            GetSymbolTargetFunction GetSymbolTarget);
     Error registerStubEntry(LinkGraph &G, Symbol &Sym,
@@ -88,7 +81,7 @@ struct Session {
   };
 
   using DynLibJDMap = std::map<std::string, orc::JITDylib *, std::less<>>;
-  using SymbolInfoMap = StringMap<MemoryRegionInfo>;
+  using SymbolInfoMap = DenseMap<orc::SymbolStringPtr, MemoryRegionInfo>;
   using FileInfoMap = StringMap<FileInfo>;
 
   Expected<orc::JITDylib *> getOrLoadDynamicLibrary(StringRef LibPath);
@@ -111,8 +104,8 @@ struct Session {
   Expected<MemoryRegionInfo &> findGOTEntryInfo(StringRef FileName,
                                                 StringRef TargetName);
 
-  bool isSymbolRegistered(StringRef Name);
-  Expected<MemoryRegionInfo &> findSymbolInfo(StringRef SymbolName,
+  bool isSymbolRegistered(const orc::SymbolStringPtr &Name);
+  Expected<MemoryRegionInfo &> findSymbolInfo(const orc::SymbolStringPtr &Name,
                                               Twine ErrorMsgStem);
 
   DynLibJDMap DynLibJDs;

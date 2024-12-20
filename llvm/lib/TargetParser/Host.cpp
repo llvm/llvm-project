@@ -280,8 +280,9 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
   if (Implementer == "0x46") { // Fujitsu Ltd.
     return StringSwitch<const char *>(Part)
-      .Case("0x001", "a64fx")
-      .Default("generic");
+        .Case("0x001", "a64fx")
+        .Case("0x003", "fujitsu-monaka")
+        .Default("generic");
   }
 
   if (Implementer == "0x4e") { // NVIDIA Corporation
@@ -344,6 +345,29 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     case 0x1003:
       return "exynos-m4";
     }
+  }
+
+  if (Implementer == "0x61") { // Apple
+    return StringSwitch<const char *>(Part)
+        .Case("0x020", "apple-m1")
+        .Case("0x021", "apple-m1")
+        .Case("0x022", "apple-m1")
+        .Case("0x023", "apple-m1")
+        .Case("0x024", "apple-m1")
+        .Case("0x025", "apple-m1")
+        .Case("0x028", "apple-m1")
+        .Case("0x029", "apple-m1")
+        .Case("0x030", "apple-m2")
+        .Case("0x031", "apple-m2")
+        .Case("0x032", "apple-m2")
+        .Case("0x033", "apple-m2")
+        .Case("0x034", "apple-m2")
+        .Case("0x035", "apple-m2")
+        .Case("0x038", "apple-m2")
+        .Case("0x039", "apple-m2")
+        .Case("0x049", "apple-m3")
+        .Case("0x048", "apple-m3")
+        .Default("generic");
   }
 
   if (Implementer == "0x63") { // Arm China.
@@ -808,16 +832,31 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     // Alderlake:
     case 0x97:
     case 0x9a:
+      CPU = "alderlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Gracemont
     case 0xbe:
+      CPU = "gracemont";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Raptorlake:
     case 0xb7:
     case 0xba:
     case 0xbf:
+      CPU = "raptorlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Meteorlake:
     case 0xaa:
     case 0xac:
-      CPU = "alderlake";
+      CPU = "meteorlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
@@ -833,9 +872,14 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake S:
     case 0xc6:
+      CPU = "arrowlake-s";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
+      break;
+
     // Lunarlake:
     case 0xbd:
-      CPU = "arrowlake-s";
+      CPU = "lunarlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
       break;
@@ -871,6 +915,11 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Emerald Rapids:
     case 0xcf:
+      CPU = "emeraldrapids";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_SAPPHIRERAPIDS;
+      break;
+
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
@@ -2011,7 +2060,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 const StringMap<bool> sys::getHostCPUFeatures() {
   unsigned long hwcap = getauxval(AT_HWCAP);
   bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
-  const uint32_t cpucfg2 = 0x2, cpucfg3 = 0x3;
+  uint32_t cpucfg2 = 0x2, cpucfg3 = 0x3;
   __asm__("cpucfg %[cpucfg2], %[cpucfg2]\n\t" : [cpucfg2] "+r"(cpucfg2));
   __asm__("cpucfg %[cpucfg3], %[cpucfg3]\n\t" : [cpucfg3] "+r"(cpucfg3));
 
@@ -2025,13 +2074,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["lvz"] = hwcap & (1UL << 9);  // HWCAP_LOONGARCH_LVZ
 
   Features["frecipe"] = cpucfg2 & (1U << 25); // CPUCFG.2.FRECIPE
+  Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
   Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
+  Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
 
   Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
 
   // TODO: Need to complete.
-  // Features["div32"] = cpucfg2 & (1U << 26);       // CPUCFG.2.DIV32
-  // Features["lamcas"] = cpucfg2 & (1U << 28);      // CPUCFG.2.LAMCAS
   // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
   // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
   return Features;

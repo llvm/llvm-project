@@ -12,13 +12,24 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if defined(__NVPTX__) || defined(__AMDGPU__)
+#if (defined(__NVPTX__) || defined(__AMDGPU__)) &&                             \
+    !((defined(__CUDA__) && !defined(__CUDA_ARCH__)) ||                        \
+      (defined(__HIP__) && !defined(__HIP_DEVICE_COMPILE__)))
 #include <gpuintrin.h>
 #define RPC_TARGET_IS_GPU
 #endif
 
-#ifndef RPC_INLINE
-#define RPC_INLINE inline
+// Workaround for missing __has_builtin in < GCC 10.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+#ifndef RPC_ATTRS
+#if defined(__CUDA__) || defined(__HIP__)
+#define RPC_ATTRS __attribute__((host, device)) inline
+#else
+#define RPC_ATTRS inline
+#endif
 #endif
 
 namespace rpc {
@@ -40,26 +51,26 @@ template <class T> struct is_const<const T> : type_constant<bool, true> {};
 
 /// Freestanding implementation of std::move.
 template <class T>
-RPC_INLINE constexpr typename remove_reference<T>::type &&move(T &&t) {
+RPC_ATTRS constexpr typename remove_reference<T>::type &&move(T &&t) {
   return static_cast<typename remove_reference<T>::type &&>(t);
 }
 
 /// Freestanding implementation of std::forward.
 template <typename T>
-RPC_INLINE constexpr T &&forward(typename remove_reference<T>::type &value) {
+RPC_ATTRS constexpr T &&forward(typename remove_reference<T>::type &value) {
   return static_cast<T &&>(value);
 }
 template <typename T>
-RPC_INLINE constexpr T &&forward(typename remove_reference<T>::type &&value) {
+RPC_ATTRS constexpr T &&forward(typename remove_reference<T>::type &&value) {
   return static_cast<T &&>(value);
 }
 
 struct in_place_t {
-  RPC_INLINE explicit in_place_t() = default;
+  RPC_ATTRS explicit in_place_t() = default;
 };
 
 struct nullopt_t {
-  RPC_INLINE constexpr explicit nullopt_t() = default;
+  RPC_ATTRS constexpr explicit nullopt_t() = default;
 };
 
 constexpr inline in_place_t in_place{};
@@ -75,15 +86,15 @@ template <typename T> class optional {
 
     bool in_use = false;
 
-    RPC_INLINE ~OptionalStorage() { reset(); }
+    RPC_ATTRS ~OptionalStorage() { reset(); }
 
-    RPC_INLINE constexpr OptionalStorage() : empty() {}
+    RPC_ATTRS constexpr OptionalStorage() : empty() {}
 
     template <typename... Args>
-    RPC_INLINE constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+    RPC_ATTRS constexpr explicit OptionalStorage(in_place_t, Args &&...args)
         : stored_value(forward<Args>(args)...) {}
 
-    RPC_INLINE constexpr void reset() {
+    RPC_ATTRS constexpr void reset() {
       if (in_use)
         stored_value.~U();
       in_use = false;
@@ -93,72 +104,70 @@ template <typename T> class optional {
   OptionalStorage<T> storage;
 
 public:
-  RPC_INLINE constexpr optional() = default;
-  RPC_INLINE constexpr optional(nullopt_t) {}
+  RPC_ATTRS constexpr optional() = default;
+  RPC_ATTRS constexpr optional(nullopt_t) {}
 
-  RPC_INLINE constexpr optional(const T &t) : storage(in_place, t) {
+  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {
     storage.in_use = true;
   }
-  RPC_INLINE constexpr optional(const optional &) = default;
+  RPC_ATTRS constexpr optional(const optional &) = default;
 
-  RPC_INLINE constexpr optional(T &&t) : storage(in_place, move(t)) {
+  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {
     storage.in_use = true;
   }
-  RPC_INLINE constexpr optional(optional &&O) = default;
+  RPC_ATTRS constexpr optional(optional &&O) = default;
 
-  RPC_INLINE constexpr optional &operator=(T &&t) {
+  RPC_ATTRS constexpr optional &operator=(T &&t) {
     storage = move(t);
     return *this;
   }
-  RPC_INLINE constexpr optional &operator=(optional &&) = default;
+  RPC_ATTRS constexpr optional &operator=(optional &&) = default;
 
-  RPC_INLINE constexpr optional &operator=(const T &t) {
+  RPC_ATTRS constexpr optional &operator=(const T &t) {
     storage = t;
     return *this;
   }
-  RPC_INLINE constexpr optional &operator=(const optional &) = default;
+  RPC_ATTRS constexpr optional &operator=(const optional &) = default;
 
-  RPC_INLINE constexpr void reset() { storage.reset(); }
+  RPC_ATTRS constexpr void reset() { storage.reset(); }
 
-  RPC_INLINE constexpr const T &value() const & { return storage.stored_value; }
+  RPC_ATTRS constexpr const T &value() const & { return storage.stored_value; }
 
-  RPC_INLINE constexpr T &value() & { return storage.stored_value; }
+  RPC_ATTRS constexpr T &value() & { return storage.stored_value; }
 
-  RPC_INLINE constexpr explicit operator bool() const { return storage.in_use; }
-  RPC_INLINE constexpr bool has_value() const { return storage.in_use; }
-  RPC_INLINE constexpr const T *operator->() const {
+  RPC_ATTRS constexpr explicit operator bool() const { return storage.in_use; }
+  RPC_ATTRS constexpr bool has_value() const { return storage.in_use; }
+  RPC_ATTRS constexpr const T *operator->() const {
     return &storage.stored_value;
   }
-  RPC_INLINE constexpr T *operator->() { return &storage.stored_value; }
-  RPC_INLINE constexpr const T &operator*() const & {
+  RPC_ATTRS constexpr T *operator->() { return &storage.stored_value; }
+  RPC_ATTRS constexpr const T &operator*() const & {
     return storage.stored_value;
   }
-  RPC_INLINE constexpr T &operator*() & { return storage.stored_value; }
+  RPC_ATTRS constexpr T &operator*() & { return storage.stored_value; }
 
-  RPC_INLINE constexpr T &&value() && { return move(storage.stored_value); }
-  RPC_INLINE constexpr T &&operator*() && { return move(storage.stored_value); }
+  RPC_ATTRS constexpr T &&value() && { return move(storage.stored_value); }
+  RPC_ATTRS constexpr T &&operator*() && { return move(storage.stored_value); }
 };
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
-RPC_INLINE void sleep_briefly() {
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
+RPC_ATTRS void sleep_briefly() {
+#if defined(__NVPTX__) && defined(RPC_TARGET_IS_GPU)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700)
     asm("nanosleep.u32 64;" ::: "memory");
-#elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#elif defined(__AMDGPU__) && defined(RPC_TARGET_IS_GPU)
   __builtin_amdgcn_s_sleep(2);
-#elif defined(LIBC_TARGET_ARCH_IS_X86)
+#elif __has_builtin(__builtin_ia32_pause)
   __builtin_ia32_pause();
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && __has_builtin(__builtin_arm_isb)
+#elif __has_builtin(__builtin_arm_isb)
   __builtin_arm_isb(0xf);
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  asm volatile("isb\n" ::: "memory");
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif
 }
 
 /// Conditional to indicate if this process is running on the GPU.
-RPC_INLINE constexpr bool is_process_gpu() {
+RPC_ATTRS constexpr bool is_process_gpu() {
 #ifdef RPC_TARGET_IS_GPU
   return true;
 #else
@@ -167,14 +176,15 @@ RPC_INLINE constexpr bool is_process_gpu() {
 }
 
 /// Wait for all lanes in the group to complete.
-RPC_INLINE void sync_lane(uint64_t lane_mask) {
+RPC_ATTRS void sync_lane([[maybe_unused]] uint64_t lane_mask) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_sync_lane(lane_mask);
 #endif
 }
 
 /// Copies the value from the first active thread to the rest.
-RPC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
+RPC_ATTRS uint32_t broadcast_value([[maybe_unused]] uint64_t lane_mask,
+                                   uint32_t x) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_read_first_lane_u32(lane_mask, x);
 #else
@@ -183,7 +193,7 @@ RPC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
 }
 
 /// Returns the number lanes that participate in the RPC interface.
-RPC_INLINE uint32_t get_num_lanes() {
+RPC_ATTRS uint32_t get_num_lanes() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_num_lanes();
 #else
@@ -192,7 +202,7 @@ RPC_INLINE uint32_t get_num_lanes() {
 }
 
 /// Returns the id of the thread inside of an AMD wavefront executing together.
-RPC_INLINE uint64_t get_lane_mask() {
+RPC_ATTRS uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_mask();
 #else
@@ -201,7 +211,7 @@ RPC_INLINE uint64_t get_lane_mask() {
 }
 
 /// Returns the id of the thread inside of an AMD wavefront executing together.
-RPC_INLINE uint32_t get_lane_id() {
+RPC_ATTRS uint32_t get_lane_id() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_id();
 #else
@@ -210,7 +220,7 @@ RPC_INLINE uint32_t get_lane_id() {
 }
 
 /// Conditional that is only true for a single thread in a lane.
-RPC_INLINE bool is_first_lane(uint64_t lane_mask) {
+RPC_ATTRS bool is_first_lane([[maybe_unused]] uint64_t lane_mask) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_is_first_in_lane(lane_mask);
 #else
@@ -219,7 +229,7 @@ RPC_INLINE bool is_first_lane(uint64_t lane_mask) {
 }
 
 /// Returns a bitmask of threads in the current lane for which \p x is true.
-RPC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
+RPC_ATTRS uint64_t ballot([[maybe_unused]] uint64_t lane_mask, bool x) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_ballot(lane_mask, x);
 #else
@@ -229,7 +239,7 @@ RPC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
 
 /// Return \p val aligned "upwards" according to \p align.
 template <typename V, typename A>
-RPC_INLINE constexpr V align_up(V val, A align) {
+RPC_ATTRS constexpr V align_up(V val, A align) {
   return ((val + V(align) - 1) / V(align)) * V(align);
 }
 
@@ -237,14 +247,14 @@ RPC_INLINE constexpr V align_up(V val, A align) {
 /// model. On the GPU stack variables are always private to a lane so we can
 /// simply use the variable passed in. On the CPU we need to allocate enough
 /// space for the whole lane and index into it.
-template <typename V> RPC_INLINE V &lane_value(V *val, uint32_t id) {
+template <typename V> RPC_ATTRS V &lane_value(V *val, uint32_t id) {
   if constexpr (is_process_gpu())
     return *val;
   return val[id];
 }
 
 /// Advance the \p p by \p bytes.
-template <typename T, typename U> RPC_INLINE T *advance(T *ptr, U bytes) {
+template <typename T, typename U> RPC_ATTRS T *advance(T *ptr, U bytes) {
   if constexpr (is_const<T>::value)
     return reinterpret_cast<T *>(reinterpret_cast<const uint8_t *>(ptr) +
                                  bytes);
@@ -253,11 +263,11 @@ template <typename T, typename U> RPC_INLINE T *advance(T *ptr, U bytes) {
 }
 
 /// Wrapper around the optimal memory copy implementation for the target.
-RPC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
+RPC_ATTRS void rpc_memcpy(void *dst, const void *src, size_t count) {
   __builtin_memcpy(dst, src, count);
 }
 
-template <class T> RPC_INLINE constexpr const T &max(const T &a, const T &b) {
+template <class T> RPC_ATTRS constexpr const T &max(const T &a, const T &b) {
   return (a < b) ? b : a;
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: r{{[0-9]+}} = sub(#-1,r{{[0-9]+}})
 
 define i32 @f0(i32 %a0) #0 {

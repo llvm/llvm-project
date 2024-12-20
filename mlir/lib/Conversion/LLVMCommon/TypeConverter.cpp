@@ -153,6 +153,12 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                        type.isVarArg());
   });
 
+  // Helper function that checks if the given value range is a bare pointer.
+  auto isBarePointer = [](ValueRange values) {
+    return values.size() == 1 &&
+           isa<LLVM::LLVMPointerType>(values.front().getType());
+  };
+
   // Argument materializations convert from the new block argument types
   // (multiple SSA values that make up a memref descriptor) back to the
   // original block argument type. The dialect conversion framework will then
@@ -161,11 +167,10 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   addArgumentMaterialization([&](OpBuilder &builder,
                                  UnrankedMemRefType resultType,
                                  ValueRange inputs, Location loc) {
-    if (inputs.size() == 1) {
-      // Bare pointers are not supported for unranked memrefs because a
-      // memref descriptor cannot be built just from a bare pointer.
+    // Note: Bare pointers are not supported for unranked memrefs because a
+    // memref descriptor cannot be built just from a bare pointer.
+    if (TypeRange(inputs) != getUnrankedMemRefDescriptorFields())
       return Value();
-    }
     Value desc =
         UnrankedMemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
     // An argument materialization must return a value of type
@@ -177,20 +182,17 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                  ValueRange inputs, Location loc) {
     Value desc;
-    if (inputs.size() == 1) {
-      // This is a bare pointer. We allow bare pointers only for function entry
-      // blocks.
-      BlockArgument barePtr = dyn_cast<BlockArgument>(inputs.front());
-      if (!barePtr)
-        return Value();
-      Block *block = barePtr.getOwner();
-      if (!block->isEntryBlock() ||
-          !isa<FunctionOpInterface>(block->getParentOp()))
-        return Value();
+    if (isBarePointer(inputs)) {
       desc = MemRefDescriptor::fromStaticShape(builder, loc, *this, resultType,
                                                inputs[0]);
-    } else {
+    } else if (TypeRange(inputs) ==
+               getMemRefDescriptorFields(resultType,
+                                         /*unpackAggregates=*/true)) {
       desc = MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
+    } else {
+      // The inputs are neither a bare pointer nor an unpacked memref
+      // descriptor. This materialization function cannot be used.
+      return Value();
     }
     // An argument materialization must return a value of type `resultType`,
     // so insert a cast from the memref descriptor type (!llvm.struct) to the
