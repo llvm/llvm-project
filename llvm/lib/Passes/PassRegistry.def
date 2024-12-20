@@ -625,8 +625,8 @@ FUNCTION_PASS_WITH_PARAMS(
     parseWinEHPrepareOptions, "demote-catchswitch-only")
 FUNCTION_PASS_WITH_PARAMS(
     "bounds-checking", "BoundsCheckingPass",
-    [](BoundsCheckingPass::ReportingMode Mode) {
-      return BoundsCheckingPass(Mode);
+    [](BoundsCheckingPass::BoundsCheckingOptions Options) {
+      return BoundsCheckingPass(Options);
     },
     parseBoundsCheckingOptions, "trap")
 #undef FUNCTION_PASS_WITH_PARAMS

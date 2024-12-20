@@ -1393,23 +1393,25 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
   return Opts;
 }
 
-Expected<BoundsCheckingPass::ReportingMode>
+Expected<BoundsCheckingPass::BoundsCheckingOptions>
 parseBoundsCheckingOptions(StringRef Params) {
-  BoundsCheckingPass::ReportingMode Mode =
-      BoundsCheckingPass::ReportingMode::Trap;
+  BoundsCheckingPass::BoundsCheckingOptions Options(
+      BoundsCheckingPass::ReportingMode::Trap, false);
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     if (ParamName == "trap") {
-      Mode = BoundsCheckingPass::ReportingMode::Trap;
+      Options.Mode = BoundsCheckingPass::ReportingMode::Trap;
     } else if (ParamName == "rt") {
-      Mode = BoundsCheckingPass::ReportingMode::FullRuntime;
+      Options.Mode = BoundsCheckingPass::ReportingMode::FullRuntime;
     } else if (ParamName == "rt-abort") {
-      Mode = BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+      Options.Mode = BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
     } else if (ParamName == "min-rt") {
-      Mode = BoundsCheckingPass::ReportingMode::MinRuntime;
+      Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntime;
     } else if (ParamName == "min-rt-abort") {
-      Mode = BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+      Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+    } else if (ParamName == "merge") {
+      Options.Merge = true;
     } else {
       return make_error<StringError>(
           formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
@@ -1417,7 +1419,7 @@ parseBoundsCheckingOptions(StringRef Params) {
           inconvertibleErrorCode());
     }
   }
-  return Mode;
+  return Options;
 }
 
 } // namespace
