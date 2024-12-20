@@ -325,6 +325,11 @@ benny.kra@gmail.com (email), [d0k](https://github.com/d0k) (GitHub)
 Teresa Johnson \
 tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) (GitHub)
 
+#### Library layering
+
+Nakamura Takumi \
+geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub)
+
 #### MCJIT, Orc, RuntimeDyld, PerfJITEvents
 
 Lang Hames \
