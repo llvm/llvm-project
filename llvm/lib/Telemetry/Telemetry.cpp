@@ -13,8 +13,7 @@ Error Manager::dispatch(TelemetryInfo *Entry) {
 
   Error AllErrs = Error::success();
   for (auto &Dest : Destinations) {
-    if (Error Err = Dest->receiveEntry(Entry))
-      AllErrs = joinErrors(std::move(AllErrs), std::move(Err));
+    AllErrs = joinErrors(std::move(AllErrs), Dest->receiveEntry(Entry));
   }
   return AllErrs;
 }
