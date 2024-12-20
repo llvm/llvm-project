@@ -18,7 +18,6 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -42,9 +41,6 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
-#include "clang/CIR/Dialect/IR/CIRAttrs.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -55,7 +51,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Casting.h"
@@ -669,67 +664,6 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
     return lowerCirAttrAsValue(parentOp, typeinfoAttr, rewriter, converter);
 
   llvm_unreachable("unhandled attribute type");
-}
-
-mlir::LLVM::TBAATypeDescriptorAttr
-createScalarTypeNode(mlir::MLIRContext *ctx, llvm::StringRef typeName,
-                     mlir::LLVM::TBAANodeAttr parent, int64_t offset) {
-  llvm::SmallVector<mlir::LLVM::TBAAMemberAttr, 2> members;
-  members.push_back(mlir::LLVM::TBAAMemberAttr::get(ctx, parent, offset));
-  return mlir::LLVM::TBAATypeDescriptorAttr::get(
-      ctx, typeName, llvm::ArrayRef<mlir::LLVM::TBAAMemberAttr>(members));
-}
-
-mlir::LLVM::TBAARootAttr getRoot(mlir::MLIRContext *ctx) {
-  return mlir::LLVM::TBAARootAttr::get(
-      ctx, mlir::StringAttr::get(ctx, "Simple C/C++ TBAA"));
-}
-
-mlir::LLVM::TBAATypeDescriptorAttr getChar(mlir::MLIRContext *ctx) {
-  return createScalarTypeNode(ctx, "omnipotent char", getRoot(ctx), 0);
-}
-
-// FIXME(cir): This should be moved and use tablegen approach
-// see https://github.com/llvm/clangir/pull/1220#discussion_r1889187867
-StringRef getTypeName(mlir::Type type) {
-  return TypeSwitch<mlir::Type, StringRef>(type)
-      .Case<cir::IntType>([](cir::IntType ty) { return ty.getTBAATypeName(); })
-      .Case<cir::SingleType>([](cir::SingleType) { return "float"; })
-      .Case<cir::DoubleType>([](cir::DoubleType) { return "double"; })
-      .Case<cir::FP80Type>([](cir::FP80Type) { return "f80"; })
-      .Case<cir::FP128Type>([](cir::FP128Type) { return "f128"; })
-      .Case<cir::LongDoubleType>(
-          [](cir::LongDoubleType) { return "long double"; })
-      .Case<cir::BoolType>([](cir::BoolType) { return "bool"; })
-      .Case<cir::PointerType>([](cir::PointerType) { return "any pointer"; })
-      .Default([](auto ty) {
-        llvm::errs() << "unknown type: " << ty << "\n";
-        return "unknown";
-      });
-}
-
-mlir::LLVM::TBAATypeDescriptorAttr
-lowerScalarType(mlir::MLIRContext *ctx, cir::TBAAScalarAttr scalarAttr) {
-  // special handle for omnipotent char
-  if (auto intTy = mlir::dyn_cast_or_null<cir::IntType>(scalarAttr.getType())) {
-    if (intTy.getWidth() == 1 || intTy.getWidth() == 8) {
-      return getChar(ctx);
-    }
-  }
-  auto name = getTypeName(scalarAttr.getType());
-  return createScalarTypeNode(ctx, name, getChar(ctx), 0);
-}
-
-mlir::ArrayAttr lowerCIRTBAAAttr(mlir::Attribute tbaa,
-                                 mlir::ConversionPatternRewriter &rewriter) {
-  auto *ctx = rewriter.getContext();
-  if (auto scalarAttr = mlir::dyn_cast<cir::TBAAScalarAttr>(tbaa)) {
-    auto accessType = lowerScalarType(ctx, scalarAttr);
-    auto tag = mlir::LLVM::TBAATagAttr::get(accessType, accessType, 0);
-    return mlir::ArrayAttr::get(ctx, {tag});
-  }
-  assert(!cir::MissingFeatures::tbaaTagForStruct());
-  return mlir::ArrayAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1578,14 +1512,10 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   }
 
   // TODO: nontemporal, syncscope.
-  auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
-      op->getLoc(), llvmTy, adaptor.getAddr(), /* alignment */ alignment,
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, llvmTy, adaptor.getAddr(), /* alignment */ alignment,
       op.getIsVolatile(), /* nontemporal */ false,
       /* invariant */ false, /* invariantGroup */ invariant, ordering);
-  rewriter.replaceOp(op, loadOp);
-  if (auto tbaa = op.getTbaaAttr()) {
-    loadOp.setTBAATags(lowerCIRTBAAAttr(tbaa, rewriter));
-  }
   return mlir::LogicalResult::success();
 }
 
@@ -1617,14 +1547,9 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   }
 
   // TODO: nontemporal, syncscope.
-  auto storeOp = rewriter.create<mlir::LLVM::StoreOp>(
-      op->getLoc(), adaptor.getValue(), adaptor.getAddr(), alignment,
-      op.getIsVolatile(),
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+      op, adaptor.getValue(), adaptor.getAddr(), alignment, op.getIsVolatile(),
       /* nontemporal */ false, /* invariantGroup */ invariant, ordering);
-  rewriter.replaceOp(op, storeOp);
-  if (auto tbaa = op.getTbaaAttr()) {
-    storeOp.setTBAATags(lowerCIRTBAAAttr(tbaa, rewriter));
-  }
   return mlir::LogicalResult::success();
 }
 

@@ -588,7 +588,7 @@ def LoadOp : CIR_Op<"load", [
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<MemOrder>:$mem_order,
-                       OptionalAttr<CIR_AnyTBAAAttr>:$tbaa
+                       OptionalAttr<ArrayAttr>:$tbaa
                        );
   let results = (outs CIR_AnyType:$result);
 
@@ -657,7 +657,7 @@ def StoreOp : CIR_Op<"store", [
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<MemOrder>:$mem_order,
-                       OptionalAttr<CIR_AnyTBAAAttr>:$tbaa);
+                       OptionalAttr<ArrayAttr>:$tbaa);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
@@ -4068,7 +4068,7 @@ def CopyOp : CIR_Op<"copy",
   let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
                        Arg<CIR_PointerType, "", [MemRead]>:$src,
                        UnitAttr:$is_volatile,
-                       OptionalAttr<CIR_TBAAAttr>:$tbaa);
+                       OptionalAttr<ArrayAttr>:$tbaa);
   let summary = "Copies contents from a CIR pointer to another";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.copy` will copy the memory

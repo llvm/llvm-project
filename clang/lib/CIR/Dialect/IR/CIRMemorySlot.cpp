@@ -151,7 +151,7 @@ DeletionKind cir::CopyOp::removeBlockingUses(
   if (loadsFrom(slot))
     builder.create<cir::StoreOp>(getLoc(), reachingDefinition, getDst(), false,
                                  mlir::IntegerAttr{}, cir::MemOrderAttr(),
-                                 cir::TBAAAttr{});
+                                 mlir::ArrayAttr{});
   return DeletionKind::Delete;
 }
 

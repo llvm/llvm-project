@@ -74,28 +74,6 @@ def CIR_IntType : CIR_Type<"Int", "int",
     static bool isValidPrimitiveIntBitwidth(unsigned width) {
       return width == 8 || width == 16 || width == 32 || width == 64;
     }
-
-    llvm::StringRef getTBAATypeName() const {
-      switch (getWidth()) {
-        case 1:
-        case 8: {
-          return "omnipotent char";
-        }
-        case 16: {
-          return "short";
-        }
-        case 32: {
-          return "int";
-        }
-        case 64: {
-          return "long";
-        }
-        default: {
-          llvm::errs() << "unknown type: " << *this << "\n";
-          return "unknown";
-        }
-      }
-    }
   }];
   let genVerifyDecl = 1;
 }
@@ -628,13 +606,6 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_MethodType,
   CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_FuncType, CIR_VoidType,
   CIR_StructType, CIR_ExceptionType, CIR_AnyFloat, CIR_FP16, CIR_BFloat16,
-  CIR_ComplexType
-]>;
-
-def CIR_AnyScalarType : AnyTypeOf<[
-  CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_MethodType,
-  CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_FuncType, CIR_VoidType,
-  CIR_ExceptionType, CIR_AnyFloat, CIR_FP16, CIR_BFloat16,
   CIR_ComplexType
 ]>;
 
