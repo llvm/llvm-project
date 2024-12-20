@@ -23,7 +23,7 @@ Descriptor *RTDEF(CUFAllocDescriptor)(
   return reinterpret_cast<Descriptor *>(CUFAllocManaged(sizeInBytes));
 }
 
-void RTDEF(CUFFreeDesciptor)(
+void RTDEF(CUFFreeDescriptor)(
     Descriptor *desc, const char *sourceFile, int sourceLine) {
   CUFFreeManaged(reinterpret_cast<void *>(desc));
 }
