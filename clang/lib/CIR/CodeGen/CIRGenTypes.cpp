@@ -173,13 +173,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::Float:
       assert(&astContext.getFloatTypeSemantics(type) ==
                  &llvm::APFloat::IEEEsingle() &&
-             "ClangIR only supports float as IEEE 32-bit");
+             "ClangIR NYI: 'float' in a format other than IEEE 32-bit");
       resultType = cgm.FloatTy;
       break;
     case BuiltinType::Double:
       assert(&astContext.getFloatTypeSemantics(type) ==
                  &llvm::APFloat::IEEEdouble() &&
-             "ClangIR only supports double as IEEE 64-bit");
+             "ClangIR NYI: 'double' in a format other than IEEE 64-bit");
       resultType = cgm.DoubleTy;
       break;
     case BuiltinType::LongDouble:
