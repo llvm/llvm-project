@@ -33,6 +33,13 @@ compilation options on the command line after ``--``:
 
   $ clang-tidy test.cpp -- -Imy_project/include -DMY_DEFINES ...
 
+If there are too many options to specify on the command line, you can store them
+in a parameter file, and use :program:`clang-tidy` with parameters file:
+
+.. code-block:: console
+
+  $ clang-tidy @parameters_file
+
 :program:`clang-tidy` has its own checks and can also run Clang Static Analyzer
 checks. Each check has a name and the checks to run can be chosen using the
 ``-checks=`` option, which specifies a comma-separated list of positive and
