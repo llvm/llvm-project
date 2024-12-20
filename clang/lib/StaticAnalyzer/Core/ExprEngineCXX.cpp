@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtCXX.h"
@@ -1200,21 +1199,4 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
   // FIXME: Move all post/pre visits to ::Visit().
   getCheckerManager().runCheckersForPostStmt(Dst, Tmp, LE, *this);
-}
-
-void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
-                                     ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
-
-  ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
-
-  for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
-    for (ExplodedNode *N : CheckerPreStmt) {
-      Visit(Attr->getAssumption(), N, EvalSet);
-    }
-  }
-
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }

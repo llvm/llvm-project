@@ -4295,8 +4295,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                          InVals, /*IsThisReturn=*/false, SDValue());
 }
 
-// This is identical to the default implementation in ExpandDYNAMIC_STACKALLOC,
-// except for applying the wave size scale to the increment amount.
+// This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
+// except for stack growth direction(default: downwards, AMDGPU: upwards) and
+// applying the wave size scale to the increment amount.
 SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
                                                       SelectionDAG &DAG) const {
   const MachineFunction &MF = DAG.getMachineFunction();
@@ -4316,31 +4317,35 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
   SDValue Size = Tmp2.getOperand(1);
-  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  Chain = SP.getValue(1);
-  MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
+  SDValue BaseAddr = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
+  Align Alignment = cast<ConstantSDNode>(Tmp3)->getAlignValue();
+
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
   assert(TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
          "Stack grows upwards for AMDGPU");
+
+  Chain = BaseAddr.getValue(1);
+  Align StackAlign = TFL->getStackAlign();
+  if (Alignment > StackAlign) {
+    uint64_t ScaledAlignment = (uint64_t)Alignment.value()
+                               << Subtarget->getWavefrontSizeLog2();
+    uint64_t StackAlignMask = ScaledAlignment - 1;
+    SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
+                                  DAG.getConstant(StackAlignMask, dl, VT));
+    BaseAddr = DAG.getNode(ISD::AND, dl, VT, TmpAddr,
+                           DAG.getSignedConstant(-ScaledAlignment, dl, VT));
+  }
 
   SDValue ScaledSize = DAG.getNode(
       ISD::SHL, dl, VT, Size,
       DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
-  Align StackAlign = TFL->getStackAlign();
-  Tmp1 = DAG.getNode(ISD::ADD, dl, VT, SP, ScaledSize); // Value
-  if (Alignment && *Alignment > StackAlign) {
-    Tmp1 = DAG.getNode(
-        ISD::AND, dl, VT, Tmp1,
-        DAG.getSignedConstant(-(uint64_t)Alignment->value()
-                                  << Subtarget->getWavefrontSizeLog2(),
-                              dl, VT));
-  }
+  SDValue NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
 
-  Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1); // Output chain
+  Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
   Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
-  return DAG.getMergeValues({Tmp1, Tmp2}, dl);
+  return DAG.getMergeValues({BaseAddr, Tmp2}, dl);
 }
 
 SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
@@ -6869,15 +6874,12 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
 /// Helper function for LowerBRCOND
 static SDNode *findUser(SDValue Value, unsigned Opcode) {
 
-  SDNode *Parent = Value.getNode();
-  for (SDNode::use_iterator I = Parent->use_begin(), E = Parent->use_end();
-       I != E; ++I) {
-
-    if (I.getUse().get() != Value)
+  for (SDUse &U : Value->uses()) {
+    if (U.get() != Value)
       continue;
 
-    if (I->getOpcode() == Opcode)
-      return *I;
+    if (U.getUser()->getOpcode() == Opcode)
+      return U.getUser();
   }
   return nullptr;
 }
@@ -12155,7 +12157,7 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
       (CRHS->hasOneUse() && !TII->isInlineConstant(CRHS->getAPIntValue()))) {
     // We have 64-bit scalar and/or/xor, but do not have vector forms.
     if (Subtarget->has64BitLiterals() && CRHS->hasOneUse() &&
-        !CRHS->use_begin()->isDivergent())
+        !CRHS->user_begin()->isDivergent())
       return SDValue();
 
     // If we need to materialize a 64-bit immediate, it will be split up later
@@ -15684,29 +15686,30 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   }
 
   // Try to figure out the used register components
-  for (SDNode::use_iterator I = Node->use_begin(), E = Node->use_end(); I != E;
-       ++I) {
+  for (SDUse &Use : Node->uses()) {
 
     // Don't look at users of the chain.
-    if (I.getUse().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
+    SDNode *User = Use.getUser();
+
     // Abort if we can't understand the usage
-    if (!I->isMachineOpcode() ||
-        I->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
+    if (!User->isMachineOpcode() ||
+        User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return Node;
 
     // Lane means which subreg of %vgpra_vgprb_vgprc_vgprd is used.
     // Note that subregs are packed, i.e. Lane==0 is the first bit set
     // in OldDmask, so it can be any of X,Y,Z,W; Lane==1 is the second bit
     // set, etc.
-    Lane = SubIdx2Lane(I->getConstantOperandVal(1));
+    Lane = SubIdx2Lane(User->getConstantOperandVal(1));
     if (Lane == ~0u)
       return Node;
 
     // Check if the use is for the TFE/LWE generated result at VGPRn+1.
     if (UsesTFC && Lane == TFCLane) {
-      Users[Lane] = *I;
+      Users[Lane] = User;
     } else {
       // Set which texture component corresponds to the lane.
       unsigned Comp;
@@ -15719,7 +15722,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
       if (Users[Lane])
         return Node;
 
-      Users[Lane] = *I;
+      Users[Lane] = User;
       NewDmask |= 1 << Comp;
     }
   }
@@ -17426,10 +17429,9 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
 }
 
 bool SITargetLowering::hasMemSDNodeUser(SDNode *N) const {
-  SDNode::use_iterator I = N->use_begin(), E = N->use_end();
-  for (; I != E; ++I) {
-    if (MemSDNode *M = dyn_cast<MemSDNode>(*I)) {
-      if (getBasePtrIndex(M) == I.getOperandNo())
+  for (SDUse &Use : N->uses()) {
+    if (MemSDNode *M = dyn_cast<MemSDNode>(Use.getUser())) {
+      if (getBasePtrIndex(M) == Use.getOperandNo())
         return true;
     }
   }

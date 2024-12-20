@@ -557,8 +557,8 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
-  fir::ExtendedValue
-  symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) {
+  fir::ExtendedValue symBoxToExtendedValue(
+      const Fortran::lower::SymbolBox &symBox) override final {
     return symBox.match(
         [](const Fortran::lower::SymbolBox::Intrinsic &box)
             -> fir::ExtendedValue { return box.getAddr(); },
