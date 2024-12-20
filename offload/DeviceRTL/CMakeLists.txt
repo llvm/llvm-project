@@ -52,7 +52,7 @@ set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803"
                              "gfx11-generic;gfx1100;gfx1101;gfx1102;gfx1103"
                              "gfx1150;gfx1151;gfx1152;gfx1153"
                              "gfx12-generic"
-                             "gfx1210")
+                             "gfx12-5-generic;gfx1250;gfx1251")
 set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
                             "sm_70;sm_72;sm_75;sm_80;sm_86;sm_87;sm_89;sm_90")
 set(all_gpu_architectures

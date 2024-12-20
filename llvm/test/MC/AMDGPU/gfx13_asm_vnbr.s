@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
 
 v_send_vgpr_next_b32 v1, v2, v3
 // GFX13: v_send_vgpr_next_b32 v1, v2, v3 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:0 ; encoding: [0x01,0x00,0x00,0xfa,0x03,0x04,0x20,0x00]

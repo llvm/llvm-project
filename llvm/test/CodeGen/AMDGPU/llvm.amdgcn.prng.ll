@@ -1,7 +1,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 

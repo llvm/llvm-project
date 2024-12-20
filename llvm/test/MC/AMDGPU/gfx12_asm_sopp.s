@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefixes=GFX12,GFX1200 %s
-// RUN: not llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1210 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: not llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1250 %s | FileCheck --check-prefix=GFX12 %s
 
 s_wait_loadcnt 0x1234
 // GFX12: encoding: [0x34,0x12,0xc0,0xbf]

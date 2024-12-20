@@ -117,8 +117,8 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx1153 %s 2>&1 | FileCheck --check-prefix=GFX1153 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefix=GFX1200 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1201 %s 2>&1 | FileCheck --check-prefix=GFX1201 %s
-// RUN: %clang -### -target amdgcn -mcpu=gfx1210 %s 2>&1 | FileCheck --check-prefix=GFX1210 %s
-// RUN: %clang -### -target amdgcn -mcpu=gfx1211 %s 2>&1 | FileCheck --check-prefix=GFX1211 %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx1250 %s 2>&1 | FileCheck --check-prefix=GFX1250 %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx1251 %s 2>&1 | FileCheck --check-prefix=GFX1251 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1300 %s 2>&1 | FileCheck --check-prefix=GFX1300 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1301 %s 2>&1 | FileCheck --check-prefix=GFX1301 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1302 %s 2>&1 | FileCheck --check-prefix=GFX1302 %s
@@ -129,7 +129,7 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx10-3-generic %s 2>&1 | FileCheck --check-prefix=GFX10_3_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx11-generic %s 2>&1 | FileCheck --check-prefix=GFX11_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx12-generic %s 2>&1 | FileCheck --check-prefix=GFX12_GENERIC %s
-// RUN: %clang -### -target amdgcn -mcpu=gfx12-1-generic %s 2>&1 | FileCheck --check-prefix=GFX12_1_GENERIC %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx12-5-generic %s 2>&1 | FileCheck --check-prefix=GFX12_5_GENERIC %s
 
 // GCNDEFAULT-NOT: -target-cpu
 // GFX600:    "-target-cpu" "gfx600"
@@ -179,8 +179,8 @@
 // GFX1153:   "-target-cpu" "gfx1153"
 // GFX1200:   "-target-cpu" "gfx1200"
 // GFX1201:   "-target-cpu" "gfx1201"
-// GFX1210:   "-target-cpu" "gfx1210"
-// GFX1211:   "-target-cpu" "gfx1211"
+// GFX1250:   "-target-cpu" "gfx1250"
+// GFX1251:   "-target-cpu" "gfx1251"
 // GFX1300:   "-target-cpu" "gfx1300"
 // GFX1301:   "-target-cpu" "gfx1301"
 // GFX1302:   "-target-cpu" "gfx1302"
@@ -192,4 +192,4 @@
 // GFX10_3_GENERIC:   "-target-cpu" "gfx10-3-generic"
 // GFX11_GENERIC:     "-target-cpu" "gfx11-generic"
 // GFX12_GENERIC:     "-target-cpu" "gfx12-generic"
-// GFX12_1_GENERIC:   "-target-cpu" "gfx12-1-generic"
+// GFX12_5_GENERIC:   "-target-cpu" "gfx12-5-generic"

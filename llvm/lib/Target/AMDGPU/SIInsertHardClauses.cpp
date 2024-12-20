@@ -44,7 +44,7 @@ using namespace llvm;
 namespace {
 
 enum HardClauseType {
-  // For GFX10 and GFX1210:
+  // For GFX10 and GFX1250:
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
@@ -104,7 +104,7 @@ public:
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
-          ST->hasGFX1210Insts()) {
+          ST->hasGFX1250Insts()) {
         if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());

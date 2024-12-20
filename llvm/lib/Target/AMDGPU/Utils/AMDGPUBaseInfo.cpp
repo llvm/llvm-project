@@ -606,8 +606,8 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
 }
 
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
-  if (ST.hasFeature(AMDGPU::FeatureGFX1210Insts))
-    return SIEncodingFamily::GFX1210;
+  if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
+    return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
@@ -721,27 +721,27 @@ bool isGenericAtomic(unsigned Opc) {
 }
 
 bool isAsyncStore(unsigned Opc) {
-  return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1210 ||
+  return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx13 ||
-         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx13 ||
-         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx13 ||
-         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx13 ||
-         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx13 ||
-         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx13 ||
-         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx13 ||
-         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx13;
 }
 
 bool isTensorStore(unsigned Opc) {
-  return Opc == TENSOR_STORE_FROM_LDS_gfx1210 ||
-         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1210;
+  return Opc == TENSOR_STORE_FROM_LDS_gfx1250 ||
+         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1250;
 }
 
 unsigned getTemporalHintType(const MCInstrDesc TID) {
@@ -1175,8 +1175,8 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share".
 
-  // GFX12.1 only supports CU mode, which contains four SIMDs.
-  if (isGFX1210Only(*STI)) {
+  // GFX12.5 only supports CU mode, which contains four SIMDs.
+  if (isGFX1250Only(*STI)) {
     assert(STI->getFeatureBits().test(FeatureCuMode));
     return 4;
   }
@@ -1402,7 +1402,7 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   const auto &Features = STI->getFeatureBits();
-  if (Features.test(FeatureGFX1210Insts))
+  if (Features.test(FeatureGFX1250Insts))
     return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   if (Features.test(FeatureGFX90AInsts))
     return 512;
@@ -2465,7 +2465,7 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
 }
 
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
-  if (isGFX1210Plus(STI))
+  if (isGFX1250Plus(STI))
     return 32;
   return 16;
 }
@@ -2538,12 +2538,12 @@ bool isGFX12Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
-bool isGFX1210Plus(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX1210Insts];
+bool isGFX1250Plus(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
 }
 
-bool isGFX1210Only(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX1210Insts] && !isGFX13(STI);
+bool isGFX1250Only(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
 }
 
 bool isGFX13(const MCSubtargetInfo &STI) {
@@ -2553,7 +2553,7 @@ bool isGFX13(const MCSubtargetInfo &STI) {
 bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
-  if (isGFX1210Only(STI))
+  if (isGFX1250Only(STI))
     return false;
   return isGFX10Plus(STI);
 }
@@ -3533,9 +3533,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
        SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
     // LD_SCALE operands ignore MSB.
     if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1210 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1250 ||
         Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1210)
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250)
       return {};
     return { VOPOps, nullptr };
   }
@@ -3562,7 +3562,7 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
 
   if (TSFlags & SIInstrFlags::VSAMPLE)
     llvm_unreachable("Sample VGPR lowering is not implemented and"
-                     " these instructions are not expected on gfx1210");
+                     " these instructions are not expected on gfx1250");
 
   if (isVOPMPseudo(Desc.getOpcode()))
     return {VOPMOps, nullptr};
@@ -3639,16 +3639,16 @@ bool isDPALU_DPP32BitOpc(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_MUL_LO_U32_e64:
   case AMDGPU::V_MUL_LO_U32_e64_dpp:
-  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx1210:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx1250:
   case AMDGPU::V_MUL_HI_U32_e64:
   case AMDGPU::V_MUL_HI_U32_e64_dpp:
-  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx1210:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx1250:
   case AMDGPU::V_MUL_HI_I32_e64:
   case AMDGPU::V_MUL_HI_I32_e64_dpp:
-  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx1210:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx1250:
   case AMDGPU::V_MAD_U32_e64:
   case AMDGPU::V_MAD_U32_e64_dpp:
-  case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
+  case AMDGPU::V_MAD_U32_e64_dpp_gfx1250:
     return true;
   default:
     return false;
@@ -3660,7 +3660,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
     return false;
 
   if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
-    return ST.hasFeature(AMDGPU::FeatureGFX1210Insts);
+    return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
 
   return hasAny64BitVGPROperands(OpDesc);
 }

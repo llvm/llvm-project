@@ -112,7 +112,7 @@ protected:
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
-  bool GFX1210Insts = false;
+  bool GFX1250Insts = false;
   bool GFX13Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
@@ -183,7 +183,7 @@ protected:
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
-  bool HasGFX1211GEMMInsts = false;
+  bool HasGFX1251GEMMInsts = false;
   bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
@@ -385,7 +385,7 @@ public:
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
   bool supportsWGP() const {
-    if (GFX1210Insts && !GFX13Insts)
+    if (GFX1250Insts && !GFX13Insts)
       return false;
     return getGeneration() >= GFX10;
   }
@@ -708,21 +708,21 @@ public:
     return GFX10_BEncoding;
   }
 
-  bool hasMTBUFInsts() const { return GFX13Insts || !hasGFX1210Insts(); }
+  bool hasMTBUFInsts() const { return GFX13Insts || !hasGFX1250Insts(); }
 
   bool hasFormattedMUBUFInsts() const {
-    return GFX13Insts || !hasGFX1210Insts();
+    return GFX13Insts || !hasGFX1250Insts();
   }
 
   bool hasExportInsts() const {
-    return GFX13Insts || (!hasGFX940Insts() && !hasGFX1210Insts());
+    return GFX13Insts || (!hasGFX940Insts() && !hasGFX1250Insts());
   }
 
-  bool hasVINTERPEncoding() const { return GFX13Insts || !hasGFX1210Insts(); }
+  bool hasVINTERPEncoding() const { return GFX13Insts || !hasGFX1250Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const {
-    return hasGFX90AInsts() || hasGFX1210Insts();
+    return hasGFX90AInsts() || hasGFX1250Insts();
   }
 
   bool hasMultiDwordFlatScratchAddressing() const {
@@ -932,7 +932,7 @@ public:
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
 
-  bool hasGFX1211GEMMInsts() const { return HasGFX1211GEMMInsts; }
+  bool hasGFX1251GEMMInsts() const { return HasGFX1251GEMMInsts; }
 
   /// \return true if the target has flat, global, and buffer atomic fadd for
   /// double.
@@ -1001,7 +1001,7 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
-  bool hasVectorPrefetch() const { return GFX1210Insts; }
+  bool hasVectorPrefetch() const { return GFX1250Insts; }
 
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
@@ -1083,7 +1083,7 @@ public:
   }
 
   bool hasLDSFPAtomicAddF32() const { return GFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX1210Insts; }
+  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX1250Insts; }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
@@ -1130,7 +1130,7 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
-  bool hasFmaakFmamkF64Insts() const { return hasGFX1210Insts(); }
+  bool hasFmaakFmamkF64Insts() const { return hasGFX1250Insts(); }
 
   bool hasImageInsts() const {
     return HasImageInsts;
@@ -1186,17 +1186,17 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts || GFX1210Insts; }
+  bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts || GFX1210Insts; }
+  bool hasLshlAddB64() const { return GFX940Insts || GFX1250Insts; }
 
   // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return GFX1210Insts; }
+  bool hasScaleOffset() const { return GFX1250Insts; }
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
   // FLAT GLOBAL VOffset is signed
-  bool hasSignedGVSOffset() const { return GFX1210Insts; }
+  bool hasSignedGVSOffset() const { return GFX1250Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1347,7 +1347,7 @@ public:
   bool hasMLMathInsts() const { return HasMLMathInsts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1210Insts; }
+  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }
@@ -1429,10 +1429,10 @@ public:
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
-  bool hasAddPC64Inst() const { return GFX1210Insts; }
+  bool hasAddPC64Inst() const { return GFX1250Insts; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
-  /// GFX1210.
+  /// GFX1250.
   bool hasWaitXCnt() const { return HasWaitXcnt; }
 
   // A single DWORD instructions can use a 64-bit literal.
@@ -1534,41 +1534,41 @@ public:
   /// values.
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
-  bool hasGFX1210Insts() const { return GFX1210Insts; }
+  bool hasGFX1250Insts() const { return GFX1250Insts; }
 
   bool hasGFX13Insts() const { return GFX13Insts; }
 
-  bool hasVOPD3() const { return GFX1210Insts; }
+  bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
-  bool hasAddU64SubU64() const { return GFX1210Insts; }
+  bool hasAddU64SubU64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return GFX1210Insts; }
+  bool hasVectorMulU64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
   // instructions.
-  bool hasMadU64U32NoCarry() const { return GFX1210Insts; }
+  bool hasMadU64U32NoCarry() const { return GFX1250Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return GFX1210Insts; }
+  bool hasIntMinMax64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-  bool hasAddMinMaxInsts() const { return GFX1210Insts; }
+  bool hasAddMinMaxInsts() const { return GFX1250Insts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
-  bool hasPkAddMinMaxInsts() const { return GFX1210Insts; }
+  bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
-  bool hasPkMinMax3Insts() const { return GFX1210Insts; }
+  bool hasPkMinMax3Insts() const { return GFX1250Insts; }
 
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
-  bool hasSGetShaderCyclesInst() const { return GFX1210Insts; }
+  bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
-  // of sign-extending. Note that GFX1210 has not only fixed the bug but also
+  // of sign-extending. Note that GFX1250 has not only fixed the bug but also
   // extended VA to 57 bits.
-  bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1210Insts; }
+  bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1250Insts; }
 
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return GFX13Insts; }
@@ -1727,7 +1727,7 @@ public:
 
   bool supportsWave32() const { return getGeneration() >= GFX10; }
 
-  bool supportsWave64() const { return !hasGFX1210Insts() || GFX13Insts; }
+  bool supportsWave64() const { return !hasGFX1250Insts() || GFX13Insts; }
 
   bool isWave32() const {
     return getWavefrontSize() == 32;
@@ -1792,11 +1792,11 @@ public:
 
   // \returns true if the subtarget has a hazard requiring an "s_nop 0"
   // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
-  bool requiresNopBeforeDeallocVGPRs() const { return !GFX1210Insts; }
+  bool requiresNopBeforeDeallocVGPRs() const { return !GFX1250Insts; }
 
   // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
-  bool requiresWaitIdleBeforeGetReg() const { return GFX1210Insts; }
+  bool requiresWaitIdleBeforeGetReg() const { return GFX1250Insts; }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
 
 v_permute_pair_2src_interleave_b64 v905, v906, v902, v3
 // GFX13: v_permute_pair_2src_interleave_b64 v905, v906, v902, v3 ; encoding: [0x89,0x03,0x08,0xdd,0x86,0x67,0x80,0x00,0x8a,0x03,0x00,0x00]

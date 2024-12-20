@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx904 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,ECC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=-sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 < %s | FileCheck -check-prefixes=GCN,ECC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,ECC %s
 
 ; Make sure the correct set of targets are marked with
 ; FeatureDoesNotSupportSRAMECC, and +sramecc is ignored if it's never

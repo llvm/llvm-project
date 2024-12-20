@@ -17,7 +17,7 @@ body:             |
     ; CHECK-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     ; CHECK-NEXT: $sgpr33 = S_MOV_B32 0
     ; CHECK-NEXT: $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr0_sgpr1, 0, 0 :: ("amdgpu-noclobber" load (s32), addrspace 1)
-    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1210 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
+    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
     ; CHECK-NEXT: $sgpr2 = S_MOV_B32 0
     ; CHECK-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
     ; CHECK-NEXT: S_WAIT_BVHCNT_soft 0
@@ -50,7 +50,7 @@ body:             |
     $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     $sgpr33 = S_MOV_B32 0
     $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr0_sgpr1, 0, 0 :: ("amdgpu-noclobber" load (s32), addrspace 1)
-    $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1210 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
+    $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
     $sgpr2 = S_MOV_B32 0
     $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
     $vgpr0, $vgpr1 = BUNDLE {

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1210 -verify-machineinstrs %s -o - | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1210 -global-isel -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel -verify-machineinstrs %s -o - | FileCheck %s
 
 ; CHECK: .cluster_dims:
 ; CHECK-NEXT: - 2

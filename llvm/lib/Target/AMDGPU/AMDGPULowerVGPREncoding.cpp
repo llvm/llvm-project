@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Lower VGPRs above first 256 on gfx1210+.
+/// Lower VGPRs above first 256 on gfx1250+.
 /// Also lowers dynamic VGPR indexing pseudo instructions to subtarget
 /// instructions.
 ///
 /// The pass scans used VGPRs and inserts S_SET_VGPR_MSB instructions on
-/// gfx1210 (or S_SET_VGPR_FRAMES on gfx13+) to switch VGPR addressing mode. The
+/// gfx1250 (or S_SET_VGPR_FRAMES on gfx13+) to switch VGPR addressing mode. The
 /// mode change is effective until the next change. This instruction provides
 /// high bits of a VGPR address for four of the operands: vdst, src0, src1, and
 /// src2, or other 4 operands depending on the instruction encoding. If bits are
@@ -144,7 +144,7 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
       }
       default: {
         assert(type == EncodeType::SET_VGPR_MSB);
-        // GFX1210 layout: [src0 msb, src1 msb, src2 msb, dst msb]
+        // GFX1250 layout: [src0 msb, src1 msb, src2 msb, dst msb]
         static constexpr unsigned BitsPerField = 2;
         unsigned V = 0;
         for (const auto &[I, Op] : enumerate(Ops))

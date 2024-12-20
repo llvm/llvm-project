@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
 
 v_scale_bias_activate_scatter4_f16 v5, v6, v7, v8, v[5:8], 4.0, v3 aux_data:2
 // GFX13: v_scale_bias_activate_scatter4_f16 v5, v6, v7, v8, v[5:8], 4.0, v3 aux_data:2 ; encoding: [0x05,0x80,0x10,0xde,0x05,0x64,0x80,0x08,0x06,0x00,0x00,0xf6,0x07,0x80,0x00,0x00]

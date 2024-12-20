@@ -75,7 +75,7 @@ enum InstCounterType {
   //             confusion (after upstreaming, to reduce textual conflicts)
   BVH_CNT, // gfx12+ only.
   KM_CNT,  // gfx12+ only.
-  X_CNT,   // gfx1210.
+  X_CNT,   // gfx1250.
   NUM_EXTENDED_INST_CNTS,
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
   VM_VSRC,                          // gfx12+ expert mode only.
@@ -108,7 +108,7 @@ struct HardwareLimits {
   unsigned SamplecntMax; // gfx12+ only.
   unsigned BvhcntMax;    // gfx12+ only.
   unsigned KmcntMax;     // gfx12+ only.
-  unsigned XcntMax;      // gfx1210.
+  unsigned XcntMax;      // gfx1250.
   unsigned VaVdstMax;    // gfx12+ expert mode only.
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 };
@@ -510,7 +510,7 @@ private:
   int SgprUB = -1;
   unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
   // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
-  // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1210) are relevant.
+  // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
   // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
   // X_CNT score.
   unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};

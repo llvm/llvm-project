@@ -3,8 +3,8 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,W32,W32-FAKE16,GFX1200,GFX1200-W32,GFX1200-W32-FAKE16 %s
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,W64,W64-REAL16,GFX1200,GFX1200-W64,GFX1200-W64-REAL16 %s
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,-real-true16 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,W64,W64-FAKE16,GFX1200,GFX1200-W64,GFX1200-W64-FAKE16 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1210 -mattr=+real-true16 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,GFX1210,W32,GFX1210-W32,W32-REAL16,GFX1210-W32-REAL16 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1210 -mattr=-real-true16 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,GFX1210,W32,GFX1210-W32,W32-FAKE16,GFX1210-W32-FAKE16 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,GFX1250,W32,GFX1250-W32,W32-REAL16,GFX1250-W32-REAL16 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,GFX1250,W32,GFX1250-W32,W32-FAKE16,GFX1250-W32-FAKE16 %s
 
 0x05,0x00,0x55,0xd6,0xfa,0x04,0x0e,0x04,0x01,0x1b,0x00,0xff
 # GFX12: v_add3_u32_e64_dpp v5, v1, v2, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x55,0xd6,0xfa,0x04,0x0e,0x04,0x01,0x1b,0x00,0xff]
@@ -6077,7 +6077,7 @@
 # GFX1200-W64: {{.*}}
 # GFX1200-W64-FAKE16: {{.*}}
 # GFX1200-W64-REAL16: {{.*}}
-# GFX1210: {{.*}}
-# GFX1210-W32: {{.*}}
-# GFX1210-W32-FAKE16: {{.*}}
-# GFX1210-W32-REAL16: {{.*}}
+# GFX1250: {{.*}}
+# GFX1250-W32: {{.*}}
+# GFX1250-W32-FAKE16: {{.*}}
+# GFX1250-W32-REAL16: {{.*}}

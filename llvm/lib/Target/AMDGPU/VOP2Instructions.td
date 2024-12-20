@@ -897,14 +897,14 @@ let isAdd = 1 in {
 }
 
 let isReMaterializable = 1 in {
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1250Plus in {
 let SchedRW = [Write64Bit] in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SchedRW = [Write64Bit]
 let SchedRW = [WriteDouble] in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
-} // End SubtargetPredicate = HasGFX1210Insts
+} // End SubtargetPredicate = HasGFX1250Insts
 } // End isReMaterializable = 1
 
 } // End isCommutable = 1
@@ -1530,8 +1530,8 @@ multiclass VOP2Only_Real_MADK64<GFXGen Gen, bits<6> op> {
   }
 }
 
-multiclass VOP2Only_Real_MADK64_gfx1210_gfx13<bits<6> gfx1210Op, bits<6> op> :
-  VOP2Only_Real_MADK64<GFX1210Gen, gfx1210Op>,
+multiclass VOP2Only_Real_MADK64_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
+  VOP2Only_Real_MADK64<GFX1250Gen, gfx1250Op>,
   VOP2Only_Real_MADK64<GFX13Gen, op>;
 
 multiclass VOP2Only_Real_MADK_with_name<GFXGen Gen, bits<6> op, string asmName,
@@ -1709,8 +1709,8 @@ multiclass VOP2_Real_FULL<GFXGen Gen, bits<6> op> :
   VOP2_Real_dpp<Gen, op>,
   VOP2_Real_dpp8<Gen, op>;
 
-multiclass VOP2_Real_FULL_gfx1210_gfx13<bits<6> gfx1210Op, bits<6> op> :
-  VOP2_Real_FULL<GFX1210Gen, gfx1210Op>,
+multiclass VOP2_Real_FULL_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
+  VOP2_Real_FULL<GFX1250Gen, gfx1250Op>,
   VOP2_Real_FULL<GFX13Gen, op>;
 
 multiclass VOP2_Real_NO_VOP3_with_name<GFXGen Gen, bits<6> op, string opName,
@@ -1732,8 +1732,8 @@ multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
 multiclass VOP2_Real_NO_DPP<GFXGen Gen, bits<6> op> :
   VOP2_Real_e32<Gen, op>, VOP2_Real_e64<Gen, op>;
 
-multiclass VOP2_Real_NO_DPP_gfx1210_gfx13<bits<6> gfx1210Op, bits<6> op> :
-  VOP2_Real_NO_DPP<GFX1210Gen, gfx1210Op>,
+multiclass VOP2_Real_NO_DPP_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
+  VOP2_Real_NO_DPP<GFX1250Gen, gfx1250Op>,
   VOP2_Real_NO_DPP<GFX13Gen, op>;
 
 multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
@@ -1840,11 +1840,11 @@ let SubtargetPredicate = Gen.AssemblerPredicate in {
 let SubtargetPredicate = HasFmacF64Inst in
 defm V_FMAC_F64 : VOP2_Real_FULL_gfx12_gfx13<0x17, 0x1f>;
 
-defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1210_gfx13<0x23, 0x20>;
-defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1210_gfx13<0x24, 0x21>;
-defm V_ADD_U64 : VOP2_Real_FULL_gfx1210_gfx13<0x28, 0x23>;
-defm V_SUB_U64 : VOP2_Real_FULL_gfx1210_gfx13<0x29, 0x24>;
-defm V_MUL_U64 : VOP2_Real_NO_DPP_gfx1210_gfx13<0x2a, 0x15>;
+defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x23, 0x20>;
+defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x24, 0x21>;
+defm V_ADD_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x28, 0x23>;
+defm V_SUB_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x29, 0x24>;
+defm V_MUL_U64 : VOP2_Real_NO_DPP_gfx1250_gfx13<0x2a, 0x15>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12, GFX13.

@@ -605,10 +605,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1201";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX120E:
     return "gfx120E";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1210:
-    return "gfx1210";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1211:
-    return "gfx1211";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250:
+    return "gfx1250";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251:
+    return "gfx1251";
 
   // AMDGCN GFX13.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300:
@@ -633,8 +633,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx11-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:
     return "gfx12-generic";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_1_GENERIC:
-    return "gfx12-1-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC:
+    return "gfx12-5-generic";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }

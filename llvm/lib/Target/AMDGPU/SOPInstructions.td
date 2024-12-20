@@ -597,6 +597,7 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 let SubtargetPredicate = isGFX13Plus in {
   let hasSideEffects = 1 in {
     def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32">;
+    def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32">;
   }
 } // End SubtargetPredicate = isGFX13Plus
 
@@ -1720,7 +1721,7 @@ let OtherPredicates = [HasImageInsts] in {
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16"> {
-  let SubtargetPredicate = isNotGFX1210Plus;
+  let SubtargetPredicate = isNotGFX1250Plus;
 }
 
 // On SI the documentation says sleep for approximately 64 * low 2
@@ -1741,7 +1742,7 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {
-  let SubtargetPredicate = isGFX1210Plus;
+  let SubtargetPredicate = isGFX1250Plus;
 }
 
 def S_GET_SHADER_CYCLES_U64 : SOP1_64_0 <"s_get_shader_cycles_u64",
@@ -1794,7 +1795,7 @@ def S_SET_GPR_IDX_OFF : SOPP_Pseudo<"s_set_gpr_idx_off", (ins) > {
 
 def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_monitor_sleep timm:$simm16)]> {
-  let SubtargetPredicate = isGFX1210Plus;
+  let SubtargetPredicate = isGFX1250Plus;
 }
 } // End hasSideEffects
 
@@ -1874,7 +1875,7 @@ let OtherPredicates = [HasExportInsts] in
                 [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
-let SubtargetPredicate = isGFX1210Plus, hasSideEffects = 1 in {
+let SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1 in {
   def S_WAIT_ASYNCCNT :
     SOPP_Pseudo<"s_wait_asynccnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
@@ -1891,7 +1892,7 @@ let SubtargetPredicate = isGFX1210Plus, hasSideEffects = 1 in {
       let Uses = [TENSORcnt];
       let Defs = [TENSORcnt];
     }
-} // End SubtargetPredicate = isGFX1210Plus, hasSideEffects = 1
+} // End SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1
 
 let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
   def S_WAIT_XCNT :
@@ -2178,6 +2179,7 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
 
 defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x11>;
 defm S_SET_GPR_IDX_U32 : SOP1_Real_gfx13<0x6f>;
+defm S_ADD_GPR_IDX_U32 : SOP1_Real_gfx13<0x70>;
 
 //===----------------------------------------------------------------------===//
 //  SOP1 - GFX11, GFX12
@@ -2224,12 +2226,12 @@ multiclass SOP1_IMM_Real_gfx12_gfx13<bits<8> op> {
 multiclass SOP1_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)> :
   SOP1_Real_gfx11<op, name>, SOP1_Real_gfx12<op, name>;
 
-multiclass SOP1_Real_gfx1210<bits<8> op, string name = !tolower(NAME)> {
+multiclass SOP1_Real_gfx1250<bits<8> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
-  def _gfx1210 : SOP1_Real<op, ps, name>,
-                 Select<GFX1210Gen, ps.PseudoInstr>;
+  def _gfx1250 : SOP1_Real<op, ps, name>,
+                 Select<GFX1250Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    let AssemblerPredicate = isGFX1210Plus in
+    let AssemblerPredicate = isGFX1250Plus in
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
 }
 
@@ -2302,16 +2304,16 @@ defm S_MOV_FROM_GLOBAL_B64        : SOP1_Real_gfx12_gfx13<0x05c>;
 defm S_MOV_TO_GLOBAL_B32          : SOP1_Real_gfx12_gfx13<0x05d>;
 defm S_MOV_TO_GLOBAL_B64          : SOP1_Real_gfx12_gfx13<0x05e>;
 defm S_SWAP_TO_GLOBAL_B32         : SOP1_Real_gfx12_gfx13<0x05f>;
-let OtherPredicates = [isNotGFX1210Plus] in {
+let OtherPredicates = [isNotGFX1250Plus] in {
 defm S_GETPC_B64                  : SOP1_Real_gfx11_gfx12<0x047>;
 defm S_SETPC_B64                  : SOP1_Real_gfx11_gfx12<0x048>;
 defm S_SWAPPC_B64                 : SOP1_Real_gfx11_gfx12<0x049>;
 defm S_RFE_B64                    : SOP1_Real_gfx11_gfx12<0x04a>;
 }
-defm S_GETPC_B64                  : SOP1_Real_gfx1210<0x047, "s_get_pc_i64">;
-defm S_SETPC_B64                  : SOP1_Real_gfx1210<0x048, "s_set_pc_i64">;
-defm S_SWAPPC_B64                 : SOP1_Real_gfx1210<0x049, "s_swap_pc_i64">;
-defm S_RFE_B64                    : SOP1_Real_gfx1210<0x04a, "s_rfe_i64">;
+defm S_GETPC_B64                  : SOP1_Real_gfx1250<0x047, "s_get_pc_i64">;
+defm S_SETPC_B64                  : SOP1_Real_gfx1250<0x048, "s_set_pc_i64">;
+defm S_SWAPPC_B64                 : SOP1_Real_gfx1250<0x049, "s_swap_pc_i64">;
+defm S_RFE_B64                    : SOP1_Real_gfx1250<0x04a, "s_rfe_i64">;
 defm S_SENDMSG_RTN_B32            : SOP1_Real_gfx11_gfx12_gfx13<0x04c>;
 defm S_SENDMSG_RTN_B64            : SOP1_Real_gfx11_gfx12_gfx13<0x04d>;
 defm S_BARRIER_SIGNAL_M0          : SOP1_M0_Real_gfx12_gfx13<0x04e>;
@@ -2329,7 +2331,7 @@ defm S_ALLOC_VGPR                 : SOP1_Real_gfx12_gfx13<0x053>;
 defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12_gfx13<0x057>;
 defm S_SLEEP_VAR                  : SOP1_Real_gfx12_gfx13<0x058>;
 
-// GFX1210
+// GFX1250
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
 defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
 
@@ -2739,21 +2741,21 @@ multiclass SOPK_Real32_gfx11_gfx12<bits<5> op> :
 multiclass SOPK_Real64_gfx11_gfx12<bits<5> op> :
   SOPK_Real64_gfx11<op>, SOPK_Real64_gfx12<op>;
 
-multiclass SOPK_Real32_gfx1210<bits<5> op, string name = !tolower(NAME)> {
+multiclass SOPK_Real32_gfx1250<bits<5> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOPK_Pseudo>(NAME);
-  def _gfx1210 : SOPK_Real32<op, ps, name>,
-                 Select<GFX1210Gen, ps.PseudoInstr>;
+  def _gfx1250 : SOPK_Real32<op, ps, name>,
+                 Select<GFX1250Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    let AssemblerPredicate = isGFX1210Plus in
+    let AssemblerPredicate = isGFX1250Plus in
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
 }
 
 defm S_GETREG_B32           : SOPK_Real32_gfx11_gfx12<0x011>;
 defm S_SETREG_B32           : SOPK_Real32_gfx11_gfx12<0x012>;
 defm S_SETREG_IMM32_B32     : SOPK_Real64_gfx11_gfx12<0x013>;
-let OtherPredicates = [isNotGFX1210Plus] in
+let OtherPredicates = [isNotGFX1250Plus] in
 defm S_CALL_B64             : SOPK_Real32_gfx11_gfx12<0x014>;
-defm S_CALL_B64             : SOPK_Real32_gfx1210<0x014, "s_call_i64">;
+defm S_CALL_B64             : SOPK_Real32_gfx1250<0x014, "s_call_i64">;
 defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11<0x016>;
 defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11<0x017>;
 defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11<0x018>;
@@ -2922,7 +2924,7 @@ defm S_WAIT_LOADCNT_DSCNT   : SOPP_Real_32_gfx12_gfx13<0x048>;
 defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12_gfx13<0x049>;
 
 //===----------------------------------------------------------------------===//
-// SOPP - GFX1210 only.
+// SOPP - GFX1250 only.
 //===----------------------------------------------------------------------===//
 defm S_SET_VGPR_MSB   : SOPP_Real_32_gfx12<0x006>;
 defm S_SETPRIO_INC_WG : SOPP_Real_32_gfx12_gfx13<0x03e>;

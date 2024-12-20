@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+architected-sgprs -global-isel --verify-machineinstrs < %s | FileCheck -check-prefix=GFX9-GISEL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 --verify-machineinstrs < %s | FileCheck -check-prefix=GFX12-SDAG %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel --verify-machineinstrs < %s | FileCheck -check-prefix=GFX12-GISEL %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 --verify-machineinstrs < %s | FileCheck -check-prefix=GFX1210-SDAG %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 -global-isel --verify-machineinstrs < %s | FileCheck -check-prefix=GFX1210-GISEL %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 --verify-machineinstrs < %s | FileCheck -check-prefix=GFX1250-SDAG %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel --verify-machineinstrs < %s | FileCheck -check-prefix=GFX1250-GISEL %s
 
 define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX9-SDAG-LABEL: _amdgpu_cs_main:
@@ -47,24 +47,24 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
-; GFX1210-SDAG-LABEL: _amdgpu_cs_main:
-; GFX1210-SDAG:       ; %bb.0: ; %.entry
-; GFX1210-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
-; GFX1210-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
-; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
-; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v2, s1
-; GFX1210-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
-; GFX1210-SDAG-NEXT:    s_endpgm
+; GFX1250-SDAG-LABEL: _amdgpu_cs_main:
+; GFX1250-SDAG:       ; %bb.0: ; %.entry
+; GFX1250-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GFX1250-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX1250-SDAG-NEXT:    s_endpgm
 ;
-; GFX1210-GISEL-LABEL: _amdgpu_cs_main:
-; GFX1210-GISEL:       ; %bb.0: ; %.entry
-; GFX1210-GISEL-NEXT:    s_mov_b32 s0, ttmp9
-; GFX1210-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
-; GFX1210-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
-; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1210-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
-; GFX1210-GISEL-NEXT:    s_endpgm
+; GFX1250-GISEL-LABEL: _amdgpu_cs_main:
+; GFX1250-GISEL:       ; %bb.0: ; %.entry
+; GFX1250-GISEL-NEXT:    s_mov_b32 s0, ttmp9
+; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
+; GFX1250-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1250-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX1250-GISEL-NEXT:    s_endpgm
 .entry:
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   %idy = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -131,23 +131,23 @@ define amdgpu_cs void @caller() {
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
-; GFX1210-SDAG-LABEL: caller:
-; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
-; GFX1210-SDAG-NEXT:    s_mov_b64 s[0:1], callee@abs64
-; GFX1210-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX1210-SDAG-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; GFX1210-SDAG-NEXT:    s_endpgm
+; GFX1250-SDAG-LABEL: caller:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
+; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], callee@abs64
+; GFX1250-SDAG-NEXT:    s_mov_b32 s32, 0
+; GFX1250-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX1250-SDAG-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-SDAG-NEXT:    s_endpgm
 ;
-; GFX1210-GISEL-LABEL: caller:
-; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
-; GFX1210-GISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
-; GFX1210-GISEL-NEXT:    s_mov_b32 s32, 0
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; GFX1210-GISEL-NEXT:    s_endpgm
+; GFX1250-GISEL-LABEL: caller:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
+; GFX1250-GISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
+; GFX1250-GISEL-NEXT:    s_mov_b32 s32, 0
+; GFX1250-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1250-GISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-GISEL-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   call amdgpu_gfx void @callee(i32 %idx)
   ret void
