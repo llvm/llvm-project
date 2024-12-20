@@ -30237,9 +30237,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // If operand R is not a shuffle, several cases are not profitable based on
     // pipeline modeling, so we are excluding them here.
     if (!IsOperandShuffle) {
-      // A hack to detect AMD CPU.
-      if (Subtarget.hasSSE4A() && Opc == ISD::SRA) {
-        if (Opc == ISD::SRA)
+      // A hack to detect AMD Zen series CPU.
+      if (Subtarget.hasSSE4A()) {
+        if (!IsAdjacentQuads)
+          Profitable = false;
+        // A hack to detect Zen+ and Zen 2, because VPSRLVD is 2 cycles slower
+        // than in Zen 3, so this transformation should not be used.
+        else if (!Subtarget.hasVAES())
           Profitable = false;
       } else {
         if ((Subtarget.hasAVX() && !Subtarget.hasAVX2()) ||

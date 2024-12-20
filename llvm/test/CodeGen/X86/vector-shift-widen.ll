@@ -173,14 +173,6 @@ define <32 x i8> @shl_v32i8_quad(<32 x i8> %a) {
 ; AVX2-NEXT:     vpshufb {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # ymm0 = ymm0[0,12,8,4,9,1,5,13,14,3,10,7,6,2,11,15,28,24,18,22,29,25,19,23,20,16,26,30,21,17,27,31]
 ; AVX2-NEXT:     vpand {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:     retq
-;
-; ZNVER1-LABEL: shl_v32i8_quad:
-; ZNVER1:      # %bb.0:
-; ZNVER1-NEXT:   vpshufb {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # ymm0 = ymm0[0,5,13,9,3,6,12,11,2,4,10,14,1,7,8,15,25,29,18,22,24,28,19,23,17,21,26,30,16,20,27,31]
-; ZNVER1-NEXT:   vpsllvd {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; ZNVER1-NEXT:   vpshufb {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # ymm0 = ymm0[0,12,8,4,9,1,5,13,14,3,10,7,6,2,11,15,28,24,18,22,29,25,19,23,20,16,26,30,21,17,27,31]
-; ZNVER1-NEXT:   vpand {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; ZNVER1-NEXT:   retq
   %shift = shl <32 x i8> %a, <i8 0, i8 2, i8 4, i8 6, i8 4, i8 0, i8 6, i8 2, i8 2, i8 0, i8 4, i8 6, i8 6, i8 0, i8 4, i8 2,
                               i8 1, i8 3, i8 5, i8 7, i8 1, i8 3, i8 5, i8 7, i8 7, i8 5, i8 3, i8 1, i8 7, i8 5, i8 3, i8 1>
   ret <32 x i8> %shift
@@ -194,14 +186,6 @@ define <32 x i8> @lshr_v32i8_quad(<32 x i8> %a) {
 ; AVX2-NEXT:     vpshufb {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # ymm0 = ymm0[0,12,8,4,9,1,5,13,14,3,10,7,6,2,11,15,28,24,18,22,29,25,19,23,20,16,26,30,21,17,27,31]
 ; AVX2-NEXT:     vpand {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:     retq
-;
-; ZNVER1-LABEL: lshr_v32i8_quad:
-; ZNVER1:      # %bb.0:
-; ZNVER1-NEXT:   vpshufb {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # ymm0 = ymm0[0,5,13,9,3,6,12,11,2,4,10,14,1,7,8,15,25,29,18,22,24,28,19,23,17,21,26,30,16,20,27,31]
-; ZNVER1-NEXT:   vpsrlvd {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; ZNVER1-NEXT:   vpshufb {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # ymm0 = ymm0[0,12,8,4,9,1,5,13,14,3,10,7,6,2,11,15,28,24,18,22,29,25,19,23,20,16,26,30,21,17,27,31]
-; ZNVER1-NEXT:   vpand {{\.LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; ZNVER1-NEXT:   retq
   %shift = lshr <32 x i8> %a, <i8 0, i8 2, i8 4, i8 6, i8 4, i8 0, i8 6, i8 2, i8 2, i8 0, i8 4, i8 6, i8 6, i8 0, i8 4, i8 2,
                                i8 1, i8 3, i8 5, i8 7, i8 1, i8 3, i8 5, i8 7, i8 7, i8 5, i8 3, i8 1, i8 7, i8 5, i8 3, i8 1>
   ret <32 x i8> %shift
