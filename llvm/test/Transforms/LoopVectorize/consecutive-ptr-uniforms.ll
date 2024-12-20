@@ -49,7 +49,7 @@ for.end:
 ; CHECK:       [[OFFSET_IDX:%.+]] = sub i64 %n, %index
 ; CHECK-NOT:   getelementptr
 ; CHECK:       %[[G0:.+]] = getelementptr inbounds i32, ptr %a, i64 [[OFFSET_IDX]]
-; CHECK:       getelementptr inbounds i8, ptr %[[G0]], i64 -12
+; CHECK:       getelementptr i8, ptr %[[G0]], i64 -12
 ; CHECK-NOT:   getelementptr
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;

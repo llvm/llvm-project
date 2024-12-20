@@ -1216,7 +1216,6 @@ struct FuncUnitSorter {
 /// Calculate the maximum register pressure of the scheduled instructions stream
 class HighRegisterPressureDetector {
   MachineBasicBlock *OrigMBB;
-  const MachineFunction &MF;
   const MachineRegisterInfo &MRI;
   const TargetRegisterInfo *TRI;
 
@@ -1283,9 +1282,9 @@ private:
     }
   }
 
-  // Return true if Reg is fixed one, for example, stack pointer
-  bool isFixedRegister(Register Reg) const {
-    return Reg.isPhysical() && TRI->isFixedRegister(MF, Reg.asMCReg());
+  // Return true if Reg is reserved one, for example, stack pointer
+  bool isReservedRegister(Register Reg) const {
+    return Reg.isPhysical() && MRI.isReserved(Reg.asMCReg());
   }
 
   bool isDefinedInThisLoop(Register Reg) const {
@@ -1311,7 +1310,7 @@ private:
         // because it's used only at the first iteration.
         if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
           continue;
-        if (isFixedRegister(Reg))
+        if (isReservedRegister(Reg))
           continue;
         if (isDefinedInThisLoop(Reg))
           continue;
@@ -1423,7 +1422,7 @@ private:
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
                                                    Register Reg) {
-      if (!Reg.isValid() || isFixedRegister(Reg))
+      if (!Reg.isValid() || isReservedRegister(Reg))
         return;
 
       bool Inserted = RegSet.insert(Reg).second;
@@ -1437,7 +1436,7 @@ private:
 
     const auto EraseReg = [this, &CurSetPressure](RegSetTy &RegSet,
                                                   Register Reg) {
-      if (!Reg.isValid() || isFixedRegister(Reg))
+      if (!Reg.isValid() || isReservedRegister(Reg))
         return;
 
       // live-in register
@@ -1489,7 +1488,7 @@ private:
 public:
   HighRegisterPressureDetector(MachineBasicBlock *OrigMBB,
                                const MachineFunction &MF)
-      : OrigMBB(OrigMBB), MF(MF), MRI(MF.getRegInfo()),
+      : OrigMBB(OrigMBB), MRI(MF.getRegInfo()),
         TRI(MF.getSubtarget().getRegisterInfo()),
         PSetNum(TRI->getNumRegPressureSets()), InitSetPressure(PSetNum, 0),
         PressureSetLimit(PSetNum, 0) {}
