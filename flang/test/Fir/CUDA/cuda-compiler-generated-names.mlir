@@ -9,7 +9,7 @@ module @mod1 attributes {gpu.container} {
       return
     }
 
-    fir.global @default.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1> {
+    fir.global @_QQdefault.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1> {
       %true = arith.constant true
       %c0_i64 = arith.constant 0 : i64
       %0 = fir.undefined tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
@@ -21,7 +21,7 @@ module @mod1 attributes {gpu.container} {
     }
 
     func.func @special() {
-      %0 = fir.address_of(@default.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
+      %0 = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
       return
     }
   }
@@ -31,5 +31,5 @@ module @mod1 attributes {gpu.container} {
 // CHECK: llvm.mlir.global linkonce constant @_QMtest_dinitEXdtXtseq
 // CHECK: llvm.mlir.addressof @_QMtest_dinitEXdtXtseq : !llvm.ptr
 
-// CHECK: llvm.mlir.global external constant @defaultXnonTbpDefinedIoTable()
-// CHECK: llvm.mlir.addressof @defaultXnonTbpDefinedIoTable
+// CHECK: llvm.mlir.global external constant @_QQdefaultXnonTbpDefinedIoTable()
+// CHECK: llvm.mlir.addressof @_QQdefaultXnonTbpDefinedIoTable
