@@ -48,8 +48,9 @@ void CompilerGeneratedNamesConversionPass::runOnOperation() {
     auto symName = op.getAttrOfType<mlir::StringAttr>(
         mlir::SymbolTable::getSymbolAttrName());
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
-    if (deconstructedName.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
-        !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
+    if ((deconstructedName.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
+         !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) ||
+        symName.getValue().starts_with("default.nonTbpDefinedIoTable")) {
       std::string newName =
           fir::NameUniquer::replaceSpecialSymbols(symName.getValue().str());
       if (newName != symName) {
