@@ -1986,12 +1986,12 @@ void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
   // LastLane = 1 - RunTimeVF
   Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *ResultPtr = Builder.CreateGEP(
-      IndexedTy, Ptr, NumElt, "",
-      getGEPNoWrapFlags().withoutInBounds().withoutNoUnsignedSignedWrap());
-  ResultPtr = Builder.CreateGEP(
-      IndexedTy, ResultPtr, LastLane, "",
-      getGEPNoWrapFlags().withoutInBounds().withoutNoUnsignedSignedWrap());
+  Value *ResultPtr =
+      Builder.CreateGEP(IndexedTy, Ptr, NumElt, "",
+                        getGEPNoWrapFlags().withoutNoUnsignedSignedWrap());
+  ResultPtr =
+      Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
+                        getGEPNoWrapFlags().withoutNoUnsignedSignedWrap());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
