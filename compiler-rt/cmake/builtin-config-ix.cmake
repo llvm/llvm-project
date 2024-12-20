@@ -15,6 +15,8 @@ builtin_check_c_compiler_flag(-fomit-frame-pointer  COMPILER_RT_HAS_OMIT_FRAME_P
 builtin_check_c_compiler_flag(-ffreestanding        COMPILER_RT_HAS_FFREESTANDING_FLAG)
 builtin_check_c_compiler_flag(-fxray-instrument     COMPILER_RT_HAS_XRAY_COMPILER_FLAG)
 builtin_check_c_compiler_flag(-fno-lto              COMPILER_RT_HAS_FNO_LTO_FLAG)
+builtin_check_c_compiler_flag(-fno-whole-program-vtables COMPILER_RT_HAS_FNO_WPD_FLAG)
+builtin_check_c_compiler_flag(-fno-virtual-function-elimination COMPILER_RT_HAS_FNO_VFE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)

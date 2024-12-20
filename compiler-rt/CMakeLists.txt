@@ -363,8 +363,11 @@ append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANIT
 if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
   append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
 endif()
-append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
-
+if(NOT COMPILER_RT_ENABLE_LTO)
+  append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_FNO_WPD_FLAG -fno-whole-program-vtables SANITIZER_COMMON_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_FNO_VFE_FLAG -fno-virtual-function-elimination SANITIZER_COMMON_CFLAGS)
+endif()
 # By default do not instrument or use profdata for compiler-rt.
 if(NOT COMPILER_RT_ENABLE_PGO)
   if(LLVM_PROFDATA_FILE AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
