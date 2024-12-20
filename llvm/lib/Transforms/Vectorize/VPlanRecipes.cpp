@@ -3438,7 +3438,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  bool ScalarPHI = VF.isScalar() || IsInLoop;
+  bool ScalarPHI = State.VF.isScalar() || IsInLoop;
   Type *VecTy =
       ScalarPHI ? StartV->getType() : VectorType::get(StartV->getType(), VF);
 
