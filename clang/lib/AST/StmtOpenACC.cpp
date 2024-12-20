@@ -225,3 +225,43 @@ OpenACCWaitConstruct *OpenACCWaitConstruct::Create(
                            QueuesLoc, QueueIdExprs, RParenLoc, End, Clauses);
   return Inst;
 }
+OpenACCInitConstruct *OpenACCInitConstruct::CreateEmpty(const ASTContext &C,
+                                                        unsigned NumClauses) {
+  void *Mem =
+      C.Allocate(OpenACCInitConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCInitConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCInitConstruct *
+OpenACCInitConstruct::Create(const ASTContext &C, SourceLocation Start,
+                             SourceLocation DirectiveLoc, SourceLocation End,
+                             ArrayRef<const OpenACCClause *> Clauses) {
+  void *Mem =
+      C.Allocate(OpenACCInitConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst =
+      new (Mem) OpenACCInitConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}
+OpenACCShutdownConstruct *
+OpenACCShutdownConstruct::CreateEmpty(const ASTContext &C,
+                                      unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCShutdownConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCShutdownConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCShutdownConstruct *OpenACCShutdownConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    SourceLocation End, ArrayRef<const OpenACCClause *> Clauses) {
+  void *Mem = C.Allocate(
+      OpenACCShutdownConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst =
+      new (Mem) OpenACCShutdownConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}

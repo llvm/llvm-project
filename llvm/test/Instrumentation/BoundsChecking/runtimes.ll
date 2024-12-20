@@ -38,7 +38,7 @@ define void @f1(i64 %x) nounwind {
 ; RT-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
 ; RT-NEXT:    ret void
 ; RT:       [[TRAP]]:
-; RT-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR0]]
+; RT-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR1:[0-9]+]]
 ; RT-NEXT:    br label %[[BB7]]
 ;
 ; RTABORT-LABEL: define void @f1(
@@ -54,7 +54,7 @@ define void @f1(i64 %x) nounwind {
 ; RTABORT-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
 ; RTABORT-NEXT:    ret void
 ; RTABORT:       [[TRAP]]:
-; RTABORT-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR1:[0-9]+]]
+; RTABORT-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR2:[0-9]+]]
 ; RTABORT-NEXT:    unreachable
 ;
 ; MINRT-LABEL: define void @f1(
@@ -70,7 +70,7 @@ define void @f1(i64 %x) nounwind {
 ; MINRT-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
 ; MINRT-NEXT:    ret void
 ; MINRT:       [[TRAP]]:
-; MINRT-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal() #[[ATTR0]]
+; MINRT-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal() #[[ATTR1:[0-9]+]]
 ; MINRT-NEXT:    br label %[[BB7]]
 ;
 ; MINRTABORT-LABEL: define void @f1(
@@ -86,7 +86,7 @@ define void @f1(i64 %x) nounwind {
 ; MINRTABORT-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
 ; MINRTABORT-NEXT:    ret void
 ; MINRTABORT:       [[TRAP]]:
-; MINRTABORT-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal_abort() #[[ATTR1:[0-9]+]]
+; MINRTABORT-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal_abort() #[[ATTR2:[0-9]+]]
 ; MINRTABORT-NEXT:    unreachable
 ;
   %1 = alloca i128, i64 %x

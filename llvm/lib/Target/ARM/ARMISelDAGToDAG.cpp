@@ -505,14 +505,14 @@ bool ARMDAGToDAGISel::hasNoVMLxHazardUse(SDNode *N) const {
   if (!N->hasOneUse())
     return false;
 
-  SDNode *Use = *N->use_begin();
-  if (Use->getOpcode() == ISD::CopyToReg)
+  SDNode *User = *N->user_begin();
+  if (User->getOpcode() == ISD::CopyToReg)
     return true;
-  if (Use->isMachineOpcode()) {
+  if (User->isMachineOpcode()) {
     const ARMBaseInstrInfo *TII = static_cast<const ARMBaseInstrInfo *>(
         CurDAG->getSubtarget().getInstrInfo());
 
-    const MCInstrDesc &MCID = TII->get(Use->getMachineOpcode());
+    const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
     if (MCID.mayStore())
       return true;
     unsigned Opcode = MCID.getOpcode();

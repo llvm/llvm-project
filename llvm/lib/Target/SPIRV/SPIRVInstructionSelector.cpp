@@ -2987,14 +2987,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
-  case Intrinsic::spv_handle_fromBinding: {
+  case Intrinsic::spv_resource_handlefrombinding: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
-  case Intrinsic::spv_typedBufferStore: {
+  case Intrinsic::spv_resource_store_typedbuffer: {
     selectImageWriteIntrinsic(I);
     return true;
   }
-  case Intrinsic::spv_typedBufferLoad: {
+  case Intrinsic::spv_resource_load_typedbuffer: {
     selectReadImageIntrinsic(ResVReg, ResType, I);
     return true;
   }

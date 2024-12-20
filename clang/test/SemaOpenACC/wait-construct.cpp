@@ -35,7 +35,7 @@ void uses() {
   // expected-note@#AMBIG_SHORT{{conversion to integral type 'short'}}
 #pragma acc wait(Ambiguous)
 
-  // expected-error@+2{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc wait(4, Explicit, 5)
 
@@ -61,7 +61,7 @@ void TestInst() {
   // expected-note@#AMBIG_SHORT{{conversion to integral type 'short'}}
 #pragma acc wait(devnum:T::value :queues:T::ACValue)
 
-  // expected-error@+5{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+5{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+3{{multiple conversions from expression type 'const AmbiguousConvert' to an integral type}}
   // expected-note@#AMBIG_INT{{conversion to integral type 'int'}}
