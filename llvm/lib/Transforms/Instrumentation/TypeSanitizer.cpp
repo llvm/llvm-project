@@ -510,7 +510,8 @@ void collectMemAccessInfo(
   }
 }
 
-bool TypeSanitizer::sanitizeFunction(Function &F, const TargetLibraryInfo &TLI) {
+bool TypeSanitizer::sanitizeFunction(Function &F,
+                                     const TargetLibraryInfo &TLI) {
   // This is required to prevent instrumenting call to __tysan_init from within
   // the module constructor.
   if (&F == TysanCtorFunction.getCallee() || &F == TysanGlobalsSetTypeFunction)
@@ -877,7 +878,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
 }
 
 PreservedAnalyses TypeSanitizerPass::run(Module &M,
-                                               ModuleAnalysisManager &MAM) {
+                                         ModuleAnalysisManager &MAM) {
   Function *TysanCtorFunction;
   std::tie(TysanCtorFunction, std::ignore) =
       createSanitizerCtorAndInitFunctions(M, kTysanModuleCtorName,
