@@ -167,6 +167,33 @@ exit:
   ret void
 }
 
+; Negative test. Widening structs of vectors is not supported.
+; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
+define void @negative_struct_of_vectors(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+; CHECK-LABEL: define void @negative_struct_of_vectors
+; CHECK-NOT:   vector.body:
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
+  %in_val = load <1 x float>, ptr %arrayidx, align 4
+  %call = tail call { <1 x float>, <1 x float> } @foo(<1 x float> %in_val) #0
+  %extract_a = extractvalue { <1 x float>, <1 x float> } %call, 0
+  %extract_b = extractvalue { <1 x float>, <1 x float> } %call, 1
+  %arrayidx2 = getelementptr inbounds float, ptr %out_a, i64 %iv
+  store <1 x float> %extract_a, ptr %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %out_b, i64 %iv
+  store <1 x float> %extract_b, ptr %arrayidx4, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 ; Negative test. Widening structs with mixed element types is not supported.
 ; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
 define void @negative_mixed_element_type_struct_return(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -361,6 +388,7 @@ declare %named_struct @bar_named(double)
 declare { { float, float } } @foo_nested_struct(float)
 declare { [2 x float] } @foo_arrays(float)
 declare { float, [1 x float] } @foo_one_non_widenable_element(float)
+declare { <1 x float>, <1 x float> } @foo_vectors(<1 x float>)
 declare { i32, i32, i32 } @qux(i32)
 
 declare { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float>)

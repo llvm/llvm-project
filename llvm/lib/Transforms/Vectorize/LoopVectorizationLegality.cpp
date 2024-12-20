@@ -958,10 +958,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         Type *InstTy = Inst.getType();
         if (isa<CallInst>(Inst) && isa<StructType>(InstTy) &&
             canWidenCallReturnType(InstTy)) {
+          // TODO: Remove the `StructVecCallFound` flag once vectorizing calls
+          // with struct returns is supported.
           StructVecCallFound = true;
-          // For now, we can only widen struct values returned from calls where
-          // all users are extractvalue instructions.
-          return llvm::all_of(Inst.users(), IsaPred<ExtractValueInst>);
+          // For now, we only recognize struct values returned from calls where
+          // all users are extractvalue as vectorizable.
+          return all_of(Inst.users(), IsaPred<ExtractValueInst>);
         }
         return VectorType::isValidElementType(InstTy) || InstTy->isVoidTy();
       };

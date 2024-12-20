@@ -75,12 +75,12 @@ inline bool isVectorizedTy(Type *Ty) {
   return Ty->isVectorTy();
 }
 
-// Returns true if `Ty` is a valid vector element type, void, or an unpacked
-// literal struct where all elements are valid vector element types.
-// Note: Even if a type can be vectorized that does not mean it is valid to do
-// so in all cases. For example, a vectorized struct (as returned by
-// toVectorizedTy) does not perform (de)interleaving, so it can't be used for
-// vectorizing loads/stores.
+/// Returns true if `Ty` is a valid vector element type, void, or an unpacked
+/// literal struct where all elements are valid vector element types.
+/// Note: Even if a type can be vectorized that does not mean it is valid to do
+/// so in all cases. For example, a vectorized struct (as returned by
+/// toVectorizedTy) does not perform (de)interleaving, so it can't be used for
+/// vectorizing loads/stores.
 inline bool canVectorizeTy(Type *Ty) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
     return canVectorizeStructTy(StructTy);
