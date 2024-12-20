@@ -25,7 +25,7 @@ float foo() {
 // CHECK: define internal void @_init_resource_bindings() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB_h = call target("dx.CBuffer", %class.CB, 176, 16, 168)
-// CHECK-SAME: @llvm.dx.handle.fromBinding.tdx.CBuffer_s_class.CBs_176_16_168t(i32 3, i32 1, i32 1, i32 0, i1 false)
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_s_class.CBs_176_16_168t(i32 3, i32 1, i32 1, i32 0, i1 false)
 // CHECK-NEXT: store target("dx.CBuffer", %class.CB, 176, 16, 168) %CB_h, ptr @CB.cb, align 4
 
 [numthreads(4,1,1)]

@@ -58,10 +58,10 @@ float foo() {
 // CHECK: define internal void @_init_resource_bindings() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB_h = call target("dx.CBuffer", %class.CB, 16, 0, 8)
-// CHECK-SAME: @llvm.dx.handle.fromBinding.tdx.CBuffer_s_class.CBs_16_0_8t(i32 2, i32 0, i32 1, i32 0, i1 false)
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_s_class.CBs_16_0_8t(i32 2, i32 0, i32 1, i32 0, i1 false)
 // CHECK-NEXT: store target("dx.CBuffer", %class.CB, 16, 0, 8) %CB_h, ptr @CB.cb, align 4
 // CHECK-NEXT: %ParticleLife_h = call target("dx.CBuffer", %class.ParticleLife, 24, 0, 4, 8, 16, 20)
-// CHECK-SAME: @llvm.dx.handle.fromBinding.tdx.CBuffer_s_class.ParticleLifes_24_0_4_8_16_20t(i32 1, i32 2, i32 1, i32 0, i1 false)
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_s_class.ParticleLifes_24_0_4_8_16_20t(i32 1, i32 2, i32 1, i32 0, i1 false)
 // CHECK-NEXT: store target("dx.CBuffer", %class.ParticleLife, 24, 0, 4, 8, 16, 20) %ParticleLife_h, ptr @ParticleLife.cb, align 4
 
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer.hlsl()
