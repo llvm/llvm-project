@@ -47,8 +47,7 @@ struct Range {
   }
 };
 
-using FallibleMemory64Iterator =
-    llvm::object::MinidumpFile::FallibleMemory64Iterator;
+using FallibleMemory64Iterator = llvm::object::MinidumpFile::FallibleMemory64Iterator;
 using ExceptionStreamsIterator =
     llvm::object::MinidumpFile::ExceptionStreamsIterator;
 
@@ -56,8 +55,6 @@ class MinidumpParser {
 public:
   static llvm::Expected<MinidumpParser>
   Create(const lldb::DataBufferSP &data_buf_sp);
-
-  const llvm::minidump::Header *GetHeader() const;
 
   llvm::ArrayRef<uint8_t> GetData();
 
@@ -99,8 +96,7 @@ public:
   /// complete (includes all regions mapped into the process memory).
   std::pair<MemoryRegionInfos, bool> BuildMemoryRegions();
 
-  llvm::iterator_range<FallibleMemory64Iterator>
-  GetMemory64Iterator(llvm::Error &err);
+  llvm::iterator_range<FallibleMemory64Iterator> GetMemory64Iterator(llvm::Error &err);
 
   static llvm::StringRef GetStreamTypeAsString(StreamType stream_type);
 

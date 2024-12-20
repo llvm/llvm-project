@@ -138,8 +138,7 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
     return nullptr;
 
   lldbassert(DataPtr->GetByteSize() == header_size);
-  if (identify_magic(toStringRef(DataPtr->GetData())) !=
-      llvm::file_magic::minidump)
+  if (identify_magic(toStringRef(DataPtr->GetData())) != llvm::file_magic::minidump)
     return nullptr;
 
   auto AllData =
@@ -345,11 +344,27 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
-bool ProcessMinidump::IsLLDBMinidump() const {
-  const llvm::minidump::Header *header = m_minidump_parser->GetHeader();
-  if (!header)
+bool ProcessMinidump::IsLLDBMinidump() {
+  // If we've already checked, return the cached value
+  if (m_is_lldb_generated.has_value())
+    return *m_is_lldb_generated;
+
+  // If the minidump doesn't have a LLDBGeneratedStream, it's not an LLDB
+  // We also check to see if the section was generated correctly, but not
+  // enforcing an exact size so we can change it in the future without
+  // impacting older generated Minidumps.
+  llvm::ArrayRef<uint8_t> lldbStream =
+      m_minidump_parser->GetStream(StreamType::LLDBGenerated);
+  if (lldbStream.empty() || lldbStream.size() <= sizeof(StreamType)) {
+    m_is_lldb_generated = false;
     return false;
-  return (header->Flags & llvm::minidump::Header::LLDB_HEADER_FLAG) == 0;
+  }
+
+  const uint32_t *lldbStreamType =
+      reinterpret_cast<const uint32_t *>(lldbStream.data());
+
+  m_is_lldb_generated = *lldbStreamType == (uint32_t)StreamType::LLDBGenerated;
+  return *m_is_lldb_generated;
 }
 
 DynamicLoader *ProcessMinidump::GetDynamicLoader() {
@@ -505,8 +520,8 @@ void ProcessMinidump::ReadModuleList() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   for (auto module : filtered_modules) {
-    std::string name = cantFail(
-        m_minidump_parser->GetMinidumpFile().getString(module->ModuleNameRVA));
+    std::string name = cantFail(m_minidump_parser->GetMinidumpFile().getString(
+        module->ModuleNameRVA));
     const uint64_t load_addr = module->BaseOfImage;
     const uint64_t load_size = module->SizeOfImage;
     LLDB_LOG(log, "found module: name: {0} {1:x10}-{2:x10} size: {3}", name,
@@ -525,8 +540,8 @@ void ProcessMinidump::ReadModuleList() {
     Status error;
     // Try and find a module with a full UUID that matches. This function will
     // add the module to the target if it finds one.
-    lldb::ModuleSP module_sp =
-        GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
+    lldb::ModuleSP module_sp = GetTarget().GetOrCreateModule(module_spec,
+                                                     true /* notify */, &error);
     if (module_sp) {
       LLDB_LOG(log, "Full uuid match for {0}.", name);
     } else {
@@ -550,8 +565,9 @@ void ProcessMinidump::ReadModuleList() {
       // we don't then we will end up setting the load address of a different
       // ObjectFilePlaceholder and an assertion will fire.
       auto *objfile = module_sp->GetObjectFile();
-      if (objfile && objfile->GetPluginName() ==
-                         ObjectFilePlaceholder::GetPluginNameStatic()) {
+      if (objfile &&
+          objfile->GetPluginName() ==
+              ObjectFilePlaceholder::GetPluginNameStatic()) {
         if (((ObjectFilePlaceholder *)objfile)->GetBaseImageAddress() !=
             load_addr)
           module_sp.reset();
@@ -581,7 +597,8 @@ void ProcessMinidump::ReadModuleList() {
     }
 
     bool load_addr_changed = false;
-    module_sp->SetLoadAddress(GetTarget(), load_addr, false, load_addr_changed);
+    module_sp->SetLoadAddress(GetTarget(), load_addr, false,
+                              load_addr_changed);
   }
 }
 
@@ -609,10 +626,10 @@ JITLoaderList &ProcessMinidump::GetJITLoaders() {
   return *m_jit_loaders_up;
 }
 
-#define INIT_BOOL(VAR, LONG, SHORT, DESC)                                      \
-  VAR(LLDB_OPT_SET_1, false, LONG, SHORT, DESC, false, true)
-#define APPEND_OPT(VAR)                                                        \
-  m_option_group.Append(&VAR, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1)
+#define INIT_BOOL(VAR, LONG, SHORT, DESC) \
+    VAR(LLDB_OPT_SET_1, false, LONG, SHORT, DESC, false, true)
+#define APPEND_OPT(VAR) \
+    m_option_group.Append(&VAR, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1)
 
 class CommandObjectProcessMinidumpDump : public CommandObjectParsed {
 private:
@@ -673,50 +690,55 @@ private:
     // If no options were set, then dump everything
     m_dump_all.GetOptionValue().SetCurrentValue(true);
   }
-  bool DumpAll() const { return m_dump_all.GetOptionValue().GetCurrentValue(); }
+  bool DumpAll() const {
+    return m_dump_all.GetOptionValue().GetCurrentValue();
+  }
   bool DumpDirectory() const {
-    return DumpAll() || m_dump_directory.GetOptionValue().GetCurrentValue();
+    return DumpAll() ||
+        m_dump_directory.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinux() const {
     return DumpAll() || m_dump_linux_all.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxCPUInfo() const {
     return DumpLinux() ||
-           m_dump_linux_cpuinfo.GetOptionValue().GetCurrentValue();
+        m_dump_linux_cpuinfo.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxProcStatus() const {
     return DumpLinux() ||
-           m_dump_linux_proc_status.GetOptionValue().GetCurrentValue();
+        m_dump_linux_proc_status.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxProcStat() const {
     return DumpLinux() ||
-           m_dump_linux_proc_stat.GetOptionValue().GetCurrentValue();
+        m_dump_linux_proc_stat.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxLSBRelease() const {
     return DumpLinux() ||
-           m_dump_linux_lsb_release.GetOptionValue().GetCurrentValue();
+        m_dump_linux_lsb_release.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxCMDLine() const {
     return DumpLinux() ||
-           m_dump_linux_cmdline.GetOptionValue().GetCurrentValue();
+        m_dump_linux_cmdline.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxEnviron() const {
     return DumpLinux() ||
-           m_dump_linux_environ.GetOptionValue().GetCurrentValue();
+        m_dump_linux_environ.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxAuxv() const {
-    return DumpLinux() || m_dump_linux_auxv.GetOptionValue().GetCurrentValue();
+    return DumpLinux() ||
+        m_dump_linux_auxv.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxMaps() const {
-    return DumpLinux() || m_dump_linux_maps.GetOptionValue().GetCurrentValue();
+    return DumpLinux() ||
+        m_dump_linux_maps.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxProcUptime() const {
     return DumpLinux() ||
-           m_dump_linux_proc_uptime.GetOptionValue().GetCurrentValue();
+        m_dump_linux_proc_uptime.GetOptionValue().GetCurrentValue();
   }
   bool DumpLinuxProcFD() const {
     return DumpLinux() ||
-           m_dump_linux_proc_fd.GetOptionValue().GetCurrentValue();
+        m_dump_linux_proc_fd.GetOptionValue().GetCurrentValue();
   }
   bool DumpFacebook() const {
     return DumpAll() || m_fb_all.GetOptionValue().GetCurrentValue();
@@ -754,59 +776,60 @@ private:
   bool DumpFacebookLogcat() const {
     return DumpFacebook() || m_fb_logcat.GetOptionValue().GetCurrentValue();
   }
-
 public:
   CommandObjectProcessMinidumpDump(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "process plugin dump",
-                            "Dump information from the minidump file.",
-                            nullptr),
-        m_option_group(), INIT_BOOL(m_dump_all, "all", 'a',
-                                    "Dump the everything in the minidump."),
-        INIT_BOOL(m_dump_directory, "directory", 'd',
-                  "Dump the minidump directory map."),
-        INIT_BOOL(m_dump_linux_cpuinfo, "cpuinfo", 'C',
-                  "Dump linux /proc/cpuinfo."),
-        INIT_BOOL(m_dump_linux_proc_status, "status", 's',
-                  "Dump linux /proc/<pid>/status."),
-        INIT_BOOL(m_dump_linux_lsb_release, "lsb-release", 'r',
-                  "Dump linux /etc/lsb-release."),
-        INIT_BOOL(m_dump_linux_cmdline, "cmdline", 'c',
-                  "Dump linux /proc/<pid>/cmdline."),
-        INIT_BOOL(m_dump_linux_environ, "environ", 'e',
-                  "Dump linux /proc/<pid>/environ."),
-        INIT_BOOL(m_dump_linux_auxv, "auxv", 'x',
-                  "Dump linux /proc/<pid>/auxv."),
-        INIT_BOOL(m_dump_linux_maps, "maps", 'm',
-                  "Dump linux /proc/<pid>/maps."),
-        INIT_BOOL(m_dump_linux_proc_stat, "stat", 'S',
-                  "Dump linux /proc/<pid>/stat."),
-        INIT_BOOL(m_dump_linux_proc_uptime, "uptime", 'u',
-                  "Dump linux process uptime."),
-        INIT_BOOL(m_dump_linux_proc_fd, "fd", 'f',
-                  "Dump linux /proc/<pid>/fd."),
-        INIT_BOOL(m_dump_linux_all, "linux", 'l', "Dump all linux streams."),
-        INIT_BOOL(m_fb_app_data, "fb-app-data", 1,
-                  "Dump Facebook application custom data."),
-        INIT_BOOL(m_fb_build_id, "fb-build-id", 2,
-                  "Dump the Facebook build ID."),
-        INIT_BOOL(m_fb_version, "fb-version", 3,
-                  "Dump Facebook application version string."),
-        INIT_BOOL(m_fb_java_stack, "fb-java-stack", 4,
-                  "Dump Facebook java stack."),
-        INIT_BOOL(m_fb_dalvik, "fb-dalvik-info", 5,
-                  "Dump Facebook Dalvik info."),
-        INIT_BOOL(m_fb_unwind, "fb-unwind-symbols", 6,
-                  "Dump Facebook unwind symbols."),
-        INIT_BOOL(m_fb_error_log, "fb-error-log", 7,
-                  "Dump Facebook error log."),
-        INIT_BOOL(m_fb_app_state, "fb-app-state-log", 8,
-                  "Dump Facebook java stack."),
-        INIT_BOOL(m_fb_abort, "fb-abort-reason", 9,
-                  "Dump Facebook abort reason."),
-        INIT_BOOL(m_fb_thread, "fb-thread-name", 10,
-                  "Dump Facebook thread name."),
-        INIT_BOOL(m_fb_logcat, "fb-logcat", 11, "Dump Facebook logcat."),
-        INIT_BOOL(m_fb_all, "facebook", 12, "Dump all Facebook streams.") {
+  : CommandObjectParsed(interpreter, "process plugin dump",
+      "Dump information from the minidump file.", nullptr),
+    m_option_group(),
+    INIT_BOOL(m_dump_all, "all", 'a',
+              "Dump the everything in the minidump."),
+    INIT_BOOL(m_dump_directory, "directory", 'd',
+              "Dump the minidump directory map."),
+    INIT_BOOL(m_dump_linux_cpuinfo, "cpuinfo", 'C',
+              "Dump linux /proc/cpuinfo."),
+    INIT_BOOL(m_dump_linux_proc_status, "status", 's',
+              "Dump linux /proc/<pid>/status."),
+    INIT_BOOL(m_dump_linux_lsb_release, "lsb-release", 'r',
+              "Dump linux /etc/lsb-release."),
+    INIT_BOOL(m_dump_linux_cmdline, "cmdline", 'c',
+              "Dump linux /proc/<pid>/cmdline."),
+    INIT_BOOL(m_dump_linux_environ, "environ", 'e',
+              "Dump linux /proc/<pid>/environ."),
+    INIT_BOOL(m_dump_linux_auxv, "auxv", 'x',
+              "Dump linux /proc/<pid>/auxv."),
+    INIT_BOOL(m_dump_linux_maps, "maps", 'm',
+              "Dump linux /proc/<pid>/maps."),
+    INIT_BOOL(m_dump_linux_proc_stat, "stat", 'S',
+              "Dump linux /proc/<pid>/stat."),
+    INIT_BOOL(m_dump_linux_proc_uptime, "uptime", 'u',
+              "Dump linux process uptime."),
+    INIT_BOOL(m_dump_linux_proc_fd, "fd", 'f',
+              "Dump linux /proc/<pid>/fd."),
+    INIT_BOOL(m_dump_linux_all, "linux", 'l',
+              "Dump all linux streams."),
+    INIT_BOOL(m_fb_app_data, "fb-app-data", 1,
+              "Dump Facebook application custom data."),
+    INIT_BOOL(m_fb_build_id, "fb-build-id", 2,
+              "Dump the Facebook build ID."),
+    INIT_BOOL(m_fb_version, "fb-version", 3,
+              "Dump Facebook application version string."),
+    INIT_BOOL(m_fb_java_stack, "fb-java-stack", 4,
+              "Dump Facebook java stack."),
+    INIT_BOOL(m_fb_dalvik, "fb-dalvik-info", 5,
+              "Dump Facebook Dalvik info."),
+    INIT_BOOL(m_fb_unwind, "fb-unwind-symbols", 6,
+              "Dump Facebook unwind symbols."),
+    INIT_BOOL(m_fb_error_log, "fb-error-log", 7,
+              "Dump Facebook error log."),
+    INIT_BOOL(m_fb_app_state, "fb-app-state-log", 8,
+              "Dump Facebook java stack."),
+    INIT_BOOL(m_fb_abort, "fb-abort-reason", 9,
+              "Dump Facebook abort reason."),
+    INIT_BOOL(m_fb_thread, "fb-thread-name", 10,
+              "Dump Facebook thread name."),
+    INIT_BOOL(m_fb_logcat, "fb-logcat", 11,
+              "Dump Facebook logcat."),
+    INIT_BOOL(m_fb_all, "facebook", 12, "Dump all Facebook streams.") {
     APPEND_OPT(m_dump_all);
     APPEND_OPT(m_dump_directory);
     APPEND_OPT(m_dump_linux_cpuinfo);
@@ -909,7 +932,8 @@ public:
     if (DumpLinuxProcFD())
       DumpTextStream(StreamType::LinuxProcFD, "/proc/PID/fd");
     if (DumpFacebookAppData())
-      DumpTextStream(StreamType::FacebookAppCustomData, "Facebook App Data");
+      DumpTextStream(StreamType::FacebookAppCustomData,
+                     "Facebook App Data");
     if (DumpFacebookBuildID()) {
       auto bytes = minidump.GetStream(StreamType::FacebookBuildID);
       if (bytes.size() >= 4) {
@@ -926,21 +950,26 @@ public:
       DumpTextStream(StreamType::FacebookAppVersionName,
                      "Facebook Version String");
     if (DumpFacebookJavaStack())
-      DumpTextStream(StreamType::FacebookJavaStack, "Facebook Java Stack");
+      DumpTextStream(StreamType::FacebookJavaStack,
+                     "Facebook Java Stack");
     if (DumpFacebookDalvikInfo())
-      DumpTextStream(StreamType::FacebookDalvikInfo, "Facebook Dalvik Info");
+      DumpTextStream(StreamType::FacebookDalvikInfo,
+                     "Facebook Dalvik Info");
     if (DumpFacebookUnwindSymbols())
       DumpBinaryStream(StreamType::FacebookUnwindSymbols,
                        "Facebook Unwind Symbols Bytes");
     if (DumpFacebookErrorLog())
-      DumpTextStream(StreamType::FacebookDumpErrorLog, "Facebook Error Log");
+      DumpTextStream(StreamType::FacebookDumpErrorLog,
+                     "Facebook Error Log");
     if (DumpFacebookAppStateLog())
       DumpTextStream(StreamType::FacebookAppStateLog,
                      "Faceook Application State Log");
     if (DumpFacebookAbortReason())
-      DumpTextStream(StreamType::FacebookAbortReason, "Facebook Abort Reason");
+      DumpTextStream(StreamType::FacebookAbortReason,
+                     "Facebook Abort Reason");
     if (DumpFacebookThreadName())
-      DumpTextStream(StreamType::FacebookThreadName, "Facebook Thread Name");
+      DumpTextStream(StreamType::FacebookThreadName,
+                     "Facebook Thread Name");
     if (DumpFacebookLogcat())
       DumpTextStream(StreamType::FacebookLogcat, "Facebook Logcat");
   }
@@ -949,12 +978,11 @@ public:
 class CommandObjectMultiwordProcessMinidump : public CommandObjectMultiword {
 public:
   CommandObjectMultiwordProcessMinidump(CommandInterpreter &interpreter)
-      : CommandObjectMultiword(
-            interpreter, "process plugin",
-            "Commands for operating on a ProcessMinidump process.",
-            "process plugin <subcommand> [<subcommand-options>]") {
-    LoadSubCommand("dump", CommandObjectSP(new CommandObjectProcessMinidumpDump(
-                               interpreter)));
+    : CommandObjectMultiword(interpreter, "process plugin",
+          "Commands for operating on a ProcessMinidump process.",
+          "process plugin <subcommand> [<subcommand-options>]") {
+    LoadSubCommand("dump",
+        CommandObjectSP(new CommandObjectProcessMinidumpDump(interpreter)));
   }
 
   ~CommandObjectMultiwordProcessMinidump() override = default;

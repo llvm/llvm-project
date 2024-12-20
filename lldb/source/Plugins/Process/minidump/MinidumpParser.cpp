@@ -20,8 +20,8 @@
 #include <algorithm>
 #include <map>
 #include <optional>
-#include <utility>
 #include <vector>
+#include <utility>
 
 using namespace lldb_private;
 using namespace minidump;
@@ -43,10 +43,6 @@ MinidumpParser::MinidumpParser(lldb::DataBufferSP data_sp,
 llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
   return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes(),
                                  m_data_sp->GetByteSize());
-}
-
-const llvm::minidump::Header *MinidumpParser::GetHeader() const {
-  return reinterpret_cast<llvm::minidump::Header *>(m_file.get());
 }
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetStream(StreamType stream_type) {
@@ -74,7 +70,8 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
     if (GetArchitecture().GetTriple().isOSBinFormatELF()) {
       if (pdb70_uuid->Age != 0)
         return UUID(pdb70_uuid, sizeof(*pdb70_uuid));
-      return UUID(&pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
+      return UUID(&pdb70_uuid->Uuid,
+                                    sizeof(pdb70_uuid->Uuid));
     }
     return UUID(*pdb70_uuid);
   } else if (cv_signature == CvSignature::ElfBuildId)
@@ -456,12 +453,10 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
 
   if (!GetStream(StreamType::Memory64List).empty()) {
     llvm::Error err = llvm::Error::success();
-    for (const auto &memory_desc : GetMinidumpFile().getMemory64List(err)) {
-      if (memory_desc.first.StartOfMemoryRange <= addr &&
-          addr < memory_desc.first.StartOfMemoryRange +
-                     memory_desc.first.DataSize) {
-        return minidump::Range(memory_desc.first.StartOfMemoryRange,
-                               memory_desc.second);
+    for (const auto &memory_desc :  GetMinidumpFile().getMemory64List(err)) {
+      if (memory_desc.first.StartOfMemoryRange <= addr 
+          && addr < memory_desc.first.StartOfMemoryRange + memory_desc.first.DataSize) {
+        return minidump::Range(memory_desc.first.StartOfMemoryRange, memory_desc.second);
       }
     }
 
@@ -495,8 +490,7 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
   return range->range_ref.slice(offset, overlap);
 }
 
-llvm::iterator_range<FallibleMemory64Iterator>
-MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
+llvm::iterator_range<FallibleMemory64Iterator> MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
   llvm::ErrorAsOutParameter ErrAsOutParam(&err);
   return m_file->getMemory64List(err);
 }
@@ -608,7 +602,8 @@ std::pair<MemoryRegionInfos, bool> MinidumpParser::BuildMemoryRegions() {
   case StreamType::ST:                                                         \
     return #ST
 
-llvm::StringRef MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
+llvm::StringRef
+MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
   switch (stream_type) {
     ENUM_TO_CSTR(Unused);
     ENUM_TO_CSTR(ThreadList);
