@@ -37,14 +37,13 @@ struct UncheckedOptionalAccessModelOptions {
   /// can't identify when their results are used safely (across calls),
   /// resulting in false positives in all such cases. Note: this option does not
   /// cover access through `operator[]`.
-  /// FIXME: we currently cache and equate the result of const accessors
-  /// returning pointers, so cover the case of operator-> followed by
-  /// operator->, which covers the common case of smart pointers. We also cover
-  /// some limited cases of returning references (if return type is an optional
-  /// type), so cover some cases of operator* followed by operator*. We don't
-  /// cover mixing operator-> and operator*. Once we are confident in this const
-  /// accessor caching, we shouldn't need the IgnoreSmartPointerDereference
-  /// option anymore.
+  ///
+  /// FIXME: we now cache and equate the result of const accessors
+  /// that look like unique_ptr, have both `->` (returning a pointer type) and
+  /// `*` (returning a reference type). This includes mixing `->` and
+  /// `*` in a sequence of calls as long as the object is not modified. Once we
+  /// are confident in this const accessor caching, we shouldn't need the
+  /// IgnoreSmartPointerDereference option anymore.
   bool IgnoreSmartPointerDereference = false;
 };
 
