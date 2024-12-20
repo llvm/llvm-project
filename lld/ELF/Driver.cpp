@@ -1897,6 +1897,9 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
                      << ": " << e.message();
   }
+
+  if (ctx.arg.osabi == ELFOSABI_OPENBSD)
+    ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
 }
 
 static bool isFormatBinary(Ctx &ctx, StringRef s) {

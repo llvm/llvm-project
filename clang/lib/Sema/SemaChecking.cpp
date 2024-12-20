@@ -3631,7 +3631,6 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
-  case AtomicExpr::AO__atomic_clear:
     return OrderingCABI != llvm::AtomicOrderingCABI::consume &&
            OrderingCABI != llvm::AtomicOrderingCABI::acquire &&
            OrderingCABI != llvm::AtomicOrderingCABI::acq_rel;
@@ -3684,18 +3683,12 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     C11CmpXchg,
 
     // bool __atomic_compare_exchange(A *, C *, CP, bool, int, int)
-    GNUCmpXchg,
-
-    // bool __atomic_test_and_set(A *, int)
-    TestAndSet,
-
-    // void __atomic_clear(A *, int)
-    Clear,
+    GNUCmpXchg
   } Form = Init;
 
-  const unsigned NumForm = Clear + 1;
-  const unsigned NumArgs[] = {2, 2, 3, 3, 3, 3, 4, 5, 6, 2, 2};
-  const unsigned NumVals[] = {1, 0, 1, 1, 1, 1, 2, 2, 3, 0, 0};
+  const unsigned NumForm = GNUCmpXchg + 1;
+  const unsigned NumArgs[] = { 2, 2, 3, 3, 3, 3, 4, 5, 6 };
+  const unsigned NumVals[] = { 1, 0, 1, 1, 1, 1, 2, 2, 3 };
   // where:
   //   C is an appropriate type,
   //   A is volatile _Atomic(C) for __c11 builtins and is C for GNU builtins,
@@ -3856,14 +3849,6 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
     Form = GNUCmpXchg;
     break;
-
-  case AtomicExpr::AO__atomic_test_and_set:
-    Form = TestAndSet;
-    break;
-
-  case AtomicExpr::AO__atomic_clear:
-    Form = Clear;
-    break;
   }
 
   unsigned AdjustedNumArgs = NumArgs[Form];
@@ -4009,10 +3994,10 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   ValType.removeLocalVolatile();
   ValType.removeLocalConst();
   QualType ResultType = ValType;
-  if (Form == Copy || Form == LoadCopy || Form == GNUXchg || Form == Init ||
-      Form == Clear)
+  if (Form == Copy || Form == LoadCopy || Form == GNUXchg ||
+      Form == Init)
     ResultType = Context.VoidTy;
-  else if (Form == C11CmpXchg || Form == GNUCmpXchg || Form == TestAndSet)
+  else if (Form == C11CmpXchg || Form == GNUCmpXchg)
     ResultType = Context.BoolTy;
 
   // The type of a parameter passed 'by value'. In the GNU atomics, such
@@ -4056,10 +4041,6 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       APIOrderedArgs.push_back(Args[5]); // Weak
       APIOrderedArgs.push_back(Args[1]); // Order
       APIOrderedArgs.push_back(Args[3]); // OrderFail
-      break;
-    case TestAndSet:
-    case Clear:
-      APIOrderedArgs.push_back(Args[1]); // Order
       break;
     }
   } else
@@ -4146,8 +4127,6 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     SubExprs.push_back(APIOrderedArgs[1]); // Val1
     break;
   case Load:
-  case TestAndSet:
-  case Clear:
     SubExprs.push_back(APIOrderedArgs[1]); // Order
     break;
   case LoadCopy:
@@ -8103,8 +8082,9 @@ static void CheckFormatString(
   }
 
   if (Type == Sema::FST_Printf || Type == Sema::FST_NSString ||
-      Type == Sema::FST_FreeBSDKPrintf || Type == Sema::FST_OSLog ||
-      Type == Sema::FST_OSTrace || Type == Sema::FST_Syslog) {
+      Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf ||
+      Type == Sema::FST_OSLog || Type == Sema::FST_OSTrace ||
+      Type == Sema::FST_Syslog) {
     CheckPrintfHandler H(
         S, FExpr, OrigFormatExpr, Type, firstDataArg, numDataArgs,
         (Type == Sema::FST_NSString || Type == Sema::FST_OSTrace), Str, APK,
@@ -8113,7 +8093,7 @@ static void CheckFormatString(
 
     if (!analyze_format_string::ParsePrintfString(
             H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
-            Type == Sema::FST_FreeBSDKPrintf))
+            Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf))
       H.DoneProcessing();
   } else if (Type == Sema::FST_Scanf) {
     CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,

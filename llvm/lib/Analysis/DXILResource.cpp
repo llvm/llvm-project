@@ -691,7 +691,7 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
     switch (ID) {
     default:
       continue;
-    case Intrinsic::dx_handle_fromBinding: {
+    case Intrinsic::dx_resource_handlefrombinding: {
       auto *HandleTy = cast<TargetExtType>(F.getReturnType());
       ResourceTypeInfo &RTI = DRTM[HandleTy];
 
