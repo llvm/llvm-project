@@ -453,6 +453,10 @@ New Compiler Flags
 - The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
   starting from C++26, this warning is enabled as an error by default.
 
+- '-fsanitize-merge' (default) and '-fno-sanitize-merge' have been added for
+  fine-grained control of which UBSan checks are allowed to be merged by the
+  backend (for example, -fno-sanitize-merge=bool,enum).
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -511,6 +515,8 @@ Removed Compiler Flags
   derivatives) is now removed, since it's no longer possible to suppress the
   diagnostic (see above). Users can expect an `unknown warning` diagnostic if
   it's still in use.
+- The experimental flag '-ubsan-unique-traps' has been removed. It is
+  superseded by '-fno-sanitize-merge'.
 
 Attribute Changes in Clang
 --------------------------
@@ -882,6 +888,7 @@ Bug Fixes to C++ Support
 - Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 - Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
+- Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1232,6 +1239,8 @@ Sanitizers
 - Introduced an experimental Type Sanitizer, activated by using the
   ``-fsanitize=type`` flag. This sanitizer detects violations of C/C++ type-based
   aliasing rules.
+
+- Implemented ``-f[no-]sanitize-trap=local-bounds``, and ``-f[no-]sanitize-recover=local-bounds``.
 
 Python Binding Changes
 ----------------------

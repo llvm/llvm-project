@@ -25,3 +25,6 @@ revert: breaks smoke/xteamr
 f4ee5a673f6e [OpenMP] Replace AMDGPU fences with generic scoped fences (#119619) 
 Ron , Dhruva, Joseph 
 ---
+revert: breaks rocBLAS build
+d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
+---

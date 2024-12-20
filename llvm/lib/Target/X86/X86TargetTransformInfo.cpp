@@ -1728,7 +1728,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
         // destination register is just a copy of the source register or the
         // copy of the previous destination register (the cost is
         // TTI::TCC_Basic). If the source register is just reused, the cost for
-        // this operation is 0.
+        // this operation is TTI::TCC_Free.
         NumOfDests =
             getTypeLegalizationCost(
                 FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
@@ -1762,7 +1762,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
               if (SrcReg != DestReg &&
                   any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
                 // Just a copy of the source register.
-                Cost += TTI::TCC_Basic;
+                Cost += TTI::TCC_Free;
               }
               PrevSrcReg = SrcReg;
               PrevRegMask = RegMask;

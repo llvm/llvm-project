@@ -99,8 +99,8 @@ public:
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
-    addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
+    addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
   }
 };

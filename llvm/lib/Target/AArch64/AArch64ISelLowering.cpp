@@ -6464,7 +6464,7 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
         return false;
 
       unsigned NumExtMaskedLoads = 0;
-      for (auto *U : Ld->getMask()->uses())
+      for (auto *U : Ld->getMask()->users())
         if (isa<MaskedLoadSDNode>(U))
           NumExtMaskedLoads++;
 
@@ -8559,7 +8559,7 @@ SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
   ArgChains.push_back(Chain);
 
   // Add a chain value for each stack argument corresponding
-  for (SDNode *U : DAG.getEntryNode().getNode()->uses())
+  for (SDNode *U : DAG.getEntryNode().getNode()->users())
     if (LoadSDNode *L = dyn_cast<LoadSDNode>(U))
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr()))
         if (FI->getIndex() < 0) {
@@ -18110,9 +18110,9 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
   if (N->getOpcode() == ISD::SHL && N->hasOneUse()) {
     if (auto C2 = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
       unsigned ShlAmt = C2->getZExtValue();
-      if (auto ShouldADD = *N->use_begin();
+      if (auto ShouldADD = *N->user_begin();
           ShouldADD->getOpcode() == ISD::ADD && ShouldADD->hasOneUse()) {
-        if (auto ShouldLOAD = dyn_cast<LoadSDNode>(*ShouldADD->use_begin())) {
+        if (auto ShouldLOAD = dyn_cast<LoadSDNode>(*ShouldADD->user_begin())) {
           unsigned ByteVT = ShouldLOAD->getMemoryVT().getSizeInBits() / 8;
           if ((1ULL << ShlAmt) == ByteVT &&
               isIndexedLoadLegal(ISD::PRE_INC, ShouldLOAD->getMemoryVT()))
@@ -18903,8 +18903,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into madd or msub.
-    if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ADD ||
-                           N->use_begin()->getOpcode() == ISD::SUB))
+    if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ADD ||
+                           N->user_begin()->getOpcode() == ISD::SUB))
       return SDValue();
   }
   // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub
@@ -19116,11 +19116,65 @@ static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
   return SDValue();
 }
 
+/// Tries to replace scalar FP <-> INT conversions with SVE in streaming
+/// functions, this can help to reduce the number of fmovs to/from GPRs.
+static SDValue
+tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const AArch64Subtarget *Subtarget) {
+  if (N->isStrictFPOpcode())
+    return SDValue();
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
+      (!Subtarget->isStreaming() && !Subtarget->isStreamingCompatible()))
+    return SDValue();
+
+  auto isSupportedType = [](EVT VT) {
+    return !VT.isVector() && VT != MVT::bf16 && VT != MVT::f128;
+  };
+
+  SDValue SrcVal = N->getOperand(0);
+  EVT SrcTy = SrcVal.getValueType();
+  EVT DestTy = N->getValueType(0);
+
+  if (!isSupportedType(SrcTy) || !isSupportedType(DestTy))
+    return SDValue();
+
+  EVT SrcVecTy;
+  EVT DestVecTy;
+  if (DestTy.bitsGT(SrcTy)) {
+    DestVecTy = getPackedSVEVectorVT(DestTy);
+    SrcVecTy = DestVecTy.changeVectorElementType(SrcTy);
+  } else {
+    SrcVecTy = getPackedSVEVectorVT(SrcTy);
+    DestVecTy = SrcVecTy.changeVectorElementType(DestTy);
+  }
+
+  // Ensure the resulting src/dest vector type is legal.
+  if (SrcVecTy == MVT::nxv2i32 || DestVecTy == MVT::nxv2i32)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
+                            DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
+  SDValue Convert = DAG.getNode(N->getOpcode(), DL, DestVecTy, Vec);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
+}
+
 static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
   // First try to optimize away the conversion when it's conditionally from
   // a constant. Vectors only.
   if (SDValue Res = performVectorCompareAndMaskUnaryOpCombine(N, DAG))
+    return Res;
+
+  if (SDValue Res =
+          tryToReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
     return Res;
 
   EVT VT = N->getValueType(0);
@@ -19161,6 +19215,10 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
+  if (SDValue Res =
+          tryToReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
+    return Res;
+
   if (!Subtarget->isNeonAvailable())
     return SDValue();
 
@@ -19587,7 +19645,7 @@ static SDValue performANDSETCCCombine(SDNode *N,
   // Checks if the current node (N) is used by any SELECT instruction and
   // returns an empty SDValue to avoid applying the optimization to prevent
   // incorrect results
-  for (auto U : N->uses())
+  for (auto U : N->users())
     if (U->getOpcode() == ISD::SELECT)
       return SDValue();
 
@@ -21804,7 +21862,7 @@ static SDValue tryCombineWhileLo(SDNode *N,
   if (HalfSize < 2)
     return SDValue();
 
-  auto It = N->use_begin();
+  auto It = N->user_begin();
   SDNode *Lo = *It++;
   SDNode *Hi = *It;
 
@@ -23391,11 +23449,10 @@ static SDValue performPostLD1Combine(SDNode *N,
 
   // Check if there are other uses. If so, do not combine as it will introduce
   // an extra load.
-  for (SDNode::use_iterator UI = LD->use_begin(), UE = LD->use_end(); UI != UE;
-       ++UI) {
-    if (UI.getUse().getResNo() == 1) // Ignore uses of the chain result.
+  for (SDUse &U : LD->uses()) {
+    if (U.getResNo() == 1) // Ignore uses of the chain result.
       continue;
-    if (*UI != N)
+    if (U.getUser() != N)
       return SDValue();
   }
 
@@ -23403,7 +23460,7 @@ static SDValue performPostLD1Combine(SDNode *N,
   // TODO: This could be expanded to more operations if they reliably use the
   // index variants.
   if (N->hasOneUse()) {
-    unsigned UseOpc = N->use_begin()->getOpcode();
+    unsigned UseOpc = N->user_begin()->getOpcode();
     if (UseOpc == ISD::FMUL || UseOpc == ISD::FMA)
       return SDValue();
   }
@@ -23411,11 +23468,9 @@ static SDValue performPostLD1Combine(SDNode *N,
   SDValue Addr = LD->getOperand(1);
   SDValue Vector = N->getOperand(0);
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(), UE =
-       Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (User->getOpcode() != ISD::ADD
-        || UI.getUse().getResNo() != Addr.getResNo())
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::ADD || Use.getResNo() != Addr.getResNo())
       continue;
 
     // If the increment is a constant, it must match the memory ref size.
@@ -24129,11 +24184,9 @@ static SDValue performNEONPostLDSTCombine(SDNode *N,
   SDValue Addr = N->getOperand(AddrOpIdx);
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-       UE = Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (User->getOpcode() != ISD::ADD ||
-        UI.getUse().getResNo() != Addr.getResNo())
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::ADD || Use.getResNo() != Addr.getResNo())
       continue;
 
     // Check that the add is independent of the load/store.  Otherwise, folding
@@ -24756,13 +24809,13 @@ static SDValue tryToWidenSetCCOperands(SDNode *Op, SelectionDAG &DAG) {
 
   // Make sure that all uses of Op are VSELECTs with result matching types where
   // the result type has a larger element type than the SetCC operand.
-  SDNode *FirstUse = *Op->use_begin();
+  SDNode *FirstUse = *Op->user_begin();
   if (FirstUse->getOpcode() != ISD::VSELECT)
     return SDValue();
   EVT UseMVT = FirstUse->getValueType(0);
   if (UseMVT.getScalarSizeInBits() <= Op0MVT.getScalarSizeInBits())
     return SDValue();
-  if (any_of(Op->uses(), [&UseMVT](const SDNode *N) {
+  if (any_of(Op->users(), [&UseMVT](const SDNode *N) {
         return N->getOpcode() != ISD::VSELECT || N->getValueType(0) != UseMVT;
       }))
     return SDValue();
@@ -25336,7 +25389,7 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   uint64_t MinOffset = -1ull;
-  for (SDNode *N : GN->uses()) {
+  for (SDNode *N : GN->users()) {
     if (N->getOpcode() != ISD::ADD)
       return SDValue();
     auto *C = dyn_cast<ConstantSDNode>(N->getOperand(0));
@@ -25906,7 +25959,7 @@ static SDValue performFPExtendCombine(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND)
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::FP_ROUND)
     return SDValue();
 
   auto hasValidElementTypeForFPExtLoad = [](EVT VT) {
@@ -26055,7 +26108,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
     HasFoundMULLow = false;
 
   // Find ExtractLow.
-  for (SDNode *User : ExtractHighSrcVec.getNode()->uses()) {
+  for (SDNode *User : ExtractHighSrcVec.getNode()->users()) {
     if (User == ExtractHigh.getNode())
       continue;
 
@@ -26073,7 +26126,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
 
   // Check ExtractLow's user.
   if (HasFoundMULLow) {
-    SDNode *ExtractLowUser = *ExtractLow.getNode()->use_begin();
+    SDNode *ExtractLowUser = *ExtractLow.getNode()->user_begin();
     if (ExtractLowUser->getOpcode() != N->getOpcode()) {
       HasFoundMULLow = false;
     } else {
@@ -26241,7 +26294,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMulCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    return performIntToFpCombine(N, DAG, Subtarget);
+    return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT_SAT:
@@ -26550,7 +26603,7 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -26562,7 +26615,7 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
     return false;
 
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != AArch64ISD::RET_GLUE)
       return false;
     HasRet = true;
@@ -26605,12 +26658,11 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
 
   // Non-null if there is exactly one user of the loaded value (ignoring chain).
   SDNode *ValOnlyUser = nullptr;
-  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end(); UI != UE;
-       ++UI) {
-    if (UI.getUse().getResNo() == 1)
+  for (SDUse &U : N->uses()) {
+    if (U.getResNo() == 1)
       continue; // Ignore chain.
     if (ValOnlyUser == nullptr)
-      ValOnlyUser = *UI;
+      ValOnlyUser = U.getUser();
     else {
       ValOnlyUser = nullptr; // Multiple non-chain uses, bail out.
       break;
@@ -29651,7 +29703,7 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
   unsigned Opc = N->getOpcode();
   if (ISD::isExtOpcode(Opc)) {
-    if (any_of(N->uses(),
+    if (any_of(N->users(),
                [&](SDNode *Use) { return Use->getOpcode() == ISD::MUL; }))
       return false;
   }

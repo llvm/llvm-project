@@ -1766,6 +1766,46 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
+/// `A == MIN_INT ? B != MIN_INT : A < B` --> `A < B`
+/// `A == MAX_INT ? B != MAX_INT : A > B` --> `A > B`
+static Instruction *foldSelectWithExtremeEqCond(Value *CmpLHS, Value *CmpRHS,
+                                                Value *TrueVal,
+                                                Value *FalseVal) {
+  Type *Ty = CmpLHS->getType();
+
+  if (Ty->isPtrOrPtrVectorTy())
+    return nullptr;
+
+  CmpPredicate Pred;
+  Value *B;
+
+  if (!match(FalseVal, m_c_ICmp(Pred, m_Specific(CmpLHS), m_Value(B))))
+    return nullptr;
+
+  Value *TValRHS;
+  if (!match(TrueVal, m_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(B),
+                                     m_Value(TValRHS))))
+    return nullptr;
+
+  APInt C;
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  if (ICmpInst::isLT(Pred)) {
+    C = CmpInst::isSigned(Pred) ? APInt::getSignedMinValue(BitWidth)
+                                : APInt::getMinValue(BitWidth);
+  } else if (ICmpInst::isGT(Pred)) {
+    C = CmpInst::isSigned(Pred) ? APInt::getSignedMaxValue(BitWidth)
+                                : APInt::getMaxValue(BitWidth);
+  } else {
+    return nullptr;
+  }
+
+  if (!match(CmpRHS, m_SpecificInt(C)) || !match(TValRHS, m_SpecificInt(C)))
+    return nullptr;
+
+  return new ICmpInst(Pred, CmpLHS, B);
+}
+
 static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
                                      InstCombinerImpl &IC) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
@@ -1779,6 +1819,10 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 
   if (Pred == ICmpInst::ICMP_NE)
     std::swap(TrueVal, FalseVal);
+
+  if (Instruction *Res =
+          foldSelectWithExtremeEqCond(CmpLHS, CmpRHS, TrueVal, FalseVal))
+    return Res;
 
   // Transform (X == C) ? X : Y -> (X == C) ? C : Y
   // specific handling for Bitwise operation.

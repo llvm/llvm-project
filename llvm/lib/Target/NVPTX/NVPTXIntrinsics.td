@@ -2803,10 +2803,10 @@ def : Pat<(int_nvvm_ptr_param_to_gen i64:$src),
 
 // nvvm.ptr.gen.to.param
 def : Pat<(int_nvvm_ptr_gen_to_param i32:$src),
-          (IMOV32rr Int32Regs:$src)>;
+          (i32 Int32Regs:$src)>;
 
 def : Pat<(int_nvvm_ptr_gen_to_param i64:$src),
-          (IMOV64rr Int64Regs:$src)>;
+          (i64 Int64Regs:$src)>;
 
 // nvvm.move intrinsicc
 def nvvm_move_i16 : NVPTXInst<(outs Int16Regs:$r), (ins Int16Regs:$s),
