@@ -1119,7 +1119,7 @@ static void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
                                           KnownBits &Known) {
   const APInt *CLow, *CHigh;
   if (isSignedMinMaxIntrinsicClamp(II, CLow, CHigh))
-    Known = Known.unionWith(ConstantRange(*CLow, *CHigh).toKnownBits());
+    Known = Known.unionWith(ConstantRange(*CLow, *CHigh + 1).toKnownBits());
 }
 
 static void computeKnownBitsFromOperator(const Operator *I,

@@ -5,7 +5,7 @@
 ; constraints from a signed min-max clamp. The clamp is a sequence of smin and
 ; smax instructions limiting a variable into a range, smin <= x <= smax.
 ;
-; Each LIT test (except the last one) has two versions depending on the order
+; Each LIT test (except the last ones) has two versions depending on the order
 ; of smin and smax:
 ; a) y = smax(smin(x, upper_limit), lower_limit)
 ; b) y = smin(smax(x, lower_limit), upper_limit)
@@ -180,6 +180,7 @@ define <16 x i8> @test_vec_1b(<16 x i16> %x) {
   ret <16 x i8> %b.trunc
 }
 
+; A longer test that was the original motivation for the smin-smax clamping.
 define i8 @test_final(i16 %x, i16 %y) {
 ; CHECK-LABEL: define i8 @test_final(
 ; CHECK-SAME: i16 [[X:%.*]], i16 [[Y:%.*]]) {
@@ -202,4 +203,61 @@ define i8 @test_final(i16 %x, i16 %y) {
   %shr = lshr i32 %mul, 7
   %trunc= trunc nuw nsw i32 %shr to i8
   ret i8 %trunc
+}
+
+; Range tests below check if the bounds are dealt with correctly.
+
+; This gets optimized.
+define i8 @test_bounds_1(i16 %x) {
+; CHECK-LABEL: define i8 @test_bounds_1(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 127)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 0)
+; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[SHR]]
+;
+  %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 127)
+  %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 0)
+  %a = sext i16 %2 to i32
+  %shr = ashr i32 %a, 7
+  %b.trunc = trunc i32 %shr to i8
+  ret i8 %b.trunc
+}
+
+; While this does not.
+define i8 @test_bounds_2(i16 %x) {
+; CHECK-LABEL: define i8 @test_bounds_2(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 128)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 0)
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[TMP2]], 7
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[SHR]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+;
+  %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 128)
+  %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 0)
+  %a = sext i16 %2 to i32
+  %shr = ashr i32 %a, 7
+  %b.trunc = trunc i32 %shr to i8
+  ret i8 %b.trunc
+}
+
+; This should get optimized. We test here if the optimization works correctly
+; if the upper limit is signed max int.
+define i8 @test_bounds_3(i16 %x) {
+; CHECK-LABEL: define i8 @test_bounds_3(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 32767)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 32752)
+; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[A]], -1
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 32767)
+  %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 32752)
+  %a = sext i16 %2 to i32
+  %and = and i32 %a, 255
+  %b.trunc = trunc i32 %and to i8
+  ret i8 %b.trunc
 }
