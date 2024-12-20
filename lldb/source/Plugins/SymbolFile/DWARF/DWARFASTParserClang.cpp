@@ -2398,69 +2398,20 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   enum_decl->setNumPositiveBits(NumPositiveBits);
   enum_decl->setNumNegativeBits(NumNegativeBits);
 
-  // C++0x N3000 [conv.prom]p3:
-  //   An rvalue of an unscoped enumeration type whose underlying
-  //   type is not fixed can be converted to an rvalue of the first
-  //   of the following types that can represent all the values of
-  //   the enumeration: int, unsigned int, long int, unsigned long
-  //   int, long long int, or unsigned long long int.
-  // C99 6.4.4.3p2:
-  //   An identifier declared as an enumeration constant has type int.
-  // The C99 rule is modified by C23.
+  auto ts_ptr = clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  if (!ts_ptr)
+    return enumerators_added;
+
   clang::QualType BestPromotionType;
+  clang::QualType BestType;
   unsigned BestWidth;
 
   auto &Context = m_ast.getASTContext();
-  unsigned LongWidth = Context.getTargetInfo().getLongWidth();
-  unsigned IntWidth = Context.getTargetInfo().getIntWidth();
-  unsigned CharWidth = Context.getTargetInfo().getCharWidth();
-  unsigned ShortWidth = Context.getTargetInfo().getShortWidth();
-
   bool is_cpp = Language::LanguageIsCPlusPlus(
       SymbolFileDWARF::GetLanguage(*parent_die.GetCU()));
-
-  if (NumNegativeBits) {
-    // If there is a negative value, figure out the smallest integer type (of
-    // int/long/longlong) that fits.
-    if (NumNegativeBits <= CharWidth && NumPositiveBits < CharWidth) {
-      BestWidth = CharWidth;
-    } else if (NumNegativeBits <= ShortWidth && NumPositiveBits < ShortWidth) {
-      BestWidth = ShortWidth;
-    } else if (NumNegativeBits <= IntWidth && NumPositiveBits < IntWidth) {
-      BestWidth = IntWidth;
-    } else if (NumNegativeBits <= LongWidth && NumPositiveBits < LongWidth) {
-      BestWidth = LongWidth;
-    } else {
-      BestWidth = Context.getTargetInfo().getLongLongWidth();
-    }
-    BestPromotionType =
-        BestWidth <= IntWidth ? Context.IntTy : enum_decl->getIntegerType();
-  } else {
-    // If there is no negative value, figure out the smallest type that fits
-    // all of the enumerator values.
-    if (NumPositiveBits <= CharWidth) {
-      BestPromotionType = Context.IntTy;
-      BestWidth = CharWidth;
-    } else if (NumPositiveBits <= ShortWidth) {
-      BestPromotionType = Context.IntTy;
-      BestWidth = ShortWidth;
-    } else if (NumPositiveBits <= IntWidth) {
-      BestWidth = IntWidth;
-      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
-                              ? Context.UnsignedIntTy
-                              : Context.IntTy;
-    } else if (NumPositiveBits <= LongWidth) {
-      BestWidth = LongWidth;
-      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
-                              ? Context.UnsignedLongTy
-                              : Context.LongTy;
-    } else {
-      BestWidth = Context.getTargetInfo().getLongLongWidth();
-      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
-                              ? Context.UnsignedLongLongTy
-                              : Context.LongLongTy;
-    }
-  }
+  ts_ptr->getSema()->ComputeBestEnumProperties(
+      Context, enum_decl, is_cpp, false, NumNegativeBits, NumPositiveBits,
+      BestWidth, BestType, BestPromotionType);
   enum_decl->setPromotionType(BestPromotionType);
 
   return enumerators_added;
