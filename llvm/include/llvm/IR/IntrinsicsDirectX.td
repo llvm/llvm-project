@@ -40,6 +40,10 @@ def int_dx_resource_load_rawbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
                             [llvm_any_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrReadMem]>;
+def int_dx_resource_store_rawbuffer
+    : DefaultAttrsIntrinsic<
+          [], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_any_ty],
+          [IntrWriteMem]>;
 
 def int_dx_resource_updatecounter
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
