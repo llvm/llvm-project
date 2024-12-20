@@ -858,21 +858,22 @@ COFFOptTable::COFFOptTable() : GenericOptTable(infoTable, true) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(opt::InputArgList &args) {
+static void handleColorDiagnostics(COFFLinkerContext &ctx,
+                                   opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    ctx.e.errs().enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    ctx.e.errs().enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      ctx.e.errs().enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      ctx.e.errs().enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -934,12 +935,12 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   }
 
   // Handle /WX early since it converts missing argument warnings to errors.
-  errorHandler().fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
+  ctx.e.fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
 
   if (missingCount)
     fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
 
-  handleColorDiagnostics(args);
+  handleColorDiagnostics(ctx, args);
 
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
@@ -1019,7 +1020,7 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void LinkerDriver::printHelp(const char *argv0) {
-  ctx.optTable.printHelp(lld::outs(),
+  ctx.optTable.printHelp(ctx.e.outs(),
                          (std::string(argv0) + " [options] file...").c_str(),
                          "LLVM Linker", false);
 }

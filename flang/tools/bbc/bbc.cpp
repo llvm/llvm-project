@@ -452,7 +452,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
-      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
+      fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP,
+                                        llvm::OptimizationLevel::O2);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
         return mlir::failure();
@@ -467,6 +468,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    if (enableOpenMP)
+      config.EnableOpenMP = true;
     config.NSWOnLoopVarInc = setNSW;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);

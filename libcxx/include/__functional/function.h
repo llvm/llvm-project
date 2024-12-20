@@ -12,6 +12,7 @@
 
 #include <__assert>
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>

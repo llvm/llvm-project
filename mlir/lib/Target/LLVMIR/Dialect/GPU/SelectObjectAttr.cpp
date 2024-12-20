@@ -121,6 +121,13 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
       new llvm::GlobalVariable(*module, binary->getType(), true,
                                llvm::GlobalValue::LinkageTypes::InternalLinkage,
                                binary, getBinaryIdentifier(op.getName()));
+
+  if (object.getProperties()) {
+    if (auto section = mlir::dyn_cast_or_null<mlir::StringAttr>(
+            object.getProperties().get("section"))) {
+      serializedObj->setSection(section.getValue());
+    }
+  }
   serializedObj->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
   serializedObj->setAlignment(llvm::MaybeAlign(8));
   serializedObj->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);

@@ -414,7 +414,7 @@ module attributes {transform.with_named_sequence} {
 func.func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
   //  CHECK-SAME: (%[[A:.*]]: memref<f32>, %[[B:.*]]: memref<f32>)
   //       CHECK:   %[[V:.*]] = vector.transfer_read %[[A]][]{{.*}} : memref<f32>, vector<f32>
-  //       CHECK:   %[[val:.*]] = vector.extractelement %[[V]][] : vector<f32>
+  //       CHECK:   %[[val:.*]] = vector.extract %[[V]][] : f32 from vector<f32>
   //       CHECK:   %[[VV:.*]] = vector.broadcast %[[val]] : f32 to vector<f32>
   //       CHECK:   vector.transfer_write %[[VV]], %[[B]][] : vector<f32>, memref<f32>
   memref.copy %A, %B :  memref<f32> to memref<f32>
@@ -1440,7 +1440,6 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-LABEL: func @reduce_1d(
 //   CHECK-SAME:   %[[A:.*]]: tensor<32xf32>
 func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
-  //  CHECK-DAG: %[[vF0:.*]] = arith.constant dense<0.000000e+00> : vector<f32>
   //  CHECK-DAG: %[[F0:.*]] = arith.constant 0.000000e+00 : f32
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %f0 = arith.constant 0.000000e+00 : f32
@@ -1451,8 +1450,7 @@ func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
   %1 = linalg.fill ins(%f0 : f32) outs(%0 : tensor<f32>) -> tensor<f32>
   //      CHECK: %[[r:.*]] = vector.transfer_read %[[A]][%[[C0]]]
   // CHECK-SAME:   : tensor<32xf32>, vector<32xf32>
-  //      CHECK: %[[f0:.*]] = vector.extractelement %[[vF0]][] : vector<f32>
-  //      CHECK: %[[red:.*]] = vector.multi_reduction <add>, %[[r]], %[[f0]] [0]
+  //      CHECK: %[[red:.*]] = vector.multi_reduction <add>, %[[r]], %[[F0]] [0]
   // CHECK-SAME:   : vector<32xf32> to f32
   //      CHECK: %[[red_v1:.*]] = vector.broadcast %[[red]] : f32 to vector<f32>
   //      CHECK: %[[res:.*]] = vector.transfer_write %[[red_v1]], %[[init]][]
@@ -1779,9 +1777,9 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @zero_dim_tensor
 //       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
-//       CHECK:     vector.extractelement
+//       CHECK:     vector.extract
 //       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
-//       CHECK:     vector.extractelement
+//       CHECK:     vector.extract
 //       CHECK:     arith.addf {{.*}} : f32
 //       CHECK:     vector.broadcast %{{.*}} : f32 to vector<f32>
 //       CHECK:     vector.transfer_write {{.*}} : vector<f32>, tensor<f32>

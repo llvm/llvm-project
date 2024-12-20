@@ -1607,13 +1607,7 @@ std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
                   SortedFunctions.begin(),
                   [](BinaryFunction &BF) { return &BF; });
 
-  llvm::stable_sort(SortedFunctions,
-                    [](const BinaryFunction *A, const BinaryFunction *B) {
-                      if (A->hasValidIndex() && B->hasValidIndex()) {
-                        return A->getIndex() < B->getIndex();
-                      }
-                      return A->hasValidIndex();
-                    });
+  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
   return SortedFunctions;
 }
 

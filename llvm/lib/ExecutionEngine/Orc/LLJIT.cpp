@@ -10,8 +10,6 @@
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
-#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -21,7 +19,6 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -625,7 +622,8 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
-  if (ES.getTargetTriple().isOSBinFormatMachO()) {
+  const Triple &TT = ES.getTargetTriple();
+  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
     if (InitializedDylib.contains(&JD)) {
       WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
       dlupdate = true;
@@ -639,12 +637,10 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
                                                  result, DSOHandles[&JD]);
-      if (E)
-        return E;
-      else if (result)
+      if (result)
         return make_error<StringError>("dlupdate failed",
                                        inconvertibleErrorCode());
-      return Error::success();
+      return E;
     }
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),

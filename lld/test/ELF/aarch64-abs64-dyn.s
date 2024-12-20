@@ -1,5 +1,5 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 
 // Creates a R_AARCH64_ABS64 relocation against foo and bar
         .globl foo

@@ -219,6 +219,7 @@ public:
                           MachineBasicBlock::iterator End,
                           unsigned NumRegionInstrs) {}
 
+  virtual MachineSchedPolicy getPolicy() const { return {}; }
   virtual void dumpPolicy() const {}
 
   /// Check if pressure tracking is needed before building the DAG and
@@ -1167,12 +1168,16 @@ protected:
   const TargetSchedModel *SchedModel = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
+  MachineSchedPolicy RegionPolicy;
+
   SchedRemainder Rem;
 
   GenericSchedulerBase(const MachineSchedContext *C) : Context(C) {}
 
   void setPolicy(CandPolicy &Policy, bool IsPostRA, SchedBoundary &CurrZone,
                  SchedBoundary *OtherZone);
+
+  MachineSchedPolicy getPolicy() const override { return RegionPolicy; }
 
 #ifndef NDEBUG
   void traceCandidate(const SchedCandidate &Cand);
@@ -1254,8 +1259,6 @@ public:
 protected:
   ScheduleDAGMILive *DAG = nullptr;
 
-  MachineSchedPolicy RegionPolicy;
-
   // State of the top and bottom scheduled instruction boundaries.
   SchedBoundary Top;
   SchedBoundary Bot;
@@ -1294,7 +1297,6 @@ protected:
   ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
   SchedBoundary Bot;
-  MachineSchedPolicy RegionPolicy;
 
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;

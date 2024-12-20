@@ -12,7 +12,6 @@
 
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 
-#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"

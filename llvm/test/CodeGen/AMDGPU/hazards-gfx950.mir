@@ -1,0 +1,257 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs -run-pass=post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
+
+---
+# GCN-LABEL: name: vcmpx_vopc_write_exec_permlane16_swap_vop1
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vopc_write_exec_permlane16_swap_vop1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vop3_write_exec_permlane16_swap_vop1
+# GCN:      V_CMPX_EQ_I32_e64
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vop3_write_exec_permlane16_swap_vop1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vopc_write_exec_permlane16_swap_vop3
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vopc_write_exec_permlane16_swap_vop3
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vop3_write_exec_permlane16_swap_vop3
+# GCN:      V_CMPX_EQ_I32_e64
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vop3_write_exec_permlane16_swap_vop3
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vopc_write_exec_permlane32_swap_vop1
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vopc_write_exec_permlane32_swap_vop1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vop3_write_exec_permlane32_swap_vop1
+# GCN:      V_CMPX_EQ_I32_e64
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vop3_write_exec_permlane32_swap_vop1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vopc_write_exec_permlane32_swap_vop3
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vopc_write_exec_permlane32_swap_vop3
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vop3_write_exec_permlane32_swap_vop3
+# GCN:      V_CMPX_EQ_I32_e64
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vop3_write_exec_permlane32_swap_vop3
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vopc_write_exec_permlane16_swap_vop1__nowait
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vopc_write_exec_permlane16_swap_vop1__nowait
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_vopc_write_exec_permlane16_swap_vop1__wait1
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_vopc_write_exec_permlane16_swap_vop1__wait1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: valu_write_vdst_read_permlane16_swap_0
+# GCN:      V_MOV_B32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_PERMLANE
+name:            valu_write_vdst_read_permlane16_swap_0
+body:             |
+  bb.0:
+    liveins: $vgpr1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: valu_write_vdst_read_permlane16_swap_1
+# GCN:      V_MOV_B32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_PERMLANE
+name:            valu_write_vdst_read_permlane16_swap_1
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: valu_write_vdst_read_permlane32_swap_0
+# GCN:      V_MOV_B32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_PERMLANE
+name:            valu_write_vdst_read_permlane32_swap_0
+body:             |
+  bb.0:
+    liveins: $vgpr1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: valu_write_vdst_read_permlane32_swap_1
+# GCN:      V_MOV_B32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_PERMLANE
+name:            valu_write_vdst_read_permlane32_swap_1
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# No hazard, write of other register
+# GCN-LABEL: name: valu_write_vdst_read_permlane16_swap_0_otherreg
+# GCN:      V_MOV_B32
+# GCN-NEXT: V_PERMLANE
+name:            valu_write_vdst_read_permlane16_swap_0_otherreg
+body:             |
+  bb.0:
+    liveins: $vgpr1
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+...
+
+---
+# Both permlane hazards at once.
+# GCN-LABEL: name: valu_writes_vdst__vcmpx_write_exec__permlane32_swap
+# GCN:      V_MOV_B32
+# GCN:      V_CMPX_EQ_I32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_PERMLANE
+name:            valu_writes_vdst__vcmpx_write_exec__permlane32_swap
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr3
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    $exec = V_CMPX_EQ_I32_e64 $vgpr2, $vgpr3, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_write_exec__valu_writes_vdst___permlane32_swap
+# GCN:      V_CMPX_EQ_I32
+# GCN:      V_MOV_B32
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_write_exec__valu_writes_vdst___permlane32_swap
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr3
+    $exec = V_CMPX_EQ_I32_e64 $vgpr2, $vgpr3, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...
+
+---
+# GCN-LABEL: name: vcmpx_write_exec__valu_writes_vdstx2___permlane32_swap
+# GCN:      V_CMPX_EQ_I32
+# GCN:      V_MOV_B32
+# GCN:      V_MOV_B32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_PERMLANE
+name:            vcmpx_write_exec__valu_writes_vdstx2___permlane32_swap
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr3
+    $exec = V_CMPX_EQ_I32_e64 $vgpr2, $vgpr3, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+...

@@ -103,14 +103,14 @@ spirv.module Logical GLSL450 {
     %37 = spirv.IAdd %arg4, %11 : i32
     // CHECK: spirv.AccessChain [[ARG0]]
     %c0 = spirv.Constant 0 : i32
-    %38 = spirv.AccessChain %arg0[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
+    %38 = spirv.AccessChain %arg0[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
     %39 = spirv.Load "StorageBuffer" %38 : f32
     // CHECK: spirv.AccessChain [[ARG1]]
-    %40 = spirv.AccessChain %arg1[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
+    %40 = spirv.AccessChain %arg1[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
     %41 = spirv.Load "StorageBuffer" %40 : f32
     %42 = spirv.FAdd %39, %41 : f32
     // CHECK: spirv.AccessChain [[ARG2]]
-    %43 = spirv.AccessChain %arg2[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
+    %43 = spirv.AccessChain %arg2[%c0, %36, %37] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x !spirv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
     spirv.Store "StorageBuffer" %43, %42 : f32
     spirv.Return
   }

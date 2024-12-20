@@ -701,9 +701,9 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
 
   // Filter operands with dynamic dimension
   auto operandsWithDynamicDim =
-      llvm::to_vector(llvm::make_filter_range(operands, [&](Value operand) {
+      llvm::filter_to_vector(operands, [&](Value operand) {
         return cast<RankedTensorType>(operand.getType()).isDynamicDim(dim);
-      }));
+      });
 
   // If no operand has a dynamic dimension, it means all sizes were 1
   if (operandsWithDynamicDim.empty())
@@ -1152,6 +1152,9 @@ public:
     if (op.getDoubleRound() && !op.getScale32())
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
+
+    if (!isa<IntegerType>(inputTy.getElementType()))
+      return rewriter.notifyMatchFailure(op, "only support integer type");
 
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {

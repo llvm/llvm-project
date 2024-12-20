@@ -29,6 +29,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <mutex>
 #include <optional>
@@ -338,13 +339,6 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   };
 }
 
-static auto toJSONSorted(llvm::json::OStream &JOS,
-                         const llvm::StringSet<> &Set) {
-  SmallVector<StringRef> Strings(Set.keys());
-  llvm::sort(Strings);
-  return toJSONStrings(JOS, std::move(Strings));
-}
-
 // Technically, we don't need to sort the dependency list to get determinism.
 // Leaving these be will simply preserve the import order.
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
@@ -431,7 +425,8 @@ public:
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
     TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(&*DiagOpts, &DiagConsumer,
+        CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                            &*DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
@@ -472,7 +467,9 @@ public:
             JOS.attributeArray("command-line",
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
-            JOS.attributeArray("file-deps", toJSONSorted(JOS, MD.FileDeps));
+            JOS.attributeArray("file-deps", [&] {
+              MD.forEachFileDep([&](StringRef FileDep) { JOS.value(FileDep); });
+            });
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));
             JOS.attribute("name", StringRef(MD.ID.ModuleName));
@@ -744,7 +741,8 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
         tooling::JSONCommandLineSyntax::AutoDetect);
 
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions);
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          new DiagnosticOptions);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
   TheDriver.setCheckInputsExist(false);

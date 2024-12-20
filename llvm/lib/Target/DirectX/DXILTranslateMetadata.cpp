@@ -286,11 +286,6 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
   MDTuple *Properties = nullptr;
   if (ShaderFlags != 0) {
     SmallVector<Metadata *> MDVals;
-    // FIXME: ShaderFlagsAnalysis pass needs to collect and provide
-    // ShaderFlags for each entry function. Currently, ShaderFlags value
-    // provided by ShaderFlagsAnalysis pass is created by walking *all* the
-    // function instructions of the module. Is it is correct to use this value
-    // for metadata of the empty library entry?
     MDVals.append(
         getTagValueAsMetadata(EntryPropsTag::ShaderFlags, ShaderFlags, Ctx));
     Properties = MDNode::get(Ctx, MDVals);
@@ -302,7 +297,7 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
 
 static void translateMetadata(Module &M, const DXILResourceMap &DRM,
                               const Resources &MDResources,
-                              const ComputedShaderFlags &ShaderFlags,
+                              const ModuleShaderFlags &ShaderFlags,
                               const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> IRB(Ctx);
@@ -318,23 +313,27 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
   // See https://github.com/llvm/llvm-project/issues/57928
   MDTuple *Signatures = nullptr;
 
-  if (MMDI.ShaderProfile == Triple::EnvironmentType::Library)
+  if (MMDI.ShaderProfile == Triple::EnvironmentType::Library) {
+    // Get the combined shader flag mask of all functions in the library to be
+    // used as shader flags mask value associated with top-level library entry
+    // metadata.
+    uint64_t CombinedMask = ShaderFlags.getCombinedFlags();
     EntryFnMDNodes.emplace_back(
-        emitTopLevelLibraryNode(M, ResourceMD, ShaderFlags));
-  else if (MMDI.EntryPropertyVec.size() > 1) {
+        emitTopLevelLibraryNode(M, ResourceMD, CombinedMask));
+  } else if (MMDI.EntryPropertyVec.size() > 1) {
     M.getContext().diagnose(DiagnosticInfoTranslateMD(
         M, "Non-library shader: One and only one entry expected"));
   }
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
-    // FIXME: ShaderFlagsAnalysis pass needs to collect and provide
-    // ShaderFlags for each entry function. For now, assume shader flags value
-    // of entry functions being compiled for lib_* shader profile viz.,
-    // EntryPro.Entry is 0.
-    uint64_t EntryShaderFlags =
-        (MMDI.ShaderProfile == Triple::EnvironmentType::Library) ? 0
-                                                                 : ShaderFlags;
+    const ComputedShaderFlags &EntrySFMask =
+        ShaderFlags.getFunctionFlags(EntryProp.Entry);
+
+    // If ShaderProfile is Library, mask is already consolidated in the
+    // top-level library node. Hence it is not emitted.
+    uint64_t EntryShaderFlags = 0;
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
+      EntryShaderFlags = EntrySFMask;
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
         M.getContext().diagnose(DiagnosticInfoTranslateMD(
             M,
@@ -361,8 +360,7 @@ PreservedAnalyses DXILTranslateMetadata::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
-  const ComputedShaderFlags &ShaderFlags =
-      MAM.getResult<ShaderFlagsAnalysis>(M);
+  const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
   translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
@@ -393,7 +391,7 @@ public:
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     const dxil::Resources &MDResources =
         getAnalysis<DXILResourceMDWrapper>().getDXILResource();
-    const ComputedShaderFlags &ShaderFlags =
+    const ModuleShaderFlags &ShaderFlags =
         getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
     dxil::ModuleMetadataInfo MMDI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();

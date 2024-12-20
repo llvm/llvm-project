@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -69,7 +68,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -2111,8 +2109,6 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     for (DbgVariableRecord &DVR : filterDbgVars(DVRRange))
       RetargetDbgVariableRecordIfPossible(&DVR);
   }
-
-  return;
 }
 
 /// Attempt to thread through two successive basic blocks.

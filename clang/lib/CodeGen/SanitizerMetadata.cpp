@@ -13,9 +13,6 @@
 #include "CodeGenModule.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Constants.h"
 
 using namespace clang;
 using namespace CodeGen;

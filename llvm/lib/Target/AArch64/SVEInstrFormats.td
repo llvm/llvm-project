@@ -59,6 +59,57 @@ class SVEType<ValueType VT> {
     !eq(VT, nxv8f16): nxv2f16,
     !eq(VT, nxv8bf16): nxv2bf16,
     true : untyped);
+
+  // The 64-bit vector subreg of VT.
+  ValueType DSub = !cond(
+    !eq(VT, nxv16i8): v8i8,
+    !eq(VT, nxv8i16): v4i16,
+    !eq(VT, nxv4i32): v2i32,
+    !eq(VT, nxv2i64): v1i64,
+    !eq(VT, nxv2f16): v4f16,
+    !eq(VT, nxv4f16): v4f16,
+    !eq(VT, nxv8f16): v4f16,
+    !eq(VT, nxv2f32): v2f32,
+    !eq(VT, nxv4f32): v2f32,
+    !eq(VT, nxv2f64): v1f64,
+    !eq(VT, nxv2bf16): v4bf16,
+    !eq(VT, nxv4bf16): v4bf16,
+    !eq(VT, nxv8bf16): v4bf16,
+    true : untyped);
+
+    // The 128-bit vector subreg of VT.
+  ValueType ZSub = !cond(
+    !eq(VT, nxv16i8): v16i8,
+    !eq(VT, nxv8i16): v8i16,
+    !eq(VT, nxv4i32): v4i32,
+    !eq(VT, nxv2i64): v2i64,
+    !eq(VT, nxv2f16): v8f16,
+    !eq(VT, nxv4f16): v8f16,
+    !eq(VT, nxv8f16): v8f16,
+    !eq(VT, nxv2f32): v4f32,
+    !eq(VT, nxv4f32): v4f32,
+    !eq(VT, nxv2f64): v2f64,
+    !eq(VT, nxv2bf16): v8bf16,
+    !eq(VT, nxv4bf16): v8bf16,
+    !eq(VT, nxv8bf16): v8bf16,
+    true : untyped);
+
+  // The legal scalar used to hold a vector element.
+  ValueType EltAsScalar = !cond(
+    !eq(VT, nxv16i8): i32,
+    !eq(VT, nxv8i16): i32,
+    !eq(VT, nxv4i32): i32,
+    !eq(VT, nxv2i64): i64,
+    !eq(VT, nxv2f16): f16,
+    !eq(VT, nxv4f16): f16,
+    !eq(VT, nxv8f16): f16,
+    !eq(VT, nxv2f32): f32,
+    !eq(VT, nxv4f32): f32,
+    !eq(VT, nxv2f64): f64,
+    !eq(VT, nxv2bf16): bf16,
+    !eq(VT, nxv4bf16): bf16,
+    !eq(VT, nxv8bf16): bf16,
+    true : untyped);
 }
 
 def SDT_AArch64Setcc : SDTypeProfile<1, 4, [
@@ -785,7 +836,7 @@ class sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op>
 : I<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
   asm, "\t$Pg, $Pn",
   "",
-  [(op (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn))]>, Sched<[]> {
+  [(set NZCV, (op (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn)))]>, Sched<[]> {
   bits<4> Pg;
   bits<4> Pn;
   let Inst{31-24} = 0b00100101;
@@ -809,7 +860,7 @@ multiclass sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op,
 
   let hasNoSchedulingInfo = 1, isCompare = 1, Defs = [NZCV] in {
   def _ANY : Pseudo<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
-                    [(op_any (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn))]>,
+                    [(set NZCV, (op_any (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn)))]>,
              PseudoInstExpansion<(!cast<Instruction>(NAME) PPRAny:$Pg, PPR8:$Pn)>;
   }
 }
@@ -1402,29 +1453,61 @@ multiclass sve_int_perm_dup_i<string asm> {
   def : InstAlias<"mov $Zd, $Qn",
                   (!cast<Instruction>(NAME # _Q) ZPR128:$Zd, FPR128asZPR:$Qn, 0), 2>;
 
-  // Duplicate extracted element of vector into all vector elements
+  // Duplicate an extracted vector element across a vector.
+
   def : Pat<(nxv16i8 (splat_vector (i32 (vector_extract (nxv16i8 ZPR:$vec), sve_elm_idx_extdup_b:$index)))),
             (!cast<Instruction>(NAME # _B) ZPR:$vec, sve_elm_idx_extdup_b:$index)>;
-  def : Pat<(nxv8i16 (splat_vector (i32 (vector_extract (nxv8i16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
-            (!cast<Instruction>(NAME # _H) ZPR:$vec, sve_elm_idx_extdup_h:$index)>;
-  def : Pat<(nxv4i32 (splat_vector (i32 (vector_extract (nxv4i32 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
-            (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-  def : Pat<(nxv2i64 (splat_vector (i64 (vector_extract (nxv2i64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
-            (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
-  def : Pat<(nxv8f16 (splat_vector (f16 (vector_extract (nxv8f16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
-            (!cast<Instruction>(NAME # _H) ZPR:$vec, sve_elm_idx_extdup_h:$index)>;
-  def : Pat<(nxv8bf16 (splat_vector (bf16 (vector_extract (nxv8bf16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
-            (!cast<Instruction>(NAME # _H) ZPR:$vec, sve_elm_idx_extdup_h:$index)>;
-  def : Pat<(nxv4f16 (splat_vector (f16 (vector_extract (nxv4f16 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
-            (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-  def : Pat<(nxv2f16 (splat_vector (f16 (vector_extract (nxv2f16 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
-            (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
-  def : Pat<(nxv4f32 (splat_vector (f32 (vector_extract (nxv4f32 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
-            (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-  def : Pat<(nxv2f32 (splat_vector (f32 (vector_extract (nxv2f32 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
-            (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
-  def : Pat<(nxv2f64 (splat_vector (f64 (vector_extract (nxv2f64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
-            (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
+  def : Pat<(nxv16i8 (splat_vector (i32 (vector_extract (v16i8 V128:$vec), sve_elm_idx_extdup_b:$index)))),
+            (!cast<Instruction>(NAME # _B) (SUBREG_TO_REG (i64 0), $vec, zsub), sve_elm_idx_extdup_b:$index)>;
+  def : Pat<(nxv16i8 (splat_vector (i32 (vector_extract (v8i8 V64:$vec), sve_elm_idx_extdup_b:$index)))),
+            (!cast<Instruction>(NAME # _B) (SUBREG_TO_REG (i64 0), $vec, dsub), sve_elm_idx_extdup_b:$index)>;
+
+  foreach VT = [nxv8i16, nxv2f16, nxv4f16, nxv8f16, nxv2bf16, nxv4bf16, nxv8bf16] in {
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.Packed ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
+              (!cast<Instruction>(NAME # _H) ZPR:$vec, sve_elm_idx_extdup_h:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.ZSub V128:$vec), sve_elm_idx_extdup_h:$index)))),
+              (!cast<Instruction>(NAME # _H) (SUBREG_TO_REG (i64 0), $vec, zsub), sve_elm_idx_extdup_h:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.DSub V64:$vec), sve_elm_idx_extdup_h:$index)))),
+              (!cast<Instruction>(NAME # _H) (SUBREG_TO_REG (i64 0), $vec, dsub), sve_elm_idx_extdup_h:$index)>;
+  }
+
+  foreach VT = [nxv4i32, nxv2f32, nxv4f32 ] in {
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.Packed ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+              (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.ZSub V128:$vec), sve_elm_idx_extdup_s:$index)))),
+              (!cast<Instruction>(NAME # _S) (SUBREG_TO_REG (i64 0), $vec, zsub), sve_elm_idx_extdup_s:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.DSub V64:$vec), sve_elm_idx_extdup_s:$index)))),
+              (!cast<Instruction>(NAME # _S) (SUBREG_TO_REG (i64 0), $vec, dsub), sve_elm_idx_extdup_s:$index)>;
+  }
+
+  foreach VT = [nxv2i64, nxv2f64] in {
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (VT ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
+              (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.ZSub V128:$vec), sve_elm_idx_extdup_d:$index)))),
+              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG (i64 0), $vec, zsub), sve_elm_idx_extdup_d:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.DSub V64:$vec), sve_elm_idx_extdup_d:$index)))),
+              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG (i64 0), $vec, dsub), sve_elm_idx_extdup_d:$index)>;
+  }
+
+  // When extracting from an unpacked vector the index must be scaled to account
+  // for the "holes" in the underlying packed vector type. We get the scaling
+  // for free by "promoting" the element type to one whose underlying vector
+  // type is packed. This is only valid when extracting from a vector whose
+  // length is the same or bigger than the result of the splat.
+
+  foreach VT = [nxv4f16, nxv4bf16] in {
+    def : Pat<(SVEType<VT>.HalfLength (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (VT ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+              (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (VT ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+              (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
+  }
+
+  foreach VT = [nxv2f16, nxv2f32, nxv2bf16] in {
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (VT ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
+              (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
+  }
+
+  // Duplicate an indexed 128-bit segment across a vector.
 
   def : Pat<(nxv16i8 (AArch64duplane128 nxv16i8:$Op1, i64:$imm)),
             (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
@@ -5274,7 +5357,7 @@ multiclass sve_int_dup_imm_pred_merge_inst<
             (!cast<Instruction>(NAME) $Zd, $Pg, $imm, $shift)>;
 }
 
-multiclass sve_int_dup_imm_pred_merge<string asm> {
+multiclass sve_int_dup_imm_pred_merge<string asm, SDPatternOperator op> {
   defm _B : sve_int_dup_imm_pred_merge_inst<0b00, asm, ZPR8, cpy_imm8_opt_lsl_i8,
                                             nxv16i8, nxv16i1, i32, SVECpyDupImm8Pat>;
   defm _H : sve_int_dup_imm_pred_merge_inst<0b01, asm, ZPR16, cpy_imm8_opt_lsl_i16,
@@ -5303,6 +5386,15 @@ multiclass sve_int_dup_imm_pred_merge<string asm> {
             (!cast<Instruction>(NAME # _D) $Zd, $Pg, 0, 0)>;
   def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv2f64 ZPR:$Zd)),
             (!cast<Instruction>(NAME # _D) $Zd, $Pg, 0, 0)>;
+
+  def : Pat<(nxv16i8 (op nxv16i1:$pg, (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)), nxv16i8:$zd)),
+            (!cast<Instruction>(NAME # _B) $zd, $pg, $a, $b)>;
+  def : Pat<(nxv8i16 (op nxv8i1:$pg, (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)), nxv8i16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, $a, $b)>;
+  def : Pat<(nxv4i32 (op nxv4i1:$pg, (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)), nxv4i32:$zd)),
+            (!cast<Instruction>(NAME # _S) $zd, $pg, $a, $b)>;
+  def : Pat<(nxv2i64 (op nxv2i1:$pg, (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)), nxv2i64:$zd)),
+            (!cast<Instruction>(NAME # _D) $zd, $pg, $a, $b)>;
 }
 
 multiclass sve_int_dup_imm_pred_zero_inst<
@@ -5324,7 +5416,7 @@ multiclass sve_int_dup_imm_pred_zero_inst<
             (!cast<Instruction>(NAME) $Pg, $imm, $shift)>;
 }
 
-multiclass sve_int_dup_imm_pred_zero<string asm> {
+multiclass sve_int_dup_imm_pred_zero<string asm, SDPatternOperator op> {
   defm _B : sve_int_dup_imm_pred_zero_inst<0b00, asm, ZPR8, cpy_imm8_opt_lsl_i8,
                                            nxv16i8, nxv16i1, i32, SVECpyDupImm8Pat>;
   defm _H : sve_int_dup_imm_pred_zero_inst<0b01, asm, ZPR16, cpy_imm8_opt_lsl_i16,
@@ -5333,6 +5425,15 @@ multiclass sve_int_dup_imm_pred_zero<string asm> {
                                            nxv4i32, nxv4i1, i32, SVECpyDupImm32Pat>;
   defm _D : sve_int_dup_imm_pred_zero_inst<0b11, asm, ZPR64, cpy_imm8_opt_lsl_i64,
                                            nxv2i64, nxv2i1, i64, SVECpyDupImm64Pat>;
+
+  def : Pat<(nxv16i8 (op nxv16i1:$pg, (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _B) $pg, $a, $b)>;
+  def : Pat<(nxv8i16 (op nxv8i1:$pg, (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _H) $pg, $a, $b)>;
+  def : Pat<(nxv4i32 (op nxv4i1:$pg, (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _S) $pg, $a, $b)>;
+  def : Pat<(nxv2i64 (op nxv2i1:$pg, (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _D) $pg, $a, $b)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7427,6 +7528,45 @@ multiclass sve_int_perm_rev_revw<string asm, SDPatternOperator op> {
   def _D : sve_int_perm_rev<0b11, 0b10, asm, ZPR64>;
 
   def : SVE_1_Op_Passthru_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
+}
+
+class sve_int_perm_rev_z<bits<2> sz, bits<4> opc, string asm,
+                        ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Zd, $Pg/z, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<3> Pg;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz;
+  let Inst{21-20} = 0b10;
+  let Inst{19-16} = opc;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
+}
+
+multiclass sve_int_perm_rev_rbit_z<string asm> {
+  def _B : sve_int_perm_rev_z<0b00, 0b0111, asm, ZPR8>;
+  def _H : sve_int_perm_rev_z<0b01, 0b0111, asm, ZPR16>;
+  def _S : sve_int_perm_rev_z<0b10, 0b0111, asm, ZPR32>;
+  def _D : sve_int_perm_rev_z<0b11, 0b0111, asm, ZPR64>;
+}
+
+multiclass sve_int_perm_rev_revb_z<string asm> {
+  def _H : sve_int_perm_rev_z<0b01, 0b0100, asm, ZPR16>;
+  def _S : sve_int_perm_rev_z<0b10, 0b0100, asm, ZPR32>;
+  def _D : sve_int_perm_rev_z<0b11, 0b0100, asm, ZPR64>;
+}
+
+multiclass sve_int_perm_rev_revh_z<string asm> {
+  def _S : sve_int_perm_rev_z<0b10, 0b0101, asm, ZPR32>;
+  def _D : sve_int_perm_rev_z<0b11, 0b0101, asm, ZPR64>;
 }
 
 class sve_int_perm_cpy_r<bits<2> sz8_64, string asm, ZPRRegOp zprty,
@@ -10319,15 +10459,14 @@ class sve2p1_extq<string mnemonic>
 multiclass sve2p1_extq<string mnemonic, SDPatternOperator Op> {
   def NAME : sve2p1_extq<mnemonic>;
   def : SVE_3_Op_Imm_Pat<nxv16i8, Op, nxv16i8, nxv16i8, i32, timm32_0_15, !cast<Instruction>(NAME)>;
-  def : SVE_3_Op_Imm_Pat<nxv8i16, Op, nxv8i16, nxv8i16, i32, timm32_0_15, !cast<Instruction>(NAME)>;
-  def : SVE_3_Op_Imm_Pat<nxv4i32, Op, nxv4i32, nxv4i32, i32, timm32_0_15, !cast<Instruction>(NAME)>;
-  def : SVE_3_Op_Imm_Pat<nxv2i64, Op, nxv2i64, nxv2i64, i32, timm32_0_15, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, Op, nxv8i16, nxv8i16, i32, extq_timm32_0_7m2, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, Op, nxv4i32, nxv4i32, i32, extq_timm32_0_3m4, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, Op, nxv2i64, nxv2i64, i32, extq_timm32_0_1m8, !cast<Instruction>(NAME)>;
 
-  def : SVE_3_Op_Imm_Pat<nxv8f16, Op, nxv8f16, nxv8f16, i32, timm32_0_15, !cast<Instruction>(NAME)>;
-  def : SVE_3_Op_Imm_Pat<nxv4f32, Op, nxv4f32, nxv4f32, i32, timm32_0_15, !cast<Instruction>(NAME)>;
-  def : SVE_3_Op_Imm_Pat<nxv2f64, Op, nxv2f64, nxv2f64, i32, timm32_0_15, !cast<Instruction>(NAME)>;
-  def : SVE_3_Op_Imm_Pat<nxv8bf16, Op, nxv8bf16, nxv8bf16, i32, timm32_0_15, !cast<Instruction>(NAME
-)>;
+  def : SVE_3_Op_Imm_Pat<nxv8f16, Op, nxv8f16, nxv8f16, i32, extq_timm32_0_7m2, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv4f32, Op, nxv4f32, nxv4f32, i32, extq_timm32_0_3m4, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv2f64, Op, nxv2f64, nxv2f64, i32, extq_timm32_0_1m8, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Imm_Pat<nxv8bf16, Op, nxv8bf16, nxv8bf16, i32, extq_timm32_0_7m2, !cast<Instruction>(NAME)>;
 }
 
 // SVE move predicate from vector

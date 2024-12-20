@@ -8,15 +8,15 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'zext_i8_i16'
+; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 8 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 16 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 1 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 2 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 0 for VF vscale x 8 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK-LABEL: define void @zext_i8_i16
 ; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -40,7 +40,7 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i16>
-; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[TMP10]], trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 2, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[TMP10]], trunc (<vscale x 8 x i32> splat (i32 2) to <vscale x 8 x i16>)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
@@ -91,15 +91,14 @@ exit:                                 ; preds = %for.body
 
 define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'sext_i8_i16'
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 8 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 16 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 1 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 2 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 0 for VF vscale x 8 For instruction:   %conv = sext i8 %0 to i32
+; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
 ; CHECK-LABEL: define void @sext_i8_i16
 ; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -123,7 +122,7 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i16>
-; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[TMP10]], trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 2, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[TMP10]], trunc (<vscale x 8 x i32> splat (i32 2) to <vscale x 8 x i16>)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]

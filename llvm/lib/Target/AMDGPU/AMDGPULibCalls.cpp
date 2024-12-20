@@ -20,11 +20,8 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"

@@ -14,8 +14,6 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -23,7 +21,6 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
-#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <optional>

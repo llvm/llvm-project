@@ -16,8 +16,6 @@
 #include "llvm/ExecutionEngine/JITLink/MachO_arm64.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SwapByteOrder.h"
 
 using namespace llvm;
 

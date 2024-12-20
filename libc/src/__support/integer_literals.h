@@ -165,6 +165,10 @@ LIBC_INLINE constexpr T parse_with_prefix(const char *ptr) {
 
 } // namespace internal
 
+LIBC_INLINE constexpr UInt<96> operator""_u96(const char *x) {
+  return internal::parse_with_prefix<UInt<96>>(x);
+}
+
 LIBC_INLINE constexpr UInt128 operator""_u128(const char *x) {
   return internal::parse_with_prefix<UInt128>(x);
 }

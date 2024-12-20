@@ -1210,7 +1210,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   return s;
 }
 
-/// Return the basic block label. It is not necessarilly unique because a block
+/// Return the basic block label. It is not necessarily unique because a block
 /// contains multiple scheduling regions. But it is fine for visualization.
 std::string ScheduleDAGInstrs::getDAGName() const {
   return "dag." + BB->getFullName();

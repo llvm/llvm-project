@@ -18,8 +18,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static LIBC_CONSTINIT FreeListHeap<> freelist_heap_symbols;
-FreeListHeap<> *freelist_heap = &freelist_heap_symbols;
+static LIBC_CONSTINIT FreeListHeap freelist_heap_symbols;
+FreeListHeap *freelist_heap = &freelist_heap_symbols;
 
 LLVM_LIBC_FUNCTION(void *, malloc, (size_t size)) {
   return freelist_heap->allocate(size);

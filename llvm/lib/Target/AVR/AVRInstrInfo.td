@@ -69,9 +69,9 @@ def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;
 def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;
 def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;
 def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;
-def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftDOp>;
-def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftDOp>;
-def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftDOp>;
+def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftPairOp>;
+def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftPairOp>;
+def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftPairOp>;
 
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;
@@ -365,7 +365,7 @@ let isCommutable = 1, Constraints = "$src = $rd", Defs = [SREG] in {
   // Adds two 8-bit registers.
   def ADDRdRr : FRdRr<0b0000, 0b11, (outs GPR8:$rd),(ins GPR8:$src, GPR8:$rr),
                       "add\t$rd, $rr",
-                      [(set i8:$rd, (add i8:$src, i8:$rr)), (implicit SREG)]>;
+                      [(set i8:$rd, (add i8:$src, i8:$rr))]>;
 
   // ADDW Rd+1:Rd, Rr+1:Rr
   // Pseudo instruction to add four 8-bit registers as two 16-bit values.
@@ -375,15 +375,14 @@ let isCommutable = 1, Constraints = "$src = $rd", Defs = [SREG] in {
   // adc Rd+1, Rr+1
   def ADDWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
                         "addw\t$rd, $rr",
-                        [(set i16:$rd, (add i16:$src, i16:$rr)),
-                         (implicit SREG)]>;
+                        [(set i16:$rd, (add i16:$src, i16:$rr))]>;
 
   // ADC Rd, Rr
   // Adds two 8-bit registers with carry.
   let Uses = [SREG] in
   def ADCRdRr : FRdRr<0b0001, 0b11, (outs GPR8:$rd), (ins GPR8:$src, GPR8:$rr),
                       "adc\t$rd, $rr",
-                      [(set i8:$rd, (adde i8:$src, i8:$rr)), (implicit SREG)]>;
+                      [(set i8:$rd, (adde i8:$src, i8:$rr))]>;
 
   // ADCW Rd+1:Rd, Rr+1:Rr
   // Pseudo instruction to add four 8-bit registers as two 16-bit values with
@@ -395,15 +394,13 @@ let isCommutable = 1, Constraints = "$src = $rd", Defs = [SREG] in {
   let Uses = [SREG] in
   def ADCWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
                         "adcw\t$rd, $rr",
-                        [(set i16:$rd, (adde i16:$src, i16:$rr)),
-                         (implicit SREG)]>;
+                        [(set i16:$rd, (adde i16:$src, i16:$rr))]>;
 
   // AIDW Rd, k
   // Adds an immediate 6-bit value K to Rd, placing the result in Rd.
   def ADIWRdK : FWRdK<0b0, (outs IWREGS:$rd), (ins IWREGS :$src, imm_arith6:$k),
                       "adiw\t$rd, $k",
-                      [(set i16:$rd, (add i16:$src, uimm6:$k)),
-                       (implicit SREG)]>,
+                      [(set i16:$rd, (add i16:$src, uimm6:$k))]>,
                 Requires<[HasADDSUBIW]>;
 }
 
@@ -415,7 +412,7 @@ let Constraints = "$rs = $rd", Defs = [SREG] in {
   // Subtracts the 8-bit value of Rr from Rd and places the value in Rd.
   def SUBRdRr : FRdRr<0b0001, 0b10, (outs GPR8:$rd), (ins GPR8:$rs, GPR8:$rr),
                       "sub\t$rd, $rr",
-                      [(set i8:$rd, (sub i8:$rs, i8:$rr)), (implicit SREG)]>;
+                      [(set i8:$rd, (sub i8:$rs, i8:$rr))]>;
 
   // SUBW Rd+1:Rd, Rr+1:Rr
   // Subtracts two 16-bit values and places the result into Rd.
@@ -425,12 +422,11 @@ let Constraints = "$rs = $rd", Defs = [SREG] in {
   // sbc Rd+1, Rr+1
   def SUBWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$rs, DREGS:$rr),
                         "subw\t$rd, $rr",
-                        [(set i16:$rd, (sub i16:$rs, i16:$rr)),
-                         (implicit SREG)]>;
+                        [(set i16:$rd, (sub i16:$rs, i16:$rr))]>;
 
   def SUBIRdK : FRdK<0b0101, (outs LD8:$rd), (ins LD8:$rs, imm_ldi8:$k),
                      "subi\t$rd, $k",
-                     [(set i8:$rd, (sub i8:$rs, imm:$k)), (implicit SREG)]>;
+                     [(set i8:$rd, (sub i8:$rs, imm:$k))]>;
 
   // SUBIW Rd+1:Rd, K+1:K
   //
@@ -439,20 +435,18 @@ let Constraints = "$rs = $rd", Defs = [SREG] in {
   // sbci Rd+1, K+1
   def SUBIWRdK : Pseudo<(outs DLDREGS:$rd), (ins DLDREGS:$rs, i16imm:$rr),
                         "subiw\t$rd, $rr",
-                        [(set i16:$rd, (sub i16:$rs, imm:$rr)),
-                         (implicit SREG)]>;
+                        [(set i16:$rd, (sub i16:$rs, imm:$rr))]>;
 
   def SBIWRdK : FWRdK<0b1, (outs IWREGS:$rd), (ins IWREGS:$rs, imm_arith6:$k),
                       "sbiw\t$rd, $k",
-                      [(set i16:$rd, (sub i16:$rs, uimm6:$k)),
-                       (implicit SREG)]>,
+                      [(set i16:$rd, (sub i16:$rs, uimm6:$k))]>,
                 Requires<[HasADDSUBIW]>;
 
   // Subtract with carry operations which must read the carry flag in SREG.
   let Uses = [SREG] in {
     def SBCRdRr : FRdRr<0b0000, 0b10, (outs GPR8:$rd), (ins GPR8:$rs, GPR8:$rr),
                         "sbc\t$rd, $rr",
-                        [(set i8:$rd, (sube i8:$rs, i8:$rr)), (implicit SREG)]>;
+                        [(set i8:$rd, (sube i8:$rs, i8:$rr))]>;
 
     // SBCW Rd+1:Rd, Rr+1:Rr
     //
@@ -461,20 +455,18 @@ let Constraints = "$rs = $rd", Defs = [SREG] in {
     // sbc Rd+1, Rr+1
     def SBCWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$rs, DREGS:$rr),
                           "sbcw\t$rd, $rr",
-                          [(set i16:$rd, (sube i16:$rs, i16:$rr)),
-                           (implicit SREG)]>;
+                          [(set i16:$rd, (sube i16:$rs, i16:$rr))]>;
 
     def SBCIRdK : FRdK<0b0100, (outs LD8:$rd), (ins LD8:$rs, imm_ldi8:$k),
                        "sbci\t$rd, $k",
-                       [(set i8:$rd, (sube i8:$rs, imm:$k)), (implicit SREG)]>;
+                       [(set i8:$rd, (sube i8:$rs, imm:$k))]>;
 
     // SBCIW Rd+1:Rd, K+1:K
     // sbci Rd,   K
     // sbci Rd+1, K+1
     def SBCIWRdK : Pseudo<(outs DLDREGS:$rd), (ins DLDREGS:$rs, i16imm:$rr),
                           "sbciw\t$rd, $rr",
-                          [(set i16:$rd, (sube i16:$rs, imm:$rr)),
-                           (implicit SREG)]>;
+                          [(set i16:$rd, (sube i16:$rs, imm:$rr))]>;
   }
 }
 
@@ -484,11 +476,11 @@ let Constraints = "$rs = $rd", Defs = [SREG] in {
 let Constraints = "$src = $rd", Defs = [SREG] in {
   def INCRd : FRd<0b1001, 0b0100011, (outs GPR8:$rd), (ins GPR8:$src),
                   "inc\t$rd",
-                  [(set i8:$rd, (add i8:$src, 1)), (implicit SREG)]>;
+                  [(set i8:$rd, (add i8:$src, 1))]>;
 
   def DECRd : FRd<0b1001, 0b0101010, (outs GPR8:$rd), (ins GPR8:$src),
                   "dec\t$rd",
-                  [(set i8:$rd, (add i8:$src, -1)), (implicit SREG)]>;
+                  [(set i8:$rd, (add i8:$src, -1))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -538,7 +530,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   let isCommutable = 1 in {
     def ANDRdRr : FRdRr<0b0010, 0b00, (outs GPR8:$rd),
                         (ins GPR8:$src, GPR8:$rr), "and\t$rd, $rr",
-                        [(set i8:$rd, (and i8:$src, i8:$rr)), (implicit SREG)]>;
+                        [(set i8:$rd, (and i8:$src, i8:$rr))]>;
 
     // ANDW Rd+1:Rd, Rr+1:Rr
     //
@@ -547,12 +539,11 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
     // and Rd+1, Rr+1
     def ANDWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
                           "andw\t$rd, $rr",
-                          [(set i16:$rd, (and i16:$src, i16:$rr)),
-                           (implicit SREG)]>;
+                          [(set i16:$rd, (and i16:$src, i16:$rr))]>;
 
     def ORRdRr : FRdRr<0b0010, 0b10, (outs GPR8:$rd), (ins GPR8:$src, GPR8:$rr),
                        "or\t$rd, $rr",
-                       [(set i8:$rd, (or i8:$src, i8:$rr)), (implicit SREG)]>;
+                       [(set i8:$rd, (or i8:$src, i8:$rr))]>;
 
     // ORW Rd+1:Rd, Rr+1:Rr
     //
@@ -561,12 +552,11 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
     // or Rd+1, Rr+1
     def ORWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
                          "orw\t$rd, $rr",
-                         [(set i16:$rd, (or i16:$src, i16:$rr)),
-                          (implicit SREG)]>;
+                         [(set i16:$rd, (or i16:$src, i16:$rr))]>;
 
     def EORRdRr : FRdRr<0b0010, 0b01, (outs GPR8:$rd),
                         (ins GPR8:$src, GPR8:$rr), "eor\t$rd, $rr",
-                        [(set i8:$rd, (xor i8:$src, i8:$rr)), (implicit SREG)]>;
+                        [(set i8:$rd, (xor i8:$src, i8:$rr))]>;
 
     // EORW Rd+1:Rd, Rr+1:Rr
     //
@@ -575,13 +565,12 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
     // eor Rd+1, Rr+1
     def EORWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
                           "eorw\t$rd, $rr",
-                          [(set i16:$rd, (xor i16:$src, i16:$rr)),
-                           (implicit SREG)]>;
+                          [(set i16:$rd, (xor i16:$src, i16:$rr))]>;
   }
 
   def ANDIRdK : FRdK<0b0111, (outs LD8:$rd), (ins LD8:$src, imm_ldi8:$k),
                      "andi\t$rd, $k",
-                     [(set i8:$rd, (and i8:$src, imm:$k)), (implicit SREG)]>;
+                     [(set i8:$rd, (and i8:$src, imm:$k))]>;
 
   // ANDI Rd+1:Rd, K+1:K
   //
@@ -590,12 +579,11 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   // andi Rd+1, K+1
   def ANDIWRdK : Pseudo<(outs DLDREGS:$rd), (ins DLDREGS:$src, i16imm:$k),
                         "andiw\t$rd, $k",
-                        [(set i16:$rd, (and i16:$src, imm:$k)),
-                         (implicit SREG)]>;
+                        [(set i16:$rd, (and i16:$src, imm:$k))]>;
 
   def ORIRdK : FRdK<0b0110, (outs LD8:$rd), (ins LD8:$src, imm_ldi8:$k),
                     "ori\t$rd, $k",
-                    [(set i8:$rd, (or i8:$src, imm:$k)), (implicit SREG)]>;
+                    [(set i8:$rd, (or i8:$src, imm:$k))]>;
 
   // ORIW Rd+1:Rd, K+1,K
   //
@@ -604,8 +592,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   // ori Rd+1, K+1
   def ORIWRdK : Pseudo<(outs DLDREGS:$rd), (ins DLDREGS:$src, i16imm:$rr),
                        "oriw\t$rd, $rr",
-                       [(set i16:$rd, (or i16:$src, imm:$rr)),
-                        (implicit SREG)]>;
+                       [(set i16:$rd, (or i16:$src, imm:$rr))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -613,7 +600,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
 //===----------------------------------------------------------------------===//
 let Constraints = "$src = $rd", Defs = [SREG] in {
   def COMRd : FRd<0b1001, 0b0100000, (outs GPR8:$rd), (ins GPR8:$src),
-                  "com\t$rd", [(set i8:$rd, (not i8:$src)), (implicit SREG)]>;
+                  "com\t$rd", [(set i8:$rd, (not i8:$src))]>;
 
   // COMW Rd+1:Rd
   //
@@ -621,10 +608,10 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   // com Rd
   // com Rd+1
   def COMWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "comw\t$rd",
-                      [(set i16:$rd, (not i16:$src)), (implicit SREG)]>;
+                      [(set i16:$rd, (not i16:$src))]>;
 
   def NEGRd : FRd<0b1001, 0b0100001, (outs GPR8:$rd), (ins GPR8:$src),
-                  "neg\t$rd", [(set i8:$rd, (ineg i8:$src)), (implicit SREG)]>;
+                  "neg\t$rd", [(set i8:$rd, (ineg i8:$src))]>;
 
   // NEGW Rd+1:Rd
   //
@@ -722,7 +709,7 @@ let Defs = [SREG] in {
 
   def CPRdRr : FRdRr<0b0001, 0b01, (outs), (ins GPR8:$rd, GPR8:$rr),
                      "cp\t$rd, $rr",
-                     [(AVRcmp i8:$rd, i8:$rr), (implicit SREG)]>;
+                     [(AVRcmp i8:$rd, i8:$rr)]>;
 
   // CPW Rd+1:Rd, Rr+1:Rr
   //
@@ -731,12 +718,12 @@ let Defs = [SREG] in {
   // cpc Rd+1, Rr+1
   def CPWRdRr : Pseudo<(outs), (ins DREGS:$src, DREGS:$src2),
                        "cpw\t$src, $src2",
-                       [(AVRcmp i16:$src, i16:$src2), (implicit SREG)]>;
+                       [(AVRcmp i16:$src, i16:$src2)]>;
 
   let Uses = [SREG] in
   def CPCRdRr : FRdRr<0b0000, 0b01, (outs), (ins GPR8:$rd, GPR8:$rr),
                       "cpc\t$rd, $rr",
-                      [(AVRcmpc i8:$rd, i8:$rr), (implicit SREG)]>;
+                      [(AVRcmpc i8:$rd, i8:$rr)]>;
 
   // CPCW Rd+1:Rd. Rr+1:Rr
   //
@@ -746,12 +733,12 @@ let Defs = [SREG] in {
   let Uses = [SREG] in
   def CPCWRdRr : Pseudo<(outs), (ins DREGS:$src, DREGS:$src2),
                         "cpcw\t$src, $src2",
-                        [(AVRcmpc i16:$src, i16:$src2), (implicit SREG)]>;
+                        [(AVRcmpc i16:$src, i16:$src2)]>;
 
   // CPI Rd, K
   // Compares a register with an 8 bit immediate.
   def CPIRdK : FRdK<0b0011, (outs), (ins LD8:$rd, imm_ldi8:$k), "cpi\t$rd, $k",
-                    [(AVRcmp i8:$rd, imm:$k), (implicit SREG)]>;
+                    [(AVRcmp i8:$rd, imm:$k)]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1386,11 +1373,10 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                       "lslw\t$rd",
                       [(set i16
                         : $rd, (AVRlsl i16
-                                : $src)),
-                       (implicit SREG)]>;
+                                : $src))]>;
 
   def LSLWHiRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lslwhi\t$rd",
-                        [(set i16:$rd, (AVRlslhi i16:$src)), (implicit SREG)]>;
+                        [(set i16:$rd, (AVRlslhi i16:$src))]>;
 
   def LSLWNRd : Pseudo<(outs DLDREGS
                         : $rd),
@@ -1401,8 +1387,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                          (set i16
                           : $rd, (AVRlslwn i16
                                   : $src, imm
-                                  : $bits)),
-                         (implicit SREG)
+                                  : $bits))
                        ]>;
 
   def LSLBNRd : Pseudo<(outs LD8
@@ -1414,8 +1399,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                          (set i8
                           : $rd, (AVRlslbn i8
                                   : $src, imm
-                                  : $bits)),
-                         (implicit SREG)
+                                  : $bits))
                        ]>;
 
   def LSRRd
@@ -1426,8 +1410,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
              : $src),
             "lsr\t$rd", [(set i8
                           : $rd, (AVRlsr i8
-                                  : $src)),
-                         (implicit SREG)]>;
+                                  : $src))]>;
 
   def LSRWRd : Pseudo<(outs DREGS
                        : $rd),
@@ -1436,11 +1419,10 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                       "lsrw\t$rd",
                       [(set i16
                         : $rd, (AVRlsr i16
-                                : $src)),
-                       (implicit SREG)]>;
+                                : $src))]>;
 
   def LSRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lsrwlo\t$rd",
-                        [(set i16:$rd, (AVRlsrlo i16:$src)), (implicit SREG)]>;
+                        [(set i16:$rd, (AVRlsrlo i16:$src))]>;
 
   def LSRWNRd : Pseudo<(outs DLDREGS
                         : $rd),
@@ -1451,8 +1433,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                          (set i16
                           : $rd, (AVRlsrwn i16
                                   : $src, imm
-                                  : $bits)),
-                         (implicit SREG)
+                                  : $bits))
                        ]>;
 
   def LSRBNRd : Pseudo<(outs LD8
@@ -1464,8 +1445,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                          (set i8
                           : $rd, (AVRlsrbn i8
                                   : $src, imm
-                                  : $bits)),
-                         (implicit SREG)
+                                  : $bits))
                        ]>;
 
   def ASRRd
@@ -1476,8 +1456,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
              : $src),
             "asr\t$rd", [(set i8
                           : $rd, (AVRasr i8
-                                  : $src)),
-                         (implicit SREG)]>;
+                                  : $src))]>;
 
   def ASRWNRd : Pseudo<(outs DREGS
                         : $rd),
@@ -1488,8 +1467,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                          (set i16
                           : $rd, (AVRasrwn i16
                                   : $src, imm
-                                  : $bits)),
-                         (implicit SREG)
+                                  : $bits))
                        ]>;
 
   def ASRBNRd : Pseudo<(outs LD8
@@ -1501,8 +1479,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                          (set i8
                           : $rd, (AVRasrbn i8
                                   : $src, imm
-                                  : $bits)),
-                         (implicit SREG)
+                                  : $bits))
                        ]>;
 
   def ASRWRd : Pseudo<(outs DREGS
@@ -1512,25 +1489,22 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                       "asrw\t$rd",
                       [(set i16
                         : $rd, (AVRasr i16
-                                : $src)),
-                       (implicit SREG)]>;
+                                : $src))]>;
 
   def ASRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "asrwlo\t$rd",
-                        [(set i16:$rd, (AVRasrlo i16:$src)), (implicit SREG)]>;
+                        [(set i16:$rd, (AVRasrlo i16:$src))]>;
   let Uses = [R1] in
   def ROLBRdR1 : Pseudo<(outs GPR8:$rd),
                         (ins GPR8:$src),
                         "rolb\t$rd",
-                        [(set i8:$rd, (AVRrol i8:$src)),
-                        (implicit SREG)]>,
+                        [(set i8:$rd, (AVRrol i8:$src))]>,
                  Requires<[HasNonTinyEncoding]>;
 
   let Uses = [R17] in
   def ROLBRdR17 : Pseudo<(outs GPR8:$rd),
                          (ins GPR8:$src),
                          "rolb\t$rd",
-                         [(set i8:$rd, (AVRrol i8:$src)),
-                         (implicit SREG)]>,
+                         [(set i8:$rd, (AVRrol i8:$src))]>,
                   Requires<[HasTinyEncoding]>;
 
   def RORBRd : Pseudo<(outs GPR8
@@ -1540,8 +1514,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                       "rorb\t$rd",
                       [(set i8
                         : $rd, (AVRror i8
-                                : $src)),
-                       (implicit SREG)]>;
+                                : $src))]>;
 
   // Bit rotate operations.
   let Uses = [SREG] in {
@@ -1554,8 +1527,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                  "rolw\t$rd",
                  [(set i16
                    : $rd, (AVRrol i16
-                           : $src)),
-                  (implicit SREG)]>;
+                           : $src))]>;
 
     def RORRd : FRd<0b1001, 0b0100111,
                     (outs GPR8
@@ -1572,8 +1544,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                  "rorw\t$rd",
                  [(set i16
                    : $rd, (AVRror i16
-                           : $src)),
-                  (implicit SREG)]>;
+                           : $src))]>;
   }
 }
 
@@ -1740,8 +1711,7 @@ def SEXT
                       "sext\t$dst, $src",
                       [(set i16
                         : $dst, (sext i8
-                                 : $src)),
-                       (implicit SREG)]>;
+                                 : $src))]>;
 
 def ZEXT
     : ExtensionPseudo<(outs DREGS
@@ -1751,8 +1721,7 @@ def ZEXT
                       "zext\t$dst, $src",
                       [(set i16
                         : $dst, (zext i8
-                                 : $src)),
-                       (implicit SREG)]>;
+                                 : $src))]>;
 
 // This pseudo gets expanded into a movw+adiw thus it clobbers SREG.
 let Defs = [SREG],

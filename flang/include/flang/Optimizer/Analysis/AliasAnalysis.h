@@ -60,18 +60,18 @@ struct AliasAnalysis {
   //  module top
   //    real, pointer :: a(:)
   //  end module
-  //  
+  //
   //  subroutine test()
   //    use top
   //    a(1) = 1
   //  end subroutine
   //  -------------------------------------------------
-  // 
+  //
   //  flang -fc1 -emit-fir test.f90 -o test.fir
   //
   //  ------------------- test.fir --------------------
-  //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>> 
-  //  
+  //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  //
   //  func.func @_QPtest() {
   //    %c1 = arith.constant 1 : index
   //    %cst = arith.constant 1.000000e+00 : f32
@@ -100,12 +100,12 @@ struct AliasAnalysis {
   // Additionally, because it is relied on in HLFIR lowering, we allow querying
   // on a box SSA value, which is interpreted as querying on its data.
   //
-  // So in the above example, !fir.ref<f32> and !fir.box<!fir.ptr<!fir.array<?xf32>>> is data, 
+  // So in the above example, !fir.ref<f32> and !fir.box<!fir.ptr<!fir.array<?xf32>>> is data,
   // while !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> is not data.
 
   // This also applies to function arguments. In the example below, %arg0
   // is data, %arg1 is not data but a load of %arg1 is.
-  // 
+  //
   // func.func @_QFPtest2(%arg0: !fir.ref<f32>, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>> )  {
   //    %0 = fir.load %arg1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   //    ... }
@@ -129,7 +129,7 @@ struct AliasAnalysis {
       /// inlining happens an inlined fir.declare of the callee's
       /// dummy argument identifies the scope where the source
       /// may be treated as a dummy argument.
-      mlir::Value instantiationPoint;
+      mlir::Operation *instantiationPoint;
 
       /// Whether the source was reached following data or box reference
       bool isData{false};
@@ -146,6 +146,8 @@ struct AliasAnalysis {
     /// Have we lost precision following the source such that
     /// even an exact match cannot be MustAlias?
     bool approximateSource;
+    /// Source object is used in an internal procedure via host association.
+    bool isCapturedInInternalProcedure{false};
 
     /// Print information about the memory source to `os`.
     void print(llvm::raw_ostream &os) const;
@@ -156,6 +158,9 @@ struct AliasAnalysis {
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;
+
+    /// Is this source a variable from the Fortran source?
+    bool isFortranUserVariable() const;
 
     /// @name Dummy Argument Aliasing
     ///
@@ -183,6 +188,10 @@ struct AliasAnalysis {
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const AliasAnalysis::Source &op);
 
+  /// Given the values and their sources, return their aliasing behavior.
+  mlir::AliasResult alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                          mlir::Value rhs);
+
   /// Given two values, return their aliasing behavior.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
 
@@ -190,10 +199,11 @@ struct AliasAnalysis {
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
   /// Return the memory source of a value.
-  /// If getInstantiationPoint is true, the search for the source
+  /// If getLastInstantiationPoint is true, the search for the source
   /// will stop at [hl]fir.declare if it represents a dummy
   /// argument declaration (i.e. it has the dummy_scope operand).
-  Source getSource(mlir::Value, bool getInstantiationPoint = false);
+  fir::AliasAnalysis::Source getSource(mlir::Value,
+                                       bool getLastInstantiationPoint = false);
 
 private:
   /// Return true, if `ty` is a reference type to an object of derived type

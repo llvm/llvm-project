@@ -178,7 +178,7 @@ enum class WNoError { Unknown };
 
 static cl::bits<WNoError> WNoErrorList(
     "Wno-error",
-    cl::desc("If set don't error out on the specified warning type."),
+    cl::desc("If set, don't error out on the specified warning type."),
     cl::values(
         clEnumValN(WNoError::Unknown, "unknown",
                    "If set, unknown format options are only warned about.\n"

@@ -10,6 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
 namespace llvm::sandboxir {
 
@@ -56,6 +57,12 @@ bool PredIterator::operator==(const PredIterator &Other) const {
   assert(DAG == Other.DAG && "Iterators of different DAGs!");
   assert(N == Other.N && "Iterators of different nodes!");
   return OpIt == Other.OpIt && MemIt == Other.MemIt;
+}
+
+DGNode::~DGNode() {
+  if (SB == nullptr)
+    return;
+  SB->eraseFromBundle(this);
 }
 
 #ifndef NDEBUG

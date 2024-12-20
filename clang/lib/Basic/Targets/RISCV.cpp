@@ -108,6 +108,10 @@ bool RISCVTargetInfo::validateAsmConstraint(
       return true;
     }
     return false;
+  case 'R':
+    // An even-odd GPR pair
+    Info.setAllowsRegister();
+    return true;
   case 'v':
     // A vector register.
     if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
@@ -212,11 +216,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (ISAInfo->hasExtension("c"))
     Builder.defineMacro("__riscv_compressed");
 
-  if (ISAInfo->hasExtension("zve32x")) {
+  if (ISAInfo->hasExtension("zve32x"))
     Builder.defineMacro("__riscv_vector");
-    // Currently we support the v0.12 RISC-V V intrinsics.
-    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 12)));
-  }
+
+  // Currently we support the v1.0 RISC-V V intrinsics.
+  Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
 
   auto VScale = getVScaleRange(Opts);
   if (VScale && VScale->first && VScale->first == VScale->second)
@@ -507,4 +511,11 @@ bool RISCVTargetInfo::validateGlobalRegisterVariable(
     return true;
   }
   return false;
+}
+
+bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
+  assert(getTriple().isOSLinux() &&
+         "__builtin_cpu_is() is only supported for Linux.");
+
+  return llvm::RISCV::hasValidCPUModel(CPUName);
 }

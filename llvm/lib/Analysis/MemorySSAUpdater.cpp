@@ -1403,9 +1403,11 @@ void MemorySSAUpdater::changeToUnreachable(const Instruction *I) {
 
 MemoryAccess *MemorySSAUpdater::createMemoryAccessInBB(
     Instruction *I, MemoryAccess *Definition, const BasicBlock *BB,
-    MemorySSA::InsertionPlace Point) {
-  MemoryUseOrDef *NewAccess = MSSA->createDefinedAccess(I, Definition);
-  MSSA->insertIntoListsForBlock(NewAccess, BB, Point);
+    MemorySSA::InsertionPlace Point, bool CreationMustSucceed) {
+  MemoryUseOrDef *NewAccess = MSSA->createDefinedAccess(
+      I, Definition, /*Template=*/nullptr, CreationMustSucceed);
+  if (NewAccess)
+    MSSA->insertIntoListsForBlock(NewAccess, BB, Point);
   return NewAccess;
 }
 

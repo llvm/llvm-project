@@ -77,8 +77,8 @@ def t2_so_imm_not_XFORM : SDNodeXForm<imm, [{
 
 // t2_so_imm_neg_XFORM - Return the negation of a t2_so_imm value
 def t2_so_imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-((int)N->getZExtValue()), SDLoc(N),
-                                   MVT::i32);
+  return CurDAG->getSignedTargetConstant(-((int)N->getZExtValue()), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 // so_imm_notSext_XFORM - Return a so_imm value packed into the format
@@ -2787,8 +2787,9 @@ def : T2Pat<(rotr rGPR:$lhs, (and rGPR:$rhs, lo5AllOne)),
 
 let Uses = [CPSR] in {
 def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                   "rrx", "\t$Rd, $Rm",
-                   [(set rGPR:$Rd, (ARMrrx rGPR:$Rm))]>, Sched<[WriteALU]> {
+                      "rrx", "\t$Rd, $Rm",
+                      [(set rGPR:$Rd, (ARMrrx rGPR:$Rm, CPSR))]>,
+            Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -2800,12 +2801,13 @@ def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
 }
 }
 
+// These differ from t2LSRri / t2ASRri in that they are flag-setting
+// and have a hardcoded shift amount = 1.
 let isCodeGenOnly = 1, Defs = [CPSR] in {
-def t2MOVsrl_glue : T2TwoRegShiftImm<
-                        (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                        "lsrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsrl_glue rGPR:$Rm))]>,
-                        Sched<[WriteALU]> {
+def t2LSRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                               "lsrs", ".w\t$Rd, $Rm, #1",
+                               [(set rGPR:$Rd, CPSR, (ARMlsrs1 rGPR:$Rm))]>,
+              Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -2816,11 +2818,10 @@ def t2MOVsrl_glue : T2TwoRegShiftImm<
   let Inst{14-12} = 0b000;
   let Inst{7-6} = 0b01;
 }
-def t2MOVsra_glue : T2TwoRegShiftImm<
-                        (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                        "asrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsra_glue rGPR:$Rm))]>,
-                        Sched<[WriteALU]> {
+def t2ASRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                               "asrs", ".w\t$Rd, $Rm, #1",
+                               [(set rGPR:$Rd, CPSR, (ARMasrs1 rGPR:$Rm))]>,
+              Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;

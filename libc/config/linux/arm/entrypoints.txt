@@ -183,6 +183,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # search.h entrypoints
+    libc.src.search.lfind
+
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
@@ -197,6 +200,14 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # complex.h entrypoints
+    libc.src.complex.creal
+    libc.src.complex.crealf
+    libc.src.complex.creall
+    libc.src.complex.cimag
+    libc.src.complex.cimagf
+    libc.src.complex.cimagl
+    
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept

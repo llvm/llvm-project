@@ -31,22 +31,18 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
-#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 
@@ -1145,15 +1141,7 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
   return false;
 }
 
-/// This method is typically called in contexts where we can't generate
-/// side-effects, like in __builtin_dynamic_object_size. When finding
-/// expressions, only choose those that have either already been emitted or can
-/// be loaded without side-effects.
-///
-/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
-///   within the top-level struct.
-/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
-llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
+llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
 
@@ -1182,12 +1170,25 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     return nullptr;
 
   Indices.push_back(Builder.getInt32(0));
-  Res = Builder.CreateInBoundsGEP(
+  return Builder.CreateInBoundsGEP(
       ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
       RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
+}
 
-  return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), Res,
-                                   getIntAlign(), "..counted_by.load");
+/// This method is typically called in contexts where we can't generate
+/// side-effects, like in __builtin_dynamic_object_size. When finding
+/// expressions, only choose those that have either already been emitted or can
+/// be loaded without side-effects.
+///
+/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
+///   within the top-level struct.
+/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
+llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
+    const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
+  if (llvm::Value *GEP = GetCountedByFieldExprGEP(Base, FAMDecl, CountDecl))
+    return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), GEP,
+                                     getIntAlign(), "..counted_by.load");
+  return nullptr;
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
@@ -1939,6 +1940,10 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   // EmitFromMemory for the non-bitfield case.
   if (IsBool &&
       cast<llvm::IntegerType>(Value->getType())->getBitWidth() == 1)
+    return false;
+
+  if (NeedsEnumCheck &&
+      getContext().isTypeIgnoredBySanitizer(SanitizerKind::Enum, Ty))
     return false;
 
   llvm::APInt Min, End;
@@ -3900,9 +3905,11 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  if (!ClSanitizeDebugDeoptimization &&
-      CGM.getCodeGenOpts().OptimizationLevel && TrapBB &&
-      (!CurCodeDecl || !CurCodeDecl->hasAttr<OptimizeNoneAttr>())) {
+  bool NoMerge = ClSanitizeDebugDeoptimization ||
+                 !CGM.getCodeGenOpts().OptimizationLevel ||
+                 (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+
+  if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
@@ -3914,18 +3921,17 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB);
     EmitBlock(TrapBB);
 
-    llvm::CallInst *TrapCall = Builder.CreateCall(
-        CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-        llvm::ConstantInt::get(CGM.Int8Ty,
-                               ClSanitizeDebugDeoptimization
-                                   ? TrapBB->getParent()->size()
-                                   : static_cast<uint64_t>(CheckHandlerID)));
+    llvm::CallInst *TrapCall =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
                                     CGM.getCodeGenOpts().TrapFuncName);
       TrapCall->addFnAttr(A);
     }
+    if (NoMerge)
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
@@ -4365,7 +4371,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           ME &&
           ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
-        const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        const FieldDecl *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
         if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
           if (std::optional<int64_t> Diff =
                   getOffsetDifferenceInBits(*this, CountFD, FAMDecl)) {

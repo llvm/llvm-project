@@ -13,9 +13,10 @@
 #
 # CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
 # CHECK-NEXT:                ---
-# CHECK-NEXT:                 25      0      1   0             0         0 is_stmt
-# CHECK-NEXT:                 29     28      1   0             0         0 is_stmt prologue_end
+# CHECK-NEXT:                 25      0      1   0             0         0 is_stmt prologue_end
+# CHECK-NEXT:                 29     28      1   0             0         0 is_stmt
 # CHECK-NEXT:                 29     28      1   0             0         0 is_stmt end_sequence
+
 --- |
   source_filename = "t.ll"
   target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

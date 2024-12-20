@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1459,7 +1460,7 @@ SelectionDAG::getStrictFPExtendOrRound(SDValue Op, SDValue Chain,
       VT.bitsGT(Op.getValueType())
           ? getNode(ISD::STRICT_FP_EXTEND, DL, {VT, MVT::Other}, {Chain, Op})
           : getNode(ISD::STRICT_FP_ROUND, DL, {VT, MVT::Other},
-                    {Chain, Op, getIntPtrConstant(0, DL)});
+                    {Chain, Op, getIntPtrConstant(0, DL, /*isTarget=*/true)});
 
   return std::pair<SDValue, SDValue>(Res, SDValue(Res.getNode(), 1));
 }
@@ -1636,14 +1637,7 @@ SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                                   bool isT, bool isO) {
-  EVT EltVT = VT.getScalarType();
-  assert((EltVT.getSizeInBits() >= 64 ||
-          (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
-         "getConstant with a uint64_t value that doesn't fit in the type!");
-  // TODO: Avoid implicit trunc?
-  // See https://github.com/llvm/llvm-project/issues/112510.
-  return getConstant(APInt(EltVT.getSizeInBits(), Val, /*isSigned=*/false,
-                           /*implicitTrunc=*/true),
+  return getConstant(APInt(VT.getScalarSizeInBits(), Val, /*isSigned=*/false),
                      DL, VT, isT, isO);
 }
 
@@ -1772,10 +1766,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 SDValue SelectionDAG::getSignedConstant(int64_t Val, const SDLoc &DL, EVT VT,
                                         bool isT, bool isO) {
   unsigned Size = VT.getScalarSizeInBits();
-  assert(
-      isIntN(Size, Val) &&
-      "getSignedConstant with a int64_t value that doesn't fit in the type!");
-  return getConstant(APInt(Size, Val, true), DL, VT, isT, isO);
+  return getConstant(APInt(Size, Val, /*isSigned=*/true), DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget,
@@ -2481,6 +2472,141 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
          "There should only be one subvector after tree flattening");
 
   return Subvectors[0];
+}
+
+bool SelectionDAG::expandMultipleResultFPLibCall(
+    RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
+    std::optional<unsigned> CallRetResNo) {
+  LLVMContext &Ctx = *getContext();
+  EVT VT = Node->getValueType(0);
+  unsigned NumResults = Node->getNumValues();
+
+  const char *LCName = TLI->getLibcallName(LC);
+  if (!LC || !LCName)
+    return false;
+
+  auto getVecDesc = [&]() -> VecDesc const * {
+    for (bool Masked : {false, true}) {
+      if (VecDesc const *VD = getLibInfo().getVectorMappingInfo(
+              LCName, VT.getVectorElementCount(), Masked)) {
+        return VD;
+      }
+    }
+    return nullptr;
+  };
+
+  // For vector types, we must find a vector mapping for the libcall.
+  VecDesc const *VD = nullptr;
+  if (VT.isVector() && !(VD = getVecDesc()))
+    return false;
+
+  // Find users of the node that store the results (and share input chains). The
+  // destination pointers can be used instead of creating stack allocations.
+  // FIXME: This should allow stores with the same chains (not just the entry
+  // chain), but there's a risk the store is within a (CALLSEQ_START,
+  // CALLSEQ_END) pair, which after this expansion will lead to nested call
+  // sequences.
+  SDValue InChain = getEntryNode();
+  SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
+  for (SDNode *User : Node->uses()) {
+    if (!ISD::isNormalStore(User))
+      continue;
+    auto *ST = cast<StoreSDNode>(User);
+    SDValue StoreValue = ST->getValue();
+    unsigned ResNo = StoreValue.getResNo();
+    Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
+    if (CallRetResNo == ResNo || !ST->isSimple() ||
+        ST->getAddressSpace() != 0 ||
+        ST->getAlign() <
+            getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
+        ST->getChain() != InChain)
+      continue;
+    ResultStores[ResNo] = ST;
+  }
+
+  TargetLowering::ArgListTy Args;
+  auto AddArgListEntry = [&](SDValue Node, Type *Ty) {
+    TargetLowering::ArgListEntry Entry{};
+    Entry.Ty = Ty;
+    Entry.Node = Node;
+    Args.push_back(Entry);
+  };
+
+  // Pass the arguments.
+  for (const SDValue &Op : Node->op_values()) {
+    EVT ArgVT = Op.getValueType();
+    Type *ArgTy = ArgVT.getTypeForEVT(Ctx);
+    AddArgListEntry(Op, ArgTy);
+  }
+
+  // Pass the output pointers.
+  SmallVector<SDValue, 2> ResultPtrs(NumResults);
+  Type *PointerTy = PointerType::getUnqual(Ctx);
+  for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
+    if (ResNo == CallRetResNo)
+      continue;
+    EVT ResVT = Node->getValueType(ResNo);
+    SDValue ResultPtr = ST ? ST->getBasePtr() : CreateStackTemporary(ResVT);
+    ResultPtrs[ResNo] = ResultPtr;
+    AddArgListEntry(ResultPtr, PointerTy);
+  }
+
+  SDLoc DL(Node);
+
+  // Pass the vector mask (if required).
+  if (VD && VD->isMasked()) {
+    EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
+    SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
+    AddArgListEntry(Mask, MaskVT.getTypeForEVT(Ctx));
+  }
+
+  Type *RetType = CallRetResNo.has_value()
+                      ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
+                      : Type::getVoidTy(Ctx);
+  SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
+                                     TLI->getPointerTy(getDataLayout()));
+  TargetLowering::CallLoweringInfo CLI(*this);
+  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
+      TLI->getLibcallCallingConv(LC), RetType, Callee, std::move(Args));
+
+  auto [Call, CallChain] = TLI->LowerCallTo(CLI);
+
+  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
+    if (ResNo == CallRetResNo) {
+      Results.push_back(Call);
+      continue;
+    }
+    MachinePointerInfo PtrInfo;
+    if (StoreSDNode *ST = ResultStores[ResNo]) {
+      // Replace store with the library call.
+      ReplaceAllUsesOfValueWith(SDValue(ST, 0), CallChain);
+      PtrInfo = ST->getPointerInfo();
+    } else {
+      PtrInfo = MachinePointerInfo::getFixedStack(
+          getMachineFunction(), cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+    }
+    SDValue LoadResult =
+        getLoad(Node->getValueType(ResNo), DL, CallChain, ResultPtr, PtrInfo);
+    Results.push_back(LoadResult);
+  }
+
+  if (CallRetResNo && !Node->hasAnyUseOfValue(*CallRetResNo)) {
+    // FIXME: Find a way to avoid updating the root. This is needed for x86,
+    // which uses a floating-point stack. If (for example) the node to be
+    // expanded has two results one floating-point which is returned by the
+    // call, and one integer result, returned via an output pointer. If only the
+    // integer result is used then the `CopyFromReg` for the FP result may be
+    // optimized out. This prevents an FP stack pop from being emitted for it.
+    // Setting the root like this ensures there will be a use of the
+    // `CopyFromReg` chain, and ensures the FP pop will be emitted.
+    SDValue NewRoot =
+        getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
+    setRoot(NewRoot);
+    // Ensure the new root is reachable from the results.
+    Results[0] = getMergeValues({Results[0], NewRoot}, DL);
+  }
+
+  return true;
 }
 
 SDValue SelectionDAG::expandVAArg(SDNode *Node) {
@@ -3786,6 +3912,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::PARITY: {
     // Parity returns 0 everywhere but the LSB.
     Known.Zero.setBitsFrom(1);
+    break;
+  }
+  case ISD::MGATHER:
+  case ISD::MLOAD: {
+    ISD::LoadExtType ETy =
+        (Opcode == ISD::MGATHER)
+            ? cast<MaskedGatherSDNode>(Op)->getExtensionType()
+            : cast<MaskedLoadSDNode>(Op)->getExtensionType();
+    if (ETy == ISD::ZEXTLOAD) {
+      EVT MemVT = cast<MemSDNode>(Op)->getMemoryVT();
+      KnownBits Known0(MemVT.getScalarSizeInBits());
+      return Known0.zext(BitWidth);
+    }
     break;
   }
   case ISD::LOAD: {
@@ -7209,11 +7348,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return N1;
     break;
   case ISD::FP_ROUND:
-    assert(VT.isFloatingPoint() &&
-           N1.getValueType().isFloatingPoint() &&
-           VT.bitsLE(N1.getValueType()) &&
-           N2C && (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
-           "Invalid FP_ROUND!");
+    assert(VT.isFloatingPoint() && N1.getValueType().isFloatingPoint() &&
+           VT.bitsLE(N1.getValueType()) && N2C &&
+           (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
+           N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
   case ISD::AssertSext:
@@ -10220,8 +10358,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
 
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
@@ -10394,7 +10534,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     assert(VTList.VTs[0].isFloatingPoint() &&
            Ops[1].getValueType().isFloatingPoint() &&
            VTList.VTs[0].bitsLT(Ops[1].getValueType()) &&
-           isa<ConstantSDNode>(Ops[2]) &&
+           Ops[2].getOpcode() == ISD::TargetConstant &&
            (Ops[2]->getAsZExtVal() == 0 || Ops[2]->getAsZExtVal() == 1) &&
            "Invalid STRICT_FP_ROUND!");
     break;
@@ -10426,8 +10566,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTList, Ops);
     void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList);
     createOperands(N, Ops);
@@ -12377,7 +12519,7 @@ bool SDNode::hasPredecessor(const SDNode *N) const {
 }
 
 void SDNode::intersectFlagsWith(const SDNodeFlags Flags) {
-  this->Flags.intersectWith(Flags);
+  this->Flags &= Flags;
 }
 
 SDValue

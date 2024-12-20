@@ -455,7 +455,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
+      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_fake16
                                           : AMDGPU::V_FMAAK_F16;
       break;
     }
@@ -484,7 +484,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
+      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_fake16
                                           : AMDGPU::V_FMAMK_F16;
       break;
     }

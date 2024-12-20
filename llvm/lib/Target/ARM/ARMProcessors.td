@@ -95,8 +95,12 @@ def ProcR52plus  : SubtargetFeature<"r52plus", "ARMProcFamily", "CortexR52plus",
 
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
+def ProcM55      : SubtargetFeature<"m55", "ARMProcFamily", "CortexM55",
+                                   "Cortex-M55 ARM processors", []>;
 def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
                                    "Cortex-M7 ARM processors", []>;
+def ProcM85      : SubtargetFeature<"m85", "ARMProcFamily", "CortexM85",
+                                   "Cortex-M85 ARM processors", []>;
 
 //===----------------------------------------------------------------------===//
 // ARM processors
@@ -384,6 +388,7 @@ def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
+                                                         ProcM55,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeatureUseMISched,
@@ -394,6 +399,7 @@ def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
+                                                         ProcM85,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,

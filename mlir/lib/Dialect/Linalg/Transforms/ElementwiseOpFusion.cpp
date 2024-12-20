@@ -88,12 +88,18 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
       indexingMaps.push_back(op.getMatchingIndexingMap(&opOperand));
     }
   }
+  if (indexingMaps.empty()) {
+    // If there are no indexing maps, the operand can only be dropped
+    // if neither op has loops.
+    return producer.getNumLoops() == 0 && consumer.getNumLoops() == 0;
+  }
 
   // The concatanation of the remained indexing maps must be invertible, so
   // the bounds of the op can be still computed after dropping the selected
   // operand. inversePermutation returns an empty AffineMap in case the
   // concatanated indexing maps are not invertible.
-  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+  return inversePermutation(concatAffineMaps(
+             indexingMaps, producer.getContext())) != AffineMap();
 }
 
 /// Returns a set of indices of the producer's results which would
@@ -1995,7 +2001,8 @@ public:
             genericOp.getMatchingIndexingMap(&outputOperand));
 
       // Check if the operation shapes to loops map is computable.
-      if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {
+      if (!inversePermutation(
+              concatAffineMaps(fusedIndexMaps, rewriter.getContext()))) {
         return rewriter.notifyMatchFailure(
             genericOp, "fused op loop bound computation failed");
       }

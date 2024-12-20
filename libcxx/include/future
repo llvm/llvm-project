@@ -364,10 +364,11 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
 #  include <__chrono/duration.h>
+#  include <__chrono/steady_clock.h>
 #  include <__chrono/time_point.h>
 #  include <__condition_variable/condition_variable.h>
 #  include <__exception/exception_ptr.h>
@@ -378,26 +379,34 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #  include <__memory/allocator_traits.h>
 #  include <__memory/compressed_pair.h>
 #  include <__memory/pointer_traits.h>
-#  include <__memory/shared_ptr.h>
+#  include <__memory/shared_count.h>
 #  include <__memory/unique_ptr.h>
 #  include <__memory/uses_allocator.h>
+#  include <__mutex/lock_guard.h>
+#  include <__mutex/mutex.h>
+#  include <__mutex/unique_lock.h>
 #  include <__system_error/error_category.h>
 #  include <__system_error/error_code.h>
 #  include <__system_error/error_condition.h>
+#  include <__thread/thread.h>
 #  include <__type_traits/add_lvalue_reference.h>
 #  include <__type_traits/aligned_storage.h>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/decay.h>
 #  include <__type_traits/enable_if.h>
+#  include <__type_traits/invoke.h>
+#  include <__type_traits/is_same.h>
+#  include <__type_traits/remove_cvref.h>
+#  include <__type_traits/remove_reference.h>
 #  include <__type_traits/strip_signature.h>
 #  include <__type_traits/underlying_type.h>
 #  include <__utility/auto_cast.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
-#  include <mutex>
+#  include <__utility/swap.h>
 #  include <new>
 #  include <stdexcept>
-#  include <thread>
+#  include <tuple>
 #  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -2059,7 +2068,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
 #  include <chrono>
@@ -2071,6 +2080,7 @@ _LIBCPP_POP_MACROS
 #  include <exception>
 #  include <iosfwd>
 #  include <system_error>
+#  include <thread>
 #endif
 
 #endif // _LIBCPP_FUTURE

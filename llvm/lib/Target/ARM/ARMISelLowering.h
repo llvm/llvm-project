@@ -101,15 +101,15 @@ class VectorType;
 
     BCC_i64,
 
-    SRL_GLUE, // V,Flag = srl_flag X -> srl X, 1 + save carry out.
-    SRA_GLUE, // V,Flag = sra_flag X -> sra X, 1 + save carry out.
-    RRX,      // V = RRX X, Flag     -> srl X, 1 + shift in carry flag.
+    LSLS,  // Flag-setting shift left.
+    LSRS1, // Flag-setting logical shift right by one bit.
+    ASRS1, // Flag-setting arithmetic shift right by one bit.
+    RRX,   // Shift right one bit with carry in.
 
     ADDC, // Add with carry
     ADDE, // Add using carry
     SUBC, // Sub with carry
     SUBE, // Sub using carry
-    LSLS, // Shift left producing carry
 
     VMOVRRD, // double to two gprs.
     VMOVDRR, // Two gprs to double.

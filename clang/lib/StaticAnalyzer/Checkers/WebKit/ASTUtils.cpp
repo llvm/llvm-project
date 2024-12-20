@@ -142,9 +142,31 @@ bool isASafeCallArg(const Expr *E) {
         return true;
     }
   }
+  if (isConstOwnerPtrMemberExpr(E))
+    return true;
 
   // TODO: checker for method calls on non-refcounted objects
   return isa<CXXThisExpr>(E);
+}
+
+bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
+  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
+    if (auto *Callee = MCE->getDirectCallee()) {
+      auto Name = safeGetName(Callee);
+      if (Name == "get" || Name == "ptr") {
+        auto *ThisArg = MCE->getImplicitObjectArgument();
+        E = ThisArg;
+      }
+    }
+  }
+  auto *ME = dyn_cast<MemberExpr>(E);
+  if (!ME)
+    return false;
+  auto *D = ME->getMemberDecl();
+  if (!D)
+    return false;
+  auto T = D->getType();
+  return isOwnerPtrType(T) && T.isConstQualified();
 }
 
 } // namespace clang

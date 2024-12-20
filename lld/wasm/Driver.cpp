@@ -184,16 +184,17 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
+  auto &errs = errorHandler().errs();
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    errs.enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    errs.enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      errs.enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      errs.enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -425,6 +426,33 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     error("no input files");
 }
 
+static StringRef getAliasSpelling(opt::Arg *arg) {
+  if (const opt::Arg *alias = arg->getAlias())
+    return alias->getSpelling();
+  return arg->getSpelling();
+}
+
+static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
+                                                        unsigned id) {
+  auto *arg = args.getLastArg(id);
+  if (!arg)
+    return {"", ""};
+
+  StringRef s = arg->getValue();
+  std::pair<StringRef, StringRef> ret = s.split(';');
+  if (ret.second.empty())
+    error(getAliasSpelling(arg) + " expects 'old;new' format, but got " + s);
+  return ret;
+}
+
+// Parse options of the form "old;new[;extra]".
+static std::tuple<StringRef, StringRef, StringRef>
+getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
+  auto [oldDir, second] = getOldNewOptions(args, id);
+  auto [newDir, extraDir] = second.split(';');
+  return {oldDir, newDir, extraDir};
+}
+
 static StringRef getEntry(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_entry, OPT_no_entry);
   if (!arg) {
@@ -542,6 +570,7 @@ static void readConfigs(opt::InputArgList &args) {
   else
     error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 1);
@@ -569,6 +598,31 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
+  config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
+  config->thinLTOEmitIndexFiles = args.hasArg(OPT_thinlto_emit_index_files) ||
+                                  args.hasArg(OPT_thinlto_index_only) ||
+                                  args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
+                             args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
+  config->thinLTOObjectSuffixReplace =
+      getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
+  std::tie(config->thinLTOPrefixReplaceOld, config->thinLTOPrefixReplaceNew,
+           config->thinLTOPrefixReplaceNativeObject) =
+      getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace_eq);
+  if (config->thinLTOEmitIndexFiles && !config->thinLTOIndexOnly) {
+    if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
+      error("--thinlto-object-suffix-replace is not supported with "
+            "--thinlto-emit-index-files");
+    else if (args.hasArg(OPT_thinlto_prefix_replace_eq))
+      error("--thinlto-prefix-replace is not supported with "
+            "--thinlto-emit-index-files");
+  }
+  if (!config->thinLTOPrefixReplaceNativeObject.empty() &&
+      config->thinLTOIndexOnlyArg.empty()) {
+    error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
+          "--thinlto-index-only=");
+  }
   config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   errorHandler().verbose = args.hasArg(OPT_verbose);
@@ -713,7 +767,7 @@ static void checkOptions(opt::InputArgList &args) {
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
 
-  if (config->outputFile.empty())
+  if (config->outputFile.empty() && !config->thinLTOIndexOnly)
     error("no output file specified");
 
   if (config->importTable && config->exportTable)
@@ -1205,14 +1259,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
   // Interpret these flags early because error()/warn() depend on them.
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
-  errorHandler().fatalWarnings =
+  auto &errHandler = errorHandler();
+  errHandler.errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errHandler.fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   checkZOptions(args);
 
   // Handle --help
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(lld::outs(),
+    parser.printHelp(errHandler.outs(),
                      (std::string(argsArr[0]) + " [options] file...").c_str(),
                      "LLVM Linker", false);
     return;
@@ -1220,7 +1275,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle -v or -version.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    lld::outs() << getLLDVersion() << "\n";
+    errHandler.outs() << getLLDVersion() << "\n";
 
   // Handle --reproduce
   if (const char *path = getReproduceOption(args)) {
@@ -1378,6 +1433,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   processStubLibraries();
 
   writeWhyExtract();
+
+  // Bail out if normal linked output is skipped due to LTO.
+  if (config->thinLTOIndexOnly)
+    return;
 
   createOptionalSymbols();
 

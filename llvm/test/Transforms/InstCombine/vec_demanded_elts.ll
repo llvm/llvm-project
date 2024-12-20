@@ -644,7 +644,7 @@ define ptr @gep_demanded_lane_undef(ptr %base, i64 %idx) {
 ;; indices.
 define ptr @PR41624(<2 x ptr> %a) {
 ; CHECK-LABEL: @PR41624(
-; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 5>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> splat (i64 5), <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[W]], i64 0
 ; CHECK-NEXT:    ret ptr [[R]]
 ;

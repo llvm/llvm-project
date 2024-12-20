@@ -25,7 +25,12 @@ class OutputSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
-using RelType = uint32_t;
+struct RelType {
+  uint32_t v = 0;
+  /*implicit*/ constexpr RelType(uint32_t v = 0) : v(v) {}
+  /*implicit*/ operator uint32_t() const { return v; }
+};
+
 using JumpModType = uint32_t;
 
 // List of target-independent relocation types. Relocations read
@@ -158,7 +163,9 @@ class InputSectionDescription;
 
 class ThunkCreator {
 public:
-  ThunkCreator(Ctx &ctx) : ctx(ctx) {}
+  // Thunk may be incomplete. Avoid inline ctor/dtor.
+  ThunkCreator(Ctx &ctx);
+  ~ThunkCreator();
   // Return true if Thunks have been added to OutputSections
   bool createThunks(uint32_t pass, ArrayRef<OutputSection *> outputSections);
 
@@ -183,6 +190,8 @@ private:
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
 
+  bool addSyntheticLandingPads();
+
   Ctx &ctx;
 
   // Record all the available Thunks for a (Symbol, addend) pair, where Symbol
@@ -192,9 +201,10 @@ private:
   // original addend, so we cannot fold offset + addend. A nested pair is used
   // because DenseMapInfo is not specialized for std::tuple.
   llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
-                 std::vector<Thunk *>>
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbolsBySectionAndAddend;
-  llvm::DenseMap<std::pair<Symbol *, int64_t>, std::vector<Thunk *>>
+  llvm::DenseMap<std::pair<Symbol *, int64_t>,
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbols;
 
   // Find a Thunk from the Thunks symbol definition, we can use this to find
@@ -213,8 +223,11 @@ private:
   // to be reached via thunks that use indirect branches. A destination
   // needs at most one landing pad as that can be reused by all callers.
   llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
-                 Thunk *>
+                 std::unique_ptr<Thunk>>
       landingPadsBySectionAndAddend;
+
+  // All the nonLandingPad thunks that have been created, in order of creation.
+  std::vector<Thunk *> allThunks;
 
   // The number of completed passes of createThunks this permits us
   // to do one time initialization on Pass 0 and put a limit on the

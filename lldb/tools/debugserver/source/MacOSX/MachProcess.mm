@@ -72,12 +72,12 @@
 #define PLATFORM_DRIVERKIT 10
 #endif
 
-#ifndef PLATFORM_XROS
-#define PLATFORM_XROS 11
+#ifndef PLATFORM_VISIONOS
+#define PLATFORM_VISIONOS 11
 #endif
 
-#ifndef PLATFORM_XR_SIMULATOR
-#define PLATFORM_XR_SIMULATOR 12
+#ifndef PLATFORM_VISIONOSSIMULATOR
+#define PLATFORM_VISIONOSSIMULATOR 12
 #endif
 
 #ifdef WITH_SPRINGBOARD
@@ -756,9 +756,9 @@ MachProcess::GetPlatformString(unsigned char platform) {
     return "bridgeos";
   case PLATFORM_DRIVERKIT:
     return "driverkit";
-  case PLATFORM_XROS:
+  case PLATFORM_VISIONOS:
     return "xros";
-  case PLATFORM_XR_SIMULATOR:
+  case PLATFORM_VISIONOSSIMULATOR:
     return "xrossimulator";
   default:
     DNBLogError("Unknown platform %u found for one binary", platform);

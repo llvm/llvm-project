@@ -32,7 +32,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], !dbg [[DBG9]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]], !dbg [[DBG9]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4, !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_LOAD]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00), !dbg [[DBG9]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]], !dbg [[DBG9]]
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP4]], align 4, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG9]]

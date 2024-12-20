@@ -33,7 +33,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
@@ -45,11 +44,9 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1174,6 +1171,18 @@ void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
 void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
   Indent() << "#pragma acc loop";
 
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS, Policy);
+    Printer.VisitClauseList(S->clauses());
+  }
+  OS << '\n';
+
+  PrintStmt(S->getLoop());
+}
+
+void StmtPrinter::VisitOpenACCCombinedConstruct(OpenACCCombinedConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
   if (!S->clauses().empty()) {
     OS << ' ';
     OpenACCClausePrinter Printer(OS, Policy);

@@ -567,8 +567,8 @@ define i32 @mixed_clamp_to_i32_2(float %x) {
 
 define <2 x float> @mixed_clamp_to_float_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_vec(
-; CHECK-NEXT:    [[SI_MIN:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 255, i32 255>)
-; CHECK-NEXT:    [[R1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[SI_MIN]], <2 x i32> <i32 1, i32 1>)
+; CHECK-NEXT:    [[SI_MIN:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> splat (i32 255))
+; CHECK-NEXT:    [[R1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[SI_MIN]], <2 x i32> splat (i32 1))
 ; CHECK-NEXT:    [[R:%.*]] = uitofp nneg <2 x i32> [[R1]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;

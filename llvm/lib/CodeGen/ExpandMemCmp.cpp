@@ -686,7 +686,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     }
     // Generate new code and remove the original memcmp call and the user
     if (ICmpInst::isSigned(Pred)) {
-      Value *Cmp = Builder.CreateICmp(CmpInst::getUnsignedPredicate(Pred),
+      Value *Cmp = Builder.CreateICmp(ICmpInst::getUnsignedPredicate(Pred),
                                       Loads.Lhs, Loads.Rhs);
       auto *Result = NeedsZExt ? Builder.CreateZExt(Cmp, UI->getType()) : Cmp;
       UI->replaceAllUsesWith(Result);

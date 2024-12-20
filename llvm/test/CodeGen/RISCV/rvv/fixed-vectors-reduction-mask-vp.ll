@@ -231,16 +231,18 @@ declare i1 @llvm.vp.reduce.and.v256i1(i1, <256 x i1>, <256 x i1>, i32)
 define zeroext i1 @vpreduce_and_v256i1(i1 zeroext %s, <256 x i1> %v, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_and_v256i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v11, v9
+; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    bltu a1, a3, .LBB14_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vmnot.m v11, v0
-; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vcpop.m a2, v11, v0.t
+; CHECK-NEXT:    vmnot.m v9, v9
+; CHECK-NEXT:    vcpop.m a2, v9, v0.t
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    and a0, a2, a0
 ; CHECK-NEXT:    addi a2, a1, -128

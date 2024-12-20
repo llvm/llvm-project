@@ -28,8 +28,7 @@ body:             |
     ; RV32ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
     ; RV32ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
     ; RV32ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX [[SEXT_INREG]], [[SEXT_INREG1]]
-    ; RV32ZBB-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SMAX]], 8
-    ; RV32ZBB-NEXT: $x10 = COPY [[SEXT_INREG2]](s32)
+    ; RV32ZBB-NEXT: $x10 = COPY [[SMAX]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = COPY $x11
@@ -66,8 +65,7 @@ body:             |
     ; RV32ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
     ; RV32ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
     ; RV32ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX [[SEXT_INREG]], [[SEXT_INREG1]]
-    ; RV32ZBB-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SMAX]], 16
-    ; RV32ZBB-NEXT: $x10 = COPY [[SEXT_INREG2]](s32)
+    ; RV32ZBB-NEXT: $x10 = COPY [[SMAX]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = COPY $x11

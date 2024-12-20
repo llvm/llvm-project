@@ -20,6 +20,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
@@ -482,8 +483,9 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   // Generate a loop nest looping around the hlfir.elemental shape and clone
   // hlfir.elemental region inside the inner loop
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered());
-  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+      hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered(),
+                         flangomp::shouldUseWorkshareLowering(elemental));
+  builder.setInsertionPointToStart(loopNest.body);
   auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
                                         loopNest.oneBasedIndices);
   hlfir::Entity elementValue{yield.getElementValue()};
@@ -553,8 +555,9 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
-  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                         flangomp::shouldUseWorkshareLowering(assign));
+  builder.setInsertionPointToStart(loopNest.body);
   auto arrayElement =
       hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
   builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
@@ -598,11 +601,14 @@ llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
     return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
 
   hlfir::Entity rhs{assign.getRhs()};
-  // TODO: ExprType check is here to avoid conflicts with
-  // ElementalAssignBufferization pattern. We need to combine
-  // these matchers into a single one that applies to AssignOp.
-  if (mlir::isa<hlfir::ExprType>(rhs.getType()))
-    return rewriter.notifyMatchFailure(assign, "RHS is not in memory");
+
+  // To avoid conflicts with ElementalAssignBufferization pattern, we avoid
+  // matching RHS when it is an `ExprType` defined by an `ElementalOp`; which is
+  // among the main criteria matched by ElementalAssignBufferization.
+  if (mlir::isa<hlfir::ExprType>(rhs.getType()) &&
+      mlir::isa<hlfir::ElementalOp>(rhs.getDefiningOp()))
+    return rewriter.notifyMatchFailure(
+        assign, "RHS is an ExprType defined by ElementalOp");
 
   if (!rhs.isArray())
     return rewriter.notifyMatchFailure(assign,
@@ -648,8 +654,9 @@ llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
-  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                         flangomp::shouldUseWorkshareLowering(assign));
+  builder.setInsertionPointToStart(loopNest.body);
   auto rhsArrayElement =
       hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
   rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);

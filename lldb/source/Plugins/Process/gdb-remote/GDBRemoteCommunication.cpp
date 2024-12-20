@@ -1223,10 +1223,6 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
           listen_socket.Listen("localhost:0", backlog).ToError())
     return error;
 
-  Socket *accept_socket = nullptr;
-  std::future<Status> accept_status = std::async(
-      std::launch::async, [&] { return listen_socket.Accept(accept_socket); });
-
   llvm::SmallString<32> remote_addr;
   llvm::raw_svector_ostream(remote_addr)
       << "connect://localhost:" << listen_socket.GetLocalPortNumber();
@@ -1238,10 +1234,15 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Unable to connect: %s", status.AsCString());
 
-  client.SetConnection(std::move(conn_up));
-  if (llvm::Error error = accept_status.get().ToError())
-    return error;
+  // The connection was already established above, so a short timeout is
+  // sufficient.
+  Socket *accept_socket = nullptr;
+  if (Status accept_status =
+          listen_socket.Accept(std::chrono::seconds(1), accept_socket);
+      accept_status.Fail())
+    return accept_status.takeError();
 
+  client.SetConnection(std::move(conn_up));
   server.SetConnection(
       std::make_unique<ConnectionFileDescriptor>(accept_socket));
   return llvm::Error::success();

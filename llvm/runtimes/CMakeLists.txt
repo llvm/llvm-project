@@ -635,6 +635,7 @@ if(build_runtimes)
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
+                     ${extra_cmake_args}
           BASE_NAME ${name}
           EXTRA_ARGS TARGET_TRIPLE ${name})
       endforeach()

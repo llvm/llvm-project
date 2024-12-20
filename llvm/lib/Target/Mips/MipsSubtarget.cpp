@@ -14,7 +14,6 @@
 #include "Mips.h"
 #include "MipsCallLowering.h"
 #include "MipsLegalizerInfo.h"
-#include "MipsMachineFunction.h"
 #include "MipsRegisterBankInfo.h"
 #include "MipsRegisterInfo.h"
 #include "MipsTargetMachine.h"

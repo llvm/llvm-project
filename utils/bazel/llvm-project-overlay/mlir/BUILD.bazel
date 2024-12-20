@@ -2337,6 +2337,7 @@ td_library(
     srcs = ["include/mlir/Dialect/AMX/AMX.td"],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":LLVMOpsTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -2358,6 +2359,20 @@ gentbl_cc_library(
                 "-dialect=amx",
             ],
             "include/mlir/Dialect/AMX/AMXDialect.cpp.inc",
+        ),
+        (
+            [
+                "-gen-typedef-decls",
+                "-typedefs-dialect=amx",
+            ],
+            "include/mlir/Dialect/AMX/AMXTypes.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "-typedefs-dialect=amx",
+            ],
+            "include/mlir/Dialect/AMX/AMXTypes.cpp.inc",
         ),
         (
             ["-gen-op-decls"],
@@ -2388,6 +2403,7 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":SideEffectInterfaces",
+        "//llvm:Support",
     ],
 )
 
@@ -2398,6 +2414,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMXDialect",
+        ":ConvertToLLVMInterface",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -3172,6 +3189,7 @@ cc_library(
         ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
+        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -3218,6 +3236,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -3352,6 +3371,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":BytecodeOpInterface",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -3925,6 +3945,7 @@ cc_library(
         ":AffineOpsIncGen",
         ":ArithDialect",
         ":ControlFlowInterfaces",
+        ":DialectUtils",
         ":IR",
         ":InliningUtils",
         ":LoopLikeInterface",
@@ -4854,6 +4875,7 @@ cc_library(
     name = "AllExtensions",
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
+        ":AMXTransforms",
         ":AffineTransformOps",
         ":ArithToLLVM",
         ":BufferizationTransformOps",
@@ -4864,7 +4886,9 @@ cc_library(
         ":FuncExtensions",
         ":FuncToLLVM",
         ":FuncTransformOps",
+        ":GPUToGPURuntimeTransforms",
         ":GPUToLLVMIRTranslation",
+        ":GPUToNVVMTransforms",
         ":GPUTransformOps",
         ":IndexToLLVM",
         ":LLVMToLLVMIRTranslation",
@@ -5060,6 +5084,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
@@ -5599,6 +5624,7 @@ cc_library(
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
+        "//llvm:Core",
         "//llvm:Support",
     ],
 )
@@ -5883,6 +5909,7 @@ cc_library(
         ":ControlFlowDialect",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":FuncToLLVM",
         ":GPUCommonTransforms",
@@ -5963,6 +5990,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":DialectUtils",
         ":IR",
         ":Pass",
         ":SPIRVConversion",
@@ -6063,6 +6091,7 @@ cc_library(
     hdrs = [
         "include/mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h",
         "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
+        "include/mlir/Conversion/GPUCommon/GPUToLLVM.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
     ],
     includes = ["include"],
@@ -7654,6 +7683,7 @@ cc_library(
         ":ArithUtils",
         ":DialectUtils",
         ":IR",
+        ":InferTypeOpInterface",
         ":LinalgDialect",
         ":LinalgUtils",
         ":SCFDialect",
@@ -7839,6 +7869,7 @@ cc_library(
         "include/mlir/Transforms/LoopInvariantCodeMotionUtils.h",
         "include/mlir/Transforms/OneToNTypeConversion.h",
         "include/mlir/Transforms/RegionUtils.h",
+        "include/mlir/Transforms/WalkPatternRewriteDriver.h",
     ],
     includes = ["include"],
     deps = [
@@ -8347,6 +8378,31 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "ToLLVMInterfaceIncGen",
+    tbl_outs = [
+        (
+            ["--gen-attr-interface-decls"],
+            "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.h.inc",
+        ),
+        (
+            ["--gen-attr-interface-defs"],
+            "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.cpp.inc",
+        ),
+        (
+            ["--gen-op-interface-decls"],
+            "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.h.inc",
+        ),
+        (
+            ["--gen-op-interface-defs"],
+            "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Conversion/ConvertToLLVM/ToLLVMInterface.td",
+    deps = [":UBDialectTdFiles"],
+)
+
 cc_library(
     name = "ConvertToLLVMInterface",
     srcs = ["lib/Conversion/ConvertToLLVM/ToLLVMInterface.cpp"],
@@ -8355,6 +8411,7 @@ cc_library(
     deps = [
         ":IR",
         ":Support",
+        ":ToLLVMInterfaceIncGen",
         "//llvm:Support",
     ],
 )
@@ -8367,6 +8424,7 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
+        ":Analysis",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -9947,6 +10005,8 @@ cc_binary(
         ":OpenMPToLLVMIRTranslation",
         ":ToLLVMIRTranslation",
         "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Linker",
         "//llvm:Support",
         "//llvm:X86AsmParser",
     ],
@@ -10067,34 +10127,6 @@ cc_binary(
         ":ToLLVMIRTranslation",
         ":VectorDialect",
         ":VectorToLLVM",
-        "//llvm:Support",
-    ],
-)
-
-cc_binary(
-    name = "mlir-spirv-cpu-runner",
-    srcs = ["tools/mlir-spirv-cpu-runner/mlir-spirv-cpu-runner.cpp"],
-    deps = [
-        ":ArithDialect",
-        ":BuiltinToLLVMIRTranslation",
-        ":ExecutionEngineUtils",
-        ":FuncDialect",
-        ":FuncToLLVM",
-        ":GPUDialect",
-        ":GPUToSPIRV",
-        ":GPUTransforms",
-        ":LLVMDialect",
-        ":LLVMToLLVMIRTranslation",
-        ":MemRefDialect",
-        ":MlirJitRunner",
-        ":Pass",
-        ":SPIRVConversion",
-        ":SPIRVDialect",
-        ":SPIRVToLLVM",
-        ":SPIRVTransforms",
-        ":ToLLVMIRTranslation",
-        "//llvm:Core",
-        "//llvm:Linker",
         "//llvm:Support",
     ],
 )
@@ -14257,6 +14289,64 @@ cc_binary(
         ":AllPassesAndDialects",
         ":IR",
         ":MlirReduceLib",
+        "//llvm:Support",
+        "//mlir/test:TestDialect",
+    ],
+)
+
+cc_library(
+    name = "MlirQueryUtils",
+    srcs = glob(
+        [
+            "lib/Query/Matcher/*.cpp",
+            "lib/Query/Matcher/*.h",
+            "lib/Query/*.cpp",
+            "lib/Query/*.h",
+        ],
+    ),
+    hdrs = glob(
+        [
+            "include/mlir/Query/Matcher/*.h",
+            "include/mlir/Query/*.h",
+        ],
+    ),
+    includes = ["include"],
+    deps = [
+        ":FuncDialect",
+        ":IR",
+        ":Reducer",
+        ":Rewrite",
+        "//llvm:LineEditor",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MlirQueryLib",
+    srcs = ["lib/Tools/mlir-query/MlirQueryMain.cpp"],
+    hdrs = ["include/mlir/Tools/mlir-query/MlirQueryMain.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":MlirQueryUtils",
+        ":Parser",
+        ":Support",
+        "//llvm:LineEditor",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "mlir-query",
+    srcs = ["tools/mlir-query/mlir-query.cpp"],
+    includes = ["include"],
+    local_defines = ["MLIR_INCLUDE_TESTS"],
+    stamp = 0,
+    deps = [
+        ":AllPassesAndDialects",
+        ":IR",
+        ":MlirQueryLib",
+        ":MlirQueryUtils",
         "//llvm:Support",
         "//mlir/test:TestDialect",
     ],

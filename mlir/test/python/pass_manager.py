@@ -1,6 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
-import gc, sys
+import gc, os, sys, tempfile
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.dialects.func import FuncOp
@@ -340,3 +340,45 @@ def testPrintIrBeforeAndAfterAll():
         # CHECK:   }
         # CHECK: }
         pm.run(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrTree
+@run
+def testPrintIrTree():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() {
+              %0 = arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing()
+        # CHECK-LABEL: // Tree printing begin
+        # CHECK: \-- builtin_module_no-symbol-name
+        # CHECK:     \-- 0_canonicalize.mlir
+        # CHECK-LABEL: // Tree printing end
+        pm.run(module)
+        log("// Tree printing begin")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pm.enable_ir_printing(tree_printing_dir_path=temp_dir)
+            pm.run(module)
+
+            def print_file_tree(directory, prefix=""):
+                entries = sorted(os.listdir(directory))
+                for i, entry in enumerate(entries):
+                    path = os.path.join(directory, entry)
+                    connector = "\-- " if i == len(entries) - 1 else "|-- "
+                    log(f"{prefix}{connector}{entry}")
+                    if os.path.isdir(path):
+                        print_file_tree(
+                            path, prefix + ("    " if i == len(entries) - 1 else "│   ")
+                        )
+
+            print_file_tree(temp_dir)
+        log("// Tree printing end")

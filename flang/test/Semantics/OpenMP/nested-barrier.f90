@@ -17,7 +17,7 @@ program omp_nest_barrier
   !$omp do simd
   do i = 1, 10
     k = k + 1
-    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
     !ERROR: `BARRIER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`,`CRITICAL`, `ORDERED`, `ATOMIC` or `MASTER` region.
     !$omp barrier
     j = j -1
@@ -34,7 +34,7 @@ program omp_nest_barrier
   !$omp parallel do simd
   do i = 1, 10
     k = k + 1
-    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
     !ERROR: `BARRIER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`,`CRITICAL`, `ORDERED`, `ATOMIC` or `MASTER` region.
     !$omp barrier
     j = j -1

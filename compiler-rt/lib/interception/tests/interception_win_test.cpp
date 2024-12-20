@@ -230,6 +230,7 @@ const u8 kUnpatchableCode6[] = {
     0x90, 0x90, 0x90, 0x90,
 };
 
+#      if SANITIZER_WINDOWS64
 const u8 kUnpatchableCode7[] = {
     0x33, 0xc0,                     // xor     eax,eax
     0x48, 0x85, 0xd2,               // test    rdx,rdx
@@ -286,7 +287,9 @@ const u8 kPatchableCode11[] = {
     0x48, 0x83, 0xec, 0x38,         // sub     rsp,38h
     0x83, 0x64, 0x24, 0x28, 0x00,   // and     dword ptr [rsp+28h],0
 };
+#      endif
 
+#      if !SANITIZER_WINDOWS64
 const u8 kPatchableCode12[] = {
     0x55,                           // push    ebp
     0x53,                           // push    ebx
@@ -302,6 +305,7 @@ const u8 kPatchableCode13[] = {
     0x56,                           // push    esi
     0x8b, 0x5c, 0x24, 0x14,         // mov     ebx,dword ptr[esp+14h]
 };
+#      endif
 
 const u8 kPatchableCode14[] = {
     0x55,                           // push    ebp
@@ -791,6 +795,41 @@ TEST(Interception, EmptyExportTable) {
   // export any symbol (empty export table).
   uptr FunPtr = InternalGetProcAddress((void *)GetModuleHandleA(0), "example");
   EXPECT_EQ(0U, FunPtr);
+}
+
+const struct InstructionSizeData {
+  size_t size;  // hold instruction size or 0 for failure,
+                // e.g. on control instructions
+  u8 instr[16];
+  size_t rel_offset;
+  const char *comment;
+} data[] = {
+    /* sorted list */
+    {1, {0x50}, 0, "50 : push eax / rax"},
+};
+
+std::string dumpInstruction(unsigned arrayIndex,
+                            const InstructionSizeData &data) {
+  std::stringstream ret;
+  ret << "  with arrayIndex=" << arrayIndex << " {";
+  for (size_t i = 0; i < data.size; i++) {
+    if (i > 0)
+      ret << ", ";
+    ret << "0x" << std::setfill('0') << std::setw(2) << std::right << std::hex
+        << (int)data.instr[i];
+  }
+  ret << "} " << data.comment;
+  return ret.str();
+}
+
+TEST(Interception, GetInstructionSize) {
+  for (unsigned i = 0; i < sizeof(data) / sizeof(*data); i++) {
+    size_t rel_offset = ~0L;
+    size_t size = __interception::TestOnlyGetInstructionSize(
+        (uptr)data[i].instr, &rel_offset);
+    EXPECT_EQ(data[i].size, size) << dumpInstruction(i, data[i]);
+    EXPECT_EQ(data[i].rel_offset, rel_offset) << dumpInstruction(i, data[i]);
+  }
 }
 
 }  // namespace __interception

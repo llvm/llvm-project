@@ -78,7 +78,7 @@ define float @not_exact_but_allow_recip_but_denorm(float %x) {
 
 define <2 x float> @exact_inverse_splat(<2 x float> %x) {
 ; CHECK-LABEL: @exact_inverse_splat(
-; CHECK-NEXT:    [[DIV:%.*]] = fmul <2 x float> [[X:%.*]], <float 2.500000e-01, float 2.500000e-01>
+; CHECK-NEXT:    [[DIV:%.*]] = fmul <2 x float> [[X:%.*]], splat (float 2.500000e-01)
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv <2 x float> %x, <float 4.0, float 4.0>
@@ -87,7 +87,7 @@ define <2 x float> @exact_inverse_splat(<2 x float> %x) {
 
 define <vscale x 2 x float> @exact_inverse_scalable_splat(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: @exact_inverse_scalable_splat(
-; CHECK-NEXT:    [[DIV:%.*]] = fmul <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 2.500000e-01, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[DIV:%.*]] = fmul <vscale x 2 x float> [[X:%.*]], splat (float 2.500000e-01)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[DIV]]
 ;
   %div = fdiv <vscale x 2 x float> %x, splat (float 4.0)
@@ -98,7 +98,7 @@ define <vscale x 2 x float> @exact_inverse_scalable_splat(<vscale x 2 x float> %
 
 define <2 x float> @not_exact_but_allow_recip_splat(<2 x float> %x) {
 ; CHECK-LABEL: @not_exact_but_allow_recip_splat(
-; CHECK-NEXT:    [[DIV:%.*]] = fmul arcp <2 x float> [[X:%.*]], <float 0x3FD5555560000000, float 0x3FD5555560000000>
+; CHECK-NEXT:    [[DIV:%.*]] = fmul arcp <2 x float> [[X:%.*]], splat (float 0x3FD5555560000000)
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv arcp <2 x float> %x, <float 3.0, float 3.0>
@@ -116,7 +116,7 @@ define <2 x float> @exact_inverse_vec(<2 x float> %x) {
 
 define <2 x float> @not_exact_inverse_splat(<2 x float> %x) {
 ; CHECK-LABEL: @not_exact_inverse_splat(
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], <float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv <2 x float> %x, <float 3.0, float 3.0>
@@ -465,7 +465,7 @@ define float @div_factor_too_strict(float %x, float %y) {
 
 define <2 x float> @div_factor_commute(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @div_factor_commute(
-; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan ninf nsz <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan ninf nsz <2 x float> splat (float 1.000000e+00), [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[D]]
 ;
   %m = fmul <2 x float> %y, %x
@@ -959,7 +959,7 @@ define float @fdiv_nnan_zero_f32(float %x) {
 
 define <2 x float> @fdiv_nnan_zero_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_v2f32(
-; CHECK-NEXT:    [[FDIV:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FDIV]]
 ;
   %fdiv = fdiv nnan <2 x float> %x, zeroinitializer
@@ -977,7 +977,7 @@ define float @fdiv_nnan_zero_f32_fmf(float %x) {
 
 define <2 x float> @fdiv_nnan_zero_v2f32_fmf(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_v2f32_fmf(
-; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FDIV]]
 ;
   %fdiv = fdiv nnan nsz <2 x float> %x, zeroinitializer
@@ -1031,7 +1031,7 @@ define double @test_negative_zero(double %X) {
 
 define <2 x double> @test_positive_zero_vector_nsz(<2 x double> %X) {
 ; CHECK-LABEL: @test_positive_zero_vector_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> splat (double 0x7FF0000000000000), <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = fdiv nnan nsz <2 x double> %X, <double 0.0, double 0.0>
@@ -1040,7 +1040,7 @@ define <2 x double> @test_positive_zero_vector_nsz(<2 x double> %X) {
 
 define <2 x double> @test_negative_zero_vector_nsz(<2 x double> %X) {
 ; CHECK-LABEL: @test_negative_zero_vector_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> splat (double 0x7FF0000000000000), <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = fdiv nnan nsz <2 x double> %X, <double -0.0, double 0.0>
@@ -1049,7 +1049,7 @@ define <2 x double> @test_negative_zero_vector_nsz(<2 x double> %X) {
 
 define <2 x double> @test_positive_zero_vector(<2 x double> %X) {
 ; CHECK-LABEL: @test_positive_zero_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x double> @llvm.copysign.v2f64(<2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x double> @llvm.copysign.v2f64(<2 x double> splat (double 0x7FF0000000000000), <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = fdiv nnan <2 x double> %X, <double 0.0, double 0.0>

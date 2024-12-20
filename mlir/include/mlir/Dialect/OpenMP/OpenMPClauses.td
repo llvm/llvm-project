@@ -108,6 +108,31 @@ class OpenMP_CancelDirectiveNameClauseSkip<
 def OpenMP_CancelDirectiveNameClause : OpenMP_CancelDirectiveNameClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [11.7.1] `bind` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_BindClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    OptionalAttr<BindKindAttr>:$bind_kind
+  );
+
+  let optAssemblyFormat = [{
+    `bind` `(` custom<ClauseAttr>($bind_kind) `)`
+  }];
+
+  let description = [{
+    The `bind` clause specifies the binding region of the construct on which it
+    appears.
+  }];
+}
+
+def OpenMP_BindClause : OpenMP_BindClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
 //===----------------------------------------------------------------------===//
 

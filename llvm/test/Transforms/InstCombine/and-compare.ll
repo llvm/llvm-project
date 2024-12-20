@@ -23,7 +23,7 @@ define i1 @test1(i32 %a, i32 %b) {
 define <2 x i1> @test1vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @test1vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 65280, i32 65280>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], splat (i32 65280)
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TMP]]
 ;
@@ -46,7 +46,7 @@ define i1 @test2(i64 %A) {
 
 define <2 x i1> @test2vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test2vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[A:%.*]], <i64 128, i64 128>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[A:%.*]], splat (i64 128)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[AND]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -68,7 +68,7 @@ define i1 @test3(i64 %A) {
 
 define <2 x i1> @test3vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[A:%.*]], <i64 128, i64 128>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[A:%.*]], splat (i64 128)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[AND]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

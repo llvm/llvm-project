@@ -74,7 +74,7 @@ define i32 @reduce_or() sanitize_memory {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <3 x i32>, ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <3 x i32> [[O]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <3 x i32> [[O]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <3 x i32> [[TMP7]], [[_MSLD]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.and.v3i32(<3 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[_MSLD]])

@@ -866,6 +866,13 @@
 // CHECK-INTSAN-MINIMAL: "-fsanitize=integer-divide-by-zero,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change"
 // CHECK-INTSAN-MINIMAL: "-fsanitize-minimal-runtime"
 
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-trap=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-IMPL-CONV-TRAP
+// CHECK-IMPL-CONV-TRAP: "-fsanitize-trap=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,implicit-bitfield-conversion"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-IMPL-CONV-MINIMAL
+// CHECK-IMPL-CONV-MINIMAL: "-fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,implicit-bitfield-conversion"
+// CHECK-IMPL-CONV-MINIMAL: "-fsanitize-minimal-runtime"
+
 // RUN: %clang --target=aarch64-linux-android -march=armv8-a+memtag -fsanitize=memtag -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MEMTAG-MINIMAL
 // CHECK-MEMTAG-MINIMAL: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
 // CHECK-MEMTAG-MINIMAL: "-fsanitize-minimal-runtime"

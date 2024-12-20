@@ -48,6 +48,8 @@ _Bool __aarch64_have_lse_atomics
 #elif defined(__linux__) && __has_include(<sys/auxv.h>)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/getauxval.inc"
+#elif defined(_WIN32)
+#include "aarch64/lse_atomics/windows.inc"
 #else
 // When unimplemented, we leave __aarch64_have_lse_atomics initialized to false.
 #endif
@@ -76,6 +78,8 @@ struct {
 #elif defined(__linux__) && __has_include(<sys/auxv.h>)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/getauxval.inc"
+#elif defined(_WIN32)
+#include "aarch64/fmv/windows.inc"
 #else
 #include "aarch64/fmv/unimplemented.inc"
 #endif

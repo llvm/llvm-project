@@ -120,6 +120,7 @@
 // CHECK-NEXT:     smaia                1.0       'Smaia' (Advanced Interrupt Architecture Machine Level)
 // CHECK-NEXT:     smcdeleg             1.0       'Smcdeleg' (Counter Delegation Machine Level)
 // CHECK-NEXT:     smcsrind             1.0       'Smcsrind' (Indirect CSR Access Machine Level)
+// CHECK-NEXT:     smdbltrp             1.0       'Smdbltrp' (Double Trap Machine Level)
 // CHECK-NEXT:     smepmp               1.0       'Smepmp' (Enhanced Physical Memory Protection)
 // CHECK-NEXT:     smmpm                1.0       'Smmpm' (Machine-level Pointer Masking for M-mode)
 // CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)
@@ -131,6 +132,7 @@
 // CHECK-NEXT:     sscofpmf             1.0       'Sscofpmf' (Count Overflow and Mode-Based Filtering)
 // CHECK-NEXT:     sscounterenw         1.0       'Sscounterenw' (Support writeable scounteren enable bit for any hpmcounter that is not read-only zero)
 // CHECK-NEXT:     sscsrind             1.0       'Sscsrind' (Indirect CSR Access Supervisor Level)
+// CHECK-NEXT:     ssdbltrp             1.0       'Ssdbltrp' (Double Trap Supervisor Level)
 // CHECK-NEXT:     ssnpm                1.0       'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)
 // CHECK-NEXT:     sspm                 1.0       'Sspm' (Indicates Supervisor-mode Pointer Masking)
 // CHECK-NEXT:     ssqosid              1.0       'Ssqosid' (Quality-of-Service (QoS) Identifiers)
@@ -185,6 +187,7 @@
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
 // CHECK-NEXT:     smctr                1.0       'Smctr' (Control Transfer Records Machine Level)
 // CHECK-NEXT:     ssctr                1.0       'Ssctr' (Control Transfer Records Supervisor Level)
+// CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-EMPTY:
 // CHECK-NEXT: Supported Profiles
 // CHECK-NEXT:     rva20s64

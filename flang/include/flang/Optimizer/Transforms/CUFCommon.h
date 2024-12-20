@@ -20,6 +20,8 @@ namespace cuf {
 mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
                                             mlir::SymbolTable &symTab);
 
+bool isInCUDADeviceContext(mlir::Operation *op);
+
 } // namespace cuf
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_CUFCOMMON_H_

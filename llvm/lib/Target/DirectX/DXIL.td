@@ -294,43 +294,6 @@ class Attributes<Version ver = DXIL1_0, list<DXILAttribute> attrs> {
   list<DXILAttribute> op_attrs = attrs;
 }
 
-class DXILConstant<int value_> {
-  int value = value_;
-}
-
-defset list<DXILConstant> BarrierModes = {
-  def BarrierMode_DeviceMemoryBarrier              : DXILConstant<2>;
-  def BarrierMode_DeviceMemoryBarrierWithGroupSync : DXILConstant<3>;
-  def BarrierMode_GroupMemoryBarrier               : DXILConstant<8>;
-  def BarrierMode_GroupMemoryBarrierWithGroupSync  : DXILConstant<9>;
-  def BarrierMode_AllMemoryBarrier                 : DXILConstant<10>;
-  def BarrierMode_AllMemoryBarrierWithGroupSync    : DXILConstant<11>;
-}
-
-// Intrinsic arg selection
-class Arg {
-  int index = -1;
-  DXILConstant value;
-  bit is_i8 = 0;
-  bit is_i32 = 0;
-}
-class ArgSelect<int index_> : Arg {
-  let index = index_;
-}
-class ArgI32<DXILConstant value_> : Arg {
-  let value = value_;
-  let is_i32 = 1;
-}
-class ArgI8<DXILConstant value_> : Arg {
-  let value = value_;
-  let is_i8 = 1;
-}
-
-class IntrinsicSelect<Intrinsic intrinsic_, list<Arg> args_> {
-  Intrinsic intrinsic = intrinsic_;
-  list<Arg> args = args_;
-}
-
 // Abstraction DXIL Operation
 class DXILOp<int opcode, DXILOpClass opclass> {
   // A short description of the operation
@@ -344,9 +307,6 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
   // LLVM Intrinsic DXIL Operation maps to
   Intrinsic LLVMIntrinsic = ?;
-
-  // Non-trivial LLVM Intrinsics DXIL Operation maps to
-  list<IntrinsicSelect> intrinsic_selects = [];
 
   // Result type of the op
   DXILOpParamType result;
@@ -604,6 +564,30 @@ def CountBits :  DXILOp<31, unaryBits> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def FirstbitHi :  DXILOp<33, unaryBits> {
+  let Doc = "Returns the location of the first set bit starting from "
+            "the highest order bit and working downward.";
+  let LLVMIntrinsic = int_dx_firstbituhigh;
+  let arguments = [OverloadTy];
+  let result = Int32Ty;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def FirstbitSHi :  DXILOp<34, unaryBits> {
+  let Doc = "Returns the location of the first set bit from "
+            "the highest order bit based on the sign.";
+  let LLVMIntrinsic = int_dx_firstbitshigh;
+  let arguments = [OverloadTy];
+  let result = Int32Ty;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def FMax :  DXILOp<35, binary> {
   let Doc = "Float maximum. FMax(a,b) = a > b ? a : b";
   let LLVMIntrinsic = int_maxnum;
@@ -770,6 +754,13 @@ def BufferStore : DXILOp<69, bufferStore> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def UpdateCounter : DXILOp<70, bufferUpdateCounter> {
+  let Doc = "increments/decrements a buffer counter";
+  let arguments = [HandleTy, Int8Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let Doc = "checks whether a Sample, Gather, or Load operation "
             "accessed mapped tiles in a tiled resource";
@@ -777,6 +768,14 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def Discard : DXILOp<82, discard> {
+  let Doc = "discard the current pixel";
+  let LLVMIntrinsic = int_dx_discard;
+  let arguments = [Int1Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [pixel]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {
@@ -819,6 +818,15 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def MakeDouble :  DXILOp<101, makeDouble> {
+  let Doc = "creates a double value";
+  let LLVMIntrinsic = int_dx_asdouble;
+  let arguments = [Int32Ty, Int32Ty];
+  let result = DoubleTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def SplitDouble :  DXILOp<102, splitDouble> {
   let Doc = "Splits a double into 2 uints";
   let arguments = [OverloadTy];
@@ -828,18 +836,46 @@ def SplitDouble :  DXILOp<102, splitDouble> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def AnnotateHandle : DXILOp<217, annotateHandle> {
+def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
+  let Doc = "signed dot product of 4 x i8 vectors packed into i32, with "
+            "accumulate to i32";
+  let LLVMIntrinsic = int_dx_dot4add_i8packed;
+  let arguments = [Int32Ty, Int32Ty, Int32Ty];
+  let result = Int32Ty;
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
+  let Doc = "unsigned dot product of 4 x i8 vectors packed into i32, with "
+            "accumulate to i32";
+  let LLVMIntrinsic = int_dx_dot4add_u8packed;
+  let arguments = [Int32Ty, Int32Ty, Int32Ty];
+  let result = Int32Ty;
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
 }
 
-def CreateHandleFromBinding : DXILOp<218, createHandleFromBinding> {
+def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let Doc = "create resource handle from binding";
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+}
+
+def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
+  let Doc = "returns true if the expression is true in any of the active lanes in the current wave";
+  let LLVMIntrinsic = int_dx_wave_any;
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
@@ -870,16 +906,11 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def Barrier : DXILOp<80, barrier> {
-  let Doc = "inserts a memory barrier in the shader";
-  let intrinsic_selects = [
-    IntrinsicSelect<
-        int_dx_group_memory_barrier_with_group_sync,
-        [ ArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync> ]>,
-  ];
-
-  let arguments = [Int32Ty];
-  let result = VoidTy;
-  let stages = [Stages<DXIL1_0, [compute, library]>];
-  let attributes = [Attributes<DXIL1_0, []>];
+def WaveAllBitCount : DXILOp<135, waveAllOp> {
+  let Doc = "returns the count of bits set to 1 across the wave";
+  let LLVMIntrinsic = int_dx_wave_active_countbits;
+  let arguments = [Int1Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }

@@ -1,6 +1,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H_
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -24,10 +25,6 @@ struct MemProfRecord;
 
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
-  // Version 0: This version didn't have a version field.
-  Version0 = 0,
-  // Version 1: Added a version field to the header.
-  Version1 = 1,
   // Version 2: Added a call stack table.
   Version2 = 2,
   // Version 3: Added a radix tree for call stacks.  Switched to linear IDs for
@@ -35,7 +32,7 @@ enum IndexedVersion : uint64_t {
   Version3 = 3,
 };
 
-constexpr uint64_t MinimumSupportedVersion = Version0;
+constexpr uint64_t MinimumSupportedVersion = Version2;
 constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
@@ -215,18 +212,19 @@ using LinearFrameId = uint32_t;
 struct Frame {
   // A uuid (uint64_t) identifying the function. It is obtained by
   // llvm::md5(FunctionName) which returns the lower 64 bits.
-  GlobalValue::GUID Function;
+  GlobalValue::GUID Function = 0;
   // The symbol name for the function. Only populated in the Frame by the reader
   // if requested during initialization. This field should not be serialized.
   std::unique_ptr<std::string> SymbolName;
   // The source line offset of the call from the beginning of parent function.
-  uint32_t LineOffset;
+  uint32_t LineOffset = 0;
   // The source column number of the call to help distinguish multiple calls
   // on the same line.
-  uint32_t Column;
+  uint32_t Column = 0;
   // Whether the current frame is inlined.
-  bool IsInlineFrame;
+  bool IsInlineFrame = false;
 
+  Frame() = default;
   Frame(const Frame &Other) {
     Function = Other.Function;
     SymbolName = Other.SymbolName
@@ -355,10 +353,15 @@ struct IndexedAllocationInfo {
   PortableMemInfoBlock Info;
 
   IndexedAllocationInfo() = default;
+  // This constructor is soft deprecated.  It will be removed once we remove all
+  // users of the CallStack field.
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
                         const MemInfoBlock &MB,
                         const MemProfSchema &Schema = getFullSchema())
       : CallStack(CS), CSId(CSId), Info(MB, Schema) {}
+  IndexedAllocationInfo(CallStackId CSId, const MemInfoBlock &MB,
+                        const MemProfSchema &Schema = getFullSchema())
+      : CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(const MemProfSchema &Schema,
@@ -387,14 +390,6 @@ struct AllocationInfo {
   PortableMemInfoBlock Info;
 
   AllocationInfo() = default;
-  AllocationInfo(
-      const IndexedAllocationInfo &IndexedAI,
-      llvm::function_ref<const Frame(const FrameId)> IdToFrameCallback) {
-    for (const FrameId &Id : IndexedAI.CallStack) {
-      CallStack.push_back(IdToFrameCallback(Id));
-    }
-    Info = IndexedAI.Info;
-  }
 
   void printYAML(raw_ostream &OS) const {
     OS << "    -\n";
@@ -482,20 +477,6 @@ struct MemProfRecord {
   llvm::SmallVector<std::vector<Frame>> CallSites;
 
   MemProfRecord() = default;
-  MemProfRecord(
-      const IndexedMemProfRecord &Record,
-      llvm::function_ref<const Frame(const FrameId Id)> IdToFrameCallback) {
-    for (const IndexedAllocationInfo &IndexedAI : Record.AllocSites) {
-      AllocSites.emplace_back(IndexedAI, IdToFrameCallback);
-    }
-    for (const ArrayRef<FrameId> Site : Record.CallSites) {
-      std::vector<Frame> Frames;
-      for (const FrameId Id : Site) {
-        Frames.push_back(IdToFrameCallback(Id));
-      }
-      CallSites.push_back(Frames);
-    }
-  }
 
   // Prints out the contents of the memprof record in YAML.
   void print(llvm::raw_ostream &OS) const {
@@ -837,7 +818,7 @@ template <typename MapTy> struct FrameIdConverter {
     auto Iter = Map.find(Id);
     if (Iter == Map.end()) {
       LastUnmappedId = Id;
-      return Frame(0, 0, 0, false);
+      return Frame();
     }
     return detail::DerefIterator<Frame>(Iter);
   }
@@ -895,11 +876,12 @@ struct LinearFrameIdConverter {
 // call stack array in the profile.
 struct LinearCallStackIdConverter {
   const unsigned char *CallStackBase;
-  std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
 
   LinearCallStackIdConverter() = delete;
-  LinearCallStackIdConverter(const unsigned char *CallStackBase,
-                             std::function<Frame(LinearFrameId)> FrameIdToFrame)
+  LinearCallStackIdConverter(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
   std::vector<Frame> operator()(LinearCallStackId LinearCSId) {
@@ -931,6 +913,98 @@ struct LinearCallStackIdConverter {
   }
 };
 
+struct LineLocation {
+  LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
+
+  bool operator<(const LineLocation &O) const {
+    return LineOffset < O.LineOffset ||
+           (LineOffset == O.LineOffset && Column < O.Column);
+  }
+
+  bool operator==(const LineLocation &O) const {
+    return LineOffset == O.LineOffset && Column == O.Column;
+  }
+
+  bool operator!=(const LineLocation &O) const {
+    return LineOffset != O.LineOffset || Column != O.Column;
+  }
+
+  uint64_t getHashCode() const { return ((uint64_t)Column << 32) | LineOffset; }
+
+  uint32_t LineOffset;
+  uint32_t Column;
+};
+
+// A pair of a call site location and its corresponding callee GUID.
+using CallEdgeTy = std::pair<LineLocation, uint64_t>;
+
+// Used to extract caller-callee pairs from the call stack array.  The leaf
+// frame is assumed to call a heap allocation function with GUID 0.  The
+// resulting pairs are accumulated in CallerCalleePairs.  Users can take it
+// with:
+//
+//   auto Pairs = std::move(Extractor.CallerCalleePairs);
+struct CallerCalleePairExtractor {
+  // The base address of the radix tree array.
+  const unsigned char *CallStackBase;
+  // A functor to convert a linear FrameId to a Frame.
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
+  // A map from caller GUIDs to lists of call sites in respective callers.
+  DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
+
+  // The set of linear call stack IDs that we've visited.
+  BitVector Visited;
+
+  CallerCalleePairExtractor() = delete;
+  CallerCalleePairExtractor(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame,
+      unsigned RadixTreeSize)
+      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame),
+        Visited(RadixTreeSize) {}
+
+  void operator()(LinearCallStackId LinearCSId) {
+    const unsigned char *Ptr =
+        CallStackBase +
+        static_cast<uint64_t>(LinearCSId) * sizeof(LinearFrameId);
+    uint32_t NumFrames =
+        support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    // The leaf frame calls a function with GUID 0.
+    uint64_t CalleeGUID = 0;
+    for (; NumFrames; --NumFrames) {
+      LinearFrameId Elem =
+          support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      // Follow a pointer to the parent, if any.  See comments below on
+      // CallStackRadixTreeBuilder for the description of the radix tree format.
+      if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
+        Ptr += (-Elem) * sizeof(LinearFrameId);
+        Elem =
+            support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      }
+      // We shouldn't encounter another pointer.
+      assert(static_cast<std::make_signed_t<LinearFrameId>>(Elem) >= 0);
+
+      // Add a new caller-callee pair.
+      Frame F = FrameIdToFrame(Elem);
+      uint64_t CallerGUID = F.Function;
+      LineLocation Loc(F.LineOffset, F.Column);
+      CallerCalleePairs[CallerGUID].emplace_back(Loc, CalleeGUID);
+
+      // Keep track of the indices we've visited.  If we've already visited the
+      // current one, terminate the traversal.  We will not discover any new
+      // caller-callee pair by continuing the traversal.
+      unsigned Offset =
+          std::distance(CallStackBase, Ptr) / sizeof(LinearFrameId);
+      if (Visited.test(Offset))
+        break;
+      Visited.set(Offset);
+
+      Ptr += sizeof(LinearFrameId);
+      CalleeGUID = CallerGUID;
+    }
+  }
+};
+
 struct IndexedMemProfData {
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.
@@ -953,8 +1027,9 @@ struct FrameStat {
 };
 
 // Compute a histogram of Frames in call stacks.
-llvm::DenseMap<FrameId, FrameStat>
-computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+template <typename FrameIdTy>
+llvm::DenseMap<FrameIdTy, FrameStat>
+computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
                           &MemProfCallStackData);
 
 // Construct a radix tree of call stacks.
@@ -1012,7 +1087,7 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
 // On-disk IndexedMemProfRecord will refer to call stacks by their indexes into
 // the radix tree array, so we do not explicitly encode mappings like:
 // "CallStackId 1 -> 11".
-class CallStackRadixTreeBuilder {
+template <typename FrameIdTy> class CallStackRadixTreeBuilder {
   // The radix tree array.
   std::vector<LinearFrameId> RadixArray;
 
@@ -1039,42 +1114,31 @@ class CallStackRadixTreeBuilder {
   // RadixArray[Indexes[5 - 1]] is the last frame of the common prefix.
   std::vector<LinearCallStackId> Indexes;
 
-  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameId>>;
+  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameIdTy>>;
 
   // Encode a call stack into RadixArray.  Return the starting index within
   // RadixArray.
   LinearCallStackId encodeCallStack(
-      const llvm::SmallVector<FrameId> *CallStack,
-      const llvm::SmallVector<FrameId> *Prev,
-      const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
+      const llvm::SmallVector<FrameIdTy> *CallStack,
+      const llvm::SmallVector<FrameIdTy> *Prev,
+      const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes);
 
 public:
   CallStackRadixTreeBuilder() = default;
 
   // Build a radix tree array.
-  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
-                 &&MemProfCallStackData,
-             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
-             llvm::DenseMap<FrameId, FrameStat> &FrameHistogram);
+  void
+  build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
+            &&MemProfCallStackData,
+        const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes,
+        llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram);
 
-  const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
+  ArrayRef<LinearFrameId> getRadixArray() const { return RadixArray; }
 
   llvm::DenseMap<CallStackId, LinearCallStackId> takeCallStackPos() {
     return std::move(CallStackPos);
   }
 };
-
-// Verify that each CallStackId is computed with hashCallStack.  This function
-// is intended to help transition from CallStack to CSId in
-// IndexedAllocationInfo.
-void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record);
-
-// Verify that each CallStackId is computed with hashCallStack.  This function
-// is intended to help transition from CallStack to CSId in
-// IndexedAllocationInfo.
-void verifyFunctionProfileData(
-    const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
-        &FunctionProfileData);
 } // namespace memprof
 } // namespace llvm
 

@@ -473,16 +473,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
                     [](BinaryFunction &BF) { return &BF; });
 
     // Sort functions by index.
-    llvm::stable_sort(SortedFunctions,
-                      [](const BinaryFunction *A, const BinaryFunction *B) {
-                        if (A->hasValidIndex() && B->hasValidIndex())
-                          return A->getIndex() < B->getIndex();
-                        if (A->hasValidIndex() && !B->hasValidIndex())
-                          return true;
-                        if (!A->hasValidIndex() && B->hasValidIndex())
-                          return false;
-                        return A->getAddress() < B->getAddress();
-                      });
+    llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
 
     for (const BinaryFunction *Func : SortedFunctions) {
       if (!Func->hasValidIndex())

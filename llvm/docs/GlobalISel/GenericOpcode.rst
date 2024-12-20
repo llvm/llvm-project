@@ -753,6 +753,24 @@ The type of the operand must be equal to or larger than the vector element
 type. If the operand is larger than the vector element type, the scalar is
 implicitly truncated to the vector element type.
 
+G_STEP_VECTOR
+^^^^^^^^^^^^^
+
+Create a scalable vector where all lanes are linear sequences starting at 0
+with a given unsigned step.
+
+The type of the operand must be equal to the vector element type. Arithmetic
+is performed modulo the bitwidth of the element. The step must be > 0.
+Otherwise the vector is zero.
+
+.. code-block::
+
+  %0:_(<vscale x 2 x s64>) = G_STEP_VECTOR i64 4
+
+  %1:_(<vscale x s32>) = G_STEP_VECTOR i32 4
+
+  0, 1*Step, 2*Step, 3*Step, 4*Step, ...
+
 G_VECTOR_COMPRESS
 ^^^^^^^^^^^^^^^^^
 

@@ -103,7 +103,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePEIPass(Registry);
   initializePHIEliminationPass(Registry);
   initializePatchableFunctionPass(Registry);
-  initializePeepholeOptimizerPass(Registry);
+  initializePeepholeOptimizerLegacyPass(Registry);
   initializePostMachineSchedulerPass(Registry);
   initializePostRAHazardRecognizerPass(Registry);
   initializePostRAMachineSinkingPass(Registry);
@@ -113,8 +113,8 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRABasicPass(Registry);
   initializeRAGreedyPass(Registry);
   initializeRegAllocFastPass(Registry);
-  initializeRegUsageInfoCollectorPass(Registry);
-  initializeRegUsageInfoPropagationPass(Registry);
+  initializeRegUsageInfoCollectorLegacyPass(Registry);
+  initializeRegUsageInfoPropagationLegacyPass(Registry);
   initializeRegisterCoalescerPass(Registry);
   initializeRemoveLoadsIntoFakeUsesPass(Registry);
   initializeRemoveRedundantDebugValuesPass(Registry);

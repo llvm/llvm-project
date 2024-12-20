@@ -47,7 +47,7 @@ test(
 #endif // _LIBCPP_STD_VER >= 17
 
 #if _LIBCPP_STD_VER >= 20
-#  if !defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC
+#  if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
 #    define __cpp_lib_barrier 201907L
 #  endif
 // define __cpp_lib_format 202110L
@@ -60,7 +60,7 @@ test(
 #endif // _LIBCPP_STD_VER >= 23
 
 #if _LIBCPP_STD_VER >= 26
-#  if !defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC
+#  if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC
 #    undef __cpp_lib_barrier
 #    define __cpp_lib_barrier 299900L
 #  endif

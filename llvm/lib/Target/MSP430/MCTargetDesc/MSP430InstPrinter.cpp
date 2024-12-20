@@ -17,7 +17,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"

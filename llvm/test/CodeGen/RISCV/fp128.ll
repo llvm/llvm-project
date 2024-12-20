@@ -14,19 +14,19 @@ define i32 @test_load_and_cmp() nounwind {
 ; RV32I-NEXT:    addi sp, sp, -48
 ; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui a0, %hi(x)
+; RV32I-NEXT:    lui a1, %hi(y)
 ; RV32I-NEXT:    lw a2, %lo(x)(a0)
 ; RV32I-NEXT:    lw a3, %lo(x+4)(a0)
 ; RV32I-NEXT:    lw a4, %lo(x+8)(a0)
 ; RV32I-NEXT:    lw a5, %lo(x+12)(a0)
-; RV32I-NEXT:    lui a0, %hi(y)
-; RV32I-NEXT:    lw a1, %lo(y)(a0)
-; RV32I-NEXT:    lw a6, %lo(y+4)(a0)
-; RV32I-NEXT:    lw a7, %lo(y+8)(a0)
-; RV32I-NEXT:    lw a0, %lo(y+12)(a0)
-; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    lw a0, %lo(y)(a1)
+; RV32I-NEXT:    lw a6, %lo(y+4)(a1)
+; RV32I-NEXT:    lw a7, %lo(y+8)(a1)
+; RV32I-NEXT:    lw a1, %lo(y+12)(a1)
+; RV32I-NEXT:    sw a0, 8(sp)
 ; RV32I-NEXT:    sw a6, 12(sp)
 ; RV32I-NEXT:    sw a7, 16(sp)
-; RV32I-NEXT:    sw a0, 20(sp)
+; RV32I-NEXT:    sw a1, 20(sp)
 ; RV32I-NEXT:    addi a0, sp, 24
 ; RV32I-NEXT:    addi a1, sp, 8
 ; RV32I-NEXT:    sw a2, 24(sp)
@@ -51,19 +51,19 @@ define i32 @test_add_and_fptosi() nounwind {
 ; RV32I-NEXT:    addi sp, sp, -80
 ; RV32I-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui a0, %hi(x)
+; RV32I-NEXT:    lui a1, %hi(y)
 ; RV32I-NEXT:    lw a3, %lo(x)(a0)
 ; RV32I-NEXT:    lw a4, %lo(x+4)(a0)
 ; RV32I-NEXT:    lw a5, %lo(x+8)(a0)
 ; RV32I-NEXT:    lw a6, %lo(x+12)(a0)
-; RV32I-NEXT:    lui a0, %hi(y)
-; RV32I-NEXT:    lw a1, %lo(y)(a0)
-; RV32I-NEXT:    lw a2, %lo(y+4)(a0)
-; RV32I-NEXT:    lw a7, %lo(y+8)(a0)
-; RV32I-NEXT:    lw a0, %lo(y+12)(a0)
-; RV32I-NEXT:    sw a1, 24(sp)
+; RV32I-NEXT:    lw a0, %lo(y)(a1)
+; RV32I-NEXT:    lw a2, %lo(y+4)(a1)
+; RV32I-NEXT:    lw a7, %lo(y+8)(a1)
+; RV32I-NEXT:    lw a1, %lo(y+12)(a1)
+; RV32I-NEXT:    sw a0, 24(sp)
 ; RV32I-NEXT:    sw a2, 28(sp)
 ; RV32I-NEXT:    sw a7, 32(sp)
-; RV32I-NEXT:    sw a0, 36(sp)
+; RV32I-NEXT:    sw a1, 36(sp)
 ; RV32I-NEXT:    addi a0, sp, 56
 ; RV32I-NEXT:    addi a1, sp, 40
 ; RV32I-NEXT:    addi a2, sp, 24

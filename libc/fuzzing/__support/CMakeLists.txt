@@ -23,3 +23,11 @@ add_libc_fuzzer(
   COMPILE_OPTIONS
     -D__LIBC_EXPLICIT_SIMD_OPT
 ) 
+
+add_libc_fuzzer(
+  freelist_heap_fuzz
+  SRCS
+    freelist_heap_fuzz.cpp
+  DEPENDS
+    libc.src.__support.freelist_heap
+)

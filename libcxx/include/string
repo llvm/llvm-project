@@ -638,6 +638,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
+#include <__utility/scope_guard.h>
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <climits>
@@ -648,7 +649,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <string_view>
 #include <version>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
 
@@ -672,7 +673,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
 #  define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS __attribute__((__no_sanitize__("address")))
 // This macro disables AddressSanitizer (ASan) instrumentation for a specific function,
 // allowing memory accesses that would normally trigger ASan errors to proceed without crashing.
@@ -785,7 +786,7 @@ public:
   //
   // This string implementation doesn't contain any references into itself. It only contains a bit that says whether
   // it is in small or large string mode, so the entire structure is trivially relocatable if its members are.
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
   // When compiling with AddressSanitizer (ASan), basic_string cannot be trivially
   // relocatable. Because the object's memory might be poisoned when its content
   // is kept inside objects memory (short string optimization), instead of in allocated
@@ -800,7 +801,7 @@ public:
       void>;
 #endif
 
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
     if (__libcpp_is_constant_evaluated())
       return __ptr;
@@ -928,6 +929,15 @@ private:
   };
 
   _LIBCPP_COMPRESSED_PAIR(__rep, __rep_, allocator_type, __alloc_);
+
+  // annotate the string with its size() at scope exit. The string has to be in a valid state at that point.
+  struct __annotate_new_size {
+    basic_string& __str_;
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __annotate_new_size(basic_string& __str) : __str_(__str) {}
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()() { __str_.__annotate_new(__str_.size()); }
+  };
 
   // Construct a string with the given allocator and enough storage to hold `__size` characters, but
   // don't initialize the characters. The contents of the string, including the null terminator, must be
@@ -1912,6 +1922,9 @@ private:
 #ifndef _LIBCPP_CXX03_LANG
     if constexpr (__libcpp_is_contiguous_iterator<_ForwardIter>::value &&
                   is_same<value_type, __iter_value_type<_ForwardIter>>::value && is_same<_ForwardIter, _Sent>::value) {
+      _LIBCPP_ASSERT_INTERNAL(
+          !std::__is_overlapping_range(std::__to_address(__first), std::__to_address(__last), __dest),
+          "__copy_non_overlapping_range called with an overlapping range!");
       traits_type::copy(__dest, std::__to_address(__first), __last - __first);
       return __dest + (__last - __first);
     }
@@ -1966,9 +1979,12 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_long_size(size_type __s) _NOEXCEPT {
     __rep_.__l.__size_ = __s;
   }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_size() const _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long size");
     return __rep_.__l.__size_;
   }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_size(size_type __s) _NOEXCEPT {
     if (__is_long())
       __set_long_size(__s);
@@ -1977,11 +1993,13 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_long_cap(size_type __s) _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__s), "Long capacity should always be larger than the SSO");
     __rep_.__l.__cap_     = __s / __endian_factor;
     __rep_.__l.__is_long_ = true;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_cap() const _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long capacity");
     return __rep_.__l.__cap_ * __endian_factor;
   }
 
@@ -1990,10 +2008,12 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_long_pointer() _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
     return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __get_long_pointer() const _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
     return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
   }
 
@@ -2019,7 +2039,7 @@ private:
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
 #  if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
     if (!__is_long())
@@ -2031,14 +2051,14 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void)__current_size;
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
 #endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
 #endif
@@ -2046,7 +2066,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
     (void)__n;
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
 #endif
@@ -2054,7 +2074,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
     (void)__old_size;
-#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
 #endif
@@ -2073,6 +2093,8 @@ private:
     size_type __guess          = __align_it<__boundary>(__s + 1) - 1;
     if (__guess == __min_cap)
       __guess += __endian_factor;
+
+    _LIBCPP_ASSERT_INTERNAL(__guess >= __s, "recommendation is below the requested size");
     return __guess;
   }
 
@@ -2137,6 +2159,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_no_alias(const value_type* __s, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
+    _LIBCPP_ASSERT_INTERNAL(__pos <= capacity(), "Trying to erase at position outside the strings capacity!");
     __null_terminate_at(std::__to_address(__get_pointer()), __pos);
   }
 
@@ -2158,6 +2181,7 @@ private:
         __alloc_ = __str.__alloc_;
       } else {
         __annotate_delete();
+        auto __guard       = std::__make_scope_guard(__annotate_new_size(*this));
         allocator_type __a = __str.__alloc_;
         auto __allocation  = std::__allocate_at_least(__a, __str.__get_long_cap());
         __begin_lifetime(__allocation.ptr, __allocation.count);
@@ -2167,7 +2191,6 @@ private:
         __set_long_pointer(__allocation.ptr);
         __set_long_cap(__allocation.count);
         __set_long_size(__str.size());
-        __annotate_new(__get_long_size());
       }
     }
   }
@@ -2235,11 +2258,11 @@ private:
     return std::__is_pointer_in_range(data(), data() + size() + 1, std::addressof(__v));
   }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_length_error() {
     std::__throw_length_error("basic_string");
   }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_out_of_range() {
     std::__throw_out_of_range("basic_string");
   }
 
@@ -2263,12 +2286,12 @@ private:
 #define _LIBCPP_DECLARE(...) extern template __VA_ARGS__;
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
 _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #  endif
 #else
 _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #  endif
 #endif
@@ -2495,6 +2518,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
   __annotate_delete();
+  auto __guard      = std::__make_scope_guard(__annotate_new_size(*this));
   auto __allocation = std::__allocate_at_least(__alloc_, __cap + 1);
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
@@ -2513,7 +2537,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
   __set_long_size(__old_sz);
   traits_type::assign(__p[__old_sz], value_type());
-  __annotate_new(__old_sz);
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it
@@ -2537,7 +2560,6 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   pointer __old_p = __get_pointer();
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
-  __annotate_delete();
   auto __allocation = std::__allocate_at_least(__alloc_, __cap + 1);
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
@@ -2562,11 +2584,12 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
     size_type __n_copy,
     size_type __n_del,
     size_type __n_add) {
+  __annotate_delete();
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   __grow_by(__old_cap, __delta_cap, __old_sz, __n_copy, __n_del, __n_add);
   _LIBCPP_SUPPRESS_DEPRECATED_POP
   __set_long_size(__old_sz - __n_del + __n_add);
-  __annotate_new(__old_sz - __n_del + __n_add);
 }
 
 // assign
@@ -3335,12 +3358,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
   if (__requested_capacity <= capacity())
     return;
 
-  size_type __target_capacity = std::max(__requested_capacity, size());
-  __target_capacity           = __recommend(__target_capacity);
-  if (__target_capacity == capacity())
-    return;
-
-  __shrink_or_extend(__target_capacity);
+  __shrink_or_extend(__recommend(__requested_capacity));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3356,6 +3374,7 @@ template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target_capacity) {
   __annotate_delete();
+  auto __guard    = std::__make_scope_guard(__annotate_new_size(*this));
   size_type __cap = capacity();
   size_type __sz  = size();
 
@@ -3385,9 +3404,8 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
         // The Standard mandates shrink_to_fit() does not increase the capacity.
         // With equal capacity keep the existing buffer. This avoids extra work
         // due to swapping the elements.
-        if (__allocation.count - 1 > __target_capacity) {
+        if (__allocation.count - 1 > capacity()) {
           __alloc_traits::deallocate(__alloc_, __allocation.ptr, __allocation.count);
-          __annotate_new(__sz); // Undoes the __annotate_delete()
           return;
         }
         __new_data        = __allocation.ptr;
@@ -3412,7 +3430,6 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
     __set_long_pointer(__new_data);
   } else
     __set_short_size(__sz);
-  __annotate_new(__sz);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -4198,7 +4215,7 @@ _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
 _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
 _LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_EXPORTED_FROM_ABI long stol(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_EXPORTED_FROM_ABI unsigned long stoul(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
@@ -4218,7 +4235,7 @@ _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_TEMPLATE_DATA_VIS const typename basic_string<_CharT, _Traits, _Allocator>::size_type
@@ -4246,7 +4263,7 @@ struct hash<basic_string<char16_t, char_traits<char16_t>, _Allocator> > : __stri
 template <class _Allocator>
 struct hash<basic_string<char32_t, char_traits<char32_t>, _Allocator> > : __string_hash<char32_t, _Allocator> {};
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Allocator>
 struct hash<basic_string<wchar_t, char_traits<wchar_t>, _Allocator> > : __string_hash<wchar_t, _Allocator> {};
 #endif
@@ -4302,7 +4319,7 @@ operator""s(const char* __str, size_t __len) {
   return basic_string<char>(__str, __len);
 }
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<wchar_t>
 operator""s(const wchar_t* __str, size_t __len) {
   return basic_string<wchar_t>(__str, __len);
@@ -4330,7 +4347,7 @@ operator""s(const char32_t* __str, size_t __len) {
 #  if _LIBCPP_STD_VER >= 20
 template <>
 inline constexpr bool __format::__enable_insertable<std::basic_string<char>> = true;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> = true;
 #    endif

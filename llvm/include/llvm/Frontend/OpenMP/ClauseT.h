@@ -238,8 +238,9 @@ struct MapperT {
 // When used as arguments for other clauses, e.g. `fail`.
 ENUM(MemoryOrder, AcqRel, Acquire, Relaxed, Release, SeqCst);
 ENUM(MotionExpectation, Present);
+// Union of `dependence-type` and `task-depenence-type`.
 // V5.2: [15.9.1] `task-dependence-type` modifier
-ENUM(TaskDependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
+ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
 
 template <typename I, typename E> //
@@ -489,7 +490,7 @@ template <typename T, typename I, typename E> //
 struct DefaultmapT {
   ENUM(ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default,
        Present);
-  ENUM(VariableCategory, Scalar, Aggregate, Pointer, Allocatable);
+  ENUM(VariableCategory, All, Scalar, Aggregate, Pointer, Allocatable);
   using TupleTrait = std::true_type;
   std::tuple<ImplicitBehavior, OPT(VariableCategory)> t;
 };
@@ -502,17 +503,17 @@ template <typename T, typename I, typename E> //
 struct DependT {
   using Iterator = type::IteratorT<T, I, E>;
   using LocatorList = ObjectListT<I, E>;
-  using TaskDependenceType = tomp::type::TaskDependenceType;
+  using DependenceType = tomp::type::DependenceType;
 
-  struct DepType { // The form with task dependence type.
+  struct TaskDep { // The form with task dependence type.
     using TupleTrait = std::true_type;
     // Empty LocatorList means "omp_all_memory".
-    std::tuple<TaskDependenceType, OPT(Iterator), LocatorList> t;
+    std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
   };
 
   using Doacross = DoacrossT<T, I, E>;
   using UnionTrait = std::true_type;
-  std::variant<Doacross, DepType> u; // Doacross form is legacy
+  std::variant<Doacross, TaskDep> u; // Doacross form is legacy
 };
 
 // V5.2: [3.5] `destroy` clause
@@ -562,7 +563,7 @@ struct DistScheduleT {
 template <typename T, typename I, typename E> //
 struct DoacrossT {
   using Vector = ListT<type::LoopIterationT<I, E>>;
-  ENUM(DependenceType, Source, Sink);
+  using DependenceType = tomp::type::DependenceType;
   using TupleTrait = std::true_type;
   // Empty Vector means "omp_cur_iteration"
   std::tuple<DependenceType, Vector> t;
@@ -1162,9 +1163,9 @@ struct UntiedT {
 // V5.2: [15.9.3] `update` clause
 template <typename T, typename I, typename E> //
 struct UpdateT {
-  using TaskDependenceType = tomp::type::TaskDependenceType;
+  using DependenceType = tomp::type::DependenceType;
   using WrapperTrait = std::true_type;
-  OPT(TaskDependenceType) v;
+  OPT(DependenceType) v;
 };
 
 // V5.2: [14.1.3] `use` clause

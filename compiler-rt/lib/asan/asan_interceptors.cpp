@@ -365,7 +365,7 @@ INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
   va_list ap;
   uptr args[64];
   // We don't know a better way to forward ... into REAL function. We can
-  // increase args size if neccecary.
+  // increase args size if necessary.
   CHECK_LE(argc, ARRAY_SIZE(args));
   internal_memset(args, 0, sizeof(args));
   va_start(ap, argc);

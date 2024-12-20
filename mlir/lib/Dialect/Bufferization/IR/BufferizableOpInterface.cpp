@@ -718,7 +718,7 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
       // loose all of its users and eventually DCE away.
       rewriter.setInsertionPointAfter(op);
       replacement = rewriter.create<bufferization::ToTensorOp>(
-          replacement.getLoc(), replacement);
+          replacement.getLoc(), opResult.getType(), replacement);
     }
     replacements.push_back(replacement);
   }

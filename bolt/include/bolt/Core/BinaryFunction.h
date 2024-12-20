@@ -527,6 +527,11 @@ private:
   /// fragment of the function.
   SmallVector<MCSymbol *, 0> LSDASymbols;
 
+  /// Each function fragment may have another fragment containing all landing
+  /// pads for it. If that's the case, the LP fragment will be stored in the
+  /// vector below with indexing starting with the main fragment.
+  SmallVector<std::optional<FragmentNum>, 0> LPFragments;
+
   /// Map to discover which CFIs are attached to a given instruction offset.
   /// Maps an instruction offset into a FrameInstructions offset.
   /// This is only relevant to the buildCFG phase and is discarded afterwards.
@@ -906,6 +911,10 @@ public:
   BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
     BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
     return BB && BB->getOffset() == Offset ? BB : nullptr;
+  }
+
+  const BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockAtOffset(Offset);
   }
 
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
@@ -1881,6 +1890,42 @@ public:
     return LSDASymbols[F.get()];
   }
 
+  /// If all landing pads for the function fragment \p F are located in fragment
+  /// \p LPF, designate \p LPF as a landing-pad fragment for \p F. Passing
+  /// std::nullopt in LPF, means that landing pads for \p F are located in more
+  /// than one fragment.
+  void setLPFragment(const FragmentNum F, std::optional<FragmentNum> LPF) {
+    if (F.get() >= LPFragments.size())
+      LPFragments.resize(F.get() + 1);
+
+    LPFragments[F.get()] = LPF;
+  }
+
+  /// If function fragment \p F has a designated landing pad fragment, i.e. a
+  /// fragment that contains all landing pads for throwers in \p F, then return
+  /// that landing pad fragment number. If \p F does not need landing pads,
+  /// return \p F. Return nullptr if landing pads for \p F are scattered among
+  /// several function fragments.
+  std::optional<FragmentNum> getLPFragment(const FragmentNum F) {
+    if (!isSplit()) {
+      assert(F == FragmentNum::main() && "Invalid fragment number");
+      return FragmentNum::main();
+    }
+
+    if (F.get() >= LPFragments.size())
+      return std::nullopt;
+
+    return LPFragments[F.get()];
+  }
+
+  /// Return a symbol corresponding to a landing pad fragment for fragment \p F.
+  /// See getLPFragment().
+  MCSymbol *getLPStartSymbol(const FragmentNum F) {
+    if (std::optional<FragmentNum> LPFragment = getLPFragment(F))
+      return getSymbol(*LPFragment);
+    return nullptr;
+  }
+
   void setOutputDataAddress(uint64_t Address) { OutputDataOffset = Address; }
 
   uint64_t getOutputDataAddress() const { return OutputDataOffset; }
@@ -2360,6 +2405,19 @@ inline raw_ostream &operator<<(raw_ostream &OS,
                                const BinaryFunction &Function) {
   OS << Function.getPrintName();
   return OS;
+}
+
+/// Compare function by index if it is valid, fall back to the original address
+/// otherwise.
+inline bool compareBinaryFunctionByIndex(const BinaryFunction *A,
+                                         const BinaryFunction *B) {
+  if (A->hasValidIndex() && B->hasValidIndex())
+    return A->getIndex() < B->getIndex();
+  if (A->hasValidIndex() && !B->hasValidIndex())
+    return true;
+  if (!A->hasValidIndex() && B->hasValidIndex())
+    return false;
+  return A->getAddress() < B->getAddress();
 }
 
 } // namespace bolt

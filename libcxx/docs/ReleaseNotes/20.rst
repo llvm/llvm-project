@@ -62,6 +62,13 @@ Improvements and New Features
   compile times and smaller debug information as well as better code generation if optimizations are disabled.
   The Chromium project measured a 5% reduction in object file and debug information size.
 
+- The ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`` ABI configuration was added, which allows ``std::unique_ptr<T[]>`` to
+  detect out-of-bounds accesses in certain circumstances. ``std::unique_ptr<T[]>`` can now also detect out-of-bounds
+  accesses for a limited set of types (non-trivially destructible types) when the ABI configuration is disabled.
+
+- The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` ABI configuration was added, which allows storing valid bounds
+  in ``std::array::iterator`` and detecting OOB accesses when the appropriate hardening mode is enabled.
+
 Deprecations and Removals
 -------------------------
 
@@ -94,6 +101,9 @@ Deprecations and Removals
   specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these
   headers as an extension and only deprecates them. The ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS`` macro can be defined to
   suppress deprecation for these headers.
+
+- The ``_LIBCPP_DISABLE_AVAILABILITY`` macro that was used to force-disable availability markup has now been removed.
+  Whether availability markup is used by the library is now solely controlled at configuration-time.
 
 Upcoming Deprecations and Removals
 ----------------------------------

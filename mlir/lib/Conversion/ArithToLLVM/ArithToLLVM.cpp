@@ -53,13 +53,40 @@ struct ConstrainedVectorConvertToLLVMPattern
   }
 };
 
+template <typename SourceOp, typename TargetOp,
+          template <typename, typename> typename AttrConvert =
+              AttrConvertPassThrough>
+struct DenormalOpConversionToLLVMPattern
+    : public VectorConvertToLLVMPattern<SourceOp, TargetOp, AttrConvert> {
+  using VectorConvertToLLVMPattern<SourceOp, TargetOp,
+                                   AttrConvert>::VectorConvertToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // TODO: Here, we need a legalization step. LLVM provides a function-level
+    // attribute for denormal; here, we need to move this information from the
+    // operation to the function, making sure all the operations in the same
+    // function are consistent.
+    if (op.getDenormalModeAttr().getValue() != arith::DenormalMode::ieee)
+      return rewriter.notifyMatchFailure(
+          op, "only ieee denormal mode is supported at the moment");
+
+    StringRef arithDenormalAttrName = SourceOp::getDenormalModeAttrName();
+    op->removeAttr(arithDenormalAttrName);
+    return VectorConvertToLLVMPattern<SourceOp, TargetOp,
+                                      AttrConvert>::matchAndRewrite(op, adaptor,
+                                                                    rewriter);
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Straightforward Op Lowerings
 //===----------------------------------------------------------------------===//
 
 using AddFOpLowering =
-    VectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using AddIOpLowering =
     VectorConvertToLLVMPattern<arith::AddIOp, LLVM::AddOp,
                                arith::AttrConvertOverflowToLLVM>;
@@ -67,8 +94,8 @@ using AndIOpLowering = VectorConvertToLLVMPattern<arith::AndIOp, LLVM::AndOp>;
 using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
 using DivFOpLowering =
-    VectorConvertToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
 using DivUIOpLowering =
@@ -83,38 +110,38 @@ using FPToSIOpLowering =
 using FPToUIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToUIOp, LLVM::FPToUIOp>;
 using MaximumFOpLowering =
-    VectorConvertToLLVMPattern<arith::MaximumFOp, LLVM::MaximumOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::MaximumFOp, LLVM::MaximumOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using MaxNumFOpLowering =
-    VectorConvertToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxUIOp, LLVM::UMaxOp>;
 using MinimumFOpLowering =
-    VectorConvertToLLVMPattern<arith::MinimumFOp, LLVM::MinimumOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::MinimumFOp, LLVM::MinimumOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using MinNumFOpLowering =
-    VectorConvertToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using MinSIOpLowering =
     VectorConvertToLLVMPattern<arith::MinSIOp, LLVM::SMinOp>;
 using MinUIOpLowering =
     VectorConvertToLLVMPattern<arith::MinUIOp, LLVM::UMinOp>;
 using MulFOpLowering =
-    VectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using MulIOpLowering =
     VectorConvertToLLVMPattern<arith::MulIOp, LLVM::MulOp,
                                arith::AttrConvertOverflowToLLVM>;
 using NegFOpLowering =
-    VectorConvertToLLVMPattern<arith::NegFOp, LLVM::FNegOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::NegFOp, LLVM::FNegOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using OrIOpLowering = VectorConvertToLLVMPattern<arith::OrIOp, LLVM::OrOp>;
 using RemFOpLowering =
-    VectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using RemSIOpLowering =
     VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp>;
 using RemUIOpLowering =
@@ -131,8 +158,8 @@ using ShRUIOpLowering =
 using SIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp>;
 using SubFOpLowering =
-    VectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
-                               arith::AttrConvertFastMathToLLVM>;
+    DenormalOpConversionToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
+                                      arith::AttrConvertFastMathToLLVM>;
 using SubIOpLowering =
     VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp,
                                arith::AttrConvertOverflowToLLVM>;

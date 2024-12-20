@@ -28,12 +28,13 @@
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; CHECK-NEXT: dispatchPtr: { reg: '$sgpr4_sgpr5' }
-; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr6_sgpr7' }
-; CHECK-NEXT: dispatchID: { reg: '$sgpr8_sgpr9' }
-; CHECK-NEXT: workGroupIDX: { reg: '$sgpr10' }
-; CHECK-NEXT: workGroupIDY: { reg: '$sgpr11' }
-; CHECK-NEXT: workGroupIDZ: { reg: '$sgpr12' }
-; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr13' }
+; CHECK-NEXT: queuePtr: { reg: '$sgpr6_sgpr7' }
+; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr8_sgpr9' }
+; CHECK-NEXT: dispatchID: { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: workGroupIDX: { reg: '$sgpr12' }
+; CHECK-NEXT: workGroupIDY: { reg: '$sgpr13' }
+; CHECK-NEXT: workGroupIDZ: { reg: '$sgpr14' }
+; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr15' }
 ; CHECK-NEXT: workItemIDX: { reg: '$vgpr0' }
 ; CHECK-NEXT: workItemIDY: { reg: '$vgpr1' }
 ; CHECK-NEXT: workItemIDZ: { reg: '$vgpr2' }

@@ -37,11 +37,10 @@ func.func @masked_static_vectorize_nd_tensor_extract_with_affine_apply_contiguou
 // CHECK:           %[[STEP:.*]] = vector.step : vector<4xindex>
 // CHECK:           %[[IDX_BC:.*]] = vector.broadcast %[[IDX_IN]] : index to vector<4xindex>
 // CHECK:           %[[IDX_VEC:.*]] = arith.addi %[[STEP]], %[[IDX_BC]] : vector<4xindex>
-// CHECK:           %[[C0:.*]] = arith.constant 0 : i32
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[IDX_VEC]] : vector<4xindex> to vector<4xindex>
 
 /// Extract the starting point from the index vector
-// CHECK:           %[[IDX_START:.*]] = vector.extractelement %[[SC]]{{\[}}%[[C0]] : i32] : vector<4xindex>
+// CHECK:           %[[IDX_START:.*]] = vector.extract %[[SC]][0] : index from vector<4xindex>
 
 // Final read and write
 // CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]]{{\[}}%[[C79]], %[[IDX_START]]], {{.*}} {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
@@ -98,11 +97,10 @@ func.func @masked_static_vectorize_nd_tensor_extract_with_affine_apply_contiguou
 // CHECK:           %[[STEP:.*]] = vector.step : vector<[4]xindex>
 // CHECK:           %[[IDX_BC:.*]] = vector.broadcast %[[IDX_IN]] : index to vector<[4]xindex>
 // CHECK:           %[[IDX_VEC:.*]] = arith.addi %[[STEP]], %[[IDX_BC]] : vector<[4]xindex>
-// CHECK:           %[[C0:.*]] = arith.constant 0 : i32
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[IDX_VEC]] : vector<[4]xindex> to vector<[4]xindex>
 
 /// Extract the starting point from the index vector
-// CHECK:           %[[IDX_START:.*]] = vector.extractelement %[[SC]]{{\[}}%[[C0]] : i32] : vector<[4]xindex>
+// CHECK:           %[[IDX_START:.*]] = vector.extract %[[SC]][0] : index from vector<[4]xindex>
 
 // Final read and write
 // CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]]{{\[}}%[[C79]], %[[IDX_START]]], {{.*}} {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x[4]xf32> } : vector<1x[4]xi1> -> vector<1x[4]xf32>
@@ -159,11 +157,10 @@ func.func @masked_dynamic_vectorize_nd_tensor_extract_with_affine_apply_contiguo
 // CHECK:           %[[STEP:.*]] = vector.step : vector<4xindex>
 // CHECK:           %[[IDX_BC:.*]] = vector.broadcast %[[IDX]] : index to vector<4xindex>
 // CHECK:           %[[IDX_VEC:.*]] = arith.addi %[[STEP]], %[[IDX_BC]] : vector<4xindex>
-// CHECK:           %[[C0:.*]] = arith.constant 0 : i32
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[IDX_VEC]] : vector<4xindex> to vector<4xindex>
 
 /// Extract the starting point from the index vector
-// CHECK:           %[[IDX_START:.*]] = vector.extractelement %[[SC]]{{\[}}%[[C0]] : i32] : vector<4xindex>
+// CHECK:           %[[IDX_START:.*]] = vector.extract %[[SC]][0] : index from vector<4xindex>
 
 // Final read and write
 // CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]]{{\[}}%[[C79]], %[[IDX_START]]], {{.*}} {in_bounds = [true, true]} : tensor<?x?xf32>, vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
@@ -218,11 +215,10 @@ func.func @masked_dynamic_vectorize_nd_tensor_extract_with_affine_apply_contiguo
 // CHECK:           %[[STEP:.*]] = vector.step : vector<[4]xindex>
 // CHECK:           %[[IDX_BC:.*]] = vector.broadcast %[[IDX]] : index to vector<[4]xindex>
 // CHECK:           %[[IDX_VEC:.*]] = arith.addi %[[STEP]], %[[IDX_BC]] : vector<[4]xindex>
-// CHECK:           %[[C0:.*]] = arith.constant 0 : i32
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[IDX_VEC]] : vector<[4]xindex> to vector<[4]xindex>
 
 /// Extract the starting point from the index vector
-// CHECK:           %[[IDX_START:.*]] = vector.extractelement %[[SC]]{{\[}}%[[C0]] : i32] : vector<[4]xindex>
+// CHECK:           %[[IDX_START:.*]] = vector.extract %[[SC]][0] : index from vector<[4]xindex>
 
 // Final read and write
 // CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]]{{\[}}%[[C79]], %[[IDX_START]]], {{.*}} {in_bounds = [true, true]} : tensor<?x?xf32>, vector<1x[4]xf32> } : vector<1x[4]xi1> -> vector<1x[4]xf32>

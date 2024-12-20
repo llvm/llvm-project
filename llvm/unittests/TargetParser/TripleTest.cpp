@@ -1341,6 +1341,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_TRUE(T.isTime64ABI());
   EXPECT_TRUE(T.isHardFloatABI());
 
+  T = Triple("x86_64-pc-linux-llvm");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::LLVM, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }

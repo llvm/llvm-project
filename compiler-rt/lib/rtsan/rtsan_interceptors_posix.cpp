@@ -15,12 +15,10 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
 #include "rtsan/rtsan.h"
-#include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
 
@@ -33,17 +31,18 @@ extern "C" {
 typedef int32_t OSSpinLock;
 void OSSpinLockLock(volatile OSSpinLock *__lock);
 }
-#endif
+#endif // TARGET_OS_MAC
 
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
-#endif
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_INTERCEPT_MEMALIGN || SANITIZER_INTERCEPT_PVALLOC
 #include <malloc.h>
 #endif
 
 #include <fcntl.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -62,8 +61,11 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 // Filesystem
 
 INTERCEPTOR(int, open, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // We do not early exit if O_NONBLOCK is set.
+  // O_NONBLOCK **does not prevent the syscall** it simply sets the FD to be in
+  // nonblocking mode, which is a different concept than our
+  // [[clang::nonblocking]], and is not rt-safe. This behavior was confirmed
+  // using Instruments on Darwin with a simple test program
   __rtsan_notify_intercepted_call("open");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -79,8 +81,7 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
 
 #if SANITIZER_INTERCEPT_OPEN64
 INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("open64");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -99,8 +100,7 @@ INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
 #endif // SANITIZER_INTERCEPT_OPEN64
 
 INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("openat");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -116,8 +116,7 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
 
 #if SANITIZER_INTERCEPT_OPENAT64
 INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("openat64");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -136,8 +135,7 @@ INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
 #endif // SANITIZER_INTERCEPT_OPENAT64
 
 INTERCEPTOR(int, creat, const char *path, mode_t mode) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("creat");
   const int result = REAL(creat)(path, mode);
   return result;
@@ -145,8 +143,7 @@ INTERCEPTOR(int, creat, const char *path, mode_t mode) {
 
 #if SANITIZER_INTERCEPT_CREAT64
 INTERCEPTOR(int, creat64, const char *path, mode_t mode) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("creat64");
   const int result = REAL(creat64)(path, mode);
   return result;
@@ -191,6 +188,23 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   va_end(args);
 
   return REAL(fcntl)(filedes, cmd, arg);
+}
+
+INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+  __rtsan_notify_intercepted_call("ioctl");
+
+  // See fcntl for discussion on why we use intptr_t
+  // And why we read from va_args on all request types
+  using arg_type = intptr_t;
+  static_assert(sizeof(arg_type) >= sizeof(struct ifreq *));
+  static_assert(sizeof(arg_type) >= sizeof(int));
+
+  va_list args;
+  va_start(args, request);
+  arg_type arg = va_arg(args, arg_type);
+  va_end(args);
+
+  return REAL(ioctl)(filedes, request, arg);
 }
 
 #if SANITIZER_INTERCEPT_FCNTL64
@@ -319,6 +333,31 @@ INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
   return REAL(writev)(fd, iov, iovcnt);
 }
 
+INTERCEPTOR(off_t, lseek, int fd, off_t offset, int whence) {
+  __rtsan_notify_intercepted_call("lseek");
+  return REAL(lseek)(fd, offset, whence);
+}
+
+#if SANITIZER_INTERCEPT_LSEEK64
+INTERCEPTOR(off64_t, lseek64, int fd, off64_t offset, int whence) {
+  __rtsan_notify_intercepted_call("lseek64");
+  return REAL(lseek64)(fd, offset, whence);
+}
+#define RTSAN_MAYBE_INTERCEPT_LSEEK64 INTERCEPT_FUNCTION(lseek64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_LSEEK64
+#endif // SANITIZER_INTERCEPT_LSEEK64
+
+INTERCEPTOR(int, dup, int oldfd) {
+  __rtsan_notify_intercepted_call("dup");
+  return REAL(dup)(oldfd);
+}
+
+INTERCEPTOR(int, dup2, int oldfd, int newfd) {
+  __rtsan_notify_intercepted_call("dup2");
+  return REAL(dup2)(oldfd, newfd);
+}
+
 // Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
@@ -417,6 +456,11 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
   return REAL(nanosleep)(rqtp, rmtp);
 }
 
+INTERCEPTOR(int, sched_yield, void) {
+  __rtsan_notify_intercepted_call("sched_yield");
+  return REAL(sched_yield)();
+}
+
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
@@ -431,9 +475,12 @@ INTERCEPTOR(void, free, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  if (ptr != NULL) {
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
     __rtsan_notify_intercepted_call("free");
-  }
+
   return REAL(free)(ptr);
 }
 
@@ -464,10 +511,19 @@ INTERCEPTOR(void *, valloc, SIZE_T size) {
 }
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
+
+// In some cases, when targeting older Darwin versions, this warning may pop up.
+// Because we are providing a wrapper, the client is responsible to check
+// whether aligned_alloc is available, not us. We still succeed linking on an
+// old OS, because we are using a weak symbol (see aligned_alloc in
+// sanitizer_platform_interceptors.h)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
   __rtsan_notify_intercepted_call("aligned_alloc");
   return REAL(aligned_alloc)(alignment, size);
 }
+#pragma clang diagnostic pop
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
 #else
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
@@ -492,7 +548,75 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
 }
 #endif
 
+INTERCEPTOR(void *, mmap, void *addr, size_t length, int prot, int flags,
+            int fd, off_t offset) {
+  __rtsan_notify_intercepted_call("mmap");
+  return REAL(mmap)(addr, length, prot, flags, fd, offset);
+}
+
+#if SANITIZER_INTERCEPT_MMAP64
+INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
+            int fd, off64_t offset) {
+  __rtsan_notify_intercepted_call("mmap64");
+  return REAL(mmap64)(addr, length, prot, flags, fd, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MMAP64
+#endif // SANITIZER_INTERCEPT_MMAP64
+
+INTERCEPTOR(int, munmap, void *addr, size_t length) {
+  __rtsan_notify_intercepted_call("munmap");
+  return REAL(munmap)(addr, length);
+}
+
+INTERCEPTOR(int, shm_open, const char *name, int oflag, mode_t mode) {
+  __rtsan_notify_intercepted_call("shm_open");
+  return REAL(shm_open)(name, oflag, mode);
+}
+
+INTERCEPTOR(int, shm_unlink, const char *name) {
+  __rtsan_notify_intercepted_call("shm_unlink");
+  return REAL(shm_unlink)(name);
+}
+
 // Sockets
+INTERCEPTOR(int, getaddrinfo, const char *node, const char *service,
+            const struct addrinfo *hints, struct addrinfo **res) {
+  __rtsan_notify_intercepted_call("getaddrinfo");
+  return REAL(getaddrinfo)(node, service, hints, res);
+}
+
+INTERCEPTOR(int, getnameinfo, const struct sockaddr *sa, socklen_t salen,
+            char *host, socklen_t hostlen, char *serv, socklen_t servlen,
+            int flags) {
+  __rtsan_notify_intercepted_call("getnameinfo");
+  return REAL(getnameinfo)(sa, salen, host, hostlen, serv, servlen, flags);
+}
+
+INTERCEPTOR(int, bind, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("bind");
+  return REAL(bind)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, listen, int socket, int backlog) {
+  __rtsan_notify_intercepted_call("listen");
+  return REAL(listen)(socket, backlog);
+}
+
+INTERCEPTOR(int, accept, int socket, struct sockaddr *address,
+            socklen_t *address_len) {
+  __rtsan_notify_intercepted_call("accept");
+  return REAL(accept)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, connect, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("connect");
+  return REAL(connect)(socket, address, address_len);
+}
+
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
   __rtsan_notify_intercepted_call("socket");
   return REAL(socket)(domain, type, protocol);
@@ -536,6 +660,114 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
   return REAL(shutdown)(socket, how);
 }
 
+// I/O Multiplexing
+
+INTERCEPTOR(int, poll, struct pollfd *fds, nfds_t nfds, int timeout) {
+  __rtsan_notify_intercepted_call("poll");
+  return REAL(poll)(fds, nfds, timeout);
+}
+
+#if !SANITIZER_APPLE
+// FIXME: This should work on all unix systems, even Mac, but currently
+// it is showing some weird error while linking
+// error: declaration of 'select' has a different language linkage
+INTERCEPTOR(int, select, int nfds, fd_set *readfds, fd_set *writefds,
+            fd_set *exceptfds, struct timeval *timeout) {
+  __rtsan_notify_intercepted_call("select");
+  return REAL(select)(nfds, readfds, writefds, exceptfds, timeout);
+}
+#define RTSAN_MAYBE_INTERCEPT_SELECT INTERCEPT_FUNCTION(select)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SELECT
+#endif // !SANITIZER_APPLE
+
+INTERCEPTOR(int, pselect, int nfds, fd_set *readfds, fd_set *writefds,
+            fd_set *exceptfds, const struct timespec *timeout,
+            const sigset_t *sigmask) {
+  __rtsan_notify_intercepted_call("pselect");
+  return REAL(pselect)(nfds, readfds, writefds, exceptfds, timeout, sigmask);
+}
+
+#if SANITIZER_INTERCEPT_EPOLL
+INTERCEPTOR(int, epoll_create, int size) {
+  __rtsan_notify_intercepted_call("epoll_create");
+  return REAL(epoll_create)(size);
+}
+
+INTERCEPTOR(int, epoll_create1, int flags) {
+  __rtsan_notify_intercepted_call("epoll_create1");
+  return REAL(epoll_create1)(flags);
+}
+
+INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd,
+            struct epoll_event *event) {
+  __rtsan_notify_intercepted_call("epoll_ctl");
+  return REAL(epoll_ctl)(epfd, op, fd, event);
+}
+
+INTERCEPTOR(int, epoll_wait, int epfd, struct epoll_event *events,
+            int maxevents, int timeout) {
+  __rtsan_notify_intercepted_call("epoll_wait");
+  return REAL(epoll_wait)(epfd, events, maxevents, timeout);
+}
+
+INTERCEPTOR(int, epoll_pwait, int epfd, struct epoll_event *events,
+            int maxevents, int timeout, const sigset_t *sigmask) {
+  __rtsan_notify_intercepted_call("epoll_pwait");
+  return REAL(epoll_pwait)(epfd, events, maxevents, timeout, sigmask);
+}
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE INTERCEPT_FUNCTION(epoll_create)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE1 INTERCEPT_FUNCTION(epoll_create1)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CTL INTERCEPT_FUNCTION(epoll_ctl)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT INTERCEPT_FUNCTION(epoll_wait)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT INTERCEPT_FUNCTION(epoll_pwait)
+#else
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE1
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CTL
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT
+#endif // SANITIZER_INTERCEPT_EPOLL
+
+#if SANITIZER_INTERCEPT_KQUEUE
+INTERCEPTOR(int, kqueue, void) {
+  __rtsan_notify_intercepted_call("kqueue");
+  return REAL(kqueue)();
+}
+
+INTERCEPTOR(int, kevent, int kq, const struct kevent *changelist, int nchanges,
+            struct kevent *eventlist, int nevents,
+            const struct timespec *timeout) {
+  __rtsan_notify_intercepted_call("kevent");
+  return REAL(kevent)(kq, changelist, nchanges, eventlist, nevents, timeout);
+}
+
+INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
+            int nchanges, struct kevent64_s *eventlist, int nevents,
+            unsigned int flags, const struct timespec *timeout) {
+  __rtsan_notify_intercepted_call("kevent64");
+  return REAL(kevent64)(kq, changelist, nchanges, eventlist, nevents, flags,
+                        timeout);
+}
+#define RTSAN_MAYBE_INTERCEPT_KQUEUE INTERCEPT_FUNCTION(kqueue)
+#define RTSAN_MAYBE_INTERCEPT_KEVENT INTERCEPT_FUNCTION(kevent)
+#define RTSAN_MAYBE_INTERCEPT_KEVENT64 INTERCEPT_FUNCTION(kevent64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_KQUEUE
+#define RTSAN_MAYBE_INTERCEPT_KEVENT
+#define RTSAN_MAYBE_INTERCEPT_KEVENT64
+#endif // SANITIZER_INTERCEPT_KQUEUE
+
+INTERCEPTOR(int, pipe, int pipefd[2]) {
+  __rtsan_notify_intercepted_call("pipe");
+  return REAL(pipe)(pipefd);
+}
+
+INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkfifo");
+  return REAL(mkfifo)(pathname, mode);
+}
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -546,6 +778,11 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(valloc);
   RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
+  INTERCEPT_FUNCTION(mmap);
+  RTSAN_MAYBE_INTERCEPT_MMAP64;
+  INTERCEPT_FUNCTION(munmap);
+  INTERCEPT_FUNCTION(shm_open);
+  INTERCEPT_FUNCTION(shm_unlink);
 #if SANITIZER_INTERCEPT_MEMALIGN
   INTERCEPT_FUNCTION(memalign);
 #endif
@@ -577,6 +814,11 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+  INTERCEPT_FUNCTION(lseek);
+  RTSAN_MAYBE_INTERCEPT_LSEEK64;
+  INTERCEPT_FUNCTION(dup);
+  INTERCEPT_FUNCTION(dup2);
+  INTERCEPT_FUNCTION(ioctl);
 
 #if SANITIZER_APPLE
   INTERCEPT_FUNCTION(OSSpinLockLock);
@@ -600,15 +842,37 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sleep);
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
+  INTERCEPT_FUNCTION(sched_yield);
 
-  INTERCEPT_FUNCTION(socket);
+  INTERCEPT_FUNCTION(accept);
+  INTERCEPT_FUNCTION(bind);
+  INTERCEPT_FUNCTION(connect);
+  INTERCEPT_FUNCTION(getaddrinfo);
+  INTERCEPT_FUNCTION(getnameinfo);
+  INTERCEPT_FUNCTION(listen);
+  INTERCEPT_FUNCTION(recv);
+  INTERCEPT_FUNCTION(recvfrom);
+  INTERCEPT_FUNCTION(recvmsg);
   INTERCEPT_FUNCTION(send);
   INTERCEPT_FUNCTION(sendmsg);
   INTERCEPT_FUNCTION(sendto);
-  INTERCEPT_FUNCTION(recv);
-  INTERCEPT_FUNCTION(recvmsg);
-  INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
+  INTERCEPT_FUNCTION(socket);
+
+  RTSAN_MAYBE_INTERCEPT_SELECT;
+  INTERCEPT_FUNCTION(pselect);
+  INTERCEPT_FUNCTION(poll);
+  RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE1;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_CTL;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
+  RTSAN_MAYBE_INTERCEPT_KQUEUE;
+  RTSAN_MAYBE_INTERCEPT_KEVENT;
+  RTSAN_MAYBE_INTERCEPT_KEVENT64;
+
+  INTERCEPT_FUNCTION(pipe);
+  INTERCEPT_FUNCTION(mkfifo);
 }
 
 #endif // SANITIZER_POSIX

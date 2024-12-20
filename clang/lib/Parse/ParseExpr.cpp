@@ -2199,10 +2199,17 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       };
       if (OpKind == tok::l_paren || !LHS.isInvalid()) {
         if (Tok.isNot(tok::r_paren)) {
-          if (ParseExpressionList(ArgExprs, [&] {
+          bool HasTrailingComma = false;
+          bool HasError = ParseExpressionList(
+              ArgExprs,
+              [&] {
                 PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                     RunSignatureHelp);
-              })) {
+              },
+              /*FailImmediatelyOnInvalidExpr*/ false,
+              /*EarlyTypoCorrection*/ false, &HasTrailingComma);
+
+          if (HasError && !HasTrailingComma) {
             (void)Actions.CorrectDelayedTyposInExpr(LHS);
             // If we got an error when parsing expression list, we don't call
             // the CodeCompleteCall handler inside the parser. So call it here
@@ -3662,7 +3669,8 @@ void Parser::injectEmbedTokens() {
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  llvm::function_ref<void()> ExpressionStarts,
                                  bool FailImmediatelyOnInvalidExpr,
-                                 bool EarlyTypoCorrection) {
+                                 bool EarlyTypoCorrection,
+                                 bool *HasTrailingComma) {
   bool SawError = false;
   while (true) {
     if (ExpressionStarts)
@@ -3705,6 +3713,12 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     Token Comma = Tok;
     ConsumeToken();
     checkPotentialAngleBracketDelimiter(Comma);
+
+    if (Tok.is(tok::r_paren)) {
+      if (HasTrailingComma)
+        *HasTrailingComma = true;
+      break;
+    }
   }
   if (SawError) {
     // Ensure typos get diagnosed when errors were encountered while parsing the

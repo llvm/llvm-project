@@ -390,14 +390,14 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[GEP]], align 4, !alias.scope [[META23:![0-9]+]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP17]] = add <4 x i32> [[TMP16]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP17]] = add <4 x i32> [[TMP16]], splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x i32> [ [[TMP17]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[DOTLCSSA]])
-; CHECK-NEXT:    store i32 [[TMP19]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    store i32 [[TMP19]], ptr [[ARRAYIDX5]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META23]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_INC8_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -415,7 +415,7 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ITR]], [[LFTR_WIDEIV]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_INC8_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY3]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_INC8_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY3]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       for.inc8.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC8_LOOPEXIT]]
 ; CHECK:       for.inc8.loopexit:

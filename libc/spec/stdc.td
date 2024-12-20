@@ -695,6 +695,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           GuardedFunctionSpec<"exp10f16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
+          FunctionSpec<"exp10m1f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           GuardedFunctionSpec<"exp10m1f16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
           FunctionSpec<"remainder", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
@@ -1737,7 +1738,6 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
-  
   NamedType StructLconv = NamedType<"struct lconv">;
   PtrType StructLconvPtr = PtrType<StructLconv>;
 

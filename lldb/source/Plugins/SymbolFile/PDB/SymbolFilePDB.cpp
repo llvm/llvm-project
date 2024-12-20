@@ -310,9 +310,9 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   Mangled mangled = GetMangledForPDBFunc(pdb_func);
 
-  FunctionSP func_sp =
-      std::make_shared<Function>(&comp_unit, pdb_func.getSymIndexId(),
-                                 func_type_uid, mangled, func_type, func_range);
+  FunctionSP func_sp = std::make_shared<Function>(
+      &comp_unit, pdb_func.getSymIndexId(), func_type_uid, mangled, func_type,
+      AddressRanges{func_range});
 
   comp_unit.AddFunction(func_sp);
 
@@ -421,9 +421,7 @@ static size_t ParseFunctionBlocksForPDBSymbol(
       if (raw_sym.getVirtualAddress() < func_file_vm_addr)
         break;
 
-      auto block_sp = std::make_shared<Block>(pdb_symbol->getSymIndexId());
-      parent_block->AddChild(block_sp);
-      block = block_sp.get();
+      block = parent_block->CreateChild(pdb_symbol->getSymIndexId()).get();
     } else
       llvm_unreachable("Unexpected PDB symbol!");
 

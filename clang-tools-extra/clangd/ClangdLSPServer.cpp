@@ -1419,15 +1419,12 @@ void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
   llvm::StringSet<> ModifiedFiles;
-  for (auto &Entry : Settings.compilationDatabaseChanges) {
-    PathRef File = Entry.first;
-    auto Old = CDB->getCompileCommand(File);
-    auto New =
-        tooling::CompileCommand(std::move(Entry.second.workingDirectory), File,
-                                std::move(Entry.second.compilationCommand),
+  for (auto &[File, Command] : Settings.compilationDatabaseChanges) {
+    auto Cmd =
+        tooling::CompileCommand(std::move(Command.workingDirectory), File,
+                                std::move(Command.compilationCommand),
                                 /*Output=*/"");
-    if (Old != New) {
-      CDB->setCompileCommand(File, std::move(New));
+    if (CDB->setCompileCommand(File, std::move(Cmd))) {
       ModifiedFiles.insert(File);
     }
   }

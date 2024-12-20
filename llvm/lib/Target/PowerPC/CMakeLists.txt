@@ -41,7 +41,6 @@ add_llvm_target(PowerPCCodeGen
   PPCMachineFunctionInfo.cpp
   PPCMachineScheduler.cpp
   PPCMacroFusion.cpp
-  PPCMergeStringPool.cpp
   PPCMIPeephole.cpp
   PPCRegisterInfo.cpp
   PPCSubtarget.cpp

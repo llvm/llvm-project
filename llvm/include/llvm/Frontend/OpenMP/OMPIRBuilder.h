@@ -1262,12 +1262,12 @@ public:
   ///                    cannot be resumed until execution of the structured
   ///                    block that is associated with the generated task is
   ///                    completed.
-  InsertPointOrErrorTy createTask(const LocationDescription &Loc,
-                                  InsertPointTy AllocaIP,
-                                  BodyGenCallbackTy BodyGenCB, bool Tied = true,
-                                  Value *Final = nullptr,
-                                  Value *IfCondition = nullptr,
-                                  SmallVector<DependData> Dependencies = {});
+  /// \param Mergeable	 If the given task is `mergeable`
+  InsertPointOrErrorTy
+  createTask(const LocationDescription &Loc, InsertPointTy AllocaIP,
+             BodyGenCallbackTy BodyGenCB, bool Tied = true,
+             Value *Final = nullptr, Value *IfCondition = nullptr,
+             SmallVector<DependData> Dependencies = {}, bool Mergeable = false);
 
   /// Generator for the taskgroup construct
   ///

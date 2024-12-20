@@ -23,21 +23,34 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
   LogicalResult
   matchAndRewrite(CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Convert the original function results.
+    // Convert the original function results. Keep track of how many result
+    // types an original result type is converted into.
+    SmallVector<size_t> numResultsReplacments;
     SmallVector<Type, 1> convertedResults;
-    if (failed(typeConverter->convertTypes(callOp.getResultTypes(),
-                                           convertedResults)))
-      return failure();
-
-    // If this isn't a one-to-one type mapping, we don't know how to aggregate
-    // the results.
-    if (callOp->getNumResults() != convertedResults.size())
-      return failure();
+    size_t numFlattenedResults = 0;
+    for (auto [idx, type] : llvm::enumerate(callOp.getResultTypes())) {
+      if (failed(typeConverter->convertTypes(type, convertedResults)))
+        return failure();
+      numResultsReplacments.push_back(convertedResults.size() -
+                                      numFlattenedResults);
+      numFlattenedResults = convertedResults.size();
+    }
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
-    rewriter.replaceOpWithNewOp<CallOp>(
-        callOp, callOp.getCallee(), convertedResults, adaptor.getOperands());
+    auto newCallOp =
+        rewriter.create<CallOp>(callOp.getLoc(), callOp.getCallee(),
+                                convertedResults, adaptor.getOperands());
+    SmallVector<ValueRange> replacements;
+    size_t offset = 0;
+    for (int i = 0, e = callOp->getNumResults(); i < e; ++i) {
+      replacements.push_back(
+          newCallOp->getResults().slice(offset, numResultsReplacments[i]));
+      offset += numResultsReplacments[i];
+    }
+    assert(offset == convertedResults.size() &&
+           "expected that all converted results are used");
+    rewriter.replaceOpWithMultiple(callOp, replacements);
     return success();
   }
 };

@@ -3391,7 +3391,9 @@ bool LLParser::parseStructDefinition(SMLoc TypeLoc, StringRef Name,
       (isPacked && parseToken(lltok::greater, "expected '>' in packed struct")))
     return true;
 
-  STy->setBody(Body, isPacked);
+  if (auto E = STy->setBodyOrError(Body, isPacked))
+    return tokError(toString(std::move(E)));
+
   ResultTy = STy;
   return false;
 }
@@ -5329,12 +5331,14 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
-                                         align.Val, encoding.Val, flags.Val));
+                                         align.Val, encoding.Val,
+                                         num_extra_inhabitants.Val, flags.Val));
   return false;
 }
 
@@ -5432,7 +5436,9 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(associated, MDField, );                                             \
   OPTIONAL(allocated, MDField, );                                              \
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
-  OPTIONAL(annotations, MDField, );
+  OPTIONAL(annotations, MDField, );                                            \
+  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
+  OPTIONAL(specification, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5447,7 +5453,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   if (identifier.Val)
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
-            scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
+            scope.Val, baseType.Val, size.Val, align.Val, offset.Val,
+            specification.Val, num_extra_inhabitants.Val, flags.Val,
             elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
             discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
             Rank, annotations.Val)) {
@@ -5463,7 +5470,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
        discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
-       annotations.Val));
+       annotations.Val, specification.Val, num_extra_inhabitants.Val));
   return false;
 }
 
@@ -6254,6 +6261,8 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
   case ValID::t_APSInt:
   case ValID::t_APFloat:
   case ValID::t_Undef:
+  case ValID::t_Poison:
+  case ValID::t_Zero:
   case ValID::t_Constant:
   case ValID::t_ConstantSplat:
   case ValID::t_ConstantStruct:

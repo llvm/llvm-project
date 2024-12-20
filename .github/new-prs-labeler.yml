@@ -587,6 +587,12 @@ llvm:ir:
   - llvm/docs/LangRef.rst
   - llvm/unittests/IR/**
 
+llvm:SandboxIR:
+  - llvm/lib/SandboxIR/**
+  - llvm/include/llvm/SandboxIR/**
+  - llvm/docs/SandboxIR.md
+  - llvm/unittests/SandboxIR/**
+
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**
@@ -604,6 +610,14 @@ llvm:transforms:
   - llvm/include/llvm/Transforms/**
   - llvm/test/Transforms/**
   - llvm/unittests/Transforms/**
+
+llvm:instcombine:
+  - llvm/lib/Analysis/InstructionSimplify.cpp
+  - llvm/lib/Transforms/InstCombine/**
+  - llvm/include/llvm/Transforms/InstCombine/
+  - llvm/include/llvm/Analysis/InstructionSimplify.h
+  - llvm/test/Transforms/InstCombine/**
+  - llvm/test/Transforms/InstSimplify/**
 
 clangd:
   - clang-tools-extra/clangd/**

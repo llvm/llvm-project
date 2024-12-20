@@ -24,7 +24,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -214,35 +213,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
 }
 
-void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
-  VPValue *ExitValue = getOperand(0);
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  VPRecipeBase *ExitingRecipe = ExitValue->getDefiningRecipe();
-  auto *ExitingVPBB = ExitingRecipe ? ExitingRecipe->getParent() : nullptr;
-  // Values leaving the vector loop reach live out phi's in the exiting block
-  // via middle block.
-  auto *PredVPBB = !ExitingVPBB || ExitingVPBB->getEnclosingLoopRegion()
-                       ? MiddleVPBB
-                       : ExitingVPBB;
-  BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
-  Value *V = State.get(ExitValue, VPLane(0));
-  if (Phi->getBasicBlockIndex(PredBB) != -1)
-    Phi->setIncomingValueForBlock(PredBB, V);
-  else
-    Phi->addIncoming(V, PredBB);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPLiveOut::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
-  O << "Live-out ";
-  getPhi()->printAsOperand(O);
-  O << " = ";
-  getOperand(0)->printAsOperand(O, SlotTracker);
-  O << "\n";
-}
-#endif
-
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
@@ -319,18 +289,6 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 InstructionCost VPRecipeBase::computeCost(ElementCount VF,
                                           VPCostContext &Ctx) const {
   llvm_unreachable("subclasses should implement computeCost");
-}
-
-InstructionCost VPSingleDefRecipe::computeCost(ElementCount VF,
-                                               VPCostContext &Ctx) const {
-  Instruction *UI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
-  if (isa<VPReplicateRecipe>(this)) {
-    assert(UI && "VPReplicateRecipe must have an underlying instruction");
-    // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
-    // transform, avoid computing their cost multiple times for now.
-    Ctx.SkipCostComputation.insert(UI);
-  }
-  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
 }
 
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
@@ -873,7 +831,12 @@ void VPIRInstruction::execute(VPTransformState &State) {
     State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
     Value *V = State.get(ExitValue, VPLane(Lane));
     auto *Phi = cast<PHINode>(&I);
-    Phi->addIncoming(V, PredBB);
+    // If there is no existing block for PredBB in the phi, add a new incoming
+    // value. Otherwise update the existing incoming value for PredBB.
+    if (Phi->getBasicBlockIndex(PredBB) == -1)
+      Phi->addIncoming(V, PredBB);
+    else
+      Phi->setIncomingValueForBlock(PredBB, V);
   }
 
   // Advance the insert point after the wrapped IR instruction. This allows
@@ -896,7 +859,9 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   if (getNumOperands() != 0) {
     assert(getNumOperands() == 1 && "can have at most 1 operand");
     O << " (extra operand: ";
-    printOperands(O, SlotTracker);
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    O << " from ";
+    getParent()->getPredecessors()[0]->printAsOperand(O);
     O << ")";
   }
 }
@@ -978,7 +943,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1))
+  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1, State.TTI))
     TysForDecl.push_back(VectorType::get(getResultType(), State.VF));
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
@@ -989,7 +954,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
       Arg = State.get(I.value(), VPLane(0));
     else
       Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
-    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
+    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index(),
+                                               State.TTI))
       TysForDecl.push_back(Arg->getType());
     Args.push_back(Arg);
   }
@@ -1521,6 +1487,8 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
   State.set(this, Cast);
   State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
+  if (auto *CastOp = dyn_cast<Instruction>(Cast))
+    setFlags(CastOp);
 }
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
@@ -2305,6 +2273,15 @@ bool VPReplicateRecipe::shouldPack() const {
       });
     return false;
   });
+}
+
+InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  Instruction *UI = cast<Instruction>(getUnderlyingValue());
+  // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
+  // transform, avoid computing their cost multiple times for now.
+  Ctx.SkipCostComputation.insert(UI);
+  return Ctx.getLegacyCost(UI, VF);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3342,6 +3319,10 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
 InstructionCost
 VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
                                              VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  if (VF.isScalar())
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, CostKind);
+
   if (VF.isScalable() && VF.getKnownMinValue() == 1)
     return InstructionCost::getInvalid();
 
@@ -3350,7 +3331,6 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   Type *VectorTy =
       ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
 
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
                                 cast<VectorType>(VectorTy), Mask, CostKind,
                                 VF.getKnownMinValue() - 1);

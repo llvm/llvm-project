@@ -1853,12 +1853,25 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           const Value::ValueType curr_piece_source_value_type =
               curr_piece_source_value.GetValueType();
           Scalar &scalar = curr_piece_source_value.GetScalar();
-          const lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+          lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
           switch (curr_piece_source_value_type) {
           case Value::ValueType::Invalid:
             return llvm::createStringError("invalid value type");
-          case Value::ValueType::LoadAddress:
-          case Value::ValueType::FileAddress: {
+          case Value::ValueType::FileAddress:
+            if (target) {
+              curr_piece_source_value.ConvertToLoadAddress(module_sp.get(),
+                                                           target);
+              addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+            } else {
+              return llvm::createStringError(
+                  "unable to convert file address 0x%" PRIx64
+                  " to load address "
+                  "for DW_OP_piece(%" PRIu64 "): "
+                  "no target available",
+                  addr, piece_byte_size);
+            }
+            [[fallthrough]];
+          case Value::ValueType::LoadAddress: {
             if (target) {
               if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
                 if (target->ReadMemory(addr, curr_piece.GetBuffer().GetBytes(),

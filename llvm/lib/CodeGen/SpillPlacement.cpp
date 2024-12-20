@@ -50,14 +50,14 @@ char &llvm::SpillPlacementID = SpillPlacement::ID;
 
 INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
-INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
+INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
 INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
 void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-  AU.addRequiredTransitive<EdgeBundles>();
+  AU.addRequiredTransitive<EdgeBundlesWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -191,7 +191,7 @@ struct SpillPlacement::Node {
 
 bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
-  bundles = &getAnalysis<EdgeBundles>();
+  bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
 
   assert(!nodes && "Leaking node array");
   nodes = new Node[bundles->getNumBundles()];

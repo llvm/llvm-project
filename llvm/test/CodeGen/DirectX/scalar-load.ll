@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes='dxil-data-scalarization,function(scalarizer<load-store>),dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
-; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
 
 ; Make sure we can load groupshared, static vectors and arrays of vectors
 
@@ -22,7 +21,6 @@
 ; CHECK-LABEL: load_array_vec_test
 define <4 x i32> @load_array_vec_test() #0 {
   ; CHECK-COUNT-8: load i32, ptr addrspace(3) {{(.*@arrayofVecData.scalarized.*|%.*)}}, align 4
-  ; CHECK-NOT: load i32, ptr addrspace(3) {{.*}}, align 4
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([2 x <4 x i32>], [2 x <4 x i32>] addrspace(3)* @"arrayofVecData", i32 0, i32 0), align 4
   %2 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([2 x <4 x i32>], [2 x <4 x i32>] addrspace(3)* @"arrayofVecData", i32 0, i32 1), align 4
   %3 = add <4 x i32> %1, %2
@@ -32,7 +30,6 @@ define <4 x i32> @load_array_vec_test() #0 {
 ; CHECK-LABEL: load_vec_test
 define <4 x i32> @load_vec_test() #0 {
   ; CHECK-COUNT-4: load i32, ptr addrspace(3) {{(@vecData.scalarized|getelementptr \(i32, ptr addrspace\(3\) @vecData.scalarized, i32 .*\)|%.*)}}, align {{.*}}
-  ; CHECK-NOT: load i32, ptr addrspace(3) {{.*}}, align 4 
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* @"vecData", align 4
   ret <4 x i32> %1
 }
@@ -41,7 +38,6 @@ define <4 x i32> @load_vec_test() #0 {
 define <4 x i32> @load_static_array_of_vec_test(i32 %index) #0 {
   ; CHECK: getelementptr [3 x [4 x i32]], ptr @staticArrayOfVecData.scalarized, i32 0, i32 %index
   ; CHECK-COUNT-4: load i32, ptr {{.*}}, align 4
-  ; CHECK-NOT: load i32, ptr {{.*}}, align 4
   %3 = getelementptr inbounds [3 x <4 x i32>], [3 x <4 x i32>]* @staticArrayOfVecData, i32 0, i32 %index
   %4 = load <4 x i32>, <4 x i32>* %3, align 4
   ret <4 x i32> %4
@@ -50,7 +46,6 @@ define <4 x i32> @load_static_array_of_vec_test(i32 %index) #0 {
 ; CHECK-LABEL: multid_load_test
 define <4 x i32> @multid_load_test() #0 {
   ; CHECK-COUNT-8: load i32, ptr addrspace(3) {{(.*@groushared2dArrayofVectors.scalarized.*|%.*)}}, align 4
-  ; CHECK-NOT: load i32, ptr addrspace(3) {{.*}}, align 4
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([3 x [3 x <4 x i32>]], [3 x [3 x <4 x i32>]] addrspace(3)* @"groushared2dArrayofVectors", i32 0, i32 0, i32 0), align 4
   %2 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([3 x [3 x <4 x i32>]], [3 x [3 x <4 x i32>]] addrspace(3)* @"groushared2dArrayofVectors", i32 0, i32 1, i32 1), align 4
   %3 = add <4 x i32> %1, %2

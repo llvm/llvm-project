@@ -69,6 +69,7 @@ class ValueDecl;
 class TagDecl;
 class TemplateParameterList;
 class Type;
+class Attr;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -322,6 +323,7 @@ public:
 /// * Objective C: the GC attributes (none, weak, or strong)
 class Qualifiers {
 public:
+  Qualifiers() = default;
   enum TQ : uint64_t {
     // NOTE: These flags must be kept in sync with DeclSpec::TQ.
     Const = 0x1,
@@ -696,45 +698,27 @@ public:
   ///   every address space is a superset of itself.
   /// CL2.0 adds:
   ///   __generic is a superset of any address space except for __constant.
-  static bool isAddressSpaceSupersetOf(LangAS A, LangAS B) {
+  static bool isAddressSpaceSupersetOf(LangAS A, LangAS B,
+                                       const ASTContext &Ctx) {
     // Address spaces must match exactly.
-    return A == B ||
-           // Otherwise in OpenCLC v2.0 s6.5.5: every address space except
-           // for __constant can be used as __generic.
-           (A == LangAS::opencl_generic && B != LangAS::opencl_constant) ||
-           // We also define global_device and global_host address spaces,
-           // to distinguish global pointers allocated on host from pointers
-           // allocated on device, which are a subset of __global.
-           (A == LangAS::opencl_global && (B == LangAS::opencl_global_device ||
-                                           B == LangAS::opencl_global_host)) ||
-           (A == LangAS::sycl_global && (B == LangAS::sycl_global_device ||
-                                         B == LangAS::sycl_global_host)) ||
-           // Consider pointer size address spaces to be equivalent to default.
-           ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
-            (isPtrSizeAddressSpace(B) || B == LangAS::Default)) ||
-           // Default is a superset of SYCL address spaces.
-           (A == LangAS::Default &&
-            (B == LangAS::sycl_private || B == LangAS::sycl_local ||
-             B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
-             B == LangAS::sycl_global_host)) ||
-           // In HIP device compilation, any cuda address space is allowed
-           // to implicitly cast into the default address space.
-           (A == LangAS::Default &&
-            (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
-             B == LangAS::cuda_shared));
+    return A == B || isTargetAddressSpaceSupersetOf(A, B, Ctx);
   }
+
+  static bool isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
+                                             const ASTContext &Ctx);
 
   /// Returns true if the address space in these qualifiers is equal to or
   /// a superset of the address space in the argument qualifiers.
-  bool isAddressSpaceSupersetOf(Qualifiers other) const {
-    return isAddressSpaceSupersetOf(getAddressSpace(), other.getAddressSpace());
+  bool isAddressSpaceSupersetOf(Qualifiers other, const ASTContext &Ctx) const {
+    return isAddressSpaceSupersetOf(getAddressSpace(), other.getAddressSpace(),
+                                    Ctx);
   }
 
   /// Determines if these qualifiers compatibly include another set.
   /// Generally this answers the question of whether an object with the other
   /// qualifiers can be safely used as an object with these qualifiers.
-  bool compatiblyIncludes(Qualifiers other) const {
-    return isAddressSpaceSupersetOf(other) &&
+  bool compatiblyIncludes(Qualifiers other, const ASTContext &Ctx) const {
+    return isAddressSpaceSupersetOf(other, Ctx) &&
            // ObjC GC qualifiers can match, be added, or be removed, but can't
            // be changed.
            (getObjCGCAttr() == other.getObjCGCAttr() || !hasObjCGCAttr() ||
@@ -1272,11 +1256,11 @@ public:
 
   /// Determine whether this type is more qualified than the other
   /// given type, requiring exact equality for non-CVR qualifiers.
-  bool isMoreQualifiedThan(QualType Other) const;
+  bool isMoreQualifiedThan(QualType Other, const ASTContext &Ctx) const;
 
   /// Determine whether this type is at least as qualified as the other
   /// given type, requiring exact equality for non-CVR qualifiers.
-  bool isAtLeastAsQualifiedAs(QualType Other) const;
+  bool isAtLeastAsQualifiedAs(QualType Other, const ASTContext &Ctx) const;
 
   QualType getNonReferenceType() const;
 
@@ -1424,11 +1408,12 @@ public:
   ///   address spaces overlap iff they are they same.
   /// OpenCL C v2.0 s6.5.5 adds:
   ///   __generic overlaps with any address space except for __constant.
-  bool isAddressSpaceOverlapping(QualType T) const {
+  bool isAddressSpaceOverlapping(QualType T, const ASTContext &Ctx) const {
     Qualifiers Q = getQualifiers();
     Qualifiers TQ = T.getQualifiers();
     // Address spaces overlap if at least one of them is a superset of another
-    return Q.isAddressSpaceSupersetOf(TQ) || TQ.isAddressSpaceSupersetOf(Q);
+    return Q.isAddressSpaceSupersetOf(TQ, Ctx) ||
+           TQ.isAddressSpaceSupersetOf(Q, Ctx);
   }
 
   /// Returns gc attribute of this type.
@@ -1801,6 +1786,15 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
+enum class SubstTemplateTypeParmTypeFlag {
+  None,
+
+  /// Whether to expand the pack using the stored PackIndex in place. This is
+  /// useful for e.g. substituting into an atomic constraint expression, where
+  /// that expression is part of an unexpanded pack.
+  ExpandPacksInPlace,
+};
+
 enum class ArraySizeModifier;
 enum class ElaboratedTypeKeyword;
 enum class VectorKind;
@@ -2169,6 +2163,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasNonCanonicalUnderlyingType : 1;
+
+    LLVM_PREFERRED_TYPE(SubstTemplateTypeParmTypeFlag)
+    unsigned SubstitutionFlag : 1;
 
     // The index of the template parameter this substitution represents.
     unsigned Index : 15;
@@ -5925,12 +5922,12 @@ class PackIndexingType final
   unsigned Size : 31;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned ExpandsToEmptyPack : 1;
+  unsigned FullySubstituted : 1;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
   PackIndexingType(const ASTContext &Context, QualType Canonical,
-                   QualType Pattern, Expr *IndexExpr, bool ExpandsToEmptyPack,
+                   QualType Pattern, Expr *IndexExpr, bool FullySubstituted,
                    ArrayRef<QualType> Expansions = {});
 
 public:
@@ -5954,7 +5951,9 @@ public:
 
   bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
 
-  bool expandsToEmptyPack() const { return ExpandsToEmptyPack; }
+  bool isFullySubstituted() const { return FullySubstituted; }
+
+  bool expandsToEmptyPack() const { return isFullySubstituted() && Size == 0; }
 
   ArrayRef<QualType> getExpansions() const {
     return {getExpansionsPtr(), Size};
@@ -5968,10 +5967,10 @@ public:
     if (hasSelectedType())
       getSelectedType().Profile(ID);
     else
-      Profile(ID, Context, getPattern(), getIndexExpr(), expandsToEmptyPack());
+      Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted());
   }
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Pattern, Expr *E, bool ExpandsToEmptyPack);
+                      QualType Pattern, Expr *E, bool FullySubstituted);
 
 private:
   const QualType *getExpansionsPtr() const {
@@ -6130,20 +6129,28 @@ public:
 private:
   friend class ASTContext; // ASTContext creates these
 
+  const Attr *Attribute;
+
   QualType ModifiedType;
   QualType EquivalentType;
 
   AttributedType(QualType canon, attr::Kind attrKind, QualType modified,
                  QualType equivalent)
-      : Type(Attributed, canon, equivalent->getDependence()),
-        ModifiedType(modified), EquivalentType(equivalent) {
-    AttributedTypeBits.AttrKind = attrKind;
-  }
+      : AttributedType(canon, attrKind, nullptr, modified, equivalent) {}
+
+  AttributedType(QualType canon, const Attr *attr, QualType modified,
+                 QualType equivalent);
+
+private:
+  AttributedType(QualType canon, attr::Kind attrKind, const Attr *attr,
+                 QualType modified, QualType equivalent);
 
 public:
   Kind getAttrKind() const {
     return static_cast<Kind>(AttributedTypeBits.AttrKind);
   }
+
+  const Attr *getAttr() const { return Attribute; }
 
   QualType getModifiedType() const { return ModifiedType; }
   QualType getEquivalentType() const { return EquivalentType; }
@@ -6176,25 +6183,6 @@ public:
 
   std::optional<NullabilityKind> getImmediateNullability() const;
 
-  /// Retrieve the attribute kind corresponding to the given
-  /// nullability kind.
-  static Kind getNullabilityAttrKind(NullabilityKind kind) {
-    switch (kind) {
-    case NullabilityKind::NonNull:
-      return attr::TypeNonNull;
-
-    case NullabilityKind::Nullable:
-      return attr::TypeNullable;
-
-    case NullabilityKind::NullableResult:
-      return attr::TypeNullableResult;
-
-    case NullabilityKind::Unspecified:
-      return attr::TypeNullUnspecified;
-    }
-    llvm_unreachable("Unknown nullability kind.");
-  }
-
   /// Strip off the top-level nullability annotation on the given
   /// type, if it's there.
   ///
@@ -6207,14 +6195,16 @@ public:
   static std::optional<NullabilityKind> stripOuterNullability(QualType &T);
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getAttrKind(), ModifiedType, EquivalentType);
+    Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent) {
+                      QualType modified, QualType equivalent,
+                      const Attr *attr) {
     ID.AddInteger(attrKind);
     ID.AddPointer(modified.getAsOpaquePtr());
     ID.AddPointer(equivalent.getAsOpaquePtr());
+    ID.AddPointer(attr);
   }
 
   static bool classof(const Type *T) {
@@ -6395,7 +6385,8 @@ class SubstTemplateTypeParmType final
   Decl *AssociatedDecl;
 
   SubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                            unsigned Index, std::optional<unsigned> PackIndex);
+                            unsigned Index, std::optional<unsigned> PackIndex,
+                            SubstTemplateTypeParmTypeFlag Flag);
 
 public:
   /// Gets the type that was substituted for the template
@@ -6424,21 +6415,31 @@ public:
     return SubstTemplateTypeParmTypeBits.PackIndex - 1;
   }
 
+  SubstTemplateTypeParmTypeFlag getSubstitutionFlag() const {
+    return static_cast<SubstTemplateTypeParmTypeFlag>(
+        SubstTemplateTypeParmTypeBits.SubstitutionFlag);
+  }
+
   bool isSugared() const { return true; }
   QualType desugar() const { return getReplacementType(); }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getReplacementType(), getAssociatedDecl(), getIndex(),
-            getPackIndex());
+            getPackIndex(), getSubstitutionFlag());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
                       const Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex) {
+                      std::optional<unsigned> PackIndex,
+                      SubstTemplateTypeParmTypeFlag Flag) {
     Replacement.Profile(ID);
     ID.AddPointer(AssociatedDecl);
     ID.AddInteger(Index);
     ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
+    ID.AddInteger(llvm::to_underlying(Flag));
+    assert((Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
+            PackIndex) &&
+           "ExpandPacksInPlace needs a valid PackIndex");
   }
 
   static bool classof(const Type *T) {
@@ -8097,24 +8098,26 @@ inline FunctionType::ExtInfo getFunctionExtInfo(QualType t) {
 /// is more qualified than "const int", "volatile int", and
 /// "int". However, it is not more qualified than "const volatile
 /// int".
-inline bool QualType::isMoreQualifiedThan(QualType other) const {
+inline bool QualType::isMoreQualifiedThan(QualType other,
+                                          const ASTContext &Ctx) const {
   Qualifiers MyQuals = getQualifiers();
   Qualifiers OtherQuals = other.getQualifiers();
-  return (MyQuals != OtherQuals && MyQuals.compatiblyIncludes(OtherQuals));
+  return (MyQuals != OtherQuals && MyQuals.compatiblyIncludes(OtherQuals, Ctx));
 }
 
 /// Determine whether this type is at last
 /// as qualified as the Other type. For example, "const volatile
 /// int" is at least as qualified as "const int", "volatile int",
 /// "int", and "const volatile int".
-inline bool QualType::isAtLeastAsQualifiedAs(QualType other) const {
+inline bool QualType::isAtLeastAsQualifiedAs(QualType other,
+                                             const ASTContext &Ctx) const {
   Qualifiers OtherQuals = other.getQualifiers();
 
   // Ignore __unaligned qualifier if this type is a void.
   if (getUnqualifiedType()->isVoidType())
     OtherQuals.removeUnaligned();
 
-  return getQualifiers().compatiblyIncludes(OtherQuals);
+  return getQualifiers().compatiblyIncludes(OtherQuals, Ctx);
 }
 
 /// If Type is a reference type (e.g., const

@@ -33,7 +33,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
   Clang-format options:
 
     --Werror                       - If set, changes formatting warnings to errors
-    --Wno-error=<value>            - If set don't error out on the specified warning type.
+    --Wno-error=<value>            - If set, don't error out on the specified warning type.
       =unknown                     -   If set, unknown format options are only warned about.
                                        This can be used to enable formatting, even if the
                                        configuration contains unknown (newer) options.
@@ -363,8 +363,3 @@ those as well).
 
 These commands use the file paths shown in the diff output
 so they will only work from the root of the repository.
-
-Current State of Clang Format for LLVM
-======================================
-
-The following table :doc:`ClangFormattedStatus` shows the current status of clang-formatting for the entire LLVM source tree.

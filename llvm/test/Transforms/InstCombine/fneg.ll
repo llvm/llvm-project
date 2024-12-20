@@ -1113,7 +1113,7 @@ define float @test_fneg_select_maxnum(float %x) {
 define <vscale x 2 x double> @test_fneg_select_svec(<vscale x 2 x i1> %cond, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: @test_fneg_select_svec(
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg fast <vscale x 2 x double> [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select fast <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x double> [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select fast <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x double> splat (double -0.000000e+00), <vscale x 2 x double> [[TMP2]]
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
 ;
   %1 = select <vscale x 2 x i1> %cond, <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> %b
@@ -1124,7 +1124,7 @@ define <vscale x 2 x double> @test_fneg_select_svec(<vscale x 2 x i1> %cond, <vs
 define <vscale x 2 x double> @test_fneg_select_svec_2(<vscale x 2 x i1> %cond, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: @test_fneg_select_svec_2(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = fneg fast <vscale x 2 x double> [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x double> [[A_NEG]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = select fast <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x double> [[A_NEG]], <vscale x 2 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = select <vscale x 2 x i1> %cond, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
@@ -1134,7 +1134,7 @@ define <vscale x 2 x double> @test_fneg_select_svec_2(<vscale x 2 x i1> %cond, <
 
 define <vscale x 2 x double> @test_fneg_select_svec_3(<vscale x 2 x i1> %cond, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: @test_fneg_select_svec_3(
-; CHECK-NEXT:    ret <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x double> splat (double -0.000000e+00)
 ;
   %1 = select <vscale x 2 x i1> %cond, <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> zeroinitializer
   %2 = fneg fast <vscale x 2 x double> %1

@@ -1001,7 +1001,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     char Char = String[i];
     if (Variant.BreakCharacters.contains(Char)) {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), false);
+        addAsmOperand(String.substr(Prev, i - Prev), false);
         Prev = i;
         IsIsolatedToken = false;
       }
@@ -1010,7 +1010,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     }
     if (Variant.TokenizingCharacters.contains(Char)) {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        addAsmOperand(String.substr(Prev, i - Prev), IsIsolatedToken);
         InTok = false;
         IsIsolatedToken = false;
       }
@@ -1021,7 +1021,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     }
     if (Variant.SeparatorCharacters.contains(Char)) {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        addAsmOperand(String.substr(Prev, i - Prev), IsIsolatedToken);
         InTok = false;
       }
       Prev = i + 1;
@@ -1032,7 +1032,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     switch (Char) {
     case '\\':
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), false);
+        addAsmOperand(String.substr(Prev, i - Prev), false);
         InTok = false;
         IsIsolatedToken = false;
       }
@@ -1045,7 +1045,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
 
     case '$': {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        addAsmOperand(String.substr(Prev, i - Prev), IsIsolatedToken);
         InTok = false;
         IsIsolatedToken = false;
       }
@@ -1059,7 +1059,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       size_t EndPos = String.find('}', i);
       assert(EndPos != StringRef::npos &&
              "Missing brace in operand reference!");
-      addAsmOperand(String.slice(i, EndPos + 1), IsIsolatedToken);
+      addAsmOperand(String.substr(i, EndPos + 1 - i), IsIsolatedToken);
       Prev = EndPos + 1;
       i = EndPos;
       IsIsolatedToken = false;
@@ -2491,7 +2491,6 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
     if (!CI.isUserClass())
       continue;
 
-    OS << "  // '" << CI.ClassName << "' class\n";
     OS << "  case " << CI.Name << ": {\n";
     OS << "    DiagnosticPredicate DP(Operand." << CI.PredicateMethod
        << "());\n";
@@ -2504,7 +2503,7 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
       OS << "    break;\n";
     } else
       OS << "    break;\n";
-    OS << "    }\n";
+    OS << "  }\n";
   }
   OS << "  } // end switch (Kind)\n\n";
 

@@ -908,6 +908,10 @@ fp16_fml_fallthrough:
       if (VersionNum < 6 ||
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
+    } else if (Triple.getVendor() == llvm::Triple::Apple &&
+               Triple.isOSBinFormatMachO()) {
+      // Firmwares on Apple platforms are strict-align by default.
+      Features.push_back("+strict-align");
     } else if (VersionNum < 7 ||
                Triple.getSubArch() ==
                    llvm::Triple::SubArchType::ARMSubArch_v6m ||

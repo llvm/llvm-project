@@ -15,7 +15,7 @@ define void @test_pr55096(i64 %c, ptr %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[DOTCAST]], 2008
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 6229, [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[TMP1]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -37,9 +37,9 @@ define void @test_pr55096(i64 %c, ptr %p) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; CHECK:       pred.store.continue3:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 340
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

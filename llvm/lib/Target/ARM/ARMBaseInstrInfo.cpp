@@ -45,7 +45,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1163,6 +1161,13 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
             .addImm(0)
             .addMemOperand(MMO)
             .add(predOps(ARMCC::AL));
+      } else if (ARM::cl_FPSCR_NZCVRegClass.hasSubClassEq(RC)) {
+        BuildMI(MBB, I, DebugLoc(), get(ARM::VSTR_FPSCR_NZCVQC_off))
+            .addReg(SrcReg, getKillRegState(isKill))
+            .addFrameIndex(FI)
+            .addImm(0)
+            .addMemOperand(MMO)
+            .add(predOps(ARMCC::AL));
       } else
         llvm_unreachable("Unknown reg class!");
       break;
@@ -1326,6 +1331,7 @@ Register ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case ARM::VSTRD:
   case ARM::VSTRS:
   case ARM::VSTR_P0_off:
+  case ARM::VSTR_FPSCR_NZCVQC_off:
   case ARM::MVE_VSTRWU32:
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
@@ -1413,6 +1419,12 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
           .add(predOps(ARMCC::AL));
     } else if (ARM::VCCRRegClass.hasSubClassEq(RC)) {
       BuildMI(MBB, I, DL, get(ARM::VLDR_P0_off), DestReg)
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMemOperand(MMO)
+          .add(predOps(ARMCC::AL));
+    } else if (ARM::cl_FPSCR_NZCVRegClass.hasSubClassEq(RC)) {
+      BuildMI(MBB, I, DL, get(ARM::VLDR_FPSCR_NZCVQC_off), DestReg)
           .addFrameIndex(FI)
           .addImm(0)
           .addMemOperand(MMO)
@@ -1577,6 +1589,7 @@ Register ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case ARM::VLDRD:
   case ARM::VLDRS:
   case ARM::VLDR_P0_off:
+  case ARM::VLDR_FPSCR_NZCVQC_off:
   case ARM::MVE_VLDRWU32:
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {

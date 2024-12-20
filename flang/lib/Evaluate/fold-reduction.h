@@ -47,7 +47,7 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{correction.Add(x, rounding)};
+          auto next{x.Subtract(correction, rounding)};
           overflow |= next.flags.test(RealFlag::Overflow);
           auto added{sum.Add(next.value, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
@@ -90,7 +90,7 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{correction.Add(x, rounding)};
+          auto next{x.Subtract(correction, rounding)};
           overflow |= next.flags.test(RealFlag::Overflow);
           auto added{sum.Add(next.value, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
@@ -348,7 +348,7 @@ public:
       overflow_ |= sum.overflow;
       element = sum.value;
     } else { // Real & Complex: use Kahan summation
-      auto next{array_.At(at).Add(correction_, rounding_)};
+      auto next{array_.At(at).Subtract(correction_, rounding_)};
       overflow_ |= next.flags.test(RealFlag::Overflow);
       auto sum{element.Add(next.value, rounding_)};
       overflow_ |= sum.flags.test(RealFlag::Overflow);

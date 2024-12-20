@@ -21,7 +21,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleLoader.h"

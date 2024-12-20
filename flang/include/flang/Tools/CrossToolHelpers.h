@@ -123,6 +123,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
   bool NSWOnLoopVarInc = false; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenMP = false; ///< Enable OpenMP lowering.
 };
 
 struct OffloadModuleOpts {

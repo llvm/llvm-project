@@ -4,7 +4,7 @@
 define i32 @test1(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test1(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]])
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -17,7 +17,7 @@ define i32 @test1(ptr %p, ptr %q) {
 define i32 @test2(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test2(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -56,7 +56,7 @@ define i32 @test4(ptr %p, ptr %q) {
 define i32 @test5(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test5(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA6]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -69,7 +69,7 @@ define i32 @test5(ptr %p, ptr %q) {
 define i32 @test6(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test6(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA6]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -82,7 +82,7 @@ define i32 @test6(ptr %p, ptr %q) {
 define i32 @test7(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test7(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]])
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA7:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -129,7 +129,7 @@ define i32 @test10(ptr %p, ptr %q) {
 ; and not just the common final access type.
 ; CHECK-LABEL: define i32 @test10(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA7:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA10:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -172,8 +172,11 @@ declare i32 @foo(ptr) readonly
 ; CHECK: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
 ; CHECK: [[META5]] = !{!"B", [[META2]]}
 ; CHECK: [[TBAA6]] = !{[[META2]], [[META2]], i64 0}
-; CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], i64 0}
-; CHECK: [[META8]] = !{!"struct X", [[META9]], i64 0}
-; CHECK: [[META9]] = !{!"int", [[META10:![0-9]+]], i64 0}
-; CHECK: [[META10]] = !{!"char", [[META3]], i64 0}
+; CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+; CHECK: [[META8]] = !{!"scalar type", [[META9:![0-9]+]]}
+; CHECK: [[META9]] = !{!"another root"}
+; CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META12:![0-9]+]], i64 0}
+; CHECK: [[META11]] = !{!"struct X", [[META12]], i64 0}
+; CHECK: [[META12]] = !{!"int", [[META13:![0-9]+]], i64 0}
+; CHECK: [[META13]] = !{!"char", [[META3]], i64 0}
 ;.

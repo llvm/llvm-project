@@ -49,7 +49,7 @@ LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
   return stream;
 }
 
-template <uint16_t opcode>
+template <uint32_t opcode>
 LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
   uint64_t ret = 0;
   rpc::Client::Port port = rpc::client.open<opcode>();

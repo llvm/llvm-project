@@ -80,6 +80,18 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(UpgradeDataLayoutString("E-m:e-i64:64-n32:64-S128", "sparcv9"),
             "E-m:e-i64:64-i128:128-n32:64-S128");
 
+  // Check that MIPS64 targets add -i128:128.
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128", "mips64"),
+            "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "e-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128", "mips64el"),
+            "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  // but that MIPS64 with o32 does not.
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64", "mips64el"),
+            "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64");
+
   // Check that SPIR && SPIRV targets add -G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spir"), "e-p:32:32-G1");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spir64"), "e-p:32:32-G1");

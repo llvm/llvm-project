@@ -24,10 +24,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
-#include <utility>
 #include <cassert>
+#include <utility>
 #include <vector>
 
 using namespace clang;

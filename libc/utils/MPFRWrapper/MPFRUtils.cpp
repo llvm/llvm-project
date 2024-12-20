@@ -262,6 +262,7 @@ public:
 
       int d = mpz_tstbit(integer, 0);
       mpfr_set_si(result.value, d ? -1 : 1, mpfr_rounding);
+      mpz_clear(integer);
       return result;
     }
 
@@ -559,6 +560,56 @@ public:
     return result;
   }
 
+  MPFRNumber tanpi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+
+    mpfr_tanpi(result.value, value, mpfr_rounding);
+    return result;
+#else
+    MPFRNumber value_ret_exact(*this);
+    MPFRNumber value_one(*this);
+    mpfr_set_si(value_one.value, 1, MPFR_RNDN);
+    mpfr_fmod(value_ret_exact.value, value, value_one.value, mpfr_rounding);
+    mpfr_mul_si(value_ret_exact.value, value_ret_exact.value, 4, MPFR_RNDN);
+
+    if (mpfr_integer_p(value_ret_exact.value)) {
+      int mod = mpfr_get_si(value_ret_exact.value, MPFR_RNDN);
+      mod = (mod < 0 ? -1 * mod : mod);
+
+      switch (mod) {
+      case 0:
+        mpfr_set_si(result.value, 0, mpfr_rounding);
+        break;
+      case 1:
+        mpfr_set_si(result.value, (mpfr_signbit(value) ? -1 : 1),
+                    mpfr_rounding);
+        break;
+      case 2: {
+        auto d = mpfr_get_si(value, MPFR_RNDZ);
+        d += mpfr_sgn(value) > 0 ? 0 : 1;
+        mpfr_set_inf(result.value, (d & 1) ? -1 : 1);
+        break;
+      }
+      case 3:
+        mpfr_set_si(result.value, (mpfr_signbit(value) ? 1 : -1),
+                    mpfr_rounding);
+        break;
+      }
+
+      return result;
+    }
+
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_tan(result.value, value_pi.value, mpfr_rounding);
+    return result;
+#endif
+  }
+
   MPFRNumber trunc() const {
     MPFRNumber result(*this);
     mpfr_trunc(result.value, value);
@@ -797,6 +848,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.tan();
   case Operation::Tanh:
     return mpfrInput.tanh();
+  case Operation::Tanpi:
+    return mpfrInput.tanpi();
   case Operation::Trunc:
     return mpfrInput.trunc();
   default:

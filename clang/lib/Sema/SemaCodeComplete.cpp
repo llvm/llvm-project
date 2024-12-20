@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
@@ -22,7 +23,6 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/QualTypeNames.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
@@ -42,14 +42,12 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -1246,7 +1244,8 @@ enum class OverloadCompare { BothViable, Dominates, Dominated };
 static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
                                         const CXXMethodDecl &Incumbent,
                                         const Qualifiers &ObjectQuals,
-                                        ExprValueKind ObjectKind) {
+                                        ExprValueKind ObjectKind,
+                                        const ASTContext &Ctx) {
   // Base/derived shadowing is handled elsewhere.
   if (Candidate.getDeclContext() != Incumbent.getDeclContext())
     return OverloadCompare::BothViable;
@@ -1280,8 +1279,8 @@ static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
   // So make some decision based on the qualifiers.
   Qualifiers CandidateQual = Candidate.getMethodQualifiers();
   Qualifiers IncumbentQual = Incumbent.getMethodQualifiers();
-  bool CandidateSuperset = CandidateQual.compatiblyIncludes(IncumbentQual);
-  bool IncumbentSuperset = IncumbentQual.compatiblyIncludes(CandidateQual);
+  bool CandidateSuperset = CandidateQual.compatiblyIncludes(IncumbentQual, Ctx);
+  bool IncumbentSuperset = IncumbentQual.compatiblyIncludes(CandidateQual, Ctx);
   if (CandidateSuperset == IncumbentSuperset)
     return OverloadCompare::BothViable;
   return IncumbentSuperset ? OverloadCompare::Dominates
@@ -1452,7 +1451,8 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           Result &Incumbent = Results[Entry.second];
           switch (compareOverloads(*Method,
                                    *cast<CXXMethodDecl>(Incumbent.Declaration),
-                                   ObjectTypeQualifiers, ObjectKind)) {
+                                   ObjectTypeQualifiers, ObjectKind,
+                                   CurContext->getParentASTContext())) {
           case OverloadCompare::Dominates:
             // Replace the dominated overload with this one.
             // FIXME: if the overload dominates multiple incumbents then we
@@ -1836,6 +1836,9 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
       Builder.AddChunk(CodeCompletionString::CK_RightParen);
       Results.AddResult(Result(Builder.TakeString()));
     }
+
+    if (LangOpts.Char8 || LangOpts.CPlusPlus20)
+      Results.AddResult(Result("char8_t", CCP_Type));
   } else
     Results.AddResult(Result("__auto_type", CCP_Type));
 
@@ -1888,6 +1891,9 @@ AddStorageSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
     Results.AddResult(Result("constexpr"));
     Results.AddResult(Result("thread_local"));
   }
+
+  if (LangOpts.CPlusPlus20)
+    Results.AddResult(Result("constinit"));
 }
 
 static void
@@ -1911,6 +1917,9 @@ AddFunctionSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
   case SemaCodeCompletion::PCC_Template:
     if (LangOpts.CPlusPlus || LangOpts.C99)
       Results.AddResult(Result("inline"));
+
+    if (LangOpts.CPlusPlus20)
+      Results.AddResult(Result("consteval"));
     break;
 
   case SemaCodeCompletion::PCC_ObjCInstanceVariableList:
@@ -2186,6 +2195,69 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       } else {
         Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
       }
+
+      if (SemaRef.getLangOpts().CPlusPlus20 &&
+          SemaRef.getLangOpts().CPlusPlusModules) {
+        clang::Module *CurrentModule = SemaRef.getCurrentModule();
+        if (SemaRef.CurContext->isTranslationUnit()) {
+          /// Global module fragment can only be declared in the beginning of
+          /// the file. CurrentModule should be null in this case.
+          if (!CurrentModule) {
+            // module;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+
+          /// Named module should be declared in the beginning of the file,
+          /// or after the global module fragment.
+          if (!CurrentModule ||
+              CurrentModule->Kind == Module::ExplicitGlobalModuleFragment ||
+              CurrentModule->Kind == Module::ImplicitGlobalModuleFragment) {
+            // export module;
+            // module name;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddPlaceholderChunk("name");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+
+          /// Import can occur in non module file or after the named module
+          /// declaration.
+          if (!CurrentModule ||
+              CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+              CurrentModule->Kind == Module::ModulePartitionInterface) {
+            // import name;
+            Builder.AddTypedTextChunk("import");
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddPlaceholderChunk("name");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+
+          if (CurrentModule &&
+              (CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+               CurrentModule->Kind == Module::ModulePartitionInterface)) {
+            // module: private;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_Colon);
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddTypedTextChunk("private");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+        }
+
+        // export
+        if (!CurrentModule ||
+            CurrentModule->Kind != Module::ModuleKind::PrivateModuleFragment)
+          Results.AddResult(Result("export", CodeCompletionResult::RK_Keyword));
+      }
     }
 
     if (SemaRef.getLangOpts().ObjC)
@@ -2253,6 +2325,11 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     [[fallthrough]];
 
   case SemaCodeCompletion::PCC_Template:
+    if (SemaRef.getLangOpts().CPlusPlus20 &&
+        CCC == SemaCodeCompletion::PCC_Template)
+      Results.AddResult(Result("concept", CCP_Keyword));
+    [[fallthrough]];
+
   case SemaCodeCompletion::PCC_MemberTemplate:
     if (SemaRef.getLangOpts().CPlusPlus && Results.includeCodePatterns()) {
       // template < parameters >
@@ -2264,6 +2341,11 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     } else {
       Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
     }
+
+    if (SemaRef.getLangOpts().CPlusPlus20 &&
+        (CCC == SemaCodeCompletion::PCC_Template ||
+         CCC == SemaCodeCompletion::PCC_MemberTemplate))
+      Results.AddResult(Result("requires", CCP_Keyword));
 
     AddStorageSpecifiers(CCC, SemaRef.getLangOpts(), Results);
     AddFunctionSpecifiers(CCC, SemaRef.getLangOpts(), Results);
@@ -2486,6 +2568,14 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       Builder.AddPlaceholderChunk("expression");
       Builder.AddChunk(CodeCompletionString::CK_SemiColon);
       Results.AddResult(Result(Builder.TakeString()));
+      // "co_return expression ;" for coroutines(C++20).
+      if (SemaRef.getLangOpts().CPlusPlus20) {
+        Builder.AddTypedTextChunk("co_return");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddPlaceholderChunk("expression");
+        Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+        Results.AddResult(Result(Builder.TakeString()));
+      }
       // When boolean, also add 'return true;' and 'return false;'.
       if (ReturnType->isBooleanType()) {
         Builder.AddTypedTextChunk("return true");
@@ -2705,6 +2795,44 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
         Builder.AddPlaceholderChunk("parameter-pack");
         Builder.AddChunk(CodeCompletionString::CK_RightParen);
         Results.AddResult(Result(Builder.TakeString()));
+      }
+
+      if (SemaRef.getLangOpts().CPlusPlus20) {
+        // co_await expression
+        Builder.AddTypedTextChunk("co_await");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddPlaceholderChunk("expression");
+        Results.AddResult(Result(Builder.TakeString()));
+
+        // co_yield expression
+        Builder.AddTypedTextChunk("co_yield");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddPlaceholderChunk("expression");
+        Results.AddResult(Result(Builder.TakeString()));
+
+        // requires (parameters) { requirements }
+        Builder.AddResultTypeChunk("bool");
+        Builder.AddTypedTextChunk("requires");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+        Builder.AddPlaceholderChunk("parameters");
+        Builder.AddChunk(CodeCompletionString::CK_RightParen);
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddPlaceholderChunk("requirements");
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+        Results.AddResult(Result(Builder.TakeString()));
+
+        if (SemaRef.CurContext->isRequiresExprBody()) {
+          // requires expression ;
+          Builder.AddTypedTextChunk("requires");
+          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+          Builder.AddPlaceholderChunk("expression");
+          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+          Results.AddResult(Result(Builder.TakeString()));
+        }
       }
     }
 
@@ -5422,7 +5550,7 @@ private:
 
   // This visitor infers members of T based on traversing expressions/types
   // that involve T. It is invoked with code known to be valid for T.
-  class ValidVisitor : public RecursiveASTVisitor<ValidVisitor> {
+  class ValidVisitor : public DynamicRecursiveASTVisitor {
     ConceptInfo *Outer;
     const TemplateTypeParmType *T;
 
@@ -5440,7 +5568,8 @@ private:
     }
 
     // In T.foo or T->foo, `foo` is a member function/variable.
-    bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
+    bool
+    VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) override {
       const Type *Base = E->getBaseType().getTypePtr();
       bool IsArrow = E->isArrow();
       if (Base->isPointerType() && IsArrow) {
@@ -5453,14 +5582,14 @@ private:
     }
 
     // In T::foo, `foo` is a static member function/variable.
-    bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
+    bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) override {
       if (E->getQualifier() && isApprox(E->getQualifier()->getAsType(), T))
         addValue(E, E->getDeclName(), Member::Colons);
       return true;
     }
 
     // In T::typename foo, `foo` is a type.
-    bool VisitDependentNameType(DependentNameType *DNT) {
+    bool VisitDependentNameType(DependentNameType *DNT) override {
       const auto *Q = DNT->getQualifier();
       if (Q && isApprox(Q->getAsType(), T))
         addType(DNT->getIdentifier());
@@ -5469,7 +5598,7 @@ private:
 
     // In T::foo::bar, `foo` must be a type.
     // VisitNNS() doesn't exist, and TraverseNNS isn't always called :-(
-    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) {
+    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) override {
       if (NNSL) {
         NestedNameSpecifier *NNS = NNSL.getNestedNameSpecifier();
         const auto *Q = NNS->getPrefix();
@@ -5477,14 +5606,14 @@ private:
           addType(NNS->getAsIdentifier());
       }
       // FIXME: also handle T::foo<X>::bar
-      return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSL);
+      return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSL);
     }
 
     // FIXME also handle T::foo<X>
 
     // Track the innermost caller/callee relationship so we can tell if a
     // nested expr is being called as a function.
-    bool VisitCallExpr(CallExpr *CE) {
+    bool VisitCallExpr(CallExpr *CE) override {
       Caller = CE;
       Callee = CE->getCallee();
       return true;

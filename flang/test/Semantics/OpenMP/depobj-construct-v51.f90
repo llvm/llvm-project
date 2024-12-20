@@ -2,12 +2,12 @@
 
 subroutine f04
   integer :: obj
-!ERROR: An UPDATE clause on a DEPOBJ construct must not have SOURCE, SINK or DEPOBJ as dependence-type
+!ERROR: An UPDATE clause on a DEPOBJ construct must not have SINK, SOURCE or DEPOBJ as dependence type
   !$omp depobj(obj) update(source)
 end
 
 subroutine f05
   integer :: obj
-!ERROR: An UPDATE clause on a DEPOBJ construct must not have SOURCE, SINK or DEPOBJ as dependence-type
+!ERROR: An UPDATE clause on a DEPOBJ construct must not have SINK, SOURCE or DEPOBJ as dependence type
   !$omp depobj(obj) update(depobj)
 end
