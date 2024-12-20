@@ -1,3 +1,5 @@
+# REQUIRES: system-darwin
+#
 # Tests that LLDB correctly finds the implementation
 # DIE (with a `DW_AT_APPLE_objc_complete_type`)
 # given an interface DIE (without said attribute).
