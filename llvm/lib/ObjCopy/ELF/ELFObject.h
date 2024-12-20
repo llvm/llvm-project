@@ -1235,10 +1235,10 @@ public:
     Segments.emplace_back(std::make_unique<Segment>(Data));
     return *Segments.back();
   }
-  void updateSegmentData(
-      Segment &S, std::vector<uint8_t> NewSegmentData,
-      const DenseMap<const SectionBase *, std::pair<uint64_t, uint64_t>>
-          &SectionMapping);
+  using OffsetAndSize = std::pair<uint64_t, uint64_t>;
+  using Section2OffsetAndSize = DenseMap<const SectionBase *, OffsetAndSize>;
+  void updateSegmentData(Segment &S, std::vector<uint8_t> NewSegmentData,
+                         const Section2OffsetAndSize &SectionMapping);
   bool isRelocatable() const {
     return (Type != ELF::ET_DYN && Type != ELF::ET_EXEC) || MustBeRelocatable;
   }

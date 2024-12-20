@@ -609,95 +609,122 @@ static void addSymbol(Object &Obj, const NewSymbolInfo &SymInfo,
       Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
 }
 
+namespace {
+struct RemoveNoteDetail {
+  struct DeletedRange {
+    uint64_t OldFrom;
+    uint64_t OldTo;
+    uint64_t NewPos;
+  };
+
+  template <class ELFT>
+  static std::vector<DeletedRange>
+  findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
+                    ArrayRef<RemoveNoteInfo> NotesToRemove);
+  static std::vector<uint8_t> updateData(ArrayRef<uint8_t> OldData,
+                                         ArrayRef<DeletedRange> ToRemove);
+  static Object::Section2OffsetAndSize
+  getSectionMapping(const Segment &Seg, ArrayRef<DeletedRange> ToRemove);
+};
+
+} // namespace
+
 template <class ELFT>
-static Error removeNoteImpl(Object &Obj,
-                            ArrayRef<RemoveNoteInfo> NotesToRemove) {
+std::vector<RemoveNoteDetail::DeletedRange>
+RemoveNoteDetail::findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
+                                    ArrayRef<RemoveNoteInfo> NotesToRemove) {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT);
-  for (Segment &Seg : Obj.segments()) {
-    // TODO: Support nested segments
-    if (Seg.Type != PT_NOTE || Seg.ParentSegment)
-      continue;
+  std::vector<DeletedRange> ToRemove;
+  uint64_t CurPos = 0;
+  uint64_t NewPos = 0;
+  while (CurPos + sizeof(Elf_Nhdr) <= Data.size()) {
+    auto Nhdr = reinterpret_cast<const Elf_Nhdr *>(Data.data() + CurPos);
+    size_t FullSize = Nhdr->getSize(Align);
+    if (CurPos + FullSize > Data.size())
+      break;
+    Elf_Note Note(*Nhdr);
+    bool ShouldRemove =
+        llvm::any_of(NotesToRemove, [&Note](const RemoveNoteInfo &NoteInfo) {
+          return NoteInfo.TypeId == Note.getType() &&
+                 (NoteInfo.Name.empty() || NoteInfo.Name == Note.getName());
+        });
+    if (ShouldRemove)
+      ToRemove.push_back({CurPos, CurPos + FullSize, NewPos});
+    else
+      NewPos += FullSize;
+    CurPos += FullSize;
+  }
+  return ToRemove;
+}
 
-    // Find chunks of the segment data to remove
-    struct DeletedRange {
-      uint64_t OldFrom;
-      uint64_t OldTo;
-      uint64_t NewOffset;
-    };
-    std::vector<DeletedRange> DataToRemove;
-    ArrayRef<uint8_t> OldData = Seg.getContents();
-    size_t Align = std::max<size_t>(4, Seg.Align);
-    uint64_t Offset = 0;
-    while (Offset + sizeof(Elf_Nhdr) <= OldData.size()) {
-      auto Nhdr = reinterpret_cast<const Elf_Nhdr *>(OldData.data() + Offset);
-      size_t FullSize = Nhdr->getSize(Align);
-      if (Offset + FullSize > OldData.size())
-        break;
-      Elf_Note Note(*Nhdr);
-      if (llvm::any_of(NotesToRemove, [&](const RemoveNoteInfo &NoteInfo) {
-            return NoteInfo.TypeId == Note.getType() &&
-                   (NoteInfo.Name.empty() || NoteInfo.Name == Note.getName());
-          }))
-        DataToRemove.push_back({Offset, Offset + FullSize, 0});
-      Offset += FullSize;
-    }
-    if (DataToRemove.empty())
-      continue;
-
-    // Prepare the new segment data
-    std::vector<uint8_t> NewData;
-    NewData.reserve(OldData.size());
-    Offset = 0;
-    for (auto &RemRange : DataToRemove) {
-      if (Offset < RemRange.OldFrom) {
-        auto Slice = OldData.slice(Offset, RemRange.OldFrom - Offset);
-        NewData.insert(NewData.end(), Slice.begin(), Slice.end());
-      }
-      RemRange.NewOffset = NewData.size();
-      Offset = RemRange.OldTo;
-    }
-    if (Offset < OldData.size()) {
-      auto Slice = OldData.slice(Offset);
+std::vector<uint8_t>
+RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
+                             ArrayRef<DeletedRange> ToRemove) {
+  std::vector<uint8_t> NewData;
+  NewData.reserve(OldData.size());
+  uint64_t CurPos = 0;
+  for (auto &RemRange : ToRemove) {
+    if (CurPos < RemRange.OldFrom) {
+      auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
       NewData.insert(NewData.end(), Slice.begin(), Slice.end());
     }
-
-    auto CalculateNewOffset = [&](uint64_t SecOffset) {
-      uint64_t Offset = SecOffset - Seg.Offset;
-      auto It =
-          llvm::upper_bound(DataToRemove, Offset,
-                            [](const uint64_t &Off, const DeletedRange &Range) {
-                              return Off < Range.OldFrom;
-                            });
-      if (It != DataToRemove.begin()) {
-        --It;
-        Offset = (Offset > It->OldTo) ? (Offset - It->OldTo + It->NewOffset)
-                                      : It->NewOffset;
-      }
-      return Offset + Seg.Offset;
-    };
-
-    // Remap the segment's sections
-    DenseMap<const SectionBase *, std::pair<uint64_t, uint64_t>> Mapping;
-    for (const SectionBase *Sec : Seg.Sections) {
-      uint64_t NewOffset = CalculateNewOffset(Sec->Offset);
-      uint64_t NewSize =
-          CalculateNewOffset(Sec->Offset + Sec->Size) - NewOffset;
-      Mapping.try_emplace(Sec, NewOffset, NewSize);
-    }
-
-    Obj.updateSegmentData(Seg, std::move(NewData), Mapping);
+    assert(RemRange.NewPos == NewData.size());
+    CurPos = RemRange.OldTo;
   }
-  return Error::success();
+  if (CurPos < OldData.size()) {
+    auto Slice = OldData.slice(CurPos);
+    NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+  }
+  return NewData;
+}
+
+Object::Section2OffsetAndSize
+RemoveNoteDetail::getSectionMapping(const Segment &Seg,
+                                    ArrayRef<DeletedRange> ToRemove) {
+  auto CalculateNewOffset = [&](uint64_t SecOffset) {
+    uint64_t Pos = SecOffset - Seg.Offset;
+    auto It = llvm::upper_bound(
+        ToRemove, Pos, [](const uint64_t &Pos, const DeletedRange &Range) {
+          return Pos < Range.OldFrom;
+        });
+    if (It != ToRemove.begin()) {
+      --It;
+      Pos = (Pos > It->OldTo) ? (Pos - It->OldTo + It->NewPos) : It->NewPos;
+    }
+    return Pos + Seg.Offset;
+  };
+
+  // Remap the segment's sections
+  Object::Section2OffsetAndSize Mapping;
+  for (const SectionBase *Sec : Seg.Sections) {
+    uint64_t NewOffset = CalculateNewOffset(Sec->Offset);
+    uint64_t NewSize = CalculateNewOffset(Sec->Offset + Sec->Size) - NewOffset;
+    Mapping.try_emplace(Sec, NewOffset, NewSize);
+  }
+  return Mapping;
 }
 
 static Error removeNote(Object &Obj, endianness Endianness,
                         ArrayRef<RemoveNoteInfo> NotesToRemove) {
-  // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
-  // header, so the parsers are the same.
-  if (Endianness == endianness::little)
-    return removeNoteImpl<ELF64LE>(Obj, NotesToRemove);
-  else
-    return removeNoteImpl<ELF64BE>(Obj, NotesToRemove);
+  for (Segment &Seg : Obj.segments()) {
+    // TODO: Support nested segments
+    if (Seg.Type != PT_NOTE || Seg.ParentSegment)
+      continue;
+    ArrayRef<uint8_t> OldData = Seg.getContents();
+    size_t Align = std::max<size_t>(4, Seg.Align);
+    // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
+    // header, so the parsers are the same.
+    auto ToRemove = (Endianness == endianness::little)
+                        ? RemoveNoteDetail::findNotesToRemove<ELF64LE>(
+                              OldData, Align, NotesToRemove)
+                        : RemoveNoteDetail::findNotesToRemove<ELF64BE>(
+                              OldData, Align, NotesToRemove);
+    if (!ToRemove.empty())
+      Obj.updateSegmentData(Seg,
+                            RemoveNoteDetail::updateData(OldData, ToRemove),
+                            RemoveNoteDetail::getSectionMapping(Seg, ToRemove));
+  }
+  return Error::success();
 }
 
 static Error
