@@ -736,6 +736,8 @@ Improvements to Clang's diagnostics
       return ptr + index < ptr; // warning
     }
 
+- Fix -Wdangling false positives on conditional operators (#120206).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
