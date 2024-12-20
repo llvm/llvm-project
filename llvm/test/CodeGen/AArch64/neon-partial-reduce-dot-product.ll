@@ -558,3 +558,91 @@ define <2 x i32> @not_udot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) {
   %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <4 x i32> %mult)
   ret <2 x i32> %partial.reduce
 }
+
+define <2 x i64> @udot_different_types(<2 x i64> %acc, <8 x i16> %a, <8 x i8> %b){
+; CHECK-LABEL: udot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    ushll v3.4s, v1.4h, #0
+; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    ushll v4.4s, v2.4h, #0
+; CHECK-NEXT:    ushll2 v2.4s, v2.8h, #0
+; CHECK-NEXT:    umull v5.2d, v1.2s, v2.2s
+; CHECK-NEXT:    umlal v0.2d, v3.2s, v4.2s
+; CHECK-NEXT:    umlal2 v0.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umlal2 v5.2d, v3.4s, v4.4s
+; CHECK-NEXT:    add v0.2d, v5.2d, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = zext <8 x i16> %a to <8 x i64>
+  %b.wide = zext <8 x i8> %b to <8 x i64>
+  %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  ret <2 x i64> %partial.reduce
+}
+
+define <2 x i64> @sdot_different_types(<2 x i64> %acc, <8 x i16> %a, <8 x i8> %b){
+; CHECK-LABEL: sdot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-NEXT:    sshll v3.4s, v1.4h, #0
+; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    sshll v4.4s, v2.4h, #0
+; CHECK-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-NEXT:    smull v5.2d, v1.2s, v2.2s
+; CHECK-NEXT:    smlal v0.2d, v3.2s, v4.2s
+; CHECK-NEXT:    smlal2 v0.2d, v1.4s, v2.4s
+; CHECK-NEXT:    smlal2 v5.2d, v3.4s, v4.4s
+; CHECK-NEXT:    add v0.2d, v5.2d, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = sext <8 x i16> %a to <8 x i64>
+  %b.wide = sext <8 x i8> %b to <8 x i64>
+  %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  ret <2 x i64> %partial.reduce
+}
+
+define <2 x i64> @usdot_different_types(<2 x i64> %acc, <8 x i16> %a, <8 x i8> %b){
+; CHECK-LABEL: usdot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-NEXT:    ushll v3.4s, v1.4h, #0
+; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    sshll v4.4s, v2.4h, #0
+; CHECK-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-NEXT:    smull v5.2d, v1.2s, v2.2s
+; CHECK-NEXT:    smlal v0.2d, v3.2s, v4.2s
+; CHECK-NEXT:    smlal2 v0.2d, v1.4s, v2.4s
+; CHECK-NEXT:    smlal2 v5.2d, v3.4s, v4.4s
+; CHECK-NEXT:    add v0.2d, v5.2d, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = zext <8 x i16> %a to <8 x i64>
+  %b.wide = sext <8 x i8> %b to <8 x i64>
+  %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  ret <2 x i64> %partial.reduce
+}
+
+define <2 x i64> @sudot_different_types(<2 x i64> %acc, <8 x i16> %a, <8 x i8> %b){
+; CHECK-LABEL: sudot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    sshll v3.4s, v1.4h, #0
+; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    ushll v4.4s, v2.4h, #0
+; CHECK-NEXT:    ushll2 v2.4s, v2.8h, #0
+; CHECK-NEXT:    smull v5.2d, v1.2s, v2.2s
+; CHECK-NEXT:    smlal v0.2d, v3.2s, v4.2s
+; CHECK-NEXT:    smlal2 v0.2d, v1.4s, v2.4s
+; CHECK-NEXT:    smlal2 v5.2d, v3.4s, v4.4s
+; CHECK-NEXT:    add v0.2d, v5.2d, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = sext <8 x i16> %a to <8 x i64>
+  %b.wide = zext <8 x i8> %b to <8 x i64>
+  %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  ret <2 x i64> %partial.reduce
+}

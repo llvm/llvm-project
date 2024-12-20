@@ -497,3 +497,133 @@ entry:
   %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i64(<vscale x 2 x i64> %acc, <vscale x 8 x i64> %mult)
   ret <vscale x 2 x i64> %partial.reduce
 }
+
+define <vscale x 2 x i64> @udot_different_types(<vscale x 2 x i64> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i8> %b){
+; CHECK-LABEL: udot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z4.s, z2.h
+; CHECK-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEXT:    uunpklo z5.d, z3.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    uunpklo z7.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    uunpklo z6.d, z4.s
+; CHECK-NEXT:    uunpkhi z4.d, z4.s
+; CHECK-NEXT:    uunpklo z24.d, z2.s
+; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    mul z3.d, z3.d, z4.d
+; CHECK-NEXT:    mla z0.d, p0/m, z5.d, z6.d
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    mla z1.d, p0/m, z7.d, z24.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = zext <vscale x 8 x i16> %a to <vscale x 8 x i64>
+  %b.wide = zext <vscale x 8 x i8> %b to <vscale x 8 x i64>
+  %mult = mul nuw nsw <vscale x 8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i64(<vscale x 2 x i64> %acc, <vscale x 8 x i64> %mult)
+  ret <vscale x 2 x i64> %partial.reduce
+}
+
+define <vscale x 2 x i64> @sdot_different_types(<vscale x 2 x i64> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i8> %b){
+; CHECK-LABEL: sdot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    sunpklo z3.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sunpklo z5.d, z3.s
+; CHECK-NEXT:    sunpkhi z3.d, z3.s
+; CHECK-NEXT:    sunpklo z7.d, z1.s
+; CHECK-NEXT:    sunpklo z4.s, z2.h
+; CHECK-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
+; CHECK-NEXT:    sunpklo z6.d, z4.s
+; CHECK-NEXT:    sunpkhi z4.d, z4.s
+; CHECK-NEXT:    sunpklo z24.d, z2.s
+; CHECK-NEXT:    sunpkhi z2.d, z2.s
+; CHECK-NEXT:    mul z3.d, z3.d, z4.d
+; CHECK-NEXT:    mla z0.d, p0/m, z5.d, z6.d
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    mla z1.d, p0/m, z7.d, z24.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = sext <vscale x 8 x i16> %a to <vscale x 8 x i64>
+  %b.wide = sext <vscale x 8 x i8> %b to <vscale x 8 x i64>
+  %mult = mul nuw nsw <vscale x 8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i64(<vscale x 2 x i64> %acc, <vscale x 8 x i64> %mult)
+  ret <vscale x 2 x i64> %partial.reduce
+}
+
+define <vscale x 2 x i64> @usdot_different_types(<vscale x 2 x i64> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i8> %b){
+; CHECK-LABEL: usdot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z5.d, z3.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    uunpklo z7.d, z1.s
+; CHECK-NEXT:    sunpklo z4.s, z2.h
+; CHECK-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    sunpklo z6.d, z4.s
+; CHECK-NEXT:    sunpkhi z4.d, z4.s
+; CHECK-NEXT:    sunpklo z24.d, z2.s
+; CHECK-NEXT:    sunpkhi z2.d, z2.s
+; CHECK-NEXT:    mul z3.d, z3.d, z4.d
+; CHECK-NEXT:    mla z0.d, p0/m, z5.d, z6.d
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    mla z1.d, p0/m, z7.d, z24.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = zext <vscale x 8 x i16> %a to <vscale x 8 x i64>
+  %b.wide = sext <vscale x 8 x i8> %b to <vscale x 8 x i64>
+  %mult = mul nuw nsw <vscale x 8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i64(<vscale x 2 x i64> %acc, <vscale x 8 x i64> %mult)
+  ret <vscale x 2 x i64> %partial.reduce
+}
+
+define <vscale x 2 x i64> @sudot_different_types(<vscale x 2 x i64> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i8> %b){
+; CHECK-LABEL: sudot_different_types:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-NEXT:    sunpklo z3.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z4.s, z2.h
+; CHECK-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEXT:    sunpklo z5.d, z3.s
+; CHECK-NEXT:    sunpkhi z3.d, z3.s
+; CHECK-NEXT:    sunpklo z7.d, z1.s
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
+; CHECK-NEXT:    uunpklo z6.d, z4.s
+; CHECK-NEXT:    uunpkhi z4.d, z4.s
+; CHECK-NEXT:    uunpklo z24.d, z2.s
+; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    mul z3.d, z3.d, z4.d
+; CHECK-NEXT:    mla z0.d, p0/m, z5.d, z6.d
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    mla z1.d, p0/m, z7.d, z24.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = sext <vscale x 8 x i16> %a to <vscale x 8 x i64>
+  %b.wide = zext <vscale x 8 x i8> %b to <vscale x 8 x i64>
+  %mult = mul nuw nsw <vscale x 8 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i64(<vscale x 2 x i64> %acc, <vscale x 8 x i64> %mult)
+  ret <vscale x 2 x i64> %partial.reduce
+}
