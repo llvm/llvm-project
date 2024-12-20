@@ -252,6 +252,23 @@ Ignore a function when doing a source level single step in
 Get the default value, make it into a capture group, then add another capture
 group for the new function name.
 
+You can ignore a function once using:
+
+.. code-block:: shell
+
+  (lldb) thread step-in -r ^abc
+
+Or you can do the opposite, only step into functions with a certain name:
+
+.. code-block:: shell
+
+  (lldb) sif abc
+  # Which is equivalent to:
+  (lldb) thread step-in -t abc
+
+``thread step-in`` has more options which cover some of ``skip``'s other
+features. See ``help thread step-in`` for details.
+
 Do a source level single step over in the currently selected thread
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
