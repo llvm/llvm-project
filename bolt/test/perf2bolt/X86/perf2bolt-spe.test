@@ -1,0 +1,9 @@
+## Check that Arm SPE mode is unavailable on X86.
+
+REQUIRES: system-linux,x86_64-linux
+
+RUN: %clang %cflags %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
+RUN: touch %t.empty.perf.data
+RUN: not perf2bolt -p %t.empty.perf.data -o %t.perf.boltdata --nl --spe --pa %t.exe 2>&1 | FileCheck %s
+
+CHECK: BOLT-ERROR: -spe is available only on AArch64.
