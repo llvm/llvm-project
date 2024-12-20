@@ -1289,29 +1289,49 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     return nullptr;
   }
   p = SkipWhiteSpace(p);
-  if (InCompilerDirective()) {
-    if (*p++ != '!') {
-      return nullptr;
-    }
-    for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
-      if (*s != ToLowerCaseLetter(*p)) {
+  if (*p == '!') {
+    if (InCompilerDirective()) {
+      if (*p++ != '!') {
         return nullptr;
       }
-    }
-    p = SkipWhiteSpace(p);
-    if (*p == '&') {
-      if (!ampersand) {
-        insertASpace_ = true;
+      for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
+        if (*s != ToLowerCaseLetter(*p)) {
+          return nullptr;
+        }
       }
-      return p + 1;
-    } else if (ampersand) {
-      return p;
+      p = SkipWhiteSpace(p);
+      if (*p == '&') {
+        if (!ampersand) {
+          insertASpace_ = true;
+        }
+        return p + 1;
+      } else if (ampersand) {
+        return p;
+      } else {
+        return nullptr;
+      }
+    } else if (features_.IsEnabled(LanguageFeature::OpenMP)) {
+      if (*p + 1 == '$')
+        return nullptr;
+      p += 2;
+      p = SkipWhiteSpace(p);
+      if (*p == '&') {
+        if (!ampersand) {
+          insertASpace_ = true;
+        }
+        return p + 1;
+      } else if (ampersand) {
+        return p;
+      } else {
+        return nullptr;
+      }
     } else {
       return nullptr;
     }
   } else {
     if (*p == '&') {
-      return p + 1;
+      p = SkipWhiteSpace(p + 1);
+      return p;
     } else if (*p == '!' || *p == '\n' || *p == '#') {
       return nullptr;
     } else if (ampersand || IsImplicitContinuation()) {
