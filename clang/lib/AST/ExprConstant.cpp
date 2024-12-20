@@ -3510,6 +3510,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // P2280R4 struck the restriction that variable of reference type lifetime
   // should begin within the evaluation of E
   // Used to be C++20 [expr.const]p5.12.2:
+  // ... its lifetime began within the evaluation of E;
   if (isa<ParmVarDecl>(VD) && !AllowConstexprUnknown) {
     // Assume parameters of a potential constant expression are usable in
     // constant expressions.
@@ -3537,6 +3538,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // P2280R4 struck the restriction that variable of reference type should have
   // a preceding initialization.
   // Used to be C++20 [expr.const]p5.12:
+  //   ... reference has a preceding initialization and either ...
   if (!Init && !AllowConstexprUnknown) {
     // Don't diagnose during potential constant expression checking; an
     // initializer might be added later.
@@ -3550,6 +3552,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   // P2280R4 struck the initialization requirement for variables of reference
   // type so we can no longer assume we have an Init.
+  // Used to be C++20 [expr.const]p5.12:
+  //  ... reference has a preceding initialization and either ...
   if (Init && Init->isValueDependent()) {
     // The DeclRefExpr is not value-dependent, but the variable it refers to
     // has a value-dependent initializer. This should only happen in
@@ -3571,6 +3575,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // this in the cases where it matters for conformance.
   // P2280R4 struck the initialization requirement for variables of reference
   // type so we can no longer assume we have an Init.
+  // Used to be C++20 [expr.const]p5.12:
+  //  ... reference has a preceding initialization and either ...
   if (Init && !VD->evaluateValue()) {
     if (AllowConstexprUnknown) {
       Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
@@ -3608,9 +3614,13 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   Result = VD->getEvaluatedValue();
 
-  // P2280R4 If we don't have a value because this is a reference that was not
-  // initialized or whose lifetime began within E then create a value with as
-  // a ConstexprUnknown status.
+  // C++23 [expr.const]p8
+  // ... For such an object that is not usable in constant expressions, the
+  // dynamic type of the object is constexpr-unknown. For such a reference that
+  // is not usable in constant expressions, the reference is treated as binding
+  // to an unspecified object of the referenced type whose lifetime and that of
+  // all subobjects includes the entire constant evaluation and whose dynamic
+  // type is constexpr-unknown.
   if (AllowConstexprUnknown) {
     if (!Result) {
       Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
@@ -5966,9 +5976,12 @@ struct CheckDynamicTypeHandler {
 /// dynamic type.
 static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
                              AccessKinds AK, bool Polymorphic) {
-  // P2280R4 We are not allowed to invoke a virtual function whose dynamic type
+  // We are not allowed to invoke a virtual function whose dynamic type
   // is constexpr-unknown, so stop early and let this fail later on if we
   // attempt to do so.
+  // C++23 [expr.const]p5.6
+  // an invocation of a virtual function ([class.virtual]) for an object whose
+  // dynamic type is constexpr-unknown;
   if (This.allowConstexprUnknown())
     return true;
 

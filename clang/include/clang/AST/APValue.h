@@ -316,7 +316,9 @@ private:
 public:
   bool allowConstexprUnknown() const { return AllowConstexprUnknown; }
 
-  void setConstexprUnknown() { AllowConstexprUnknown = true; }
+  void setConstexprUnknown(bool IsConstexprUnknown = true) {
+    AllowConstexprUnknown = IsConstexprUnknown;
+  }
 
   /// Creates an empty APValue of type None.
   APValue() : Kind(None), AllowConstexprUnknown(false) {}
