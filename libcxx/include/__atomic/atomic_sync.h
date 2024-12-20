@@ -16,7 +16,6 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
-#include <__thread/support.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/invoke.h>
