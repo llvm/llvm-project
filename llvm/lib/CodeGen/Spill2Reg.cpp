@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AllocationOrder.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -27,6 +28,9 @@
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "Spill2Reg"
+STATISTIC(NumSpill2RegInstrs, "Number of spills/reloads replaced by spill2reg");
 
 namespace {
 
@@ -202,8 +206,7 @@ void Spill2Reg::collectSpillsAndReloads() {
 }
 
 bool Spill2Reg::isProfitable(const MachineInstr *MI) const {
-  // TODO: Unimplemented.
-  return true;
+  return TII->isSpill2RegProfitable(MI, TRI, MRI);
 }
 
 bool Spill2Reg::allAccessesProfitable(const StackSlotDataEntry &Entry) const {
@@ -227,7 +230,33 @@ Spill2Reg::tryGetFreePhysicalReg(const TargetRegisterClass *RegClass,
 // Replace stack-based spills/reloads with register-based ones.
 void Spill2Reg::replaceStackWithReg(StackSlotDataEntry &Entry,
                                     Register VectorReg) {
-  // TODO: Unimplemented
+  for (StackSlotDataEntry::MIData &SpillData : Entry.Spills) {
+    MachineInstr *StackSpill = SpillData.MI;
+    assert(SpillData.MO->isReg() && "Expected register MO");
+    Register OldReg = SpillData.MO->getReg();
+
+    TII->spill2RegInsertToS2RReg(
+        VectorReg, OldReg, SpillData.SpillBits, StackSpill->getParent(),
+        /*InsertBeforeIt=*/StackSpill->getIterator(), TRI);
+
+    // Spill to stack is no longer needed.
+    StackSpill->eraseFromParent();
+    assert(OldReg.isPhysical() && "Otherwise we need to removeInterval()");
+  }
+
+  for (StackSlotDataEntry::MIData &ReloadData : Entry.Reloads) {
+    MachineInstr *StackReload = ReloadData.MI;
+    assert(ReloadData.MO->isReg() && "Expected Reg MO");
+    Register OldReg = ReloadData.MO->getReg();
+
+    TII->spill2RegExtractFromS2RReg(
+        OldReg, VectorReg, ReloadData.SpillBits, StackReload->getParent(),
+        /*InsertBeforeIt=*/StackReload->getIterator(), TRI);
+
+    // Reload from stack is no longer needed.
+    StackReload->eraseFromParent();
+    assert(OldReg.isPhysical() && "Otherwise we need to removeInterval()");
+  }
 }
 
 void Spill2Reg::calculateLiveRegs(StackSlotDataEntry &Entry,
@@ -258,6 +287,8 @@ void Spill2Reg::generateCode() {
 
     // Replace stack accesses with register accesses.
     replaceStackWithReg(Entry, *PhysVectorRegOpt);
+
+    NumSpill2RegInstrs += Entry.Spills.size() + Entry.Reloads.size();
   }
 }
 
