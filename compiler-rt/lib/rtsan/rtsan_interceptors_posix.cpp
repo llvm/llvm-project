@@ -297,6 +297,23 @@ INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
   return REAL(fdopen)(fd, mode);
 }
 
+#if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
+INTERCEPTOR(FILE *, open_memstream, char **buf, size_t *size) {
+  __rtsan_notify_intercepted_call("open_memstream");
+  return REAL(open_memstream)(buf, size);
+}
+
+INTERCEPTOR(FILE *, fmemopen, void *buf, size_t size, const char *mode) {
+  __rtsan_notify_intercepted_call("fmemopen");
+  return REAL(fmemopen)(buf, size, mode);
+}
+#define RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM INTERCEPT_FUNCTION(open_memstream)
+#define RTSAN_MAYBE_INTERCEPT_FMEMOPEN INTERCEPT_FUNCTION(fmemopen)
+#else
+#define RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM
+#define RTSAN_MAYBE_INTERCEPT_FMEMOPEN
+#endif
+
 INTERCEPTOR(int, puts, const char *s) {
   __rtsan_notify_intercepted_call("puts");
   return REAL(puts)(s);
@@ -944,6 +961,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(fputs);
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
+  RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM;
+  RTSAN_MAYBE_INTERCEPT_FMEMOPEN;
   INTERCEPT_FUNCTION(lseek);
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
