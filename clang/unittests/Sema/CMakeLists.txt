@@ -7,6 +7,7 @@ add_clang_unittest(SemaTests
   ExternalSemaSourceTest.cpp
   CodeCompleteTest.cpp
   GslOwnerPointerInference.cpp
+  ParseHLSLRootSignatureTest.cpp
   SemaLookupTest.cpp
   SemaNoloadLookupTest.cpp
   )
