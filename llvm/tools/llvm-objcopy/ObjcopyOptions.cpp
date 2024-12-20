@@ -1261,6 +1261,21 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
     ELFConfig.NotesToRemove.push_back(*NoteInfo);
   }
 
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (!Config.ToRemove.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --remove-section");
+    if (!Config.AddSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --add-section");
+    if (!Config.UpdateSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --update-section");
+  }
+
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {
     return createStringError(

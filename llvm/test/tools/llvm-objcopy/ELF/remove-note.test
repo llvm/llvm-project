@@ -1,3 +1,13 @@
+## Check incompatible options
+# RUN: not llvm-objcopy --remove-note=1 --remove-section=.test - 2>&1 | FileCheck %s --check-prefix=ERR-REMSEC
+# RUN: not llvm-objcopy --remove-note=1 --add-section=.test=%s - 2>&1 | FileCheck %s --check-prefix=ERR-ADDSEC
+# RUN: not llvm-objcopy --remove-note=1 --update-section=.test=%s - 2>&1 | FileCheck %s --check-prefix=ERR-UPDSEC
+
+# ERR-REMSEC: error: cannot specify both --remove-note and --remove-section
+# ERR-ADDSEC: error: cannot specify both --remove-note and --add-section
+# ERR-UPDSEC: error: cannot specify both --remove-note and --update-section
+
+## Check invalid argument formats
 # RUN: not llvm-objcopy --remove-note= - 2>&1 | FileCheck %s --check-prefix=ERR-NOTYPEID
 # RUN: not llvm-objcopy --remove-note=CORE/ - 2>&1 | FileCheck %s --check-prefix=ERR-NOTYPEID
 # RUN: not llvm-objcopy --remove-note=/1 - 2>&1 | FileCheck %s --check-prefix=ERR-EMPTYNAME
