@@ -344,6 +344,7 @@ void initializeXRayInstrumentationPass(PassRegistry&);
 void initializeYkStackmapsPass(PassRegistry&);
 void initializeYkSplitBlocksAfterCallsPass(PassRegistry&);
 void initializeYkBasicBlockTracerPass(PassRegistry&);
+void initializeYkShadowStackPass(PassRegistry&);
 void initializeYkModuleClonePass(PassRegistry&);
 } // end namespace llvm
 
