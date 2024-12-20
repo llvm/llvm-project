@@ -1216,7 +1216,6 @@ struct FuncUnitSorter {
 /// Calculate the maximum register pressure of the scheduled instructions stream
 class HighRegisterPressureDetector {
   MachineBasicBlock *OrigMBB;
-  const MachineFunction &MF;
   const MachineRegisterInfo &MRI;
   const TargetRegisterInfo *TRI;
 
@@ -1489,7 +1488,7 @@ private:
 public:
   HighRegisterPressureDetector(MachineBasicBlock *OrigMBB,
                                const MachineFunction &MF)
-      : OrigMBB(OrigMBB), MF(MF), MRI(MF.getRegInfo()),
+      : OrigMBB(OrigMBB), MRI(MF.getRegInfo()),
         TRI(MF.getSubtarget().getRegisterInfo()),
         PSetNum(TRI->getNumRegPressureSets()), InitSetPressure(PSetNum, 0),
         PressureSetLimit(PSetNum, 0) {}
