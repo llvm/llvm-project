@@ -1196,29 +1196,47 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
       // FIXME: we should create the init capture variable and mark it invalid
       // in this case.
-      if (C->InitCaptureType.get().isNull() && !C->Init.isUsable()) {
-        Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type); // 
-        continue; // 
-      }
+// Check if the initializer type is invalid or unusable
+if (C->InitCaptureType.get().isNull() && !C->Init.isUsable()) {
+    Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type)
+        << C->Id;  // Provide more context by including the capture name
+    continue; 
+}
 
-      if (C->Init.get()->containsUnexpandedParameterPack() &&
-          !C->InitCaptureType.get()->getAs<PackExpansionType>())
-        DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
+// Check if there are unexpanded parameter packs
+if (C->Init.get()->containsUnexpandedParameterPack() &&
+    !C->InitCaptureType.get()->getAs<PackExpansionType>()) {
+    Diag(C->Loc, diag::err_pack_expansion_mismatch)
+        << C->Id;  // Include the problematic capture for context
+    DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
+}
 
-      unsigned InitStyle;
-      switch (C->InitKind) {
-      case LambdaCaptureInitKind::NoInit:
-        llvm_unreachable("not an init-capture?");
-      case LambdaCaptureInitKind::CopyInit:
-        InitStyle = VarDecl::CInit;
-        break;
-      case LambdaCaptureInitKind::DirectInit:
-        InitStyle = VarDecl::CallInit;
-        break;
-      case LambdaCaptureInitKind::ListInit:
-        InitStyle = VarDecl::ListInit;
-        break;
-      }
+// Determine the appropriate initialization style
+unsigned InitStyle;
+switch (C->InitKind) {
+case LambdaCaptureInitKind::NoInit:
+    Diag(C->Loc, diag::err_unsupported_lambda_capture_no_init)
+        << C->Id;  // Mention the capture name causing the issue
+    llvm_unreachable("not an init-capture?");
+
+case LambdaCaptureInitKind::CopyInit:
+    InitStyle = VarDecl::CInit;
+    Diag(C->Loc, diag::note_lambda_capture_copy_init)
+        << C->Id;  // Note about using copy initialization
+    break;
+
+case LambdaCaptureInitKind::DirectInit:
+    InitStyle = VarDecl::CallInit;
+    Diag(C->Loc, diag::note_lambda_capture_direct_init)
+        << C->Id;  // Note about using direct initialization
+    break;
+
+case LambdaCaptureInitKind::ListInit:
+    InitStyle = VarDecl::ListInit;
+    Diag(C->Loc, diag::note_lambda_capture_list_init)
+        << C->Id;  // Note about using list initialization
+    break;
+}
       Var = createLambdaInitCaptureVarDecl(C->Loc, C->InitCaptureType.get(),
                                            C->EllipsisLoc, C->Id, InitStyle,
                                            C->Init.get(), Method);
@@ -2146,32 +2164,35 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       SourceRange CaptureRange = LSI->ExplicitCaptureRanges[I];
 
       // Warn about unused explicit captures.
-      bool IsCaptureUsed = true;
-      if (!CurContext->isDependentContext() && !IsImplicit &&
-          !From.isODRUsed()) {
-        // Initialized captures that are non-ODR used may not be eliminated.
-        // FIXME: Where did the IsGenericLambda here come from?
-        bool NonODRUsedInitCapture =
-            IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
-        if (!NonODRUsedInitCapture) {
-          bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
-          SourceRange FixItRange;
-          if (CaptureRange.isValid()) {
-            if (!CurHasPreviousCapture && !IsLast) {
-              // If there are no captures preceding this capture, remove the
-              // following comma.
-              FixItRange = SourceRange(CaptureRange.getBegin(),
-                                       getLocForEndOfToken(CaptureRange.getEnd()));
-            } else {
-              // Otherwise, remove the comma since the last used capture.
-              FixItRange = SourceRange(getLocForEndOfToken(PrevCaptureLoc),
-                                       CaptureRange.getEnd());
-            }
-          }
 
-          IsCaptureUsed = !DiagnoseUnusedLambdaCapture(FixItRange, From);
-        }
+      bool IsCaptureUsed = true;
+
+if (!CurContext->isDependentContext() && !IsImplicit && !From.isODRUsed()) {
+  // Handle non-ODR used init captures separately.
+  bool NonODRUsedInitCapture = IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
+
+  if (!NonODRUsedInitCapture) {
+    bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
+    SourceRange FixItRange;
+
+    if (CaptureRange.isValid()) {
+      if (!CurHasPreviousCapture && !IsLast) {
+        // No previous capture and not the last capture: remove current and next comma.
+        FixItRange = SourceRange(
+            CaptureRange.getBegin(), getLocForEndOfToken(CaptureRange.getEnd()));
+      } else if (CurHasPreviousCapture && !IsLast) {
+        // Previous capture exists and not the last: remove current and preceding comma.
+        FixItRange = SourceRange(
+            getLocForEndOfToken(PrevCaptureLoc), CaptureRange.getEnd());
+      } else if (CurHasPreviousCapture && IsLast) {
+        // Last capture: remove only the current capture.
+        FixItRange = CaptureRange;
       }
+    }
+
+    IsCaptureUsed = !DiagnoseUnusedLambdaCapture(FixItRange, From);
+  }
+}
 
       if (CaptureRange.isValid()) {
         CurHasPreviousCapture |= IsCaptureUsed;
