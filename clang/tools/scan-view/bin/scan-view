@@ -36,7 +36,6 @@ def url_is_up(url):
 
 
 def start_browser(port, options):
-    import webbrowser
 
     url = 'http://%s:%d' % (options.host, port)
 
