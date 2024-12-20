@@ -29,6 +29,7 @@ define void @f1(ptr noalias %a,
 ; LV-LABEL: @f1(
 ; LV-NEXT:  for.body.lver.check:
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
+; LV-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; LV-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
 ; LV-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
@@ -36,7 +37,8 @@ define void @f1(ptr noalias %a,
 ; LV-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[A]]
 ; LV-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
-; LV-NEXT:    br i1 [[TMP6]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
+; LV-NEXT:    [[TMP7:%.*]] = or i1 [[TMP1]], [[TMP6]]
+; LV-NEXT:    br i1 [[TMP7]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; LV:       for.body.lver.orig:
