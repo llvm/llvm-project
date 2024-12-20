@@ -7,6 +7,7 @@
 ; RUN: not llvm-as < %t/duplicate-ret.ll 2>&1 | FileCheck %s --check-prefix=CHECK-DUPLICATE-RET
 ; RUN: not llvm-as < %t/none-after.ll 2>&1 | FileCheck %s --check-prefix=CHECK-NONE-AFTER
 ; RUN: not llvm-as < %t/none-before.ll 2>&1 | FileCheck %s --check-prefix=CHECK-NONE-BEFORE
+; RUN: not opt -disable-output < %t/non-pointer-type.ll 2>&1 | FileCheck %s --check-prefix=CHECK-NON-POINTER-TYPE
 
 ;--- missing-lparen.ll
 
@@ -61,5 +62,12 @@ define void @test(ptr captures(address, none) %p) {
 
 ; CHECK-NONE-BEFORE: <stdin>:[[@LINE+1]]:38: error: cannot use 'none' with other component
 define void @test(ptr captures(none, address) %p) {
+  ret void
+}
+
+;--- non-pointer-type.ll
+
+; CHECK-NON-POINTER-TYPE: Attribute 'captures(none)' applied to incompatible type!
+define void @test(i32 captures(none) %p) {
   ret void
 }
