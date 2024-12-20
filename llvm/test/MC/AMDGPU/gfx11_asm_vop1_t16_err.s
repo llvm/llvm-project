@@ -737,6 +737,12 @@ v_sat_pk_u8_i16_e32 v199.l, v5.l quad_perm:[3,2,1,0]
 v_sin_f16_e32 v128, 0xfe0b
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_sin_f16_e32 v128.h, 0xfe0b
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_sin_f16_e32 v128.l, 0xfe0b
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_sin_f16_e32 v255, v1
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -746,6 +752,24 @@ v_sin_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_sin_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:24: error: invalid operand for instruction
 
+v_sin_f16_e32 v255.h, v1.h
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_sin_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_sin_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_sin_f16_e32 v255.l, v1.l
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_sin_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_sin_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_sin_f16_e32 v5, v199
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -754,6 +778,24 @@ v_sin_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 
 v_sin_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_sin_f16_e32 v5.h, v199.h
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sin_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sin_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sin_f16_e32 v5.l, v199.l
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sin_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sin_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 v_sqrt_f16_e32 v128.h, 0xfe0b
 // GFX11: :[[@LINE-1]]:16: error: invalid operand for instruction
