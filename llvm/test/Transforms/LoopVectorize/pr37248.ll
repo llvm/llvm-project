@@ -61,8 +61,8 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; CHECK:       pred.store.continue3:
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP16]], i32 -1
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i16, ptr [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i16, ptr [[TMP16]], i32 -1
 ; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP17]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -146,8 +146,8 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[TMP10]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP13]], i32 -1
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i16, ptr [[TMP13]], i32 -1
 ; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
