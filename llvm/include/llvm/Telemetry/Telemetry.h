@@ -32,27 +32,17 @@ class Serializer {
 public:
   virtual Error init() = 0;
   virtual void write(StringRef KeyName, bool Value) = 0;
-  virtual void write(StringRef KeyName, int Value) = 0;
-  virtual void write(StringRef KeyName, unsigned int Value) = 0;
-  virtual void write(StringRef KeyName, long Value) = 0;
-  virtual void write(StringRef KeyName, unsigned long Value) = 0;
-  virtual void write(StringRef KeyName, long long Value) = 0;
-  virtual void write(StringRef KeyName, unsigned long long Value) = 0;
   virtual void write(StringRef KeyName, StringRef Value) = 0;
-  virtual void beginObject(StringRef KeyName) = 0;
-  virtual void endObject() = 0;
 
   template <typename T>
-  using Is_DenseMap =
-      std::is_same<T, DenseMap<typename T::key_type, typename T::mapped_type>>;
-  template <typename T>
-  using Is_StdMap =
-      std::is_same<T, std::map<typename T::key_type, typename T::mapped_type>>;
-  template <typename T>
-  using Enable_If_Map =
-      std::enable_if_t<Is_DenseMap<T>::value || Is_StdMap<T>::value>;
+  std::enable_if_t<std::is_integral_v<T>> write(StringRef KeyName, T Value) {
+    if constexpr (std::is_signed_v<T>)
+      writeSigned(KeyName, Value);
+    else
+      writeUnsigned(KeyName, Value);
+  }
 
-  template <typename T, typename = Enable_If_Map<T>>
+  template <typename T, typename = typename T::mapped_type>
   void write(StringRef KeyName, const T &Map) {
     beginObject(KeyName);
     for (const auto &KeyVal : Map)
@@ -60,7 +50,14 @@ public:
     endObject();
   }
 
+  virtual void beginObject(StringRef KeyName) = 0;
+  virtual void endObject() = 0;
+
   virtual Error finalize() = 0;
+
+private:
+  virtual void writeUnsigned(StringRef KeyName, unsigned long long) = 0;
+  virtual void writeSigned(StringRef KeyName, long long) = 0;
 };
 
 /// Configuration for the Manager class.
@@ -118,8 +115,6 @@ struct TelemetryInfo {
   // For isa, dyn_cast, etc, operations.
   virtual KindType getKind() const { return EntryKind::Base; }
   static bool classof(const TelemetryInfo *T) {
-    if (T == nullptr)
-      return false;
     return T->getKind() == EntryKind::Base;
   }
 };
