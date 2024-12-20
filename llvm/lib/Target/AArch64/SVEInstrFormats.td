@@ -3321,9 +3321,9 @@ multiclass sve_fp_z2op_p_zd_d_flogb<string asm, SDPatternOperator op> {
   def _S : sve_fp_z2op_p_zd<0b0011010, asm, ZPR32, ZPR32>;
   def _D : sve_fp_z2op_p_zd<0b0011011, asm, ZPR64, ZPR64>;
 
-  def : SVE_3_Op_UndefZero_Pat<nxv8i16, op, nxv8i16, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_3_Op_UndefZero_Pat<nxv4i32, op, nxv4i32, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_3_Op_UndefZero_Pat<nxv2i64, op, nxv2i64, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv8i16, op, nxv8i16, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv4i32, op, nxv4i32, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv2i64, op, nxv2i64, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_fp_z2op_p_zd_b_0<string asm, string op> {
