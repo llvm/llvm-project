@@ -8,8 +8,7 @@
 
 // <bitset>
 
-// Test hardening assertions for std::bitset using ABI v1 (where the const overload of `operator[]` returns
-// `const_reference` which is non-Standard behavior).
+// Test hardening assertions for std::bitset.
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: libcpp-hardening-mode=none
