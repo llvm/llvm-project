@@ -20963,8 +20963,9 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performTruncateCombine(SDNode *N,
-                                      SelectionDAG &DAG) {
+static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   if (VT.isFixedLengthVector() && VT.is64BitVector() && N0.hasOneUse() &&
@@ -20972,8 +20973,37 @@ static SDValue performTruncateCombine(SDNode *N,
     SDValue Op = N0.getOperand(0);
     if (VT.getScalarType() == MVT::i32 &&
         N0.getOperand(0).getValueType().getScalarType() == MVT::i64)
-      Op = DAG.getNode(ISD::TRUNCATE, SDLoc(N), MVT::i32, Op);
-    return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, Op);
+      Op = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op);
+    return DAG.getNode(N0.getOpcode(), DL, VT, Op);
+  }
+
+  // Performing the following combine produces a preferable form for ISEL.
+  // i32 (trunc (extract Vi64, idx)) -> i32 (extract (nvcast Vi32), idx*2))
+  if (DCI.isAfterLegalizeDAG() && N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      N0.hasOneUse()) {
+    SDValue Op = N0.getOperand(0);
+    SDValue ExtractIndexNode = N0.getOperand(1);
+    if (!isa<ConstantSDNode>(ExtractIndexNode))
+      return SDValue();
+
+    // For a legal DAG, EXTRACT_VECTOR_ELT can only have produced an i32 or i64.
+    // So we can only expect: i32 (trunc (i64 (extract Vi64, idx))).
+    assert((VT == MVT::i32 && N0.getValueType() == MVT::i64) &&
+           "Unexpected legalisation result!");
+
+    EVT SrcVectorType = Op.getValueType();
+    // We also assume that SrcVectorType cannot be a V64 (see
+    // LowerEXTRACT_VECTOR_ELT).
+    assert((SrcVectorType == MVT::v2i64 || SrcVectorType == MVT::nxv2i64) &&
+           "Unexpected legalisation result!");
+
+    unsigned ExtractIndex =
+        cast<ConstantSDNode>(ExtractIndexNode)->getZExtValue();
+    MVT CastVT = SrcVectorType.isScalableVector() ? MVT::nxv4i32 : MVT::v4i32;
+
+    Op = DAG.getNode(AArch64ISD::NVCAST, DL, CastVT, Op);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op,
+                       DAG.getVectorIdxConstant(ExtractIndex * 2, DL));
   }
 
   return SDValue();
@@ -26276,7 +26306,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
   case ISD::TRUNCATE:
-    return performTruncateCombine(N, DAG);
+    return performTruncateCombine(N, DAG, DCI);
   case AArch64ISD::ANDS:
     return performFlagSettingCombine(N, DCI, ISD::AND);
   case AArch64ISD::ADC:
