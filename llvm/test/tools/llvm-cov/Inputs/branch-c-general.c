@@ -119,21 +119,21 @@ void switches() {               // CHECK: @LINE|{{.*}}switches()
     case 1:                     // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: 0, False: 1]
       // fallthrough
-    case 2:                     // BRCOV: Branch ([[@LINE]]:5): [True: [[#min(C,2)]], Folded]
+    case 2:                     // CHECK: Branch ([[@LINE]]:5): [True: [[#min(C,2)]], Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: [[#min(C,2)]], False: 1]
       break;
-    case 3:                     // BRCOV: Branch ([[@LINE]]:5): [True: [[#min(C,3)]], Folded]
+    case 3:                     // CHECK: Branch ([[@LINE]]:5): [True: [[#min(C,3)]], Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: [[#min(C,3)]], False: 0]
       continue;
-    case 4:                     // BRCOV: Branch ([[@LINE]]:5): [True: [[#min(C,4)]], Folded]
+    case 4:                     // CHECK: Branch ([[@LINE]]:5): [True: [[#min(C,4)]], Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: [[#min(C,4)]], False: 0]
       switch (i) {
-      case 6 ... 9:             // BRCOV: Branch ([[@LINE]]:7): [True: [[#min(C,4)]], Folded]
+      case 6 ... 9:             // CHECK: Branch ([[@LINE]]:7): [True: [[#min(C,4)]], Folded]
         if (i) {}               // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,4)]], False: 0]
         continue;
       }
 
-    default:                    // BRCOV: Branch ([[@LINE]]:5): [True: [[#min(C,5)]], Folded]
+    default:                    // CHECK: Branch ([[@LINE]]:5): [True: [[#min(C,5)]], Folded]
       if (i == len - 1)         // CHECK: Branch ([[@LINE]]:11): [True: 1, False: [[#min(C,4)]]]
         return;
     }
@@ -153,7 +153,7 @@ void big_switch() {             // CHECK: @LINE|{{.*}}big_switch()
     case (1 << 1):              // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: 1, False: 1]
       break;
-    case (1 << 2) ... (1 << 12):// BRCOV: Branch ([[@LINE]]:5): [True: [[#min(C,11)]], Folded]
+    case (1 << 2) ... (1 << 12):// CHECK: Branch ([[@LINE]]:5): [True: [[#min(C,11)]], Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: [[#min(C,11)]], False: 0]
       break;
       // The branch for the large case range above appears after the case body.
@@ -161,7 +161,7 @@ void big_switch() {             // CHECK: @LINE|{{.*}}big_switch()
     case (1 << 13):             // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: 1, False: 0]
       break;
-    case (1 << 14) ... (1 << 28)://BRCOV: Branch ([[@LINE]]:5): [True: [[#min(C,15)]], Folded]
+    case (1 << 14) ... (1 << 28)://CHECK: Branch ([[@LINE]]:5): [True: [[#min(C,15)]], Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: [[#min(C,15)]], False: 0]
       break;
     // The branch for the large case range above appears after the case body.
@@ -169,7 +169,7 @@ void big_switch() {             // CHECK: @LINE|{{.*}}big_switch()
     case (1 << 29) ... ((1 << 29) + 1):
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: 1, False: 0]
       break;
-    default:                    // BRCOV: Branch ([[@LINE]]:5): [True: [[#min(C,2)]], Folded]
+    default:                    // CHECK: Branch ([[@LINE]]:5): [True: [[#min(C,2)]], Folded]
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: [[#min(C,2)]], False: 0]
       break;
     }
