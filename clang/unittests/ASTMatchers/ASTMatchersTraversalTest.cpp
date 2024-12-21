@@ -283,6 +283,12 @@ TEST(HasDeclaration, HasDeclarationOfTypeAlias) {
           hasDeclaration(typeAliasTemplateDecl()))))))));
 }
 
+TEST(HasDeclaration, HasDeclarationOfObjCInterface) {
+  EXPECT_TRUE(matchesObjC("@interface BaseClass @end void f() {BaseClass* b;}",
+                          varDecl(hasType(objcObjectPointerType(
+                              pointee(hasDeclaration(objcInterfaceDecl())))))));
+}
+
 TEST(HasUnqualifiedDesugaredType, DesugarsUsing) {
   EXPECT_TRUE(
       matches("struct A {}; using B = A; B b;",

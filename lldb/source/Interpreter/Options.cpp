@@ -251,12 +251,9 @@ Option *Options::GetLongOptions() {
       m_getopt_table[i].flag = nullptr;
       m_getopt_table[i].val = short_opt;
 
-      if (option_seen.find(short_opt) == option_seen.end()) {
-        option_seen[short_opt] = i;
-      } else if (short_opt) {
+      auto [pos, inserted] = option_seen.try_emplace(short_opt, i);
+      if (!inserted && short_opt) {
         m_getopt_table[i].val = 0;
-        std::map<int, uint32_t>::const_iterator pos =
-            option_seen.find(short_opt);
         StreamString strm;
         if (defs[i].HasShortOption())
           Debugger::ReportError(

@@ -193,7 +193,8 @@ public:
     Mesa,
     SUSE,
     OpenEmbedded,
-    LastVendorType = OpenEmbedded
+    Intel,
+    LastVendorType = Intel
   };
   enum OSType {
     UnknownOS,
@@ -268,6 +269,7 @@ public:
     MuslF32,
     MuslSF,
     MuslX32,
+    LLVM,
 
     MSVC,
     Itanium,

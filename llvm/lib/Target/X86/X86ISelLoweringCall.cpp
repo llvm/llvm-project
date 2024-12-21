@@ -18,7 +18,6 @@
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86TargetMachine.h"
-#include "X86TargetObjectFile.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -263,20 +262,15 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
 /// function arguments in the caller parameter area. For X86, aggregates
 /// that contain SSE vectors are placed at 16-byte boundaries while the rest
 /// are at 4-byte boundaries.
-uint64_t X86TargetLowering::getByValTypeAlignment(Type *Ty,
-                                                  const DataLayout &DL) const {
-  if (Subtarget.is64Bit()) {
-    // Max of 8 and alignment of type.
-    Align TyAlign = DL.getABITypeAlign(Ty);
-    if (TyAlign > 8)
-      return TyAlign.value();
-    return 8;
-  }
+Align X86TargetLowering::getByValTypeAlignment(Type *Ty,
+                                               const DataLayout &DL) const {
+  if (Subtarget.is64Bit())
+    return std::max(DL.getABITypeAlign(Ty), Align::Constant<8>());
 
   Align Alignment(4);
   if (Subtarget.hasSSE1())
     getMaxByValAlign(Ty, Alignment);
-  return Alignment.value();
+  return Alignment;
 }
 
 /// It returns EVT::Other if the type should be determined using generic
@@ -950,7 +944,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -961,7 +955,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   bool HasRet = false;
-  for (const SDNode *U : Copy->uses()) {
+  for (const SDNode *U : Copy->users()) {
     if (U->getOpcode() != X86ISD::RET_GLUE)
       return false;
     // If we are returning more than one value, we can definitely
@@ -2418,8 +2412,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Callee);
   }
 
-  // Returns a chain & a glue for retval copy to use.
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && isTailCall && !IsMustTail) {
@@ -2431,8 +2423,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(
-        DAG.getSignedConstant(FPDiff, dl, MVT::i32, /*isTarget=*/true));
+    Ops.push_back(DAG.getSignedTargetConstant(FPDiff, dl, MVT::i32));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -2524,7 +2515,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, MVT::Other, Ops);
 
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -2534,6 +2525,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return Ret;
   }
 
+  // Returns a chain & a glue for retval copy to use.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   if (HasNoCfCheck && IsCFProtectionSupported && IsIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {

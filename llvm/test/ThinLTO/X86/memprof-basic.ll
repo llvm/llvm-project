@@ -45,7 +45,7 @@
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:	-memprof-report-hinted-sizes \
 ; RUN:	-stats -pass-remarks=memprof-context-disambiguation -save-temps \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=DUMP-SIZES \
 ; RUN:	--check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS \
 ; RUN:  --check-prefix=SIZES
 
@@ -128,13 +128,16 @@ attributes #0 = { noinline optnone }
 !0 = !{i64 8632435727821051414}
 !1 = !{i64 -3421689549917153178}
 !2 = !{!3, !5}
-!3 = !{!4, !"notcold", i64 100}
+!3 = !{!4, !"notcold", !10}
 !4 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 8632435727821051414}
-!5 = !{!6, !"cold", i64 400}
+!5 = !{!6, !"cold", !11, !12}
 !6 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 -3421689549917153178}
 !7 = !{i64 9086428284934609951}
 !8 = !{i64 -5964873800580613432}
 !9 = !{i64 2732490490862098848}
+!10 = !{i64 123, i64 100}
+!11 = !{i64 456, i64 200}
+!12 = !{i64 789, i64 300}
 
 
 ; DUMP: CCG before cloning:
@@ -143,6 +146,9 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	Versions: 1 MIB:
 ; DUMP: 		AllocType 1 StackIds: 2, 3, 0
 ; DUMP: 		AllocType 2 StackIds: 2, 3, 1
+; DUMP-SIZES:	ContextSizeInfo per MIB:
+; DUMP-SIZES:		{ 123, 100 }
+; DUMP-SIZES:		{ 456, 200 }, { 789, 300 }
 ; DUMP: 	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
@@ -267,8 +273,9 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[BAZ2]] AllocTypes: Cold ContextIds: 2
 ; DUMP:		Clone of [[BAR]]
 
-; SIZES: NotCold context 1 with total size 100 is NotCold after cloning
-; SIZES: Cold context 2 with total size 400 is Cold after cloning
+; SIZES: NotCold full allocation context 123 with total size 100 is NotCold after cloning
+; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning
+; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning
 
 ; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
 ; REMARKS: created clone _Z3barv.memprof.1

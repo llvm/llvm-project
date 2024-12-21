@@ -14,23 +14,22 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
-#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Attr.h"
@@ -47,7 +46,6 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaMSP430.h"
@@ -63,7 +61,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/Assumptions.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -723,8 +721,7 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
 namespace {
 /// Determines if a given Expr references any of the given function's
 /// ParmVarDecls, or the function's implicit `this` parameter (if applicable).
-class ArgumentDependenceChecker
-    : public RecursiveASTVisitor<ArgumentDependenceChecker> {
+class ArgumentDependenceChecker : public DynamicRecursiveASTVisitor {
 #ifndef NDEBUG
   const CXXRecordDecl *ClassType;
 #endif
@@ -748,14 +745,14 @@ public:
     return Result;
   }
 
-  bool VisitCXXThisExpr(CXXThisExpr *E) {
+  bool VisitCXXThisExpr(CXXThisExpr *E) override {
     assert(E->getType()->getPointeeCXXRecordDecl() == ClassType &&
            "`this` doesn't refer to the enclosing class?");
     Result = true;
     return false;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
       if (Parms.count(PVD)) {
         Result = true;
@@ -779,9 +776,9 @@ static void handleDiagnoseAsBuiltinAttr(Sema &S, Decl *D,
   auto DiagnoseType = [&](unsigned Index, AttributeArgumentNType T) {
     SourceLocation Loc = [&]() {
       auto Union = AL.getArg(Index - 1);
-      if (Union.is<Expr *>())
-        return Union.get<Expr *>()->getBeginLoc();
-      return Union.get<IdentifierLoc *>()->Loc;
+      if (auto *E = dyn_cast<Expr *>(Union))
+        return E->getBeginLoc();
+      return cast<IdentifierLoc *>(Union)->Loc;
     }();
 
     S.Diag(Loc, diag::err_attribute_argument_n_type) << AL << Index << T;
@@ -1213,6 +1210,14 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *TT = T->getAs<TypedefType>())
     S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
         << TT->getDecl();
+}
+
+static void handleNoSpecializations(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Message;
+  if (AL.getNumArgs() != 0)
+    S.checkStringLiteralArgumentAttr(AL, 0, Message);
+  D->getDescribedTemplate()->addAttr(
+      NoSpecializationsAttr::Create(S.Context, Message, AL));
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
@@ -3072,7 +3077,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
         if (HasPriority)
           DuplicateAttr = true;
         HasPriority = true;
-        int Digit;
+        unsigned Digit;
         if (AttrStr.getAsInteger(0, Digit))
           return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                  << Unsupported << None << AttrStr << TargetVersion;
@@ -3226,7 +3231,7 @@ bool Sema::checkTargetClonesAttrString(
           HasDefault = true;
         } else if (AttrStr.consume_front("priority=")) {
           IsPriority = true;
-          int Digit;
+          unsigned Digit;
           if (AttrStr.getAsInteger(0, Digit))
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                    << Unsupported << None << Str << TargetClones;
@@ -3865,6 +3870,119 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (S.Context) CallbackAttr(
       S.Context, AL, EncodingIndices.data(), EncodingIndices.size()));
+}
+
+LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
+                                                        StringRef ParamName) {
+  // Atleast one capture by is required.
+  if (AL.getNumArgs() == 0) {
+    Diag(AL.getLoc(), diag::err_capture_by_attribute_no_entity)
+        << AL.getRange();
+    return nullptr;
+  }
+  unsigned N = AL.getNumArgs();
+  auto ParamIdents =
+      MutableArrayRef<IdentifierInfo *>(new (Context) IdentifierInfo *[N], N);
+  auto ParamLocs =
+      MutableArrayRef<SourceLocation>(new (Context) SourceLocation[N], N);
+  bool IsValid = true;
+  for (unsigned I = 0; I < N; ++I) {
+    if (AL.isArgExpr(I)) {
+      Expr *E = AL.getArgAsExpr(I);
+      Diag(E->getExprLoc(), diag::err_capture_by_attribute_argument_unknown)
+          << E << E->getExprLoc();
+      IsValid = false;
+      continue;
+    }
+    assert(AL.isArgIdent(I));
+    IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
+    if (IdLoc->Ident->getName() == ParamName) {
+      Diag(IdLoc->Loc, diag::err_capture_by_references_itself) << IdLoc->Loc;
+      IsValid = false;
+      continue;
+    }
+    ParamIdents[I] = IdLoc->Ident;
+    ParamLocs[I] = IdLoc->Loc;
+  }
+  if (!IsValid)
+    return nullptr;
+  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::INVALID);
+  auto *CapturedBy =
+      LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N, AL);
+  CapturedBy->setArgs(ParamIdents, ParamLocs);
+  return CapturedBy;
+}
+
+static void handleLifetimeCaptureByAttr(Sema &S, Decl *D,
+                                        const ParsedAttr &AL) {
+  // Do not allow multiple attributes.
+  if (D->hasAttr<LifetimeCaptureByAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_capture_by_attribute_multiple)
+        << AL.getRange();
+    return;
+  }
+  auto *PVD = dyn_cast<ParmVarDecl>(D);
+  assert(PVD);
+  auto *CaptureByAttr = S.ParseLifetimeCaptureByAttr(AL, PVD->getName());
+  if (CaptureByAttr)
+    D->addAttr(CaptureByAttr);
+}
+
+void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
+  bool HasImplicitThisParam = isInstanceMethod(FD);
+  SmallVector<LifetimeCaptureByAttr *, 1> Attrs;
+  for (ParmVarDecl *PVD : FD->parameters())
+    if (auto *A = PVD->getAttr<LifetimeCaptureByAttr>())
+      Attrs.push_back(A);
+  if (HasImplicitThisParam) {
+    TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+    if (!TSI)
+      return;
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = TSI->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc()) {
+      if (auto *A = ATL.getAttrAs<LifetimeCaptureByAttr>())
+        Attrs.push_back(const_cast<LifetimeCaptureByAttr *>(A));
+    }
+  }
+  if (Attrs.empty())
+    return;
+  llvm::StringMap<int> NameIdxMapping = {
+      {"global", LifetimeCaptureByAttr::GLOBAL},
+      {"unknown", LifetimeCaptureByAttr::UNKNOWN}};
+  int Idx = 0;
+  if (HasImplicitThisParam) {
+    NameIdxMapping["this"] = 0;
+    Idx++;
+  }
+  for (const ParmVarDecl *PVD : FD->parameters())
+    NameIdxMapping[PVD->getName()] = Idx++;
+  auto DisallowReservedParams = [&](StringRef Reserved) {
+    for (const ParmVarDecl *PVD : FD->parameters())
+      if (PVD->getName() == Reserved)
+        Diag(PVD->getLocation(), diag::err_capture_by_param_uses_reserved_name)
+            << (PVD->getName() == "unknown");
+  };
+  for (auto *CapturedBy : Attrs) {
+    const auto &Entities = CapturedBy->getArgIdents();
+    for (size_t I = 0; I < Entities.size(); ++I) {
+      StringRef Name = Entities[I]->getName();
+      auto It = NameIdxMapping.find(Name);
+      if (It == NameIdxMapping.end()) {
+        auto Loc = CapturedBy->getArgLocs()[I];
+        if (!HasImplicitThisParam && Name == "this")
+          Diag(Loc, diag::err_capture_by_implicit_this_not_available) << Loc;
+        else
+          Diag(Loc, diag::err_capture_by_attribute_argument_unknown)
+              << Entities[I] << Loc;
+        continue;
+      }
+      if (Name == "unknown" || Name == "global")
+        DisallowReservedParams(Name);
+      CapturedBy->setParamIdx(I, It->second);
+    }
+  }
 }
 
 static bool isFunctionLike(const Type &T) {
@@ -4746,6 +4864,15 @@ static void handleManagedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(::new (S.Context) HIPManagedAttr(S.Context, AL));
   if (!D->hasAttr<CUDADeviceAttr>())
     D->addAttr(CUDADeviceAttr::CreateImplicit(S.Context));
+}
+
+static void handleGridConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (D->isInvalidDecl())
+    return;
+  // Whether __grid_constant__ is allowed to be used will be checked in
+  // Sema::CheckFunctionDeclaration as we need complete function decl to make
+  // the call.
+  D->addAttr(::new (S.Context) CUDAGridConstantAttr(S.Context, AL));
 }
 
 static void handleGNUInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6620,6 +6747,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_SYCLKernel:
     S.SYCL().handleKernelAttr(D, AL);
     break;
+  case ParsedAttr::AT_SYCLKernelEntryPoint:
+    S.SYCL().handleKernelEntryPointAttr(D, AL);
+    break;
   case ParsedAttr::AT_SYCLSpecialClass:
     handleSimpleAttribute<SYCLSpecialClassAttr>(S, D, AL);
     break;
@@ -6632,6 +6762,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Callback:
     handleCallbackAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_LifetimeCaptureBy:
+    handleLifetimeCaptureByAttr(S, D, AL);
+    break;
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);
     break;
@@ -6641,6 +6774,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_CUDADevice:
     handleDeviceAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CUDAGridConstant:
+    handleGridConstantAttr(S, D, AL);
     break;
   case ParsedAttr::AT_HIPManaged:
     handleManagedAttr(S, D, AL);
@@ -6784,6 +6920,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_PreferredName:
     handlePreferredName(S, D, AL);
+    break;
+  case ParsedAttr::AT_NoSpecializations:
+    handleNoSpecializations(S, D, AL);
     break;
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
@@ -6974,6 +7113,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupThreadID:
+    S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupID:
+    S.HLSL().handleSV_GroupIDAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
@@ -7240,7 +7385,9 @@ void Sema::ProcessDeclAttributeList(
   // good to have a way to specify "these attributes must appear as a group",
   // for these. Additionally, it would be good to have a way to specify "these
   // attribute must never appear as a group" for attributes like cold and hot.
-  if (!D->hasAttr<OpenCLKernelAttr>()) {
+  if (!(D->hasAttr<OpenCLKernelAttr>() ||
+        (D->hasAttr<CUDAGlobalAttr>() &&
+         Context.getTargetInfo().getTriple().isSPIRV()))) {
     // These attributes cannot be applied to a non-kernel function.
     if (const auto *A = D->getAttr<ReqdWorkGroupSizeAttr>()) {
       // FIXME: This emits a different error message than

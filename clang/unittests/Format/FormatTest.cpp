@@ -5724,6 +5724,24 @@ TEST_F(FormatTest, HashInMacroDefinition) {
                getLLVMStyleWithColumns(22));
 
   verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
+
+#if 0
+  // FIXME: The correct format is:
+  verifyFormat("{\n"
+               "  {\n"
+               "#define GEN_ID(_x) char *_x{#_x}\n"
+               "    GEN_ID(one);\n"
+               "  }\n"
+               "}");
+#endif
+  verifyFormat("{\n"
+               "  {\n"
+               "#define GEN_ID(_x) \\\n"
+               "  char *_x { #_x }\n"
+               "    GEN_ID(one);\n"
+               "  }\n"
+               "}",
+               getGoogleStyle());
 }
 
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
@@ -9441,6 +9459,15 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("void foo(\n"
+               "    void (*foobarpntr)(\n"
+               "        aaaaaaaaaaaaaaaaaa *,\n"
+               "        bbbbbbbbbbbbbb *,\n"
+               "        cccccccccccccccccccc *,\n"
+               "        dddddddddddddddddd *\n"
+               "    )\n"
+               ");",
+               Style);
   verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
                "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
                "};",
@@ -13664,6 +13691,10 @@ TEST_F(FormatTest, FormatsArrays) {
       "                                  .aaaaaaaaaaaaaaaaaaaaaa();");
   verifyFormat("a[::b::c];");
 
+  verifyFormat("{\n"
+               "  (*a)[0] = 1;\n"
+               "}");
+
   verifyNoCrash("a[,Y?)]", getLLVMStyleWithColumns(10));
 
   FormatStyle NoColumnLimit = getLLVMStyleWithColumns(0);
@@ -14476,10 +14507,13 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
   FormatStyle DoNotMergeNoColumnLimit = NoColumnLimit;
   DoNotMergeNoColumnLimit.AllowShortFunctionsOnASingleLine =
       FormatStyle::SFS_None;
-  verifyFormat("A()\n"
-               "    : b(0) {\n"
+  verifyFormat("A() : b(0) {\n"
                "}",
-               "A():b(0){}", DoNotMergeNoColumnLimit);
+               DoNotMergeNoColumnLimit);
+  verifyNoChange("A()\n"
+                 "    : b(0) {\n"
+                 "}",
+                 DoNotMergeNoColumnLimit);
   verifyFormat("A()\n"
                "    : b(0) {\n"
                "}",
@@ -24393,6 +24427,8 @@ TEST_F(FormatTest, DisableRegions) {
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   format("? ) =");
   verifyNoCrash("#define a\\\n /**/}");
+  verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
+                "LY52:                   ! [internal]");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
@@ -27384,6 +27420,13 @@ TEST_F(FormatTest, RemoveSemicolon) {
                Style);
 #endif
 
+  verifyFormat("auto sgf = [] {\n"
+               "  ogl = {\n"
+               "      a, b, c, d, e,\n"
+               "  };\n"
+               "};",
+               Style);
+
   Style.TypenameMacros.push_back("STRUCT");
   verifyFormat("STRUCT(T, B) { int i; };", Style);
 }
@@ -28135,7 +28178,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                Style);
 }
 
-TEST_F(FormatTest, RemovesEmptyLinesInUnwrappedLines) {
+TEST_F(FormatTest, RemoveEmptyLinesInUnwrappedLines) {
   auto Style = getLLVMStyle();
   Style.RemoveEmptyLinesInUnwrappedLines = true;
 
@@ -28209,6 +28252,65 @@ TEST_F(FormatTest, RemovesEmptyLinesInUnwrappedLines) {
                "void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames\n"
                "\n"
                "    (std::map<int, std::string> *outputMap);",
+               Style);
+}
+
+TEST_F(FormatTest, KeepFormFeed) {
+  auto Style = getLLVMStyle();
+  Style.KeepFormFeed = true;
+
+  constexpr StringRef NoFormFeed{"int i;\n"
+                                 "\n"
+                                 "void f();"};
+  verifyFormat(NoFormFeed,
+               "int i;\n"
+               " \f\n"
+               "void f();",
+               Style);
+  verifyFormat(NoFormFeed,
+               "int i;\n"
+               "\n"
+               "\fvoid f();",
+               Style);
+  verifyFormat(NoFormFeed,
+               "\fint i;\n"
+               "\n"
+               "void f();",
+               Style);
+  verifyFormat(NoFormFeed,
+               "int i;\n"
+               "\n"
+               "void f();\f",
+               Style);
+
+  constexpr StringRef FormFeed{"int i;\n"
+                               "\f\n"
+                               "void f();"};
+  verifyNoChange(FormFeed, Style);
+
+  Style.LineEnding = FormatStyle::LE_LF;
+  verifyFormat(FormFeed,
+               "int i;\r\n"
+               "\f\r\n"
+               "void f();",
+               Style);
+
+  constexpr StringRef FormFeedBeforeEmptyLine{"int i;\n"
+                                              "\f\n"
+                                              "\n"
+                                              "void f();"};
+  Style.MaxEmptyLinesToKeep = 2;
+  verifyFormat(FormFeedBeforeEmptyLine,
+               "int i;\n"
+               "\n"
+               "\f\n"
+               "void f();",
+               Style);
+  verifyFormat(FormFeedBeforeEmptyLine,
+               "int i;\n"
+               "\f\n"
+               "\f\n"
+               "void f();",
                Style);
 }
 

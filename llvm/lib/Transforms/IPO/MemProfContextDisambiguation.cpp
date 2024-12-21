@@ -33,13 +33,11 @@
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -134,6 +132,11 @@ cl::opt<bool> EnableMemProfContextDisambiguation(
 cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
+
+cl::opt<bool> MemProfRequireDefinitionForPromotion(
+    "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Require target function definition when promoting indirect calls"));
 } // namespace llvm
 
 extern cl::opt<bool> MemProfReportHintedSizes;
@@ -244,6 +247,10 @@ public:
     // recursion.
     bool Recursive = false;
 
+    // This will be formed by ORing together the AllocationType enum values
+    // for contexts including this node.
+    uint8_t AllocTypes = 0;
+
     // The corresponding allocation or interior call. This is the primary call
     // for which we have created this node.
     CallInfo Call;
@@ -252,7 +259,7 @@ public:
     // through cloning. I.e. located in the same function and have the same
     // (possibly pruned) stack ids. They will be updated the same way as the
     // primary call when assigning to function clones.
-    std::vector<CallInfo> MatchingCalls;
+    SmallVector<CallInfo, 0> MatchingCalls;
 
     // For alloc nodes this is a unique id assigned when constructed, and for
     // callsite stack nodes it is the original stack id when the node is
@@ -262,10 +269,6 @@ public:
     // nodes in the dot graph. Therefore we don't bother to assign a value for
     // clones.
     uint64_t OrigStackOrAllocId = 0;
-
-    // This will be formed by ORing together the AllocationType enum values
-    // for contexts including this node.
-    uint8_t AllocTypes = 0;
 
     // Edges to all callees in the profiled call stacks.
     // TODO: Should this be a map (from Callee node) for more efficient lookup?
@@ -475,7 +478,8 @@ protected:
   void addStackNodesForMIB(ContextNode *AllocNode,
                            CallStack<NodeT, IteratorT> &StackContext,
                            CallStack<NodeT, IteratorT> &CallsiteContext,
-                           AllocationType AllocType, uint64_t TotalSize);
+                           AllocationType AllocType,
+                           ArrayRef<ContextTotalSize> ContextSizeInfo);
 
   /// Matches all callsite metadata (or summary) to the nodes created for
   /// allocation memprof MIB metadata, synthesizing new nodes to reflect any
@@ -705,9 +709,10 @@ private:
   /// Map from each context ID to the AllocationType assigned to that context.
   DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
 
-  /// Map from each contextID to the profiled aggregate allocation size,
+  /// Map from each contextID to the profiled full contexts and their total
+  /// sizes (there may be more than one due to context trimming),
   /// optionally populated when requested (via MemProfReportHintedSizes).
-  DenseMap<uint32_t, uint64_t> ContextIdToTotalSize;
+  DenseMap<uint32_t, std::vector<ContextTotalSize>> ContextIdToContextSizeInfos;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
@@ -891,21 +896,6 @@ struct DenseMapInfo<IndexCall>
 
 namespace {
 
-struct FieldSeparator {
-  bool Skip = true;
-  const char *Sep;
-
-  FieldSeparator(const char *Sep = ", ") : Sep(Sep) {}
-};
-
-raw_ostream &operator<<(raw_ostream &OS, FieldSeparator &FS) {
-  if (FS.Skip) {
-    FS.Skip = false;
-    return OS;
-  }
-  return OS << FS.Sep;
-}
-
 // Map the uint8_t alloc types (which may contain NotCold|Cold) to the alloc
 // type we should actually use on the corresponding allocation.
 // If we can't clone a node that has NotCold+Cold alloc type, we will fall
@@ -928,8 +918,11 @@ bool allocTypesMatch(
     const std::vector<uint8_t> &InAllocTypes,
     const std::vector<std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>>>
         &Edges) {
+  // This should be called only when the InAllocTypes vector was computed for
+  // this set of Edges. Make sure the sizes are the same.
+  assert(InAllocTypes.size() == Edges.size());
   return std::equal(
-      InAllocTypes.begin(), InAllocTypes.end(), Edges.begin(),
+      InAllocTypes.begin(), InAllocTypes.end(), Edges.begin(), Edges.end(),
       [](const uint8_t &l,
          const std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>> &r) {
         // Can share if one of the edges is None type - don't
@@ -940,6 +933,46 @@ bool allocTypesMatch(
           return true;
         return allocTypeToUse(l) == allocTypeToUse(r->AllocTypes);
       });
+}
+
+// Helper to check if the alloc types for all edges recorded in the
+// InAllocTypes vector match the alloc types for callee edges in the given
+// clone. Because the InAllocTypes were computed from the original node's callee
+// edges, and other cloning could have happened after this clone was created, we
+// need to find the matching clone callee edge, which may or may not exist.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+bool allocTypesMatchClone(
+    const std::vector<uint8_t> &InAllocTypes,
+    const ContextNode<DerivedCCG, FuncTy, CallTy> *Clone) {
+  const ContextNode<DerivedCCG, FuncTy, CallTy> *Node = Clone->CloneOf;
+  assert(Node);
+  // InAllocTypes should have been computed for the original node's callee
+  // edges.
+  assert(InAllocTypes.size() == Node->CalleeEdges.size());
+  // First create a map of the clone callee edge callees to the edge alloc type.
+  DenseMap<const ContextNode<DerivedCCG, FuncTy, CallTy> *, uint8_t>
+      EdgeCalleeMap;
+  for (const auto &E : Clone->CalleeEdges) {
+    assert(!EdgeCalleeMap.contains(E->Callee));
+    EdgeCalleeMap[E->Callee] = E->AllocTypes;
+  }
+  // Next, walk the original node's callees, and look for the corresponding
+  // clone edge to that callee.
+  for (unsigned I = 0; I < Node->CalleeEdges.size(); I++) {
+    auto Iter = EdgeCalleeMap.find(Node->CalleeEdges[I]->Callee);
+    // Not found is ok, we will simply add an edge if we use this clone.
+    if (Iter == EdgeCalleeMap.end())
+      continue;
+    // Can share if one of the edges is None type - don't
+    // care about the type along that edge as it doesn't
+    // exist for those context ids.
+    if (InAllocTypes[I] == (uint8_t)AllocationType::None ||
+        Iter->second == (uint8_t)AllocationType::None)
+      continue;
+    if (allocTypeToUse(Iter->second) != allocTypeToUse(InAllocTypes[I]))
+      return false;
+  }
+  return true;
 }
 
 } // end anonymous namespace
@@ -1160,8 +1193,7 @@ template <class NodeT, class IteratorT>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     ContextNode *AllocNode, CallStack<NodeT, IteratorT> &StackContext,
     CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType,
-    uint64_t TotalSize) {
-  assert(!MemProfReportHintedSizes || TotalSize > 0);
+    ArrayRef<ContextTotalSize> ContextSizeInfo) {
   // Treating the hot alloc type as NotCold before the disambiguation for "hot"
   // is done.
   if (AllocType == AllocationType::Hot)
@@ -1170,8 +1202,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
   ContextIdToAllocationType[++LastContextId] = AllocType;
 
   if (MemProfReportHintedSizes) {
-    assert(TotalSize);
-    ContextIdToTotalSize[LastContextId] = TotalSize;
+    assert(!ContextSizeInfo.empty());
+    auto &Entry = ContextIdToContextSizeInfos[LastContextId];
+    Entry.insert(Entry.begin(), ContextSizeInfo.begin(), ContextSizeInfo.end());
   }
 
   // Update alloc type and context ids for this MIB.
@@ -1216,10 +1249,6 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     assert(ContextIdToAllocationType.count(OldId));
     // The new context has the same allocation type as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
-    // For now set this to 0 so we don't duplicate sizes. Not clear how to divvy
-    // up the size. Assume that if we are able to duplicate context ids that we
-    // will be able to disambiguate all copies.
-    ContextIdToTotalSize[LastContextId] = 0;
   }
   return NewContextIds;
 }
@@ -1352,6 +1381,17 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
     }
     assert(NodeContextIds == CalleeEdgeContextIds);
   }
+  // FIXME: Since this checking is only invoked under an option, we should
+  // change the error checking from using assert to something that will trigger
+  // an error on a release build.
+#ifndef NDEBUG
+  // Make sure we don't end up with duplicate edges between the same caller and
+  // callee.
+  DenseSet<ContextNode<DerivedCCG, FuncTy, CallTy> *> NodeSet;
+  for (const auto &E : Node->CalleeEdges)
+    NodeSet.insert(E->Callee);
+  assert(NodeSet.size() == Node->CalleeEdges.size());
+#endif
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -1907,12 +1947,28 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
           // Add all of the MIBs and their stack nodes.
           for (auto &MDOp : MemProfMD->operands()) {
             auto *MIBMD = cast<const MDNode>(MDOp);
+            std::vector<ContextTotalSize> ContextSizeInfo;
+            // Collect the context size information if it exists.
+            if (MIBMD->getNumOperands() > 2) {
+              for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
+                MDNode *ContextSizePair =
+                    dyn_cast<MDNode>(MIBMD->getOperand(I));
+                assert(ContextSizePair->getNumOperands() == 2);
+                uint64_t FullStackId = mdconst::dyn_extract<ConstantInt>(
+                                           ContextSizePair->getOperand(0))
+                                           ->getZExtValue();
+                uint64_t TotalSize = mdconst::dyn_extract<ConstantInt>(
+                                         ContextSizePair->getOperand(1))
+                                         ->getZExtValue();
+                ContextSizeInfo.push_back({FullStackId, TotalSize});
+              }
+            }
             MDNode *StackNode = getMIBStackNode(MIBMD);
             assert(StackNode);
             CallStack<MDNode, MDNode::op_iterator> StackContext(StackNode);
             addStackNodesForMIB<MDNode, MDNode::op_iterator>(
                 AllocNode, StackContext, CallsiteContext,
-                getMIBAllocType(MIBMD), getMIBTotalSize(MIBMD));
+                getMIBAllocType(MIBMD), ContextSizeInfo);
           }
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Memprof and callsite metadata on memory allocations no longer
@@ -1988,17 +2044,19 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
               EmptyContext;
           unsigned I = 0;
           assert(!MemProfReportHintedSizes ||
-                 AN.TotalSizes.size() == AN.MIBs.size());
+                 AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
                 StackContext(&MIB);
-            uint64_t TotalSize = 0;
-            if (MemProfReportHintedSizes)
-              TotalSize = AN.TotalSizes[I];
+            std::vector<ContextTotalSize> ContextSizeInfo;
+            if (MemProfReportHintedSizes) {
+              for (auto [FullStackId, TotalSize] : AN.ContextSizeInfos[I])
+                ContextSizeInfo.push_back({FullStackId, TotalSize});
+            }
             addStackNodesForMIB<MIBInfo, SmallVector<unsigned>::const_iterator>(
                 AllocNode, StackContext, EmptyContext, MIB.AllocType,
-                TotalSize);
+                ContextSizeInfo);
             I++;
           }
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
@@ -2711,9 +2769,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
     OS << "\t\t" << *Edge << "\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    FieldSeparator FS;
+    ListSeparator LS;
     for (auto *Clone : Clones)
-      OS << FS << Clone;
+      OS << LS << Clone;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << "\n";
@@ -2770,13 +2828,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
     std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
     std::sort(SortedIds.begin(), SortedIds.end());
     for (auto Id : SortedIds) {
-      auto SizeI = ContextIdToTotalSize.find(Id);
-      assert(SizeI != ContextIdToTotalSize.end());
       auto TypeI = ContextIdToAllocationType.find(Id);
       assert(TypeI != ContextIdToAllocationType.end());
-      OS << getAllocTypeString((uint8_t)TypeI->second) << " context " << Id
-         << " with total size " << SizeI->second << " is "
-         << getAllocTypeString(Node->AllocTypes) << " after cloning\n";
+      auto CSI = ContextIdToContextSizeInfos.find(Id);
+      if (CSI != ContextIdToContextSizeInfos.end()) {
+        for (auto &Info : CSI->second) {
+          OS << "MemProf hinting: "
+             << getAllocTypeString((uint8_t)TypeI->second)
+             << " full allocation context " << Info.FullStackId
+             << " with total size " << Info.TotalSize << " is "
+             << getAllocTypeString(Node->AllocTypes) << " after cloning\n";
+        }
+      }
     }
   }
 }
@@ -3125,7 +3188,15 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // from the same callers as the old node. That should be true in the current
     // use case, where we will remove None-type edges after copying over all
     // caller edges from the callee.
-    assert(IsNewNode || NewCaller->findEdgeFromCaller(OldCallerEdge->Caller));
+    auto *ExistingCallerEdge =
+        NewCaller->findEdgeFromCaller(OldCallerEdge->Caller);
+    assert(IsNewNode || ExistingCallerEdge);
+    if (ExistingCallerEdge) {
+      ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
+                                                 EdgeContextIdsToMove.end());
+      ExistingCallerEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
+      continue;
+    }
     auto NewEdge = std::make_shared<ContextEdge>(
         NewCaller, OldCallerEdge->Caller,
         computeAllocType(EdgeContextIdsToMove), EdgeContextIdsToMove);
@@ -3298,6 +3369,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     if (hasSingleAllocType(Node->AllocTypes) || Node->CallerEdges.size() <= 1)
       break;
 
+    // If the caller was not successfully matched to a call in the IR/summary,
+    // there is no point in trying to clone for it as we can't update that call.
+    if (!CallerEdge->Caller->hasCall()) {
+      ++EI;
+      continue;
+    }
+
     // Only need to process the ids along this edge pertaining to the given
     // allocation.
     auto CallerEdgeContextsForAlloc =
@@ -3345,11 +3423,22 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
           allocTypeToUse(CallerAllocTypeForAlloc))
         continue;
 
-      if (!allocTypesMatch<DerivedCCG, FuncTy, CallTy>(
-              CalleeEdgeAllocTypesForCallerEdge, CurClone->CalleeEdges))
-        continue;
-      Clone = CurClone;
-      break;
+      bool BothSingleAlloc = hasSingleAllocType(CurClone->AllocTypes) &&
+                             hasSingleAllocType(CallerAllocTypeForAlloc);
+      // The above check should mean that if both have single alloc types that
+      // they should be equal.
+      assert(!BothSingleAlloc ||
+             CurClone->AllocTypes == CallerAllocTypeForAlloc);
+
+      // If either both have a single alloc type (which are the same), or if the
+      // clone's callee edges have the same alloc types as those for the current
+      // allocation on Node's callee edges (CalleeEdgeAllocTypesForCallerEdge),
+      // then we can reuse this clone.
+      if (BothSingleAlloc || allocTypesMatchClone<DerivedCCG, FuncTy, CallTy>(
+                                 CalleeEdgeAllocTypesForCallerEdge, CurClone)) {
+        Clone = CurClone;
+        break;
+      }
     }
 
     // The edge iterator is adjusted when we move the CallerEdge to the clone.
@@ -4072,7 +4161,17 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
     Module &M) {
   ICallAnalysis = std::make_unique<ICallPromotionAnalysis>();
   Symtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = Symtab->create(M, /*InLTO=*/true)) {
+  // Don't add canonical names, to avoid multiple functions to the symtab
+  // when they both have the same root name with "." suffixes stripped.
+  // If we pick the wrong one then this could lead to incorrect ICP and calling
+  // a memprof clone that we don't actually create (resulting in linker unsats).
+  // What this means is that the GUID of the function (or its PGOFuncName
+  // metadata) *must* match that in the VP metadata to allow promotion.
+  // In practice this should not be a limitation, since local functions should
+  // have PGOFuncName metadata and global function names shouldn't need any
+  // special handling (they should not get the ".llvm.*" suffix that the
+  // canonicalization handling is attempting to strip).
+  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
@@ -4264,9 +4363,6 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           AllocVersionsThinBackend++;
           if (!MaxAllocVersionsThinBackend)
             MaxAllocVersionsThinBackend = 1;
-          // Remove any remaining callsite metadata and we can skip the rest of
-          // the handling for this instruction, since no cloning needed.
-          I.setMetadata(LLVMContext::MD_callsite, nullptr);
           continue;
         }
 
@@ -4419,14 +4515,28 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             CloneCallsite(Callsite->second, CB, CalledFunction);
           }
         }
-        // Memprof and callsite metadata on memory allocations no longer needed.
-        I.setMetadata(LLVMContext::MD_memprof, nullptr);
-        I.setMetadata(LLVMContext::MD_callsite, nullptr);
       }
     }
 
     // Now do any promotion required for cloning.
     performICP(M, FS->callsites(), VMaps, ICallAnalysisInfo, ORE);
+  }
+
+  // We skip some of the functions and instructions above, so remove all the
+  // metadata in a single sweep here.
+  for (auto &F : M) {
+    // We can skip memprof clones because createFunctionClones already strips
+    // the metadata from the newly created clones.
+    if (F.isDeclaration() || isMemProfClone(F))
+      continue;
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (!isa<CallBase>(I))
+          continue;
+        I.setMetadata(LLVMContext::MD_memprof, nullptr);
+        I.setMetadata(LLVMContext::MD_callsite, nullptr);
+      }
+    }
   }
 
   return Changed;
@@ -4510,7 +4620,13 @@ void MemProfContextDisambiguation::performICP(
       // target (or version of the code), and we need to be conservative
       // (similar to what is done in the ICP pass).
       Function *TargetFunction = Symtab->getFunction(Candidate.Value);
-      if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
+      if (TargetFunction == nullptr ||
+          // Any ThinLTO global dead symbol removal should have already
+          // occurred, so it should be safe to promote when the target is a
+          // declaration.
+          // TODO: Remove internal option once more fully tested.
+          (MemProfRequireDefinitionForPromotion &&
+           TargetFunction->isDeclaration())) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", CB)
                  << "Memprof cannot promote indirect call: target with md5sum "

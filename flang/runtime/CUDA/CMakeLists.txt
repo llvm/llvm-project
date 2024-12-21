@@ -17,6 +17,8 @@ add_flang_library(${CUFRT_LIBNAME}
   allocator.cpp
   allocatable.cpp
   descriptor.cpp
+  kernel.cpp
+  memmove-function.cpp
   memory.cpp
   registration.cpp
 )

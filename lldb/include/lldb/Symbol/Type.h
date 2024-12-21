@@ -84,6 +84,9 @@ FLAGS_ENUM(TypeQueryOptions){
     /// matching type is found. When false, the type query should find all
     /// matching types.
     e_find_one = (1u << 4),
+    // If set, treat TypeQuery::m_name as a mangled name that should be
+    // searched.
+    e_search_by_mangled_name = (1u << 5),
 };
 LLDB_MARK_AS_BITMASK_ENUM(TypeQueryOptions)
 
@@ -298,6 +301,19 @@ public:
       m_options |= e_find_one;
     else
       m_options &= ~e_find_one;
+  }
+
+  /// Returns true if the type query is supposed to treat the name to be
+  /// searched as a mangled name.
+  bool GetSearchByMangledName() const {
+    return (m_options & e_search_by_mangled_name) != 0;
+  }
+
+  void SetSearchByMangledName(bool b) {
+    if (b)
+      m_options |= e_search_by_mangled_name;
+    else
+      m_options &= ~e_search_by_mangled_name;
   }
 
   /// Access the internal compiler context array.

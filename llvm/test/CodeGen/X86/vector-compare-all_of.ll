@@ -1594,3 +1594,62 @@ define i1 @select_v2i8(ptr %s0, ptr %s1) {
   %res = select i1 %cmp0, i1 %cmp1, i1 false
   ret i1 %res
 }
+
+define i1 @PR116977(<32 x i8> %a, <32 x i8> %b, <32 x i8> %v) {
+; SSE-LABEL: PR116977:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm0
+; SSE-NEXT:    pcmpeqb %xmm5, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm5, %xmm3
+; SSE-NEXT:    pand %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm2, %xmm3
+; SSE-NEXT:    pmovmskb %xmm3, %eax
+; SSE-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR116977:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpeqb %xmm0, %xmm2, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vpcmpeqb %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; AVX1-NEXT:    sete %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR116977:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpxor %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vptest %ymm0, %ymm0
+; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR116977:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpneqb %ymm0, %ymm2, %k0
+; AVX512-NEXT:    vpcmpneqb %ymm1, %ymm2, %k1
+; AVX512-NEXT:    kortestd %k1, %k0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %ca = icmp ne <32 x i8> %v, %a
+  %cb = icmp ne <32 x i8> %v, %b
+  %or = or <32 x i1> %ca, %cb
+  %scl = bitcast <32 x i1> %or to i32
+  %cmp = icmp eq i32 %scl, 0
+  ret i1 %cmp
+}

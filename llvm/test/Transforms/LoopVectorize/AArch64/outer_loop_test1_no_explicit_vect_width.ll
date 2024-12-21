@@ -26,7 +26,7 @@
 ; CHECK: %[[VecInd:.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %[[VecIndNext:.*]], %[[ForInc]] ]
 ; CHECK: %[[AAddr:.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, <4 x i64> %[[VecInd]]
 ; CHECK: %[[VecIndTr:.*]] = trunc <4 x i64> %[[VecInd]] to <4 x i32>
-; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[VecIndTr]], <4 x ptr> %[[AAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[VecIndTr]], <4 x ptr> %[[AAddr]], i32 4, <4 x i1> splat (i1 true))
 ; CHECK: %[[VecIndTr2:.*]] = trunc <4 x i64> %[[VecInd]] to <4 x i32>
 ; CHECK: %[[StoreVal:.*]] = add nsw <4 x i32> %[[VecIndTr2]], %[[Splat]]
 ; CHECK: br label %[[InnerLoop:.+]]
@@ -34,15 +34,15 @@
 ; CHECK: [[InnerLoop]]:
 ; CHECK: %[[InnerPhi:.*]] = phi <4 x i64> [ zeroinitializer, %vector.body ], [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ]
 ; CHECK: %[[AAddr2:.*]] = getelementptr inbounds [8 x [8 x i32]], ptr @arr, i64 0, <4 x i64> %[[InnerPhi]], <4 x i64> %[[VecInd]]
-; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[StoreVal]], <4 x ptr> %[[AAddr2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true
-; CHECK: %[[InnerPhiNext]] = add nuw nsw <4 x i64> %[[InnerPhi]], <i64 1, i64 1, i64 1, i64 1>
-; CHECK: %[[VecCond:.*]] = icmp eq <4 x i64> %[[InnerPhiNext]], <i64 8, i64 8, i64 8, i64 8>
+; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[StoreVal]], <4 x ptr> %[[AAddr2]], i32 4, <4 x i1> splat (i1 true))
+; CHECK: %[[InnerPhiNext]] = add nuw nsw <4 x i64> %[[InnerPhi]], splat (i64 1)
+; CHECK: %[[VecCond:.*]] = icmp eq <4 x i64> %[[InnerPhiNext]], splat (i64 8)
 ; CHECK: %[[InnerCond:.*]] = extractelement <4 x i1> %[[VecCond]], i32 0
 ; CHECK: br i1 %[[InnerCond]], label %[[ForInc]], label %[[InnerLoop]]
 
 ; CHECK: [[ForInc]]:
 ; CHECK: %[[IndNext]] = add nuw i64 %[[Ind]], 4
-; CHECK: %[[VecIndNext]] = add <4 x i64> %[[VecInd]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK: %[[VecIndNext]] = add <4 x i64> %[[VecInd]], splat (i64 4)
 ; CHECK: %[[Cmp:.*]] = icmp eq i64 %[[IndNext]], 8
 ; CHECK: br i1 %[[Cmp]], label %middle.block, label %vector.body
 
@@ -92,22 +92,22 @@ for.end10:                                        ; preds = %for.inc8
 ; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]
 ; CHECK: %[[VecInd:.*]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ %[[VecIndNext:.*]], %[[ForInc]] ]
 ; CHECK: %[[AAddr:.*]] = getelementptr inbounds [8 x i64], ptr @arrX, i64 0, <2 x i64> %[[VecInd]]
-; CHECK: call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %[[VecInd]], <2 x ptr> %[[AAddr]], i32 4, <2 x i1> <i1 true, i1 true>)
+; CHECK: call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %[[VecInd]], <2 x ptr> %[[AAddr]], i32 4, <2 x i1> splat (i1 true))
 ; CHECK: %[[StoreVal:.*]] = add nsw <2 x i64> %[[VecInd]], %[[Splat]]
 ; CHECK: br label %[[InnerLoop:.+]]
 
 ; CHECK: [[InnerLoop]]:
 ; CHECK: %[[InnerPhi:.*]] = phi <2 x i64> [ zeroinitializer, %vector.body ], [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ]
 ; CHECK: %[[AAddr2:.*]] = getelementptr inbounds [8 x [8 x i64]], ptr @arrY, i64 0, <2 x i64> %[[InnerPhi]], <2 x i64> %[[VecInd]]
-; CHECK: call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %[[StoreVal]], <2 x ptr> %[[AAddr2]], i32 4, <2 x i1> <i1 true, i1 true>
-; CHECK: %[[InnerPhiNext]] = add nuw nsw <2 x i64> %[[InnerPhi]], <i64 1, i64 1>
-; CHECK: %[[VecCond:.*]] = icmp eq <2 x i64> %[[InnerPhiNext]], <i64 8, i64 8>
+; CHECK: call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %[[StoreVal]], <2 x ptr> %[[AAddr2]], i32 4, <2 x i1> splat (i1 true))
+; CHECK: %[[InnerPhiNext]] = add nuw nsw <2 x i64> %[[InnerPhi]], splat (i64 1)
+; CHECK: %[[VecCond:.*]] = icmp eq <2 x i64> %[[InnerPhiNext]], splat (i64 8)
 ; CHECK: %[[InnerCond:.*]] = extractelement <2 x i1> %[[VecCond]], i32 0
 ; CHECK: br i1 %[[InnerCond]], label %[[ForInc]], label %[[InnerLoop]]
 
 ; CHECK: [[ForInc]]:
 ; CHECK: %[[IndNext]] = add nuw i64 %[[Ind]], 2
-; CHECK: %[[VecIndNext]] = add <2 x i64> %[[VecInd]], <i64 2, i64 2>
+; CHECK: %[[VecIndNext]] = add <2 x i64> %[[VecInd]], splat (i64 2)
 ; CHECK: %[[Cmp:.*]] = icmp eq i64 %[[IndNext]], 8
 ; CHECK: br i1 %[[Cmp]], label %middle.block, label %vector.body
 ; Function Attrs: norecurse nounwind uwtable

@@ -49,7 +49,7 @@ define i1 @uadd_ov_true(i8 %x, ptr %px, ptr %pc) {
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], -100
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ugt i8 [[X]], -100
 ; CHECK-NEXT:    store i1 [[C1]], ptr [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
@@ -113,7 +113,7 @@ define i1 @sadd_ov_true(i8 %x, ptr %px, ptr %pc) {
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], 28
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ugt i8 [[X]], 28
 ; CHECK-NEXT:    store i1 [[C1]], ptr [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
@@ -177,7 +177,7 @@ define i1 @usub_ov_true(i8 %x, ptr %px, ptr %pc) {
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], 99
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ult i8 [[X]], 99
 ; CHECK-NEXT:    store i1 [[C1]], ptr [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
@@ -241,7 +241,7 @@ define i1 @ssub_ov_true(i8 %x, ptr %px, ptr %pc) {
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], -29
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ult i8 [[X]], -29
 ; CHECK-NEXT:    store i1 [[C1]], ptr [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
@@ -273,7 +273,7 @@ define i1 @umul_ov_false(i8 %x, ptr %px, ptr %pc) {
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], 24
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ugt i8 [[X]], 24
 ; CHECK-NEXT:    store i1 [[C1]], ptr [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:

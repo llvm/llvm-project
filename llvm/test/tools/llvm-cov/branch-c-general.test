@@ -167,4 +167,4 @@
 
 // RUN: yaml2obj %S/Inputs/branch-c-general-single.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/branch-c-general-single.proftext -o %t.profdata
-// RUN: llvm-cov show --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %S/Inputs/branch-c-general.c
+// RUN: llvm-cov show --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %S/Inputs/branch-c-general.c -D#C=1

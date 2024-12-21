@@ -209,12 +209,11 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   state.processFunctionScopes(func);
 
   fir::DummyScopeOp scopeOp;
-  if (auto declVal = source.origin.instantiationPoint) {
+  if (auto declOp = source.origin.instantiationPoint) {
     // If the source is a dummy argument within some fir.dummy_scope,
     // then find the corresponding innermost scope to be used for finding
     // the right TBAA tree.
-    auto declareOp =
-        mlir::dyn_cast_or_null<fir::DeclareOp>(declVal.getDefiningOp());
+    auto declareOp = mlir::dyn_cast<fir::DeclareOp>(declOp);
     assert(declareOp && "Instantiation point must be fir.declare");
     if (auto dummyScope = declareOp.getDummyScope())
       scopeOp = mlir::cast<fir::DummyScopeOp>(dummyScope.getDefiningOp());

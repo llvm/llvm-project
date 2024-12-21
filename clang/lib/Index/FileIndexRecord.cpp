@@ -65,7 +65,7 @@ void FileIndexRecord::print(llvm::raw_ostream &OS, SourceManager &SM) const {
         OS << ' ' << ND->getDeclName();
       }
     } else {
-      const auto *MI = DclInfo.DeclOrMacro.get<const MacroInfo *>();
+      const auto *MI = cast<const MacroInfo *>(DclInfo.DeclOrMacro);
       SourceLocation Loc = SM.getFileLoc(MI->getDefinitionLoc());
       PresumedLoc PLoc = SM.getPresumedLoc(Loc);
       OS << llvm::sys::path::filename(PLoc.getFilename()) << ':'
