@@ -57,6 +57,7 @@ jobs:
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
+      ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
       enable-pgo: ${{ steps.vars.outputs.enable-pgo }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
@@ -123,6 +124,15 @@ jobs:
 
         # Detect necessary CMake flags
         target="${{ runner.os }}-${{ runner.arch }}"
+
+        # The hendrikmuhs/ccache-action action does not support installing sccache
+        # on arm64 Linux.
+        if [ "$target" = "Linux-ARM64" ];
+          echo ccache=ccache >> $GITHUB_OUTPUT
+        else
+          echo ccache=sccache >> $GITHUB_OUTPUT
+        fi
+
         if [ "${{ runner.os }}" = "Linux" ]; then
           echo "enable-pgo=true" >> $GITHUB_OUTPUT
         else
@@ -216,8 +226,8 @@ jobs:
       with:
         # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
         max-size: 2G
-        key: sccache-${{ runner.os }}-${{ runner.arch }}-release
-        variant: sccache
+        key: ${{ needs.prepare.outputs.ccache }}-${{ runner.os }}-${{ runner.arch }}-release
+        variant: ${{ needs.prepare.outputs.ccache }}
 
     - name: Configure Stage 1 Clang
       id: build
@@ -230,8 +240,8 @@ jobs:
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
             -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+            -DCMAKE_C_COMPILER_LAUNCHER=${{ needs.prepare.outputs.ccache }} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=${{ needs.prepare.outputs.ccache }}
     - name: Build Stage 1 Clang
       shell: bash
       run: |
@@ -552,8 +562,8 @@ jobs:
       with:
         # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
         max-size: 2G
-        key: sccache-${{ runner.os }}-${{ runner.arch }}-release
-        variant: sccache
+        key: ${{ needs.prepare.outputs.ccache }}-${{ runner.os }}-${{ runner.arch }}-release
+        variant: ${{ needs.prepare.outputs.ccache }}
 
     - name: Run Tests
       shell: bash
