@@ -452,9 +452,9 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char *Name;
-  const char *AltName;
-  const char *DeprecatedName;
+  const char Name[32];
+  const char AltName[32];
+  const char DeprecatedName[32];
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
