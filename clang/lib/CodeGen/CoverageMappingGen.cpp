@@ -964,6 +964,10 @@ struct CounterCoverageMappingBuilder
   std::pair<Counter, Counter>
   getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
                                       Counter CaseCountSum) {
+    if (llvm::EnableSingleByteCoverage)
+      return {Counter::getZero(), // Folded
+              Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)};
+
     // Simplify is skipped while building the counters above: it can get
     // really slow on top of switches with thousands of cases. Instead,
     // trigger simplification by adding zero to the last counter.
@@ -1195,12 +1199,14 @@ struct CounterCoverageMappingBuilder
   /// and add it to the function's SourceRegions.
   /// Returns Counter that corresponds to SC.
   Counter createSwitchCaseRegion(const SwitchCase *SC, Counter ParentCount) {
+    Counter TrueCnt = getRegionCounter(SC);
+    Counter FalseCnt = (llvm::EnableSingleByteCoverage
+                            ? Counter::getZero() // Folded
+                            : subtractCounters(ParentCount, TrueCnt));
     // Push region onto RegionStack but immediately pop it (which adds it to
     // the function's SourceRegions) because it doesn't apply to any other
     // source other than the SwitchCase.
-    Counter TrueCnt = getRegionCounter(SC);
-    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(),
-                          subtractCounters(ParentCount, TrueCnt)));
+    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(), FalseCnt));
     return TrueCnt;
   }
 
