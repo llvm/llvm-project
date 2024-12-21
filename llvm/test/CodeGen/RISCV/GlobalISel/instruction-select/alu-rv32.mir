@@ -102,10 +102,9 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; RV32I-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[COPY]], [[COPY1]]
-    ; RV32I-NEXT: [[LUI:%[0-9]+]]:gpr = LUI 16
-    ; RV32I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -1
-    ; RV32I-NEXT: [[AND:%[0-9]+]]:gpr = AND [[ADD]], [[ADDI]]
-    ; RV32I-NEXT: $x10 = COPY [[AND]]
+    ; RV32I-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[ADD]], 16
+    ; RV32I-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[SLLI]], 16
+    ; RV32I-NEXT: $x10 = COPY [[SRLI]]
     ; RV32I-NEXT: PseudoRET implicit $x10
     %0:gprb(s32) = COPY $x10
     %1:gprb(s32) = COPY $x11
@@ -200,8 +199,9 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV32I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY]], 1234
-    ; RV32I-NEXT: $x10 = COPY [[ADDI]]
+    ; RV32I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1234
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY]], [[ADDI]]
+    ; RV32I-NEXT: $x10 = COPY [[SUB]]
     ; RV32I-NEXT: PseudoRET implicit $x10
     %0:gprb(s32) = COPY $x10
     %1:gprb(s32) = G_CONSTANT i32 -1234

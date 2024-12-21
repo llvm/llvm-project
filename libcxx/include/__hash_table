@@ -15,6 +15,8 @@
 #include <__assert>
 #include <__bit/countl.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__math/rounding_functions.h>
@@ -25,16 +27,16 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
+#include <__new/launder.h>
 #include <__type_traits/can_extract_key.h>
-#include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -42,9 +44,7 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cstring>
 #include <limits>
-#include <new> // __launder
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -1210,9 +1210,9 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
     max_load_factor() = __u.max_load_factor();
     if (bucket_count() != 0) {
       __next_pointer __cache = __detach();
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
       try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
         const_iterator __i = __u.begin();
         while (__cache != nullptr && __u.size() != 0) {
           __cache->__upcast()->__get_value() = std::move(__u.remove(__i++)->__get_value());
@@ -1220,12 +1220,12 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
           __node_insert_multi(__cache->__upcast());
           __cache = __next;
         }
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
       } catch (...) {
         __deallocate_node(__cache);
         throw;
       }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       __deallocate_node(__cache);
     }
     const_iterator __i = __u.begin();
@@ -1256,21 +1256,21 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __
 
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       for (; __cache != nullptr && __first != __last; ++__first) {
         __cache->__upcast()->__get_value() = *__first;
         __next_pointer __next              = __cache->__next_;
         __node_insert_unique(__cache->__upcast());
         __cache = __next;
       }
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       __deallocate_node(__cache);
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)
@@ -1288,21 +1288,21 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __f
       " or the nodes value type");
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       for (; __cache != nullptr && __first != __last; ++__first) {
         __cache->__upcast()->__get_value() = *__first;
         __next_pointer __next              = __cache->__next_;
         __node_insert_multi(__cache->__upcast());
         __cache = __next;
       }
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       __deallocate_node(__cache);
       throw;
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)

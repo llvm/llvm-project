@@ -27,7 +27,6 @@ program wsloop_dynamic
   end do
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 !CHECK:      omp.terminator
 !CHECK:    }

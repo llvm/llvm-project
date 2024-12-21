@@ -47,6 +47,7 @@ class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
+class ProfileSummaryInfo;
 class raw_ostream;
 class TargetInstrInfo;
 class VirtRegMap;
@@ -113,14 +114,18 @@ public:
   ~LiveIntervals();
 
   /// Calculate the spill weight to assign to a single instruction.
+  /// If \p PSI is provided the calculation is altered for optsize functions.
   static float getSpillWeight(bool isDef, bool isUse,
                               const MachineBlockFrequencyInfo *MBFI,
-                              const MachineInstr &MI);
+                              const MachineInstr &MI,
+                              ProfileSummaryInfo *PSI = nullptr);
 
   /// Calculate the spill weight to assign to a single instruction.
+  /// If \p PSI is provided the calculation is altered for optsize functions.
   static float getSpillWeight(bool isDef, bool isUse,
                               const MachineBlockFrequencyInfo *MBFI,
-                              const MachineBasicBlock *MBB);
+                              const MachineBasicBlock *MBB,
+                              ProfileSummaryInfo *PSI = nullptr);
 
   LiveInterval &getInterval(Register Reg) {
     if (hasInterval(Reg))

@@ -17,16 +17,19 @@
 
 */
 
-#include <__config>
+#if 0
+#else // 0
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
-#ifdef __cplusplus
-#  include <ccomplex>
-#elif __has_include_next(<complex.h>)
-#  include_next <complex.h>
-#endif
+#  ifdef __cplusplus
+#    include <complex>
+#  elif __has_include_next(<complex.h>)
+#    include_next <complex.h>
+#  endif
+#endif // 0
 
 #endif // _LIBCPP_COMPLEX_H

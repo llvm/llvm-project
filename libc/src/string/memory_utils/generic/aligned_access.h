@@ -13,7 +13,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 
-#include "src/__support/macros/config.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_generic.h" // generic::splat
 #include "src/string/memory_utils/utils.h"      // Ptr, CPtr

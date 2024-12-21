@@ -85,8 +85,9 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
          cast<llvm::StructType>(VTable->getValueType())
              ->getElementType(AddressPoint.VTableIndex));
      unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
-     llvm::ConstantRange InRange(llvm::APInt(32, -Offset, true),
-                                 llvm::APInt(32, VTableSize - Offset, true));
+     llvm::ConstantRange InRange(
+         llvm::APInt(32, (int)-Offset, true),
+         llvm::APInt(32, (int)(VTableSize - Offset), true));
      llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
          VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
 

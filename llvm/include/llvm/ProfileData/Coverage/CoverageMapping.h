@@ -278,6 +278,10 @@ struct CounterMappingRegion {
 
   RegionKind Kind;
 
+  bool isBranch() const {
+    return (Kind == BranchRegion || Kind == MCDCBranchRegion);
+  }
+
   CounterMappingRegion(Counter Count, unsigned FileID, unsigned ExpandedFileID,
                        unsigned LineStart, unsigned ColumnStart,
                        unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
@@ -364,20 +368,21 @@ struct CounterMappingRegion {
 struct CountedRegion : public CounterMappingRegion {
   uint64_t ExecutionCount;
   uint64_t FalseExecutionCount;
-  bool Folded;
+  bool TrueFolded;
+  bool FalseFolded;
   bool HasSingleByteCoverage;
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
                 bool HasSingleByteCoverage)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(0), Folded(false),
+        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true),
         HasSingleByteCoverage(HasSingleByteCoverage) {}
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
                 uint64_t FalseExecutionCount, bool HasSingleByteCoverage)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(FalseExecutionCount), Folded(false),
-        HasSingleByteCoverage(HasSingleByteCoverage) {}
+        FalseExecutionCount(FalseExecutionCount), TrueFolded(false),
+        FalseFolded(false), HasSingleByteCoverage(HasSingleByteCoverage) {}
 };
 
 /// MCDC Record grouping all information together.
@@ -466,7 +471,7 @@ public:
         Folded(std::move(Folded)), PosToID(std::move(PosToID)),
         CondLoc(std::move(CondLoc)){};
 
-  CounterMappingRegion getDecisionRegion() const { return Region; }
+  const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }
@@ -721,14 +726,13 @@ struct FunctionRecord {
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
                   uint64_t FalseCount, bool HasSingleByteCoverage) {
-    if (Region.Kind == CounterMappingRegion::BranchRegion ||
-        Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
+    if (Region.isBranch()) {
       CountedBranchRegions.emplace_back(Region, Count, FalseCount,
                                         HasSingleByteCoverage);
-      // If both counters are hard-coded to zero, then this region represents a
+      // If either counter is hard-coded to zero, then this region represents a
       // constant-folded branch.
-      if (Region.Count.isZero() && Region.FalseCount.isZero())
-        CountedBranchRegions.back().Folded = true;
+      CountedBranchRegions.back().TrueFolded = Region.Count.isZero();
+      CountedBranchRegions.back().FalseFolded = Region.FalseCount.isZero();
       return;
     }
     if (CountedRegions.empty())

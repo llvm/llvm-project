@@ -65,9 +65,11 @@ class WebAssemblyAsmTypeCheck final {
   void pushTypes(ArrayRef<wasm::ValType> Types);
   void pushType(StackType Type) { Stack.push_back(Type); }
   bool match(StackType TypeA, StackType TypeB);
-  std::string getTypesString(ArrayRef<StackType> Types, size_t StartPos);
+  std::string getTypesString(ArrayRef<wasm::ValType> Types,
+                             size_t StartPos = 0);
+  std::string getTypesString(ArrayRef<StackType> Types, size_t StartPos = 0);
   SmallVector<StackType, 4>
-  valTypeToStackType(ArrayRef<wasm::ValType> ValTypes);
+  valTypesToStackTypes(ArrayRef<wasm::ValType> ValTypes);
 
   void dumpTypeStack(Twine Msg);
   bool typeError(SMLoc ErrorLoc, const Twine &Msg);
@@ -80,6 +82,7 @@ class WebAssemblyAsmTypeCheck final {
   bool getTable(SMLoc ErrorLoc, const MCOperand &TableOp, wasm::ValType &Type);
   bool getSignature(SMLoc ErrorLoc, const MCOperand &SigOp,
                     wasm::WasmSymbolType Type, const wasm::WasmSignature *&Sig);
+  bool checkTryTable(SMLoc ErrorLoc, const MCInst &Inst);
 
 public:
   WebAssemblyAsmTypeCheck(MCAsmParser &Parser, const MCInstrInfo &MII,

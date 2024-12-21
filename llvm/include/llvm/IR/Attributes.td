@@ -183,6 +183,9 @@ def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 /// Function creates no aliases of pointer.
 def NoCapture : EnumAttr<"nocapture", IntersectAnd, [ParamAttr]>;
 
+/// Function is not a source of divergence.
+def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
+
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate", IntersectPreserve, [FnAttr]>;
 
@@ -314,6 +317,9 @@ def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
 /// ThreadSanitizer is on.
 def SanitizeThread : EnumAttr<"sanitize_thread", IntersectPreserve, [FnAttr]>;
 
+/// TypeSanitizer is on.
+def SanitizeType : EnumAttr<"sanitize_type", IntersectPreserve, [FnAttr]>;
+
 /// MemorySanitizer is on.
 def SanitizeMemory : EnumAttr<"sanitize_memory", IntersectPreserve, [FnAttr]>;
 
@@ -331,7 +337,7 @@ def SanitizeRealtime : EnumAttr<"sanitize_realtime", IntersectPreserve, [FnAttr]
 
 /// RealtimeSanitizer should error if a real-time unsafe function is invoked
 /// during a real-time sanitized function (see `sanitize_realtime`).
-def SanitizeRealtimeUnsafe : EnumAttr<"sanitize_realtime_unsafe", IntersectPreserve, [FnAttr]>;
+def SanitizeRealtimeBlocking : EnumAttr<"sanitize_realtime_blocking", IntersectPreserve, [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.
 ///
@@ -422,12 +428,13 @@ class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
 
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeThreadAttr>">;
+def : CompatRule<"isEqual<SanitizeTypeAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
 def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
-def : CompatRule<"isEqual<SanitizeRealtimeUnsafeAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeBlockingAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

@@ -38,48 +38,53 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-std::string lld::toString(RelType type) {
-  StringRef s = getELFRelocationTypeName(elf::ctx.arg.emachine, type);
+std::string elf::toStr(Ctx &ctx, RelType type) {
+  StringRef s = getELFRelocationTypeName(ctx.arg.emachine, type);
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);
 }
 
-TargetInfo *elf::getTarget(Ctx &ctx) {
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s, RelType type) {
+  s << toStr(s.ctx, type);
+  return s;
+}
+
+void elf::setTarget(Ctx &ctx) {
   switch (ctx.arg.emachine) {
   case EM_386:
   case EM_IAMCU:
-    return getX86TargetInfo(ctx);
+    return setX86TargetInfo(ctx);
   case EM_AARCH64:
-    return getAArch64TargetInfo(ctx);
+    return setAArch64TargetInfo(ctx);
   case EM_AMDGPU:
-    return getAMDGPUTargetInfo(ctx);
+    return setAMDGPUTargetInfo(ctx);
   case EM_ARM:
-    return getARMTargetInfo(ctx);
+    return setARMTargetInfo(ctx);
   case EM_AVR:
-    return getAVRTargetInfo(ctx);
+    return setAVRTargetInfo(ctx);
   case EM_HEXAGON:
-    return getHexagonTargetInfo(ctx);
+    return setHexagonTargetInfo(ctx);
   case EM_LOONGARCH:
-    return getLoongArchTargetInfo(ctx);
+    return setLoongArchTargetInfo(ctx);
   case EM_MIPS:
-    return getMipsTargetInfo(ctx);
+    return setMipsTargetInfo(ctx);
   case EM_MSP430:
-    return getMSP430TargetInfo(ctx);
+    return setMSP430TargetInfo(ctx);
   case EM_PPC:
-    return getPPCTargetInfo(ctx);
+    return setPPCTargetInfo(ctx);
   case EM_PPC64:
-    return getPPC64TargetInfo(ctx);
+    return setPPC64TargetInfo(ctx);
   case EM_RISCV:
-    return getRISCVTargetInfo(ctx);
+    return setRISCVTargetInfo(ctx);
   case EM_SPARCV9:
-    return getSPARCV9TargetInfo(ctx);
+    return setSPARCV9TargetInfo(ctx);
   case EM_S390:
-    return getSystemZTargetInfo(ctx);
+    return setSystemZTargetInfo(ctx);
   case EM_X86_64:
-    return getX86_64TargetInfo(ctx);
+    return setX86_64TargetInfo(ctx);
   default:
-    fatal("unsupported e_machine value: " + Twine(ctx.arg.emachine));
+    Fatal(ctx) << "unsupported e_machine value: " << ctx.arg.emachine;
   }
 }
 
@@ -101,10 +106,11 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
     if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
       std::string objLoc = isec->getLocation(loc - isecLoc);
       // Return object file location and source file location.
-      // TODO: Refactor getSrcMsg not to take a variable.
       Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
-      return {isec, objLoc + ": ",
-              isec->file ? isec->getSrcMsg(dummy, loc - isecLoc) : ""};
+      ELFSyncStream msg(ctx, DiagLevel::None);
+      if (isec->file)
+        msg << isec->getSrcMsg(dummy, loc - isecLoc);
+      return {isec, objLoc + ": ", std::string(msg.str())};
     }
   }
   return {};
@@ -113,8 +119,7 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
 TargetInfo::~TargetInfo() {}
 
 int64_t TargetInfo::getImplicitAddend(const uint8_t *buf, RelType type) const {
-  internalLinkerError(getErrorLocation(buf),
-                      "cannot read addend for relocation " + toString(type));
+  InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
   return 0;
 }
 
@@ -128,7 +133,8 @@ bool TargetInfo::needsThunk(RelExpr expr, RelType type, const InputFile *file,
 
 bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                                   uint8_t stOther) const {
-  fatal("target doesn't support split stacks");
+  Err(ctx) << "target doesn't support split stacks";
+  return false;
 }
 
 bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
@@ -154,9 +160,7 @@ void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr),
-        bits);
+        sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
     if (rel.expr != R_RELAX_HINT)
       relocate(loc, rel, val);
   }

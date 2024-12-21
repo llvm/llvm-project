@@ -35,7 +35,7 @@ ObjectFile::createGOFFObjectFile(MemoryBufferRef Object) {
 
 GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
     : ObjectFile(Binary::ID_GOFF, Object) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   // Object file isn't the right size, bail out early.
   if ((Object.getBufferSize() % GOFF::RecordLength) != 0) {
     Err = createStringError(

@@ -74,6 +74,10 @@ FloatType Builder::getFloat8E3M4Type() {
   return FloatType::getFloat8E3M4(context);
 }
 
+FloatType Builder::getFloat8E8M0FNUType() {
+  return FloatType::getFloat8E8M0FNU(context);
+}
+
 FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }
 
 FloatType Builder::getF16Type() { return FloatType::getF16(context); }
@@ -234,7 +238,10 @@ DenseIntElementsAttr Builder::getIndexTensorAttr(ArrayRef<int64_t> values) {
 }
 
 IntegerAttr Builder::getI32IntegerAttr(int32_t value) {
-  return IntegerAttr::get(getIntegerType(32), APInt(32, value));
+  // The APInt always uses isSigned=true here because we accept the value
+  // as int32_t.
+  return IntegerAttr::get(getIntegerType(32),
+                          APInt(32, value, /*isSigned=*/true));
 }
 
 IntegerAttr Builder::getSI32IntegerAttr(int32_t value) {
@@ -252,14 +259,20 @@ IntegerAttr Builder::getI16IntegerAttr(int16_t value) {
 }
 
 IntegerAttr Builder::getI8IntegerAttr(int8_t value) {
-  return IntegerAttr::get(getIntegerType(8), APInt(8, value));
+  // The APInt always uses isSigned=true here because we accept the value
+  // as int8_t.
+  return IntegerAttr::get(getIntegerType(8),
+                          APInt(8, value, /*isSigned=*/true));
 }
 
 IntegerAttr Builder::getIntegerAttr(Type type, int64_t value) {
   if (type.isIndex())
     return IntegerAttr::get(type, APInt(64, value));
-  return IntegerAttr::get(
-      type, APInt(type.getIntOrFloatBitWidth(), value, type.isSignedInteger()));
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return IntegerAttr::get(type, APInt(type.getIntOrFloatBitWidth(), value,
+                                      type.isSignedInteger(),
+                                      /*implicitTrunc=*/true));
 }
 
 IntegerAttr Builder::getIntegerAttr(Type type, const APInt &value) {
@@ -540,7 +553,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
       return cleanupFailure();
 
     // Ask the dialect to materialize a constant operation for this value.
-    Attribute attr = foldResult.get<Attribute>();
+    Attribute attr = cast<Attribute>(foldResult);
     auto *constOp = dialect->materializeConstant(cstBuilder, attr, expectedType,
                                                  op->getLoc());
     if (!constOp) {

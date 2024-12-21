@@ -55,6 +55,10 @@ class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
   bits<1> ZExt32To64 = 0;
   let TSFlags{9} = ZExt32To64;
 
+  // Indicate that this instruction takes a register+immediate memory operand.
+  bits<1> MemriOp = 0;
+  let TSFlags{10} = MemriOp;
+
   // Fields used for relation models.
   string BaseName = "";
 
@@ -82,6 +86,7 @@ class PPC970_Unit_BRU      { bits<3> PPC970_Unit = 7;   }
 class XFormMemOp { bits<1> XFormMemOp = 1; }
 class SExt32To64 { bits<1> SExt32To64 = 1; }
 class ZExt32To64 { bits<1> ZExt32To64 = 1; }
+class MemriOp      { bits<1> MemriOp = 1;      }
 
 // Two joined instructions; used to emit two adjacent instructions as one.
 // The itinerary from the first instruction is used for scheduling and
@@ -250,7 +255,7 @@ class DForm_base<bits<6> opcode, dag OOL, dag IOL, string asmstr,
 
 class DForm_1<bits<6> opcode, dag OOL, dag IOL, string asmstr,
               InstrItinClass itin, list<dag> pattern>
-  : DForm_base<opcode, OOL, IOL, asmstr, itin, pattern> {
+  : DForm_base<opcode, OOL, IOL, asmstr, itin, pattern>, MemriOp {
 }
 
 class DForm_2<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -295,6 +300,7 @@ class DForm_4_zero<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let RST = 0;
   let RA = 0;
   let D = 0;
+  let MemriOp = 0;
 }
 
 class DForm_4_fixedreg_zero<bits<6> opcode, bits<5> R, dag OOL, dag IOL,
@@ -372,7 +378,7 @@ class DForm_6_ext<bits<6> opcode, dag OOL, dag IOL, string asmstr,
 // 1.7.5 DS-Form
 class DSForm_1<bits<6> opcode, bits<2> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>
-         : I<opcode, OOL, IOL, asmstr, itin> {
+         : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5>  RST;
   bits<5>  RA;
   bits<14> D;
@@ -404,7 +410,7 @@ class DXForm<bits<6> opcode, bits<5> xo, dag OOL, dag IOL, string asmstr,
 // DQ-Form: [PO T RA DQ TX XO] or [PO S RA DQ SX XO]
 class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
                       string asmstr, InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<6>  XT;
   bits<5> RA;
   bits<12> DQ;
@@ -421,7 +427,7 @@ class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
 class DQForm_RTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin,
                            list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RTp;
   bits<5> RA;
   bits<12> DQ;
@@ -1246,7 +1252,7 @@ class XX2_RD6_DCMX7_RS6<bits<6> opcode, bits<4> xo1, bits<3> xo2,
 
 class XForm_XD6_RA5_RB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                         string asmstr, InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RA;
   bits<6> D;
   bits<5> RB;

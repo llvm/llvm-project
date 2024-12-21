@@ -20,9 +20,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -33,6 +31,8 @@
 
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#define DEBUG_TYPE "gpu-to-llvm-spv"
 
 using namespace mlir;
 
@@ -272,10 +272,11 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 
   /// Get the subgroup size from the target or return a default.
-  static int getSubgroupSize(Operation *op) {
-    return spirv::lookupTargetEnvOrDefault(op)
-        .getResourceLimits()
-        .getSubgroupSize();
+  static std::optional<int> getSubgroupSize(Operation *op) {
+    auto parentFunc = op->getParentOfType<LLVM::LLVMFuncOp>();
+    if (!parentFunc)
+      return std::nullopt;
+    return parentFunc.getIntelReqdSubGroupSize();
   }
 
   static bool hasValidWidth(gpu::ShuffleOp op) {
@@ -313,6 +314,38 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
         rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI1Type(), true);
     rewriter.replaceOp(op, {result, trueVal});
     return success();
+  }
+};
+
+class MemorySpaceToOpenCLMemorySpaceConverter final : public TypeConverter {
+public:
+  MemorySpaceToOpenCLMemorySpaceConverter(MLIRContext *ctx) {
+    addConversion([](Type t) { return t; });
+    addConversion([ctx](BaseMemRefType memRefType) -> std::optional<Type> {
+      // Attach global addr space attribute to memrefs with no addr space attr
+      Attribute memSpaceAttr = memRefType.getMemorySpace();
+      if (memSpaceAttr)
+        return std::nullopt;
+
+      unsigned globalAddrspace = storageClassToAddressSpace(
+          spirv::ClientAPI::OpenCL, spirv::StorageClass::CrossWorkgroup);
+      Attribute addrSpaceAttr =
+          IntegerAttr::get(IntegerType::get(ctx, 64), globalAddrspace);
+      if (auto rankedType = dyn_cast<MemRefType>(memRefType)) {
+        return MemRefType::get(memRefType.getShape(),
+                               memRefType.getElementType(),
+                               rankedType.getLayout(), addrSpaceAttr);
+      }
+      return UnrankedMemRefType::get(memRefType.getElementType(),
+                                     addrSpaceAttr);
+    });
+    addConversion([this](FunctionType type) {
+      auto inputs = llvm::map_to_vector(
+          type.getInputs(), [this](Type ty) { return convertType(ty); });
+      auto results = llvm::map_to_vector(
+          type.getResults(), [this](Type ty) { return convertType(ty); });
+      return FunctionType::get(type.getContext(), inputs, results);
+    });
   }
 };
 
@@ -376,11 +409,24 @@ struct GPUToLLVMSPVConversionPass final
     RewritePatternSet patterns(context);
 
     LowerToLLVMOptions options(context);
-    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
-      options.overrideIndexBitwidth(indexBitwidth);
-
+    options.overrideIndexBitwidth(this->use64bitIndex ? 64 : 32);
     LLVMTypeConverter converter(context, options);
     LLVMConversionTarget target(*context);
+
+    // Force OpenCL address spaces when they are not present
+    {
+      MemorySpaceToOpenCLMemorySpaceConverter converter(context);
+      AttrTypeReplacer replacer;
+      replacer.addReplacement([&converter](BaseMemRefType origType)
+                                  -> std::optional<BaseMemRefType> {
+        return converter.convertType<BaseMemRefType>(origType);
+      });
+
+      replacer.recursivelyReplaceElementsIn(getOperation(),
+                                            /*replaceAttrs=*/true,
+                                            /*replaceLocs=*/false,
+                                            /*replaceTypes=*/true);
+    }
 
     target.addIllegalOp<gpu::BarrierOp, gpu::BlockDimOp, gpu::BlockIdOp,
                         gpu::GPUFuncOp, gpu::GlobalIdOp, gpu::GridDimOp,
@@ -412,8 +458,8 @@ gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace addressSpace) {
 }
 } // namespace
 
-void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
-                                            RewritePatternSet &patterns) {
+void populateGpuToLLVMSPVConversionPatterns(
+    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
                GPUSubgroupOpConversion<gpu::LaneIdOp>,
                GPUSubgroupOpConversion<gpu::NumSubgroupsOp>,

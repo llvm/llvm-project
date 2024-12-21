@@ -533,7 +533,7 @@ public:
       const auto &BranchParams = B->getBranchParams();
       PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
-      Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
+      Folded[I++] = (B->Count.isZero() || B->FalseCount.isZero());
     }
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.
@@ -1442,7 +1442,7 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
       }
     // Capture branch regions specific to the function (excluding expansions).
     for (const auto &CR : Function.CountedBranchRegions)
-      if (FileIDs.test(CR.FileID) && (CR.FileID == CR.ExpandedFileID))
+      if (FileIDs.test(CR.FileID))
         FileCoverage.BranchRegions.push_back(CR);
     // Capture MCDC records specific to the function.
     for (const auto &MR : Function.MCDCRecords)

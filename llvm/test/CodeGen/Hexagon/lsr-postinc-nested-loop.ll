@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon < %s | FileCheck %s
 ; Test to ensure LSR does not optimize out addrec of the outerloop.
 ; This will help to generate post-increment instructions, otherwise
 ; it end up an as extra reg+reg add inside the loop.

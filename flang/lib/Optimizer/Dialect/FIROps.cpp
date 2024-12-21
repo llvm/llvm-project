@@ -1347,7 +1347,7 @@ bool fir::ConvertOp::isIntegerCompatible(mlir::Type ty) {
 }
 
 bool fir::ConvertOp::isFloatCompatible(mlir::Type ty) {
-  return mlir::isa<mlir::FloatType, fir::RealType>(ty);
+  return mlir::isa<mlir::FloatType>(ty);
 }
 
 bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
@@ -1359,7 +1359,7 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
 static std::optional<mlir::Type> getVectorElementType(mlir::Type ty) {
   mlir::Type elemTy;
   if (mlir::isa<fir::VectorType>(ty))
-    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getEleTy();
+    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getElementType();
   else if (mlir::isa<mlir::VectorType>(ty))
     elemTy = mlir::dyn_cast<mlir::VectorType>(ty).getElementType();
   else
@@ -1410,6 +1410,15 @@ bool fir::ConvertOp::areVectorsCompatible(mlir::Type inTy, mlir::Type outTy) {
   return true;
 }
 
+static bool areRecordsCompatible(mlir::Type inTy, mlir::Type outTy) {
+  // Both records must have the same field types.
+  // Trust frontend semantics for in-depth checks, such as if both records
+  // have the BIND(C) attribute.
+  auto inRecTy = mlir::dyn_cast<fir::RecordType>(inTy);
+  auto outRecTy = mlir::dyn_cast<fir::RecordType>(outTy);
+  return inRecTy && outRecTy && inRecTy.getTypeList() == outRecTy.getTypeList();
+}
+
 bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
   if (inType == outType)
     return true;
@@ -1428,7 +1437,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
          (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
          (fir::isPolymorphicType(inType) && mlir::isa<BoxType>(outType)) ||
-         areVectorsCompatible(inType, outType);
+         areVectorsCompatible(inType, outType) ||
+         areRecordsCompatible(inType, outType);
 }
 
 llvm::LogicalResult fir::ConvertOp::verify() {
@@ -1523,7 +1533,7 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
     }
     if (dimension) {
       if (--dimension == 0)
-        eleTy = mlir::cast<fir::SequenceType>(eleTy).getEleTy();
+        eleTy = mlir::cast<fir::SequenceType>(eleTy).getElementType();
     } else {
       if (auto t = mlir::dyn_cast<mlir::TupleType>(eleTy)) {
         // FIXME: Generally, we don't know which field of the tuple is being
@@ -1533,8 +1543,6 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
       } else if (auto t = mlir::dyn_cast<fir::RecordType>(eleTy)) {
         // FIXME: This is the same as the tuple case.
         return mlir::success();
-      } else if (auto t = mlir::dyn_cast<fir::ComplexType>(eleTy)) {
-        eleTy = t.getElementType();
       } else if (auto t = mlir::dyn_cast<mlir::ComplexType>(eleTy)) {
         eleTy = t.getElementType();
       } else if (auto t = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
@@ -2088,7 +2096,7 @@ struct UndoComplexPattern : public mlir::RewritePattern {
   matchAndRewrite(mlir::Operation *op,
                   mlir::PatternRewriter &rewriter) const override {
     auto insval = mlir::dyn_cast_or_null<fir::InsertValueOp>(op);
-    if (!insval || !mlir::isa<fir::ComplexType>(insval.getType()))
+    if (!insval || !mlir::isa<mlir::ComplexType>(insval.getType()))
       return mlir::failure();
     auto insval2 = mlir::dyn_cast_or_null<fir::InsertValueOp>(
         insval.getAdt().getDefiningOp());
@@ -3809,7 +3817,7 @@ void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 //===----------------------------------------------------------------------===//
 
 inline fir::CharacterType::KindTy stringLitOpGetKind(fir::StringLitOp op) {
-  auto eleTy = mlir::cast<fir::SequenceType>(op.getType()).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(op.getType()).getElementType();
   return mlir::cast<fir::CharacterType>(eleTy).getFKind();
 }
 
@@ -4387,14 +4395,6 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                   if (auto *op = (*i++).getDefiningOp())
                     if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
                       return ty.getType(fir::toInt(off));
-                  return mlir::Type{};
-                })
-                .Case<fir::ComplexType>([&](fir::ComplexType ty) {
-                  auto x = *i;
-                  if (auto *op = (*i++).getDefiningOp())
-                    if (fir::isa_integer(x.getType()))
-                      return ty.getEleType(fir::getKindMapping(
-                          op->getParentOfType<mlir::ModuleOp>()));
                   return mlir::Type{};
                 })
                 .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {

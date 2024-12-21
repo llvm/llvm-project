@@ -177,9 +177,8 @@ static LogicalResult emitOneBuilder(const Record &record, raw_ostream &os) {
 
 // Emit all builders.  Returns false on success because of the generator
 // registration requirements.
-static bool emitBuilders(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  for (const Record *def :
-       recordKeeper.getAllDerivedDefinitions("LLVM_OpBase")) {
+static bool emitBuilders(const RecordKeeper &records, raw_ostream &os) {
+  for (const Record *def : records.getAllDerivedDefinitions("LLVM_OpBase")) {
     if (failed(emitOneBuilder(*def, os)))
       return true;
   }
@@ -305,15 +304,14 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
 
 // Emit all intrinsic MLIR builders. Returns false on success because of the
 // generator registration requirements.
-static bool emitIntrMLIRBuilders(const RecordKeeper &recordKeeper,
-                                 raw_ostream &os) {
+static bool emitIntrMLIRBuilders(const RecordKeeper &records, raw_ostream &os) {
   // Emit condition to check if "llvmEnumName" matches the intrinsic id.
   auto emitIntrCond = [](const Record &record) {
     return "intrinsicID == llvm::Intrinsic::" +
            record.getValueAsString("llvmEnumName");
   };
   for (const Record *def :
-       recordKeeper.getAllDerivedDefinitions("LLVM_IntrOpBase")) {
+       records.getAllDerivedDefinitions("LLVM_IntrOpBase")) {
     if (failed(emitOneMLIRBuilder(*def, os, emitIntrCond)))
       return true;
   }
@@ -322,15 +320,13 @@ static bool emitIntrMLIRBuilders(const RecordKeeper &recordKeeper,
 
 // Emit all op builders. Returns false on success because of the
 // generator registration requirements.
-static bool emitOpMLIRBuilders(const RecordKeeper &recordKeeper,
-                               raw_ostream &os) {
+static bool emitOpMLIRBuilders(const RecordKeeper &records, raw_ostream &os) {
   // Emit condition to check if "llvmInstName" matches the instruction opcode.
   auto emitOpcodeCond = [](const Record &record) {
     return "inst->getOpcode() == llvm::Instruction::" +
            record.getValueAsString("llvmInstName");
   };
-  for (const Record *def :
-       recordKeeper.getAllDerivedDefinitions("LLVM_OpBase")) {
+  for (const Record *def : records.getAllDerivedDefinitions("LLVM_OpBase")) {
     if (failed(emitOneMLIRBuilder(*def, os, emitOpcodeCond)))
       return true;
   }
@@ -536,17 +532,15 @@ static void emitOneCEnumFromConversion(const Record *record, raw_ostream &os) {
 // Emits conversion functions between MLIR enum attribute case and corresponding
 // LLVM API enumerants for all registered LLVM dialect enum attributes.
 template <bool ConvertTo>
-static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
+static bool emitEnumConversionDefs(const RecordKeeper &records,
                                    raw_ostream &os) {
-  for (const Record *def :
-       recordKeeper.getAllDerivedDefinitions("LLVM_EnumAttr"))
+  for (const Record *def : records.getAllDerivedDefinitions("LLVM_EnumAttr"))
     if (ConvertTo)
       emitOneEnumToConversion(def, os);
     else
       emitOneEnumFromConversion(def, os);
 
-  for (const Record *def :
-       recordKeeper.getAllDerivedDefinitions("LLVM_CEnumAttr"))
+  for (const Record *def : records.getAllDerivedDefinitions("LLVM_CEnumAttr"))
     if (ConvertTo)
       emitOneCEnumToConversion(def, os);
     else
@@ -562,10 +556,9 @@ static void emitOneIntrinsic(const Record &record, raw_ostream &os) {
 
 // Emit the list of LLVM IR intrinsics identifiers that are convertible to a
 // matching MLIR LLVM dialect intrinsic operation.
-static bool emitConvertibleIntrinsics(const RecordKeeper &recordKeeper,
+static bool emitConvertibleIntrinsics(const RecordKeeper &records,
                                       raw_ostream &os) {
-  for (const Record *def :
-       recordKeeper.getAllDerivedDefinitions("LLVM_IntrOpBase"))
+  for (const Record *def : records.getAllDerivedDefinitions("LLVM_IntrOpBase"))
     emitOneIntrinsic(*def, os);
 
   return false;

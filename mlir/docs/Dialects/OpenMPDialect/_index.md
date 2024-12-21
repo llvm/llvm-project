@@ -362,9 +362,10 @@ of accessing clause-defined block arguments.
 Loop-associated OpenMP constructs are represented in the dialect as loop wrapper
 operations. These implement the `LoopWrapperInterface`, which enforces a series
 of restrictions upon the operation:
-  - It contains a single region with a single block; and
-  - Its block contains exactly two operations: another loop wrapper or
-`omp.loop_nest` operation and a terminator.
+  - It has the `NoTerminator` and `SingleBlock` traits;
+  - It contains a single region; and
+  - Its only block contains exactly one operation, which must be another loop
+wrapper or `omp.loop_nest` operation.
 
 This approach splits the representation for a loop nest and the loop-associated
 constructs that specify how its iterations are executed, possibly across various
@@ -393,7 +394,6 @@ omp.parallel ... {
       store %sum, %c[%i] : memref<?xf32>
       omp.yield
     }
-    omp.terminator
   }
   ...
   omp.terminator
@@ -490,9 +490,7 @@ omp.distribute ... {
       ...
       omp.yield
     }
-    omp.terminator
   } {omp.composite}
-  omp.terminator
 } {omp.composite}
 ```
 
@@ -518,9 +516,7 @@ omp.parallel ... {
         ...
         omp.yield
       }
-      omp.terminator
     } {omp.composite}
-    omp.terminator
   } {omp.composite}
   ...
   omp.terminator

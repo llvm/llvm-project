@@ -144,8 +144,13 @@ getQualification(ASTContext &Context, const DeclContext *DestContext,
   // since we stored inner-most parent first.
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  for (const auto *Parent : llvm::reverse(Parents))
+  for (const auto *Parent : llvm::reverse(Parents)) {
+    if (Parent != *Parents.rbegin() && Parent->isDependent() &&
+        Parent->getAsRecordDecl() &&
+        Parent->getAsRecordDecl()->getDescribedClassTemplate())
+      OS << "template ";
     Parent->print(OS, Context.getPrintingPolicy());
+  }
   return OS.str();
 }
 
