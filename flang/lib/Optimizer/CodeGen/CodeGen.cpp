@@ -1210,12 +1210,12 @@ genCUFAllocDescriptor(mlir::Location loc,
       llvmPointerType, {llvmIntPtrType, llvmPointerType, llvmInt32Type});
 
   auto llvmFunc = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-      RTNAME_STRING(CUFAllocDesciptor));
+      RTNAME_STRING(CUFAllocDescriptor));
   auto funcFunc =
-      mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDesciptor));
+      mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDescriptor));
   if (!llvmFunc && !funcFunc)
     mlir::OpBuilder::atBlockEnd(mod.getBody())
-        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDesciptor),
+        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDescriptor),
                                         fctTy);
 
   mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
@@ -1224,7 +1224,7 @@ genCUFAllocDescriptor(mlir::Location loc,
       genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
   llvm::SmallVector args = {sizeInBytes, sourceFile, sourceLine};
   return rewriter
-      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDesciptor),
+      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDescriptor),
                                   args)
       .getResult();
 }
@@ -1725,13 +1725,17 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 };
 
 static bool isDeviceAllocation(mlir::Value val) {
+  if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
+    return isDeviceAllocation(loadOp.getMemref());
   if (auto convertOp =
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
     val = convertOp.getValue();
   if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
     if (callOp.getCallee() &&
-        callOp.getCallee().value().getRootReference().getValue().starts_with(
-            RTNAME_STRING(CUFMemAlloc)))
+        (callOp.getCallee().value().getRootReference().getValue().starts_with(
+             RTNAME_STRING(CUFMemAlloc)) ||
+         callOp.getCallee().value().getRootReference().getValue().starts_with(
+             RTNAME_STRING(CUFAllocDescriptor))))
       return true;
   return false;
 }
@@ -2045,7 +2049,8 @@ private:
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
     mlir::Value result =
-        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest);
+        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest,
+                                     isDeviceAllocation(rebox.getBox()));
     rewriter.replaceOp(rebox, result);
     return mlir::success();
   }
@@ -2990,10 +2995,12 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAlignment(*global.getAlignment());
 
     auto module = global->getParentOfType<mlir::ModuleOp>();
+    auto gpuMod = global->getParentOfType<mlir::gpu::GPUModuleOp>();
     // Add comdat if necessary
     if (fir::getTargetTriple(module).supportsCOMDAT() &&
         (linkage == mlir::LLVM::Linkage::Linkonce ||
-         linkage == mlir::LLVM::Linkage::LinkonceODR)) {
+         linkage == mlir::LLVM::Linkage::LinkonceODR) &&
+        !gpuMod) {
       addComdat(g, rewriter, module);
     }
 
@@ -3120,7 +3127,7 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
               inputBoxStorage.getDefiningOp())) {
         if (callOp.getCallee() &&
             (*callOp.getCallee())
-                .starts_with(RTNAME_STRING(CUFAllocDesciptor))) {
+                .starts_with(RTNAME_STRING(CUFAllocDescriptor))) {
           // CUDA Fortran local descriptor are allocated in managed memory. So
           // new storage must be allocated the same way.
           auto mod = load->getParentOfType<mlir::ModuleOp>();

@@ -59,8 +59,7 @@ class ConvertArmNeon2dToIntr
     RewritePatternSet patterns(context);
     populateConvertArmNeon2dToIntrPatterns(patterns);
 
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };
