@@ -127,7 +127,7 @@ jobs:
 
         # The hendrikmuhs/ccache-action action does not support installing sccache
         # on arm64 Linux.
-        if [ "$target" = "Linux-ARM64" ];
+        if [ "$target" = "Linux-ARM64" ]; then
           echo ccache=ccache >> $GITHUB_OUTPUT
         else
           echo ccache=sccache >> $GITHUB_OUTPUT
