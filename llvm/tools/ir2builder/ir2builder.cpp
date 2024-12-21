@@ -1515,14 +1515,40 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       Fun = FcI->getCalledFunction();
 
     if (!Fun) {
-      assert(FcI->isIndirectCall() && "sanity check");
-      if (ArgDecl.empty()) {
-        Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
+      if (auto InA = dyn_cast<InlineAsm>(FcI->getCalledOperand())) {
+        if (ArgDecl.empty()) {
+          Call = "CreateCall(" + asStr(InA->getFunctionType()) + ", " +
                asStr(I->getOperand(I->getNumOperands() - 1)) + ")";
-      } else {
-        Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
-               asStr(I->getOperand(I->getNumOperands() - 1)) + ", " + ArgDecl +
-               ")";
+        } else {
+          Call = "CreateCall(" + asStr(InA->getFunctionType()) + ", " +
+                asStr(I->getOperand(I->getNumOperands() - 1)) + ", " + ArgDecl +
+                ")";
+        }
+      }
+      else if (FcI->isIndirectCall()) {
+        if (ArgDecl.empty()) {
+          Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
+                asStr(I->getOperand(I->getNumOperands() - 1)) + ")";
+        } else {
+          Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
+                asStr(I->getOperand(I->getNumOperands() - 1)) + ", " + ArgDecl +
+                ")";
+        }
+      }
+      else if (auto GA = dyn_cast<GlobalAlias>(FcI->getCalledOperand())) {
+        Fun = dyn_cast<Function>(GA->getAliaseeObject());
+        assert(Fun && "Global alias is not a function");
+        OS << "auto " << FunDecl << " = " << ModName << "->getOrInsertFunction(\""
+            << Fun->getName() << "\", " << asStr(Fun->getFunctionType())
+            << ");\n";
+        if (!ArgDecl.empty())
+          Call = "CreateCall(" + FunDecl + ", " + ArgDecl + ")";
+        else
+          Call = "CreateCall(" + FunDecl + ")";
+      }
+      else {
+        OS << "/* TODO: Unknown CallBase type in Call instruction */\n";
+        return;
       }
     } else {
       // No need to save this variable as it is a temporary one.
