@@ -4974,20 +4974,35 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelElse))
       return false;
-    if (!visitStmt(IS->getThen()))
-      return false;
+    {
+      LocalScope<Emitter> ThenScope(this);
+      if (!visitStmt(IS->getThen()))
+        return false;
+      if (!ThenScope.destroyLocals())
+        return false;
+    }
     if (!this->jump(LabelEnd))
       return false;
     this->emitLabel(LabelElse);
-    if (!visitStmt(Else))
-      return false;
+    {
+      LocalScope<Emitter> ElseScope(this);
+      if (!visitStmt(Else))
+        return false;
+      if (!ElseScope.destroyLocals())
+        return false;
+    }
     this->emitLabel(LabelEnd);
   } else {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelEnd))
       return false;
-    if (!visitStmt(IS->getThen()))
-      return false;
+    {
+      LocalScope<Emitter> ThenScope(this);
+      if (!visitStmt(IS->getThen()))
+        return false;
+      if (!ThenScope.destroyLocals())
+        return false;
+    }
     this->emitLabel(LabelEnd);
   }
 
