@@ -1090,7 +1090,9 @@ TYPE_PARSER(startOmpLine >>
             construct<OpenMPDeclarativeConstruct>(
                 Parser<OpenMPRequiresConstruct>{}) ||
             construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPThreadprivate>{})) /
+                Parser<OpenMPThreadprivate>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPUtilityConstruct>{})) /
             endOmpLine))
 
 // Block Construct

@@ -2631,81 +2631,64 @@ public:
     }
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP DECLARE REDUCTION ");
     Put("(");
     Walk(std::get<OmpReductionIdentifier>(x.t)), Put(" : ");
     Walk(std::get<std::list<DeclarationTypeSpec>>(x.t), ","), Put(" : ");
     Walk(std::get<OmpReductionCombiner>(x.t));
     Put(")");
     Walk(std::get<std::optional<OmpReductionInitializerClause>>(x.t));
+    EndOpenMP();
   }
-  bool Pre(const OpenMPDeclarativeConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ");
-    return common::visit(
-        common::visitors{
-            [&](const OpenMPDeclarativeAllocate &z) {
-              Word("ALLOCATE (");
-              Walk(std::get<OmpObjectList>(z.t));
-              Put(")");
-              Walk(std::get<OmpClauseList>(z.t));
-              Put("\n");
-              EndOpenMP();
-              return false;
-            },
-            [&](const OpenMPDeclareMapperConstruct &z) {
-              Word("DECLARE MAPPER (");
-              const auto &spec{std::get<OmpDeclareMapperSpecifier>(z.t)};
-              if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
-                Walk(mapname);
-                Put(":");
-              }
-              Walk(std::get<TypeSpec>(spec.t));
-              Put("::");
-              Walk(std::get<Name>(spec.t));
-              Put(")");
 
-              Walk(std::get<OmpClauseList>(z.t));
-              Put("\n");
-              return false;
-            },
-            [&](const OpenMPDeclareReductionConstruct &) {
-              Word("DECLARE REDUCTION ");
-              return true;
-            },
-            [&](const OpenMPDeclareSimdConstruct &y) {
-              Word("DECLARE SIMD ");
-              Walk("(", std::get<std::optional<Name>>(y.t), ")");
-              Walk(std::get<OmpClauseList>(y.t));
-              Put("\n");
-              EndOpenMP();
-              return false;
-            },
-            [&](const OpenMPDeclareTargetConstruct &) {
-              Word("DECLARE TARGET ");
-              return true;
-            },
-            [&](const OpenMPRequiresConstruct &y) {
-              Word("REQUIRES ");
-              Walk(std::get<OmpClauseList>(y.t));
-              Put("\n");
-              EndOpenMP();
-              return false;
-            },
-            [&](const OpenMPThreadprivate &) {
-              Word("THREADPRIVATE (");
-              return true;
-            },
-        },
-        x.u);
-  }
-  void Post(const OpenMPDeclarativeConstruct &) {
+  void Unparse(const OpenMPDeclareMapperConstruct &z) {
+    BeginOpenMP();
+    Word("!$OMP DECLARE MAPPER (");
+    const auto &spec{std::get<OmpDeclareMapperSpecifier>(z.t)};
+    if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
+      Walk(mapname);
+      Put(":");
+    }
+    Walk(std::get<TypeSpec>(spec.t));
+    Put("::");
+    Walk(std::get<Name>(spec.t));
+    Put(")");
+
+    Walk(std::get<OmpClauseList>(z.t));
     Put("\n");
     EndOpenMP();
   }
-  void Post(const OpenMPThreadprivate &) {
+  void Unparse(const OpenMPDeclareSimdConstruct &y) {
+    BeginOpenMP();
+    Word("!$OMP DECLARE SIMD ");
+    Walk("(", std::get<std::optional<Name>>(y.t), ")");
+    Walk(std::get<OmpClauseList>(y.t));
+    Put("\n");
+    EndOpenMP();
+  }
+  void Unparse(const OpenMPDeclareTargetConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP DECLARE TARGET ");
+    Walk(std::get<parser::OmpDeclareTargetSpecifier>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
+  void Unparse(const OpenMPRequiresConstruct &y) {
+    BeginOpenMP();
+    Word("!$OMP REQUIRES ");
+    Walk(std::get<OmpClauseList>(y.t));
+    Put("\n");
+    EndOpenMP();
+  }
+  void Unparse(const OpenMPThreadprivate &x) {
+    BeginOpenMP();
+    Word("!$OMP THREADPRIVATE (");
+    Walk(std::get<parser::OmpObjectList>(x.t));
     Put(")\n");
     EndOpenMP();
   }
+
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
