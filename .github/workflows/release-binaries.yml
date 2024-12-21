@@ -222,9 +222,9 @@ jobs:
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
+            -DLLVM_RELEASE_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
     - name: Build Stage 1 Clang

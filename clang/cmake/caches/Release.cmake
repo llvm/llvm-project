@@ -40,6 +40,7 @@ set(LLVM_RELEASE_ENABLE_PROJECTS "clang;lld;lldb;clang-tools-extra;bolt;polly;ml
 # Note we don't need to add install here, since it is one of the pre-defined
 # steps.
 set(LLVM_RELEASE_FINAL_STAGE_TARGETS "clang;package;check-all;check-llvm;check-clang" CACHE STRING "")
+set(LLVM_RELEASE_CPACK_PACKAGE_FILE_NAME "" CACHE STRING "")
 set(CMAKE_BUILD_TYPE RELEASE CACHE STRING "")
 
 # Stage 1 Options
@@ -108,6 +109,8 @@ set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRIN
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
 set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
+if (LLVM_RELEASE_CPACK_PACKAGE_FILE_NAME)
+  set_final_stage_var(CPACK_PACKAGE_FILE_NAME "${LLVM_RELEASE_CPACK_PACKAGE_FILE_NAME}")
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
   set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
