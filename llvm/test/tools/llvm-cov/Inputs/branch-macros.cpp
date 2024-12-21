@@ -5,27 +5,27 @@
 #define COND1 (a == b)
 #define COND2 (a != b)
 #define COND3 (COND1 && COND2)
-#define COND4 (COND3 ? COND2 : COND1) // BRCOV: | Branch ([[@LINE]]:15): [True: 1, False: 2]
+#define COND4 (COND3 ? COND2 : COND1) // BRCOV: | Branch ([[@LINE]]:15): [True: 1, False: [[#min(C,2)]]]
 #define MACRO1 COND3
 #define MACRO2 MACRO1
 #define MACRO3 MACRO2
 
 #include <stdlib.h>
 
-// CHECK: |{{ +}}[[C3:3|1]]|bool func(
+// CHECK: |{{ +}}[[#min(C,3)]]|bool func(
 bool func(int a, int b) {
-  bool c = COND1 && COND2; // BRCOV: |  |  |  Branch ([[@LINE-12]]:15): [True: 1, False: [[C2:2|1]]]
+  bool c = COND1 && COND2; // BRCOV: |  |  |  Branch ([[@LINE-12]]:15): [True: 1, False: [[#min(C,2)]]]
                            // BRCOV: |  |  |  Branch ([[@LINE-12]]:15): [True: 0, False: 1]
-  bool d = COND3;          // BRCOV: |  |  |  |  |  Branch ([[@LINE-14]]:15): [True: 1, False: [[C2]]]
+  bool d = COND3;          // BRCOV: |  |  |  |  |  Branch ([[@LINE-14]]:15): [True: 1, False: [[#min(C,2)]]]
                            // BRCOV: |  |  |  |  |  Branch ([[@LINE-14]]:15): [True: 0, False: 1]
-  bool e = MACRO1;         // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-16]]:15): [True: 1, False: [[C2]]]
+  bool e = MACRO1;         // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-16]]:15): [True: 1, False: [[#min(C,2)]]]
                            // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-16]]:15): [True: 0, False: 1]
-  bool f = MACRO2;         // BRCOV: |  |  |  |  |  |  |  |  |  Branch ([[@LINE-18]]:15): [True: 1, False: [[C2]]]
+  bool f = MACRO2;         // BRCOV: |  |  |  |  |  |  |  |  |  Branch ([[@LINE-18]]:15): [True: 1, False: [[#min(C,2)]]]
                            // BRCOV: |  |  |  |  |  |  |  |  |  Branch ([[@LINE-18]]:15): [True: 0, False: 1]
-  bool g = MACRO3;         // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-20]]:15): [True: 1, False: [[C2]]]
+  bool g = MACRO3;         // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-20]]:15): [True: 1, False: [[#min(C,2)]]]
                            // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-20]]:15): [True: 0, False: 1]
   return c && d && e && f && g;
-                           // BRCOV: |  Branch ([[@LINE-1]]:10): [True: 0, False: [[C3]]]
+                           // BRCOV: |  Branch ([[@LINE-1]]:10): [True: 0, False: [[#min(C,3)]]]
                            // BRCOV: |  Branch ([[@LINE-2]]:15): [True: 0, False: 0]
                            // BRCOV: |  Branch ([[@LINE-3]]:20): [True: 0, False: 0]
                            // BRCOV: |  Branch ([[@LINE-4]]:25): [True: 0, False: 0]
@@ -34,11 +34,11 @@ bool func(int a, int b) {
 
 
 bool func2(int a, int b) {
-    bool h = MACRO3 || COND4;  // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-32]]:15): [True: 1, False: [[C2]]]
+    bool h = MACRO3 || COND4;  // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-32]]:15): [True: 1, False: [[#min(C,2)]]]
                                // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-32]]:15): [True: 0, False: 1]
-                               // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-34]]:15): [True: 1, False: [[C2]]]
+                               // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-34]]:15): [True: 1, False: [[#min(C,2)]]]
                                // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-34]]:15): [True: 0, False: 1]
-                               // BRCOV: |  |  |  Branch ([[@LINE-33]]:15): [True: 1, False: [[C2]]]
+                               // BRCOV: |  |  |  Branch ([[@LINE-33]]:15): [True: 1, False: [[#min(C,2)]]]
   return h;
 }
 
