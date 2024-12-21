@@ -73,6 +73,9 @@ Improvements and New Features
   optimized, resulting in a performance improvement of up to 2x for trivial element types (e.g., `std::vector<int>`),
   and up to 3.4x for non-trivial element types (e.g., `std::vector<std::vector<int>>`).
 
+- ``rotate`` has been optimized, resulting in a performance improvement of up to 2.2x for trivially move assignable
+  types.
+
 Deprecations and Removals
 -------------------------
 
