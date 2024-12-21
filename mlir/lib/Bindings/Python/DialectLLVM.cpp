@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <string>
+
 #include "mlir-c/Dialect/LLVM.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Diagnostics.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
-#include <string>
 
 namespace py = pybind11;
 using namespace llvm;

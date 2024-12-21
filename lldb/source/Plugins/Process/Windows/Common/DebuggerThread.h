@@ -46,7 +46,7 @@ private:
   void FreeProcessHandles();
   void DebugLoop();
   ExceptionResult HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
-                                       DWORD thread_id);
+                                       DWORD thread_id, bool shutting_down);
   DWORD HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info,
                                 DWORD thread_id);
   DWORD HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,

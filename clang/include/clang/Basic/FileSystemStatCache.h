@@ -48,10 +48,10 @@ public:
   /// success for directories (not files).  On a successful file lookup, the
   /// implementation can optionally fill in \p F with a valid \p File object and
   /// the client guarantees that it will close it.
-  static std::error_code
-  get(StringRef Path, llvm::vfs::Status &Status, bool isFile,
-      std::unique_ptr<llvm::vfs::File> *F,
-      FileSystemStatCache *Cache, llvm::vfs::FileSystem &FS);
+  static std::error_code get(StringRef Path, llvm::vfs::Status &Status,
+                             bool isFile, std::unique_ptr<llvm::vfs::File> *F,
+                             FileSystemStatCache *Cache,
+                             llvm::vfs::FileSystem &FS, bool IsText = true);
 
 protected:
   // FIXME: The pointer here is a non-owning/optional reference to the

@@ -86,13 +86,28 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Step, step)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Radians, radians)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupThreadId, thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FDot, fdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SDot, sdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddI8Packed, dot4add_i8packed)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddU8Packed, dot4add_u8packed)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllTrue, wave_all)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(NClamp, nclamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SClamp, sclamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
 
-  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding, handle_fromBinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
+                                   resource_handlefrombinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
+                                   group_memory_barrier_with_group_sync)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
@@ -143,6 +158,7 @@ public:
 
   bool needsResourceBindingInitFn();
   llvm::Function *createResourceBindingInitFn();
+  llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

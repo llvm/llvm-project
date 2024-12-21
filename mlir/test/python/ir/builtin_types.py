@@ -639,6 +639,7 @@ def testTypeIDs():
             (BF16Type, BF16Type.get()),
             (F16Type, F16Type.get()),
             (F32Type, F32Type.get()),
+            (FloatTF32Type, FloatTF32Type.get()),
             (F64Type, F64Type.get()),
             (NoneType, NoneType.get()),
             (ComplexType, ComplexType.get(f32)),
@@ -668,6 +669,7 @@ def testTypeIDs():
         # CHECK: BF16Type(bf16)
         # CHECK: F16Type(f16)
         # CHECK: F32Type(f32)
+        # CHECK: FloatTF32Type(tf32)
         # CHECK: F64Type(f64)
         # CHECK: NoneType(none)
         # CHECK: ComplexType(complex<f32>)
@@ -734,6 +736,9 @@ def testConcreteTypesRoundTrip():
         # CHECK: F32Type
         # CHECK: F32Type(f32)
         print_downcasted(F32Type.get())
+        # CHECK: FloatTF32Type
+        # CHECK: FloatTF32Type(tf32)
+        print_downcasted(FloatTF32Type.get())
         # CHECK: F64Type
         # CHECK: F64Type(f64)
         print_downcasted(F64Type.get())

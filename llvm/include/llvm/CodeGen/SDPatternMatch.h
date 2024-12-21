@@ -507,6 +507,13 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VSELECT, Cond, T, F);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_InsertElt(const T0_P &Vec, const T1_P &Val, const T2_P &Idx) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::INSERT_VECTOR_ELT, Vec, Val,
+                                            Idx);
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -533,9 +540,7 @@ struct BinaryOpc_match {
       if (!Flags.has_value())
         return true;
 
-      SDNodeFlags TmpFlags = *Flags;
-      TmpFlags.intersectWith(N->getFlags());
-      return TmpFlags == *Flags;
+      return (*Flags & N->getFlags()) == *Flags;
     }
 
     return false;
@@ -668,9 +673,7 @@ inline BinaryOpc_match<LHS, RHS, true> m_Or(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_DisjointOr(const LHS &L,
                                                     const RHS &R) {
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R, Flags);
+  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R, SDNodeFlags::Disjoint);
 }
 
 template <typename LHS, typename RHS>
@@ -794,6 +797,11 @@ inline BinaryOpc_match<LHS, RHS> m_FRem(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::FREM, L, R);
 }
 
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_ExtractElt(const LHS &Vec, const RHS &Idx) {
+  return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_VECTOR_ELT, Vec, Idx);
+}
+
 // === Unary operations ===
 template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
@@ -813,9 +821,7 @@ template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
       if (!Flags.has_value())
         return true;
 
-      SDNodeFlags TmpFlags = *Flags;
-      TmpFlags.intersectWith(N->getFlags());
-      return TmpFlags == *Flags;
+      return (*Flags & N->getFlags()) == *Flags;
     }
 
     return false;
@@ -848,9 +854,7 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
 
 template <typename Opnd>
 inline UnaryOpc_match<Opnd> m_NNegZExt(const Opnd &Op) {
-  SDNodeFlags Flags;
-  Flags.setNonNeg(true);
-  return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op, Flags);
+  return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op, SDNodeFlags::NonNeg);
 }
 
 template <typename Opnd> inline auto m_SExt(const Opnd &Op) {

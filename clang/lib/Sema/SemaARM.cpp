@@ -907,7 +907,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
 
   // Issue a warning if the cast is dodgy.
   CastKind CastNeeded = CK_NoOp;
-  if (!AddrType.isAtLeastAsQualifiedAs(ValType)) {
+  if (!AddrType.isAtLeastAsQualifiedAs(ValType, getASTContext())) {
     CastNeeded = CK_BitCast;
     Diag(DRE->getBeginLoc(), diag::ext_typecheck_convert_discards_qualifiers)
         << PointerArg->getType() << Context.getPointerType(AddrType)

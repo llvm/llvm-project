@@ -1121,7 +1121,8 @@ struct LowerPackResult {
 
 /// Rewrite pack as pad + reshape + transpose.
 FailureOr<LowerPackResult> lowerPack(RewriterBase &rewriter,
-                                     tensor::PackOp packOp);
+                                     tensor::PackOp packOp,
+                                     bool lowerPadLikeWithInsertSlice = true);
 
 struct LowerUnPackOpResult {
   tensor::EmptyOp emptyOp;
@@ -1131,8 +1132,9 @@ struct LowerUnPackOpResult {
 };
 
 /// Rewrite pack as empty + transpose + reshape + extract_slice.
-FailureOr<LowerUnPackOpResult> lowerUnPack(RewriterBase &rewriter,
-                                           tensor::UnPackOp unPackOp);
+FailureOr<LowerUnPackOpResult>
+lowerUnPack(RewriterBase &rewriter, tensor::UnPackOp unPackOp,
+            bool lowerUnpadLikeWithExtractSlice = true);
 
 /// Struct to hold the result of a `pack` call.
 struct PackResult {
@@ -1503,37 +1505,86 @@ using OptimizeCopyFn =
 
 /// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
-/// `OptimizeCopyFn` can be used to customize copying step optimization.
-struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
-  GeneralizePadOpPattern(MLIRContext *context,
-                         OptimizeCopyFn optimizeCopyFn = nullptr,
-                         PatternBenefit benefit = 1)
-      : OpRewritePattern<tensor::PadOp>(context, benefit),
-        optimizeCopyFn(std::move(optimizeCopyFn)) {}
+struct DecomposePadOpPattern : public OpRewritePattern<tensor::PadOp> {
+  DecomposePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::PadOp>(context, benefit) {}
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override;
 
 protected:
-  OptimizeCopyFn optimizeCopyFn;
   Value createFillOrGenerateOp(RewriterBase &rewriter, tensor::PadOp padOp,
                                Value dest,
                                const SmallVector<Value> &dynSizes) const;
 };
 
-/// Rewrites a tensor::PackOp into a sequence of tensor.pad + linalg.transpose +
-/// tensor.insert_slice ops, where the tensor::PackOp has outer dims being all
-/// 1s.
-struct GeneralizeOuterUnitDimsPackOpPattern
+/// Rewrites a tensor::PackOp into a sequence of:
+///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
+///     tensor::InsertSliceOp ops.
+///
+/// Requires that all the outer dims of the input tensor::PackOp are 1.
+///
+/// Before:
+/// ```
+///   %packed = tensor.pack %input
+///     padding_value(%pad : f32)
+///     inner_dims_pos = [1, 0]
+///     inner_tiles = [2, %high]
+///     into %output : tensor<5x1xf32> -> tensor<1x1x2x?xf32>
+/// ```
+///
+/// After:
+/// ```
+///   // PadOp
+///   %padded = tensor.pad %arg0 low[0, 0] high[%0, 1] {
+///     ^bb0(...):
+///       tensor.yield %arg2 : f32
+///   } : tensor<5x1xf32> to tensor<?x2xf32>
+///   // EmptyOp + TransposeOp
+///   %empty = tensor.empty(%arg3) : tensor<2x?xf32>
+///   %transposed = linalg.transpose
+///     ins(%extracted_slice : tensor<?x2xf32>)
+///     outs(%empty : tensor<2x?xf32>)
+///     permutation = [1, 0]
+///   // InsertSliceOp
+///   %inserted_slice = tensor.insert_slice %transposed
+///     into %arg1[0, 0, 0, 0] [1, 1, 2, %tile_dim_1] [1, 1, 1, 1]
+///     : tensor<2x?xf32> into tensor<1x1x2x?xf32>
+/// ```
+struct DecomposeOuterUnitDimsPackOpPattern
     : public OpRewritePattern<tensor::PackOp> {
   using OpRewritePattern<tensor::PackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::PackOp packOp,
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced extract_slice op
-/// + transpose op + insert_slice op, where the tensor::UnPackOp has outer dims
-/// being all 1s.
-struct GeneralizeOuterUnitDimsUnPackOpPattern
+/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced
+///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
+///
+/// Requires that all the outer dims of the input tensor::PackOp are 1.
+///
+/// Before:
+/// ```
+/// %packed = tensor.unpack %input
+///   inner_dims_pos = [1, 0]
+///   inner_tiles = [2, 8]
+///   into %output : tensor<1x1x2x8xf32> -> tensor<5x1xf32>
+/// ```
+///
+/// After:
+/// ```
+///   // Rank-reduced extract to obtain the tile
+///   %slice = tensor.extract_slice %arg0[0, 0, 0, 0] [1, 1, 2, 8] [1, 1, 1, 1]
+///     : tensor<1x1x2x8xf32> to tensor<2x8xf32>
+///   // EmptyOp + TransposeOp
+///   %init = tensor.empty() : tensor<8x2xf32>
+///   %transposed = linalg.transpose
+///     ins(%extracted_slice : tensor<2x8xf32>)
+///     outs(%0 : tensor<8x2xf32>) permutation = [1, 0]
+///   // Extract a slice matching the specified output size
+///   %result = tensor.extract_slice %transposed[0, 0] [5, 1] [1, 1]
+///     : tensor<8x2xf32> to tensor<5x1xf32>
+/// ```
+struct DecomposeOuterUnitDimsUnPackOpPattern
     : public OpRewritePattern<tensor::UnPackOp> {
   using OpRewritePattern<tensor::UnPackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::UnPackOp unpackOp,
@@ -1658,10 +1709,24 @@ void populateLinalgGenericOpsSpecializationPatterns(
 void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                           PatternBenefit benefit = 1);
 
+/// Populates patterns to decompose tensor.pack and tensor.unpack Ops into e.g.
+/// tensor.pad, linalg.transpose, tensor.{insert|extract}_slice. Require all
+/// outer dims to be unit.
+void populateDecomposePackUnpackPatterns(RewritePatternSet &patterns);
+
+/// Populates patterns to decompose tensor.pad into e.g.
+/// tensor.empty, linalg.fill, tensor.insert_slice.
+void populateDecomposePadPatterns(RewritePatternSet &patterns);
+
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
+
+/// Populates `patterns` with vectorisation patterns for tensor.insert_slice.
+/// TODO: Avoid having a dedicated `populate{}` for one pattern. Instead, either
+/// expand or merge with other `populate{}`.
+void populateInsertSliceVectorizationPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits
@@ -1785,6 +1850,10 @@ void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 /// Adds patterns that waps tensor.extract_slice(linalg.fill(%cst, %init)) into
 /// linalg.fill(%cst, tensor.extract_slice(%init)).
 void populateSwapExtractSliceWithFillPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to make explicit broadcasts and transforms in the
+/// input operands of a genericOp.
+void populateDecomposeProjectedPermutationPatterns(RewritePatternSet &patterns);
 
 /// Patterns to apply `splitReduction` below.
 void populateSplitReductionPattern(

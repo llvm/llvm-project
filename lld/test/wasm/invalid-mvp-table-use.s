@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 #
 # If any table is defined or declared besides the __indirect_function_table,
-# the compilation unit should be compiled with -mattr=+reference-types,
+# the compilation unit should be compiled with -mattr=+call-indirect-overlong,
 # causing symbol table entries to be emitted for all tables.
 # RUN: not wasm-ld --no-entry %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-ERR %s
 

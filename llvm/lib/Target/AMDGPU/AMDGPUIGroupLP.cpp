@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
-#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -191,7 +190,7 @@ public:
   bool allowedByRules(const SUnit *SU,
                       SmallVectorImpl<SchedGroup> &SyncPipe) const {
     for (auto &Rule : Rules) {
-      if (!Rule.get()->apply(SU, Collection, SyncPipe))
+      if (!Rule->apply(SU, Collection, SyncPipe))
         return false;
     }
     return true;
@@ -833,7 +832,8 @@ void PipelineSolver::solve() {
 enum IGLPStrategyID : int {
   MFMASmallGemmOptID = 0,
   MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleave = 2
+  MFMAExpInterleaveID = 2,
+  MFMAExpSimpleInterleaveID = 3
 };
 
 // Implement a IGLP scheduling strategy.
@@ -1846,6 +1846,48 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   return true;
 }
 
+class MFMAExpSimpleInterleaveOpt final : public IGLPStrategy {
+public:
+  bool applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      AMDGPU::SchedulingPhase Phase) override;
+
+  bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
+                           AMDGPU::SchedulingPhase Phase) override {
+    return true;
+  }
+
+  MFMAExpSimpleInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : IGLPStrategy(DAG, TII) {
+    IsBottomUp = true;
+  }
+};
+
+bool MFMAExpSimpleInterleaveOpt::applyIGLPStrategy(
+    DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    AMDGPU::SchedulingPhase Phase) {
+  // Count the number of MFMA instructions.
+  unsigned MFMACount = 0;
+  for (const MachineInstr &I : *DAG)
+    if (TII->isMFMAorWMMA(I))
+      ++MFMACount;
+
+  const unsigned PipelineSyncID = 0;
+  for (unsigned I = 0; I < MFMACount * 3; ++I) {
+    SchedGroup *SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::TRANS, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  }
+
+  return true;
+}
+
 class MFMASmallGemmSingleWaveOpt final : public IGLPStrategy {
 private:
   // Whether the DS_READ is a predecessor of first four MFMA in region
@@ -2309,8 +2351,10 @@ createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
     return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
   case MFMASmallGemmSingleWaveOptID:
     return std::make_unique<MFMASmallGemmSingleWaveOpt>(DAG, TII);
-  case MFMAExpInterleave:
+  case MFMAExpInterleaveID:
     return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII);
+  case MFMAExpSimpleInterleaveID:
+    return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII);
   }
 
   llvm_unreachable("Unknown IGLPStrategyID");
