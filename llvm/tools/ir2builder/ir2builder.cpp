@@ -117,7 +117,7 @@ static cl::opt<bool>
 /// When enabled the traversal will be in reverse post order, which can handle
 /// when values are defined after (text-wise) their use.
 /// On the other hand using just linear traversal will also include parts that
-/// are outside of the graph (dead blocks).
+/// are outside of the graph (dead blocks). 
 static cl::opt<bool>
     UseRPO("use-rpo",
            cl::desc("Traverses IR in reverse post order. This can help with "
@@ -126,44 +126,44 @@ static cl::opt<bool>
 
 /// \brief Transpiler from LLVM IR into IRBuilder API calls.
 /// The main purpose for this class is to hold variable counter and variable
-/// names for needed resources, such as LLVMContext.
+/// names for needed resources, such as LLVMContext. 
 class IR2Builder {
 private:
-  unsigned long varI = 0;
-  std::string llvmPrefix;
-  std::string builder;
-  std::string ctx;
-  std::string modName;
+  unsigned long VarI = 0;
+  std::string LLVMPrefix;
+  std::string Builder;
+  std::string Ctx;
+  std::string ModName;
 
-  std::vector<std::string> phiIncomings;
+  std::vector<std::string> PhiIncomings;
 
-  inline bool hasName(const Value *op) {
-    return !isa<Constant>(op) && !isa<InlineAsm>(op);
+  inline bool hasName(const Value *Op) {
+    return !isa<Constant>(Op) && !isa<InlineAsm>(Op);
   }
 
-  void outputAttr(Attribute att, raw_ostream &OS);
+  void outputAttr(Attribute Att, raw_ostream &OS);
 
   std::string getNextVar();
+  
+  std::string asStr(GlobalValue::LinkageTypes Linkage);
+  std::string asStr(GlobalValue::ThreadLocalMode TLM);
+  std::string asStr(CmpInst::Predicate P);
+  std::string asStr(AtomicRMWInst::BinOp Op);
+  std::string asStr(AtomicOrdering AO);
+  std::string asStr(SyncScope::ID Sys);
+  std::string asStr(CallingConv::ID CC);
+  std::string asStr(ConstantRange &CR);
 
-  std::string asStr(GlobalValue::LinkageTypes linkage);
-  std::string asStr(GlobalValue::ThreadLocalMode tlm);
-  std::string asStr(CmpInst::Predicate p);
-  std::string asStr(AtomicRMWInst::BinOp op);
-  std::string asStr(AtomicOrdering ao);
-  std::string asStr(SyncScope::ID sys);
-  std::string asStr(CallingConv::ID cc);
-  std::string asStr(ConstantRange &cr);
-
-  std::string asStr(const Value *op);
-  std::string asStr(const Constant *op);
-  std::string asStr(const Type *t);
-  std::string asStr(const InlineAsm *op);
-  std::string asStr(const Metadata *op);
+  std::string asStr(const Value *Op);
+  std::string asStr(const Constant *Op);
+  std::string asStr(const Type *T);
+  std::string asStr(const InlineAsm *Op);
+  std::string asStr(const Metadata *Op);
 
 public:
   IR2Builder()
-      : llvmPrefix(ScopePrefix), builder(BuilderName), ctx(ContextName),
-        modName(ModuleName) {}
+      : LLVMPrefix(ScopePrefix), Builder(BuilderName), Ctx(ContextName),
+        ModName(ModuleName) {}
 
   /// Calls convert for all the functions in passed in module.
   /// \param M Module to call convert over.
@@ -183,9 +183,9 @@ public:
   void convert(const Instruction *I, raw_ostream &OS);
 };
 
-std::string IR2Builder::getNextVar() { return "v0" + std::to_string(varI++); }
+std::string IR2Builder::getNextVar() { return "v0" + std::to_string(VarI++); }
 
-static std::string to_str(bool b) { return b ? "true" : "false"; }
+static std::string toStr(bool B) { return B ? "true" : "false"; }
 
 static std::string escape(std::string S) {
   std::string Tmp;
@@ -194,750 +194,750 @@ static std::string escape(std::string S) {
   return Tmp;
 }
 
-static std::string sanitize(std::string s) {
-  std::stringstream ss;
-  for (size_t i = 0; i < s.size(); ++i) {
-    if (!std::isalnum(s[i]))
-      ss << "_" << static_cast<unsigned>(s[i]) << "_";
+static std::string sanitize(std::string S) {
+  std::stringstream SS;
+  for (size_t I = 0; I < S.size(); ++I) {
+    if (!std::isalnum(S[I]))
+      SS << "_" << static_cast<unsigned>(S[I]) << "_";
     else
-      ss << s[i];
+      SS << S[I];
   }
-  return ss.str();
+  return SS.str();
 }
 
-std::string IR2Builder::asStr(GlobalValue::LinkageTypes linkage) {
-  std::string link = llvmPrefix + "GlobalValue::";
+std::string IR2Builder::asStr(GlobalValue::LinkageTypes Linkage) {
+  std::string Link = LLVMPrefix + "GlobalValue::";
 
-  switch (linkage) {
-  case GlobalValue::WeakODRLinkage:
-    return link + "WeakODRLinkage";
-  case GlobalValue::LinkOnceODRLinkage:
-    return link + "LinkOnceODRLinkage";
-  case GlobalValue::AvailableExternallyLinkage:
-    return link + "AvailableExternallyLinkage";
-  case GlobalValue::WeakAnyLinkage:
-    return link + "WeakAnyLinkage";
-  case GlobalValue::LinkOnceAnyLinkage:
-    return link + "LinkOnceAnyLinkage";
-  case GlobalValue::CommonLinkage:
-    return link + "CommonLinkage";
-  case GlobalValue::ExternalWeakLinkage:
-    return link + "ExternalWeakLinkage";
-  case GlobalValue::ExternalLinkage:
-    return link + "ExternalLinkage";
-  case GlobalValue::AppendingLinkage:
-    return link + "AppendingLinkage";
-  case GlobalValue::InternalLinkage:
-    return link + "InternalLinkage";
-  case GlobalValue::PrivateLinkage:
-    return link + "PrivateLinkage";
-  default:
-    return "/* Unknown LinkageTypes (using value) */" + std::to_string(linkage);
-  }
+  switch (Linkage) {
+   case GlobalValue::WeakODRLinkage:
+    return Link + "WeakODRLinkage";
+   case GlobalValue::LinkOnceODRLinkage:
+    return Link + "LinkOnceODRLinkage";
+   case GlobalValue::AvailableExternallyLinkage:
+    return Link + "AvailableExternallyLinkage";
+   case GlobalValue::WeakAnyLinkage:
+    return Link + "WeakAnyLinkage";
+   case GlobalValue::LinkOnceAnyLinkage:
+    return Link + "LinkOnceAnyLinkage";
+   case GlobalValue::CommonLinkage:
+    return Link + "CommonLinkage";
+   case GlobalValue::ExternalWeakLinkage:
+    return Link + "ExternalWeakLinkage";
+   case GlobalValue::ExternalLinkage:
+    return Link + "ExternalLinkage";
+   case GlobalValue::AppendingLinkage:
+    return Link + "AppendingLinkage";
+   case GlobalValue::InternalLinkage:
+    return Link + "InternalLinkage";
+   case GlobalValue::PrivateLinkage:
+    return Link + "PrivateLinkage";
+   default:
+    return "/* Unknown LinkageTypes (using value) */" + std::to_string(Linkage);
+   }
 }
 
-std::string IR2Builder::asStr(AtomicRMWInst::BinOp op) {
-  switch (op) {
+std::string IR2Builder::asStr(AtomicRMWInst::BinOp Op) {
+  switch (Op) {
   case AtomicRMWInst::BinOp::Xchg:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Xchg";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Xchg";
   case AtomicRMWInst::BinOp::Add:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Add";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Add";
   case AtomicRMWInst::BinOp::Sub:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Sub";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Sub";
   case AtomicRMWInst::BinOp::And:
-    return llvmPrefix + "AtomicRMWInst::BinOp::And";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::And";
   case AtomicRMWInst::BinOp::Nand:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Nand";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Nand";
   case AtomicRMWInst::BinOp::Or:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Or";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Or";
   case AtomicRMWInst::BinOp::Xor:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Xor";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Xor";
   case AtomicRMWInst::BinOp::Max:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Max";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Max";
   case AtomicRMWInst::BinOp::Min:
-    return llvmPrefix + "AtomicRMWInst::BinOp::Min";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::Min";
   case AtomicRMWInst::BinOp::UMax:
-    return llvmPrefix + "AtomicRMWInst::BinOp::UMax";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::UMax";
   case AtomicRMWInst::BinOp::UMin:
-    return llvmPrefix + "AtomicRMWInst::BinOp::UMin";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::UMin";
   case AtomicRMWInst::BinOp::FAdd:
-    return llvmPrefix + "AtomicRMWInst::BinOp::FAdd";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::FAdd";
   case AtomicRMWInst::BinOp::FSub:
-    return llvmPrefix + "AtomicRMWInst::BinOp::FSub";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::FSub";
   case AtomicRMWInst::BinOp::FMax:
-    return llvmPrefix + "AtomicRMWInst::BinOp::FMax";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::FMax";
   case AtomicRMWInst::BinOp::FMin:
-    return llvmPrefix + "AtomicRMWInst::BinOp::FMin";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::FMin";
   case AtomicRMWInst::BinOp::UIncWrap:
-    return llvmPrefix + "AtomicRMWInst::BinOp::UIncWrap";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::UIncWrap";
   case AtomicRMWInst::BinOp::UDecWrap:
-    return llvmPrefix + "AtomicRMWInst::BinOp::UDecWrap";
+    return LLVMPrefix + "AtomicRMWInst::BinOp::UDecWrap";
   default:
     return "/* TODO: Unknown AtomicRMW operator (using value) */ " +
-           std::to_string(op);
+           std::to_string(Op);
   }
 }
 
-std::string IR2Builder::asStr(AtomicOrdering ao) {
-  switch (ao) {
+std::string IR2Builder::asStr(AtomicOrdering AO) {
+  switch (AO) {
   case AtomicOrdering::NotAtomic:
-    return llvmPrefix + "AtomicOrdering::NotAtomic";
+    return LLVMPrefix + "AtomicOrdering::NotAtomic";
   case AtomicOrdering::Unordered:
-    return llvmPrefix + "AtomicOrdering::Unordered";
+    return LLVMPrefix + "AtomicOrdering::Unordered";
   case AtomicOrdering::Monotonic:
-    return llvmPrefix + "AtomicOrdering::Monotonic";
+    return LLVMPrefix + "AtomicOrdering::Monotonic";
   case AtomicOrdering::Acquire:
-    return llvmPrefix + "AtomicOrdering::Acquire";
+    return LLVMPrefix + "AtomicOrdering::Acquire";
   case AtomicOrdering::Release:
-    return llvmPrefix + "AtomicOrdering::Release";
+    return LLVMPrefix + "AtomicOrdering::Release";
   case AtomicOrdering::AcquireRelease:
-    return llvmPrefix + "AtomicOrdering::AcquireRelease";
+    return LLVMPrefix + "AtomicOrdering::AcquireRelease";
   case AtomicOrdering::SequentiallyConsistent:
-    return llvmPrefix + "AtomicOrdering::SequentiallyConsistent";
+    return LLVMPrefix + "AtomicOrdering::SequentiallyConsistent";
   default:
     return "/* TODO: Unknown atomic ordering */";
   }
 }
 
-std::string IR2Builder::asStr(CmpInst::Predicate p) {
-  switch (p) {
+std::string IR2Builder::asStr(CmpInst::Predicate P) {
+  switch (P) {
   case CmpInst::Predicate::FCMP_FALSE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_FALSE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_FALSE";
   case CmpInst::Predicate::FCMP_OEQ:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_OEQ";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_OEQ";
   case CmpInst::Predicate::FCMP_OGT:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_OGT";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_OGT";
   case CmpInst::Predicate::FCMP_OGE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_OGE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_OGE";
   case CmpInst::Predicate::FCMP_OLT:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_OLT";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_OLT";
   case CmpInst::Predicate::FCMP_OLE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_OLE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_OLE";
   case CmpInst::Predicate::FCMP_ONE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_ONE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_ONE";
   case CmpInst::Predicate::FCMP_ORD:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_ORD";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_ORD";
   case CmpInst::Predicate::FCMP_UNO:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_UNO";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_UNO";
   case CmpInst::Predicate::FCMP_UEQ:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_UEQ";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_UEQ";
   case CmpInst::Predicate::FCMP_UGT:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_UGT";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_UGT";
   case CmpInst::Predicate::FCMP_UGE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_UGE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_UGE";
   case CmpInst::Predicate::FCMP_ULT:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_ULT";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_ULT";
   case CmpInst::Predicate::FCMP_ULE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_ULE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_ULE";
   case CmpInst::Predicate::FCMP_UNE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_UNE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_UNE";
   case CmpInst::Predicate::FCMP_TRUE:
-    return llvmPrefix + "CmpInst::Predicate::FCMP_TRUE";
+    return LLVMPrefix + "CmpInst::Predicate::FCMP_TRUE";
   case CmpInst::Predicate::ICMP_EQ:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_EQ";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_EQ";
   case CmpInst::Predicate::ICMP_NE:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_NE";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_NE";
   case CmpInst::Predicate::ICMP_UGT:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_UGT";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_UGT";
   case CmpInst::Predicate::ICMP_UGE:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_UGE";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_UGE";
   case CmpInst::Predicate::ICMP_ULT:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_ULT";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_ULT";
   case CmpInst::Predicate::ICMP_ULE:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_ULE";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_ULE";
   case CmpInst::Predicate::ICMP_SGT:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_SGT";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_SGT";
   case CmpInst::Predicate::ICMP_SGE:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_SGE";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_SGE";
   case CmpInst::Predicate::ICMP_SLT:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_SLT";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_SLT";
   case CmpInst::Predicate::ICMP_SLE:
-    return llvmPrefix + "CmpInst::Predicate::ICMP_SLE";
+    return LLVMPrefix + "CmpInst::Predicate::ICMP_SLE";
   default:
     return "/* TODO: Unknown CMP predicate (using value) */ " +
-           std::to_string(p);
+           std::to_string(P);
   }
 }
 
-std::string IR2Builder::asStr(SyncScope::ID sys) {
-  if (sys == SyncScope::System)
-    return llvmPrefix + "SyncScope::System";
-  if (sys == SyncScope::SingleThread)
-    return llvmPrefix + "SyncScope::SingleThread";
-
+std::string IR2Builder::asStr(SyncScope::ID Sys) {
+  if (Sys == SyncScope::System)
+    return LLVMPrefix + "SyncScope::System";
+  if (Sys == SyncScope::SingleThread)
+    return LLVMPrefix + "SyncScope::SingleThread";
+    
   return "/* TODO: Unknown SyncScope ID (using value) */ " +
-         std::to_string(sys);
+         std::to_string(Sys);
 }
 
-std::string IR2Builder::asStr(GlobalValue::ThreadLocalMode tlm) {
-  switch (tlm) {
+std::string IR2Builder::asStr(GlobalValue::ThreadLocalMode TLM) {
+  switch (TLM) {
   case GlobalValue::ThreadLocalMode::NotThreadLocal:
-    return llvmPrefix + "GlobalValue::ThreadLocalMode::NotThreadLocal";
+    return LLVMPrefix + "GlobalValue::ThreadLocalMode::NotThreadLocal";
   case GlobalValue::ThreadLocalMode::GeneralDynamicTLSModel:
-    return llvmPrefix + "GlobalValue::ThreadLocalMode::GeneralDynamicTLSModel";
+    return LLVMPrefix + "GlobalValue::ThreadLocalMode::GeneralDynamicTLSModel";
   case GlobalValue::ThreadLocalMode::LocalDynamicTLSModel:
-    return llvmPrefix + "GlobalValue::ThreadLocalMode::LocalDynamicTLSModel";
+    return LLVMPrefix + "GlobalValue::ThreadLocalMode::LocalDynamicTLSModel";
   case GlobalValue::ThreadLocalMode::InitialExecTLSModel:
-    return llvmPrefix + "GlobalValue::ThreadLocalMode::InitialExecTLSModel";
+    return LLVMPrefix + "GlobalValue::ThreadLocalMode::InitialExecTLSModel";
   case GlobalValue::ThreadLocalMode::LocalExecTLSModel:
-    return llvmPrefix + "GlobalValue::ThreadLocalMode::LocalExecTLSModel";
+    return LLVMPrefix + "GlobalValue::ThreadLocalMode::LocalExecTLSModel";
   default:
     return "/* TODO: Unknown ThreadLocalMode (using value) */ " +
-           std::to_string(tlm);
+           std::to_string(TLM);
   }
 }
 
-std::string IR2Builder::asStr(CallingConv::ID cc) {
-  switch (cc) {
+std::string IR2Builder::asStr(CallingConv::ID CC) {
+  switch (CC) {
   case CallingConv::C:
-    return llvmPrefix + "CallingConv::C";
+    return LLVMPrefix + "CallingConv::C";
   case CallingConv::Fast:
-    return llvmPrefix + "CallingConv::Fast";
+    return LLVMPrefix + "CallingConv::Fast";
   case CallingConv::Cold:
-    return llvmPrefix + "CallingConv::Cold";
+    return LLVMPrefix + "CallingConv::Cold";
   case CallingConv::GHC:
-    return llvmPrefix + "CallingConv::GHC";
+    return LLVMPrefix + "CallingConv::GHC";
   case CallingConv::HiPE:
-    return llvmPrefix + "CallingConv::HiPE";
+    return LLVMPrefix + "CallingConv::HiPE";
   case CallingConv::AnyReg:
-    return llvmPrefix + "CallingConv::AnyReg";
+    return LLVMPrefix + "CallingConv::AnyReg";
   case CallingConv::PreserveMost:
-    return llvmPrefix + "CallingConv::PreserveMost";
+    return LLVMPrefix + "CallingConv::PreserveMost";
   case CallingConv::PreserveAll:
-    return llvmPrefix + "CallingConv::PreserveAll";
+    return LLVMPrefix + "CallingConv::PreserveAll";
   case CallingConv::Swift:
-    return llvmPrefix + "CallingConv::Swift";
+    return LLVMPrefix + "CallingConv::Swift";
   case CallingConv::CXX_FAST_TLS:
-    return llvmPrefix + "CallingConv::CXX_FAST_TLS";
+    return LLVMPrefix + "CallingConv::CXX_FAST_TLS";
   case CallingConv::Tail:
-    return llvmPrefix + "CallingConv::Tail";
+    return LLVMPrefix + "CallingConv::Tail";
   case CallingConv::CFGuard_Check:
-    return llvmPrefix + "CallingConv::CFGuard_Check";
+    return LLVMPrefix + "CallingConv::CFGuard_Check";
   case CallingConv::SwiftTail:
-    return llvmPrefix + "CallingConv::SwiftTail";
+    return LLVMPrefix + "CallingConv::SwiftTail";
   case CallingConv::PreserveNone:
-    return llvmPrefix + "CallingConv::PreserveNone";
+    return LLVMPrefix + "CallingConv::PreserveNone";
   case CallingConv::FirstTargetCC:
-    return llvmPrefix + "CallingConv::FirstTargetCC";
+    return LLVMPrefix + "CallingConv::FirstTargetCC";
   // CallingConv::X86_StdCall is the same as FirstTargetCC.
   case CallingConv::X86_FastCall:
-    return llvmPrefix + "CallingConv::X86_FastCall";
+    return LLVMPrefix + "CallingConv::X86_FastCall";
   case CallingConv::ARM_APCS:
-    return llvmPrefix + "CallingConv::ARM_APCS";
+    return LLVMPrefix + "CallingConv::ARM_APCS";
   case CallingConv::ARM_AAPCS:
-    return llvmPrefix + "CallingConv::ARM_AAPCS";
+    return LLVMPrefix + "CallingConv::ARM_AAPCS";
   case CallingConv::ARM_AAPCS_VFP:
-    return llvmPrefix + "CallingConv::ARM_AAPCS_VFP";
+    return LLVMPrefix + "CallingConv::ARM_AAPCS_VFP";
   case CallingConv::MSP430_INTR:
-    return llvmPrefix + "CallingConv::MSP430_INTR";
+    return LLVMPrefix + "CallingConv::MSP430_INTR";
   case CallingConv::X86_ThisCall:
-    return llvmPrefix + "CallingConv::X86_ThisCall";
+    return LLVMPrefix + "CallingConv::X86_ThisCall";
   case CallingConv::PTX_Kernel:
-    return llvmPrefix + "CallingConv::PTX_Kernel";
+    return LLVMPrefix + "CallingConv::PTX_Kernel";
   case CallingConv::PTX_Device:
-    return llvmPrefix + "CallingConv::PTX_Device";
+    return LLVMPrefix + "CallingConv::PTX_Device";
   case CallingConv::SPIR_FUNC:
-    return llvmPrefix + "CallingConv::SPIR_FUNC";
+    return LLVMPrefix + "CallingConv::SPIR_FUNC";
   case CallingConv::SPIR_KERNEL:
-    return llvmPrefix + "CallingConv::SPIR_KERNEL";
+    return LLVMPrefix + "CallingConv::SPIR_KERNEL";
   case CallingConv::Intel_OCL_BI:
-    return llvmPrefix + "CallingConv::Intel_OCL_BI";
+    return LLVMPrefix + "CallingConv::Intel_OCL_BI";
   case CallingConv::X86_64_SysV:
-    return llvmPrefix + "CallingConv::X86_64_SysV";
+    return LLVMPrefix + "CallingConv::X86_64_SysV";
   case CallingConv::Win64:
-    return llvmPrefix + "CallingConv::Win64";
+    return LLVMPrefix + "CallingConv::Win64";
   case CallingConv::X86_VectorCall:
-    return llvmPrefix + "CallingConv::X86_VectorCall";
+    return LLVMPrefix + "CallingConv::X86_VectorCall";
   case CallingConv::DUMMY_HHVM:
-    return llvmPrefix + "CallingConv::DUMMY_HHVM";
+    return LLVMPrefix + "CallingConv::DUMMY_HHVM";
   case CallingConv::DUMMY_HHVM_C:
-    return llvmPrefix + "CallingConv::DUMMY_HHVM_C";
+    return LLVMPrefix + "CallingConv::DUMMY_HHVM_C";
   case CallingConv::X86_INTR:
-    return llvmPrefix + "CallingConv::X86_INTR";
+    return LLVMPrefix + "CallingConv::X86_INTR";
   case CallingConv::AVR_INTR:
-    return llvmPrefix + "CallingConv::AVR_INTR";
+    return LLVMPrefix + "CallingConv::AVR_INTR";
   case CallingConv::AVR_SIGNAL:
-    return llvmPrefix + "CallingConv::AVR_SIGNAL";
+    return LLVMPrefix + "CallingConv::AVR_SIGNAL";
   case CallingConv::AVR_BUILTIN:
-    return llvmPrefix + "CallingConv::AVR_BUILTIN";
+    return LLVMPrefix + "CallingConv::AVR_BUILTIN";
   case CallingConv::AMDGPU_VS:
-    return llvmPrefix + "CallingConv::AMDGPU_VS";
+    return LLVMPrefix + "CallingConv::AMDGPU_VS";
   case CallingConv::AMDGPU_GS:
-    return llvmPrefix + "CallingConv::AMDGPU_GS";
+    return LLVMPrefix + "CallingConv::AMDGPU_GS";
   case CallingConv::AMDGPU_PS:
-    return llvmPrefix + "CallingConv::AMDGPU_PS";
+    return LLVMPrefix + "CallingConv::AMDGPU_PS";
   case CallingConv::AMDGPU_CS:
-    return llvmPrefix + "CallingConv::AMDGPU_CS";
+    return LLVMPrefix + "CallingConv::AMDGPU_CS";
   case CallingConv::AMDGPU_KERNEL:
-    return llvmPrefix + "CallingConv::AMDGPU_KERNEL";
+    return LLVMPrefix + "CallingConv::AMDGPU_KERNEL";
   case CallingConv::X86_RegCall:
-    return llvmPrefix + "CallingConv::X86_RegCall";
+    return LLVMPrefix + "CallingConv::X86_RegCall";
   case CallingConv::AMDGPU_HS:
-    return llvmPrefix + "CallingConv::AMDGPU_HS";
+    return LLVMPrefix + "CallingConv::AMDGPU_HS";
   case CallingConv::MSP430_BUILTIN:
-    return llvmPrefix + "CallingConv::MSP430_BUILTIN";
+    return LLVMPrefix + "CallingConv::MSP430_BUILTIN";
   case CallingConv::AMDGPU_LS:
-    return llvmPrefix + "CallingConv::AMDGPU_LS";
+    return LLVMPrefix + "CallingConv::AMDGPU_LS";
   case CallingConv::AMDGPU_ES:
-    return llvmPrefix + "CallingConv::AMDGPU_ES";
+    return LLVMPrefix + "CallingConv::AMDGPU_ES";
   case CallingConv::AArch64_VectorCall:
-    return llvmPrefix + "CallingConv::AArch64_VectorCall";
+    return LLVMPrefix + "CallingConv::AArch64_VectorCall";
   case CallingConv::AArch64_SVE_VectorCall:
-    return llvmPrefix + "CallingConv::AArch64_SVE_VectorCall";
+    return LLVMPrefix + "CallingConv::AArch64_SVE_VectorCall";
   case CallingConv::WASM_EmscriptenInvoke:
-    return llvmPrefix + "CallingConv::WASM_EmscriptenInvoke";
+    return LLVMPrefix + "CallingConv::WASM_EmscriptenInvoke";
   case CallingConv::AMDGPU_Gfx:
-    return llvmPrefix + "CallingConv::AMDGPU_Gfx";
+    return LLVMPrefix + "CallingConv::AMDGPU_Gfx";
   case CallingConv::M68k_INTR:
-    return llvmPrefix + "CallingConv::M68k_INTR";
+    return LLVMPrefix + "CallingConv::M68k_INTR";
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
-    return llvmPrefix +
+    return LLVMPrefix +
            "CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0";
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
-    return llvmPrefix +
+    return LLVMPrefix +
            "CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2";
   case CallingConv::AMDGPU_CS_Chain:
-    return llvmPrefix + "CallingConv::AMDGPU_CS_Chain";
+    return LLVMPrefix + "CallingConv::AMDGPU_CS_Chain";
   case CallingConv::AMDGPU_CS_ChainPreserve:
-    return llvmPrefix + "CallingConv::AMDGPU_CS_ChainPreserve";
+    return LLVMPrefix + "CallingConv::AMDGPU_CS_ChainPreserve";
   case CallingConv::M68k_RTD:
-    return llvmPrefix + "CallingConv::M68k_RTD";
+    return LLVMPrefix + "CallingConv::M68k_RTD";
   case CallingConv::GRAAL:
-    return llvmPrefix + "CallingConv::GRAAL";
+    return LLVMPrefix + "CallingConv::GRAAL";
   case CallingConv::ARM64EC_Thunk_X64:
-    return llvmPrefix + "CallingConv::ARM64EC_Thunk_X64";
+    return LLVMPrefix + "CallingConv::ARM64EC_Thunk_X64";
   case CallingConv::ARM64EC_Thunk_Native:
-    return llvmPrefix + "CallingConv::ARM64EC_Thunk_Native";
+    return LLVMPrefix + "CallingConv::ARM64EC_Thunk_Native";
   default:
-    return "/* Custom CC */" + std::to_string(cc);
+    return "/* Custom CC */" + std::to_string(CC);
   }
 }
 
-std::string IR2Builder::asStr(const Type *t) {
-  std::string tcall;
-  if (auto it = dyn_cast<IntegerType>(t)) {
-    switch (it->getBitWidth()) {
+std::string IR2Builder::asStr(const Type *T) {
+  std::string TCall;
+  if (auto IT = dyn_cast<IntegerType>(T)) {
+    switch (IT->getBitWidth()) {
     case 8:
     case 16:
     case 32:
     case 64:
-      tcall = ("getInt" + Twine(it->getBitWidth()) + "Ty()").str();
+      TCall = ("getInt" + Twine(IT->getBitWidth()) + "Ty()").str();
       break;
     default:
-      tcall = "getIntNTy(" + std::to_string(it->getBitWidth()) + ")";
+      TCall = "getIntNTy(" + std::to_string(IT->getBitWidth()) + ")";
       break;
     }
-  } else if (t->isVoidTy())
-    tcall = "getVoidTy()";
-  else if (t->isFloatTy())
-    tcall = "getFloatTy()";
-  else if (t->isDoubleTy())
-    tcall = "getDoubleTy()";
-  else if (auto st = dyn_cast<StructType>(t)) {
-    std::string elements = llvmPrefix + "ArrayRef<Type *>(";
-    if (st->getNumElements() > 1)
-      elements += "{";
-    bool first = true;
-    for (auto e : st->elements()) {
-      if (!first)
-        elements += ", ";
-      elements += asStr(e);
-      first = false;
+  } else if (T->isVoidTy())
+    TCall = "getVoidTy()";
+  else if (T->isFloatTy())
+    TCall = "getFloatTy()";
+  else if (T->isDoubleTy())
+    TCall = "getDoubleTy()";
+  else if (auto ST = dyn_cast<StructType>(T)) {
+    std::string Elements = LLVMPrefix + "ArrayRef<Type *>(";
+    if (ST->getNumElements() > 1)
+      Elements += "{";
+    bool First = true;
+    for (auto E : ST->elements()) {
+      if (!First)
+        Elements += ", ";
+      Elements += asStr(E);
+      First = false;
     }
-    if (st->getNumElements() > 1)
-      elements += "}";
-    elements += ")";
-    return llvmPrefix + "StructType::create(" + ctx + ", " + elements + ")";
-  } else if (auto at = dyn_cast<ArrayType>(t)) {
-    return llvmPrefix + "ArrayType::get(" + asStr(at->getElementType()) + ", " +
-           std::to_string(at->getArrayNumElements()) + ")";
-  } else if (t->isBFloatTy())
-    tcall = "getBFloatTy()";
-  else if (auto vt = dyn_cast<VectorType>(t)) {
-    std::string elemCount =
-        llvmPrefix + "ElementCount::get(" +
-        std::to_string(vt->getElementCount().getKnownMinValue()) + ", " +
-        to_str(vt->getElementCount().isScalable()) + ")";
-    return llvmPrefix + "VectorType::get(" + asStr(vt->getElementType()) +
-           ", " + elemCount + ")";
-  } else if (auto ft = dyn_cast<FunctionType>(t)) {
-    tcall =
-        llvmPrefix + "FunctionType::get(" + asStr(ft->getReturnType()) + ", {";
+    if (ST->getNumElements() > 1)
+      Elements += "}";
+    Elements += ")";
+    return LLVMPrefix + "StructType::create(" + Ctx + ", " + Elements + ")";
+  } else if (auto AT = dyn_cast<ArrayType>(T)) {
+    return LLVMPrefix + "ArrayType::get(" + asStr(AT->getElementType()) +
+           ", " + std::to_string(AT->getArrayNumElements()) + ")";
+  } else if (T->isBFloatTy())
+    TCall = "getBFloatTy()";
+  else if (auto VT = dyn_cast<VectorType>(T)) {
+    std::string ElemCount =
+        LLVMPrefix + "ElementCount::get(" +
+        std::to_string(VT->getElementCount().getKnownMinValue()) + ", " +
+        toStr(VT->getElementCount().isScalable()) + ")";
+    return LLVMPrefix + "VectorType::get(" + asStr(VT->getElementType()) +
+           ", " + ElemCount + ")";
+  } else if (auto FT = dyn_cast<FunctionType>(T)) {
+    TCall = LLVMPrefix + "FunctionType::get(" + asStr(FT->getReturnType()) +
+            ", {";
 
-    bool isFirst = true;
-    for (auto a : ft->params()) {
-      if (!isFirst)
-        tcall += ", ";
-      tcall += asStr(a);
-      isFirst = false;
+    bool IsFirst = true;
+    for (auto A : FT->params()) {
+      if (!IsFirst)
+        TCall += ", ";
+      TCall += asStr(A);
+      IsFirst = false;
     }
-    tcall += "}, " + to_str(ft->isVarArg()) + ")";
-    return tcall;
-  } else if (t->isPointerTy())
-    tcall = "getPtrTy()";
-  else if (t->isHalfTy())
-    return llvmPrefix + "Type::getHalfTy(" + ctx + ")";
-  else if (t->isBFloatTy())
-    return llvmPrefix + "Type::getBFloatTy(" + ctx + ")";
-  else if (t->isX86_FP80Ty())
-    return llvmPrefix + "Type::getX86_FP80Ty(" + ctx + ")";
-  else if (t->isFP128Ty())
-    return llvmPrefix + "Type::getFP128Ty(" + ctx + ")";
-  else if (t->isPPC_FP128Ty())
-    return llvmPrefix + "Type::getPPC_FP128Ty(" + ctx + ")";
-  else if (t->isX86_AMXTy())
-    return llvmPrefix + "Type::getX86_AMXTy(" + ctx + ")";
-  else if (t->isLabelTy())
-    return llvmPrefix + "Type::getLabelTy(" + ctx + ")";
-  else if (t->isMetadataTy())
-    return llvmPrefix + "Type::getMetadataTy(" + ctx + ")";
-  else if (t->isTokenTy())
-    return llvmPrefix + "Type::getTokenTy(" + ctx + ")";
+    TCall += "}, " + toStr(FT->isVarArg()) + ")";
+    return TCall;
+  } else if (T->isPointerTy())
+    TCall = "getPtrTy()";
+  else if (T->isHalfTy())
+    return LLVMPrefix + "Type::getHalfTy(" + Ctx + ")";
+  else if (T->isBFloatTy())
+    return LLVMPrefix + "Type::getBFloatTy(" + Ctx + ")";
+  else if (T->isX86_FP80Ty())
+    return LLVMPrefix + "Type::getX86_FP80Ty(" + Ctx + ")";
+  else if (T->isFP128Ty())
+    return LLVMPrefix + "Type::getFP128Ty(" + Ctx + ")";
+  else if (T->isPPC_FP128Ty())
+    return LLVMPrefix + "Type::getPPC_FP128Ty(" + Ctx + ")";
+  else if (T->isX86_AMXTy())
+    return LLVMPrefix + "Type::getX86_AMXTy(" + Ctx + ")";
+  else if (T->isLabelTy())
+    return LLVMPrefix + "Type::getLabelTy(" + Ctx + ")";
+  else if (T->isMetadataTy())
+    return LLVMPrefix + "Type::getMetadataTy(" + Ctx + ")";
+  else if (T->isTokenTy())
+    return LLVMPrefix + "Type::getTokenTy(" + Ctx + ")";
   else
     return "/* TODO: Unknown type */";
 
-  return builder + "." + tcall;
+  return Builder + "." + TCall;
 }
 
-std::string IR2Builder::asStr(const Constant *c) {
-  if (auto ci = dyn_cast<ConstantInt>(c)) {
+std::string IR2Builder::asStr(const Constant *C) {
+  if (auto CI = dyn_cast<ConstantInt>(C)) {
     // TODO: Sign has to be determined.
-    auto cval = ci->getValue();
-    return llvmPrefix + "ConstantInt::get(" + asStr(c->getType()) + ", " +
-           std::to_string(cval.getSExtValue()) + ")";
+    auto CVal = CI->getValue();
+    return LLVMPrefix + "ConstantInt::get(" + asStr(C->getType()) + ", " +
+           std::to_string(CVal.getSExtValue()) + ")";
   }
-  if (auto cf = dyn_cast<ConstantFP>(c)) {
-    auto cval = cf->getValue();
-    double dval = cval.convertToDouble();
-    std::string val = std::to_string(dval);
-    if (std::isnan(dval) || std::isinf(dval))
-      val = "\"" + val + "\"";
+  if (auto CF = dyn_cast<ConstantFP>(C)) {
+    auto CVal = CF->getValue();
+    double DVal = CVal.convertToDouble();
+    std::string Val = std::to_string(DVal);
+    if (std::isnan(DVal) || std::isinf(DVal))
+      Val = "\"" + Val + "\"";
     // TODO: Handle double to string conversion to include all digits.
-    return llvmPrefix + "ConstantFP::get(" + asStr(c->getType()) + ", " + val +
-           ")";
+    return LLVMPrefix + "ConstantFP::get(" + asStr(C->getType()) + ", " +
+           Val + ")";
   }
-  if (auto at = dyn_cast<ConstantAggregate>(c)) {
-    std::string values;
-    bool first = true;
-    for (unsigned i = 0; i < at->getNumOperands(); ++i) {
-      if (!first)
-        values += ", ";
-      values += asStr(at->getOperand(i));
-      first = false;
+  if (auto AT = dyn_cast<ConstantAggregate>(C)) {
+    std::string Values;
+    bool First = true;
+    for (unsigned I = 0; I < AT->getNumOperands(); ++I) {
+      if (!First)
+        Values += ", ";
+      Values += asStr(AT->getOperand(I));
+      First = false;
     }
 
-    std::string className;
-    if (isa<ConstantArray>(c)) {
-      className = "ConstantArray";
-      values = llvmPrefix + "ArrayRef<" + llvmPrefix + "Constant *>(" +
-               (at->getNumOperands() > 1 ? std::string("{") : std::string("")) +
-               values +
-               (at->getNumOperands() > 1 ? std::string("}") : std::string("")) +
+    std::string ClassName;
+    if (isa<ConstantArray>(C)) {
+      ClassName = "ConstantArray";
+      Values = LLVMPrefix + "ArrayRef<" + LLVMPrefix + "Constant *>(" +
+               (AT->getNumOperands() > 1 ? std::string("{") : std::string("")) +
+               Values +
+               (AT->getNumOperands() > 1 ? std::string("}") : std::string("")) +
                ")";
-    } else if (isa<ConstantStruct>(c))
-      className = "ConstantStruct";
-    else if (isa<ConstantVector>(c)) {
-      values = "{" + values + "}";
+    } else if (isa<ConstantStruct>(C))
+      ClassName = "ConstantStruct";
+    else if (isa<ConstantVector>(C)) {
+      Values = "{" + Values + "}";
       // ConstantVector does not take type as 1st arg.
-      return llvmPrefix + "ConstantVector::get(" + values + ")";
+      return LLVMPrefix + "ConstantVector::get(" + Values + ")";
     } else
       return "/* TODO: Unknown aggregate constant */";
 
-    return llvmPrefix + className + "::get(" + asStr(c->getType()) + ", " +
-           values + ")";
+    return LLVMPrefix + ClassName + "::get(" + asStr(C->getType()) + ", " +
+           Values + ")";
   }
-  if (auto cds = dyn_cast<ConstantDataSequential>(c)) {
-    std::string values;
-    std::string className;
-    std::string elemTy = "/* TODO */";
-    if (isa<ConstantDataArray>(c))
-      className = "ConstantDataArray";
-    else if (isa<ConstantDataVector>(c))
-      className = "ConstantDataVector";
+  if (auto CDS = dyn_cast<ConstantDataSequential>(C)) {
+    std::string Values;
+    std::string ClassName;
+    std::string ElemTy = "/* TODO */";
+    if (isa<ConstantDataArray>(C))
+      ClassName = "ConstantDataArray";
+    else if (isa<ConstantDataVector>(C))
+      ClassName = "ConstantDataVector";
     else
       return "/* TODO: Unknown data sequential constant */";
-    if (cds->isString()) {
-      values = "";
-      bool first = true;
-      for (auto a : cds->getAsString().str()) {
-        if (first) {
-          values += std::to_string(static_cast<uint8_t>(a));
-          first = false;
+    if (CDS->isString()) {
+      Values = "";
+      bool First = true;
+      for (auto a : CDS->getAsString().str()) {
+        if (First) {
+          Values += std::to_string(static_cast<uint8_t>(a));
+          First = false;
         } else {
-          values += ", " + std::to_string(static_cast<uint8_t>(a));
+          Values += ", " + std::to_string(static_cast<uint8_t>(a));
         }
       }
-      return llvmPrefix + className + "::get(" + ctx + ", " + llvmPrefix +
-             "ArrayRef<uint8_t>({" + values + "}))";
-    } else if (cds->isCString()) {
-      values = "";
-      bool first = true;
-      for (auto a : cds->getAsCString().str()) {
-        if (first) {
-          values += std::to_string(static_cast<uint8_t>(a));
-          first = false;
+      return LLVMPrefix + ClassName + "::get(" + Ctx + ", " + LLVMPrefix +
+             "ArrayRef<uint8_t>({" + Values + "}))";
+    }
+    if (CDS->isCString()) {
+      Values = "";
+      bool First = true;
+      for (auto A : CDS->getAsCString().str()) {
+        if (First) {
+          Values += std::to_string(static_cast<uint8_t>(A));
+          First = false;
         } else {
-          values += ", " + std::to_string(static_cast<uint8_t>(a));
+          Values += ", " + std::to_string(static_cast<uint8_t>(A));
         }
       }
-      return llvmPrefix + className + "::get(" + ctx + ", " + llvmPrefix +
-             "ArrayRef<uint8_t>({" + values + "}))";
+      return LLVMPrefix + ClassName + "::get(" + Ctx + ", " + LLVMPrefix +
+             "ArrayRef<uint8_t>({" + Values + "}))";
     } else {
-      Type *elemT = cds->getElementType();
-      if (elemT->isIntegerTy()) {
+      Type *ElemT = CDS->getElementType();
+      if (ElemT->isIntegerTy()) {
         // There can be only 8, 16, 32 or 64 ints in ConstantDataVector.
-        elemTy = "uint" + std::to_string(elemT->getIntegerBitWidth()) + "_t";
-      } else if (elemT->isDoubleTy()) {
-        elemTy = "double";
-      } else if (elemT->isFloatTy()) {
-        elemTy = "float";
+        ElemTy = "uint" + std::to_string(ElemT->getIntegerBitWidth()) + "_t";
+      } else if (ElemT->isDoubleTy()) {
+        ElemTy = "double";
+      } else if (ElemT->isFloatTy()) {
+        ElemTy = "float";
       }
-      values = llvmPrefix + "ArrayRef<" + elemTy + ">(";
-      if (cds->getNumElements() > 1)
-        values += "{";
-      bool first = true;
-      for (unsigned i = 0; i < cds->getNumElements(); ++i) {
-        if (!first)
-          values += ", ";
-        if (elemT->isIntegerTy())
-          values += std::to_string(cds->getElementAsInteger(i));
-        else if (elemT->isDoubleTy())
-          values += std::to_string(cds->getElementAsDouble(i));
-        else if (elemT->isFloatTy())
-          values += std::to_string(cds->getElementAsFloat(i));
+      Values = LLVMPrefix + "ArrayRef<" + ElemTy + ">(";
+      if (CDS->getNumElements() > 1)
+        Values += "{";
+      bool First = true;
+      for (unsigned I = 0; I < CDS->getNumElements(); ++I) {
+        if (!First)
+          Values += ", ";
+        if (ElemT->isIntegerTy())
+          Values += std::to_string(CDS->getElementAsInteger(I));
+        else if (ElemT->isDoubleTy())
+          Values += std::to_string(CDS->getElementAsDouble(I));
+        else if (ElemT->isFloatTy())
+          Values += std::to_string(CDS->getElementAsFloat(I));
         else
           return "/* Unknown type in data sequential constant */";
-        first = false;
+        First = false;
       }
-      if (cds->getNumElements() > 1)
-        values += "}";
-      values += ")";
+      if (CDS->getNumElements() > 1)
+        Values += "}";
+      Values += ")";
     }
 
-    return llvmPrefix + className + "::get(" + ctx + ", " + values + ")";
+    return LLVMPrefix + ClassName + "::get(" + Ctx + ", " + Values + ")";
   }
-  if (isa<ConstantAggregateZero>(c)) {
-    return llvmPrefix + "ConstantAggregateZero::get(" + asStr(c->getType()) +
+  if (isa<ConstantAggregateZero>(C)) {
+    return LLVMPrefix + "ConstantAggregateZero::get(" + asStr(C->getType()) +
            ")";
   }
-  if (isa<PoisonValue>(c)) {
-    return llvmPrefix + "PoisonValue::get(" + asStr(c->getType()) + ")";
+  if (isa<PoisonValue>(C)) {
+    return LLVMPrefix + "PoisonValue::get(" + asStr(C->getType()) + ")";
   }
-  if (isa<UndefValue>(c)) {
-    return llvmPrefix + "UndefValue::get(" + asStr(c->getType()) + ")";
+  if (isa<UndefValue>(C)) {
+    return LLVMPrefix + "UndefValue::get(" + asStr(C->getType()) + ")";
   }
-  if (auto ba = dyn_cast<BlockAddress>(c)) {
-    return llvmPrefix + "BlockAddress::get(" + asStr(ba->getFunction()) + ", " +
-           asStr(ba->getBasicBlock()) + ")";
+  if (auto ba = dyn_cast<BlockAddress>(C)) {
+    return LLVMPrefix + "BlockAddress::get(" + asStr(ba->getFunction()) +
+           ", " + asStr(ba->getBasicBlock()) + ")";
   }
-  if (isa<ConstantPointerNull>(c)) {
-    return llvmPrefix + "ConstantPointerNull::get(" + asStr(c->getType()) + ")";
+  if (isa<ConstantPointerNull>(C)) {
+    return LLVMPrefix + "ConstantPointerNull::get(" + asStr(C->getType()) +
+           ")";
   }
-  if (auto ctn = dyn_cast<ConstantTargetNone>(c)) {
-    auto tetType = ctn->getType();
+  if (auto CTN = dyn_cast<ConstantTargetNone>(C)) {
+    auto CTNType = CTN->getType();
 
-    std::string typeStr = "{";
-    bool first = true;
-    for (unsigned i = 0; i < tetType->getNumTypeParameters(); ++i) {
-      if (!first)
-        typeStr += ", ";
-      typeStr += asStr(tetType->getTypeParameter(i));
-      first = false;
+    std::string TypeStr = "{";
+    bool First = true;
+    for (unsigned I = 0; I < CTNType->getNumTypeParameters(); ++I) {
+      if (!First)
+        TypeStr += ", ";
+      TypeStr += asStr(CTNType->getTypeParameter(I));
+      First = false;
     }
-    typeStr += "}";
+    TypeStr += "}";
 
-    std::string intsStr = "{";
-    first = true;
-    for (unsigned i = 0; i < tetType->getNumIntParameters(); ++i) {
-      if (!first)
-        intsStr += ", ";
-      intsStr += std::to_string(tetType->getIntParameter(i));
-      first = false;
+    std::string IntsStr = "{";
+    First = true;
+    for (unsigned I = 0; I < CTNType->getNumIntParameters(); ++I) {
+      if (!First)
+        IntsStr += ", ";
+      IntsStr += std::to_string(CTNType->getIntParameter(I));
+      First = false;
     }
-    intsStr += "}";
+    IntsStr += "}";
 
-    std::string tetName = "\"" + escape(tetType->getName().str()) + "\"";
-    std::string tet = llvmPrefix + "TargetExtType::get(" + ctx + ", " +
-                      tetName + ", " + typeStr + ", " + intsStr + ")";
+    std::string CTNName = "\"" + escape(CTNType->getName().str()) + "\"";
+    std::string TET = LLVMPrefix + "TargetExtType::get(" + Ctx + ", " +
+                      CTNName + ", " + TypeStr + ", " + IntsStr + ")";
 
-    return llvmPrefix + "ConstantTargetNone::get(" + tet + ")";
+    return LLVMPrefix + "ConstantTargetNone::get(" + TET + ")";
   }
-  if (isa<ConstantTokenNone>(c)) {
-    return llvmPrefix + "ConstantTokenNone::get(" + ctx + ")";
+  if (isa<ConstantTokenNone>(C)) {
+    return LLVMPrefix + "ConstantTokenNone::get(" + Ctx + ")";
   }
-  if (auto ce = dyn_cast<ConstantExpr>(c)) {
-    (void)ce;
+  if (auto CE = dyn_cast<ConstantExpr>(C)) {
+    (void)CE;
     return "/* TODO: ConstantExpr creation */";
     // TODO: Dunno how to create this... Fails either on out of range or
     // even on incorrect opcode.
-    // return llvmPrefix + "ConstantExpr::get(" +
-    // std::to_string(ce->getOpcode()) + ", " +
-    //       asStr(ce->getOperand(0)) + ", " + asStr(ce->getOperand(1)) + ")";
+    // return LLVMPrefix + "ConstantExpr::get(" +
+    // std::to_string(CE->getOpcode()) + ", " +
+    //       asStr(CE->getOperand(0)) + ", " + asStr(CE->getOperand(1)) + ")";
   }
-  if (auto ce = dyn_cast<ConstantPtrAuth>(c)) {
-    (void)ce;
+  if (auto CE = dyn_cast<ConstantPtrAuth>(C)) {
+    (void)CE;
     return "/* TODO: ConstantPtrAuth value creation */";
   }
-  if (auto ce = dyn_cast<DSOLocalEquivalent>(c)) {
-    (void)ce;
+  if (auto CE = dyn_cast<DSOLocalEquivalent>(C)) {
+    (void)CE;
     return "/* TODO: DSOLocalEquivalent value creation */";
   }
-  if (auto ce = dyn_cast<NoCFIValue>(c)) {
-    (void)ce;
+  if (auto CE = dyn_cast<NoCFIValue>(C)) {
+    (void)CE;
     return "/* TODO: NoCFIValue value creation */";
   }
-  if (auto ce = dyn_cast<GlobalValue>(c)) {
-    // GlobalValue should is handled in asStr(Value *)
-    return asStr(dyn_cast<Value>(ce));
+  if (auto CE = dyn_cast<GlobalValue>(C)) {
+    // This should not really happen as asStr for Value should be always called.
+    return asStr(dyn_cast<Value>(CE));
   }
 
   return "/* TODO: Constant creation */";
 }
 
-std::string IR2Builder::asStr(const InlineAsm *op) {
-  auto getAsmDialect = [llvmPrefix = llvmPrefix](InlineAsm::AsmDialect d) {
-    switch (d) {
+std::string IR2Builder::asStr(const InlineAsm *Op) {
+  auto GetAsmDialect = [LLVMPrefix = LLVMPrefix](InlineAsm::AsmDialect D) {
+    switch (D) {
     case InlineAsm::AsmDialect::AD_ATT:
-      return llvmPrefix + "InlineAsm::AsmDialect::AD_ATT";
+      return LLVMPrefix + "InlineAsm::AsmDialect::AD_ATT";
     case InlineAsm::AsmDialect::AD_Intel:
-      return llvmPrefix + "InlineAsm::AsmDialect::AD_Intel";
+      return LLVMPrefix + "InlineAsm::AsmDialect::AD_Intel";
     default:
-      return "/* TODO: Unknown AsmDialect (using value) */" + std::to_string(d);
+      return "/* TODO: Unknown AsmDialect (using value) */" + std::to_string(D);
     }
   };
 
-  return llvmPrefix + "InlineAsm::get(" + asStr(op->getFunctionType()) + ", " +
-         "\"" + escape(op->getAsmString()) + "\", " + "\"" +
-         escape(op->getConstraintString()) + "\", " +
-         to_str(op->hasSideEffects()) + ", " + to_str(op->isAlignStack()) +
-         ", " + getAsmDialect(op->getDialect()) + ", " +
-         to_str(op->canThrow()) + ")";
+  return LLVMPrefix + "InlineAsm::get(" + asStr(Op->getFunctionType()) +
+         ", " + "\"" + escape(Op->getAsmString()) + "\", " + "\"" +
+         escape(Op->getConstraintString()) + "\", " +
+         toStr(Op->hasSideEffects()) + ", " + toStr(Op->isAlignStack()) +
+         ", " + GetAsmDialect(Op->getDialect()) + ", " +
+         toStr(Op->canThrow()) + ")";
 }
 
-std::string IR2Builder::asStr(const Metadata *op) {
-  if (auto mdn = dyn_cast<MDNode>(op)) {
-    std::string args = "{";
-    bool first = true;
-    for (unsigned i = 0; i < mdn->getNumOperands(); ++i) {
-      if (!first)
-        args += ", ";
-      args += asStr(mdn->getOperand(i));
-      first = false;
+std::string IR2Builder::asStr(const Metadata *Op) {
+  if (auto MDN = dyn_cast<MDNode>(Op)) {
+    std::string Args = "{";
+    bool First = true;
+    for (unsigned I = 0; I < MDN->getNumOperands(); ++I) {
+      if (!First)
+        Args += ", ";
+      Args += asStr(MDN->getOperand(I));
+      First = false;
     }
-    args += "}";
-    return llvmPrefix + "MDNode::get(" + ctx + ", " + args + ")";
+    Args += "}";
+    return LLVMPrefix + "MDNode::get(" + Ctx + ", " + Args + ")";
   }
-  if (auto vam = dyn_cast<ValueAsMetadata>(op)) {
-    return llvmPrefix + "ValueAsMetadata::get(" + asStr(vam->getValue()) + ")";
+  if (auto VAM = dyn_cast<ValueAsMetadata>(Op)) {
+    return LLVMPrefix + "ValueAsMetadata::get(" + asStr(VAM->getValue()) + ")";
   }
-  if (auto mds = dyn_cast<MDString>(op)) {
-    return llvmPrefix + "MDString::get(" + ctx + ", \"" +
-           escape(mds->getString().str()) + "\")";
-  }
-
+  if (auto MDS = dyn_cast<MDString>(Op)) {
+    return LLVMPrefix + "MDString::get(" + Ctx + ", \"" +
+           escape(MDS->getString().str()) + "\")";
+  } 
+  
   return "/* TODO: Metadata creation */";
 }
 
 // This is a DEBUG function in Value, so it's copied here for NDEBUG as well.
-static std::string getNameOrAsOperand(const Value *v) {
-  if (!v->getName().empty())
-    return std::string(v->getName());
+static std::string getNameOrAsOperand(const Value *V) {
+  if (!V->getName().empty())
+    return std::string(V->getName());
 
   std::string BBName;
   raw_string_ostream OS(BBName);
-  v->printAsOperand(OS, false);
+  V->printAsOperand(OS, false);
   return OS.str();
 }
 
-std::string IR2Builder::asStr(const Value *op) {
-  if (!op)
+std::string IR2Builder::asStr(const Value *Op) {
+  if (!Op)
     return "nullptr";
-  if (isa<Constant>(op) && !isa<GlobalValue>(op))
-    return asStr(dyn_cast<Constant>(op));
-  if (auto ina = dyn_cast<InlineAsm>(op))
-    return asStr(ina);
-  if (auto mtd = dyn_cast<MetadataAsValue>(op)) {
-    return llvmPrefix + "MetadataAsValue::get(" + ctx + ", " +
-           asStr(mtd->getMetadata()) + ")";
+  if (isa<Constant>(Op) && !isa<GlobalValue>(Op))
+    return asStr(dyn_cast<Constant>(Op));
+  if (auto InA = dyn_cast<InlineAsm>(Op))
+    return asStr(InA);
+  if (auto Mtd = dyn_cast<MetadataAsValue>(Op)) {
+    return LLVMPrefix + "MetadataAsValue::get(" + Ctx + ", " +
+           asStr(Mtd->getMetadata()) + ")";
   }
-  std::string opName = getNameOrAsOperand(op);
-  if (opName[0] == '%')
-    opName.erase(opName.begin());
-  std::string pref = "v_";
-  if (isa<GlobalValue>(op))
-    pref = "g_";
-  return pref + sanitize(opName);
+  std::string OpName = getNameOrAsOperand(Op);
+  if (OpName[0] == '%')
+    OpName.erase(OpName.begin());
+  std::string Pref = "v_";
+  if (isa<GlobalValue>(Op))
+    Pref = "g_";
+  return Pref + sanitize(OpName);
 }
 
-std::string getBinArithOp(std::string name, std::string op1, std::string op2,
+std::string getBinArithOp(std::string Name, std::string Op1, std::string Op2,
                           const Instruction *I) {
-  return "Create" + name + "(" + op1 + ", " + op2 + ", \"\", " +
-         to_str(I->hasNoUnsignedWrap()) + ", " + to_str(I->hasNoSignedWrap()) +
+  return "Create" + Name + "(" + Op1 + ", " + Op2 + ", \"\", " +
+         toStr(I->hasNoUnsignedWrap()) + ", " + toStr(I->hasNoSignedWrap()) +
          ")";
 }
 
-std::string getFPBinArithOp(std::string name, std::string op1, std::string op2,
+std::string getFPBinArithOp(std::string Name, std::string Op1, std::string Op2,
                             const Instruction *I) {
-  return "Create" + name + "(" + op1 + ", " + op2 + ")";
+  return "Create" + Name + "(" + Op1 + ", " + Op2 + ")";
   // TODO: Handle FPMathTag.
 }
 
-std::string IR2Builder::asStr(ConstantRange &cr) {
-  std::stringstream ss;
-  unsigned NumWords = divideCeil(cr.getBitWidth(), 64);
-  auto numWordsStr = std::to_string(NumWords);
-  auto numBitsStr = std::to_string(cr.getBitWidth());
-  auto lower = std::to_string(cr.getLower().getLimitedValue());
-  auto upper = std::to_string(cr.getUpper().getLimitedValue());
-  ss << llvmPrefix << "ConstantRange(APInt(" << numBitsStr << ", " << lower
+std::string IR2Builder::asStr(ConstantRange &CR) {
+  std::stringstream SS;
+  auto NumBitsStr = std::to_string(CR.getBitWidth());
+  auto Lower = std::to_string(CR.getLower().getLimitedValue());
+  auto Upper = std::to_string(CR.getUpper().getLimitedValue());
+  SS << LLVMPrefix << "ConstantRange(APInt(" << NumBitsStr << ", " << Lower
      << ", true), "
-     << "APInt(" << numBitsStr << ", " << upper << ", true))";
-  return ss.str();
+     << "APInt(" << NumBitsStr << ", " << Upper << ", true))";
+  return SS.str();
 }
 
-void IR2Builder::outputAttr(Attribute att, raw_ostream &OS) {
+void IR2Builder::outputAttr(Attribute Att, raw_ostream &OS) {
   // TODO: Handle special cases detected using "has" methods
   // see Attribute::getAsString(bool InAttrGrp).
-  if (att.isStringAttribute()) {
-    OS << llvmPrefix << "Attribute::get(" << ctx << ", \""
-       << att.getKindAsString() << "\"";
-    auto val = att.getValueAsString();
-    if (val.empty()) {
+  if (Att.isStringAttribute()) {
+    OS << LLVMPrefix << "Attribute::get(" << Ctx << ", \""
+       << Att.getKindAsString() << "\"";
+    auto Val = Att.getValueAsString();
+    if (Val.empty()) {
       OS << ")";
     } else {
       OS << ", \"";
-      printEscapedString(val, OS);
+      printEscapedString(Val, OS);
       OS << "\")";
     }
-  } else if (att.isIntAttribute()) {
-    OS << llvmPrefix << "Attribute::get(" << ctx << ", (" << llvmPrefix
-       << "Attribute::AttrKind)" << std::to_string(att.getKindAsEnum())
-       << ", static_cast<uint64_t>(" << att.getValueAsInt() << "))";
-  } else if (att.isEnumAttribute()) {
-    OS << llvmPrefix << "Attribute::get(" << ctx << ", \""
-       << att.getNameFromAttrKind(att.getKindAsEnum()) << "\")";
-  } else if (att.isTypeAttribute()) {
-    OS << llvmPrefix << "Attribute::get(" << ctx << ", (" << llvmPrefix
-       << "Attribute::AttrKind)" << std::to_string(att.getKindAsEnum()) << ", "
-       << asStr(att.getValueAsType()) << ")";
-  } else if (att.isConstantRangeAttribute()) {
-    auto cr = att.getValueAsConstantRange();
-    OS << llvmPrefix << "Attribute::get(" << ctx << ", (" << llvmPrefix
-       << "Attribute::AttrKind)" << std::to_string(att.getKindAsEnum()) << ", "
-       << asStr(cr) << ")";
-  } else if (att.isConstantRangeListAttribute()) {
-    std::string args = "{";
-    bool first = true;
-    for (auto cr : att.getValueAsConstantRangeList()) {
-      if (!first)
-        args += ", ";
-      args += asStr(cr);
-      first = false;
+  } else if (Att.isIntAttribute()) {
+    OS << LLVMPrefix << "Attribute::get(" << Ctx << ", (" << LLVMPrefix
+       << "Attribute::AttrKind)" << std::to_string(Att.getKindAsEnum())
+       << ", static_cast<uint64_t>(" << Att.getValueAsInt() << "))";
+  } else if (Att.isEnumAttribute()) {
+    OS << LLVMPrefix << "Attribute::get(" << Ctx << ", \""
+       << Att.getNameFromAttrKind(Att.getKindAsEnum()) << "\")";
+  } else if (Att.isTypeAttribute()) {
+    OS << LLVMPrefix << "Attribute::get(" << Ctx << ", (" << LLVMPrefix
+       << "Attribute::AttrKind)" << std::to_string(Att.getKindAsEnum()) << ", "
+       << asStr(Att.getValueAsType()) << ")";
+  } else if (Att.isConstantRangeAttribute()) {
+    auto CR = Att.getValueAsConstantRange();
+    OS << LLVMPrefix << "Attribute::get(" << Ctx << ", (" << LLVMPrefix
+       << "Attribute::AttrKind)" << std::to_string(Att.getKindAsEnum()) << ", "
+       << asStr(CR) << ")";
+  } else if (Att.isConstantRangeListAttribute()) {
+    std::string Args = "{";
+    bool First = true;
+    for (auto CR : Att.getValueAsConstantRangeList()) {
+      if (!First)
+        Args += ", ";
+      Args += asStr(CR);
+      First = false;
     }
-    args += "}";
-    OS << llvmPrefix << "Attribute::get(" << ctx << ", (" << llvmPrefix
-       << "Attribute::AttrKind)" << std::to_string(att.getKindAsEnum()) << ", "
-       << llvmPrefix << args << ")";
+    Args += "}";
+    OS << LLVMPrefix << "Attribute::get(" << Ctx << ", (" << LLVMPrefix
+       << "Attribute::AttrKind)" << std::to_string(Att.getKindAsEnum()) << ", "
+       << LLVMPrefix << Args << ")";
   } else {
     OS << "/* TODO: Attribute creation */";
   }
@@ -979,38 +979,39 @@ int main(int argc, char** argv) {
 )";
 
     // Used objects and variables.
-    OS << "    LLVMContext " << ctx << ";\n"
-       << "    Module *" << modName
-       << "= new Module(\"ir2builder generated module\", " << ctx << ");\n"
-       << "    IRBuilder<> " << builder << "(" << ctx << ");\n";
+    OS << "    LLVMContext " << Ctx << ";\n"
+       << "    Module *" << ModName
+       << "= new Module(\"ir2builder generated module\", " << Ctx << ");\n"
+       << "    IRBuilder<> " << Builder << "(" << Ctx << ");\n";
 
     // Globals generation.
     for (auto &G : M.globals()) {
-      std::string initVal = "nullptr";
+      std::string InitVal = "nullptr";
       if (G.hasInitializer()) {
         // In case of BlockAddress initializer we need to declare the function
         // and basic block so it can be used.
-        if (auto ba = dyn_cast<BlockAddress>(G.getInitializer())) {
-          OS << "auto " << asStr(ba->getFunction()) << " = " << modName
-             << "->getOrInsertFunction(\"" << ba->getFunction()->getName()
-             << "\", " << asStr(ba->getFunction()->getFunctionType()) << ");\n";
+        if (auto BA = dyn_cast<BlockAddress>(G.getInitializer())) {
+          OS << "auto " << asStr(BA->getFunction()) << " = " << ModName
+             << "->getOrInsertFunction(\"" << BA->getFunction()->getName()
+             << "\", " << asStr(BA->getFunction()->getFunctionType())
+             << ");\n";
           // Extract basic block.
           // TODO: The function might need to be created in here
           // since the basic blocks don't exist yet.
           OS << "// TODO: Basic block extraction\n";
         }
-        initVal = asStr(G.getInitializer());
+        InitVal = asStr(G.getInitializer());
       }
 
-      std::string gname = asStr(&G);
-      OS << "auto " << gname << " = new " << llvmPrefix << "GlobalVariable(*"
-         << modName << ", " << asStr(G.getValueType()) << ", "
-         << to_str(G.isConstant()) << ", " << asStr(G.getLinkage()) << ", "
-         << initVal << ", \"" << escape(G.getName().str()) << "\", "
+      std::string GName = asStr(&G);
+      OS << "auto " << GName << " = new " << LLVMPrefix << "GlobalVariable(*"
+         << ModName << ", " << asStr(G.getValueType()) << ", "
+         << toStr(G.isConstant()) << ", " << asStr(G.getLinkage()) << ", " << InitVal
+         << ", \"" << escape(G.getName().str()) << "\", "
          << "nullptr"
          << ", " << asStr(G.getThreadLocalMode()) << ", "
          << std::to_string(G.getAddressSpace()) << ", "
-         << to_str(G.isExternallyInitialized()) << ");\n";
+         << toStr(G.isExternallyInitialized()) << ");\n";
     }
   }
 
@@ -1023,50 +1024,51 @@ int main(int argc, char** argv) {
   // Epilogue.
   if (GenerateRunnable) {
     // Print generated code.
-    OS << "    " << modName << "->print(outs(), nullptr);\n";
+    OS << "    " << ModName << "->print(outs(), nullptr);\n";
     // Cleanup.
-    OS << "    delete " << modName << ";\n"
+    OS << "    delete " << ModName << ";\n"
        << "    return 0;\n}\n";
   }
 }
 
 void IR2Builder::convert(Function &F, raw_ostream &OS) {
-  phiIncomings.clear();
+  PhiIncomings.clear();
   // Function.
   OS << "{\n\n";
-  auto fDecl = asStr(&F);
-  OS << llvmPrefix << "Function *" << fDecl;
-  OS << " = " << llvmPrefix << "Function::Create(" << asStr(F.getFunctionType())
-     << ", " << asStr(F.getLinkage()) << ", \"" << F.getName() << "\", "
-     << modName << ");\n";
+  auto FDecl = asStr(&F);
+  OS << LLVMPrefix << "Function *" << FDecl;
+  OS << " = " << LLVMPrefix << "Function::Create("
+     << asStr(F.getFunctionType()) << ", " << asStr(F.getLinkage()) << ", \""
+     << F.getName() << "\", " << ModName << ");\n";
 
   OS << "\n";
 
   // Set attributes.
   if (F.getCallingConv() != CallingConv::C) { // C is default.
-    OS << fDecl << "->setCallingConv(" + asStr(F.getCallingConv()) << ");\n";
+    OS << FDecl << "->setCallingConv(" + asStr(F.getCallingConv())
+       << ");\n";
   }
   AttributeList AL = F.getAttributes();
   // TODO: Handle attributes with values.
   if (AL.hasFnAttrs()) {
-    for (auto att : AL.getFnAttrs()) {
-      OS << fDecl << "->addFnAttr(";
-      outputAttr(att, OS);
+    for (auto Att : AL.getFnAttrs()) {
+      OS << FDecl << "->addFnAttr(";
+      outputAttr(Att, OS);
       OS << ");\n";
     }
   }
   if (AL.hasRetAttrs()) {
-    for (auto att : AL.getRetAttrs()) {
-      OS << fDecl << "->addRetAttr(";
-      outputAttr(att, OS);
+    for (auto Att : AL.getRetAttrs()) {
+      OS << FDecl << "->addRetAttr(";
+      outputAttr(Att, OS);
       OS << ");\n";
     }
   }
-  for (size_t i = 0; i < F.arg_size(); ++i) {
-    if (AL.hasParamAttrs(i)) {
-      for (auto att : AL.getAttributes(i + 1)) {
-        OS << fDecl << "->addParamAttr(" << i << ", ";
-        outputAttr(att, OS);
+  for (size_t I = 0; I < F.arg_size(); ++I) {
+    if (AL.hasParamAttrs(I)) {
+      for (auto Att : AL.getAttributes(I + 1)) {
+        OS << FDecl << "->addParamAttr(" << I << ", ";
+        outputAttr(Att, OS);
         OS << ");\n";
       }
     }
@@ -1074,7 +1076,7 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
 
   // Save arguments into variables for easy access.
   for (const auto &[I, Arg] : enumerate(F.args())) {
-    OS << "auto " << asStr(&Arg) << " = " << fDecl << "->getArg("
+    OS << "auto " << asStr(&Arg) << " = " << FDecl << "->getArg("
        << std::to_string(I) << ");\n";
   }
 
@@ -1084,15 +1086,15 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
     // Basic block declaration in order.
     for (BasicBlock *BB : RPOT) {
       std::string bbName = asStr(BB);
-      OS << llvmPrefix << "BasicBlock* " << bbName << " = " << llvmPrefix
-         << "BasicBlock::Create(" << ctx << ", \"" << BB->getName() << "\", "
-         << fDecl << ");\n";
+      OS << LLVMPrefix << "BasicBlock* " << bbName << " = " << LLVMPrefix
+         << "BasicBlock::Create(" << Ctx << ", \"" << BB->getName() << "\", "
+         << FDecl << ");\n";
     }
 
     OS << "\n";
 
     for (auto *BB : RPOT) {
-      OS << builder << "."
+      OS << Builder << "."
          << "SetInsertPoint(" << asStr(BB) << ");\n";
 
       for (Instruction &Inst : *BB)
@@ -1103,15 +1105,15 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
   } else {
     for (BasicBlock &BB : F) {
       std::string bbName = asStr(&BB);
-      OS << llvmPrefix << "BasicBlock* " << bbName << " = " << llvmPrefix
-         << "BasicBlock::Create(" << ctx << ", \"" << BB.getName() << "\", "
-         << fDecl << ");\n";
+      OS << LLVMPrefix << "BasicBlock* " << bbName << " = " << LLVMPrefix
+         << "BasicBlock::Create(" << Ctx << ", \"" << BB.getName() << "\", "
+         << FDecl << ");\n";
     }
 
     OS << "\n";
 
     for (auto &BB : F) {
-      OS << builder << "."
+      OS << Builder << "."
          << "SetInsertPoint(" << asStr(&BB) << ");\n";
 
       for (Instruction &Inst : BB)
@@ -1123,414 +1125,418 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
 
   // Output incoming values assignment into phis, this is needed as they
   // might refer to a value not yet defined in the time of phi definition.
-  for (auto l : phiIncomings) {
-    OS << l;
+  for (auto Line : PhiIncomings) {
+    OS << Line;
   }
 
   OS << "}\n";
 }
 
 void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
-  std::string call;
+  std::string Call;
 
-  std::string op1 = "/* TODO */";
-  std::string op2 = "/* TODO */";
-  std::string op3 = "/* TODO */";
+  std::string Op1 = "/* TODO */";
+  std::string Op2 = "/* TODO */";
+  std::string Op3 = "/* TODO */";
 
   if (I->getNumOperands() > 0)
-    op1 = asStr(I->getOperand(0));
+    Op1 = asStr(I->getOperand(0));
   if (I->getNumOperands() > 1)
-    op2 = asStr(I->getOperand(1));
+    Op2 = asStr(I->getOperand(1));
   if (I->getNumOperands() > 2)
-    op3 = asStr(I->getOperand(2));
+    Op3 = asStr(I->getOperand(2));
 
   switch (I->getOpcode()) {
   case Instruction::Ret: {
     if (I->getNumOperands() == 0)
-      call = "CreateRetVoid()";
+      Call = "CreateRetVoid()";
     else
-      call = "CreateRet(" + op1 + ")";
+      Call = "CreateRet(" + Op1 + ")";
   } break;
   case Instruction::Br: {
-    const BranchInst *bi = dyn_cast<BranchInst>(I);
-    if (bi->isUnconditional()) {
-      call = "CreateBr(" + op1 + ")";
+    const BranchInst *BI = dyn_cast<BranchInst>(I);
+    if (BI->isUnconditional()) {
+      Call = "CreateBr(" + Op1 + ")";
     } else {
-      call = "CreateCondBr(" + op1 + ", " + op3 + ", " + op2 + ")";
+      Call = "CreateCondBr(" + Op1 + ", " + Op3 + ", " + Op2 + ")";
     }
   } break;
   case Instruction::Switch: {
-    auto swI = dyn_cast<SwitchInst>(I);
-    call = "CreateSwitch(" + op1 + ", " + op2 + ", " +
-           std::to_string(swI->getNumCases()) + ")";
+    auto SwI = dyn_cast<SwitchInst>(I);
+    Call = "CreateSwitch(" + Op1 + ", " + Op2 + ", " +
+           std::to_string(SwI->getNumCases()) + ")";
 
-    std::string swVar = getNextVar();
+    std::string SwVar = getNextVar();
     // No need to save temporary var into symTable.
-    OS << "auto " << swVar << " = " << builder << "." << call << ";\n";
+    OS << "auto " << SwVar << " = " << Builder << "." << Call << ";\n";
 
-    for (auto c : swI->cases()) {
-      OS << swVar << "->addCase(" << asStr(c.getCaseValue()) << ", "
-         << asStr(c.getCaseSuccessor()) << ");\n";
+    for (auto C : SwI->cases()) {
+      OS << SwVar << "->addCase(" << asStr(C.getCaseValue()) << ", "
+         << asStr(C.getCaseSuccessor()) << ");\n";
     }
     return;
   } break;
   case Instruction::IndirectBr: {
-    auto inbrI = dyn_cast<IndirectBrInst>(I);
-    call = "CreateIndirectBr(" + op1 + ", " +
-           std::to_string(inbrI->getNumDestinations()) + ")";
-    std::string inbrVar = getNextVar();
-    OS << "auto " << inbrVar << " = " << builder << "." << call << ";\n";
+    auto InbrI = dyn_cast<IndirectBrInst>(I);
+    Call = "CreateIndirectBr(" + Op1 + ", " +
+           std::to_string(InbrI->getNumDestinations()) + ")";
+    std::string InbrVar = getNextVar();
+    OS << "auto " << InbrVar << " = " << Builder << "." << Call << ";\n";
 
-    for (auto c : inbrI->successors()) {
-      OS << inbrVar << "->addDestination(" << asStr(c) << ");\n";
+    for (auto C : InbrI->successors()) {
+      OS << InbrVar << "->addDestination(" << asStr(C) << ");\n";
     }
   } break;
   case Instruction::Invoke: {
-    auto invI = dyn_cast<InvokeInst>(I);
-    std::string args = "{";
-    bool first = true;
-    for (unsigned i = 0; i < invI->arg_size(); ++i) {
-      if (!first)
-        args += ", ";
-      args += asStr(invI->getArgOperand(i));
-      first = false;
+    auto InvI = dyn_cast<InvokeInst>(I);
+    std::string Args = "{";
+    bool First = true;
+    for (unsigned I = 0; I < InvI->arg_size(); ++I) {
+      if (!First)
+        Args += ", ";
+      Args += asStr(InvI->getArgOperand(I));
+      First = false;
     }
-    args += "}";
-    std::string funDecl = getNextVar();
-    OS << "auto " << funDecl << " = " << modName << "->getOrInsertFunction(\""
+    Args += "}";
+    std::string FunDecl = getNextVar();
+    OS << "auto " << FunDecl << " = " << ModName << "->getOrInsertFunction(\""
        << I->getOperand(2)->getName() << "\", "
-       << asStr(invI->getFunctionType()) << ");\n";
-    call = "CreateInvoke(" + funDecl + ", " + asStr(invI->getNormalDest()) +
-           ", " + asStr(invI->getUnwindDest()) + ", " + args + ")";
+       << asStr(InvI->getFunctionType()) << ");\n";
+    Call = "CreateInvoke(" + FunDecl + ", " + asStr(InvI->getNormalDest()) +
+           ", " + asStr(InvI->getUnwindDest()) + ", " + Args + ")";
     // TODO: Handle operand bundles.
   } break;
   case Instruction::Resume: {
-    call = "CreateResume(" + op1 + ")";
+    Call = "CreateResume(" + Op1 + ")";
   } break;
   case Instruction::Unreachable: {
-    call = "CreateUnreachable()";
+    Call = "CreateUnreachable()";
   } break;
   case Instruction::CleanupRet: {
-    auto curI = dyn_cast<CleanupReturnInst>(I);
-    call =
-        "CreateCleanupRet(" + op1 + ", " + asStr(curI->getUnwindDest()) + ")";
+    auto CurI = dyn_cast<CleanupReturnInst>(I);
+    Call =
+        "CreateCleanupRet(" + Op1 + ", " + asStr(CurI->getUnwindDest()) + ")";
   } break;
   case Instruction::CatchRet: {
-    call = "CreateCatchRet(" + op1 + ", " + op2 + ")";
+    Call = "CreateCatchRet(" + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::CatchSwitch: {
-    auto swI = dyn_cast<CatchSwitchInst>(I);
-    call = "CreateCatchSwitch(" + op1 + ", " + op2 + ", " +
-           std::to_string(swI->getNumHandlers()) + ")";
+    auto SwI = dyn_cast<CatchSwitchInst>(I);
+    Call = "CreateCatchSwitch(" + Op1 + ", " + Op2 + ", " +
+           std::to_string(SwI->getNumHandlers()) + ")";
 
-    std::string swVar = asStr(swI);
-    OS << "auto " << swVar << " = " << builder << "." << call << ";\n";
-    for (auto c : swI->handlers()) {
-      OS << swVar << "->addHandler(" << asStr(c) << ");\n";
+    std::string SwVar = asStr(SwI);
+    OS << "auto " << SwVar << " = " << Builder << "." << Call << ";\n";
+    for (auto C : SwI->handlers()) {
+      OS << SwVar << "->addHandler(" << asStr(C) << ");\n";
     }
     return;
   } break;
   case Instruction::CallBr: {
-    auto callbrI = dyn_cast<CallBrInst>(I);
-    std::string inddest = "{";
-    bool first = true;
-    for (unsigned i = 0; i < callbrI->getNumIndirectDests(); ++i) {
-      if (!first)
-        inddest += ", ";
-      inddest += asStr(callbrI->getIndirectDest(i));
-      first = false;
+    auto CallBRI = dyn_cast<CallBrInst>(I);
+    std::string Inddest = "{";
+    bool First = true;
+    for (unsigned I = 0; I < CallBRI->getNumIndirectDests(); ++I) {
+      if (!First)
+        Inddest += ", ";
+      Inddest += asStr(CallBRI->getIndirectDest(I));
+      First = false;
     }
-    inddest += "}";
+    Inddest += "}";
 
-    std::string args = "{";
-    first = true;
-    for (unsigned i = 0; i < callbrI->arg_size(); ++i) {
-      if (!first)
-        args += ", ";
-      args += asStr(callbrI->getArgOperand(i));
-      first = false;
+    std::string Args = "{";
+    First = true;
+    for (unsigned I = 0; I < CallBRI->arg_size(); ++I) {
+      if (!First)
+        Args += ", ";
+      Args += asStr(CallBRI->getArgOperand(I));
+      First = false;
     }
-    args += "}";
-    call = "CreateCallBr(" + asStr(callbrI->getFunctionType()) + ", " +
+    Args += "}";
+    Call = "CreateCallBr(" + asStr(CallBRI->getFunctionType()) + ", " +
            asStr(I->getOperand(I->getNumOperands() - 1)) + ", " +
-           asStr(callbrI->getDefaultDest()) + ", " + inddest + ", " + args +
+           asStr(CallBRI->getDefaultDest()) + ", " + Inddest + ", " + Args +
            ")";
     // TODO: Handle operand bundles.
   } break;
   case Instruction::FNeg: {
-    call = "CreateFNeg(" + op1 + ")";
+    Call = "CreateFNeg(" + Op1 + ")";
     // TODO: Handle FPMathTag.
   } break;
   case Instruction::Add: {
-    call = getBinArithOp("Add", op1, op2, I);
+    Call = getBinArithOp("Add", Op1, Op2, I);
   } break;
   case Instruction::FAdd: {
-    call = getFPBinArithOp("FAdd", op1, op2, I);
+    Call = getFPBinArithOp("FAdd", Op1, Op2, I);
   } break;
   case Instruction::Sub: {
-    call = getBinArithOp("Sub", op1, op2, I);
+    Call = getBinArithOp("Sub", Op1, Op2, I);
   } break;
   case Instruction::FSub: {
-    call = getFPBinArithOp("FSub", op1, op2, I);
+    Call = getFPBinArithOp("FSub", Op1, Op2, I);
   } break;
   case Instruction::Mul: {
-    call = getBinArithOp("Mul", op1, op2, I);
+    Call = getBinArithOp("Mul", Op1, Op2, I);
   } break;
   case Instruction::FMul: {
-    call = getFPBinArithOp("FMul", op1, op2, I);
+    Call = getFPBinArithOp("FMul", Op1, Op2, I);
   } break;
   case Instruction::UDiv: {
-    call = "CreateUDiv(" + op1 + ", " + op2 + ", \"\", " +
-           to_str(I->isExact()) + ")";
+    Call = "CreateUDiv(" + Op1 + ", " + Op2 + ", \"\", " +
+           toStr(I->isExact()) + ")";
   } break;
   case Instruction::SDiv: {
-    call = "CreateSDiv(" + op1 + ", " + op2 + ", \"\", " +
-           to_str(I->isExact()) + ")";
+    Call = "CreateSDiv(" + Op1 + ", " + Op2 + ", \"\", " +
+           toStr(I->isExact()) + ")";
   } break;
   case Instruction::FDiv: {
-    call = getFPBinArithOp("FDiv", op1, op2, I);
+    Call = getFPBinArithOp("FDiv", Op1, Op2, I);
   } break;
   case Instruction::URem: {
-    call = "CreateURem(" + op1 + ", " + op2 + ")";
+    Call = "CreateURem(" + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::SRem: {
-    call = "CreateSRem(" + op1 + ", " + op2 + ")";
+    Call = "CreateSRem(" + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::FRem: {
-    call = getFPBinArithOp("FRem", op1, op2, I);
+    Call = getFPBinArithOp("FRem", Op1, Op2, I);
   } break;
   case Instruction::Shl: {
-    call = getBinArithOp("Shl", op1, op2, I);
+    Call = getBinArithOp("Shl", Op1, Op2, I);
   } break;
   case Instruction::LShr: {
-    call = "CreateLShr(" + op1 + ", " + op2 + ", \"\", " +
-           to_str(I->isExact()) + ")";
+    Call = "CreateLShr(" + Op1 + ", " + Op2 + ", \"\", " +
+           toStr(I->isExact()) + ")";
   } break;
   case Instruction::AShr: {
-    call = "CreateAShr(" + op1 + ", " + op2 + ", \"\", " +
-           to_str(I->isExact()) + ")";
+    Call = "CreateAShr(" + Op1 + ", " + Op2 + ", \"\", " +
+           toStr(I->isExact()) + ")";
   } break;
   case Instruction::And: {
-    call = "CreateAnd(" + op1 + ", " + op2 + ")";
+    Call = "CreateAnd(" + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::Or: {
-    call = "CreateOr(" + op1 + ", " + op2 + ")";
+    Call = "CreateOr(" + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::Xor: {
-    call = "CreateXor(" + op1 + ", " + op2 + ")";
+    Call = "CreateXor(" + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::Alloca: {
-    auto alI = dyn_cast<AllocaInst>(I);
-    auto val = alI->getArraySize();
-    auto valStr = val ? asStr(val) : "nullptr";
-    call = "CreateAlloca(" + asStr(alI->getAllocatedType()) + ", " +
-           std::to_string(alI->getAddressSpace()) + ", " + valStr + ")";
+    auto AlI = dyn_cast<AllocaInst>(I);
+    auto Val = AlI->getArraySize();
+    auto ValStr = Val ? asStr(Val) : "nullptr";
+    Call = "CreateAlloca(" + asStr(AlI->getAllocatedType()) + ", " +
+           std::to_string(AlI->getAddressSpace()) + ", " + ValStr + ")";
   } break;
   case Instruction::Load: {
-    auto lI = dyn_cast<LoadInst>(I);
-    call = "CreateLoad(" + asStr(I->getType()) + ", " + op1 + ", " +
-           to_str(lI->isVolatile()) + ")";
+    auto LI = dyn_cast<LoadInst>(I);
+    Call = "CreateLoad(" + asStr(I->getType()) + ", " + Op1 + ", " +
+           toStr(LI->isVolatile()) + ")";
   } break;
   case Instruction::Store: {
-    auto sI = dyn_cast<StoreInst>(I);
-    call = "CreateStore(" + op1 + ", " + op2 + ", " + to_str(sI->isVolatile()) +
+    auto SI = dyn_cast<StoreInst>(I);
+    Call = "CreateStore(" + Op1 + ", " + Op2 + ", " + toStr(SI->isVolatile()) +
            ")";
   } break;
   case Instruction::GetElementPtr: {
-    auto gepI = dyn_cast<GetElementPtrInst>(I);
-    std::string strList = llvmPrefix + "ArrayRef<" + llvmPrefix + "Value*>(";
+    auto GEPI = dyn_cast<GetElementPtrInst>(I);
+    std::string StrList = LLVMPrefix + "ArrayRef<" + LLVMPrefix + "Value*>(";
     if (I->getNumOperands() > 2)
-      strList += "{";
-    bool first = true;
-    for (unsigned i = 1; i < I->getNumOperands(); ++i) {
-      if (!first)
-        strList += ", ";
-      strList += asStr(I->getOperand(i));
-      first = false;
+      StrList += "{";
+    bool First = true;
+    for (unsigned J = 1; J < I->getNumOperands(); ++J) {
+      if (!First)
+        StrList += ", ";
+      StrList += asStr(I->getOperand(J));
+      First = false;
     }
     if (I->getNumOperands() > 2)
-      strList += "}";
-    strList += ")";
-    call = "CreateGEP(" + asStr(gepI->getSourceElementType()) + ", " + op1 +
-           ", " + strList + ", \"\", " + to_str(gepI->isInBounds()) + ")";
+      StrList += "}";
+    StrList += ")";
+    Call = "CreateGEP(" + asStr(GEPI->getSourceElementType()) + ", " + Op1 +
+           ", " + StrList + ", \"\", " + toStr(GEPI->isInBounds()) + ")";
   } break;
   case Instruction::Fence: {
-    auto fI = dyn_cast<FenceInst>(I);
-    call = "CreateFence(" + asStr(fI->getOrdering()) + ", " +
-           asStr(fI->getSyncScopeID()) + ")";
+    auto FI = dyn_cast<FenceInst>(I);
+    Call = "CreateFence(" + asStr(FI->getOrdering()) + ", " +
+           asStr(FI->getSyncScopeID()) + ")";
   } break;
   case Instruction::AtomicCmpXchg: {
-    auto acmpxI = dyn_cast<AtomicCmpXchgInst>(I);
-    call = "CreateAtomicCmpXchg(" + op1 + ", " + op2 + ", " + op3 + ", Align(" +
-           std::to_string(acmpxI->getAlign().value()) + "), " +
-           asStr(acmpxI->getSuccessOrdering()) + ", " +
-           asStr(acmpxI->getFailureOrdering()) + ", " +
-           asStr(acmpxI->getSyncScopeID()) + ")";
+    auto AcmpxI = dyn_cast<AtomicCmpXchgInst>(I);
+    Call = "CreateAtomicCmpXchg(" + Op1 + ", " + Op2 + ", " + Op3 + ", Align(" +
+           std::to_string(AcmpxI->getAlign().value()) + "), " +
+           asStr(AcmpxI->getSuccessOrdering()) + ", " +
+           asStr(AcmpxI->getFailureOrdering()) + ", " +
+           asStr(AcmpxI->getSyncScopeID()) + ")";
   } break;
   case Instruction::AtomicRMW: {
-    auto armwI = dyn_cast<AtomicRMWInst>(I);
-    call = "CreateAtomicRMW(" + asStr(armwI->getOperation()) + ", " + op1 +
-           ", " + op2 + ", Align(" + std::to_string(armwI->getAlign().value()) +
-           "), " + asStr(armwI->getOrdering()) + ", " +
-           asStr(armwI->getSyncScopeID()) + ")";
+    auto ArmwI = dyn_cast<AtomicRMWInst>(I);
+    Call = "CreateAtomicRMW(" + asStr(ArmwI->getOperation()) + ", " +
+           Op1 + ", " + Op2 + ", Align(" +
+           std::to_string(ArmwI->getAlign().value()) + "), " +
+           asStr(ArmwI->getOrdering()) + ", " +
+           asStr(ArmwI->getSyncScopeID()) + ")";
   } break;
   case Instruction::Trunc: {
-    call = "CreateTrunc(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateTrunc(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::ZExt: {
-    call = "CreateZExt(" + op1 + ", " + asStr(I->getType()) + ", \"\", " +
-           to_str(I->hasNonNeg()) + ")";
+    Call = "CreateZExt(" + Op1 + ", " + asStr(I->getType()) + ", \"\", " +
+           toStr(I->hasNonNeg()) + ")";
   } break;
   case Instruction::SExt: {
-    call = "CreateSExt(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateSExt(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::FPToUI: {
-    call = "CreateFPToUI(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateFPToUI(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::FPToSI: {
-    call = "CreateFPToSI(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateFPToSI(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::UIToFP: {
-    call = "CreateUIToFP(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateUIToFP(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::SIToFP: {
-    call = "CreateSIToFP(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateSIToFP(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::FPTrunc: {
-    call = "CreateFPTrunc(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateFPTrunc(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::FPExt: {
-    call = "CreateFPExt(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateFPExt(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::PtrToInt: {
-    call = "CreatePtrToInt(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreatePtrToInt(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::IntToPtr: {
-    call = "CreateIntToPtr(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateIntToPtr(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::BitCast: {
-    call = "CreateBitCast(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateBitCast(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::AddrSpaceCast: {
-    call = "CreateAddrSpaceCast(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateAddrSpaceCast(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::CleanupPad: {
-    auto cupI = dyn_cast<CleanupPadInst>(I);
-    std::string argsStr = "{";
-    bool first = true;
-    for (unsigned i = 0; i < cupI->arg_size(); ++i) {
-      if (!first)
-        argsStr += ", ";
-      argsStr += asStr(cupI->getArgOperand(i));
-      first = false;
+    auto CupI = dyn_cast<CleanupPadInst>(I);
+    std::string ArgsStr = "{";
+    bool First = true;
+    for (unsigned I = 0; I < CupI->arg_size(); ++I) {
+      if (!First)
+        ArgsStr += ", ";
+      ArgsStr += asStr(CupI->getArgOperand(I));
+      First = false;
     }
-    argsStr += "}";
-    call = "CreateCleanupPad(" + op1 + ", " + argsStr + ")";
+    ArgsStr += "}";
+    Call = "CreateCleanupPad(" + Op1 + ", " + ArgsStr + ")";
   } break;
   case Instruction::CatchPad: {
-    auto capI = dyn_cast<CatchPadInst>(I);
-    std::string argsStr = "{";
-    bool first = true;
-    for (unsigned i = 0; i < capI->arg_size(); ++i) {
-      if (!first)
-        argsStr += ", ";
-      argsStr += asStr(capI->getArgOperand(i));
-      first = false;
+    auto CapI = dyn_cast<CatchPadInst>(I);
+    std::string ArgsStr = "{";
+    bool First = true;
+    for (unsigned I = 0; I < CapI->arg_size(); ++I) {
+      if (!First)
+        ArgsStr += ", ";
+      ArgsStr += asStr(CapI->getArgOperand(I));
+      First = false;
     }
-    argsStr += "}";
-    call = "CreateCatchPad(" + op1 + ", " + argsStr + ")";
+    ArgsStr += "}";
+    Call = "CreateCatchPad(" + Op1 + ", " + ArgsStr + ")";
   } break;
   case Instruction::ICmp: {
-    auto cmpI = dyn_cast<CmpInst>(I);
-    std::string cmpPredicate = llvmPrefix + asStr(cmpI->getPredicate());
-    call = "CreateICmp(" + cmpPredicate + ", " + op1 + ", " + op2 + ")";
+    auto CmpI = dyn_cast<CmpInst>(I);
+    std::string CmpPredicate =
+        LLVMPrefix + asStr(CmpI->getPredicate());
+    Call = "CreateICmp(" + CmpPredicate + ", " + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::FCmp: {
-    auto cmpI = dyn_cast<CmpInst>(I);
-    std::string cmpPredicate = llvmPrefix + asStr(cmpI->getPredicate());
-    call = "CreateFCmp(" + cmpPredicate + ", " + op1 + ", " + op2 + ")";
+    auto CmpI = dyn_cast<CmpInst>(I);
+    std::string CmpPredicate =
+        LLVMPrefix + asStr(CmpI->getPredicate());
+    Call = "CreateFCmp(" + CmpPredicate + ", " + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::PHI: {
-    auto phI = dyn_cast<PHINode>(I);
-    call = "CreatePHI(" + asStr(I->getType()) + ", " +
-           std::to_string(phI->getNumIncomingValues()) + ")";
-    std::string phVar = asStr(phI);
-    OS << "auto " << phVar << " = " << builder << "." << call << ";\n";
+    auto PhI = dyn_cast<PHINode>(I);
+    Call = "CreatePHI(" + asStr(I->getType()) + ", " +
+           std::to_string(PhI->getNumIncomingValues()) + ")";
+    std::string PhVar = asStr(PhI);
+    OS << "auto " << PhVar << " = " << Builder << "." << Call << ";\n";
 
-    unsigned i = 0;
-    for (auto b : phI->blocks()) {
-      auto incVal = asStr(phI->getIncomingValue(i));
+    unsigned I = 0;
+    for (auto B : PhI->blocks()) {
+      auto IncVal = asStr(PhI->getIncomingValue(I));
       // Phis might contain incoming not yet defined variable in such case
       // we save the line we would output here and output it after the
       // whole function body was outputted.
-      std::string line =
-          phVar + "->addIncoming(" + incVal + ", " + asStr(b) + ");\n";
-      phiIncomings.push_back(line);
-      ++i;
+      std::string Line =
+          PhVar + "->addIncoming(" + IncVal + ", " + asStr(B) + ");\n";
+      PhiIncomings.push_back(Line);
+      ++I;
     }
     return;
   } break;
   case Instruction::Call: {
-    auto fcI = dyn_cast<CallBase>(I);
-    std::string argDecl = "";
-    if (fcI->arg_size() > 0) {
-      argDecl = getNextVar();
-      OS << "Value *" << argDecl << "[] = {";
-      bool isFirst = true;
-      for (unsigned i = 0; i < fcI->arg_size(); ++i) {
-        if (!isFirst)
+    auto FcI = dyn_cast<CallBase>(I);
+    std::string ArgDecl = "";
+    if (FcI->arg_size() > 0) {
+      ArgDecl = getNextVar();
+      OS << "Value *" << ArgDecl << "[] = {";
+      bool IsFirst = true;
+      for (unsigned I = 0; I < FcI->arg_size(); ++I) {
+        if (!IsFirst)
           OS << ", ";
-        OS << asStr(fcI->getArgOperand(i));
-        isFirst = false;
+        OS << asStr(FcI->getArgOperand(I));
+        IsFirst = false;
       }
       OS << "};\n";
     }
 
     /* TODO: Implement.
     std::string bundleDecl = "";
-    if (fcI->hasOperandBundles()) {
+    if (FcI->hasOperandBundles()) {
         bundleDecl = getNextVar();
         OS << "Value *" << bundleDecl << "[] = {";
-        isFirst = true;
-        for(unsigned i = 0; i < fcI->getNumOperandBundles(); ++i) {
-            if(!isFirst) OS << ", ";
+        IsFirst = true;
+        for(unsigned I = 0; I < FcI->getNumOperandBundles(); ++I) {
+            if(!IsFirst) OS << ", ";
             // TODO: Probably create OperandBundleUse from the current gotten
             // from getOperandBundleAt and cast construct OperandBundleDefT with
             // it, but this requires conversion of Inputs which are Use.
             OS << "...";
-            isFirst = false;
+            IsFirst = false;
         }
         OS << "};\n";
     }
     */
 
-    auto fun = dyn_cast<Function>(I->getOperand(I->getNumOperands() - 1));
-    std::string funDecl = getNextVar();
-    if (!fun)
-      fun = fcI->getCalledFunction();
+    auto Fun = dyn_cast<Function>(I->getOperand(I->getNumOperands() - 1));
+    std::string FunDecl = getNextVar();
+    if (!Fun)
+      Fun = FcI->getCalledFunction();
 
-    if (!fun) {
-      assert(fcI->isIndirectCall() && "sanity check");
-      if (argDecl.empty()) {
-        call = "CreateCall(" + asStr(fcI->getFunctionType()) + ", " +
+    if (!Fun) {
+      assert(FcI->isIndirectCall() && "sanity check");
+      if (ArgDecl.empty()) {
+        Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
                asStr(I->getOperand(I->getNumOperands() - 1)) + ")";
       } else {
-        call = "CreateCall(" + asStr(fcI->getFunctionType()) + ", " +
-               asStr(I->getOperand(I->getNumOperands() - 1)) + ", " + argDecl +
+        Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
+               asStr(I->getOperand(I->getNumOperands() - 1)) + ", " + ArgDecl +
                ")";
       }
     } else {
       // No need to save this variable as it is a temporary one.
-      OS << "auto " << funDecl << " = " << modName << "->getOrInsertFunction(\""
-         << fun->getName() << "\", " << asStr(fun->getFunctionType()) << ");\n";
-      if (!argDecl.empty())
-        call = "CreateCall(" + funDecl + ", " + argDecl + ")";
+      OS << "auto " << FunDecl << " = " << ModName << "->getOrInsertFunction(\""
+         << Fun->getName() << "\", " << asStr(Fun->getFunctionType())
+         << ");\n";
+      if (!ArgDecl.empty())
+        Call = "CreateCall(" + FunDecl + ", " + ArgDecl + ")";
       else
-        call = "CreateCall(" + funDecl + ")";
+        Call = "CreateCall(" + FunDecl + ")";
     }
   } break;
   case Instruction::Select: {
-    call = "CreateSelect(" + op1 + ", " + op2 + ", " + op3 + ")";
+    Call = "CreateSelect(" + Op1 + ", " + Op2 + ", " + Op3 + ")";
   } break;
   case Instruction::UserOp1: {
     // Internal opcode.
@@ -1543,76 +1549,76 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     return;
   };
   case Instruction::VAArg: {
-    call = "CreateVAArg(" + op1 + ", " + asStr(I->getType()) + ")";
+    Call = "CreateVAArg(" + Op1 + ", " + asStr(I->getType()) + ")";
   } break;
   case Instruction::ExtractElement: {
-    call = "CreateExtractElement(" + op1 + ", " + op2 + ")";
+    Call = "CreateExtractElement(" + Op1 + ", " + Op2 + ")";
   } break;
   case Instruction::InsertElement: {
-    call = "CreateInsertElement(" + op1 + ", " + op2 + ", " + op3 + ")";
+    Call = "CreateInsertElement(" + Op1 + ", " + Op2 + ", " + Op3 + ")";
   } break;
   case Instruction::ShuffleVector: {
-    auto svI = dyn_cast<ShuffleVectorInst>(I);
-    std::string maskStr = "{";
-    bool first = true;
-    for (int i : svI->getShuffleMask()) {
-      if (!first)
-        maskStr += ", ";
-      maskStr += std::to_string(i);
-      first = false;
+    auto SvI = dyn_cast<ShuffleVectorInst>(I);
+    std::string MaskStr = "{";
+    bool First = true;
+    for (int I : SvI->getShuffleMask()) {
+      if (!First)
+        MaskStr += ", ";
+      MaskStr += std::to_string(I);
+      First = false;
     }
-    maskStr += "}";
-    call = "CreateShuffleVector(" + op1 + ", " + op2 + ", " + maskStr + ")";
+    MaskStr += "}";
+    Call = "CreateShuffleVector(" + Op1 + ", " + Op2 + ", " + MaskStr + ")";
   } break;
   case Instruction::ExtractValue: {
-    auto evI = dyn_cast<ExtractValueInst>(I);
-    std::string argStr = "{";
-    bool isFirst = true;
-    for (auto ind : evI->getIndices()) {
-      if (!isFirst)
-        argStr += ", ";
-      argStr += std::to_string(ind);
-      isFirst = false;
+    auto EvI = dyn_cast<ExtractValueInst>(I);
+    std::string ArgStr = "{";
+    bool IsFirst = true;
+    for (auto ind : EvI->getIndices()) {
+      if (!IsFirst)
+        ArgStr += ", ";
+      ArgStr += std::to_string(ind);
+      IsFirst = false;
     }
-    argStr += "}";
-    call = "CreateExtractValue(" + op1 + ", " + argStr + ")";
+    ArgStr += "}";
+    Call = "CreateExtractValue(" + Op1 + ", " + ArgStr + ")";
   } break;
   case Instruction::InsertValue: {
-    auto ivI = dyn_cast<InsertValueInst>(I);
-    std::string argStr = "{";
-    bool isFirst = true;
-    for (auto ind : ivI->getIndices()) {
-      if (!isFirst)
-        argStr += ", ";
-      argStr += std::to_string(ind);
-      isFirst = false;
+    auto IvI = dyn_cast<InsertValueInst>(I);
+    std::string ArgStr = "{";
+    bool IsFirst = true;
+    for (auto Ind : IvI->getIndices()) {
+      if (!IsFirst)
+        ArgStr += ", ";
+      ArgStr += std::to_string(Ind);
+      IsFirst = false;
     }
-    argStr += "}";
-    call = "CreateInsertValue(" + op1 + ", " + op2 + ", " + argStr + ")";
+    ArgStr += "}";
+    Call = "CreateInsertValue(" + Op1 + ", " + Op2 + ", " + ArgStr + ")";
   } break;
   case Instruction::LandingPad: {
-    auto lpI = dyn_cast<LandingPadInst>(I);
-    std::string lpVar = asStr(I);
-    call = "CreateLandingPad(" + asStr(I->getType()) + ", " +
-           std::to_string(lpI->getNumClauses()) + ")";
-    OS << "auto " << lpVar << " = " << builder << "." << call << ";\n";
-    for (unsigned i = 0; i < lpI->getNumClauses(); ++i) {
-      OS << lpVar << "->addClause(" << asStr(lpI->getClause(i)) << ");\n";
+    auto LPI = dyn_cast<LandingPadInst>(I);
+    std::string LPVar = asStr(I);
+    Call = "CreateLandingPad(" + asStr(I->getType()) + ", " +
+           std::to_string(LPI->getNumClauses()) + ")";
+    OS << "auto " << LPVar << " = " << Builder << "." << Call << ";\n";
+    for (unsigned I = 0; I < LPI->getNumClauses(); ++I) {
+      OS << LPVar << "->addClause(" << asStr(LPI->getClause(I)) << ");\n";
     }
     return;
   } break;
   case Instruction::Freeze: {
-    call = "CreateFreeze(" + op1 + ")";
+    Call = "CreateFreeze(" + Op1 + ")";
   } break;
   default:
     OS << "// Unknown instruction: " << *I << "\n";
     return;
   }
 
-  // Check if call returns a value.
+  // Check if Call returns a value.
   if (!I->getType()->isVoidTy())
     OS << "auto " << asStr(I) << " = ";
-  OS << builder << "." << call << ";\n";
+  OS << Builder << "." << Call << ";\n";
 }
 
 int main(int argc, char **argv) {
@@ -1643,7 +1649,7 @@ int main(int argc, char **argv) {
   }
 
   // Output generation.
-  IR2Builder ir2b;
+  IR2Builder IR2B;
   if (!OutputFilename.empty()) {
     std::error_code EC;
     std::unique_ptr<ToolOutputFile> Out(
@@ -1652,10 +1658,10 @@ int main(int argc, char **argv) {
       errs() << EC.message() << '\n';
       exit(1);
     }
-    ir2b.convert(*(M.get()), Out->os());
+    IR2B.convert(*(M.get()), Out->os());
     Out->keep();
   } else {
-    ir2b.convert(*(M.get()), outs());
+    IR2B.convert(*(M.get()), outs());
   }
 
   return 0;
