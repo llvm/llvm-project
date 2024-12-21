@@ -18,7 +18,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
@@ -315,7 +314,7 @@ namespace {
 /// Default function arg type converter: Use a fully dynamic layout map.
 BaseMemRefType
 defaultFunctionArgTypeConverter(TensorType type, Attribute memorySpace,
-                                FunctionOpInterface funcOp,
+                                func::FuncOp funcOp,
                                 const BufferizationOptions &options) {
   return getMemRefTypeWithFullyDynamicLayout(type, memorySpace);
 }
@@ -362,7 +361,7 @@ BufferizationOptions::dynCastBufferizableOp(Value value) const {
 void BufferizationOptions::setFunctionBoundaryTypeConversion(
     LayoutMapOption layoutMapOption) {
   functionArgTypeConverterFn = [=](TensorType tensorType, Attribute memorySpace,
-                                   FunctionOpInterface funcOp,
+                                   func::FuncOp funcOp,
                                    const BufferizationOptions &options) {
     if (layoutMapOption == LayoutMapOption::IdentityLayoutMap)
       return bufferization::getMemRefTypeWithStaticIdentityLayout(tensorType,
@@ -484,10 +483,12 @@ bool AnalysisState::isValueRead(Value value) const {
 // Starting from `value`, follow the use-def chain in reverse, always selecting
 // the aliasing OpOperands. Find and return Values for which `condition`
 // evaluates to true. OpOperands of such matching Values are not traversed any
-// further.
+// further, the visited aliasing opOperands will be preserved through
+// `visitedOpOperands`.
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     Value value, llvm::function_ref<bool(Value)> condition,
-    TraversalConfig config) const {
+    TraversalConfig config,
+    llvm::DenseSet<OpOperand *> *visitedOpOperands) const {
   llvm::DenseSet<Value> visited;
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
@@ -554,6 +555,8 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
       }
 
       workingSet.insert(a.opOperand->get());
+      if (visitedOpOperands)
+        visitedOpOperands->insert(a.opOperand);
     }
   }
 
@@ -719,7 +722,7 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
       // loose all of its users and eventually DCE away.
       rewriter.setInsertionPointAfter(op);
       replacement = rewriter.create<bufferization::ToTensorOp>(
-          replacement.getLoc(), replacement);
+          replacement.getLoc(), opResult.getType(), replacement);
     }
     replacements.push_back(replacement);
   }

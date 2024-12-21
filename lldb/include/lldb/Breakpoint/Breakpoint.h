@@ -588,6 +588,8 @@ public:
   /// Get statistics associated with this breakpoint in JSON format.
   llvm::json::Value GetStatistics();
 
+  void ResetStatistics();
+
   /// Get the time it took to resolve all locations in this breakpoint.
   StatsDuration::Duration GetResolveTime() const { return m_resolve_time; }
 

@@ -23,7 +23,6 @@
 #include "CGVTables.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
@@ -1416,7 +1415,7 @@ void ItaniumCXXABI::emitRethrow(CodeGenFunction &CGF, bool isNoReturn) {
   llvm::FunctionCallee Fn = CGM.CreateRuntimeFunction(FTy, "__cxa_rethrow");
 
   if (isNoReturn)
-    CGF.EmitNoreturnRuntimeCallOrInvoke(Fn, std::nullopt);
+    CGF.EmitNoreturnRuntimeCallOrInvoke(Fn, {});
   else
     CGF.EmitRuntimeCallOrInvoke(Fn);
 }
@@ -3303,6 +3302,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
       CharUnits Align = CGM.getContext().getDeclAlign(VD);
       Val = Builder.CreateAlignedLoad(Var->getValueType(), Val, Align);
     }
+    Val = Builder.CreateAddrSpaceCast(Val, Wrapper->getReturnType());
 
     Builder.CreateRet(Val);
   }

@@ -135,10 +135,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     Features.push_back("+lsx");
 
   std::string ArchName;
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    ArchName = A->getValue();
+  const Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
+  if (MArch)
+    ArchName = MArch->getValue();
   ArchName = postProcessTargetCPUString(ArchName, Triple);
   llvm::LoongArch::getArchFeatures(ArchName, Features);
+  if (MArch && StringRef(MArch->getValue()) == "native")
+    for (auto &F : llvm::sys::getHostCPUFeatures())
+      Features.push_back(
+          Args.MakeArgString((F.second ? "+" : "-") + F.first()));
 
   // Select floating-point features determined by -mdouble-float,
   // -msingle-float, -msoft-float and -mfpu.
@@ -259,6 +264,42 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       Features.push_back("+frecipe");
     else
       Features.push_back("-frecipe");
+  }
+
+  // Select lam-bh feature determined by -m[no-]lam-bh.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mlam_bh, options::OPT_mno_lam_bh)) {
+    if (A->getOption().matches(options::OPT_mlam_bh))
+      Features.push_back("+lam-bh");
+    else
+      Features.push_back("-lam-bh");
+  }
+
+  // Select lamcas feature determined by -m[no-]lamcas.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mlamcas, options::OPT_mno_lamcas)) {
+    if (A->getOption().matches(options::OPT_mlamcas))
+      Features.push_back("+lamcas");
+    else
+      Features.push_back("-lamcas");
+  }
+
+  // Select ld-seq-sa feature determined by -m[no-]ld-seq-sa.
+  if (const Arg *A = Args.getLastArg(options::OPT_mld_seq_sa,
+                                     options::OPT_mno_ld_seq_sa)) {
+    if (A->getOption().matches(options::OPT_mld_seq_sa))
+      Features.push_back("+ld-seq-sa");
+    else
+      Features.push_back("-ld-seq-sa");
+  }
+
+  // Select div32 feature determined by -m[no-]div32.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mdiv32, options::OPT_mno_div32)) {
+    if (A->getOption().matches(options::OPT_mdiv32))
+      Features.push_back("+div32");
+    else
+      Features.push_back("-div32");
   }
 }
 

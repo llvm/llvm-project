@@ -71,7 +71,7 @@ createFuncFromCluster(OpBuilder &b, const SmallVector<Operation *, 8> &cluster,
           : b.getFunctionType(ValueRange(inputs).getTypes(), shape.getType());
   shape::FuncOp fnOp = b.create<shape::FuncOp>(loc, fnName, fnType);
   Block *block = fnOp.addEntryBlock();
-  b.setInsertionPoint(block, block->end());
+  b.setInsertionPointToEnd(block);
   IRMapping bvm;
   if (cluster.empty()) {
     bvm.map(shape, fnOp.getArgument(0));

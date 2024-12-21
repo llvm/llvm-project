@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _CharT>
 concept __fmt_char_type =
     same_as<_CharT, char>
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     || same_as<_CharT, wchar_t>
 #  endif
     ;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/DiagnosticsRendering.h"
+#include <cstdint>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -98,11 +99,11 @@ void RenderDiagnosticDetails(Stream &stream,
   }
 
   // Sort the diagnostics.
-  auto sort = [](auto &ds) {
-    llvm::sort(ds.begin(), ds.end(), [](auto &d1, auto &d2) {
+  auto sort = [](std::vector<DiagnosticDetail> &ds) {
+    std::stable_sort(ds.begin(), ds.end(), [](auto &d1, auto &d2) {
       auto l1 = d1.source_location.value_or(DiagnosticDetail::SourceLocation{});
       auto l2 = d2.source_location.value_or(DiagnosticDetail::SourceLocation{});
-      return std::pair(l1.line, l2.column) < std::pair(l1.line, l2.column);
+      return std::tie(l1.line, l1.column) < std::tie(l2.line, l2.column);
     });
   };
   sort(remaining_details);
@@ -121,14 +122,26 @@ void RenderDiagnosticDetails(Stream &stream,
         continue;
 
       stream << std::string(loc.column - x_pos, ' ') << cursor;
-      ++x_pos;
+      x_pos = loc.column + 1;
       for (unsigned i = 0; i + 1 < loc.length; ++i) {
         stream << underline;
-        ++x_pos;
+        x_pos += 1;
       }
     }
   }
   stream << '\n';
+
+  // Reverse the order within groups of diagnostics that are on the same column.
+  auto group = [](std::vector<DiagnosticDetail> &details) {
+    for (auto it = details.begin(), end = details.end(); it != end;) {
+      auto eq_end = std::find_if(it, end, [&](const DiagnosticDetail &d) {
+        return d.source_location->column != it->source_location->column;
+      });
+      std::reverse(it, eq_end);
+      it = eq_end;
+    }
+  };
+  group(remaining_details);
 
   // Work through each detail in reverse order using the vector/stack.
   bool did_print = false;
@@ -142,14 +155,19 @@ void RenderDiagnosticDetails(Stream &stream,
     for (auto &remaining_detail :
          llvm::ArrayRef(remaining_details).drop_back(1)) {
       uint16_t column = remaining_detail.source_location->column;
-      if (x_pos <= column)
+      // Is this a note with the same column as another diagnostic?
+      if (column == detail->source_location->column)
+        continue;
+
+      if (column >= x_pos) {
         stream << std::string(column - x_pos, ' ') << vbar;
-      x_pos = column + 1;
+        x_pos = column + 1;
+      }
     }
 
-    // Print the line connecting the ^ with the error message.
     uint16_t column = detail->source_location->column;
-    if (x_pos <= column)
+    // Print the line connecting the ^ with the error message.
+    if (column >= x_pos)
       stream << std::string(column - x_pos, ' ') << joint << hbar << spacer;
 
     // Print a colorized string based on the message's severity type.

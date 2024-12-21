@@ -15,9 +15,11 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
+#include <queue>
 #include <string>
 #include <unordered_set>
 
@@ -32,12 +34,15 @@ class Register;
 class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
+class SPIRVGlobalRegistry;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
 // directed graphs with cycles, so this assumes cycles are a single node, and
 // ignores back-edges. The cycle is visited from the entry in the same
 // topological-like ordering.
+//
+// Note: this visitor REQUIRES a reducible graph.
 //
 // This means once we visit a node, we know all the possible ancestors have been
 // visited.
@@ -62,7 +67,9 @@ class SPIRVSubtarget;
 class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
-  std::unordered_set<BasicBlock *> Visited = {};
+
+  std::unordered_set<BasicBlock *> Queued = {};
+  std::queue<BasicBlock *> ToVisit = {};
 
   struct OrderInfo {
     size_t Rank;
@@ -80,7 +87,11 @@ class PartialOrderingVisitor {
   // Visits |BB| with the current rank being |Rank|.
   size_t visit(BasicBlock *BB, size_t Rank);
 
+  bool CanBeVisited(BasicBlock *BB) const;
+
 public:
+  size_t GetNodeRank(BasicBlock *BB) const;
+
   // Build the visitor to operate on the function F.
   PartialOrderingVisitor(Function &F);
 
@@ -118,6 +129,8 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 // Add an OpName instruction for the given target register.
 void buildOpName(Register Target, const StringRef &Name,
                  MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -132,6 +145,14 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
+
+// Return a valid position for the OpVariable instruction inside a function,
+// i.e., at the beginning of the first block of the function.
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
+
+// Return a valid position for the instruction at the end of the block before
+// terminators and debug instructions.
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB);
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
@@ -155,6 +176,12 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 6;
   case SPIRV::StorageClass::Input:
     return 7;
+  case SPIRV::StorageClass::Output:
+    return 8;
+  case SPIRV::StorageClass::CodeSectionINTEL:
+    return 9;
+  case SPIRV::StorageClass::Private:
+    return 10;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -182,6 +209,8 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
+// Check if it's a SPIR-V specific intrinsic call.
+bool isSpvIntrinsic(const Value *Arg);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
@@ -260,10 +289,17 @@ inline Type *getTypedPointerWrapper(Type *ElemTy, unsigned AS) {
                             {ElemTy}, {AS});
 }
 
-inline bool isTypedPointerWrapper(TargetExtType *ExtTy) {
+inline bool isTypedPointerWrapper(const TargetExtType *ExtTy) {
   return ExtTy->getName() == TYPED_PTR_TARGET_EXT_NAME &&
          ExtTy->getNumIntParameters() == 1 &&
          ExtTy->getNumTypeParameters() == 1;
+}
+
+// True if this is an instance of PointerType or TypedPointerType.
+inline bool isPointerTyOrWrapper(const Type *Ty) {
+  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
+    return isTypedPointerWrapper(ExtTy);
+  return isPointerTy(Ty);
 }
 
 inline Type *applyWrappers(Type *Ty) {
@@ -280,12 +316,14 @@ inline Type *applyWrappers(Type *Ty) {
   return Ty;
 }
 
-inline Type *getPointeeType(Type *Ty) {
-  if (auto PType = dyn_cast<TypedPointerType>(Ty))
-    return PType->getElementType();
-  else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
-    if (isTypedPointerWrapper(ExtTy))
-      return applyWrappers(ExtTy->getTypeParameter(0));
+inline Type *getPointeeType(const Type *Ty) {
+  if (Ty) {
+    if (auto PType = dyn_cast<TypedPointerType>(Ty))
+      return PType->getElementType();
+    else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
+      if (isTypedPointerWrapper(ExtTy))
+        return ExtTy->getTypeParameter(0);
+  }
   return nullptr;
 }
 
@@ -343,6 +381,37 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 bool getVacantFunctionName(Module &M, std::string &Name);
+
+void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder &MIRBuilder, bool Force = false);
+void setRegClassType(Register Reg, const MachineInstr *SpvType,
+                     SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
+                     const MachineFunction &MF, bool Force = false);
+Register createVirtualRegister(const MachineInstr *SpvType,
+                               SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo *MRI,
+                               const MachineFunction &MF);
+Register createVirtualRegister(const MachineInstr *SpvType,
+                               SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder);
+
+// Return true if there is an opaque pointer type nested in the argument.
+bool isNestedPointer(const Type *Ty);
+
+enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
+
+inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
+  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+      {"rte", FPDecorationId::RTE},
+      {"rtz", FPDecorationId::RTZ},
+      {"rtp", FPDecorationId::RTP},
+      {"rtn", FPDecorationId::RTN},
+      {"sat", FPDecorationId::SAT}};
+  auto It = Mapping.find(S);
+  return It == Mapping.end() ? FPDecorationId::NONE : It->second;
+}
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

@@ -8333,6 +8333,420 @@ entry:
   ret <4 x double> %tan
 }
 
+define <1 x float> @constrained_vector_atan2_v1f32(<1 x float> %x, <1 x float> %y) #0 {
+; PC64LE-LABEL: constrained_vector_atan2_v1f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mflr 0
+; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
+; PC64LE-NEXT:    bl atan2f
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    addi 1, 1, 32
+; PC64LE-NEXT:    ld 0, 16(1)
+; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_atan2_v1f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mflr 0
+; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
+; PC64LE9-NEXT:    bl atan2f
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    addi 1, 1, 32
+; PC64LE9-NEXT:    ld 0, 16(1)
+; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    blr
+entry:
+  %atan2 = call <1 x float> @llvm.experimental.constrained.atan2.v1f32(
+                             <1 x float> %x,
+                             <1 x float> %y,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict") #1
+  ret <1 x float> %atan2
+}
+
+define <2 x double> @constrained_vector_atan2_v2f64(<2 x double> %x, <2 x double> %y) #0 {
+; PC64LE-LABEL: constrained_vector_atan2_v2f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mflr 0
+; PC64LE-NEXT:    stdu 1, -96(1)
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    li 3, 80
+; PC64LE-NEXT:    vmr 30, 2
+; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    xxlor 2, 63, 63
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxlor 61, 1, 1
+; PC64LE-NEXT:    xxswapd 1, 62
+; PC64LE-NEXT:    xxswapd 2, 63
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    li 3, 80
+; PC64LE-NEXT:    xxmrghd 34, 61, 1
+; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    lxvd2x 62, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    lxvd2x 61, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    addi 1, 1, 96
+; PC64LE-NEXT:    ld 0, 16(1)
+; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_atan2_v2f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mflr 0
+; PC64LE9-NEXT:    stdu 1, -80(1)
+; PC64LE9-NEXT:    std 0, 96(1)
+; PC64LE9-NEXT:    stxv 62, 48(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    stxv 63, 64(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    vmr 31, 3
+; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
+; PC64LE9-NEXT:    vmr 30, 2
+; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
+; PC64LE9-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
+; PC64LE9-NEXT:    xxswapd 1, 62
+; PC64LE9-NEXT:    xxswapd 2, 63
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xxmrghd 34, 61, 1
+; PC64LE9-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lxv 62, 48(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lxv 61, 32(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    addi 1, 1, 80
+; PC64LE9-NEXT:    ld 0, 16(1)
+; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    blr
+entry:
+  %atan2 = call <2 x double> @llvm.experimental.constrained.atan2.v2f64(
+                             <2 x double> %x,
+                             <2 x double> %y,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict") #1
+  ret <2 x double> %atan2
+}
+
+define <3 x float> @constrained_vector_atan2_v3f32(<3 x float> %x, <3 x float> %y) #0 {
+; PC64LE-LABEL: constrained_vector_atan2_v3f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mflr 0
+; PC64LE-NEXT:    stdu 1, -96(1)
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
+; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    vmr 30, 2
+; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    bl atan2f
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxswapd 0, 62
+; PC64LE-NEXT:    xxswapd 2, 63
+; PC64LE-NEXT:    fmr 31, 1
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
+; PC64LE-NEXT:    bl atan2f
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxsldwi 0, 62, 62, 3
+; PC64LE-NEXT:    xxsldwi 2, 63, 63, 3
+; PC64LE-NEXT:    fmr 30, 1
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
+; PC64LE-NEXT:    bl atan2f
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xscvdpspn 0, 1
+; PC64LE-NEXT:    xscvdpspn 1, 30
+; PC64LE-NEXT:    addis 3, 2, .LCPI194_0@toc@ha
+; PC64LE-NEXT:    lfd 30, 80(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    xscvdpspn 36, 31
+; PC64LE-NEXT:    lfd 31, 88(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    addi 3, 3, .LCPI194_0@toc@l
+; PC64LE-NEXT:    xxmrghw 34, 1, 0
+; PC64LE-NEXT:    lxvd2x 0, 0, 3
+; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    lxvd2x 62, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    xxswapd 35, 0
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    addi 1, 1, 96
+; PC64LE-NEXT:    ld 0, 16(1)
+; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_atan2_v3f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mflr 0
+; PC64LE9-NEXT:    stdu 1, -80(1)
+; PC64LE9-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE9-NEXT:    std 0, 96(1)
+; PC64LE9-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stxv 62, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stxv 63, 48(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    xscvspdpn 1, 0
+; PC64LE9-NEXT:    xxsldwi 0, 35, 35, 1
+; PC64LE9-NEXT:    vmr 31, 3
+; PC64LE9-NEXT:    vmr 30, 2
+; PC64LE9-NEXT:    xscvspdpn 2, 0
+; PC64LE9-NEXT:    bl atan2f
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xxswapd 0, 62
+; PC64LE9-NEXT:    fmr 31, 1
+; PC64LE9-NEXT:    xscvspdpn 1, 0
+; PC64LE9-NEXT:    xxswapd 0, 63
+; PC64LE9-NEXT:    xscvspdpn 2, 0
+; PC64LE9-NEXT:    bl atan2f
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xxsldwi 0, 62, 62, 3
+; PC64LE9-NEXT:    fmr 30, 1
+; PC64LE9-NEXT:    xscvspdpn 1, 0
+; PC64LE9-NEXT:    xxsldwi 0, 63, 63, 3
+; PC64LE9-NEXT:    xscvspdpn 2, 0
+; PC64LE9-NEXT:    bl atan2f
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 1, 30
+; PC64LE9-NEXT:    addis 3, 2, .LCPI194_0@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 34, 31
+; PC64LE9-NEXT:    lxv 63, 48(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lxv 62, 32(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lfd 31, 72(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    addi 3, 3, .LCPI194_0@toc@l
+; PC64LE9-NEXT:    lfd 30, 64(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    xxmrghw 35, 1, 0
+; PC64LE9-NEXT:    lxv 0, 0(3)
+; PC64LE9-NEXT:    xxperm 34, 35, 0
+; PC64LE9-NEXT:    addi 1, 1, 80
+; PC64LE9-NEXT:    ld 0, 16(1)
+; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    blr
+entry:
+  %atan2 = call <3 x float> @llvm.experimental.constrained.atan2.v3f32(
+                              <3 x float> %x,
+                              <3 x float> %y,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #1
+  ret <3 x float> %atan2
+}
+
+define <3 x double> @constrained_vector_atan2_v3f64(<3 x double> %x, <3 x double> %y) #0 {
+; PC64LE-LABEL: constrained_vector_atan2_v3f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mflr 0
+; PC64LE-NEXT:    stdu 1, -96(1)
+; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    stfd 28, 64(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    fmr 28, 2
+; PC64LE-NEXT:    fmr 2, 4
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    stfd 29, 72(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    fmr 30, 5
+; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    fmr 31, 6
+; PC64LE-NEXT:    fmr 29, 3
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxlor 63, 1, 1
+; PC64LE-NEXT:    fmr 1, 28
+; PC64LE-NEXT:    fmr 2, 30
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxmrghd 63, 1, 63
+; PC64LE-NEXT:    fmr 1, 29
+; PC64LE-NEXT:    fmr 2, 31
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    fmr 3, 1
+; PC64LE-NEXT:    xxswapd 1, 63
+; PC64LE-NEXT:    lfd 31, 88(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    xxlor 2, 63, 63
+; PC64LE-NEXT:    lfd 30, 80(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    lfd 29, 72(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    lfd 28, 64(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    addi 1, 1, 96
+; PC64LE-NEXT:    ld 0, 16(1)
+; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_atan2_v3f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mflr 0
+; PC64LE9-NEXT:    stdu 1, -80(1)
+; PC64LE9-NEXT:    std 0, 96(1)
+; PC64LE9-NEXT:    stfd 28, 48(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stxv 63, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    fmr 28, 2
+; PC64LE9-NEXT:    fmr 2, 4
+; PC64LE9-NEXT:    stfd 29, 56(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    fmr 31, 6
+; PC64LE9-NEXT:    fmr 30, 5
+; PC64LE9-NEXT:    fmr 29, 3
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xscpsgndp 63, 1, 1
+; PC64LE9-NEXT:    fmr 1, 28
+; PC64LE9-NEXT:    fmr 2, 30
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xxmrghd 63, 1, 63
+; PC64LE9-NEXT:    fmr 1, 29
+; PC64LE9-NEXT:    fmr 2, 31
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    fmr 3, 1
+; PC64LE9-NEXT:    xxswapd 1, 63
+; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
+; PC64LE9-NEXT:    lxv 63, 32(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lfd 31, 72(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    lfd 30, 64(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    lfd 29, 56(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    lfd 28, 48(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    addi 1, 1, 80
+; PC64LE9-NEXT:    ld 0, 16(1)
+; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    blr
+entry:
+  %atan2 = call <3 x double> @llvm.experimental.constrained.atan2.v3f64(
+                          <3 x double> %x,
+                          <3 x double> %y,
+                          metadata !"round.dynamic",
+                          metadata !"fpexcept.strict") #1
+  ret <3 x double> %atan2
+}
+
+define <4 x double> @constrained_vector_atan2_v4f64(<4 x double> %x, <4 x double> %y) #0 {
+; PC64LE-LABEL: constrained_vector_atan2_v4f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mflr 0
+; PC64LE-NEXT:    stdu 1, -128(1)
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    std 0, 144(1)
+; PC64LE-NEXT:    stxvd2x 59, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    stxvd2x 60, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    li 3, 80
+; PC64LE-NEXT:    vmr 28, 2
+; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    li 3, 96
+; PC64LE-NEXT:    xxlor 1, 60, 60
+; PC64LE-NEXT:    vmr 29, 3
+; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    vmr 30, 4
+; PC64LE-NEXT:    li 3, 112
+; PC64LE-NEXT:    xxlor 2, 62, 62
+; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    vmr 31, 5
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxlor 59, 1, 1
+; PC64LE-NEXT:    xxswapd 1, 60
+; PC64LE-NEXT:    xxswapd 2, 62
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxmrghd 62, 59, 1
+; PC64LE-NEXT:    xxlor 1, 61, 61
+; PC64LE-NEXT:    xxlor 2, 63, 63
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    xxlor 60, 1, 1
+; PC64LE-NEXT:    xxswapd 1, 61
+; PC64LE-NEXT:    xxswapd 2, 63
+; PC64LE-NEXT:    bl atan2
+; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    li 3, 112
+; PC64LE-NEXT:    vmr 2, 30
+; PC64LE-NEXT:    xxmrghd 35, 60, 1
+; PC64LE-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    li 3, 96
+; PC64LE-NEXT:    lxvd2x 62, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    li 3, 80
+; PC64LE-NEXT:    lxvd2x 61, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    li 3, 64
+; PC64LE-NEXT:    lxvd2x 60, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    lxvd2x 59, 1, 3 # 16-byte Folded Reload
+; PC64LE-NEXT:    addi 1, 1, 128
+; PC64LE-NEXT:    ld 0, 16(1)
+; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_atan2_v4f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mflr 0
+; PC64LE9-NEXT:    stdu 1, -112(1)
+; PC64LE9-NEXT:    std 0, 128(1)
+; PC64LE9-NEXT:    stxv 60, 48(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    stxv 62, 80(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    vmr 30, 4
+; PC64LE9-NEXT:    xscpsgndp 2, 62, 62
+; PC64LE9-NEXT:    vmr 28, 2
+; PC64LE9-NEXT:    xscpsgndp 1, 60, 60
+; PC64LE9-NEXT:    stxv 59, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    stxv 61, 64(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    stxv 63, 96(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    vmr 31, 5
+; PC64LE9-NEXT:    vmr 29, 3
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xscpsgndp 59, 1, 1
+; PC64LE9-NEXT:    xxswapd 1, 60
+; PC64LE9-NEXT:    xxswapd 2, 62
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xxmrghd 62, 59, 1
+; PC64LE9-NEXT:    xscpsgndp 1, 61, 61
+; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xscpsgndp 60, 1, 1
+; PC64LE9-NEXT:    xxswapd 1, 61
+; PC64LE9-NEXT:    xxswapd 2, 63
+; PC64LE9-NEXT:    bl atan2
+; PC64LE9-NEXT:    nop
+; PC64LE9-NEXT:    xxmrghd 35, 60, 1
+; PC64LE9-NEXT:    vmr 2, 30
+; PC64LE9-NEXT:    lxv 63, 96(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lxv 62, 80(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lxv 61, 64(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lxv 60, 48(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    lxv 59, 32(1) # 16-byte Folded Reload
+; PC64LE9-NEXT:    addi 1, 1, 112
+; PC64LE9-NEXT:    ld 0, 16(1)
+; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    blr
+entry:
+  %atan2 = call <4 x double> @llvm.experimental.constrained.atan2.v4f64(
+                             <4 x double> %x,
+                             <4 x double> %y,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict") #1
+  ret <4 x double> %atan2
+}
+
 attributes #0 = { nounwind strictfp noimplicitfloat }
 attributes #1 = { strictfp }
 
@@ -8348,6 +8762,7 @@ declare <2 x double> @llvm.experimental.constrained.powi.v2f64(<2 x double>, i32
 declare <2 x double> @llvm.experimental.constrained.sin.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.cos.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.tan.v2f64(<2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.atan2.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.exp.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.exp2.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.log.v2f64(<2 x double>, metadata, metadata)
@@ -8394,6 +8809,7 @@ declare <1 x float> @llvm.experimental.constrained.powi.v1f32(<1 x float>, i32, 
 declare <1 x float> @llvm.experimental.constrained.sin.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.cos.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.tan.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.atan2.v1f32(<1 x float>, <1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.exp.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.exp2.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.log.v1f32(<1 x float>, metadata, metadata)
@@ -8449,6 +8865,8 @@ declare <3 x float> @llvm.experimental.constrained.cos.v3f32(<3 x float>, metada
 declare <3 x double> @llvm.experimental.constrained.cos.v3f64(<3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.tan.v3f32(<3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.tan.v3f64(<3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.atan2.v3f32(<3 x float>, <3 x float>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.atan2.v3f64(<3 x double>, <3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.exp.v3f32(<3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.exp.v3f64(<3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.exp2.v3f32(<3 x float>, metadata, metadata)
@@ -8506,6 +8924,7 @@ declare <4 x double> @llvm.experimental.constrained.powi.v4f64(<4 x double>, i32
 declare <4 x double> @llvm.experimental.constrained.sin.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.cos.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.tan.v4f64(<4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.atan2.v4f64(<4 x double>, <4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.exp.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.exp2.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.log.v4f64(<4 x double>, metadata, metadata)

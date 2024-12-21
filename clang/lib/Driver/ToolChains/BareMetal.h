@@ -67,10 +67,6 @@ public:
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
-  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs) const override;
-  void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
-                         llvm::opt::ArgStringList &CmdArgs) const;
   std::string computeSysRoot() const override;
   SanitizerMask getSupportedSanitizers() const override;
 

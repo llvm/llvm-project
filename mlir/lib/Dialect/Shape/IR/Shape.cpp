@@ -695,8 +695,8 @@ struct RemoveEmptyShapeOperandsPattern : public OpRewritePattern<OpTy> {
       }
       return true;
     };
-    auto newOperands = llvm::to_vector<8>(
-        llvm::make_filter_range(op->getOperands(), isPotentiallyNonEmptyShape));
+    auto newOperands = llvm::filter_to_vector<8>(op->getOperands(),
+                                                 isPotentiallyNonEmptyShape);
 
     // Reduce op to equivalent without empty shape operands.
     if (newOperands.size() < op.getNumOperands()) {

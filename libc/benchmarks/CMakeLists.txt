@@ -126,6 +126,7 @@ add_library(libc-memory-benchmark
 target_include_directories(libc-memory-benchmark
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${LIBC_SOURCE_DIR}
 )
 target_link_libraries(libc-memory-benchmark
     PUBLIC
@@ -203,13 +204,11 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   PRIVATE
   libc-memory-benchmark
   libc.src.string.memcmp_opt_host.__internal__
-  libc.src.string.bcmp_opt_host.__internal__
   libc.src.string.memcpy_opt_host.__internal__
-  libc.src.string.memset_opt_host.__internal__
-  libc.src.string.bzero_opt_host.__internal__
   libc.src.string.memmove_opt_host.__internal__
+  libc.src.string.memset_opt_host.__internal__
+  libc.src.strings.bcmp_opt_host.__internal__
+  libc.src.strings.bzero_opt_host.__internal__
   benchmark_main
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
-
-add_subdirectory(automemcpy)
