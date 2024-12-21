@@ -1343,6 +1343,36 @@ public:
   }
 };
 
+struct MergeableCoverageData : public CoverageData {
+  std::vector<CountedRegion> CodeRegions;
+
+  MergeableCoverageData(StringRef Filename) : CoverageData(Filename) {}
+
+  void addFunctionRegions(
+      const FunctionRecord &Function,
+      std::function<bool(const CounterMappingRegion &CR)> shouldProcess,
+      std::function<bool(const CountedRegion &CR)> shouldExpand) {
+    for (const auto &CR : Function.CountedRegions)
+      if (shouldProcess(CR)) {
+        CodeRegions.push_back(CR);
+        if (shouldExpand(CR))
+          Expansions.emplace_back(CR, Function);
+      }
+    // Capture branch regions specific to the function (excluding expansions).
+    for (const auto &CR : Function.CountedBranchRegions)
+      if (shouldProcess(CR))
+        BranchRegions.push_back(CR);
+    // Capture MCDC records specific to the function.
+    for (const auto &MR : Function.MCDCRecords)
+      if (shouldProcess(MR.getDecisionRegion()))
+        MCDCRecords.push_back(MR);
+  }
+
+  CoverageData buildSegments() {
+    Segments = SegmentBuilder::buildSegments(CodeRegions);
+    return CoverageData(std::move(*this));
+  }
+};
 } // end anonymous namespace
 
 std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
@@ -1393,8 +1423,7 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
 }
 
 CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
-  CoverageData FileCoverage(Filename);
-  std::vector<CountedRegion> Regions;
+  MergeableCoverageData FileCoverage(Filename);
 
   // Look up the function records in the given file. Due to hash collisions on
   // the filename, we may get back some records that are not in the file.
@@ -1404,26 +1433,14 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
     const FunctionRecord &Function = Functions[RecordIndex];
     auto MainFileID = findMainViewFileID(Filename, Function);
     auto FileIDs = gatherFileIDs(Filename, Function);
-    for (const auto &CR : Function.CountedRegions)
-      if (FileIDs.test(CR.FileID)) {
-        Regions.push_back(CR);
-        if (MainFileID && isExpansion(CR, *MainFileID))
-          FileCoverage.Expansions.emplace_back(CR, Function);
-      }
-    // Capture branch regions specific to the function (excluding expansions).
-    for (const auto &CR : Function.CountedBranchRegions)
-      if (FileIDs.test(CR.FileID))
-        FileCoverage.BranchRegions.push_back(CR);
-    // Capture MCDC records specific to the function.
-    for (const auto &MR : Function.MCDCRecords)
-      if (FileIDs.test(MR.getDecisionRegion().FileID))
-        FileCoverage.MCDCRecords.push_back(MR);
+    FileCoverage.addFunctionRegions(
+        Function, [&](auto &CR) { return FileIDs.test(CR.FileID); },
+        [&](auto &CR) { return (MainFileID && isExpansion(CR, *MainFileID)); });
   }
 
   LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
-  FileCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
-  return FileCoverage;
+  return FileCoverage.buildSegments();
 }
 
 std::vector<InstantiationGroup>
@@ -1457,29 +1474,15 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
   if (!MainFileID)
     return CoverageData();
 
-  CoverageData FunctionCoverage(Function.Filenames[*MainFileID]);
-  std::vector<CountedRegion> Regions;
-  for (const auto &CR : Function.CountedRegions)
-    if (CR.FileID == *MainFileID) {
-      Regions.push_back(CR);
-      if (isExpansion(CR, *MainFileID))
-        FunctionCoverage.Expansions.emplace_back(CR, Function);
-    }
-  // Capture branch regions specific to the function (excluding expansions).
-  for (const auto &CR : Function.CountedBranchRegions)
-    if (CR.FileID == *MainFileID)
-      FunctionCoverage.BranchRegions.push_back(CR);
-
-  // Capture MCDC records specific to the function.
-  for (const auto &MR : Function.MCDCRecords)
-    if (MR.getDecisionRegion().FileID == *MainFileID)
-      FunctionCoverage.MCDCRecords.push_back(MR);
+  MergeableCoverageData FunctionCoverage(Function.Filenames[*MainFileID]);
+  FunctionCoverage.addFunctionRegions(
+      Function, [&](auto &CR) { return (CR.FileID == *MainFileID); },
+      [&](auto &CR) { return isExpansion(CR, *MainFileID); });
 
   LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
                     << "\n");
-  FunctionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
-  return FunctionCoverage;
+  return FunctionCoverage.buildSegments();
 }
 
 CoverageData CoverageMapping::getCoverageForExpansion(
