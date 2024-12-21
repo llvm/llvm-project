@@ -8,6 +8,7 @@
 
 #include "SymbolLocatorDebuginfod.h"
 
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"
@@ -173,11 +174,14 @@ GetFileForModule(const ModuleSpec &module_spec,
   // Grab LLDB's Debuginfod overrides from the
   // plugin.symbol-locator.debuginfod.* settings.
   PluginProperties &plugin_props = GetGlobalPluginProperties();
-  llvm::Expected<std::string> cache_path_or_err = plugin_props.GetCachePath();
-  // A cache location is *required*.
-  if (!cache_path_or_err)
-    return {};
-  std::string cache_path = *cache_path_or_err;
+  // Grab the lldb index cache settings from the global module list properties.
+  ModuleListProperties &properties =
+      ModuleList::GetGlobalModuleListProperties();
+  std::string cache_path = properties.GetLLDBIndexCachePath().GetPath();
+
+  llvm::CachePruningPolicy pruning_policy =
+      DataFileCache::GetLLDBIndexCachePolicy();
+
   llvm::SmallVector<llvm::StringRef> debuginfod_urls =
       llvm::getDefaultDebuginfodUrls();
   std::chrono::milliseconds timeout = plugin_props.GetTimeout();
@@ -191,7 +195,8 @@ GetFileForModule(const ModuleSpec &module_spec,
     cache_file_name += "-" + file_name.str();
   }
   llvm::Expected<std::string> result = llvm::getCachedOrDownloadArtifact(
-      cache_file_name, url_path, cache_path, debuginfod_urls, timeout);
+      cache_file_name, url_path, cache_path, debuginfod_urls, timeout,
+      pruning_policy);
   if (result)
     return FileSpec(*result);
 
