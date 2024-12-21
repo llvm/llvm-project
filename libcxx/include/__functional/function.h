@@ -12,6 +12,7 @@
 
 #include <__assert>
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
@@ -37,7 +38,6 @@
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <new>
 #include <tuple>
 #include <typeinfo>
 

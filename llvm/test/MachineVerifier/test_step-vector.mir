@@ -1,0 +1,29 @@
+# RUN: not --crash llc -verify-machineinstrs -mtriple=arm64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            g_step_vector
+body: |
+  bb.0:
+
+  %0:_(s32) = G_CONSTANT i32 4
+
+  ; CHECK: operand must be cimm
+  %1:_(s32) = G_STEP_VECTOR %0
+
+  ; CHECK: step must be > 0
+  %2:_(s32) = G_STEP_VECTOR i32 -1
+
+  ; CHECK: Destination type must be a scalable vector
+  %3:_(<4 x s64>) = G_STEP_VECTOR i32 5
+
+  ; CHECK: Destination element type must be scalar
+  %4:_(<vscale x 4 x p0>) = G_STEP_VECTOR i32 9
+
+  ; CHECK: step bitwidth differs from result type element bitwidth
+  %6:_(<vscale x 2 x s33>) = G_STEP_VECTOR i32 56
+
+  %7:_(<vscale x 2 x s128>) = G_STEP_VECTOR i128 79
+
+...
+

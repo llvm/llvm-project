@@ -46,6 +46,13 @@ std::string toString(const wasm::InputFile *file) {
 
 namespace wasm {
 
+std::string replaceThinLTOSuffix(StringRef path) {
+  auto [suffix, repl] = config->thinLTOObjectSuffixReplace;
+  if (path.consume_back(suffix))
+    return (path + repl).str();
+  return std::string(path);
+}
+
 void InputFile::checkArch(Triple::ArchType arch) const {
   bool is64 = arch == Triple::wasm64;
   if (is64 && !config->is64) {
@@ -248,13 +255,14 @@ static void setRelocs(const std::vector<T *> &chunks,
   }
 }
 
-// An object file can have two approaches to tables.  With the reference-types
-// feature enabled, input files that define or use tables declare the tables
-// using symbols, and record each use with a relocation.  This way when the
-// linker combines inputs, it can collate the tables used by the inputs,
-// assigning them distinct table numbers, and renumber all the uses as
-// appropriate.  At the same time, the linker has special logic to build the
-// indirect function table if it is needed.
+// An object file can have two approaches to tables.  With the
+// reference-types feature or call-indirect-overlong feature enabled
+// (explicitly, or implied by the reference-types feature), input files that
+// define or use tables declare the tables using symbols, and record each use
+// with a relocation.  This way when the linker combines inputs, it can collate
+// the tables used by the inputs, assigning them distinct table numbers, and
+// renumber all the uses as appropriate.  At the same time, the linker has
+// special logic to build the indirect function table if it is needed.
 //
 // However, MVP object files (those that target WebAssembly 1.0, the "minimum
 // viable product" version of WebAssembly) neither write table symbols nor
@@ -277,9 +285,9 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
     return;
 
   // It's possible for an input to define tables and also use the indirect
-  // function table, but forget to compile with -mattr=+reference-types.
-  // For these newer files, we require symbols for all tables, and
-  // relocations for all of their uses.
+  // function table, but forget to compile with -mattr=+call-indirect-overlong
+  // or -mattr=+reference-types. For these newer files, we require symbols for
+  // all tables, and relocations for all of their uses.
   if (tableSymbolCount != 0) {
     error(toString(this) +
           ": expected one symbol table entry for each of the " +
@@ -837,6 +845,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
   this->archiveName = std::string(archiveName);
 
   std::string path = mb.getBufferIdentifier().str();
+  if (config->thinLTOIndexOnly)
+    path = replaceThinLTOSuffix(mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this

@@ -131,7 +131,14 @@ public:
 // Contents of this chunk is always null bytes.
 class NullChunk : public NonSectionChunk {
 public:
-  explicit NullChunk(size_t n) : size(n) { hasData = false; }
+  explicit NullChunk(size_t n, uint32_t align) : size(n) {
+    hasData = false;
+    setAlignment(align);
+  }
+  explicit NullChunk(COFFLinkerContext &ctx)
+      : NullChunk(ctx.config.wordsize, ctx.config.wordsize) {}
+  explicit NullChunk(COFFLinkerContext &ctx, size_t n)
+      : NullChunk(n, ctx.config.wordsize) {}
   size_t getSize() const override { return size; }
 
   void writeTo(uint8_t *buf) const override {
@@ -153,13 +160,14 @@ public:
   void writeTo(uint8_t *buf) const override {
     uint64_t impchkVA = 0;
     if (file->impchkThunk)
-      impchkVA = file->impchkThunk->getRVA() + file->ctx.config.imageBase;
+      impchkVA =
+          file->impchkThunk->getRVA() + file->symtab.ctx.config.imageBase;
     write64le(buf, impchkVA);
   }
 
   void getBaserels(std::vector<Baserel> *res) override {
     if (file->impchkThunk)
-      res->emplace_back(rva, file->ctx.config.machine);
+      res->emplace_back(rva, file->symtab.machine);
   }
 
 private:
@@ -388,6 +396,7 @@ public:
   }
 
   size_t getSize() const override { return 3 * sizeof(uint32_t); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     write32le(buf + 0, tm->getRVA()); // TailMergeChunk start RVA
@@ -408,6 +417,7 @@ public:
   }
 
   size_t getSize() const override { return sizeof(tailMergeUnwindInfoX64); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeUnwindInfoX64, sizeof(tailMergeUnwindInfoX64));
@@ -737,11 +747,11 @@ void IdataContents::create(COFFLinkerContext &ctx) {
       }
     }
     // Terminate with null values.
-    lookups.push_back(make<NullChunk>(ctx.config.wordsize));
-    addresses.push_back(make<NullChunk>(ctx.config.wordsize));
+    lookups.push_back(make<NullChunk>(ctx));
+    addresses.push_back(make<NullChunk>(ctx));
     if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(ctx.config.wordsize));
-      auxIatCopy.push_back(make<NullChunk>(ctx.config.wordsize));
+      auxIat.push_back(make<NullChunk>(ctx));
+      auxIatCopy.push_back(make<NullChunk>(ctx));
     }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
@@ -755,7 +765,7 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     dirs.push_back(dir);
   }
   // Add null terminator.
-  dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry)));
+  dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry), 4));
 }
 
 std::vector<Chunk *> DelayLoadContents::getChunks() {
@@ -830,17 +840,16 @@ void DelayLoadContents::create(Defined *h) {
         saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
     ctx.symtab.addSynthetic(tmName, tm);
     // Terminate with null values.
-    addresses.push_back(make<NullChunk>(8));
-    names.push_back(make<NullChunk>(8));
+    addresses.push_back(make<NullChunk>(ctx, 8));
+    names.push_back(make<NullChunk>(ctx, 8));
     if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(8));
-      auxIatCopy.push_back(make<NullChunk>(8));
+      auxIat.push_back(make<NullChunk>(ctx, 8));
+      auxIatCopy.push_back(make<NullChunk>(ctx, 8));
     }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
       syms[i]->setLocation(addresses[base + i]);
-    auto *mh = make<NullChunk>(8);
-    mh->setAlignment(8);
+    auto *mh = make<NullChunk>(8, 8);
     moduleHandles.push_back(mh);
 
     // Fill the delay import table header fields.
@@ -853,7 +862,8 @@ void DelayLoadContents::create(Defined *h) {
   if (unwind)
     unwindinfo.push_back(unwind);
   // Add null terminator.
-  dirs.push_back(make<NullChunk>(sizeof(delay_import_directory_table_entry)));
+  dirs.push_back(
+      make<NullChunk>(sizeof(delay_import_directory_table_entry), 4));
 }
 
 Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
@@ -875,6 +885,7 @@ Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
 Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<TailMergeUnwindInfoX64>();
     // FIXME: Add support for other architectures.
   default:
@@ -884,6 +895,7 @@ Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
 Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<TailMergePDataChunkX64>(tm, unwind);
     // FIXME: Add support for other architectures.
   default:

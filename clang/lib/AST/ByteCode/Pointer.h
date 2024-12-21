@@ -107,6 +107,7 @@ public:
       : Offset(Offset), StorageKind(Storage::Fn) {
     PointeeStorage.Fn = FunctionPointer(F);
   }
+  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
 
   void operator=(const Pointer &P);
@@ -653,15 +654,6 @@ public:
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
   }
 
-  /// Dereferences a primitive element.
-  template <typename T> T &elem(unsigned I) const {
-    assert(I < getNumElems());
-    assert(isBlockPointer());
-    assert(asBlockPointer().Pointee);
-    return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
-                                 sizeof(InitMapPtr))[I];
-  }
-
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {
@@ -714,8 +706,6 @@ private:
   friend class InterpState;
   friend struct InitMap;
   friend class DynamicAllocator;
-
-  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {

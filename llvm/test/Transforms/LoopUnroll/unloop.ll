@@ -456,7 +456,7 @@ for.end166:
 ; Remove a loop whose exit branches into a sibling loop.
 ; Ensure that only the loop is removed and rely on verify-loopinfo to
 ; check soundness.
-define void @unloopCriticalEdge() nounwind {
+define void @unloopCriticalEdge(i1 %arg) nounwind {
 ; CHECK-LABEL: @unloopCriticalEdge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND31:%.*]]
@@ -465,7 +465,7 @@ define void @unloopCriticalEdge() nounwind {
 ; CHECK:       for.body35:
 ; CHECK-NEXT:    br label [[WHILE_COND_I_PREHEADER:%.*]]
 ; CHECK:       while.cond.i.preheader:
-; CHECK-NEXT:    br i1 undef, label [[WHILE_COND_I_PREHEADER_SPLIT:%.*]], label [[WHILE_COND_OUTER_I_LOOPEXIT_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[WHILE_COND_I_PREHEADER_SPLIT:%.*]], label [[WHILE_COND_OUTER_I_LOOPEXIT_SPLIT:%.*]]
 ; CHECK:       while.cond.i.preheader.split:
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
@@ -491,13 +491,13 @@ entry:
   br label %for.cond31
 
 for.cond31:
-  br i1 undef, label %for.body35, label %for.end94
+  br i1 false, label %for.body35, label %for.end94
 
 for.body35:
   br label %while.cond.i.preheader
 
 while.cond.i.preheader:
-  br i1 undef, label %while.cond.i.preheader.split, label %while.cond.outer.i.loopexit.split
+  br i1 %arg, label %while.cond.i.preheader.split, label %while.cond.outer.i.loopexit.split
 
 while.cond.i.preheader.split:
   br label %while.cond.i
@@ -521,7 +521,7 @@ while.end:
   br label %for.end78
 
 for.end78:
-  br i1 undef, label %Proc2.exit, label %for.cond.i.preheader
+  br i1 false, label %Proc2.exit, label %for.cond.i.preheader
 
 for.cond.i.preheader:
   br label %for.cond.i
@@ -563,7 +563,7 @@ define void @removeSubloopBlocks() nounwind {
 ; CHECK:       sw.default1711:
 ; CHECK-NEXT:    br label [[DEFCHAR:%.*]]
 ; CHECK:       defchar:
-; CHECK-NEXT:    br i1 undef, label [[IF_END2413:%.*]], label [[IF_THEN2368:%.*]]
+; CHECK-NEXT:    br i1 true, label [[IF_END2413:%.*]], label [[IF_THEN2368:%.*]]
 ; CHECK:       if.then2368:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end2413:
@@ -576,16 +576,16 @@ tryagain.outer:                                   ; preds = %sw.bb304, %entry
   br label %tryagain
 
 tryagain:                                         ; preds = %while.end1699, %tryagain.outer
-  br i1 undef, label %sw.bb1669, label %sw.bb304
+  br i1 false, label %sw.bb1669, label %sw.bb304
 
 sw.bb304:                                         ; preds = %tryagain
-  br i1 undef, label %return, label %tryagain.outer
+  br i1 true, label %return, label %tryagain.outer
 
 sw.bb1669:                                        ; preds = %tryagain
-  br i1 undef, label %sw.default1711, label %while.cond1676
+  br i1 true, label %sw.default1711, label %while.cond1676
 
 while.cond1676:                                   ; preds = %while.body1694, %sw.bb1669
-  br i1 undef, label %while.end1699, label %while.body1694
+  br i1 true, label %while.end1699, label %while.body1694
 
 while.body1694:                                   ; preds = %while.cond1676
   br label %while.cond1676
@@ -597,7 +597,7 @@ sw.default1711:                                   ; preds = %while.end1699, %sw.
   br label %defchar
 
 defchar:                                          ; preds = %sw.default1711, %sw.bb376
-  br i1 undef, label %if.end2413, label %if.then2368
+  br i1 true, label %if.end2413, label %if.then2368
 
 if.then2368:                                      ; preds = %defchar
   unreachable

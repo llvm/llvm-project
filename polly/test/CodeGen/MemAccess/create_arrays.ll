@@ -28,19 +28,23 @@
 ; CODEGEN:  %beta.s2a.reload = load double, ptr %beta.s2a
 ; CODEGEN:  %polly.access.mul.E = mul nsw i64 %polly.indvar31, 200000
 ; CODEGEN:  %polly.access.add.E = add nsw i64 %polly.access.mul.E, %polly.indvar
-; CODEGEN:  {{%.*}} = load double, ptr %polly.access.E, align 8, !alias.scope !0, !noalias !3
-; CODEGEN:  store double {{%.*}}, ptr %scevgep34, align 8, !alias.scope !8, !noalias !9
+; CODEGEN:  {{%.*}} = load double, ptr %polly.access.E, align 8, !alias.scope !4, !noalias !7
+; CODEGEN:  store double {{%.*}}, ptr %scevgep34, align 8, !alias.scope !12, !noalias !13
 ;
-; CODEGEN: !0 = !{!1}
-; CODEGEN: !1 = distinct !{!1, !2, !"polly.alias.scope.E"}
-; CODEGEN: !2 = distinct !{!2, !"polly.alias.scope.domain"}
-; CODEGEN: !3 = !{!4, !5, !6, !7}
-; CODEGEN: !4 = distinct !{!4, !2, !"polly.alias.scope.MemRef_B"}
-; CODEGEN: !5 = distinct !{!5, !2, !"polly.alias.scope.MemRef_A"}
-; CODEGEN: !6 = distinct !{!6, !2, !"polly.alias.scope.D"}
-; CODEGEN: !7 = distinct !{!7, !2, !"polly.alias.scope.F"}
-; CODEGEN: !8 = !{!5}
-; CODEGEN: !9 = !{!4, !6, !1, !7}
+; CODEGEN: !0 = distinct !{!0, !1}
+; CODEGEN: !1 = !{!"llvm.loop.vectorize.enable", i32 0}
+; CODEGEN: !2 = distinct !{!2, !1}
+; CODEGEN: !3 = distinct !{!3, !1}
+; CODEGEN: !4 = !{!5}
+; CODEGEN: !5 = distinct !{!5, !6, !"polly.alias.scope.E"}
+; CODEGEN: !6 = distinct !{!6, !"polly.alias.scope.domain"}
+; CODEGEN: !7 = !{!8, !9, !10, !11}
+; CODEGEN: !8 = distinct !{!8, !6, !"polly.alias.scope.MemRef_B"}
+; CODEGEN: !9 = distinct !{!9, !6, !"polly.alias.scope.MemRef_A"}
+; CODEGEN: !10 = distinct !{!10, !6, !"polly.alias.scope.D"}
+; CODEGEN: !11 = distinct !{!11, !6, !"polly.alias.scope.F"}
+; CODEGEN: !12 = !{!9}
+; CODEGEN: !13 = !{!8, !10, !5, !11}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

@@ -37,6 +37,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
@@ -1118,6 +1119,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if (Name.consume_front("experimental.vector.")) {
       Intrinsic::ID ID =
           StringSwitch<Intrinsic::ID>(Name)
+              // Skip over extract.last.active, otherwise it will be 'upgraded'
+              // to a regular vector extract which is a different operation.
+              .StartsWith("extract.last.active.", Intrinsic::not_intrinsic)
               .StartsWith("extract.", Intrinsic::vector_extract)
               .StartsWith("insert.", Intrinsic::vector_insert)
               .StartsWith("splice.", Intrinsic::vector_splice)
@@ -1301,6 +1305,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
             (Name.consume_front("local") || Name.consume_front("shared") ||
              Name.consume_front("global") || Name.consume_front("constant")) &&
             Name.starts_with(".to.gen");
+      else if (Name.consume_front("ldg.global."))
+        // nvvm.ldg.global.{i,p,f}
+        Expand = (Name.starts_with("i.") || Name.starts_with("f.") ||
+                  Name.starts_with("p."));
       else
         Expand = false;
 
@@ -2363,6 +2371,15 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
                Name.consume_front("constant")) &&
               Name.starts_with(".to.gen"))) {
     Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
+  } else if (Name.consume_front("ldg.global")) {
+    Value *Ptr = CI->getArgOperand(0);
+    Align PtrAlign = cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue();
+    // Use addrspace(1) for NVPTX ADDRESS_SPACE_GLOBAL
+    Value *ASC = Builder.CreateAddrSpaceCast(Ptr, Builder.getPtrTy(1));
+    Instruction *LD = Builder.CreateAlignedLoad(CI->getType(), ASC, PtrAlign);
+    MDNode *MD = MDNode::get(Builder.getContext(), {});
+    LD->setMetadata(LLVMContext::MD_invariant_load, MD);
+    return LD;
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
@@ -5542,7 +5559,9 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
-  if (T.isSPARC()) {
+  if (T.isSPARC() || (T.isMIPS64() && !DL.contains("m:m")) || T.isPPC64() ||
+      T.isWasm()) {
+    // Mips64 with o32 ABI did not add "-i128:128".
     // Add "-i128:128"
     std::string I64 = "-i64:64";
     std::string I128 = "-i128:128";

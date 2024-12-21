@@ -1,7 +1,10 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("PPCGenAsmMatcher") {
-  visibility = [ ":AsmParser" ]
+  visibility = [
+    ":AsmParser",
+    "//llvm/lib/Target/PowerPC:LLVMPowerPCCodeGen",
+  ]
   args = [ "-gen-asm-matcher" ]
   td_file = "../PPC.td"
 }

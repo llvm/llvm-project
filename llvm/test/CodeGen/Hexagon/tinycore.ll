@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv67t < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv65 < %s | FileCheck --check-prefix=CHECK-BIG %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv67t < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv65 < %s | FileCheck --check-prefix=CHECK-BIG %s
 
 ; Test that the tiny core architecture generates 3 slot packets at most and
 ; a single load/store per packet at most.

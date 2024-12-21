@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -95,8 +94,8 @@ char SILowerSGPRSpillsLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
                       "SI lower SGPR spill instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
                     "SI lower SGPR spill instructions", false, false)
 
@@ -422,6 +421,13 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
         if (!TII->isSGPRSpill(MI))
           continue;
+
+        if (MI.getOperand(0).isUndef()) {
+          if (Indexes)
+            Indexes->removeMachineInstrFromMaps(MI);
+          MI.eraseFromParent();
+          continue;
+        }
 
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
