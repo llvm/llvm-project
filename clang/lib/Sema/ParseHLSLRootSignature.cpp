@@ -7,6 +7,119 @@ namespace root_signature {
 // TODO: Hook up with Sema to properly report semantic/validation errors
 bool Parser::ReportError() { return true; }
 
+
+bool Parser::ParseDescriptorTable() {
+  // Init table which will be updated as we add clauses
+  Elements->push_back(RootElement(DescriptorTable()));
+  DescriptorTable &Table = Elements->back().Table;
+
+  bool First = true;
+  while (!Buffer.empty()) {
+    // Trim expected comma when more than 1 clause element
+    if (!First && !Buffer.consume_front(","))
+      return ReportError();
+    First = false;
+
+    // Remove any whitespace
+    Buffer = Buffer.drop_while(isspace);
+
+    // Retrieve the root element identifier
+    auto Split = Buffer.split('(');
+    Token = Split.first;
+    Buffer = Split.second;
+
+    // Dispatch to the applicable clause parser
+    if (ParseDescriptorTableClause())
+      return ReportError();
+
+    // Then we can clean up the remaining ")"
+    if (!Buffer.consume_front(")"))
+      return ReportError();
+
+    Table.NumClauses++;
+  }
+
+  if (ParseOptComma())
+    return ReportError();
+
+  if (ParseVisibility(Table.Visibility))
+    return ReportError();
+
+  // All input has been correctly parsed
+  return false;
+}
+
+bool Parser::ParseDescriptorTableClause() {
+  auto MaybeType = llvm::StringSwitch<std::optional<ClauseType>>(Token)
+                       .Case("CBV", ClauseType::CBV)
+                       .Case("SRV", ClauseType::SRV)
+                       .Case("UAV", ClauseType::UAV)
+                       .Case("Sampler", ClauseType::Sampler)
+                       .Default(std::nullopt);
+  if (!MaybeType)
+    return ReportError();
+  DescriptorTableClause Clause(*MaybeType);
+
+  // Retrieve mandatory register
+  if (ParseRegister(Clause.Register))
+    return ReportError();
+
+  if (ParseOptComma())
+    return ReportError();
+
+  // Parse optional numDescriptors arg
+  if (Buffer.consume_front("numDescriptors")) {
+    if (ParseAssign())
+      return ReportError();
+
+    if (ParseUnsignedInt(Clause.NumDescriptors))
+      return ReportError();
+
+    if (ParseOptComma())
+      return ReportError();
+  }
+
+  // Parse optional space arg
+  if (Buffer.consume_front("space")) {
+    if (ParseAssign())
+      return ReportError();
+
+    if (ParseUnsignedInt(Clause.Space))
+      return ReportError();
+
+    if (ParseOptComma())
+      return ReportError();
+  }
+
+  // Parse optional offset arg
+  if (Buffer.consume_front("offset")) {
+    if (ParseAssign())
+      return ReportError();
+
+    // This will either parse a number or the literal
+    if (Buffer.consume_front_insensitive("DESCRIPTOR_RANGE_OFFSET"))
+      Clause.Offset = DescriptorTableOffsetAppend;
+    else if (ParseUnsignedInt(Clause.Offset))
+      return ReportError();
+
+    if (ParseOptComma())
+      return ReportError();
+  }
+
+  // Parse optional flags arg
+  if (Buffer.consume_front("flags")) {
+    if (ParseAssign())
+      return ReportError();
+
+    if (ParseDescriptorRangeFlag(Clause.Flags))
+
+      if (ParseOptComma())
+        return ReportError();
+  }
+
+  return false;
+}
+
 bool Parser::ParseRootFlags() {
   // Set to RootFlags::None and skip whitespace to catch when we have RootFlags(
   // )
@@ -196,6 +309,21 @@ bool Parser::ParseEnum(SmallVector<std::pair<StringLiteral, EnumType>> Mapping,
   Enum = *MaybeEnum;
 
   return false;
+}
+
+bool Parser::ParseDescriptorRangeFlag(DescriptorRangeFlags &Flag) {
+  SmallVector<std::pair<StringLiteral, DescriptorRangeFlags>> Mapping = {
+      {"0", DescriptorRangeFlags::None},
+      {"DESCRIPTORS_VOLATILE", DescriptorRangeFlags::DescriptorsVolatile},
+      {"DATA_VOLATILE", DescriptorRangeFlags::DataVolatile},
+      {"DATA_STATIC_WHILE_SET_AT_EXECUTE",
+       DescriptorRangeFlags::DataStaticWhileSetAtExecute},
+      {"DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS",
+       DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks},
+      {"DATA_STATIC", DescriptorRangeFlags::DataStatic},
+  };
+
+  return ParseEnum<DescriptorRangeFlags>(Mapping, Flag);
 }
 
 bool Parser::ParseRootDescriptorFlag(RootDescriptorFlags &Flag) {

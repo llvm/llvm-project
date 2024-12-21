@@ -35,6 +35,9 @@ private:
 
   // RootElements parse methods
   bool ParseRootElement();
+
+  bool ParseDescriptorTable();
+  bool ParseDescriptorTableClause();
   bool ParseRootFlags();
   bool ParseRootParameter();
 
@@ -49,6 +52,7 @@ private:
   template <typename EnumType>
   bool ParseEnum(SmallVector<std::pair<StringLiteral, EnumType>> Mapping,
                  EnumType &Enum);
+  bool ParseDescriptorRangeFlag(DescriptorRangeFlags &Flag);
   bool ParseRootDescriptorFlag(RootDescriptorFlags &Flag);
   bool ParseRootFlag(RootFlags &Flag);
   bool ParseVisibility(ShaderVisibility &Visibility);

@@ -196,7 +196,24 @@ struct DescriptorTableClause {
   uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
   uint32_t Offset = DescriptorTableOffsetAppend;
-  DescriptorRangeFlags Flags = DescriptorRangeFlags::None;
+  DescriptorRangeFlags Flags;
+
+  DescriptorTableClause(ClauseType Type) : Type(Type) {
+    switch (Type) {
+    case ClauseType::CBV:
+      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ClauseType::SRV:
+      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ClauseType::UAV:
+      Flags = DescriptorRangeFlags::DataVolatile;
+      break;
+    case ClauseType::Sampler:
+      Flags = DescriptorRangeFlags::None;
+      break;
+    }
+  }
 };
 
 // Models the start of a descriptor table
