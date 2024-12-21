@@ -39,6 +39,26 @@ define i16 @p1_write_then_read_caller() {
   ret i16 %l
 }
 
+declare void @fn_capture(ptr noundef)
+; Function Attrs: mustprogress nounwind uwtable
+define i16 @p1_write_then_read_caller_escape() {
+; CHECK-LABEL: @p1_write_then_read_caller_escape(
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    store i16 0, ptr [[PTR]], align 2
+; CHECK-NEXT:    call void @fn_capture(ptr [[PTR]])
+; CHECK-NEXT:    call void @p1_write_then_read(ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  %ptr = alloca i16
+  store i16 0, ptr %ptr
+  call void @fn_capture(ptr %ptr)
+  call void @p1_write_then_read(ptr %ptr)
+  %l = load i16, ptr %ptr
+  ret i16 %l
+}
+
+
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_then_read_caller_with_clobber() {
 ; CHECK-LABEL: @p1_write_then_read_caller_with_clobber(
@@ -304,6 +324,7 @@ define i16 @large_p2_may_or_partial_alias_caller2(ptr %base1, ptr %base2) {
 @g = global i16 123, align 2
 
 declare void @read_global(ptr nocapture noundef initializes((0, 2))) nounwind
+  memory(read, argmem: write, inaccessiblemem: none) nounwind
 
 define i16 @global_var_alias() {
 ; CHECK-LABEL: @global_var_alias(
