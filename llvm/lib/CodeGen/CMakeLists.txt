@@ -50,6 +50,7 @@ add_llvm_component_library(LLVMCodeGen
   DeadMachineInstructionElim.cpp
   DetectDeadLanes.cpp
   DFAPacketizer.cpp
+  DroppedVariableStats.cpp
   DwarfEHPrepare.cpp
   EarlyIfConversion.cpp
   EdgeBundles.cpp
@@ -71,6 +72,7 @@ add_llvm_component_library(LLVMCodeGen
   GCMetadataPrinter.cpp
   GCRootLowering.cpp
   GlobalMerge.cpp
+  GlobalMergeFunctions.cpp
   HardwareLoops.cpp
   IfConversion.cpp
   ImplicitNullChecks.cpp
@@ -99,7 +101,7 @@ add_llvm_component_library(LLVMCodeGen
   LiveRegUnits.cpp
   LiveStacks.cpp
   LiveVariables.cpp
-  LLVMTargetMachine.cpp
+  CodeGenTargetMachineImpl.cpp
   LocalStackSlotAllocation.cpp
   LoopTraversal.cpp
   LowLevelTypeUtils.cpp
@@ -262,6 +264,7 @@ add_llvm_component_library(LLVMCodeGen
 
   DEPENDS
   intrinsics_gen
+  vt_gen
   ${MLDeps}
 
   LINK_COMPONENTS

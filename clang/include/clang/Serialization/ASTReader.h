@@ -50,6 +50,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
@@ -353,6 +354,9 @@ class ASTIdentifierLookupTrait;
 /// The on-disk hash table(s) used for DeclContext name lookup.
 struct DeclContextLookupTable;
 
+/// The on-disk hash table(s) used for specialization decls.
+struct LazySpecializationInfoLookupTable;
+
 } // namespace reader
 
 } // namespace serialization
@@ -533,17 +537,14 @@ private:
   /// namespace as if it is not delayed.
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
 
-  /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
+  /// Mapping from main decl ID to the related decls IDs.
   ///
-  /// These lambdas have to be loaded right after the function they belong to.
-  /// It is required to have canonical declaration for lambda class from the
-  /// same module as enclosing function. This is required to correctly resolve
-  /// captured variables in the lambda. Without this, due to lazy
-  /// deserialization, canonical declarations for the function and lambdas can
-  /// be selected from different modules and DeclRefExprs may refer to the AST
-  /// nodes that don't exist in the function.
-  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>>
-      FunctionToLambdasMap;
+  /// These related decls have to be loaded right after the main decl.
+  /// It is required to have canonical declaration for related decls from the
+  /// same module as the enclosing main decl. Without this, due to lazy
+  /// deserialization, canonical declarations for the main decl and related can
+  /// be selected from different modules.
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> RelatedDeclsMap;
 
   struct PendingUpdateRecord {
     Decl *D;
@@ -631,19 +632,39 @@ private:
   llvm::DenseMap<const DeclContext *,
                  serialization::reader::DeclContextLookupTable> Lookups;
 
+  using SpecLookupTableTy =
+      llvm::DenseMap<const Decl *,
+                     serialization::reader::LazySpecializationInfoLookupTable>;
+  /// Map from decls to specialized decls.
+  SpecLookupTableTy SpecializationsLookups;
+  /// Split partial specialization from specialization to speed up lookups.
+  SpecLookupTableTy PartialSpecializationsLookups;
+
+  bool LoadExternalSpecializationsImpl(SpecLookupTableTy &SpecLookups,
+                                       const Decl *D);
+  bool LoadExternalSpecializationsImpl(SpecLookupTableTy &SpecLookups,
+                                       const Decl *D,
+                                       ArrayRef<TemplateArgument> TemplateArgs);
+
   // Updates for visible decls can occur for other contexts than just the
   // TU, and when we read those update records, the actual context may not
   // be available yet, so have this pending map using the ID as a key. It
-  // will be realized when the context is actually loaded.
-  struct PendingVisibleUpdate {
+  // will be realized when the data is actually loaded.
+  struct UpdateData {
     ModuleFile *Mod;
     const unsigned char *Data;
   };
-  using DeclContextVisibleUpdates = SmallVector<PendingVisibleUpdate, 1>;
+  using DeclContextVisibleUpdates = SmallVector<UpdateData, 1>;
 
   /// Updates to the visible declarations of declaration contexts that
   /// haven't been loaded yet.
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> PendingVisibleUpdates;
+
+  using SpecializationsUpdate = SmallVector<UpdateData, 1>;
+  using SpecializationsUpdateMap =
+      llvm::DenseMap<GlobalDeclID, SpecializationsUpdate>;
+  SpecializationsUpdateMap PendingSpecializationsUpdates;
+  SpecializationsUpdateMap PendingPartialSpecializationsUpdates;
 
   /// The set of C++ or Objective-C classes that have forward
   /// declarations that have not yet been linked to their definitions.
@@ -676,6 +697,11 @@ private:
   bool ReadVisibleDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, GlobalDeclID ID);
+
+  bool ReadSpecializations(ModuleFile &M, llvm::BitstreamCursor &Cursor,
+                           uint64_t Offset, Decl *D, bool IsPartial);
+  void AddSpecializations(const Decl *D, const unsigned char *Data,
+                          ModuleFile &M, bool IsPartial);
 
   /// A vector containing identifiers that have already been
   /// loaded.
@@ -1341,9 +1367,48 @@ private:
   serialization::InputFile getInputFile(ModuleFile &F, unsigned ID,
                                         bool Complain = true);
 
+  /// The buffer used as the temporary backing storage for resolved paths.
+  SmallString<0> PathBuf;
+
+  /// A wrapper around StringRef that temporarily borrows the underlying buffer.
+  class TemporarilyOwnedStringRef {
+    StringRef String;
+    llvm::SaveAndRestore<SmallString<0>> UnderlyingBuffer;
+
+  public:
+    TemporarilyOwnedStringRef(StringRef S, SmallString<0> &UnderlyingBuffer)
+        : String(S), UnderlyingBuffer(UnderlyingBuffer, {}) {}
+
+    /// Return the wrapped \c StringRef that must be outlived by \c this.
+    const StringRef *operator->() const & { return &String; }
+    const StringRef &operator*() const & { return String; }
+
+    /// Make it harder to get a \c StringRef that outlives \c this.
+    const StringRef *operator->() && = delete;
+    const StringRef &operator*() && = delete;
+  };
+
 public:
-  void ResolveImportedPath(ModuleFile &M, std::string &Filename);
-  static void ResolveImportedPath(std::string &Filename, StringRef Prefix);
+  /// Get the buffer for resolving paths.
+  SmallString<0> &getPathBuf() { return PathBuf; }
+
+  /// Resolve \c Path in the context of module file \c M. The return value
+  /// must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory. The return
+  /// value must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, StringRef Prefix);
+
+  /// Resolve \c Path in the context of module file \c M.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    StringRef Prefix);
 
   /// Returns the first key declaration for the given declaration. This
   /// is one that is formerly-canonical (or still canonical) and whose module
@@ -1378,6 +1443,14 @@ public:
   /// Get the loaded lookup tables for \p Primary, if any.
   const serialization::reader::DeclContextLookupTable *
   getLoadedLookupTables(DeclContext *Primary) const;
+
+  /// Get the loaded specializations lookup tables for \p D,
+  /// if any.
+  serialization::reader::LazySpecializationInfoLookupTable *
+  getLoadedSpecializationsLookupTables(const Decl *D, bool IsPartial);
+
+  /// If we have any unloaded specialization for \p D
+  bool haveUnloadedSpecializations(const Decl *D) const;
 
 private:
   struct ImportedModule {
@@ -2036,6 +2109,12 @@ public:
                                       unsigned BlockID,
                                       uint64_t *StartOfBlockOffset = nullptr);
 
+  bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
+
+  bool
+  LoadExternalSpecializations(const Decl *D,
+                              ArrayRef<TemplateArgument> TemplateArgs) override;
+
   /// Finds all the visible declarations with a given name.
   /// The current implementation of this method just loads the entire
   /// lookup table as unmaterialized references.
@@ -2335,6 +2414,8 @@ public:
   /// Translate a FileID from another module file's FileID space into ours.
   FileID TranslateFileID(ModuleFile &F, FileID FID) const {
     assert(FID.ID >= 0 && "Reading non-local FileID.");
+    if (FID.isInvalid())
+      return FID;
     return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
   }
 
@@ -2347,11 +2428,8 @@ public:
 
   // Read a string
   static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
-
-  // Skip a string
-  static void SkipString(const RecordData &Record, unsigned &Idx) {
-    Idx += Record[Idx] + 1;
-  }
+  static StringRef ReadStringBlob(const RecordDataImpl &Record, unsigned &Idx,
+                                  StringRef &Blob);
 
   // Read a path
   std::string ReadPath(ModuleFile &F, const RecordData &Record, unsigned &Idx);
@@ -2359,11 +2437,8 @@ public:
   // Read a path
   std::string ReadPath(StringRef BaseDirectory, const RecordData &Record,
                        unsigned &Idx);
-
-  // Skip a path
-  static void SkipPath(const RecordData &Record, unsigned &Idx) {
-    SkipString(Record, Idx);
-  }
+  std::string ReadPathBlob(StringRef BaseDirectory, const RecordData &Record,
+                           unsigned &Idx, StringRef &Blob);
 
   /// Read a version tuple.
   static VersionTuple ReadVersionTuple(const RecordData &Record, unsigned &Idx);

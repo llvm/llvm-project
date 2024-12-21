@@ -7,10 +7,10 @@ define ptr @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %va
 ; CHECK-NEXT:    andi a3, a0, -4
 ; CHECK-NEXT:    slli a4, a0, 3
 ; CHECK-NEXT:    li a5, 255
-; CHECK-NEXT:    sllw a5, a5, a4
 ; CHECK-NEXT:    andi a1, a1, 255
-; CHECK-NEXT:    sllw a1, a1, a4
 ; CHECK-NEXT:    andi a2, a2, 255
+; CHECK-NEXT:    sllw a5, a5, a4
+; CHECK-NEXT:    sllw a1, a1, a4
 ; CHECK-NEXT:    sllw a2, a2, a4
 ; CHECK-NEXT:  .LBB0_3: # %do_cmpxchg
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

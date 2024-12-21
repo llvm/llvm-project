@@ -129,6 +129,7 @@ void perf2boltMode(int argc, char **argv) {
     exit(1);
   }
   opts::AggregateOnly = true;
+  opts::ShowDensity = true;
 }
 
 void boltDiffMode(int argc, char **argv) {

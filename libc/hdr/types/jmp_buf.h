@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_JMP_BUF_H
-#define LLVM_LIBC_HDR_JMP_BUF_H
+#ifndef LLVM_LIBC_HDR_TYPES_JMP_BUF_H
+#define LLVM_LIBC_HDR_TYPES_JMP_BUF_H
 
 #ifdef LIBC_FULL_BUILD
 

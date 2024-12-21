@@ -218,7 +218,7 @@ TABLES_HPP_TEMPLATE = """
 
 #include <__algorithm/ranges_upper_bound.h>
 #include <__config>
-#include <cstddef>
+#include <__cstddef/ptrdiff_t.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

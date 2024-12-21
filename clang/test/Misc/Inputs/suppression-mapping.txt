@@ -1,0 +1,13 @@
+# Suppress unused warnings in all files, apart from the ones under `foo/`.
+[unused]
+src:*
+src:*foo/*=emit
+
+# This should take precedence over `unused` group, as it's mentioned later.
+[unused-variable]
+# We don't suppress unused-variable warnings in "any" file.
+
+# Some warning groups can have strange spellings.
+[format=2]
+src:*
+src:*foo/*=emit

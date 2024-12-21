@@ -1033,6 +1033,61 @@ while (true) {{
       emitVerifier(namedAttr.attr, namedAttr.name, getVarName(namedAttr.name));
 }
 
+static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
+                                FmtContext &ctx, MethodBody &body) {
+
+  // Code to get a reference to a property into a variable to avoid multiple
+  // evaluations while verifying a property.
+  // {0}: Property variable name.
+  // {1}: Property name, with the first letter capitalized, to find the getter.
+  // {2}: Property interface type.
+  const char *const fetchProperty = R"(
+  [[maybe_unused]] {2} {0} = this->get{1}();
+)";
+
+  // Code to verify that the predicate of a property holds. Embeds the
+  // condition inline.
+  // {0}: Property condition code, with tgfmt() applied.
+  // {1}: Emit error prefix.
+  // {2}: Property name.
+  // {3}: Property description.
+  const char *const verifyProperty = R"(
+  if (!({0}))
+    return {1}"property '{2}' failed to satisfy constraint: {3}");
+)";
+
+  // Prefix variables with `tblgen_` to avoid hiding the attribute accessor.
+  const auto getVarName = [&](const NamedProperty &prop) {
+    std::string varName =
+        convertToCamelFromSnakeCase(prop.name, /*capitalizeFirst=*/false);
+    return (tblgenNamePrefix + Twine(varName)).str();
+  };
+
+  for (const NamedProperty &prop : emitHelper.getOp().getProperties()) {
+    Pred predicate = prop.prop.getPredicate();
+    // Null predicate, nothing to verify.
+    if (predicate == Pred())
+      continue;
+
+    std::string rawCondition = predicate.getCondition();
+    if (rawCondition == "true")
+      continue;
+    bool needsOp = StringRef(rawCondition).contains("$_op");
+    if (needsOp && !emitHelper.isEmittingForOp())
+      continue;
+
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    std::string varName = getVarName(prop);
+    std::string getterName =
+        convertToCamelFromSnakeCase(prop.name, /*capitalizeFirst=*/true);
+    body << formatv(fetchProperty, varName, getterName,
+                    prop.prop.getInterfaceType());
+    body << formatv(verifyProperty, tgfmt(rawCondition, &ctx.withSelf(varName)),
+                    emitHelper.emitErrorPrefix(), prop.name,
+                    prop.prop.getSummary());
+  }
+}
+
 /// Include declarations specified on NativeTrait
 static std::string formatExtraDeclarations(const Operator &op) {
   SmallVector<StringRef> extraDeclarations;
@@ -1106,7 +1161,7 @@ OpEmitter::OpEmitter(const Operator &op,
   genFolderDecls();
   genTypeInterfaceMethods();
   genOpInterfaceMethods();
-  generateOpFormat(op, opClass);
+  generateOpFormat(op, opClass, emitHelper.hasProperties());
   genSideEffectInterfaceMethods();
 }
 void OpEmitter::emitDecl(
@@ -3088,6 +3143,26 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
       defaultValuedAttrStartIndex = i;
     }
   }
+
+  // Check if parameters besides default valued one are enough to distinguish
+  // between builders with wrapped and unwrapped arguments.
+  bool hasBuilderAmbiguity = true;
+  for (const auto &arg : op.getArgs()) {
+    auto *namedAttr = dyn_cast<NamedAttribute *>(arg);
+    if (!namedAttr)
+      continue;
+    Attribute attr = namedAttr->attr;
+    if (attr.hasDefaultValue() || attr.isDerivedAttr())
+      continue;
+
+    if (attrParamKind != AttrParamKind::WrappedAttr ||
+        !canUseUnwrappedRawValue(attr))
+      continue;
+
+    hasBuilderAmbiguity = false;
+    break;
+  }
+
   // Avoid generating build methods that are ambiguous due to default values by
   // requiring at least one attribute.
   if (defaultValuedAttrStartIndex < op.getNumArgs()) {
@@ -3098,9 +3173,9 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
         cast<NamedAttribute *>(op.getArg(defaultValuedAttrStartIndex));
     Attribute attr = namedAttr->attr;
     if ((attrParamKind == AttrParamKind::WrappedAttr &&
-         canUseUnwrappedRawValue(attr)) ||
+         canUseUnwrappedRawValue(attr) && hasBuilderAmbiguity) ||
         (attrParamKind == AttrParamKind::UnwrappedValue &&
-         !canUseUnwrappedRawValue(attr))) {
+         !canUseUnwrappedRawValue(attr) && hasBuilderAmbiguity)) {
       ++defaultValuedAttrStartIndex;
       defaultValuedAttrLikeStartIndex = defaultValuedAttrStartIndex;
     }
@@ -3142,7 +3217,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                              isOptional);
       continue;
     }
-    const NamedAttribute &namedAttr = *arg.get<NamedAttribute *>();
+    const NamedAttribute &namedAttr = *cast<NamedAttribute *>(arg);
     const Attribute &attr = namedAttr.attr;
 
     // Inferred attributes don't need to be added to the param list.
@@ -3479,14 +3554,14 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   /// Attributes and Operands.
   for (unsigned i = 0, operandIt = 0, e = op.getNumArgs(); i != e; ++i) {
     Argument arg = op.getArg(i);
-    if (arg.is<NamedTypeConstraint *>()) {
+    if (isa<NamedTypeConstraint *>(arg)) {
       resolveDecorators(op.getArgDecorators(i), operandIt, EffectKind::Operand);
       ++operandIt;
       continue;
     }
-    if (arg.is<NamedProperty *>())
+    if (isa<NamedProperty *>(arg))
       continue;
-    const NamedAttribute *attr = arg.get<NamedAttribute *>();
+    const NamedAttribute *attr = cast<NamedAttribute *>(arg);
     if (attr->attr.getBaseAttr().isSymbolRefAttr())
       resolveDecorators(op.getArgDecorators(i), i, EffectKind::Symbol);
   }
@@ -3527,7 +3602,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                     .str();
       } else if (location.kind == EffectKind::Symbol) {
         // A symbol reference requires adding the proper attribute.
-        const auto *attr = op.getArg(location.index).get<NamedAttribute *>();
+        const auto *attr = cast<NamedAttribute *>(op.getArg(location.index));
         std::string argName = op.getGetterName(attr->name);
         if (attr->attr.isOptional()) {
           body << "  if (auto symbolRef = " << argName << "Attr())\n  "
@@ -3584,6 +3659,24 @@ void OpEmitter::genTypeInterfaceMethods() {
   fctx.addSubst("_ctxt", "context");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
+  // Preprocessing stage to verify all accesses to operands are valid.
+  int maxAccessedIndex = -1;
+  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
+    const InferredResultType &infer = op.getInferredResultType(i);
+    if (!infer.isArg())
+      continue;
+    Operator::OperandOrAttribute arg =
+        op.getArgToOperandOrAttribute(infer.getIndex());
+    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+      maxAccessedIndex =
+          std::max(maxAccessedIndex, arg.operandOrAttributeIndex());
+    }
+  }
+  if (maxAccessedIndex != -1) {
+    body << "  if (operands.size() <= " << Twine(maxAccessedIndex) << ")\n";
+    body << "    return ::mlir::failure();\n";
+  }
+
   // Process the type inference graph in topological order, starting from types
   // that are always fully-inferred: operands and results with constructible
   // types. The type inference graph here will always be a DAG, so this gives
@@ -3600,7 +3693,8 @@ void OpEmitter::genTypeInterfaceMethods() {
       if (infer.isArg()) {
         // If this is an operand, just index into operand list to access the
         // type.
-        auto arg = op.getArgToOperandOrAttribute(infer.getIndex());
+        Operator::OperandOrAttribute arg =
+            op.getArgToOperandOrAttribute(infer.getIndex());
         if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
           typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
                      "].getType()")
@@ -3609,7 +3703,7 @@ void OpEmitter::genTypeInterfaceMethods() {
           // If this is an attribute, index into the attribute dictionary.
         } else {
           auto *attr =
-              op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
+              cast<NamedAttribute *>(op.getArg(arg.operandOrAttributeIndex()));
           body << "  ::mlir::TypedAttr odsInferredTypeAttr" << inferredTypeIdx
                << " = ";
           if (op.getDialect().usePropertiesForAttributes()) {
@@ -3687,6 +3781,7 @@ void OpEmitter::genVerifier() {
   bool useProperties = emitHelper.hasProperties();
 
   populateSubstitutions(emitHelper, verifyCtx);
+  genPropertyVerifier(emitHelper, verifyCtx, implBody);
   genAttributeVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter,
                        useProperties);
   genOperandResultVerifier(implBody, op.getOperands(), "operand");

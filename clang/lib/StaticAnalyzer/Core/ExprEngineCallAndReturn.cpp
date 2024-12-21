@@ -353,14 +353,19 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   ExplodedNodeSet CleanedNodes;
   if (LastSt && Blk && AMgr.options.AnalysisPurgeOpt != PurgeNone) {
     static SimpleProgramPointTag retValBind("ExprEngine", "Bind Return Value");
-    PostStmt Loc(LastSt, calleeCtx, &retValBind);
+    auto Loc = isa<ReturnStmt>(LastSt)
+                   ? ProgramPoint{PostStmt(LastSt, calleeCtx, &retValBind)}
+                   : ProgramPoint{EpsilonPoint(calleeCtx, /*Data1=*/nullptr,
+                                               /*Data2=*/nullptr, &retValBind)};
+    const CFGBlock *PrePurgeBlock =
+        isa<ReturnStmt>(LastSt) ? Blk : &CEBNode->getCFG().getExit();
     bool isNew;
     ExplodedNode *BindedRetNode = G.getNode(Loc, state, false, &isNew);
     BindedRetNode->addPredecessor(CEBNode, G);
     if (!isNew)
       return;
 
-    NodeBuilderContext Ctx(getCoreEngine(), Blk, BindedRetNode);
+    NodeBuilderContext Ctx(getCoreEngine(), PrePurgeBlock, BindedRetNode);
     currBldrCtx = &Ctx;
     // Here, we call the Symbol Reaper with 0 statement and callee location
     // context, telling it to clean up everything in the callee's context

@@ -215,10 +215,10 @@ public:
   /// LHS.
   Counter subtract(Counter LHS, Counter RHS, bool Simplify = true);
 
-  using ReplaceMap = std::map<Counter, Counter>;
+  using SubstMap = std::map<Counter, Counter>;
 
-  /// Return a counter for each term in the expression replaced by ReplaceMap.
-  Counter replace(Counter C, const ReplaceMap &Map);
+  /// Return a counter for each term in the expression replaced by SubstMap.
+  Counter subst(Counter C, const SubstMap &Map);
 };
 
 using LineColPair = std::pair<unsigned, unsigned>;
@@ -277,6 +277,10 @@ struct CounterMappingRegion {
   unsigned LineStart, ColumnStart, LineEnd, ColumnEnd;
 
   RegionKind Kind;
+
+  bool isBranch() const {
+    return (Kind == BranchRegion || Kind == MCDCBranchRegion);
+  }
 
   CounterMappingRegion(Counter Count, unsigned FileID, unsigned ExpandedFileID,
                        unsigned LineStart, unsigned ColumnStart,
@@ -467,7 +471,7 @@ public:
         Folded(std::move(Folded)), PosToID(std::move(PosToID)),
         CondLoc(std::move(CondLoc)){};
 
-  CounterMappingRegion getDecisionRegion() const { return Region; }
+  const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }
@@ -722,8 +726,7 @@ struct FunctionRecord {
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
                   uint64_t FalseCount, bool HasSingleByteCoverage) {
-    if (Region.Kind == CounterMappingRegion::BranchRegion ||
-        Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
+    if (Region.isBranch()) {
       CountedBranchRegions.emplace_back(Region, Count, FalseCount,
                                         HasSingleByteCoverage);
       // If either counter is hard-coded to zero, then this region represents a

@@ -49,8 +49,8 @@ module third {}
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first/first.h",
 // CHECK-NEXT:         "[[PREFIX]]/first/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/first/first/first.h",
 // CHECK-NEXT:         "[[PREFIX]]/second/second/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/second/second/sub.modulemap"
 // CHECK-NEXT:       ],
@@ -73,8 +73,8 @@ module third {}
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/second/second/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second/sub.h",
 // CHECK-NEXT:         "[[PREFIX]]/second/second/sub.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second/sub.h",
 // CHECK-NEXT:         "[[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
