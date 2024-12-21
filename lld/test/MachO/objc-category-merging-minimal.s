@@ -1,4 +1,7 @@
 # REQUIRES: aarch64
+# UNSUPPORTED: system-windows
+#   due to awk usage
+
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
 ############ Test merging multiple categories into a single category ############

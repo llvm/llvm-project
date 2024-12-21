@@ -277,6 +277,7 @@ function(runtime_default_target)
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
+                                                FFI # offload uses libffi
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -520,24 +521,6 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
-      (LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD))
-    if(LIBC_HDRGEN_EXE)
-      set(hdrgen_exe ${LIBC_HDRGEN_EXE})
-    else()
-      if(TARGET ${LIBC_TABLEGEN_EXE})
-        set(hdrgen_exe $<TARGET_FILE:${LIBC_TABLEGEN_EXE}>)
-      else()
-        set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
-      endif()
-      set(hdrgen_deps ${LIBC_TABLEGEN_TARGET})
-    endif()
-    if(NOT hdrgen_exe)
-      message(FATAL_ERROR "libc-hdrgen executable missing")
-    endif()
-    list(APPEND extra_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
-    list(APPEND extra_deps ${hdrgen_deps})
-  endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
     if("libc" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES)
@@ -635,6 +618,7 @@ if(build_runtimes)
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
+                     ${extra_cmake_args}
           BASE_NAME ${name}
           EXTRA_ARGS TARGET_TRIPLE ${name})
       endforeach()

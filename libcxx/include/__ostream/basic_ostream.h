@@ -11,11 +11,13 @@
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__exception/operations.h>
 #  include <__memory/shared_ptr.h>
 #  include <__memory/unique_ptr.h>
+#  include <__new/exceptions.h>
+#  include <__ostream/put_character_sequence.h>
 #  include <__system_error/error_code.h>
 #  include <__type_traits/conjunction.h>
 #  include <__type_traits/enable_if.h>
@@ -23,10 +25,8 @@
 #  include <__type_traits/void_t.h>
 #  include <__utility/declval.h>
 #  include <bitset>
-#  include <cstddef>
 #  include <ios>
 #  include <locale>
-#  include <new> // for __throw_bad_alloc
 #  include <streambuf>
 #  include <string_view>
 
@@ -498,33 +498,6 @@ basic_ostream<_CharT, _Traits>& basic_ostream<_CharT, _Traits>::operator<<(const
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-__put_character_sequence(basic_ostream<_CharT, _Traits>& __os, const _CharT* __str, size_t __len) {
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-    typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
-    if (__s) {
-      typedef ostreambuf_iterator<_CharT, _Traits> _Ip;
-      if (std::__pad_and_output(
-              _Ip(__os),
-              __str,
-              (__os.flags() & ios_base::adjustfield) == ios_base::left ? __str + __len : __str,
-              __str + __len,
-              __os,
-              __os.fill())
-              .failed())
-        __os.setstate(ios_base::badbit | ios_base::failbit);
-    }
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __os.__set_badbit_and_consider_rethrow();
-  }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-  return __os;
-}
-
-template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, _CharT __c) {
   return std::__put_character_sequence(__os, &__c, 1);
 }
@@ -802,7 +775,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x) {
 
 #  if _LIBCPP_STD_VER >= 20
 
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Traits>
 basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, wchar_t) = delete;
 
@@ -821,7 +794,7 @@ basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, co
 template <class _Traits>
 basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char32_t*) = delete;
 
-#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #    if _LIBCPP_HAS_CHAR8_T
 template <class _Traits>
@@ -852,7 +825,7 @@ basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const ch
 #  endif // _LIBCPP_STD_VER >= 20
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>;
 #  endif
 
@@ -860,6 +833,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___OSTREAM_BASIC_OSTREAM_H

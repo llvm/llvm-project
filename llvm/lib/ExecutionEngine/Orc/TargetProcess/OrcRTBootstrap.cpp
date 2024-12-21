@@ -46,6 +46,18 @@ writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 static llvm::orc::shared::CWrapperFunctionResult
+writePointersWrapper(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<void(SPSSequence<SPSMemoryAccessPointerWrite>)>::
+      handle(ArgData, ArgSize,
+             [](std::vector<tpctypes::PointerWrite> Ws) {
+               for (auto &W : Ws)
+                 *W.Addr.template toPtr<void **>() =
+                     W.Value.template toPtr<void *>();
+             })
+          .release();
+}
+
+static llvm::orc::shared::CWrapperFunctionResult
 runAsMainWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSRunAsMainSignature>::handle(
              ArgData, ArgSize,
@@ -92,6 +104,8 @@ void addTo(StringMap<ExecutorAddr> &M) {
                          shared::SPSMemoryAccessUInt64Write>);
   M[rt::MemoryWriteBuffersWrapperName] =
       ExecutorAddr::fromPtr(&writeBuffersWrapper);
+  M[rt::MemoryWritePointersWrapperName] =
+      ExecutorAddr::fromPtr(&writePointersWrapper);
   M[rt::RegisterEHFrameSectionWrapperName] =
       ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
   M[rt::DeregisterEHFrameSectionWrapperName] =

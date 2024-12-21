@@ -197,6 +197,21 @@ def ROCDL_BallotOp :
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
+def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>], 1>,
+  Arguments<(ins LLVM_Type:$src0,
+                 I32:$src1)> {
+  let results = (outs LLVM_Type:$res);
+  let summary = "Get the value in the specific lane.";
+
+  let description = [{
+    Get the value in lane `src1` from input `src0`.
+  }];
+
+  let assemblyFormat = [{
+    $src0 `,` $src1  attr-dict `:` `(` type($src0) `,` type($src1) `)` `->` type($res)
+   }];
+}
+
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
 

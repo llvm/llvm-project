@@ -61,3 +61,30 @@ TEST_F(LlvmLibcExp2m1fTest, Underflow) {
                               FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcExp2m1fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2m1fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2m1fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(max_denormal));
+}
+
+#endif

@@ -36,13 +36,13 @@
 ; ONE: %fadd3 = fadd float 1.000000e+00, 1.000000e+00
 ; ONE: %fadd4 = fadd float 1.000000e+00, 1.000000e+00
 ; ONE: %fadd5 = fadd float 1.000000e+00, 1.000000e+00
-; ONE: %fadd6 = fadd <2 x float> %arg2, <float 1.000000e+00, float 1.000000e+00>
-; ONE: %fadd7 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
-; ONE: %fadd8 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, zeroinitializer
-; ONE: %fadd9 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
-; ONE: %fadd10 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
-; ONE: %fadd11 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
-; ONE: %fadd12 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
+; ONE: %fadd6 = fadd <2 x float> %arg2, splat (float 1.000000e+00)
+; ONE: %fadd7 = fadd <2 x float> splat (float 1.000000e+00), splat (float 1.000000e+00)
+; ONE: %fadd8 = fadd <2 x float> splat (float 1.000000e+00), zeroinitializer
+; ONE: %fadd9 = fadd <2 x float> splat (float 1.000000e+00), splat (float 1.000000e+00)
+; ONE: %fadd10 = fadd <2 x float> splat (float 1.000000e+00), splat (float 1.000000e+00)
+; ONE: %fadd11 = fadd <2 x float> splat (float 1.000000e+00), splat (float 1.000000e+00)
+; ONE: %fadd12 = fadd <2 x float> splat (float 1.000000e+00), splat (float 1.000000e+00)
 
 
 ; ZERO: %fadd0 = fadd float %arg0, 0.000000e+00
@@ -66,13 +66,13 @@
 ; NAN: %fadd3 = fadd float 0x7FF8000000000000, 1.000000e+00
 ; NAN: %fadd4 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
 ; NAN: %fadd5 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
-; NAN: %fadd6 = fadd <2 x float> %arg2, <float 0x7FF8000000000000, float 0x7FF8000000000000>
-; NAN: %fadd7 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
-; NAN: %fadd8 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, zeroinitializer
-; NAN: %fadd9 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 1.000000e+00, float 1.000000e+00>
-; NAN: %fadd10 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
-; NAN: %fadd11 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
-; NAN: %fadd12 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd6 = fadd <2 x float> %arg2, splat (float 0x7FF8000000000000)
+; NAN: %fadd7 = fadd <2 x float> splat (float 0x7FF8000000000000), splat (float 0x7FF8000000000000)
+; NAN: %fadd8 = fadd <2 x float> splat (float 0x7FF8000000000000), zeroinitializer
+; NAN: %fadd9 = fadd <2 x float> splat (float 0x7FF8000000000000), splat (float 1.000000e+00)
+; NAN: %fadd10 = fadd <2 x float> splat (float 0x7FF8000000000000), splat (float 0x7FF8000000000000)
+; NAN: %fadd11 = fadd <2 x float> splat (float 0x7FF8000000000000), splat (float 0x7FF8000000000000)
+; NAN: %fadd12 = fadd <2 x float> splat (float 0x7FF8000000000000), splat (float 0x7FF8000000000000)
 
 define void @foo(float %arg0, float %arg1, <2 x float> %arg2, <2 x float> %arg3) {
 bb0:
