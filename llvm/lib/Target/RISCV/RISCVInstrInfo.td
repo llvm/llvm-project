@@ -159,8 +159,15 @@ class RISCVOp<ValueType vt = XLenVT> : Operand<vt> {
 
 class RISCVUImmOp<int bitsNum> : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<bitsNum>;
+  let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<" # bitsNum # ">";
   let OperandType = "OPERAND_UIMM" # bitsNum;
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isUInt<}]# bitsNum #[{>(Imm);
+  }];
 }
 
 class RISCVUImmLeafOp<int bitsNum> :
@@ -171,6 +178,12 @@ class RISCVSImmOp<int bitsNum> : RISCVOp {
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<" # bitsNum # ">";
   let OperandType = "OPERAND_SIMM" # bitsNum;
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<}] # bitsNum # [{>(Imm);
+  }];
 }
 
 class RISCVSImmLeafOp<int bitsNum> :
@@ -221,16 +234,9 @@ def InsnDirectiveOpcode : AsmOperandClass {
 }
 
 def uimm1 : RISCVUImmLeafOp<1>;
-def uimm2 : RISCVUImmLeafOp<2> {
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isUInt<2>(Imm);
-  }];
-}
+def uimm2 : RISCVUImmLeafOp<2>;
 def uimm3 : RISCVUImmOp<3>;
-def uimm4 : RISCVUImmOp<4>;
+def uimm4 : RISCVUImmLeafOp<4>;
 def uimm5 : RISCVUImmLeafOp<5>;
 def uimm6 : RISCVUImmLeafOp<6>;
 def uimm7_opcode : RISCVUImmOp<7> {
@@ -271,13 +277,7 @@ def simm13_lsb0 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
-class UImm20Operand : RISCVOp {
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<20>";
-  let OperandType = "OPERAND_UIMM20";
-}
-
-class UImm20OperandMaybeSym : UImm20Operand {
+class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -293,15 +293,7 @@ def uimm20_auipc : UImm20OperandMaybeSym {
   let ParserMatchClass = UImmAsmOperand<20, "AUIPC">;
 }
 
-def uimm20 : UImm20Operand {
-  let ParserMatchClass = UImmAsmOperand<20>;
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isUInt<20>(Imm);
-  }];
-}
+def uimm20 : RISCVUImmOp<20>;
 
 def Simm21Lsb0JALAsmOperand : SImmAsmOperand<21, "Lsb0JAL"> {
   let ParserMethod = "parseJALOffset";
