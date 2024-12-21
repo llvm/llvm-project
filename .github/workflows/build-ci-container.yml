@@ -20,11 +20,16 @@ on:
 jobs:
   build-ci-container:
     if: github.repository_owner == 'llvm'
-    runs-on: depot-ubuntu-22.04-16
-    outputs:
-      container-name: ${{ steps.vars.outputs.container-name }}
-      container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
-      container-filename: ${{ steps.vars.outputs.container-filename }}
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        include:
+          # The arch names should match the names used on dockerhub.
+          # See https://github.com/docker-library/official-images#architectures-other-than-amd64
+          - arch: amd64
+            runs-on: depot-ubuntu-22.04-16
+          - arch: arm64v8
+            runs-on: depot-ubuntu-22.04-arm-16
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -33,8 +38,8 @@ jobs:
       - name: Write Variables
         id: vars
         run: |
-          tag=`date +%s`
-          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
+          tag="${{ github.run_id}}.${{ github.run_attempt }}"
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/${{ matrix.arch }}/ci-ubuntu-22.04"
           echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
           echo "container-filename=$(echo $container_name:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
@@ -53,7 +58,7 @@ jobs:
       - name: Upload container image
         uses: actions/upload-artifact@v4
         with:
-          name: container
+          name: container-${{ matrix.arch }}
           path: ${{ steps.vars.outputs.container-filename }}
           retention-days: 14
 
@@ -75,13 +80,29 @@ jobs:
     steps:
       - name: Download container
         uses: actions/download-artifact@v4
-        with:
-          name: container
 
       - name: Push Container
         run: |
-          podman load -i ${{ needs.build-ci-container.outputs.container-filename }}
-          podman tag ${{ needs.build-ci-container.outputs.container-name-tag }} ${{ needs.build-ci-container.outputs.container-name }}:latest
+          function push_container {
+            image_name=$1
+            latest_name=$(echo $image_name | sed 's/:[.0-9]\+$/:latest/g')
+            podman tag $image_name $latest_name
+            echo "Pushing $image_name ..."
+            podman push $image_name
+            echo "Pushing $latest_name ..."
+            podman push $latest_name
+          }
+
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
-          podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
-          podman push ${{ needs.build-ci-container.outputs.container-name }}:latest
+          for f in $(find . -iname *.tar); do
+            image_name=$(podman load -q -i $f | sed 's/Loaded image: //g')
+            push_container $image_name
+
+            if echo $image_name | grep '/amd64/'; then
+              # For amd64, create an alias with the arch component removed.
+              # This matches the convention used on dockerhub.
+              default_image_name=$(echo $(dirname $(dirname $image_name))/$(basename $image_name))
+              podman tag $image_name $default_image_name
+              push_container $default_image_name
+            fi
+          done
