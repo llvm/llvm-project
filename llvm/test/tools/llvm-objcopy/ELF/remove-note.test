@@ -20,13 +20,20 @@
 # ERR-INVNUM1: error: bad note type_id for --remove-note: '1/2'
 # ERR-INVNUM2: error: bad note type_id for --remove-note: 'Notanumber'
 
-# RUN: yaml2obj -D ALIGN=8 %s -o %t8
-# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/2 --remove-note=CORE/0x03 %t8 %t8o
-# RUN: llvm-readobj --segments --sections --notes %t8o | FileCheck %s -D#SIZE0=32 -D#SIZE1=32
+# RUN: yaml2obj -D ALIGN=8 -D ELFCLASS=64 -D ENDIANNESS=LSB %s -o %t8.64.lsb
+# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/2 --remove-note=CORE/0x03 %t8.64.lsb %t8.64.lsb.o
+# RUN: llvm-readobj --segments --sections --notes %t8.64.lsb.o | \
+# RUN:   FileCheck %s -D#SIZE0=32 -D#SIZE1=32
 
-# RUN: yaml2obj -D ALIGN=4 %s -o %t4
-# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4 %t4o
-# RUN: llvm-readobj --segments --sections --notes %t4o | FileCheck %s -D#SIZE0=24 -D#SIZE1=24
+# RUN: yaml2obj -D ALIGN=4 -D ELFCLASS=64 -D ENDIANNESS=MSB %s -o %t4.64.msb
+# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4.64.msb %t4.64.msb.o
+# RUN: llvm-readobj --segments --sections --notes %t4.64.msb.o | \
+# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=24
+
+# RUN: yaml2obj -D ALIGN=4 -D ELFCLASS=32 -D ENDIANNESS=LSB %s -o %t4.32.lsb
+# RUN: llvm-objcopy --remove-note=1 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4.32.lsb %t4.32.lsb.o
+# RUN: llvm-readobj --segments --sections --notes %t4.32.lsb.o | \
+# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=24
 
 # CHECK:      Sections [
 # CHECK:        Section {
@@ -103,8 +110,8 @@
 
 --- !ELF
 FileHeader:
-  Class:          ELFCLASS64
-  Data:           ELFDATA2LSB
+  Class:          ELFCLASS[[ELFCLASS]]
+  Data:           ELFDATA2[[ENDIANNESS]]
   Type:           ET_EXEC
   Machine:        EM_X86_64
 ProgramHeaders:
