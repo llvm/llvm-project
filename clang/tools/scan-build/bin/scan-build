@@ -820,7 +820,8 @@ ENDTEXT
       }
 
       # Emit the "View" link.
-      print OUT "<td><a href=\"$ReportFile#EndPath\">View Report</a></td>";
+      my $EncodedReport = URLEscape($ReportFile);
+      print OUT "<td><a href=\"$EncodedReport#EndPath\">View Report</a></td>";
 
       # Emit REPORTBUG markers.
       print OUT "\n<!-- REPORTBUG id=\"$ReportFile\" -->\n";
@@ -1462,6 +1463,17 @@ sub HtmlEscape {
   $tmp =~ s/&/&amp;/g;
   $tmp =~ s/</&lt;/g;
   $tmp =~ s/>/&gt;/g;
+  return $tmp;
+}
+
+##----------------------------------------------------------------------------##
+# URLEscape - encode characters that are special in URLs
+##----------------------------------------------------------------------------##
+
+sub URLEscape {
+  my $arg = shift || '';
+  my $tmp = $arg;
+  $tmp =~ s/\+/%2B/g;
   return $tmp;
 }
 
