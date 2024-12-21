@@ -1470,8 +1470,15 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     if (OpInfo.Rec->isSubClassOf("OptionalDefOperand")) {
       for (const TreePatternNode &DefaultOp :
            make_pointee_range(CGP.getDefaultOperand(OpInfo.Rec).DefaultOps)) {
-        const Record *Reg = cast<DefInit>(DefaultOp.getLeafValue())->getDef();
+        // TODO: Do these checks in ParseDefaultOperands.
+        if (!DefaultOp.isLeaf())
+          return failedImport("optional def is not a leaf");
 
+        const auto *RegDI = dyn_cast<DefInit>(DefaultOp.getLeafValue());
+        if (!RegDI)
+          return failedImport("optional def is not a record");
+
+        const Record *Reg = RegDI->getDef();
         if (!Reg->isSubClassOf("Register") && Reg->getName() != "zero_reg")
           return failedImport("optional def is not a register");
 

@@ -1,4 +1,6 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common < %s | FileCheck %s
+// RUN: llvm-tblgen -gen-global-isel  -warn-on-skipped-patterns \
+// RUN:   -I %p/../../include -I %p/Common %s 2> %t | FileCheck %s
+// RUN: FileCheck -DFILE=%s -check-prefix=ERR %s < %t
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -35,3 +37,20 @@ def tst2 : I<(outs GPR32:$rd, s_cc_out:$s), (ins GPR32:$rs1, GPR32:$rs2),
 // TODO: There should be more tests, but any attempt to write something
 //   more complex results in tablegen crashing somewhere in
 //   TreePatternNode::UpdateNodeType.
+
+
+def not_leaf : OptionalDefOperand<i32, (ops GPR8), (ops (i8 imm))>;
+def not_rec  : OptionalDefOperand<i32, (ops GPR8), (ops (i8 0))>;
+def not_reg  : OptionalDefOperand<i32, (ops GPR8), (ops GPR8)>;
+
+// ERR: [[#@LINE+1]]:5: warning: Skipped pattern: optional def is not a leaf
+def tst_not_leaf : I<(outs GPR32:$rd, not_leaf:$s), (ins i32imm:$imm),
+                     [(set GPR32:$rd, imm:$imm)]>;
+
+// ERR: [[#@LINE+1]]:5: warning: Skipped pattern: optional def is not a record
+def tst_not_rec : I<(outs GPR32:$rd, not_rec:$s), (ins i32imm:$imm),
+                    [(set GPR32:$rd, imm:$imm)]>;
+
+// ERR: [[#@LINE+1]]:5: warning: Skipped pattern: optional def is not a register
+def tst_not_reg : I<(outs GPR32:$rd, not_reg:$s), (ins i32imm:$imm),
+                    [(set GPR32:$rd, imm:$imm)]>;
