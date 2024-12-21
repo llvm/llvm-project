@@ -1250,10 +1250,6 @@ PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
                                                 FunctionAnalysisManager &AF) {
 
   auto FPM = legacy::FunctionPassManager(F.getParent());
-  FPM.add(createLoopSimplifyPass());
-  FPM.add(new DominatorTreeWrapperPass());
-  FPM.add(new LoopInfoWrapperPass());
-  FPM.add(new SPIRVConvergenceRegionAnalysisWrapperPass());
   FPM.add(createSPIRVStructurizerPass());
 
   if (!FPM.run(F))
