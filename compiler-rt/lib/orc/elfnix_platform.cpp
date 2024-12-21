@@ -105,6 +105,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
+  int dlupdate(void *DSOHandle);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, std::string_view Symbol);
 
@@ -136,6 +137,10 @@ private:
   Error dlopenInitialize(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                          PerJITDylibState &JDS,
                          ELFNixJITDylibDepInfoMap &DepInfo);
+  Error dlupdateImpl(void *DSOHandle);
+  Error dlupdateFull(std::unique_lock<std::recursive_mutex> &JDStatesLock,
+                     PerJITDylibState &JDS);
+
   Error dlcloseImpl(void *DSOHandle);
   Error dlcloseInitialize(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                           PerJITDylibState &JDS);
@@ -307,6 +312,15 @@ void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
     DLFcnError = toString(H.takeError());
     return nullptr;
   }
+}
+
+int ELFNixPlatformRuntimeState::dlupdate(void *DSOHandle) {
+  if (auto Err = dlupdateImpl(DSOHandle)) {
+    // FIXME: Make dlerror thread safe.
+    DLFcnError = toString(std::move(Err));
+    return -1;
+  }
+  return 0;
 }
 
 int ELFNixPlatformRuntimeState::dlclose(void *DSOHandle) {
@@ -520,6 +534,50 @@ Error ELFNixPlatformRuntimeState::dlopenInitialize(
       if (auto Err = dlcloseInitialize(JDStatesLock, *DepJDS))
         return Err;
   }
+  return Error::success();
+}
+
+Error ELFNixPlatformRuntimeState::dlupdateImpl(void *DSOHandle) {
+  std::unique_lock<std::recursive_mutex> Lock(JDStatesMutex);
+
+  // Try to find JITDylib state by name.
+  auto *JDS = getJITDylibStateByHeaderAddr(DSOHandle);
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "No registered JITDylib for " << DSOHandle;
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  if (!JDS->referenced())
+    return make_error<StringError>("dlupdate failed, JITDylib must be open.");
+
+  if (auto Err = dlupdateFull(Lock, *JDS))
+    return Err;
+
+  return Error::success();
+}
+
+Error ELFNixPlatformRuntimeState::dlupdateFull(
+    std::unique_lock<std::recursive_mutex> &JDStatesLock,
+    PerJITDylibState &JDS) {
+  // Call back to the JIT to push the initializers.
+  Expected<ELFNixJITDylibDepInfoMap> DepInfo((ELFNixJITDylibDepInfoMap()));
+  // Unlock so that we can accept the initializer update.
+  JDStatesLock.unlock();
+  if (auto Err = WrapperFunction<SPSExpected<SPSELFNixJITDylibDepInfoMap>(
+          SPSExecutorAddr)>::
+          call(JITDispatch(&__orc_rt_elfnix_push_initializers_tag), DepInfo,
+               ExecutorAddr::fromPtr(JDS.Header)))
+    return Err;
+  JDStatesLock.lock();
+
+  if (!DepInfo)
+    return DepInfo.takeError();
+
+  if (auto Err = runInits(JDStatesLock, JDS))
+    return Err;
+
   return Error::success();
 }
 
@@ -763,6 +821,10 @@ const char *__orc_rt_elfnix_jit_dlerror() {
 
 void *__orc_rt_elfnix_jit_dlopen(const char *path, int mode) {
   return ELFNixPlatformRuntimeState::get().dlopen(path, mode);
+}
+
+int __orc_rt_elfnix_jit_dlupdate(void *dso_handle) {
+  return ELFNixPlatformRuntimeState::get().dlupdate(dso_handle);
 }
 
 int __orc_rt_elfnix_jit_dlclose(void *dso_handle) {

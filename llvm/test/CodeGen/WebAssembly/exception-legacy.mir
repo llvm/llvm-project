@@ -105,7 +105,7 @@ body: |
 
   bb.2:
     successors: %bb.3
-    CLEANUPRET implicit-def dead $arguments
+    CLEANUPRET %bb.1, implicit-def dead $arguments
 
   bb.3:
     RETURN implicit-def dead $arguments

@@ -113,7 +113,7 @@ for.end:                                          ; preds = %for.body
 define void @ptr_of_ptr_addrec(ptr %ptrptr, i32 %length) {
 ; CHECK-LABEL: @ptr_of_ptr_addrec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START_PTRPTR:%.*]] = getelementptr ptr, ptr [[PTRPTR:%.*]]
+; CHECK-NEXT:    [[START_PTRPTR1:%.*]] = getelementptr inbounds ptr, ptr [[START_PTRPTR:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
@@ -121,7 +121,7 @@ define void @ptr_of_ptr_addrec(ptr %ptrptr, i32 %length) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START_PTRPTR]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IT_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[START_PTRPTR]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IT_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[START_PTRPTR1]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[IT_04]], align 8
 ; CHECK-NEXT:    tail call void @foo(ptr [[TMP4]])
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr ptr, ptr [[IT_04]], i64 1

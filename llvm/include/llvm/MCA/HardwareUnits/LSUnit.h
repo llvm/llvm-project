@@ -24,168 +24,6 @@
 namespace llvm {
 namespace mca {
 
-/// A node of a memory dependency graph. A MemoryGroup describes a set of
-/// instructions with same memory dependencies.
-///
-/// By construction, instructions of a MemoryGroup don't depend on each other.
-/// At dispatch stage, instructions are mapped by the LSUnit to MemoryGroups.
-/// A Memory group identifier is then stored as a "token" in field
-/// Instruction::LSUTokenID of each dispatched instructions. That token is used
-/// internally by the LSUnit to track memory dependencies.
-class MemoryGroup {
-  unsigned NumPredecessors = 0;
-  unsigned NumExecutingPredecessors = 0;
-  unsigned NumExecutedPredecessors = 0;
-
-  unsigned NumInstructions = 0;
-  unsigned NumExecuting = 0;
-  unsigned NumExecuted = 0;
-  // Successors that are in a order dependency with this group.
-  SmallVector<MemoryGroup *, 4> OrderSucc;
-  // Successors that are in a data dependency with this group.
-  SmallVector<MemoryGroup *, 4> DataSucc;
-
-  CriticalDependency CriticalPredecessor;
-  InstRef CriticalMemoryInstruction;
-
-  MemoryGroup(const MemoryGroup &) = delete;
-  MemoryGroup &operator=(const MemoryGroup &) = delete;
-
-public:
-  MemoryGroup() = default;
-  MemoryGroup(MemoryGroup &&) = default;
-
-  size_t getNumSuccessors() const {
-    return OrderSucc.size() + DataSucc.size();
-  }
-  unsigned getNumPredecessors() const { return NumPredecessors; }
-  unsigned getNumExecutingPredecessors() const {
-    return NumExecutingPredecessors;
-  }
-  unsigned getNumExecutedPredecessors() const {
-    return NumExecutedPredecessors;
-  }
-  unsigned getNumInstructions() const { return NumInstructions; }
-  unsigned getNumExecuting() const { return NumExecuting; }
-  unsigned getNumExecuted() const { return NumExecuted; }
-
-  const InstRef &getCriticalMemoryInstruction() const {
-    return CriticalMemoryInstruction;
-  }
-  const CriticalDependency &getCriticalPredecessor() const {
-    return CriticalPredecessor;
-  }
-
-  void addSuccessor(MemoryGroup *Group, bool IsDataDependent) {
-    // Do not need to add a dependency if there is no data
-    // dependency and all instructions from this group have been
-    // issued already.
-    if (!IsDataDependent && isExecuting())
-      return;
-
-    Group->NumPredecessors++;
-    assert(!isExecuted() && "Should have been removed!");
-    if (isExecuting())
-      Group->onGroupIssued(CriticalMemoryInstruction, IsDataDependent);
-
-    if (IsDataDependent)
-      DataSucc.emplace_back(Group);
-    else
-      OrderSucc.emplace_back(Group);
-  }
-
-  bool isWaiting() const {
-    return NumPredecessors >
-           (NumExecutingPredecessors + NumExecutedPredecessors);
-  }
-  bool isPending() const {
-    return NumExecutingPredecessors &&
-           ((NumExecutedPredecessors + NumExecutingPredecessors) ==
-            NumPredecessors);
-  }
-  bool isReady() const { return NumExecutedPredecessors == NumPredecessors; }
-  bool isExecuting() const {
-    return NumExecuting && (NumExecuting == (NumInstructions - NumExecuted));
-  }
-  bool isExecuted() const { return NumInstructions == NumExecuted; }
-
-  void onGroupIssued(const InstRef &IR, bool ShouldUpdateCriticalDep) {
-    assert(!isReady() && "Unexpected group-start event!");
-    NumExecutingPredecessors++;
-
-    if (!ShouldUpdateCriticalDep)
-      return;
-
-    unsigned Cycles = IR.getInstruction()->getCyclesLeft();
-    if (CriticalPredecessor.Cycles < Cycles) {
-      CriticalPredecessor.IID = IR.getSourceIndex();
-      CriticalPredecessor.Cycles = Cycles;
-    }
-  }
-
-  void onGroupExecuted() {
-    assert(!isReady() && "Inconsistent state found!");
-    NumExecutingPredecessors--;
-    NumExecutedPredecessors++;
-  }
-
-  void onInstructionIssued(const InstRef &IR) {
-    assert(!isExecuting() && "Invalid internal state!");
-    ++NumExecuting;
-
-    // update the CriticalMemDep.
-    const Instruction &IS = *IR.getInstruction();
-    if ((bool)CriticalMemoryInstruction) {
-      const Instruction &OtherIS = *CriticalMemoryInstruction.getInstruction();
-      if (OtherIS.getCyclesLeft() < IS.getCyclesLeft())
-        CriticalMemoryInstruction = IR;
-    } else {
-      CriticalMemoryInstruction = IR;
-    }
-
-    if (!isExecuting())
-      return;
-
-    // Notify successors that this group started execution.
-    for (MemoryGroup *MG : OrderSucc) {
-      MG->onGroupIssued(CriticalMemoryInstruction, false);
-      // Release the order dependency with this group.
-      MG->onGroupExecuted();
-    }
-
-    for (MemoryGroup *MG : DataSucc)
-      MG->onGroupIssued(CriticalMemoryInstruction, true);
-  }
-
-  void onInstructionExecuted(const InstRef &IR) {
-    assert(isReady() && !isExecuted() && "Invalid internal state!");
-    --NumExecuting;
-    ++NumExecuted;
-
-    if (CriticalMemoryInstruction &&
-        CriticalMemoryInstruction.getSourceIndex() == IR.getSourceIndex()) {
-      CriticalMemoryInstruction.invalidate();
-    }
-
-    if (!isExecuted())
-      return;
-
-    // Notify data dependent successors that this group has finished execution.
-    for (MemoryGroup *MG : DataSucc)
-      MG->onGroupExecuted();
-  }
-
-  void addInstruction() {
-    assert(!getNumSuccessors() && "Cannot add instructions to this group!");
-    ++NumInstructions;
-  }
-
-  void cycleEvent() {
-    if (isWaiting() && CriticalPredecessor.Cycles)
-      CriticalPredecessor.Cycles--;
-  }
-};
-
 /// Abstract base interface for LS (load/store) units in llvm-mca.
 class LSUnitBase : public HardwareUnit {
   /// Load queue size.
@@ -210,13 +48,9 @@ class LSUnitBase : public HardwareUnit {
   /// True if loads don't alias with stores.
   ///
   /// By default, the LS unit assumes that loads and stores don't alias with
-  /// eachother. If this field is set to false, then loads are always assumed to
-  /// alias with stores.
+  /// each other. If this field is set to false, then loads are always assumed
+  /// to alias with stores.
   const bool NoAlias;
-
-  /// Used to map group identifiers to MemoryGroups.
-  DenseMap<unsigned, std::unique_ptr<MemoryGroup>> Groups;
-  unsigned NextGroupID;
 
 public:
   LSUnitBase(const MCSchedModel &SM, unsigned LoadQueueSize,
@@ -265,72 +99,35 @@ public:
   bool isSQFull() const { return SQSize && SQSize == UsedSQEntries; }
   bool isLQFull() const { return LQSize && LQSize == UsedLQEntries; }
 
-  bool isValidGroupID(unsigned Index) const {
-    return Index && Groups.contains(Index);
-  }
-
   /// Check if a peviously dispatched instruction IR is now ready for execution.
-  bool isReady(const InstRef &IR) const {
-    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    const MemoryGroup &Group = getGroup(GroupID);
-    return Group.isReady();
-  }
+  virtual bool isReady(const InstRef &IR) const = 0;
 
   /// Check if instruction IR only depends on memory instructions that are
   /// currently executing.
-  bool isPending(const InstRef &IR) const {
-    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    const MemoryGroup &Group = getGroup(GroupID);
-    return Group.isPending();
-  }
+  virtual bool isPending(const InstRef &IR) const = 0;
 
   /// Check if instruction IR is still waiting on memory operations, and the
   /// wait time is still unknown.
-  bool isWaiting(const InstRef &IR) const {
-    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    const MemoryGroup &Group = getGroup(GroupID);
-    return Group.isWaiting();
-  }
+  virtual bool isWaiting(const InstRef &IR) const = 0;
 
-  bool hasDependentUsers(const InstRef &IR) const {
-    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    const MemoryGroup &Group = getGroup(GroupID);
-    return !Group.isExecuted() && Group.getNumSuccessors();
-  }
+  virtual bool hasDependentUsers(const InstRef &IR) const = 0;
 
-  const MemoryGroup &getGroup(unsigned Index) const {
-    assert(isValidGroupID(Index) && "Group doesn't exist!");
-    return *Groups.find(Index)->second;
-  }
+  virtual const CriticalDependency getCriticalPredecessor(unsigned GroupId) = 0;
 
-  MemoryGroup &getGroup(unsigned Index) {
-    assert(isValidGroupID(Index) && "Group doesn't exist!");
-    return *Groups.find(Index)->second;
-  }
-
-  unsigned createMemoryGroup() {
-    Groups.insert(
-        std::make_pair(NextGroupID, std::make_unique<MemoryGroup>()));
-    return NextGroupID++;
-  }
-
-  virtual void onInstructionExecuted(const InstRef &IR);
+  virtual void onInstructionExecuted(const InstRef &IR) = 0;
 
   // Loads are tracked by the LDQ (load queue) from dispatch until completion.
   // Stores are tracked by the STQ (store queue) from dispatch until commitment.
   // By default we conservatively assume that the LDQ receives a load at
   // dispatch. Loads leave the LDQ at retirement stage.
-  virtual void onInstructionRetired(const InstRef &IR);
+  virtual void onInstructionRetired(const InstRef &IR) = 0;
 
-  virtual void onInstructionIssued(const InstRef &IR) {
-    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    Groups[GroupID]->onInstructionIssued(IR);
-  }
+  virtual void onInstructionIssued(const InstRef &IR) = 0;
 
-  virtual void cycleEvent();
+  virtual void cycleEvent() = 0;
 
 #ifndef NDEBUG
-  void dump() const;
+  virtual void dump() const = 0;
 #endif
 };
 
@@ -396,6 +193,7 @@ public:
 /// the load/store queue(s). That also means, all the older loads/stores have
 /// already been executed.
 class LSUnit : public LSUnitBase {
+
   // This class doesn't know about the latency of a load instruction. So, it
   // conservatively/pessimistically assumes that the latency of a load opcode
   // matches the instruction latency.
@@ -434,6 +232,175 @@ class LSUnit : public LSUnitBase {
   // An instruction that both 'MayLoad' and 'HasUnmodeledSideEffects' is
   // conservatively treated as a load barrier. It forces older loads to execute
   // before newer loads are issued.
+
+protected:
+  /// A node of a memory dependency graph. A MemoryGroup describes a set of
+  /// instructions with same memory dependencies.
+  ///
+  /// By construction, instructions of a MemoryGroup don't depend on each other.
+  /// At dispatch stage, instructions are mapped by the LSUnit to MemoryGroups.
+  /// A Memory group identifier is then stored as a "token" in field
+  /// Instruction::LSUTokenID of each dispatched instructions. That token is
+  /// used internally by the LSUnit to track memory dependencies.
+  class MemoryGroup {
+    unsigned NumPredecessors = 0;
+    unsigned NumExecutingPredecessors = 0;
+    unsigned NumExecutedPredecessors = 0;
+
+    unsigned NumInstructions = 0;
+    unsigned NumExecuting = 0;
+    unsigned NumExecuted = 0;
+    // Successors that are in a order dependency with this group.
+    SmallVector<MemoryGroup *, 4> OrderSucc;
+    // Successors that are in a data dependency with this group.
+    SmallVector<MemoryGroup *, 4> DataSucc;
+
+    CriticalDependency CriticalPredecessor;
+    InstRef CriticalMemoryInstruction;
+
+    MemoryGroup(const MemoryGroup &) = delete;
+    MemoryGroup &operator=(const MemoryGroup &) = delete;
+
+  public:
+    MemoryGroup() = default;
+    MemoryGroup(MemoryGroup &&) = default;
+
+    size_t getNumSuccessors() const {
+      return OrderSucc.size() + DataSucc.size();
+    }
+    unsigned getNumPredecessors() const { return NumPredecessors; }
+    unsigned getNumExecutingPredecessors() const {
+      return NumExecutingPredecessors;
+    }
+    unsigned getNumExecutedPredecessors() const {
+      return NumExecutedPredecessors;
+    }
+    unsigned getNumInstructions() const { return NumInstructions; }
+    unsigned getNumExecuting() const { return NumExecuting; }
+    unsigned getNumExecuted() const { return NumExecuted; }
+
+    const InstRef &getCriticalMemoryInstruction() const {
+      return CriticalMemoryInstruction;
+    }
+    const CriticalDependency &getCriticalPredecessor() const {
+      return CriticalPredecessor;
+    }
+
+    void addSuccessor(MemoryGroup *Group, bool IsDataDependent) {
+      // Do not need to add a dependency if there is no data
+      // dependency and all instructions from this group have been
+      // issued already.
+      if (!IsDataDependent && isExecuting())
+        return;
+
+      Group->NumPredecessors++;
+      assert(!isExecuted() && "Should have been removed!");
+      if (isExecuting())
+        Group->onGroupIssued(CriticalMemoryInstruction, IsDataDependent);
+
+      if (IsDataDependent)
+        DataSucc.emplace_back(Group);
+      else
+        OrderSucc.emplace_back(Group);
+    }
+
+    bool isWaiting() const {
+      return NumPredecessors >
+             (NumExecutingPredecessors + NumExecutedPredecessors);
+    }
+    bool isPending() const {
+      return NumExecutingPredecessors &&
+             ((NumExecutedPredecessors + NumExecutingPredecessors) ==
+              NumPredecessors);
+    }
+    bool isReady() const { return NumExecutedPredecessors == NumPredecessors; }
+    bool isExecuting() const {
+      return NumExecuting && (NumExecuting == (NumInstructions - NumExecuted));
+    }
+    bool isExecuted() const { return NumInstructions == NumExecuted; }
+
+    void onGroupIssued(const InstRef &IR, bool ShouldUpdateCriticalDep) {
+      assert(!isReady() && "Unexpected group-start event!");
+      NumExecutingPredecessors++;
+
+      if (!ShouldUpdateCriticalDep)
+        return;
+
+      unsigned Cycles = IR.getInstruction()->getCyclesLeft();
+      if (CriticalPredecessor.Cycles < Cycles) {
+        CriticalPredecessor.IID = IR.getSourceIndex();
+        CriticalPredecessor.Cycles = Cycles;
+      }
+    }
+
+    void onGroupExecuted() {
+      assert(!isReady() && "Inconsistent state found!");
+      NumExecutingPredecessors--;
+      NumExecutedPredecessors++;
+    }
+
+    void onInstructionIssued(const InstRef &IR) {
+      assert(!isExecuting() && "Invalid internal state!");
+      ++NumExecuting;
+
+      // update the CriticalMemDep.
+      const Instruction &IS = *IR.getInstruction();
+      if ((bool)CriticalMemoryInstruction) {
+        const Instruction &OtherIS =
+            *CriticalMemoryInstruction.getInstruction();
+        if (OtherIS.getCyclesLeft() < IS.getCyclesLeft())
+          CriticalMemoryInstruction = IR;
+      } else {
+        CriticalMemoryInstruction = IR;
+      }
+
+      if (!isExecuting())
+        return;
+
+      // Notify successors that this group started execution.
+      for (MemoryGroup *MG : OrderSucc) {
+        MG->onGroupIssued(CriticalMemoryInstruction, false);
+        // Release the order dependency with this group.
+        MG->onGroupExecuted();
+      }
+
+      for (MemoryGroup *MG : DataSucc)
+        MG->onGroupIssued(CriticalMemoryInstruction, true);
+    }
+
+    void onInstructionExecuted(const InstRef &IR) {
+      assert(isReady() && !isExecuted() && "Invalid internal state!");
+      --NumExecuting;
+      ++NumExecuted;
+
+      if (CriticalMemoryInstruction &&
+          CriticalMemoryInstruction.getSourceIndex() == IR.getSourceIndex()) {
+        CriticalMemoryInstruction.invalidate();
+      }
+
+      if (!isExecuted())
+        return;
+
+      // Notify data dependent successors that this group has finished
+      // execution.
+      for (MemoryGroup *MG : DataSucc)
+        MG->onGroupExecuted();
+    }
+
+    void addInstruction() {
+      assert(!getNumSuccessors() && "Cannot add instructions to this group!");
+      ++NumInstructions;
+    }
+
+    void cycleEvent() {
+      if (isWaiting() && CriticalPredecessor.Cycles)
+        CriticalPredecessor.Cycles--;
+    }
+  };
+  /// Used to map group identifiers to MemoryGroups.
+  DenseMap<unsigned, std::unique_ptr<MemoryGroup>> Groups;
+  unsigned NextGroupID = 1;
+
   unsigned CurrentLoadGroupID;
   unsigned CurrentLoadBarrierGroupID;
   unsigned CurrentStoreGroupID;
@@ -453,6 +420,35 @@ public:
   /// accomodate instruction IR.
   Status isAvailable(const InstRef &IR) const override;
 
+  bool isReady(const InstRef &IR) const override {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return Group.isReady();
+  }
+
+  bool isPending(const InstRef &IR) const override {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return Group.isPending();
+  }
+
+  bool isWaiting(const InstRef &IR) const override {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return Group.isWaiting();
+  }
+
+  bool hasDependentUsers(const InstRef &IR) const override {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return !Group.isExecuted() && Group.getNumSuccessors();
+  }
+
+  const CriticalDependency getCriticalPredecessor(unsigned GroupId) override {
+    const MemoryGroup &Group = getGroup(GroupId);
+    return Group.getCriticalPredecessor();
+  }
+
   /// Allocates LS resources for instruction IR.
   ///
   /// This method assumes that a previous call to `isAvailable(IR)` succeeded
@@ -468,7 +464,40 @@ public:
   /// 6. A store has to wait until an older store barrier is fully executed.
   unsigned dispatch(const InstRef &IR) override;
 
-  void onInstructionExecuted(const InstRef &IR) override;
+  virtual void onInstructionIssued(const InstRef &IR) override {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    Groups[GroupID]->onInstructionIssued(IR);
+  }
+
+  virtual void onInstructionRetired(const InstRef &IR) override;
+
+  virtual void onInstructionExecuted(const InstRef &IR) override;
+
+  virtual void cycleEvent() override;
+
+#ifndef NDEBUG
+  virtual void dump() const override;
+#endif
+
+private:
+  bool isValidGroupID(unsigned Index) const {
+    return Index && Groups.contains(Index);
+  }
+
+  const MemoryGroup &getGroup(unsigned Index) const {
+    assert(isValidGroupID(Index) && "Group doesn't exist!");
+    return *Groups.find(Index)->second;
+  }
+
+  MemoryGroup &getGroup(unsigned Index) {
+    assert(isValidGroupID(Index) && "Group doesn't exist!");
+    return *Groups.find(Index)->second;
+  }
+
+  unsigned createMemoryGroup() {
+    Groups.insert(std::make_pair(NextGroupID, std::make_unique<MemoryGroup>()));
+    return NextGroupID++;
+  }
 };
 
 } // namespace mca

@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
+#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
@@ -49,9 +50,14 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
+#include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegUsageInfoCollector.h"
+#include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -59,6 +65,7 @@
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
@@ -440,7 +447,8 @@ protected:
   Error addFastRegAlloc(AddMachinePass &) const;
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// LLVMTargetMachine provides standard regalloc passes for most targets.
+  /// CodeGenTargetMachineImpl provides standard regalloc passes for most
+  /// targets.
   void addOptimizedRegAlloc(AddMachinePass &) const;
 
   /// Add passes that optimize machine instructions after register allocation.
@@ -711,6 +719,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
     addPass(SelectOptimizePass(&TM));
+
+  if (Opt.EnableGlobalMergeFunc)
+    addPass(GlobalMergeFuncPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
@@ -899,9 +910,10 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     addPass(LocalStackSlotAllocationPass());
   }
 
-  if (TM.Options.EnableIPRA)
+  if (TM.Options.EnableIPRA) {
+    addPass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>());
     addPass(RegUsageInfoPropagationPass());
-
+  }
   // Run pre-ra passes.
   derived().addPreRegAlloc(addPass);
 

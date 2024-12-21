@@ -147,7 +147,8 @@ private:
   void CheckProcedureAssemblyName(const Symbol &symbol);
   void CheckExplicitSave(const Symbol &);
   parser::Messages WhyNotInteroperableDerivedType(const Symbol &);
-  parser::Messages WhyNotInteroperableObject(const Symbol &);
+  parser::Messages WhyNotInteroperableObject(
+      const Symbol &, bool allowNonInteroperableType = false);
   parser::Messages WhyNotInteroperableFunctionResult(const Symbol &);
   parser::Messages WhyNotInteroperableProcedure(const Symbol &, bool isError);
   void CheckBindC(const Symbol &);
@@ -319,8 +320,14 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.attrs().HasAny({Attr::INTENT_IN, Attr::INTENT_INOUT,
           Attr::INTENT_OUT, Attr::OPTIONAL, Attr::VALUE}) &&
       !IsDummy(symbol)) {
-    messages_.Say(
-        "Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute"_err_en_US);
+    if (context_.IsEnabled(
+            common::LanguageFeature::IgnoreIrrelevantAttributes)) {
+      context_.Warn(common::LanguageFeature::IgnoreIrrelevantAttributes,
+          "Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute"_warn_en_US);
+    } else {
+      messages_.Say(
+          "Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute"_err_en_US);
+    }
   } else if (symbol.attrs().test(Attr::VALUE)) {
     CheckValue(symbol, derived);
   }
@@ -928,7 +935,9 @@ void CheckHelper::CheckObjectEntity(
         details.cudaDataAttr().value_or(common::CUDADataAttr::Device) !=
             common::CUDADataAttr::Device &&
         details.cudaDataAttr().value_or(common::CUDADataAttr::Device) !=
-            common::CUDADataAttr::Managed) {
+            common::CUDADataAttr::Managed &&
+        details.cudaDataAttr().value_or(common::CUDADataAttr::Device) !=
+            common::CUDADataAttr::Shared) {
       Warn(common::UsageWarning::CUDAUsage,
           "Dummy argument '%s' may not have ATTRIBUTES(%s) in a device subprogram"_warn_en_US,
           symbol.name(),
@@ -1107,7 +1116,8 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
       if (proc->init() && *proc->init()) {
         // C1519 - must be nonelemental external or module procedure,
         // or an unrestricted specific intrinsic function.
-        const Symbol &ultimate{(*proc->init())->GetUltimate()};
+        const Symbol &local{DEREF(*proc->init())};
+        const Symbol &ultimate{local.GetUltimate()};
         bool checkTarget{true};
         if (ultimate.attrs().test(Attr::INTRINSIC)) {
           if (auto intrinsic{context_.intrinsics().IsSpecificIntrinsicFunction(
@@ -1120,11 +1130,12 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
                 ultimate.name(), symbol.name());
             checkTarget = false;
           }
-        } else if ((!ultimate.attrs().test(Attr::EXTERNAL) &&
-                       ultimate.owner().kind() != Scope::Kind::Module) ||
+        } else if (!(ultimate.attrs().test(Attr::EXTERNAL) ||
+                       ultimate.owner().kind() == Scope::Kind::Module ||
+                       ultimate.owner().IsTopLevel()) ||
             IsDummy(ultimate) || IsPointer(ultimate)) {
-          context_.Say("Procedure pointer '%s' initializer '%s' is neither "
-                       "an external nor a module procedure"_err_en_US,
+          context_.Say(
+              "Procedure pointer '%s' initializer '%s' is neither an external nor a module procedure"_err_en_US,
               symbol.name(), ultimate.name());
           checkTarget = false;
         } else if (IsElementalProcedure(ultimate)) {
@@ -2999,7 +3010,8 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
   return msgs;
 }
 
-parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
+parser::Messages CheckHelper::WhyNotInteroperableObject(
+    const Symbol &symbol, bool allowNonInteroperableType) {
   parser::Messages msgs;
   if (examinedByWhyNotInteroperable_.find(symbol) !=
       examinedByWhyNotInteroperable_.end()) {
@@ -3035,8 +3047,13 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
   if (const auto *type{symbol.GetType()}) {
     const auto *derived{type->AsDerived()};
     if (derived && !derived->typeSymbol().attrs().test(Attr::BIND_C)) {
-      if (!context_.IsEnabled(
-              common::LanguageFeature::NonBindCInteroperability)) {
+      if (allowNonInteroperableType) { // portability warning only
+        evaluate::AttachDeclaration(
+            context_.Warn(common::UsageWarning::Portability, symbol.name(),
+                "The derived type of this interoperable object should be BIND(C)"_port_en_US),
+            derived->typeSymbol());
+      } else if (!context_.IsEnabled(
+                     common::LanguageFeature::NonBindCInteroperability)) {
         msgs.Say(symbol.name(),
                 "The derived type of an interoperable object must be BIND(C)"_err_en_US)
             .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
@@ -3176,7 +3193,13 @@ parser::Messages CheckHelper::WhyNotInteroperableProcedure(
                 "A dummy procedure of an interoperable procedure should be BIND(C)"_warn_en_US);
           }
         } else if (dummy->has<ObjectEntityDetails>()) {
-          dummyMsgs = WhyNotInteroperableObject(*dummy);
+          // Emit only optional portability warnings for non-interoperable
+          // types when the dummy argument is not VALUE and will be implemented
+          // on the C side by either a cdesc_t * or a void *.  F'2023 18.3.7 (5)
+          bool allowNonInteroperableType{!dummy->attrs().test(Attr::VALUE) &&
+              (IsDescriptor(*dummy) || IsAssumedType(*dummy))};
+          dummyMsgs =
+              WhyNotInteroperableObject(*dummy, allowNonInteroperableType);
         } else {
           CheckBindC(*dummy);
         }

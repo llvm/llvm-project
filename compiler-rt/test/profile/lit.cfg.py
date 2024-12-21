@@ -6,7 +6,7 @@ import re
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -29,6 +29,9 @@ if (
     config.test_exec_root = os.path.join(config.profile_lit_binary_dir, config.name)
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
+
+# Whether continous profile collection (%c) requires runtime counter relocation on this platform
+runtime_reloc = bool(config.host_os in ["AIX"])
 
 if config.host_os in ["Linux"]:
     extra_link_flags = ["-ldl"]
@@ -96,6 +99,14 @@ config.substitutions.append(
 )
 config.substitutions.append(
     (
+        "%clang_profgen_cont ",
+        build_invocation(clang_cflags)
+        + " -fprofile-instr-generate "
+        + ("-mllvm -runtime-counter-relocation " if runtime_reloc else ""),
+    )
+)
+config.substitutions.append(
+    (
         "%clangxx_profgen ",
         build_invocation(clang_cxxflags) + " -fprofile-instr-generate ",
     )
@@ -114,10 +125,26 @@ config.substitutions.append(
     ("%clang_pgogen=", build_invocation(clang_cflags) + " -fprofile-generate=")
 )
 config.substitutions.append(
+    (
+        "%clang_pgogen_cont ",
+        build_invocation(clang_cflags)
+        + " -fprofile-generate "
+        + ("-mllvm -runtime-counter-relocation " if runtime_reloc else ""),
+    )
+)
+config.substitutions.append(
     ("%clangxx_pgogen ", build_invocation(clang_cxxflags) + " -fprofile-generate ")
 )
 config.substitutions.append(
     ("%clangxx_pgogen=", build_invocation(clang_cxxflags) + " -fprofile-generate=")
+)
+config.substitutions.append(
+    (
+        "%clangxx_pgogen_cont ",
+        build_invocation(clang_cxxflags)
+        + " -fprofile-generate "
+        + ("-mllvm -runtime-counter-relocation " if runtime_reloc else ""),
+    )
 )
 
 config.substitutions.append(
@@ -162,8 +189,13 @@ if config.host_os not in [
     "NetBSD",
     "SunOS",
     "AIX",
+    "Haiku",
 ]:
     config.unsupported = True
+
+config.substitutions.append(
+    ("%shared_lib_flag", "-dynamiclib" if (config.host_os == "Darwin") else "-shared")
+)
 
 if config.host_os in ["AIX"]:
     config.available_features.add("system-aix")

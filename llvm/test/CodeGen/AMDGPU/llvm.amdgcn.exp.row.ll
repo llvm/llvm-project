@@ -110,7 +110,7 @@ define amdgpu_kernel void @id_i32() #0 {
 define amdgpu_kernel void @id_arg_i32(i32 %row) #0 {
 ; GFX11-LABEL: id_arg_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 m0, s0
@@ -119,7 +119,7 @@ define amdgpu_kernel void @id_arg_i32(i32 %row) #0 {
 ;
 ; GFX12-LABEL: id_arg_i32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 m0, s0

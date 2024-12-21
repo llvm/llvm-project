@@ -1119,9 +1119,6 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
 PreservedAnalyses
 EarlyIfConverterPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
   MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);

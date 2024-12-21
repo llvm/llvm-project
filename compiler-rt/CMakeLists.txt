@@ -44,6 +44,22 @@ include(CompilerRTUtils)
 include(CMakeDependentOption)
 include(GetDarwinLinkerVersion)
 
+include(CheckCXXCompilerFlag)
+
+# Check if we can compile with --no-default-config, or if that omits a config
+# file that is essential for the toolchain to work properly.
+#
+# Using CMAKE_REQUIRED_FLAGS to make sure the flag is used both for compilation
+# and for linking.
+#
+# Doing this test early on, to see if the flag works on the toolchain
+# out of the box. Later on, we end up adding -nostdlib and similar flags
+# to all test compiles, which easily can give false positives on this test.
+set(OLD_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --no-default-config")
+check_cxx_compiler_flag("" COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
+set(CMAKE_REQUIRED_FLAGS "${OLD_CMAKE_REQUIRED_FLAGS}")
+
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
 option(COMPILER_RT_DISABLE_AARCH64_FMV "Disable AArch64 Function Multi Versioning support" OFF)
@@ -205,7 +221,7 @@ macro(handle_default_cxx_lib var)
     set(${var}_LIBNAME "${CMAKE_MATCH_1}")
     set(${var}_SYSTEM 1)
   elseif (${var} STREQUAL "default")
-    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
       set(${var}_LIBNAME "libc++")
       set(${var}_SYSTEM 1)
     elseif (FUCHSIA)
@@ -752,7 +768,7 @@ if (CMAKE_LINKER MATCHES "link.exe$")
   # it, but CMake doesn't seem to have a way to set linker flags for
   # individual static libraries, so we enable the suppression flag for
   # the whole compiler-rt project.
-  set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
+  set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/IGNORE:4221")
 endif()
 
 add_subdirectory(include)

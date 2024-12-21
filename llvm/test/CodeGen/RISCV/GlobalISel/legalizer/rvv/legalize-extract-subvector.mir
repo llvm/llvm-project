@@ -32,12 +32,10 @@ body:             |
     ;
     ; RV64-LABEL: name: extract_subvector_nxv2i1_nxv4i1
     ; RV64: [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV64-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV64-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C]](s64)
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; RV64-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; RV64-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SELECT [[DEF]](<vscale x 4 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
     ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(s64) = G_READ_VLENB
     ; RV64-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -47,9 +45,8 @@ body:             |
     ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
     ; RV64-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 4 x s8>) = G_VSLIDEDOWN_VL [[DEF1]], [[SELECT]], [[LSHR]](s64), [[VMSET_VL]](<vscale x 2 x s1>), [[C3]], 3
     ; RV64-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 4 x s8>), 0
-    ; RV64-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV64-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[C4]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT2]](s64)
+    ; RV64-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C4]](s64)
     ; RV64-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 2 x s1>) = G_ICMP intpred(ne), [[EXTRACT_SUBVECTOR]](<vscale x 2 x s8>), [[SPLAT_VECTOR2]]
     ; RV64-NEXT: $v8 = COPY [[ICMP]](<vscale x 2 x s1>)
     ; RV64-NEXT: PseudoRET implicit $v8
@@ -87,12 +84,10 @@ body:             |
     ;
     ; RV64-LABEL: name: extract_subvector_nxv2i1_nxv8i1
     ; RV64: [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV64-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV64-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[C]](s64)
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; RV64-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; RV64-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SELECT [[DEF]](<vscale x 8 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
     ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(s64) = G_READ_VLENB
     ; RV64-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -102,9 +97,8 @@ body:             |
     ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
     ; RV64-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 8 x s8>) = G_VSLIDEDOWN_VL [[DEF1]], [[SELECT]], [[LSHR]](s64), [[VMSET_VL]](<vscale x 2 x s1>), [[C3]], 3
     ; RV64-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 8 x s8>), 0
-    ; RV64-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV64-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[C4]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT2]](s64)
+    ; RV64-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C4]](s64)
     ; RV64-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 2 x s1>) = G_ICMP intpred(ne), [[EXTRACT_SUBVECTOR]](<vscale x 2 x s8>), [[SPLAT_VECTOR2]]
     ; RV64-NEXT: $v8 = COPY [[ICMP]](<vscale x 2 x s1>)
     ; RV64-NEXT: PseudoRET implicit $v8
@@ -135,17 +129,14 @@ body:             |
     ;
     ; RV64-LABEL: name: extract_subvector_nxv4i1_nxv64i1
     ; RV64: [[DEF:%[0-9]+]]:_(<vscale x 64 x s1>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV64-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV64-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[C]](s64)
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; RV64-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; RV64-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SELECT [[DEF]](<vscale x 64 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
     ; RV64-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_EXTRACT_SUBVECTOR [[SELECT]](<vscale x 64 x s8>), 16
-    ; RV64-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV64-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; RV64-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT2]](s64)
+    ; RV64-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C2]](s64)
     ; RV64-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 4 x s1>) = G_ICMP intpred(ne), [[EXTRACT_SUBVECTOR]](<vscale x 4 x s8>), [[SPLAT_VECTOR2]]
     ; RV64-NEXT: $v8 = COPY [[ICMP]](<vscale x 4 x s1>)
     ; RV64-NEXT: PseudoRET implicit $v8

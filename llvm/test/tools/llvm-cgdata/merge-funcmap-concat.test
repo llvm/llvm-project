@@ -1,0 +1,78 @@
+# REQUIRES: shell, aarch64-registered-target
+# UNSUPPORTED: system-windows
+
+# Merge a binary file (e.g., a linked executable) having concatenated cgdata (__llvm_merge)
+
+RUN: split-file %s %t
+
+# Synthesize two sets of raw cgdata without the header (32 byte) from the indexed cgdata.
+# Concatenate them in merge-concat.ll
+RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
+RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-concat-template.ll > %t/merge-concat-template-2.ll
+RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-2-bytes.txt
+RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-concat-template-2.ll > %t/merge-concat.ll
+
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-concat.ll -o %t/merge-concat.o
+RUN: llvm-cgdata --merge --skip-trim %t/merge-concat.o -o %t/merge-concat.cgdata
+RUN: llvm-cgdata --show %t/merge-concat.cgdata | FileCheck %s
+
+CHECK: Stable function map:
+CHECK-NEXT:  Unique hash Count: 1
+CHECK-NEXT:  Total function Count: 2
+CHECK-NEXT:  Mergeable function Count: 2
+
+RUN: llvm-cgdata --convert %t/merge-concat.cgdata| FileCheck %s --check-prefix=MAP
+MAP: # Stable function map
+MAP-NEXT: :stable_function_map
+MAP-NEXT: ---
+MAP-NEXT: - Hash:            1
+MAP-NEXT:   FunctionName:    Func1
+MAP-NEXT:   ModuleName:      Mod1
+MAP-NEXT:   InstCount:       2
+MAP-NEXT:   IndexOperandHashes:
+MAP-NEXT:     - InstIndex:       0
+MAP-NEXT:       OpndIndex:       1
+MAP-NEXT:       OpndHash:        3
+MAP-NEXT: - Hash:            1
+MAP-NEXT:   FunctionName:    Func2
+MAP-NEXT:   ModuleName:      Mod1
+MAP-NEXT:   InstCount:       2
+MAP-NEXT:   IndexOperandHashes:
+MAP-NEXT:     - InstIndex:       0
+MAP-NEXT:       OpndIndex:       1
+MAP-NEXT:       OpndHash:        4
+MAP-NEXT: ...
+
+;--- raw-1.cgtext
+:stable_function_map
+- Hash:            1
+  FunctionName:    Func2
+  ModuleName:      Mod1
+  InstCount:       2
+  IndexOperandHashes:
+    - InstIndex:       0
+      OpndIndex:       1
+      OpndHash:        4
+...
+
+;--- raw-2.cgtext
+:stable_function_map
+- Hash:            1
+  FunctionName:    Func1
+  ModuleName:      Mod1
+  InstCount:       2
+  IndexOperandHashes:
+    - InstIndex:       0
+      OpndIndex:       1
+      OpndHash:        3
+...
+
+;--- merge-concat-template.ll
+
+; In an linked executable (as opposed to an object file), cgdata in __llvm_merge might be concatenated.
+; Although this is not a typical workflow, we simply support this case to parse cgdata that is concatenated.
+; In other words, the following two trees are encoded back-to-back in a binary format.
+@.data1 = private unnamed_addr constant [60 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
+@.data2 = private unnamed_addr constant [60 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"

@@ -1318,6 +1318,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   Tokens = annotate("bool x = t && requires(Foo<C1 || C2> x) { x.foo(); };");
   ASSERT_EQ(Tokens.size(), 25u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
+
+  // Second function definition is required due to lookahead
+  Tokens = annotate("void f() &\n"
+                    "  requires(n == 1)\n"
+                    "{}\n"
+                    "void g();");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -2268,6 +2277,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 
+  Tokens = annotate("Class<Type>{foo}->func(arg);");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown); // Not FunctionLBrace
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[7], tok::arrow, TT_Unknown);
+
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");
   Tokens = annotate("emit foo()->bar;", Style);
@@ -2589,6 +2605,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   Tokens = Annotate("x = '{\"\"};");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_Unknown);
+
+  // Module headers.
+  Tokens = Annotate("module x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic `x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic x``x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic x::x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
@@ -3319,6 +3353,25 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[13], BK_Block);
 
+  Tokens = annotate("{\n"
+                    "  {\n"
+                    "#define GEN_ID(_x) char *_x{#_x}\n"
+                    "    GEN_ID(one);\n"
+                    "  }\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[1], BK_Block);
+#if 0
+  // FIXME:
+  EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[14], BK_BracedInit);
+#endif
+  EXPECT_BRACE_KIND(Tokens[20], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[21], BK_Block);
+
   Tokens = annotate("a = class extends goog.a {};",
                     getGoogleStyle(FormatStyle::LK_JavaScript));
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
@@ -3560,6 +3613,13 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   ASSERT_EQ(Tokens.size(), 24u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
+}
+
+TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
+  auto Tokens = annotate("FOOBAR(switch);\n"
+                         "void f() {}");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
 }
 
 } // namespace

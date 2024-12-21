@@ -197,6 +197,18 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
   if (!Op.mayHaveIntegerOverflow())
     return true;
 
+  if (Op.Ty->isSignedIntegerType() &&
+      Ctx.isTypeIgnoredBySanitizer(SanitizerKind::SignedIntegerOverflow,
+                                   Op.Ty)) {
+    return true;
+  }
+
+  if (Op.Ty->isUnsignedIntegerType() &&
+      Ctx.isTypeIgnoredBySanitizer(SanitizerKind::UnsignedIntegerOverflow,
+                                   Op.Ty)) {
+    return true;
+  }
+
   const UnaryOperator *UO = dyn_cast<UnaryOperator>(Op.E);
 
   if (UO && UO->getOpcode() == UO_Minus &&
@@ -722,7 +734,7 @@ public:
   }
 
   Value *VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {
-    return llvm::ConstantInt::get(Builder.getInt32Ty(), E->getValue());
+    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
   }
 
   Value *VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
@@ -1125,6 +1137,10 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
   if (!CGF.SanOpts.has(Check.second.second))
     return;
 
+  // Does some SSCL ignore this type?
+  if (CGF.getContext().isTypeIgnoredBySanitizer(Check.second.second, DstType))
+    return;
+
   llvm::Constant *StaticArgs[] = {
       CGF.EmitCheckSourceLocation(Loc), CGF.EmitCheckTypeDescriptor(SrcType),
       CGF.EmitCheckTypeDescriptor(DstType),
@@ -1235,6 +1251,15 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
     // Because here sign change check is interchangeable with truncation check.
     return;
   }
+  // Does an SSCL have an entry for the DstType under its respective sanitizer
+  // section?
+  if (DstSigned && CGF.getContext().isTypeIgnoredBySanitizer(
+                       SanitizerKind::ImplicitSignedIntegerTruncation, DstType))
+    return;
+  if (!DstSigned &&
+      CGF.getContext().isTypeIgnoredBySanitizer(
+          SanitizerKind::ImplicitUnsignedIntegerTruncation, DstType))
+    return;
   // That's it. We can't rule out any more cases with the data we have.
 
   CodeGenFunction::SanitizerScope SanScope(&CGF);
@@ -1803,7 +1828,7 @@ Value *ScalarExprEmitter::VisitExpr(Expr *E) {
   CGF.ErrorUnsupported(E, "scalar expression");
   if (E->getType()->isVoidType())
     return nullptr;
-  return llvm::UndefValue::get(CGF.ConvertType(E->getType()));
+  return llvm::PoisonValue::get(CGF.ConvertType(E->getType()));
 }
 
 Value *
@@ -2077,7 +2102,8 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       Expr *InitVector = E->getInit(0);
 
       // Initialize from another scalable vector of the same type.
-      if (InitVector->getType() == E->getType())
+      if (InitVector->getType().getCanonicalType() ==
+          E->getType().getCanonicalType())
         return Visit(InitVector);
     }
 
@@ -2344,10 +2370,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
               ScalableDstTy->getElementCount().getKnownMinValue() / 8);
         }
         if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
-          llvm::Value *UndefVec = llvm::UndefValue::get(ScalableDstTy);
+          llvm::Value *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              ScalableDstTy, UndefVec, Src, Zero, "cast.scalable");
+              ScalableDstTy, PoisonVec, Src, Zero, "cast.scalable");
           if (Result->getType() != DstTy)
             Result = Builder.CreateBitCast(Result, DstTy);
           return Result;
@@ -2784,10 +2810,11 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
       return Builder.CreateNSWAdd(InVal, Amount, Name);
     [[fallthrough]];
   case LangOptions::SOB_Trapping:
-    if (!E->canOverflow())
+    BinOpInfo Info = createBinOpInfoFromIncDec(
+        E, InVal, IsInc, E->getFPFeaturesInEffect(CGF.getLangOpts()));
+    if (!E->canOverflow() || CanElideOverflowCheck(CGF.getContext(), Info))
       return Builder.CreateNSWAdd(InVal, Amount, Name);
-    return EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
-        E, InVal, IsInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
+    return EmitOverflowCheckedBinOp(Info);
   }
   llvm_unreachable("Unknown SignedOverflowBehaviorTy");
 }
@@ -2990,7 +3017,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
     } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
                CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
-               !excludeOverflowPattern) {
+               !excludeOverflowPattern &&
+               !CGF.getContext().isTypeIgnoredBySanitizer(
+                   SanitizerKind::UnsignedIntegerOverflow, E->getType())) {
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {

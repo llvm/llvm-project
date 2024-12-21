@@ -1391,11 +1391,11 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
   std::unique_ptr<PostDominanceInfo> postDomInfo;
   if (domOpFilter)
     domInfo = std::make_unique<DominanceInfo>(
-        domOpFilter->getParentOfType<func::FuncOp>());
+        domOpFilter->getParentOfType<FunctionOpInterface>());
 
   if (postDomOpFilter)
     postDomInfo = std::make_unique<PostDominanceInfo>(
-        postDomOpFilter->getParentOfType<func::FuncOp>());
+        postDomOpFilter->getParentOfType<FunctionOpInterface>());
 
   // Walk all uses of old memref; collect ops to perform replacement. We use a
   // DenseSet since an operation could potentially have multiple uses of a
@@ -1931,37 +1931,70 @@ DivModValue mlir::affine::getDivMod(OpBuilder &b, Location loc, Value lhs,
   return result;
 }
 
-/// Create IR that computes the product of all elements in the set.
-static FailureOr<OpFoldResult> getIndexProduct(OpBuilder &b, Location loc,
-                                               ArrayRef<Value> set) {
-  if (set.empty())
-    return failure();
-  OpFoldResult result = set[0];
+/// Create an affine map that computes `lhs` * `rhs`, composing in any other
+/// affine maps.
+static FailureOr<OpFoldResult> composedAffineMultiply(OpBuilder &b,
+                                                      Location loc,
+                                                      OpFoldResult lhs,
+                                                      OpFoldResult rhs) {
   AffineExpr s0, s1;
   bindSymbols(b.getContext(), s0, s1);
-  for (unsigned i = 1, e = set.size(); i < e; i++)
-    result = makeComposedFoldedAffineApply(b, loc, s0 * s1, {result, set[i]});
-  return result;
+  return makeComposedFoldedAffineApply(b, loc, s0 * s1, {lhs, rhs});
 }
 
 FailureOr<SmallVector<Value>>
 mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
-                               ArrayRef<Value> basis) {
-  unsigned numDims = basis.size();
+                               ArrayRef<Value> basis, bool hasOuterBound) {
+  if (hasOuterBound)
+    basis = basis.drop_front();
 
+  // Note: the divisors are backwards due to the scan.
   SmallVector<Value> divisors;
-  for (unsigned i = 1; i < numDims; i++) {
-    ArrayRef<Value> slice = basis.drop_front(i);
-    FailureOr<OpFoldResult> prod = getIndexProduct(b, loc, slice);
-    if (failed(prod))
+  OpFoldResult basisProd = b.getIndexAttr(1);
+  for (OpFoldResult basisElem : llvm::reverse(basis)) {
+    FailureOr<OpFoldResult> nextProd =
+        composedAffineMultiply(b, loc, basisElem, basisProd);
+    if (failed(nextProd))
       return failure();
-    divisors.push_back(getValueOrCreateConstantIndexOp(b, loc, *prod));
+    basisProd = *nextProd;
+    divisors.push_back(getValueOrCreateConstantIndexOp(b, loc, basisProd));
   }
 
   SmallVector<Value> results;
   results.reserve(divisors.size() + 1);
   Value residual = linearIndex;
-  for (Value divisor : divisors) {
+  for (Value divisor : llvm::reverse(divisors)) {
+    DivModValue divMod = getDivMod(b, loc, residual, divisor);
+    results.push_back(divMod.quotient);
+    residual = divMod.remainder;
+  }
+  results.push_back(residual);
+  return results;
+}
+
+FailureOr<SmallVector<Value>>
+mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
+                               ArrayRef<OpFoldResult> basis,
+                               bool hasOuterBound) {
+  if (hasOuterBound)
+    basis = basis.drop_front();
+
+  // Note: the divisors are backwards due to the scan.
+  SmallVector<Value> divisors;
+  OpFoldResult basisProd = b.getIndexAttr(1);
+  for (OpFoldResult basisElem : llvm::reverse(basis)) {
+    FailureOr<OpFoldResult> nextProd =
+        composedAffineMultiply(b, loc, basisElem, basisProd);
+    if (failed(nextProd))
+      return failure();
+    basisProd = *nextProd;
+    divisors.push_back(getValueOrCreateConstantIndexOp(b, loc, basisProd));
+  }
+
+  SmallVector<Value> results;
+  results.reserve(divisors.size() + 1);
+  Value residual = linearIndex;
+  for (Value divisor : llvm::reverse(divisors)) {
     DivModValue divMod = getDivMod(b, loc, residual, divisor);
     results.push_back(divMod.quotient);
     residual = divMod.remainder;
@@ -1973,8 +2006,21 @@ mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
 OpFoldResult mlir::affine::linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
                                           ArrayRef<OpFoldResult> basis,
                                           ImplicitLocOpBuilder &builder) {
-  assert(multiIndex.size() == basis.size());
+  return linearizeIndex(builder, builder.getLoc(), multiIndex, basis);
+}
+
+OpFoldResult mlir::affine::linearizeIndex(OpBuilder &builder, Location loc,
+                                          ArrayRef<OpFoldResult> multiIndex,
+                                          ArrayRef<OpFoldResult> basis) {
+  assert(multiIndex.size() == basis.size() ||
+         multiIndex.size() == basis.size() + 1);
   SmallVector<AffineExpr> basisAffine;
+
+  // Add a fake initial size in order to make the later index linearization
+  // computations line up if an outer bound is not provided.
+  if (multiIndex.size() == basis.size() + 1)
+    basisAffine.push_back(getAffineConstantExpr(1, builder.getContext()));
+
   for (size_t i = 0; i < basis.size(); ++i) {
     basisAffine.push_back(getAffineSymbolExpr(i, builder.getContext()));
   }
@@ -1983,13 +2029,13 @@ OpFoldResult mlir::affine::linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
   SmallVector<OpFoldResult> strides;
   strides.reserve(stridesAffine.size());
   llvm::transform(stridesAffine, std::back_inserter(strides),
-                  [&builder, &basis](AffineExpr strideExpr) {
+                  [&builder, &basis, loc](AffineExpr strideExpr) {
                     return affine::makeComposedFoldedAffineApply(
-                        builder, builder.getLoc(), strideExpr, basis);
+                        builder, loc, strideExpr, basis);
                   });
 
   auto &&[linearIndexExpr, multiIndexAndStrides] = computeLinearIndex(
       OpFoldResult(builder.getIndexAttr(0)), strides, multiIndex);
-  return affine::makeComposedFoldedAffineApply(
-      builder, builder.getLoc(), linearIndexExpr, multiIndexAndStrides);
+  return affine::makeComposedFoldedAffineApply(builder, loc, linearIndexExpr,
+                                               multiIndexAndStrides);
 }

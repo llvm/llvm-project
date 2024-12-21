@@ -104,43 +104,43 @@ vpmadd52luq     (%rdi){1to4}, %ymm17, %ymm19 {%k1} {z}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 18.00  18.00  8.00   8.00    -      -      -      -      -      -      -     8.00    -
+# CHECK-NEXT: 18.00  18.00  8.00   8.00    -      -      -      -      -      -     8.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52huq	%xmm16, %xmm17, %xmm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi), %xmm17, %xmm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi){1to2}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi){1to2}, %xmm17, %xmm19
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52huq	%xmm16, %xmm17, %xmm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi), %xmm17, %xmm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi){1to2}, %xmm17, %xmm19 {%k1}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52huq	%xmm16, %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi), %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi){1to2}, %xmm17, %xmm19 {%k1} {z}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52huq	%ymm16, %ymm17, %ymm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi), %ymm17, %ymm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi){1to4}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi){1to4}, %ymm17, %ymm19
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52huq	%ymm16, %ymm17, %ymm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi), %ymm17, %ymm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi){1to4}, %ymm17, %ymm19 {%k1}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52huq	%ymm16, %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi), %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52huq	(%rdi){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52huq	(%rdi){1to4}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52luq	%xmm16, %xmm17, %xmm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi), %xmm17, %xmm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi){1to2}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi){1to2}, %xmm17, %xmm19
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52luq	%xmm16, %xmm17, %xmm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi), %xmm17, %xmm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi){1to2}, %xmm17, %xmm19 {%k1}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52luq	%xmm16, %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi), %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi){1to2}, %xmm17, %xmm19 {%k1} {z}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52luq	%ymm16, %ymm17, %ymm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi), %ymm17, %ymm19
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi){1to4}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi){1to4}, %ymm17, %ymm19
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52luq	%ymm16, %ymm17, %ymm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi), %ymm17, %ymm19 {%k1}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi){1to4}, %ymm17, %ymm19 {%k1}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmadd52luq	%ymm16, %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi), %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmadd52luq	(%rdi){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmadd52luq	(%rdi){1to4}, %ymm17, %ymm19 {%k1} {z}

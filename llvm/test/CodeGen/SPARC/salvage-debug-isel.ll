@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -O1 %s -o - -stop-after=finalize-isel | FileCheck %s
+; RUN: llc -mtriple=sparc -O1 %s -o - -stop-after=finalize-isel | FileCheck %s
 
 ; Debug info salvaging in isel means we should see a location for this variable.
 
