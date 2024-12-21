@@ -28,6 +28,7 @@ runs:
 
     - name: Install Ninja (Linux)
       if: runner.os == 'Linux'
+      shell: bash
       run: |
         sudo apt-get -y install ninja
    
