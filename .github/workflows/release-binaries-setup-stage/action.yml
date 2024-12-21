@@ -22,7 +22,14 @@ runs:
   using: "composite"
   steps:
     - name: Install Ninja
+      # This doesn't seem to work on Ubuntu any more, so just use apt-get
+      if: runner.os != 'Linux'
       uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
+
+    - name: Install Ninja (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get -y install ninja
    
     - name: Setup Windows
       if: startsWith(runner.os, 'Windows')
