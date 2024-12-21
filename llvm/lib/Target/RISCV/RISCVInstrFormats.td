@@ -266,6 +266,22 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   let Size = 4;
 }
 
+class RVInst48<dag outs, dag ins, string opcodestr, string argstr,
+               list<dag> pattern, InstFormat format>
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+  let Size = 6;
+}
+
+class RVInst64<dag outs, dag ins, string opcodestr, string argstr,
+               list<dag> pattern, InstFormat format>
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
+  field bits<64> Inst;
+  field bits<64> SoftFail = 0;
+  let Size = 8;
+}
+
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">
     : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {

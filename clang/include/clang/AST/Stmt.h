@@ -109,6 +109,18 @@ protected:
 
   //===--- Statement bitfields classes ---===//
 
+  enum { NumStmtBits = 9 };
+
+#define STMT(CLASS, PARENT)
+#define STMT_RANGE(BASE, FIRST, LAST)
+#define LAST_STMT_RANGE(BASE, FIRST, LAST)                                     \
+  static_assert(                                                               \
+      llvm::isInt<NumStmtBits>(StmtClass::LAST##Class),                        \
+      "The number of 'StmtClass'es is strictly bounded under two to "          \
+      "the power of 'NumStmtBits'");
+#define ABSTRACT_STMT(STMT)
+#include "clang/AST/StmtNodes.inc"
+
   class StmtBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -116,9 +128,8 @@ protected:
 
     /// The statement class.
     LLVM_PREFERRED_TYPE(StmtClass)
-    unsigned sClass : 8;
+    unsigned sClass : NumStmtBits;
   };
-  enum { NumStmtBits = 8 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;
@@ -719,6 +730,18 @@ protected:
     unsigned Kind : 3;
   };
 
+  class ParenExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class ParenExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ProducedByFoldExpansion : 1;
+  };
+
   class StmtExprBitfields {
     friend class ASTStmtReader;
     friend class StmtExpr;
@@ -1241,6 +1264,7 @@ protected:
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
+    ParenExprBitfields ParenExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;

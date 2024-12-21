@@ -24,11 +24,16 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
-  auto TC = std::make_unique<VPValue>();
   VPBasicBlock *VPBB2 = new VPBasicBlock();
   VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
-  VPlan Plan(VPPH, &*TC, VPBB1);
+
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPPH, VPBB1);
+  VPlan Plan(VPPH, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -38,6 +43,7 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
@@ -59,8 +65,12 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
-  auto TC = std::make_unique<VPValue>();
-  VPlan Plan(VPPH, &*TC, VPBB1);
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPPH, VPBB1);
+  VPlan Plan(VPPH, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -70,6 +80,7 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
@@ -102,8 +113,11 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
-  auto TC = std::make_unique<VPValue>();
-  VPlan Plan(VPPH, &*TC, VPBB1);
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPPH, VPBB1);
+  VPlan Plan(VPPH, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -115,6 +129,7 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 #endif
 
   delete Phi;
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
@@ -138,8 +153,12 @@ TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
-  auto TC = std::make_unique<VPValue>();
-  VPlan Plan(VPPH, &*TC, VPBB1);
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPPH, VPBB1);
+  VPlan Plan(VPPH, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -149,6 +168,7 @@ TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   EXPECT_STREQ("Multiple instances of the same successor.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
@@ -175,8 +195,12 @@ TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
-  auto TC = std::make_unique<VPValue>();
-  VPlan Plan(VPPH, &*TC, VPBB1);
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPPH, VPBB1);
+  VPlan Plan(VPPH, ScalarHeaderVPBB);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -186,6 +210,7 @@ TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   EXPECT_STREQ("Multiple instances of the same successor.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
@@ -202,10 +227,14 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
 
   VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
-  VPBB1->setParent(R1);
 
-  auto TC = std::make_unique<VPValue>();
-  VPlan Plan(VPPH, &*TC, VPBB1);
+  LLVMContext C;
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
+  VPBlockUtils::connectBlocks(VPPH, VPBB1);
+  VPlan Plan(VPPH, ScalarHeaderVPBB);
+  VPBB1->setParent(R1);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -215,6 +244,7 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
   EXPECT_STREQ("Predecessor is not in the same region.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 } // namespace

@@ -7937,10 +7937,7 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v2i8_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-GI-FP16-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-FP16-NEXT:    xtn v0.4h, v1.4s
+; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-FP16-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h

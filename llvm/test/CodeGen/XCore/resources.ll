@@ -1,4 +1,4 @@
-; RUN: llc -march=xcore < %s | FileCheck %s
+; RUN: llc -mtriple=xcore < %s | FileCheck %s
 
 declare ptr addrspace(1) @llvm.xcore.getr.p1(i32 %type)
 declare void @llvm.xcore.freer.p1(ptr addrspace(1) %r)

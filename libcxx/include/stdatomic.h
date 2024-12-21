@@ -117,22 +117,24 @@ using std::atomic_signal_fence                         // see below
 
 */
 
-#include <__config>
+#if 0
+#else // 0
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
-#if defined(__cplusplus)
-
-#  include <atomic>
-#  include <version>
-
-#  ifdef _Atomic
-#    undef _Atomic
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
 #  endif
 
-#  define _Atomic(_Tp) ::std::atomic<_Tp>
+#  if defined(__cplusplus)
+
+#    include <atomic>
+#    include <version>
+
+#    ifdef _Atomic
+#      undef _Atomic
+#    endif
+
+#    define _Atomic(_Tp) ::std::atomic<_Tp>
 
 using std::memory_order _LIBCPP_USING_IF_EXISTS;
 using std::memory_order_relaxed _LIBCPP_USING_IF_EXISTS;
@@ -156,14 +158,14 @@ using std::atomic_long _LIBCPP_USING_IF_EXISTS;
 using std::atomic_ulong _LIBCPP_USING_IF_EXISTS;
 using std::atomic_llong _LIBCPP_USING_IF_EXISTS;
 using std::atomic_ullong _LIBCPP_USING_IF_EXISTS;
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#    if _LIBCPP_HAS_CHAR8_T
 using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
-#  endif
+#    endif
 using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;
 using std::atomic_char32_t _LIBCPP_USING_IF_EXISTS;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 using std::atomic_wchar_t _LIBCPP_USING_IF_EXISTS;
-#  endif
+#    endif
 
 using std::atomic_int8_t _LIBCPP_USING_IF_EXISTS;
 using std::atomic_uint8_t _LIBCPP_USING_IF_EXISTS;
@@ -228,12 +230,13 @@ using std::atomic_store_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_signal_fence _LIBCPP_USING_IF_EXISTS;
 using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 
-#else
+#  else
 
-#  if __has_include_next(<stdatomic.h>)
-#    include_next <stdatomic.h>
-#  endif
+#    if __has_include_next(<stdatomic.h>)
+#      include_next <stdatomic.h>
+#    endif
 
-#endif // defined(__cplusplus)
+#  endif // defined(__cplusplus)
+#endif   // 0
 
 #endif // _LIBCPP_STDATOMIC_H

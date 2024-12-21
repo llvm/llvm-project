@@ -64,9 +64,9 @@ static void emitMethodNameAndArgs(const InterfaceMethod &method,
 /// Get an array of all OpInterface definitions but exclude those subclassing
 /// "DeclareOpInterfaceMethods".
 static std::vector<const Record *>
-getAllInterfaceDefinitions(const RecordKeeper &recordKeeper, StringRef name) {
+getAllInterfaceDefinitions(const RecordKeeper &records, StringRef name) {
   std::vector<const Record *> defs =
-      recordKeeper.getAllDerivedDefinitions((name + "Interface").str());
+      records.getAllDerivedDefinitions((name + "Interface").str());
 
   std::string declareName = ("Declare" + name + "InterfaceMethods").str();
   llvm::erase_if(defs, [&](const Record *def) {

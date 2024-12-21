@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 declare void @llvm.xcore.setsr(i32)
 declare void @llvm.xcore.clrsr(i32)
 

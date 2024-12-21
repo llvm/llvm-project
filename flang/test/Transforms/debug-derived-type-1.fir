@@ -8,15 +8,15 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     %0 = fir.zero_bits !fir.type<_QMm_employeeTt_employee{t_person:!fir.type<_QMm_employeeTt_person{t_address:!fir.type<_QMm_employeeTt_address{house_number:i32}>,name:!fir.char<1,20>}>,hired_date:!fir.type<_QMm_employeeTt_date{year:i32,month:i32,day:i32}>,monthly_salary:f32}>
     fir.has_value %0 : !fir.type<_QMm_employeeTt_employee{t_person:!fir.type<_QMm_employeeTt_person{t_address:!fir.type<_QMm_employeeTt_address{house_number:i32}>,name:!fir.char<1,20>}>,hired_date:!fir.type<_QMm_employeeTt_date{year:i32,month:i32,day:i32}>,monthly_salary:f32}>
   } loc(#loc5)
-  fir.global @_QMt1Evar : !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3x!fir.complex<4>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}> {
-    %0 = fir.zero_bits !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3x!fir.complex<4>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}>
-    fir.has_value %0 : !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3x!fir.complex<4>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}>
+  fir.global @_QMt1Evar : !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3xcomplex<f32>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}> {
+    %0 = fir.zero_bits !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3xcomplex<f32>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}>
+    fir.has_value %0 : !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3xcomplex<f32>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}>
   } loc(#loc6)
   fir.global @_QMtest_1Exyz : !fir.type<_QMtest_1Tsometype{m_array:!fir.array<3xi32>,m_vt1:!fir.box<!fir.heap<!fir.type<_QMtest_1Tt1{name:!fir.char<1,20>,height:f32}>>>,v2:i32,m_alloc:!fir.box<!fir.heap<!fir.array<?xi32>>>,v3:i32,m_first:!fir.box<!fir.heap<!fir.char<1,?>>>,v4:i32,m_p1:!fir.box<!fir.ptr<i32>>,v5:i32,m_p2:!fir.box<!fir.ptr<i32>>,v6:i32,m_p3:!fir.box<!fir.ptr<!fir.array<?xi32>>>,v7:i32}> {
     %0 = fir.zero_bits !fir.type<_QMtest_1Tsometype{m_array:!fir.array<3xi32>,m_vt1:!fir.box<!fir.heap<!fir.type<_QMtest_1Tt1{name:!fir.char<1,20>,height:f32}>>>,v2:i32,m_alloc:!fir.box<!fir.heap<!fir.array<?xi32>>>,v3:i32,m_first:!fir.box<!fir.heap<!fir.char<1,?>>>,v4:i32,m_p1:!fir.box<!fir.ptr<i32>>,v5:i32,m_p2:!fir.box<!fir.ptr<i32>>,v6:i32,m_p3:!fir.box<!fir.ptr<!fir.array<?xi32>>>,v7:i32}>
     fir.has_value %0 : !fir.type<_QMtest_1Tsometype{m_array:!fir.array<3xi32>,m_vt1:!fir.box<!fir.heap<!fir.type<_QMtest_1Tt1{name:!fir.char<1,20>,height:f32}>>>,v2:i32,m_alloc:!fir.box<!fir.heap<!fir.array<?xi32>>>,v3:i32,m_first:!fir.box<!fir.heap<!fir.char<1,?>>>,v4:i32,m_p1:!fir.box<!fir.ptr<i32>>,v5:i32,m_p2:!fir.box<!fir.ptr<i32>>,v6:i32,m_p3:!fir.box<!fir.ptr<!fir.array<?xi32>>>,v7:i32}>
   } loc(#loc12)
-  fir.type_info @_QMt1Tt_t1 noinit nodestroy nofinal : !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3x!fir.complex<4>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}> loc(#loc7)
+  fir.type_info @_QMt1Tt_t1 noinit nodestroy nofinal : !fir.type<_QMt1Tt_t1{age:i32,points:!fir.array<3xcomplex<f32>>,cond:!fir.logical<1>,name:!fir.char<1,20>,ratio:f64}> loc(#loc7)
   fir.type_info @_QMm_employeeTt_address noinit nodestroy nofinal : !fir.type<_QMm_employeeTt_address{house_number:i32}> loc(#loc1)
   fir.type_info @_QMm_employeeTt_person noinit nodestroy nofinal extends !fir.type<_QMm_employeeTt_address{house_number:i32}> : !fir.type<_QMm_employeeTt_person{t_address:!fir.type<_QMm_employeeTt_address{house_number:i32}>,name:!fir.char<1,20>}> loc(#loc2)
   fir.type_info @_QMm_employeeTt_date noinit nodestroy nofinal : !fir.type<_QMm_employeeTt_date{year:i32,month:i32,day:i32}> loc(#loc3)

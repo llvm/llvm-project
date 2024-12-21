@@ -242,13 +242,13 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<bool> EnableFunctionArgSnippets{
+opt<int> EnableFunctionArgSnippets{
     "function-arg-placeholders",
     cat(Features),
-    desc("When disabled, completions contain only parentheses for "
-         "function calls. When enabled, completions also contain "
+    desc("When disabled (0), completions contain only parentheses for "
+         "function calls. When enabled (1), completions also contain "
          "placeholders for method parameters"),
-    init(CodeCompleteOptions().EnableFunctionArgSnippets),
+    init(-1),
 };
 
 opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
@@ -604,7 +604,7 @@ const char TestScheme::TestDir[] = "/clangd-test";
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
-                  AsyncTaskRunner *Tasks) {
+                  AsyncTaskRunner *Tasks, bool SupportContainedRefs) {
   static const trace::Metric RemoteIndexUsed("used_remote_index",
                                              trace::Metric::Value, "address");
   switch (External.Kind) {
@@ -620,8 +620,9 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
         External.Location);
     auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
     auto IndexLoadTask = [File = External.Location,
-                          PlaceHolder = NewIndex.get()] {
-      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true))
+                          PlaceHolder = NewIndex.get(), SupportContainedRefs] {
+      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true,
+                               SupportContainedRefs))
         PlaceHolder->reset(std::move(Idx));
     };
     if (Tasks) {
@@ -650,6 +651,7 @@ public:
     std::optional<Config::CDBSearchSpec> CDBSearch;
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
+    std::optional<Config::ArgumentListsPolicy> ArgumentLists;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -694,6 +696,12 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
+    if (EnableFunctionArgSnippets >= 0) {
+      ArgumentLists = EnableFunctionArgSnippets
+                          ? Config::ArgumentListsPolicy::FullPlaceholders
+                          : Config::ArgumentListsPolicy::Delimiters;
+    }
+
     Frag = [=](const config::Params &, Config &C) {
       if (CDBSearch)
         C.CompileFlags.CDBSearch = *CDBSearch;
@@ -701,6 +709,8 @@ public:
         C.Index.External = *IndexSpec;
       if (BGPolicy)
         C.Index.Background = *BGPolicy;
+      if (ArgumentLists)
+        C.Completion.ArgumentLists = *ArgumentLists;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 
@@ -900,7 +910,12 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.BackgroundIndexPriority = BackgroundIndexPriority;
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
-  auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
+  auto PAI = createProjectAwareIndex(
+      [SupportContainedRefs = Opts.EnableOutgoingCalls](
+          const Config::ExternalIndexSpec &External, AsyncTaskRunner *Tasks) {
+        return loadExternalIndex(External, Tasks, SupportContainedRefs);
+      },
+      Sync);
   Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
@@ -916,7 +931,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
   // FIXME: If we're using C++20 modules, force the lookup process to load

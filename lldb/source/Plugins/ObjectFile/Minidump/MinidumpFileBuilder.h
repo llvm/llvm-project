@@ -175,5 +175,4 @@ private:
   lldb::FileUP m_core_file;
   lldb_private::SaveCoreOptions m_save_core_options;
 };
-
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_MINIDUMPFILEBUILDER_H

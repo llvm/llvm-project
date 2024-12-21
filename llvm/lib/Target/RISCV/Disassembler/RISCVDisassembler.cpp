@@ -314,6 +314,19 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
+                                              int64_t Address,
+                                              const MCDisassembler *Decoder) {
+  assert(isUInt<6>(Imm) && "Invalid immediate");
+
+  if (!Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) &&
+      !isUInt<5>(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
@@ -321,6 +334,14 @@ static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
   if (Imm == 0)
     return MCDisassembler::Fail;
   return decodeUImmOperand<N>(Inst, Imm, Address, Decoder);
+}
+
+static DecodeStatus
+decodeUImmLog2XLenNonZeroOperand(MCInst &Inst, uint32_t Imm, int64_t Address,
+                                 const MCDisassembler *Decoder) {
+  if (Imm == 0)
+    return MCDisassembler::Fail;
+  return decodeUImmLog2XLenOperand(Inst, Imm, Address, Decoder);
 }
 
 template <unsigned N>
@@ -369,6 +390,16 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint32_t Imm, int64_t Address,
                                  const MCDisassembler *Decoder) {
   assert(isUInt<3>(Imm) && "Invalid immediate");
   if (!llvm::RISCVFPRndMode::isValidRoundingMode(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
+                                 const MCDisassembler *Decoder) {
+  assert(isUInt<3>(Imm) && "Invalid immediate");
+  if (Imm != RISCVFPRndMode::RTZ)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
@@ -651,6 +682,16 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "CORE-V SIMD extensions custom opcode table");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
                         "CORE-V Immediate Branching custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicsr, DecoderTableXqcicsr32,
+                        "Qualcomm uC CSR custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcisls, DecoderTableXqcisls32,
+                        "Qualcomm uC Scaled Load Store custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcia, DecoderTableXqcia32,
+                        "Qualcomm uC Arithmetic custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcics, DecoderTableXqcics32,
+                        "Qualcomm uC Conditional Select custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilsm, DecoderTableXqcilsm32,
+                        "Qualcomm uC Load Store Multiple custom opcode table");
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32 table");
 
   return MCDisassembler::Fail;

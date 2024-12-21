@@ -530,7 +530,7 @@ private:
 
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
-    uptr RangesReleased;
+    uptr NumReleasesAttempted;
     uptr LastReleasedBytes;
     // The minimum size of pushed blocks to trigger page release.
     uptr TryReleaseThreshold;
@@ -1144,11 +1144,12 @@ private:
     Str->append(
         "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
         "inuse: %6zu total: %6zu releases: %6zu last "
-        "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx (0x%zx)\n",
+        "releases attempted: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
+        "(0x%zx)\n",
         Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
         Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
         Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
-        Region->ReleaseInfo.RangesReleased,
+        Region->ReleaseInfo.NumReleasesAttempted,
         Region->ReleaseInfo.LastReleasedBytes >> 10,
         RegionPushedBytesDelta >> 10, Region->RegionBeg,
         getRegionBaseByClassId(ClassId));
@@ -1322,7 +1323,7 @@ private:
                                             Context.getReleaseOffset());
     auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
-    if (Recorder.getReleasedRangesCount() > 0) {
+    if (Recorder.getReleasedBytes() > 0) {
       // This is the case that we didn't hit the release threshold but it has
       // been past a certain period of time. Thus we try to release some pages
       // and if it does release some additional pages, it's hint that we are
@@ -1342,7 +1343,6 @@ private:
       }
 
       Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      Region->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
       Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
     }
     Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
@@ -1403,12 +1403,11 @@ private:
       if (RegionPushedBytesDelta < Region->ReleaseInfo.TryReleaseThreshold / 2)
         return false;
 
-      const u64 IntervalNs =
-          static_cast<u64>(atomic_load_relaxed(&ReleaseToOsIntervalMs)) *
-          1000000;
-      if (IntervalNs < 0)
+      const s64 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
+      if (IntervalMs < 0)
         return false;
 
+      const u64 IntervalNs = static_cast<u64>(IntervalMs) * 1000000;
       const u64 CurTimeNs = getMonotonicTimeFast();
       const u64 DiffSinceLastReleaseNs =
           CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
@@ -1493,6 +1492,11 @@ private:
       }
 
       const uptr PushedBytesDelta = BytesInBG - BG->BytesInBGAtLastCheckpoint;
+      if (PushedBytesDelta < getMinReleaseAttemptSize(BlockSize)) {
+        Prev = BG;
+        BG = BG->Next;
+        continue;
+      }
 
       // Given the randomness property, we try to release the pages only if the
       // bytes used by free blocks exceed certain proportion of group size. Note

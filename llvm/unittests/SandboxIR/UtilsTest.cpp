@@ -119,21 +119,21 @@ define void @foo(ptr %ptr) {
   [[maybe_unused]] auto *V3L3 = cast<sandboxir::LoadInst>(&*It++);
 
   // getPointerDiffInBytes
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L1, SE, DL), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L2, SE, DL), 8);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L1, L0, SE, DL), -4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L0, SE, DL), 0);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L1, SE), 4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L2, SE), 8);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L1, L0, SE), -4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L0, SE), 0);
 
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L1, SE, DL), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V3L1, SE, DL), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L2, SE, DL), 8);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L3, SE, DL), 12);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L3, V2L0, SE, DL), -12);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L1, SE), 4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V3L1, SE), 4);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L2, SE), 8);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L3, SE), 12);
+  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L3, V2L0, SE), -12);
 
   // atLowerAddress
-  EXPECT_TRUE(sandboxir::Utils::atLowerAddress(L0, L1, SE, DL));
-  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE, DL));
-  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE, DL));
+  EXPECT_TRUE(sandboxir::Utils::atLowerAddress(L0, L1, SE));
+  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE));
+  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE));
 }
 
 TEST_F(UtilsTest, GetExpected) {
@@ -216,74 +216,34 @@ bb0:
   EXPECT_EQ(sandboxir::Utils::getNumBits(L3), 64u);
 }
 
-TEST_F(UtilsTest, Instruction_isStackSaveOrRestoreIntrinsic) {
+TEST_F(UtilsTest, GetMemBase) {
   parseIR(C, R"IR(
-declare void @llvm.sideeffect()
-define void @foo(i8 %v1, ptr %ptr) {
-  %add = add i8 %v1, %v1
-  %stacksave = call ptr @llvm.stacksave()
-  call void @llvm.stackrestore(ptr %stacksave)
-  call void @llvm.sideeffect()
+define void @foo(ptr %ptrA, float %val, ptr %ptrB) {
+bb:
+  %gepA0 = getelementptr float, ptr %ptrA, i32 0
+  %gepA1 = getelementptr float, ptr %ptrA, i32 1
+  %gepB0 = getelementptr float, ptr %ptrB, i32 0
+  %gepB1 = getelementptr float, ptr %ptrB, i32 1
+  store float %val, ptr %gepA0
+  store float %val, ptr %gepA1
+  store float %val, ptr %gepB0
+  store float %val, ptr %gepB1
   ret void
 }
 )IR");
-  llvm::Function *LLVMF = &*M->getFunction("foo");
+  llvm::Function &Foo = *M->getFunction("foo");
   sandboxir::Context Ctx(C);
-  sandboxir::Function *F = Ctx.createFunction(LLVMF);
-  auto *BB = &*F->begin();
-  auto It = BB->begin();
-  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
-  auto *StackSave = cast<sandboxir::CallInst>(&*It++);
-  auto *StackRestore = cast<sandboxir::CallInst>(&*It++);
-  auto *Other = cast<sandboxir::CallInst>(&*It++);
-  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
 
-  EXPECT_FALSE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(Add));
-  EXPECT_TRUE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(StackSave));
-  EXPECT_TRUE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(StackRestore));
-  EXPECT_FALSE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(Other));
-  EXPECT_FALSE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(Ret));
-}
-
-TEST_F(UtilsTest, Instruction_isMemDepCandidate) {
-  parseIR(C, R"IR(
-declare void @llvm.fake.use(...)
-declare void @llvm.sideeffect()
-declare void @llvm.pseudoprobe(i64, i64, i32, i64)
-declare void @bar()
-define void @foo(i8 %v1, ptr %ptr) {
-  %add0 = add i8 %v1, %v1
-  %ld0 = load i8, ptr %ptr
-  store i8 %v1, ptr %ptr
-  call void @llvm.sideeffect()
-  call void @llvm.pseudoprobe(i64 42, i64 1, i32 0, i64 -1)
-  call void @llvm.fake.use(ptr %ptr)
-  call void @bar()
-  ret void
-}
-)IR");
-  llvm::Function *LLVMF = &*M->getFunction("foo");
-  sandboxir::Context Ctx(C);
-  sandboxir::Function *F = Ctx.createFunction(LLVMF);
-  auto *BB = &*F->begin();
-  auto It = BB->begin();
-  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
-  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto It = std::next(F->begin()->begin(), 4);
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
-  auto *SideEffect0 = cast<sandboxir::CallInst>(&*It++);
-  auto *PseudoProbe0 = cast<sandboxir::CallInst>(&*It++);
-  auto *OtherIntrinsic0 = cast<sandboxir::CallInst>(&*It++);
-  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
-  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
-
-  using Utils = sandboxir::Utils;
-
-  EXPECT_FALSE(Utils::isMemDepCandidate(Add0));
-  EXPECT_TRUE(Utils::isMemDepCandidate(Ld0));
-  EXPECT_TRUE(Utils::isMemDepCandidate(St0));
-  EXPECT_FALSE(Utils::isMemDepCandidate(SideEffect0));
-  EXPECT_FALSE(Utils::isMemDepCandidate(PseudoProbe0));
-  EXPECT_TRUE(Utils::isMemDepCandidate(OtherIntrinsic0));
-  EXPECT_TRUE(Utils::isMemDepCandidate(CallBar));
-  EXPECT_FALSE(Utils::isMemDepCandidate(Ret));
+  auto *St1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St3 = cast<sandboxir::StoreInst>(&*It++);
+  EXPECT_EQ(sandboxir::Utils::getMemInstructionBase(St0),
+            sandboxir::Utils::getMemInstructionBase(St1));
+  EXPECT_EQ(sandboxir::Utils::getMemInstructionBase(St2),
+            sandboxir::Utils::getMemInstructionBase(St3));
+  EXPECT_NE(sandboxir::Utils::getMemInstructionBase(St0),
+            sandboxir::Utils::getMemInstructionBase(St3));
 }

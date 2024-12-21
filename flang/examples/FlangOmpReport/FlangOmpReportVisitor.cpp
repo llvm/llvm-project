@@ -8,6 +8,7 @@
 
 #include "FlangOmpReportVisitor.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 namespace Fortran {
 namespace parser {
@@ -142,6 +143,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
                 },
                 c.u);
           },
+          [&](const OpenMPErrorConstruct &c) -> std::string {
+            const CharBlock &source{std::get<0>(c.t).source};
+            return normalize_construct_name(source.ToString());
+          },
           [&](const OpenMPSectionConstruct &c) -> std::string {
             return "section";
           },
@@ -190,15 +195,17 @@ void OpenMPCounterVisitor::PostConstructsCommon() {
   delete curConstruct;
 }
 
-void OpenMPCounterVisitor::Post(const OmpProcBindClause::Type &c) {
+void OpenMPCounterVisitor::Post(const OmpProcBindClause::AffinityPolicy &c) {
   clauseDetails +=
       "type=" + std::string{OmpProcBindClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDefaultClause::Type &c) {
+void OpenMPCounterVisitor::Post(
+    const OmpDefaultClause::DataSharingAttribute &c) {
   clauseDetails +=
       "type=" + std::string{OmpDefaultClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDeviceTypeClause::Type &c) {
+void OpenMPCounterVisitor::Post(
+    const OmpDeviceTypeClause::DeviceTypeDescription &c) {
   clauseDetails +=
       "type=" + std::string{OmpDeviceTypeClause::EnumToString(c)} + ";";
 }
@@ -208,34 +215,37 @@ void OpenMPCounterVisitor::Post(
       "implicit_behavior=" + std::string{OmpDefaultmapClause::EnumToString(c)} +
       ";";
 }
-void OpenMPCounterVisitor::Post(
-    const OmpDefaultmapClause::VariableCategory &c) {
+void OpenMPCounterVisitor::Post(const OmpVariableCategory::Value &c) {
   clauseDetails +=
-      "variable_category=" + std::string{OmpDefaultmapClause::EnumToString(c)} +
+      "variable_category=" + std::string{OmpVariableCategory::EnumToString(c)} +
       ";";
 }
-void OpenMPCounterVisitor::Post(const OmpScheduleModifierType::ModType &c) {
+void OpenMPCounterVisitor::Post(const OmpChunkModifier::Value &c) {
   clauseDetails +=
-      "modifier=" + std::string{OmpScheduleModifierType::EnumToString(c)} + ";";
+      "modifier=" + std::string{OmpChunkModifier::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpLinearModifier::Type &c) {
+void OpenMPCounterVisitor::Post(const OmpLinearModifier::Value &c) {
   clauseDetails +=
       "modifier=" + std::string{OmpLinearModifier::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDependenceType::Type &c) {
+void OpenMPCounterVisitor::Post(const OmpOrderingModifier::Value &c) {
   clauseDetails +=
-      "type=" + std::string{OmpDependenceType::EnumToString(c)} + ";";
+      "modifier=" + std::string{OmpOrderingModifier::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpMapType::Type &c) {
+void OpenMPCounterVisitor::Post(const OmpTaskDependenceType::Value &c) {
+  clauseDetails +=
+      "type=" + std::string{OmpTaskDependenceType::EnumToString(c)} + ";";
+}
+void OpenMPCounterVisitor::Post(const OmpMapType::Value &c) {
   clauseDetails += "type=" + std::string{OmpMapType::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpScheduleClause::ScheduleType &c) {
+void OpenMPCounterVisitor::Post(const OmpScheduleClause::Kind &c) {
   clauseDetails +=
       "type=" + std::string{OmpScheduleClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpIfClause::DirectiveNameModifier &c) {
+void OpenMPCounterVisitor::Post(const OmpDirectiveNameModifier &c) {
   clauseDetails +=
-      "name_modifier=" + std::string{OmpIfClause::EnumToString(c)} + ";";
+      "name_modifier=" + llvm::omp::getOpenMPDirectiveName(c.v).str() + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpCancelType::Type &c) {
   clauseDetails += "type=" + std::string{OmpCancelType::EnumToString(c)} + ";";

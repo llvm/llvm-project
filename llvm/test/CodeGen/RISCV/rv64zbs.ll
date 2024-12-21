@@ -1210,3 +1210,36 @@ define i1 @icmp_eq_nonpow2(i32 signext %x) nounwind {
   %cmp = icmp eq i32 %x, 32767
   ret i1 %cmp
 }
+
+define signext i32 @fold_sextinreg_shl_to_sllw(i64 %x) nounwind {
+; CHECK-LABEL: fold_sextinreg_shl_to_sllw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    sllw a0, a1, a0
+; CHECK-NEXT:    ret
+entry:
+  %mask = and i64 %x, 31
+  %shl = shl i64 1, %mask
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+define signext i32 @fold_sextinreg_shl_to_sllw_large_shamt(i64 %x) nounwind {
+; RV64I-LABEL: fold_sextinreg_shl_to_sllw_large_shamt:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: fold_sextinreg_shl_to_sllw_large_shamt:
+; RV64ZBS:       # %bb.0: # %entry
+; RV64ZBS-NEXT:    bset a0, zero, a0
+; RV64ZBS-NEXT:    sext.w a0, a0
+; RV64ZBS-NEXT:    ret
+entry:
+  %mask = and i64 %x, 63
+  %shl = shl i64 1, %mask
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}

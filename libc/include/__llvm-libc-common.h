@@ -17,6 +17,12 @@
 #undef __END_C_DECLS
 #define __END_C_DECLS }
 
+// Standard C++ doesn't have C99 restrict but GNU C++ has it with __ spelling.
+#undef __restrict
+#ifndef __GNUC__
+#define __restrict
+#endif
+
 #undef _Noreturn
 #define _Noreturn [[noreturn]]
 
@@ -47,7 +53,11 @@
 #define __restrict restrict // C99 and above support the restrict keyword.
 
 #undef __NOEXCEPT
+#ifdef __GNUC__
+#define __NOEXCEPT __attribute__((__nothrow__))
+#else
 #define __NOEXCEPT
+#endif
 
 #endif // __cplusplus
 

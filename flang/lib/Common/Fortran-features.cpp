@@ -30,6 +30,8 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::LogicalAbbreviations);
   disable_.set(LanguageFeature::XOROperator);
   disable_.set(LanguageFeature::OldStyleParameter);
+  // Possibly an accidental "feature" of nvfortran.
+  disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
@@ -41,6 +43,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::BadBranchTarget);
   warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
+  warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
   warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
@@ -48,6 +51,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::FoldingFailure);
   warnUsage_.set(UsageWarning::FoldingLimit);
   warnUsage_.set(UsageWarning::Interoperability);
+  // CharacterInteroperability warnings about length are off by default
   warnUsage_.set(UsageWarning::Bounds);
   warnUsage_.set(UsageWarning::Preprocessing);
   warnUsage_.set(UsageWarning::Scanning);
@@ -65,7 +69,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::ZeroDoStep);
   warnUsage_.set(UsageWarning::UnusedForallIndex);
   warnUsage_.set(UsageWarning::OpenMPUsage);
-  warnUsage_.set(UsageWarning::ModuleFile);
   warnUsage_.set(UsageWarning::DataLength);
   warnUsage_.set(UsageWarning::IgnoredDirective);
   warnUsage_.set(UsageWarning::HomonymousSpecific);
@@ -80,6 +83,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
   warnUsage_.set(UsageWarning::UndefinedFunctionResult);
   warnUsage_.set(UsageWarning::UselessIomsg);
+  warnUsage_.set(UsageWarning::UnsignedLiteralTruncation);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
 }

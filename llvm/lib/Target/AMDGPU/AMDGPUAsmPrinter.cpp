@@ -332,7 +332,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     emitVisibility(GVSym, GV->getVisibility(), !GV->isDeclaration());
     emitLinkage(GV, GVSym);
-    auto TS = getTargetStreamer();
+    auto *TS = getTargetStreamer();
     TS->emitAMDGPULDS(GVSym, Size, Alignment);
     return;
   }
@@ -368,6 +368,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
 
   using RIK = MCResourceInfo::ResourceInfoKind;
   const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
+  MCSymbol *FnSym = TM.getSymbol(&F);
 
   auto TryGetMCExprValue = [](const MCExpr *Value, uint64_t &Res) -> bool {
     int64_t Val;
@@ -381,7 +382,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   const uint64_t MaxScratchPerWorkitem =
       STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
   MCSymbol *ScratchSizeSymbol =
-      RI.getSymbol(F.getName(), RIK::RIK_PrivateSegSize, OutContext);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_PrivateSegSize, OutContext);
   uint64_t ScratchSize;
   if (ScratchSizeSymbol->isVariable() &&
       TryGetMCExprValue(ScratchSizeSymbol->getVariableValue(), ScratchSize) &&
@@ -394,7 +395,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   // Validate addressable scalar registers (i.e., prior to added implicit
   // SGPRs).
   MCSymbol *NumSGPRSymbol =
-      RI.getSymbol(F.getName(), RIK::RIK_NumSGPR, OutContext);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_NumSGPR, OutContext);
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       !STM.hasSGPRInitBug()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
@@ -411,9 +412,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   }
 
   MCSymbol *VCCUsedSymbol =
-      RI.getSymbol(F.getName(), RIK::RIK_UsesVCC, OutContext);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesVCC, OutContext);
   MCSymbol *FlatUsedSymbol =
-      RI.getSymbol(F.getName(), RIK::RIK_UsesFlatScratch, OutContext);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesFlatScratch, OutContext);
   uint64_t VCCUsed, FlatUsed, NumSgpr;
 
   if (NumSGPRSymbol->isVariable() && VCCUsedSymbol->isVariable() &&
@@ -440,9 +441,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     }
 
     MCSymbol *NumVgprSymbol =
-        RI.getSymbol(F.getName(), RIK::RIK_NumVGPR, OutContext);
+        RI.getSymbol(FnSym->getName(), RIK::RIK_NumVGPR, OutContext);
     MCSymbol *NumAgprSymbol =
-        RI.getSymbol(F.getName(), RIK::RIK_NumAGPR, OutContext);
+        RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext);
     uint64_t NumVgpr, NumAgpr;
 
     MachineModuleInfo &MMI =
@@ -562,7 +563,7 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
   }
-  if (UserSGPRInfo.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5) {
+  if (UserSGPRInfo.hasQueuePtr()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
   }
@@ -705,15 +706,20 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   {
     using RIK = MCResourceInfo::ResourceInfoKind;
     getTargetStreamer()->EmitMCResourceInfo(
-        RI.getSymbol(MF.getName(), RIK::RIK_NumVGPR, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_NumAGPR, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_NumSGPR, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_PrivateSegSize, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_UsesVCC, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_UsesFlatScratch, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_HasDynSizedStack, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_HasRecursion, OutContext),
-        RI.getSymbol(MF.getName(), RIK::RIK_HasIndirectCall, OutContext));
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumAGPR, OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
+                     OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesFlatScratch,
+                     OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasDynSizedStack,
+                     OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasRecursion,
+                     OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasIndirectCall,
+                     OutContext));
   }
 
   if (isVerbose()) {
@@ -726,18 +732,19 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       OutStreamer->emitRawComment(" Function info:", false);
 
       emitCommonFunctionComments(
-          RI.getSymbol(MF.getName(), RIK::RIK_NumVGPR, OutContext)
+          RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext)
               ->getVariableValue(),
-          STM.hasMAIInsts()
-              ? RI.getSymbol(MF.getName(), RIK::RIK_NumAGPR, OutContext)
-                    ->getVariableValue()
-              : nullptr,
+          STM.hasMAIInsts() ? RI.getSymbol(CurrentFnSym->getName(),
+                                           RIK::RIK_NumAGPR, OutContext)
+                                  ->getVariableValue()
+                            : nullptr,
           RI.createTotalNumVGPRs(MF, Ctx),
           RI.createTotalNumSGPRs(
               MF,
               MF.getSubtarget<GCNSubtarget>().getTargetID().isXnackOnOrAny(),
               Ctx),
-          RI.getSymbol(MF.getName(), RIK::RIK_PrivateSegSize, OutContext)
+          RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
+                       OutContext)
               ->getVariableValue(),
           getFunctionCodeSize(MF), MFI);
       return false;
@@ -943,7 +950,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   auto GetSymRefExpr =
       [&](MCResourceInfo::ResourceInfoKind RIK) -> const MCExpr * {
-    MCSymbol *Sym = RI.getSymbol(MF.getName(), RIK, OutContext);
+    MCSymbol *Sym = RI.getSymbol(CurrentFnSym->getName(), RIK, OutContext);
     return MCSymbolRefExpr::create(Sym, Ctx);
   };
 
@@ -1165,12 +1172,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
-  if (STM.getGeneration() < AMDGPUSubtarget::SEA_ISLANDS) {
-    // LDS is allocated in 64 dword blocks.
-    LDSAlignShift = 8;
-  } else {
+  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
+    // LDS is allocated in 320 dword blocks.
+    LDSAlignShift = 11;
+  } else if (STM.getFeatureBits().test(
+                 FeatureAddressableLocalMemorySize65536)) {
     // LDS is allocated in 128 dword blocks.
     LDSAlignShift = 9;
+  } else {
+    // LDS is allocated in 64 dword blocks.
+    LDSAlignShift = 8;
   }
 
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
@@ -1238,8 +1249,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     // return ((Dst & ~Mask) | (Value << Shift))
     auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
                           uint32_t Shift) {
-      auto Shft = MCConstantExpr::create(Shift, Ctx);
-      auto Msk = MCConstantExpr::create(Mask, Ctx);
+      const auto *Shft = MCConstantExpr::create(Shift, Ctx);
+      const auto *Msk = MCConstantExpr::create(Mask, Ctx);
       Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
       Dst = MCBinaryExpr::createOr(
           Dst, MCBinaryExpr::createShl(Value, Shft, Ctx), Ctx);
@@ -1414,7 +1425,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
        const SIProgramInfo &CurrentProgramInfo) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   auto CC = MF.getFunction().getCallingConv();
-  auto MD = getTargetStreamer()->getPALMetadata();
+  auto *MD = getTargetStreamer()->getPALMetadata();
   auto &Ctx = MF.getContext();
 
   MD->setEntryPoint(CC, MF.getFunction().getName());
@@ -1568,7 +1579,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   if (UserSGPRInfo.hasDispatchPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
-  if (UserSGPRInfo.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5)
+  if (UserSGPRInfo.hasQueuePtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
 
   if (UserSGPRInfo.hasKernargSegmentPtr())
@@ -1582,9 +1593,6 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
 
   if (UserSGPRInfo.hasPrivateSegmentSize())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
-
-  if (UserSGPRInfo.hasDispatchPtr())
-    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
   if (STM.isXNACKEnabled())
     Out.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;

@@ -41,17 +41,17 @@ end program
 
 ! CHECK-LABEL:  func @_QPlastprivate_realloc()
 ! CHECK:          %[[A:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlastprivate_reallocEa"} :
-! CHECK-SAME:       (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>) ->
-! CHECK-SAME:       (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>)
+! CHECK-SAME:       (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>) ->
+! CHECK-SAME:       (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>)
 ! CHECK:          omp.parallel {
 ! CHECK:            %[[A_PRIV:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlastprivate_reallocEa"} :
-! CHECK-SAME:         (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>) ->
-! CHECK-SAME:         (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>)
+! CHECK-SAME:         (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>) ->
+! CHECK-SAME:         (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>)
 ! CHECK:            omp.sections {
 ! CHECK:              omp.section {
-! CHECK:                %[[TEMP:.*]] = fir.load %[[A_PRIV:.*]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>
-! CHECK:                hlfir.assign %[[TEMP]] to %[[A]]#0 realloc : !fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>,
-! CHECK-SAME:             !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>
+! CHECK:                %[[TEMP:.*]] = fir.load %[[A_PRIV:.*]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
+! CHECK:                hlfir.assign %[[TEMP]] to %[[A]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>,
+! CHECK-SAME:             !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
 ! CHECK:              }
 ! CHECK:            }
 ! CHECK:          }

@@ -88,25 +88,25 @@ end subroutine
 !CHECK:    %[[BLK_I8_REF:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK:    %[[C0:.*]] = arith.constant 0 : index
 !CHECK:    %[[C_I8_REF:.*]] = fir.coordinate_of %[[BLK_I8_REF]], %[[C0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-!CHECK:    %[[C_REF:.*]] = fir.convert %[[C_I8_REF]] : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>
-!CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>)
-!CHECK:    %[[C_BOX:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>
-!CHECK:    %[[C_ADDR:.*]] = fir.box_addr %[[C_BOX]] : (!fir.box<!fir.ptr<!fir.complex<4>>>) -> !fir.ptr<!fir.complex<4>>
-!CHECK:    %[[C_REF:.*]] = fir.convert %[[C_ADDR]] : (!fir.ptr<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>>
-!CHECK:    fir.call @_QPsub4(%[[C_REF]], %[[A_DECL]]#1) fastmath<contract> : (!fir.ref<!fir.complex<4>>, !fir.ref<i32>) -> ()
+!CHECK:    %[[C_REF:.*]] = fir.convert %[[C_I8_REF]] : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
+!CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>, !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>)
+!CHECK:    %[[C_BOX:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
+!CHECK:    %[[C_ADDR:.*]] = fir.box_addr %[[C_BOX]] : (!fir.box<!fir.ptr<complex<f32>>>) -> !fir.ptr<complex<f32>>
+!CHECK:    %[[C_REF:.*]] = fir.convert %[[C_ADDR]] : (!fir.ptr<complex<f32>>) -> !fir.ref<complex<f32>>
+!CHECK:    fir.call @_QPsub4(%[[C_REF]], %[[A_DECL]]#1) fastmath<contract> : (!fir.ref<complex<f32>>, !fir.ref<i32>) -> ()
 !CHECK: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[C_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[A_PVT_REF:.*]] : {{.*}}) {
-!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>)
+!CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>, !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>)
 !CHECK:      %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFprivate_clause_commonblock_pointerEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:      %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>
-!CHECK:      %[[C_PVT_ADDR:.*]] = fir.box_addr %[[C_PVT_BOX]] : (!fir.box<!fir.ptr<!fir.complex<4>>>) -> !fir.ptr<!fir.complex<4>>
-!CHECK:      %[[C_PVT_REF:.*]] = fir.convert %[[C_PVT_ADDR]] : (!fir.ptr<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>>
-!CHECK:      fir.call @_QPsub5(%[[C_PVT_REF]], %[[A_PVT_DECL]]#1) fastmath<contract> : (!fir.ref<!fir.complex<4>>, !fir.ref<i32>) -> ()
+!CHECK:      %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
+!CHECK:      %[[C_PVT_ADDR:.*]] = fir.box_addr %[[C_PVT_BOX]] : (!fir.box<!fir.ptr<complex<f32>>>) -> !fir.ptr<complex<f32>>
+!CHECK:      %[[C_PVT_REF:.*]] = fir.convert %[[C_PVT_ADDR]] : (!fir.ptr<complex<f32>>) -> !fir.ref<complex<f32>>
+!CHECK:      fir.call @_QPsub5(%[[C_PVT_REF]], %[[A_PVT_DECL]]#1) fastmath<contract> : (!fir.ref<complex<f32>>, !fir.ref<i32>) -> ()
 !CHECK:      omp.terminator
 !CHECK:    }
-!CHECK:    %[[C_BOX:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>
-!CHECK:    %[[C_ADDR:.*]] = fir.box_addr %[[C_BOX]] : (!fir.box<!fir.ptr<!fir.complex<4>>>) -> !fir.ptr<!fir.complex<4>>
-!CHECK:    %[[C_REF:.*]] = fir.convert %[[C_ADDR]] : (!fir.ptr<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>>
-!CHECK:    fir.call @_QPsub6(%[[C_REF]], %[[A_DECL]]#1) fastmath<contract> : (!fir.ref<!fir.complex<4>>, !fir.ref<i32>) -> ()
+!CHECK:    %[[C_BOX:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
+!CHECK:    %[[C_ADDR:.*]] = fir.box_addr %[[C_BOX]] : (!fir.box<!fir.ptr<complex<f32>>>) -> !fir.ptr<complex<f32>>
+!CHECK:    %[[C_REF:.*]] = fir.convert %[[C_ADDR]] : (!fir.ptr<complex<f32>>) -> !fir.ref<complex<f32>>
+!CHECK:    fir.call @_QPsub6(%[[C_REF]], %[[A_DECL]]#1) fastmath<contract> : (!fir.ref<complex<f32>>, !fir.ref<i32>) -> ()
 !CHECK: return
 !CHECK: }
 subroutine private_clause_commonblock_pointer()

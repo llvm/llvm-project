@@ -41,12 +41,10 @@ class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
-
 class TargetRegisterClass {
 public:
   using iterator = const MCPhysReg *;
   using const_iterator = const MCPhysReg *;
-  using sc_iterator = const TargetRegisterClass* const *;
 
   // Instance variables filled by tablegen, do not use!
   const MCRegisterClass *MC;
@@ -67,7 +65,8 @@ public:
   /// Whether a combination of subregisters can cover every register in the
   /// class. See also the CoveredBySubRegs description in Target.td.
   const bool CoveredBySubRegs;
-  const sc_iterator SuperClasses;
+  const unsigned *SuperClasses;
+  const uint16_t SuperClassesSize;
   ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction&);
 
   /// Return the register class ID number.
@@ -175,18 +174,16 @@ public:
     return SuperRegIndices;
   }
 
-  /// Returns a NULL-terminated list of super-classes.  The
+  /// Returns a list of super-classes.  The
   /// classes are ordered by ID which is also a topological ordering from large
   /// to small classes.  The list does NOT include the current class.
-  sc_iterator getSuperClasses() const {
-    return SuperClasses;
+  ArrayRef<unsigned> superclasses() const {
+    return ArrayRef(SuperClasses, SuperClassesSize);
   }
 
   /// Return true if this TargetRegisterClass is a subset
   /// class of at least one other TargetRegisterClass.
-  bool isASubClass() const {
-    return SuperClasses[0] != nullptr;
-  }
+  bool isASubClass() const { return SuperClasses != nullptr; }
 
   /// Returns the preferred order for allocating registers from this register
   /// class in MF. The raw order comes directly from the .td file and may
@@ -1212,6 +1209,15 @@ public:
   /// in certain cases.
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
+  }
+
+  virtual std::optional<uint8_t> getVRegFlagValue(StringRef Name) const {
+    return {};
+  }
+
+  virtual SmallVector<StringLiteral>
+  getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
+    return {};
   }
 };
 

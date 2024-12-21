@@ -26,7 +26,7 @@ define internal i32 @test_cannot_promote_1(ptr %p, ptr nocapture readonly %test_
   ret i32 %sum
 }
 
-; This is called by @caller_aliased_args, from which we can see that %test_c may
+; This is called by multiple callers, from which we can see that %test_c may
 ; alias %p and so we cannot promote %test_c.
 ;
 define internal i32 @test_cannot_promote_2(ptr %p, ptr nocapture readonly %test_c) {
@@ -87,9 +87,8 @@ define internal i32 @test_can_promote_1(ptr %p, ptr nocapture readonly %test_c) 
   ret i32 %sum
 }
 
-; This is called by multiple callers (@caller_safe_args_1, @caller_safe_args_2),
-; from which we can prove that %test_c does not alias %p for any Call to the
-; function, so we can promote it.
+; This is called by multiple callers, from which we can prove that %test_c does
+; not alias %p for any Call to the function, so we can promote it.
 ;
 define internal i32 @test_can_promote_2(ptr %p, ptr nocapture readonly %test_c) {
 ; CHECK-LABEL: define {{[^@]+}}@test_can_promote_2
@@ -223,4 +222,76 @@ define i32 @caller_safe_args_2(i64 %n, ptr %p) {
   ret i32 %res
 }
 
+; Invokes @test_cannot_promote_2
+define i32 @caller_invoke_aliased_args() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define {{[^@]+}}@caller_invoke_aliased_args() personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALLER_C:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 5, ptr [[CALLER_C]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @test_cannot_promote_2(ptr [[CALLER_C]], ptr [[CALLER_C]])
+; CHECK-NEXT:            to label [[OUT:%.*]] unwind label [[CPAD:%.*]]
+; CHECK:       out:
+; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK:       cpad:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            catch ptr @_ZTIi
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %caller_c = alloca i32
+  store i32 5, ptr %caller_c
+
+  %res = invoke i32 @test_cannot_promote_2(ptr %caller_c, ptr %caller_c)
+  to label %out unwind label %cpad
+
+out:
+  ret i32 %res
+
+cpad:
+  %exn = landingpad { ptr, i32 }
+  catch ptr @_ZTIi
+  ret i32 -1
+}
+
+; Invokes @test_can_promote_2
+define i32 @caller_invoke_safe_args(i64 %n) personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define {{[^@]+}}@caller_invoke_safe_args
+; CHECK-SAME: (i64 [[N:%.*]]) personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca [5 x double], i64 [[N]], align 8
+; CHECK-NEXT:    call void @memset(ptr [[P]], i64 0, i64 [[N]])
+; CHECK-NEXT:    [[CALLER_C:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 5, ptr [[CALLER_C]], align 4
+; CHECK-NEXT:    [[CALLER_C_VAL:%.*]] = load i32, ptr [[CALLER_C]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @test_can_promote_2(ptr [[P]], i32 [[CALLER_C_VAL]])
+; CHECK-NEXT:            to label [[OUT:%.*]] unwind label [[CPAD:%.*]]
+; CHECK:       out:
+; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK:       cpad:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            catch ptr @_ZTIi
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %p = alloca [5 x double], i64 %n
+  call void @memset(ptr %p, i64 0, i64 %n)
+
+  %caller_c = alloca i32
+  store i32 5, ptr %caller_c
+
+  %res = invoke i32 @test_can_promote_2(ptr %p, ptr %caller_c)
+  to label %out unwind label %cpad
+
+out:
+  ret i32 %res
+
+cpad:
+  %exn = landingpad { ptr, i32 }
+  catch ptr @_ZTIi
+  ret i32 -1
+}
+
 declare void @memset(ptr, i64, i64)
+declare i32 @__gxx_personality_v0(...)
+
+@_ZTIi = external constant ptr

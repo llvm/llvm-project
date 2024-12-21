@@ -309,6 +309,8 @@ These variables provide fine control over the build of LLVM and
 enabled sub-projects. Nearly all of these variable names begin with
 ``LLVM_``.
 
+.. _LLVM-related variables BUILD_SHARED_LIBS:
+
 **BUILD_SHARED_LIBS**:BOOL
   Flag indicating if each LLVM component (e.g. Support) is built as a shared
   library (ON) or as a static library (OFF). Its default value is OFF. On
@@ -480,6 +482,15 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_BINDINGS**:BOOL
   If disabled, do not try to build the OCaml bindings.
 
+**LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING**:STRING
+  Enhances Debugify's ability to detect line number errors by storing extra
+  information inside Instructions, removing false positives from Debugify's
+  results at the cost of performance. Allowed values are `DISABLED` (default)
+  and `COVERAGE`. `COVERAGE` tracks whether and why a line number was
+  intentionally dropped or not generated for an instruction, allowing Debugify
+  to avoid reporting these as errors; this comes with a small performance cost
+  of ~0.1%. `COVERAGE` is an ABI-breaking option.
+
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
   only with MSVC. Defaults to ON.
@@ -592,7 +603,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   This is the correct way to build runtimes when putting together a toolchain.
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
-  compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
+  compiler, see the `libc++ documentation <https://libcxx.llvm.org/VendorDocumentation.html>`_.
 
   .. note::
     The list should not have duplicates with ``LLVM_ENABLE_PROJECTS``.
@@ -663,8 +674,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   Defaults to OFF.
 
 **LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES**:BOOL
-  When building executables, preserve symbol exports. Defaults to ON. 
-  You can use this option to disable exported symbols from all 
+  When building executables, preserve symbol exports. Defaults to ON.
+  You can use this option to disable exported symbols from all
   executables (Darwin Only).
 
 **LLVM_FORCE_USE_OLD_TOOLCHAIN**:BOOL
@@ -835,6 +846,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   ``-DLLVM_TARGETS_TO_BUILD="X86;PowerPC"``.
   The full list, as of March 2023, is:
   ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SystemZ;VE;WebAssembly;X86;XCore``
+
+  You can also specify ``host`` or ``Native`` to automatically detect and
+  include the target corresponding to the host machine's architecture, or
+  use ``all`` to include all available targets.
+  For example, on an x86_64 machine, specifying ``-DLLVM_TARGETS_TO_BUILD=host``
+  will include the ``X86`` target.
 
 **LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler version check will only warn when using a toolchain

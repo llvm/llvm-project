@@ -64,6 +64,10 @@
 #ifndef EXPRESSION_TRAIT
 #define EXPRESSION_TRAIT(I,E,K) KEYWORD(I,K)
 #endif
+#ifndef TRANSFORM_TYPE_TRAIT_DEF
+#define TRANSFORM_TYPE_TRAIT_DEF(K, Trait) KEYWORD(__##Trait, KEYCXX)
+#endif
+
 #ifndef ALIAS
 #define ALIAS(X,Y,Z)
 #endif
@@ -534,7 +538,6 @@ TYPE_TRAIT_1(__has_unique_object_representations,
 TYPE_TRAIT_2(__is_layout_compatible, IsLayoutCompatible, KEYCXX)
 TYPE_TRAIT_2(__is_pointer_interconvertible_base_of, IsPointerInterconvertibleBaseOf, KEYCXX)
 
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) KEYWORD(__##Trait, KEYCXX)
 #include "clang/Basic/TransformTypeTraits.def"
 
 // Clang-only C++ Type Traits
@@ -659,6 +662,7 @@ KEYWORD(out                         , KEYHLSL)
 // HLSL Type traits
 TYPE_TRAIT_2(__builtin_hlsl_is_scalarized_layout_compatible, IsScalarizedLayoutCompatible, KEYHLSL)
 TYPE_TRAIT_1(__builtin_hlsl_is_intangible, IsIntangibleType, KEYHLSL)
+TYPE_TRAIT_1(__builtin_hlsl_is_typed_resource_element_compatible, IsTypedResourceElementCompatible, KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)

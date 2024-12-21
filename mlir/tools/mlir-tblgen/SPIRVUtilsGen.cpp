@@ -33,7 +33,9 @@
 #include <optional>
 
 using llvm::ArrayRef;
+using llvm::cast;
 using llvm::formatv;
+using llvm::isa;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using llvm::Record;
@@ -196,12 +198,10 @@ static void emitInterfaceDef(const Availability &availability,
      << "}\n";
 }
 
-static bool emitInterfaceDefs(const RecordKeeper &recordKeeper,
-                              raw_ostream &os) {
-  llvm::emitSourceFileHeader("Availability Interface Definitions", os,
-                             recordKeeper);
+static bool emitInterfaceDefs(const RecordKeeper &records, raw_ostream &os) {
+  llvm::emitSourceFileHeader("Availability Interface Definitions", os, records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitions("Availability");
+  auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 1> handledClasses;
   for (const Record *def : defs) {
     SmallVector<const Record *, 1> parent;
@@ -286,12 +286,11 @@ static void emitInterfaceDecl(const Availability &availability,
   os << "};\n\n";
 }
 
-static bool emitInterfaceDecls(const RecordKeeper &recordKeeper,
-                               raw_ostream &os) {
+static bool emitInterfaceDecls(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("Availability Interface Declarations", os,
-                             recordKeeper);
+                             records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitions("Availability");
+  auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 4> handledClasses;
   for (const Record *def : defs) {
     SmallVector<const Record *, 1> parent;
@@ -451,11 +450,11 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
     os << "} // namespace " << ns << "\n";
 }
 
-static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Declarations", os,
-                             recordKeeper);
+                             records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
   for (const auto *def : defs)
     emitEnumDecl(*def, os);
 
@@ -483,11 +482,11 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   os << "\n";
 }
 
-static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
-                             recordKeeper);
+                             records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
   for (const auto *def : defs)
     emitEnumDef(*def, os);
 
@@ -610,11 +609,11 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
   bool areOperandsAheadOfAttrs = true;
   // Find the first attribute.
   const Argument *it = llvm::find_if(op.getArgs(), [](const Argument &arg) {
-    return arg.is<NamedAttribute *>();
+    return isa<NamedAttribute *>(arg);
   });
   // Check whether all following arguments are attributes.
   for (const Argument *ie = op.arg_end(); it != ie; ++it) {
-    if (!it->is<NamedAttribute *>()) {
+    if (!isa<NamedAttribute *>(*it)) {
       areOperandsAheadOfAttrs = false;
       break;
     }
@@ -645,7 +644,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
     os << tabs << "{\n";
-    if (argument.is<NamedTypeConstraint *>()) {
+    if (isa<NamedTypeConstraint *>(argument)) {
       os << tabs
          << formatv("  for (auto arg : {0}.getODSOperands({1})) {{\n", opVar,
                     operandNum);
@@ -660,7 +659,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << "    }\n";
       operandNum++;
     } else {
-      NamedAttribute *attr = argument.get<NamedAttribute *>();
+      NamedAttribute *attr = cast<NamedAttribute *>(argument);
       auto newtabs = tabs.str() + "  ";
       emitAttributeSerialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -965,7 +964,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << tabs << "}\n";
     } else {
       os << tabs << formatv("if ({0} < {1}.size()) {{\n", wordIndex, words);
-      auto *attr = argument.get<NamedAttribute *>();
+      auto *attr = cast<NamedAttribute *>(argument);
       auto newtabs = tabs.str() + "  ";
       emitAttributeDeserialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -1121,9 +1120,8 @@ static void initExtendedSetDeserializationDispatch(StringRef extensionSetName,
                 extensionSetName, instructionID, words);
 }
 
-static void
-emitExtendedSetDeserializationDispatch(const RecordKeeper &recordKeeper,
-                                       raw_ostream &os) {
+static void emitExtendedSetDeserializationDispatch(const RecordKeeper &records,
+                                                   raw_ostream &os) {
   StringRef extensionSetName("extensionSetName"),
       instructionID("instructionID"), words("words");
 
@@ -1139,7 +1137,7 @@ emitExtendedSetDeserializationDispatch(const RecordKeeper &recordKeeper,
 
   initExtendedSetDeserializationDispatch(extensionSetName, instructionID, words,
                                          os);
-  auto defs = recordKeeper.getAllDerivedDefinitions("SPIRV_ExtInstOp");
+  auto defs = records.getAllDerivedDefinitions("SPIRV_ExtInstOp");
   for (const auto *def : defs) {
     if (!def->getValueAsBit("autogenSerialization")) {
       continue;
@@ -1180,16 +1178,15 @@ emitExtendedSetDeserializationDispatch(const RecordKeeper &recordKeeper,
 
 /// Emits all the autogenerated serialization/deserializations functions for the
 /// SPIRV_Ops.
-static bool emitSerializationFns(const RecordKeeper &recordKeeper,
-                                 raw_ostream &os) {
+static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Serialization Utilities/Functions", os,
-                             recordKeeper);
+                             records);
 
   std::string dSerFnString, dDesFnString, serFnString, deserFnString,
       utilsString;
   raw_string_ostream dSerFn(dSerFnString), dDesFn(dDesFnString),
       serFn(serFnString), deserFn(deserFnString);
-  Record *attrClass = recordKeeper.getClass("Attr");
+  const Record *attrClass = records.getClass("Attr");
 
   // Emit the serialization and deserialization functions simultaneously.
   StringRef opVar("op");
@@ -1198,7 +1195,7 @@ static bool emitSerializationFns(const RecordKeeper &recordKeeper,
   // Handle the SPIR-V ops.
   initDispatchSerializationFn(opVar, dSerFn);
   initDispatchDeserializationFn(opcode, words, dDesFn);
-  auto defs = recordKeeper.getAllDerivedDefinitions("SPIRV_Op");
+  auto defs = records.getAllDerivedDefinitions("SPIRV_Op");
   for (const auto *def : defs) {
     Operator op(def);
     emitSerializationFunction(attrClass, def, op, serFn);
@@ -1214,7 +1211,7 @@ static bool emitSerializationFns(const RecordKeeper &recordKeeper,
   finalizeDispatchSerializationFn(opVar, dSerFn);
   finalizeDispatchDeserializationFn(opcode, dDesFn);
 
-  emitExtendedSetDeserializationDispatch(recordKeeper, dDesFn);
+  emitExtendedSetDeserializationDispatch(records, dDesFn);
 
   os << "#ifdef GET_SERIALIZATION_FNS\n\n";
   os << serFn.str();
@@ -1261,10 +1258,10 @@ static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
   os << "}\n";
 }
 
-static bool emitAttrUtils(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  llvm::emitSourceFileHeader("SPIR-V Attribute Utilities", os, recordKeeper);
+static bool emitAttrUtils(const RecordKeeper &records, raw_ostream &os) {
+  llvm::emitSourceFileHeader("SPIR-V Attribute Utilities", os, records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
   os << "#ifndef MLIR_DIALECT_SPIRV_IR_ATTR_UTILS_H_\n";
   os << "#define MLIR_DIALECT_SPIRV_IR_ATTR_UTILS_H_\n";
   emitEnumGetAttrNameFnDecl(os);
@@ -1405,12 +1402,11 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   }
 }
 
-static bool emitAvailabilityImpl(const RecordKeeper &recordKeeper,
-                                 raw_ostream &os) {
+static bool emitAvailabilityImpl(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Op Availability Implementations", os,
-                             recordKeeper);
+                             records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitions("SPIRV_Op");
+  auto defs = records.getAllDerivedDefinitions("SPIRV_Op");
   for (const auto *def : defs) {
     Operator op(def);
     if (def->getValueAsBit("autogenAvailability"))
@@ -1434,12 +1430,12 @@ static mlir::GenRegistration
 // SPIR-V Capability Implication AutoGen
 //===----------------------------------------------------------------------===//
 
-static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
+static bool emitCapabilityImplication(const RecordKeeper &records,
                                       raw_ostream &os) {
-  llvm::emitSourceFileHeader("SPIR-V Capability Implication", os, recordKeeper);
+  llvm::emitSourceFileHeader("SPIR-V Capability Implication", os, records);
 
   EnumAttr enumAttr(
-      recordKeeper.getDef("SPIRV_CapabilityAttr")->getValueAsDef("enum"));
+      records.getDef("SPIRV_CapabilityAttr")->getValueAsDef("enum"));
 
   os << "ArrayRef<spirv::Capability> "
         "spirv::getDirectImpliedCapabilities(spirv::Capability cap) {\n"

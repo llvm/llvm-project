@@ -145,9 +145,10 @@ public:
 // function here in the meantime to decouple from that discussion.
 Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
                                     ArrayRef<Type *> Tys = {}) {
+  if (Tys.empty())
+    return Intrinsic::getDeclarationIfExists(M, Id);
   auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return M->getFunction(Tys.empty() ? Intrinsic::getName(Id)
-                                    : Intrinsic::getName(Id, Tys, M, FT));
+  return Intrinsic::getDeclarationIfExists(M, Id, Tys, FT);
 }
 
 class ExpandVariadics : public ModulePass {

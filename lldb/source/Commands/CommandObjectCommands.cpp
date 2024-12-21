@@ -1099,7 +1099,7 @@ protected:
     } else {
       // Don't change the status if the command already set it...
       if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputData().empty())
+        if (result.GetOutputString().empty())
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         else
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1205,7 +1205,7 @@ protected:
     } else {
       // Don't change the status if the command already set it...
       if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputData().empty())
+        if (result.GetOutputString().empty())
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         else
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -2137,7 +2137,7 @@ protected:
     } else {
       // Don't change the status if the command already set it...
       if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputData().empty())
+        if (result.GetOutputString().empty())
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         else
           result.SetStatus(eReturnStatusSuccessFinishResult);

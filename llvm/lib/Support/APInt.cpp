@@ -1055,11 +1055,10 @@ void APInt::ashrSlowCase(unsigned ShiftAmt) {
         U.pVal[i] = (U.pVal[i + WordShift] >> BitShift) |
                     (U.pVal[i + WordShift + 1] << (APINT_BITS_PER_WORD - BitShift));
 
-      // Handle the last word which has no high bits to copy.
-      U.pVal[WordsToMove - 1] = U.pVal[WordShift + WordsToMove - 1] >> BitShift;
-      // Sign extend one more time.
+      // Handle the last word which has no high bits to copy. Use an arithmetic
+      // shift to preserve the sign bit.
       U.pVal[WordsToMove - 1] =
-          SignExtend64(U.pVal[WordsToMove - 1], APINT_BITS_PER_WORD - BitShift);
+          (int64_t)U.pVal[WordShift + WordsToMove - 1] >> BitShift;
     }
   }
 
@@ -2228,7 +2227,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
   while (*Prefix) {
     Str.push_back(*Prefix);
     ++Prefix;
-  };
+  }
 
   // We insert the digits backward, then reverse them to get the right order.
   unsigned StartDig = Str.size();

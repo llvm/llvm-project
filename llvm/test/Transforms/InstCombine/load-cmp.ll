@@ -312,9 +312,7 @@ define i1 @test10_struct_arr_i64(i64 %x) {
 
 define i1 @test10_struct_arr_noinbounds_i16(i16 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noinbounds_i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 268435455
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP2]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i16 %x, i32 2

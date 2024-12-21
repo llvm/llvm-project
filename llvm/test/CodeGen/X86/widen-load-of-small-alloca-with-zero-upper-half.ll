@@ -3270,11 +3270,10 @@ define void @load_32byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i
 ; X86-SHLD-NEXT:    movl %ecx, %edi
 ; X86-SHLD-NEXT:    andl $60, %edi
 ; X86-SHLD-NEXT:    movl 24(%esp,%edi), %edx
-; X86-SHLD-NEXT:    movl 20(%esp,%edi), %eax
-; X86-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SHLD-NEXT:    movl 20(%esp,%edi), %esi
+; X86-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SHLD-NEXT:    shll $3, %ecx
 ; X86-SHLD-NEXT:    andl $24, %ecx
-; X86-SHLD-NEXT:    movl %eax, %esi
 ; X86-SHLD-NEXT:    movl %edx, %eax
 ; X86-SHLD-NEXT:    shrdl %cl, %edx, %esi
 ; X86-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill

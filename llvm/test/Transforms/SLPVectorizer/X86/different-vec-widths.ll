@@ -17,13 +17,13 @@ define void @PR28457(ptr noalias nocapture align 32 %q, ptr noalias nocapture re
 ; SSE-NEXT:    [[Q2:%.*]] = getelementptr inbounds double, ptr [[Q:%.*]], i64 2
 ; SSE-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, ptr [[Q]], i64 4
 ; SSE-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[P]], align 8
-; SSE-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00>
+; SSE-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], splat (double 1.000000e+00)
 ; SSE-NEXT:    store <2 x double> [[TMP3]], ptr [[Q]], align 8
 ; SSE-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[P2]], align 8
-; SSE-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
+; SSE-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], splat (double 1.000000e+00)
 ; SSE-NEXT:    store <2 x double> [[TMP7]], ptr [[Q2]], align 8
 ; SSE-NEXT:    [[TMP10:%.*]] = load <2 x double>, ptr [[P4]], align 8
-; SSE-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 1.000000e+00, double 1.000000e+00>
+; SSE-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], splat (double 1.000000e+00)
 ; SSE-NEXT:    store <2 x double> [[TMP11]], ptr [[Q4]], align 8
 ; SSE-NEXT:    ret void
 ;
@@ -31,10 +31,10 @@ define void @PR28457(ptr noalias nocapture align 32 %q, ptr noalias nocapture re
 ; AVX-NEXT:    [[P4:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 4
 ; AVX-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, ptr [[Q:%.*]], i64 4
 ; AVX-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[P]], align 8
-; AVX-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+; AVX-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], splat (double 1.000000e+00)
 ; AVX-NEXT:    store <4 x double> [[TMP3]], ptr [[Q]], align 8
 ; AVX-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[P4]], align 8
-; AVX-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
+; AVX-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], splat (double 1.000000e+00)
 ; AVX-NEXT:    store <2 x double> [[TMP7]], ptr [[Q4]], align 8
 ; AVX-NEXT:    ret void
 ;

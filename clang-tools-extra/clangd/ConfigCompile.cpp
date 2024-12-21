@@ -43,7 +43,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -622,6 +621,21 @@ struct FragmentCompiler {
             C.Completion.AllScopes = AllScopes;
           });
     }
+    if (F.ArgumentLists) {
+      if (auto Val =
+              compileEnum<Config::ArgumentListsPolicy>("ArgumentLists",
+                                                       *F.ArgumentLists)
+                  .map("None", Config::ArgumentListsPolicy::None)
+                  .map("OpenDelimiter",
+                       Config::ArgumentListsPolicy::OpenDelimiter)
+                  .map("Delimiters", Config::ArgumentListsPolicy::Delimiters)
+                  .map("FullPlaceholders",
+                       Config::ArgumentListsPolicy::FullPlaceholders)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.ArgumentLists = *Val;
+        });
+    }
   }
 
   void compile(Fragment::HoverBlock &&F) {
@@ -654,6 +668,11 @@ struct FragmentCompiler {
       Out.Apply.push_back([Value(**F.BlockEnd)](const Params &, Config &C) {
         C.InlayHints.BlockEnd = Value;
       });
+    if (F.DefaultArguments)
+      Out.Apply.push_back(
+          [Value(**F.DefaultArguments)](const Params &, Config &C) {
+            C.InlayHints.DefaultArguments = Value;
+          });
     if (F.TypeNameLimit)
       Out.Apply.push_back(
           [Value(**F.TypeNameLimit)](const Params &, Config &C) {
