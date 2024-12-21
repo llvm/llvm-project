@@ -16,7 +16,7 @@ def {
 #ifdef OOR3
   bits<64> Val = 0x10000000000000000;
 #endif
-// CHECK-OOR: error: Number out of range
+// CHECK-OOR: error: number out of range
 
   bits<64> BinVal0 = 0x8000000000000000;
   bits<64> HexVal0 = 0b1000000000000000000000000000000000000000000000000000000000000000;

@@ -17,12 +17,12 @@
 // RUN:     -out:%t/executable/foo.exe -pdb:%t/symbols/bar.pdb
 
 // Find the PDB in its build location
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t/executable/foo.exe -s \
+// RUN: %lldb -f %t/executable/foo.exe -s \
 // RUN:     %p/Inputs/locate-pdb.lldbinit | FileCheck %s
 
 // Also find the PDB when it's adjacent to the executable
 // RUN: mv -f %t/symbols/bar.pdb %t/executable/bar.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t/executable/foo.exe -s \
+// RUN: %lldb -f %t/executable/foo.exe -s \
 // RUN:     %p/Inputs/locate-pdb.lldbinit | FileCheck %s
 
 int main(int argc, char** argv) {

@@ -313,8 +313,7 @@ void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
     auto sourceB = rewriter.create<LLVM::PoisonOp>(loc, rewriter.getF32Type());
     Value asF16s =
         rewriter.create<ROCDL::CvtPkRtz>(loc, truncResType, in, sourceB);
-    Value result = rewriter.create<vector::ExtractElementOp>(
-        loc, asF16s, rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0));
+    Value result = rewriter.create<vector::ExtractOp>(loc, asF16s, 0);
     return rewriter.replaceOp(op, result);
   }
   VectorType outType = cast<VectorType>(op.getOut().getType());
@@ -334,13 +333,11 @@ void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
   for (int64_t i = 0; i < numElements; i += 2) {
     int64_t elemsThisOp = std::min(numElements, i + 2) - i;
     Value thisResult = nullptr;
-    Value elemA = rewriter.create<vector::ExtractElementOp>(
-        loc, in, rewriter.create<arith::ConstantIndexOp>(loc, i));
+    Value elemA = rewriter.create<vector::ExtractOp>(loc, in, i);
     Value elemB = rewriter.create<LLVM::PoisonOp>(loc, rewriter.getF32Type());
 
     if (elemsThisOp == 2) {
-      elemB = rewriter.create<vector::ExtractElementOp>(
-          loc, in, rewriter.createOrFold<arith::ConstantIndexOp>(loc, i + 1));
+      elemB = rewriter.create<vector::ExtractOp>(loc, in, i + 1);
     }
 
     thisResult =
