@@ -18,6 +18,7 @@ on:
         type: choice
         options:
           - ubuntu-22.04
+          - depot-ubuntu-22.04-arm-small
           - windows-2022
           - macos-13
           - macos-14
@@ -151,8 +152,12 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
+          ubuntu-22.04)
             runs_on="depot-${{ inputs.runs-on }}-16"
+            multi_stage="false"
+            ;;
+          depot-ubuntu-22.04-arm-small)
+            runs_on="depot-ubuntu-22.04-arm-16"
             multi_stage="false"
             ;;
           *)
