@@ -21,10 +21,10 @@
 
 #include <cstdint>
 
-#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "llvm/ADT/Twine.h"
 
 // Raw CAPI type casters need to be declared before use, so always include them

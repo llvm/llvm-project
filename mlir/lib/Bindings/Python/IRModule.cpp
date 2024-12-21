@@ -13,9 +13,9 @@
 
 #include "Globals.h"
 #include "NanobindUtils.h"
-#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 
 namespace nb = nanobind;
 using namespace mlir;
