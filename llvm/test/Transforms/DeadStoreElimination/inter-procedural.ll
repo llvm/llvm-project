@@ -2,22 +2,12 @@
 ; RUN: opt < %s -passes=dse -enable-dse-initializes-attr-improvement -S | FileCheck %s
 
 declare void @p1_write_only(ptr nocapture noundef writeonly initializes((0, 2)) dead_on_unwind)
-
 declare void @p1_write_then_read(ptr nocapture noundef initializes((0, 2)) dead_on_unwind)
-  memory(argmem: readwrite, inaccessiblemem: readwrite)
-
 declare void @p1_clobber(ptr nocapture noundef)
-
 declare void @p2_same_range(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2)) dead_on_unwind)
-  memory(argmem: readwrite, inaccessiblemem: readwrite)
-
 declare void @p2_no_init(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef dead_on_unwind)
-
 declare void @p2_no_dead_on_unwind(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2)))
-  memory(argmem: readwrite, inaccessiblemem: readwrite)
-
 declare void @p2_no_dead_on_unwind_but_nounwind(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2))) nounwind
-  memory(argmem: readwrite, inaccessiblemem: readwrite)
 
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_only_caller() {
@@ -225,25 +215,23 @@ define i16 @p2_no_dead_on_unwind_but_nounwind_alias_caller() {
 }
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
-
 declare void @large_p1(ptr nocapture noundef initializes((0, 200))) nounwind
-  memory(argmem: readwrite, inaccessiblemem: readwrite)
-
 declare void @large_p2(ptr nocapture noundef initializes((0, 200)), ptr nocapture noundef initializes((0, 100))) nounwind
-  memory(argmem: readwrite, inaccessiblemem: readwrite)
 
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p1_caller() {
 ; CHECK-LABEL: @large_p1_caller(
-; CHECK-NEXT:    [[PTR:%.*]] = alloca [200 x i8], align 1
-; CHECK-NEXT:    call void @large_p1(ptr [[PTR]])
-; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [300 x i8], align 1
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[PTR]], i64 100
+; CHECK-NEXT:    call void @large_p1(ptr [[TMP]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[TMP]], align 2
 ; CHECK-NEXT:    ret i16 [[L]]
 ;
-  %ptr = alloca [200 x i8]
-  call void @llvm.memset.p0.i64(ptr %ptr, i8 42, i64 100, i1 false)
-  call void @large_p1(ptr %ptr)
-  %l = load i16, ptr %ptr
+  %ptr = alloca [300 x i8]
+  %tmp = getelementptr i8, ptr %ptr, i64 100
+  call void @llvm.memset.p0.i64(ptr %tmp, i8 42, i64 100, i1 false)
+  call void @large_p1(ptr %tmp)
+  %l = load i16, ptr %tmp
   ret i16 %l
 }
 
@@ -315,8 +303,7 @@ define i16 @large_p2_may_or_partial_alias_caller2(ptr %base1, ptr %base2) {
 
 @g = global i16 123, align 2
 
-declare void @read_global(ptr nocapture noundef initializes((0, 2)))
-  memory(read, argmem: write, inaccessiblemem: none) nounwind
+declare void @read_global(ptr nocapture noundef initializes((0, 2))) nounwind
 
 define i16 @global_var_alias() {
 ; CHECK-LABEL: @global_var_alias(

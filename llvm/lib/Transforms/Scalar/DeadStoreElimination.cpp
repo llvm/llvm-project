@@ -1665,16 +1665,11 @@ struct DSEState {
       // original MD. Stop walk.
       // If KillingDef is a CallInst with "initializes" attribute, the reads in
       // the callee would be dominated by initializations, so it should be safe.
-      // Note that in `getInitializesArgMemLoc`, we only check the aliasing
-      // among arguments. If aliasing through global variables, we consider it
-      // as read clobber.
       bool IsKillingDefFromInitAttr = false;
       if (IsInitializesAttrMemLoc) {
-        if (auto *CB = dyn_cast<CallBase>(UseInst))
-          IsKillingDefFromInitAttr =
-              KillingI == UseInst &&
-              KillingUndObj == getUnderlyingObject(MaybeDeadLoc.Ptr) &&
-              CB->onlyAccessesInaccessibleMemOrArgMem();
+        if (KillingI == UseInst &&
+            KillingUndObj == getUnderlyingObject(MaybeDeadLoc.Ptr))
+          IsKillingDefFromInitAttr = true;
       }
 
       if (isReadClobber(MaybeDeadLoc, UseInst) && !IsKillingDefFromInitAttr) {
@@ -2266,6 +2261,39 @@ struct DSEState {
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
 
+// Return true if "Arg" is an Alloca or GEP from Alloca, and the alloca ptr
+// doesn't escape.
+bool ValidFromAlloca(Value *Arg) {
+  const auto *AI = dyn_cast<AllocaInst>(Arg);
+  const auto *GEP = dyn_cast<GetElementPtrInst>(Arg);
+  if (!AI) {
+    if (!GEP || !dyn_cast<AllocaInst>(GEP->getPointerOperand()))
+      return false;
+  }
+
+  // No need for a visited set as we don't look through phis.
+  SmallVector<Use *, 4> Worklist;
+  for (Use &U : Arg->uses())
+    Worklist.push_back(&U);
+
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
+    Instruction *I = cast<Instruction>(U->getUser());
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+      for (Use &U : GEP->uses())
+        Worklist.push_back(&U);
+    } else if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (CB->isArgOperand(U)) {
+        unsigned ArgNo = CB->getArgOperandNo(U);
+        if (!CB->paramHasAttr(ArgNo, Attribute::NoCapture))
+          return false;
+      }
+    }
+  }
+  return true;
+}
+
 SmallVector<MemoryLocation, 1>
 DSEState::getInitializesArgMemLoc(const Instruction *I) {
   const CallBase *CB = dyn_cast<CallBase>(I);
@@ -2281,6 +2309,13 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
     Value *CurArg = CB->getArgOperand(Idx);
+    // Check whether "CurArg" could alias with global variables. We require
+    // either it's an Alloca that doesn't escape or the "CB" only accesses arg
+    // or inaccessible mem.
+    if (!Inits.empty() && !ValidFromAlloca(CurArg) &&
+        !CB->onlyAccessesInaccessibleMemOrArgMem())
+      Inits = ConstantRangeList();
+
     // We don't perform incorrect DSE on unwind edges in the current function,
     // and use the "initializes" attribute to kill dead stores if:
     // - The call does not throw exceptions, "CB->doesNotThrow()".
