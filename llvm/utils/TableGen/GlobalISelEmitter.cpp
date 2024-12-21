@@ -1451,14 +1451,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     const TreePatternNode &Dst, unsigned Start) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
 
-  // Some instructions have multiple defs, but are missing a type entry
-  // (e.g. s_cc_out operands).
-  if (Dst.getExtTypes().size() < DstI->Operands.NumDefs)
-    return failedImport("unhandled discarded def");
-
   // Process explicit defs. The caller may have already handled the first def.
   for (unsigned I = Start, E = DstI->Operands.NumDefs; I != E; ++I) {
-    std::string OpName = getMangledRootDefName(DstI->Operands[I].Name);
+    const CGIOperandList::OperandInfo &OpInfo = DstI->Operands[I];
+    std::string OpName = getMangledRootDefName(OpInfo.Name);
 
     // If the def is used in the source DAG, forward it.
     if (M.hasOperand(OpName)) {
@@ -1466,6 +1462,29 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
       // let's use a string with an appropriate lifetime.
       StringRef PermanentRef = M.getOperandMatcher(OpName).getSymbolicName();
       DstMIBuilder.addRenderer<CopyRenderer>(PermanentRef);
+      continue;
+    }
+
+    // A discarded explicit def may be an optional physical register.
+    // If this is the case, add the default register and mark it as dead.
+    if (OpInfo.Rec->isSubClassOf("OptionalDefOperand")) {
+      for (const TreePatternNode &DefaultOp :
+           make_pointee_range(CGP.getDefaultOperand(OpInfo.Rec).DefaultOps)) {
+        // TODO: Do these checks in ParseDefaultOperands.
+        if (!DefaultOp.isLeaf())
+          return failedImport("optional def is not a leaf");
+
+        const auto *RegDI = dyn_cast<DefInit>(DefaultOp.getLeafValue());
+        if (!RegDI)
+          return failedImport("optional def is not a record");
+
+        const Record *Reg = RegDI->getDef();
+        if (!Reg->isSubClassOf("Register") && Reg->getName() != "zero_reg")
+          return failedImport("optional def is not a register");
+
+        DstMIBuilder.addRenderer<AddRegisterRenderer>(
+            Target, Reg, /*IsDef=*/true, /*IsDead=*/true);
+      }
       continue;
     }
 
