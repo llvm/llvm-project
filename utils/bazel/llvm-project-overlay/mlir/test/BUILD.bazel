@@ -805,6 +805,7 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:AffineToStandard",
+        "//mlir:ArithToLLVM",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:IR",
