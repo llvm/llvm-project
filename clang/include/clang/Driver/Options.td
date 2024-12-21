@@ -1995,7 +1995,7 @@ def : Flag<["-"], "fno-diagnostics-color">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Alias<fno_color_diagnostics>;
 def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>,
-  Visibility<[ClangOption, FlangOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Values<"auto,always,never">,
   HelpText<"When to use colors in diagnostics">;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
@@ -6351,6 +6351,8 @@ def mv71t : Flag<["-"], "mv71t">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv71t"]>;
 def mv73 : Flag<["-"], "mv73">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv73"]>;
+def mv75 : Flag<["-"], "mv75">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv75"]>;
 def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
 def mhexagon_hvx_EQ : Joined<["-"], "mhvx=">,
