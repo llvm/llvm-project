@@ -94,6 +94,8 @@ Improvements and New Features
 - The performance of ``std::align`` has been improved by making it an inline function, which allows the compiler to
   better optimize calls to it.
 
+- ``rotate`` has been optimized, resulting in a performance improvement of up to 3x.
+
 Deprecations and Removals
 -------------------------
 
