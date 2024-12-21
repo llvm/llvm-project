@@ -210,7 +210,6 @@ public:
   inline const SDValue &getOperand(unsigned i) const;
   inline uint64_t getConstantOperandVal(unsigned i) const;
   inline const APInt &getConstantOperandAPInt(unsigned i) const;
-  inline bool isTargetMemoryOpcode() const;
   inline bool isTargetOpcode() const;
   inline bool isMachineOpcode() const;
   inline bool isUndef() const;
@@ -690,22 +689,6 @@ public:
   /// Test if this node has a target-specific opcode (in the
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
-
-  /// Test if this node has a target-specific opcode that may raise
-  /// FP exceptions (in the \<target\>ISD namespace and greater than
-  /// FIRST_TARGET_STRICTFP_OPCODE).  Note that all target memory
-  /// opcode are currently automatically considered to possibly raise
-  /// FP exceptions as well.
-  bool isTargetStrictFPOpcode() const {
-    return NodeType >= ISD::FIRST_TARGET_STRICTFP_OPCODE;
-  }
-
-  /// Test if this node has a target-specific
-  /// memory-referencing opcode (in the \<target\>ISD namespace and
-  /// greater than FIRST_TARGET_MEMORY_OPCODE).
-  bool isTargetMemoryOpcode() const {
-    return NodeType >= ISD::FIRST_TARGET_MEMORY_OPCODE;
-  }
 
   /// Return true if the type of the node type undefined.
   bool isUndef() const { return NodeType == ISD::UNDEF; }
@@ -1255,10 +1238,6 @@ inline bool SDValue::isTargetOpcode() const {
   return Node->isTargetOpcode();
 }
 
-inline bool SDValue::isTargetMemoryOpcode() const {
-  return Node->isTargetMemoryOpcode();
-}
-
 inline bool SDValue::isMachineOpcode() const {
   return Node->isMachineOpcode();
 }
@@ -1615,10 +1594,10 @@ public:
   }
 };
 
-/// This SDNode is used for target intrinsics that touch
-/// memory and need an associated MachineMemOperand. Its opcode may be
-/// INTRINSIC_VOID, INTRINSIC_W_CHAIN, PREFETCH, or a target-specific opcode
-/// with a value not less than FIRST_TARGET_MEMORY_OPCODE.
+/// This SDNode is used for target intrinsics that touch memory and need
+/// an associated MachineMemOperand. Its opcode may be INTRINSIC_VOID,
+/// INTRINSIC_W_CHAIN, PREFETCH, or a target-specific memory-referencing
+/// opcode (see `SelectionDAGTargetInfo::isTargetMemoryOpcode`).
 class MemIntrinsicSDNode : public MemSDNode {
 public:
   MemIntrinsicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
