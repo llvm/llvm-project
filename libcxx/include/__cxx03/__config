@@ -10,10 +10,10 @@
 #ifndef _LIBCPP___CXX03___CONFIG
 #define _LIBCPP___CXX03___CONFIG
 
-#include <__config_site>
 #include <__cxx03/__configuration/abi.h>
 #include <__cxx03/__configuration/availability.h>
 #include <__cxx03/__configuration/compiler.h>
+#include <__cxx03/__configuration/config_site_shim.h>
 #include <__cxx03/__configuration/platform.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
