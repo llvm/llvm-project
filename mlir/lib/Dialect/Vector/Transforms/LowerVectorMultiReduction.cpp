@@ -391,9 +391,8 @@ struct TwoDimMultiReductionToReduction
         reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);
       }
 
-      result = rewriter.create<vector::InsertElementOp>(
-          loc, reductionOp->getResult(0), result,
-          rewriter.create<arith::ConstantIndexOp>(loc, i));
+      result = rewriter.create<vector::InsertOp>(loc, reductionOp->getResult(0),
+                                                 result, i);
     }
 
     rewriter.replaceOp(rootOp, result);
@@ -487,7 +486,7 @@ struct LowerVectorMultiReductionPass
     populateVectorMultiReductionLoweringPatterns(loweringPatterns,
                                                  this->loweringStrategy);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 

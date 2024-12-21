@@ -1934,7 +1934,8 @@ private:
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false);
+                           bool EarlyTypoCorrection = false,
+                           bool *HasTrailingComma = nullptr);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -3705,10 +3706,14 @@ private:
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
     SourceLocation DirLoc;
+    SourceLocation LParenLoc;
+    SourceLocation RParenLoc;
     SourceLocation EndLoc;
+    SourceLocation MiscLoc;
+    SmallVector<Expr *> Exprs;
     SmallVector<OpenACCClause *> Clauses;
-    // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
-    // Wait constructs, we likely want to put that information in here as well.
+    // TODO OpenACC: As we implement support for the Atomic, Routine, and Cache
+    // constructs, we likely want to put that information in here as well.
   };
 
   struct OpenACCWaitParseInfo {
@@ -3716,6 +3721,13 @@ private:
     Expr *DevNumExpr = nullptr;
     SourceLocation QueuesLoc;
     SmallVector<Expr *> QueueIdExprs;
+
+    SmallVector<Expr *> getAllExprs() {
+      SmallVector<Expr *> Out;
+      Out.push_back(DevNumExpr);
+      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+      return Out;
+    }
   };
 
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores
@@ -3797,9 +3809,15 @@ private:
   bool ParseOpenACCSizeExprList(OpenACCClauseKind CK,
                                 llvm::SmallVectorImpl<Expr *> &SizeExprs);
   /// Parses a 'gang-arg-list', used for the 'gang' clause.
-  bool ParseOpenACCGangArgList(SourceLocation GangLoc);
-  /// Parses a 'gang-arg', used for the 'gang' clause.
-  bool ParseOpenACCGangArg(SourceLocation GangLoc);
+  bool ParseOpenACCGangArgList(SourceLocation GangLoc,
+                               llvm::SmallVectorImpl<OpenACCGangKind> &GKs,
+                               llvm::SmallVectorImpl<Expr *> &IntExprs);
+
+  using OpenACCGangArgRes = std::pair<OpenACCGangKind, ExprResult>;
+  /// Parses a 'gang-arg', used for the 'gang' clause. Returns a pair of the
+  /// ExprResult (which contains the validity of the expression), plus the gang
+  /// kind for the current argument.
+  OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
 

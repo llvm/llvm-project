@@ -4,30 +4,16 @@
 define void @test(ptr noalias %0, ptr noalias %1) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr noalias [[TMP0:%.*]], ptr noalias [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 24
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP1]], i64 48
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i64 24
-; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[TMP7]], align 8
-; CHECK-NEXT:    store double [[TMP8]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
-; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP9]], align 16
-; CHECK-NEXT:    store double [[TMP10]], ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
-; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[TMP11]], align 8
-; CHECK-NEXT:    store double [[TMP12]], ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
-; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[TMP13]], align 16
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
-; CHECK-NEXT:    store double [[TMP14]], ptr [[TMP15]], align 16
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i64 56
-; CHECK-NEXT:    [[TMP17:%.*]] = load double, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP1]], i64 40
-; CHECK-NEXT:    store double [[TMP17]], ptr [[TMP18]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
-; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[TMP19]], align 16
-; CHECK-NEXT:    store double [[TMP20]], ptr [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP9]], align 16
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x double>, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP10]], <6 x i32> <i32 2, i32 4, i32 0, i32 3, i32 5, i32 1>
+; CHECK-NEXT:    store <6 x double> [[TMP13]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 40
 ; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP1]], i64 56

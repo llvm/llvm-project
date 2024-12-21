@@ -21,11 +21,13 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -34,6 +36,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
@@ -273,8 +276,16 @@ void ProcessMinidump::RefreshStateAfterStop() {
         // No stop.
         return;
       }
+      const char *description = nullptr;
+      if (exception_stream.ExceptionRecord.ExceptionFlags ==
+          llvm::minidump::Exception::LLDB_FLAG)
+        description = reinterpret_cast<const char *>(
+            exception_stream.ExceptionRecord.ExceptionInformation);
 
-      stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo);
+      llvm::StringRef description_str(description,
+                                      Exception::MaxParameterBytes);
+      stop_info = StopInfo::CreateStopReasonWithSignal(
+          *stop_thread, signo, description_str.str().c_str());
     } else if (arch.GetTriple().getVendor() == llvm::Triple::Apple) {
       stop_info = StopInfoMachException::CreateStopReasonWithMachException(
           *stop_thread, exception_stream.ExceptionRecord.ExceptionCode, 2,
@@ -331,6 +342,16 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   triple.setArch(llvm::Triple::ArchType::x86);
   triple.setOS(llvm::Triple::OSType::Win32);
   return ArchSpec(triple);
+}
+
+DataExtractor ProcessMinidump::GetAuxvData() {
+  std::optional<llvm::ArrayRef<uint8_t>> auxv =
+      m_minidump_parser->GetStream(StreamType::LinuxAuxv);
+  if (!auxv)
+    return DataExtractor();
+
+  return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
+                       GetAddressByteSize(), GetAddressByteSize());
 }
 
 void ProcessMinidump::BuildMemoryRegions() {
@@ -534,7 +555,12 @@ void ProcessMinidump::ReadModuleList() {
 
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, load_addr, load_size);
-      GetTarget().GetImages().Append(module_sp, true /* notify */);
+      // If we haven't loaded a main executable yet, set the first module to be
+      // main executable
+      if (!GetTarget().GetExecutableModule())
+        GetTarget().SetExecutableModule(module_sp);
+      else
+        GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 
     bool load_addr_changed = false;

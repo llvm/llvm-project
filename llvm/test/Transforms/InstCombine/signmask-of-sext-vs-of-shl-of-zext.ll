@@ -121,7 +121,7 @@ define i32 @n7(i16 %x) {
 define <2 x i32> @t8(<2 x i16> %x) {
 ; CHECK-LABEL: @t8(
 ; CHECK-NEXT:    [[X_SIGNEXT:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X_SIGNEXT]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X_SIGNEXT]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %i0 = zext <2 x i16> %x to <2 x i32>
@@ -133,7 +133,7 @@ define <2 x i32> @t8(<2 x i16> %x) {
 define <2 x i32> @t9(<2 x i16> %x) {
 ; CHECK-LABEL: @t9(
 ; CHECK-NEXT:    [[I1:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[I1]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[I1]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %i0 = zext <2 x i16> %x to <2 x i32>
@@ -146,7 +146,7 @@ define <2 x i32> @t9(<2 x i16> %x) {
 define <2 x i32> @t10_undef(<2 x i16> %x) {
 ; CHECK-LABEL: @t10_undef(
 ; CHECK-NEXT:    [[I0:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[I1:%.*]] = shl nuw <2 x i32> [[I0]], <i32 16, i32 16>
+; CHECK-NEXT:    [[I1:%.*]] = shl nuw <2 x i32> [[I0]], splat (i32 16)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[I1]], <i32 -2147483648, i32 undef>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;

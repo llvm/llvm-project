@@ -756,7 +756,7 @@ The available directives are as follows:
 
 *   `ref ( input )`
 
-    -   Represents a reference to the a variable or directive, that must have
+    -   Represents a reference to a variable or directive, that must have
         already been resolved, that may be used as a parameter to a `custom`
         directive.
     -   Used to pass previously parsed entities to custom directives.

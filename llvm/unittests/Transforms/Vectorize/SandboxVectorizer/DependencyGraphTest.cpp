@@ -50,10 +50,10 @@ struct DependencyGraphTest : public testing::Test {
     return *AA;
   }
   /// \Returns true if there is a dependency: SrcN->DstN.
-  bool dependency(sandboxir::DGNode *SrcN, sandboxir::DGNode *DstN) {
-    const auto &Preds = DstN->memPreds();
-    auto It = find(Preds, SrcN);
-    return It != Preds.end();
+  bool memDependency(sandboxir::DGNode *SrcN, sandboxir::DGNode *DstN) {
+    if (auto *MemDstN = dyn_cast<sandboxir::MemDGNode>(DstN))
+      return MemDstN->hasMemPred(SrcN);
+    return false;
   }
 };
 
@@ -194,7 +194,7 @@ define void @foo(i8 %v1, ptr %ptr) {
   auto *Call = cast<sandboxir::CallInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Store)));
   EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Load)));
@@ -224,15 +224,16 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   auto Span = DAG.extend({&*BB->begin(), BB->getTerminator()});
   // Check extend().
   EXPECT_EQ(Span.top(), &*BB->begin());
   EXPECT_EQ(Span.bottom(), BB->getTerminator());
 
-  sandboxir::DGNode *N0 = DAG.getNode(S0);
-  sandboxir::DGNode *N1 = DAG.getNode(S1);
-  sandboxir::DGNode *N2 = DAG.getNode(Ret);
+  auto *N0 = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
+  auto *N1 = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *N2 = DAG.getNode(Ret);
+
   // Check getInstruction().
   EXPECT_EQ(N0->getInstruction(), S0);
   EXPECT_EQ(N1->getInstruction(), S1);
@@ -240,10 +241,76 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_TRUE(N1->hasMemPred(N0));
   EXPECT_FALSE(N0->hasMemPred(N1));
 
+  // Check preds().
+  EXPECT_TRUE(N0->preds(DAG).empty());
+  EXPECT_THAT(N1->preds(DAG), testing::ElementsAre(N0));
+
   // Check memPreds().
   EXPECT_TRUE(N0->memPreds().empty());
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
-  EXPECT_TRUE(N2->memPreds().empty());
+  EXPECT_TRUE(N2->preds(DAG).empty());
+
+  // Check UnscheduledSuccs.
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u); // N1
+  EXPECT_EQ(N1->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(N2->getNumUnscheduledSuccs(), 0u);
+
+  // Check decrUnscheduledSuccs.
+  N0->decrUnscheduledSuccs();
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 0u);
+#ifndef NDEBUG
+  EXPECT_DEATH(N0->decrUnscheduledSuccs(), ".*Counting.*");
+#endif // NDEBUG
+
+  // Check scheduled(), setScheduled().
+  EXPECT_FALSE(N0->scheduled());
+  N0->setScheduled(true);
+  EXPECT_TRUE(N0->scheduled());
+}
+
+TEST_F(DependencyGraphTest, Preds) {
+  parseIR(C, R"IR(
+declare ptr @bar(i8)
+define i8 @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v0
+  %add1 = add i8 %v1, %v1
+  %add2 = add i8 %add0, %add1
+  %ptr = call ptr @bar(i8 %add1)
+  store i8 %add2, ptr %ptr
+  ret i8 %add2
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+
+  auto *AddN0 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *AddN1 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *AddN2 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *CallN = DAG.getNode(cast<sandboxir::CallInst>(&*It++));
+  auto *StN = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
+
+  // Check preds().
+  EXPECT_THAT(AddN0->preds(DAG), testing::ElementsAre());
+  EXPECT_THAT(AddN1->preds(DAG), testing::ElementsAre());
+  EXPECT_THAT(AddN2->preds(DAG), testing::ElementsAre(AddN0, AddN1));
+  EXPECT_THAT(CallN->preds(DAG), testing::ElementsAre(AddN1));
+  EXPECT_THAT(StN->preds(DAG),
+              testing::UnorderedElementsAre(CallN, CallN, AddN2));
+  EXPECT_THAT(RetN->preds(DAG), testing::ElementsAre(AddN2));
+
+  // Check UnscheduledSuccs.
+  EXPECT_EQ(AddN0->getNumUnscheduledSuccs(), 1u); // AddN2
+  EXPECT_EQ(AddN1->getNumUnscheduledSuccs(), 2u); // AddN2, CallN
+  EXPECT_EQ(AddN2->getNumUnscheduledSuccs(), 2u); // StN, RetN
+  EXPECT_EQ(CallN->getNumUnscheduledSuccs(), 2u); // StN, StN
+  EXPECT_EQ(StN->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(RetN->getNumUnscheduledSuccs(), 0u);
 }
 
 TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
@@ -265,7 +332,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
 
   auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
@@ -299,11 +366,25 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
 
   auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
   auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+
+  // Check getTopMemDGNode().
+  using B = sandboxir::MemDGNodeIntervalBuilder;
+  using InstrInterval = sandboxir::Interval<sandboxir::Instruction>;
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(S0, S0), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(S0, Ret), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(Add0, Add1), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(Add0, Add0), DAG), nullptr);
+
+  // Check getBotMemDGNode().
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(S1, S1), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Add0, S1), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Add0, Ret), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Ret, Ret), DAG), nullptr);
 
   // Check empty range.
   EXPECT_THAT(sandboxir::MemDGNodeIntervalBuilder::makeEmpty(),
@@ -355,15 +436,17 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
-  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
+  auto *Store1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, NonAliasingStores) {
@@ -378,16 +461,18 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v0, i8 %v1) {
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
-  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
+  auto *Store1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   // We expect no dependencies because the stores don't alias.
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_TRUE(Store1N->memPreds().empty());
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, VolatileLoads) {
@@ -402,15 +487,17 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Ld0N = DAG.getNode(cast<sandboxir::LoadInst>(&*It++));
-  auto *Ld1N = DAG.getNode(cast<sandboxir::LoadInst>(&*It++));
+  auto *Ld0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::LoadInst>(&*It++)));
+  auto *Ld1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::LoadInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   EXPECT_TRUE(Ld0N->memPreds().empty());
   EXPECT_THAT(Ld1N->memPreds(), testing::ElementsAre(Ld0N));
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, VolatileSotres) {
@@ -425,15 +512,17 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v) {
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
-  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
+  auto *Store1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, Call) {
@@ -453,16 +542,16 @@ define void @foo(float %v1, float %v2) {
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
 
   auto It = BB->begin();
-  auto *Call1N = DAG.getNode(&*It++);
+  auto *Call1N = cast<sandboxir::MemDGNode>(DAG.getNode(&*It++));
   auto *AddN = DAG.getNode(&*It++);
-  auto *Call2N = DAG.getNode(&*It++);
+  auto *Call2N = cast<sandboxir::MemDGNode>(DAG.getNode(&*It++));
 
   EXPECT_THAT(Call1N->memPreds(), testing::ElementsAre());
-  EXPECT_THAT(AddN->memPreds(), testing::ElementsAre());
+  EXPECT_THAT(AddN->preds(DAG), testing::ElementsAre());
   EXPECT_THAT(Call2N->memPreds(), testing::ElementsAre(Call1N));
 }
 
@@ -485,7 +574,7 @@ define void @foo() {
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
 
   auto It = BB->begin();
@@ -493,8 +582,8 @@ define void @foo() {
   auto *AllocaN = DAG.getNode(&*It++);
   auto *StackRestoreN = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(AllocaN, StackRestoreN));
-  EXPECT_TRUE(dependency(StackSaveN, AllocaN));
+  EXPECT_TRUE(memDependency(AllocaN, StackRestoreN));
+  EXPECT_TRUE(memDependency(StackSaveN, AllocaN));
 }
 
 // Checks that stacksave and stackrestore depend on other mem instrs.
@@ -517,7 +606,7 @@ define void @foo(i8 %v0, i8 %v1, ptr %ptr) {
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
 
   auto It = BB->begin();
@@ -526,9 +615,9 @@ define void @foo(i8 %v0, i8 %v1, ptr %ptr) {
   auto *StackRestoreN = DAG.getNode(&*It++);
   auto *Store1N = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(Store0N, StackSaveN));
-  EXPECT_TRUE(dependency(StackSaveN, StackRestoreN));
-  EXPECT_TRUE(dependency(StackRestoreN, Store1N));
+  EXPECT_TRUE(memDependency(Store0N, StackSaveN));
+  EXPECT_TRUE(memDependency(StackSaveN, StackRestoreN));
+  EXPECT_TRUE(memDependency(StackRestoreN, Store1N));
 }
 
 // Make sure there is a dependency between a stackrestore and an alloca.
@@ -548,14 +637,14 @@ define void @foo(ptr %ptr) {
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
 
   auto It = BB->begin();
   auto *StackRestoreN = DAG.getNode(&*It++);
   auto *AllocaN = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(StackRestoreN, AllocaN));
+  EXPECT_TRUE(memDependency(StackRestoreN, AllocaN));
 }
 
 // Make sure there is a dependency between the alloca and stacksave
@@ -575,14 +664,14 @@ define void @foo(ptr %ptr) {
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
 
   auto It = BB->begin();
   auto *AllocaN = DAG.getNode(&*It++);
   auto *StackSaveN = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(AllocaN, StackSaveN));
+  EXPECT_TRUE(memDependency(AllocaN, StackSaveN));
 }
 
 // A non-InAlloca in a stacksave-stackrestore region does not need extra
@@ -606,7 +695,7 @@ define void @foo() {
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
 
   auto It = BB->begin();
@@ -614,6 +703,226 @@ define void @foo() {
   auto *AllocaN = DAG.getNode(&*It++);
   auto *StackRestoreN = DAG.getNode(&*It++);
 
-  EXPECT_FALSE(dependency(StackSaveN, AllocaN));
-  EXPECT_FALSE(dependency(AllocaN, StackRestoreN));
+  EXPECT_FALSE(memDependency(StackSaveN, AllocaN));
+  EXPECT_FALSE(memDependency(AllocaN, StackRestoreN));
+}
+
+TEST_F(DependencyGraphTest, Extend) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  store i8 %v4, ptr %ptr
+  store i8 %v5, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S4 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S5 = cast<sandboxir::StoreInst>(&*It++);
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  {
+    // Scenario 1: Build new DAG
+    auto NewIntvl = DAG.extend({S3, S3});
+    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S3, S3));
+    EXPECT_EQ(DAG.getInterval().top(), S3);
+    EXPECT_EQ(DAG.getInterval().bottom(), S3);
+    [[maybe_unused]] auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    // Check UnscheduledSuccs.
+    EXPECT_EQ(S3N->getNumUnscheduledSuccs(), 0u);
+  }
+  {
+    // Scenario 2: Extend below
+    auto NewIntvl = DAG.extend({S5, S5});
+    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S4, S5));
+    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+    EXPECT_TRUE(S4N->hasMemPred(S3N));
+    EXPECT_TRUE(S5N->hasMemPred(S4N));
+    EXPECT_TRUE(S5N->hasMemPred(S3N));
+    // Check UnscheduledSuccs.
+    EXPECT_EQ(S3N->getNumUnscheduledSuccs(), 2u); // S4N, S5N
+    EXPECT_EQ(S4N->getNumUnscheduledSuccs(), 1u); // S5N
+    EXPECT_EQ(S5N->getNumUnscheduledSuccs(), 0u);
+  }
+  {
+    // Scenario 3: Extend above
+    auto NewIntvl = DAG.extend({S1, S2});
+    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S1, S2));
+    auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+    auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+
+    EXPECT_TRUE(S2N->hasMemPred(S1N));
+
+    EXPECT_TRUE(S3N->hasMemPred(S2N));
+    EXPECT_TRUE(S3N->hasMemPred(S1N));
+
+    EXPECT_TRUE(S4N->hasMemPred(S3N));
+    EXPECT_TRUE(S4N->hasMemPred(S2N));
+    EXPECT_TRUE(S4N->hasMemPred(S1N));
+
+    EXPECT_TRUE(S5N->hasMemPred(S4N));
+    EXPECT_TRUE(S5N->hasMemPred(S3N));
+    EXPECT_TRUE(S5N->hasMemPred(S2N));
+    EXPECT_TRUE(S5N->hasMemPred(S1N));
+
+    // Check UnscheduledSuccs.
+    EXPECT_EQ(S1N->getNumUnscheduledSuccs(), 4u); // S2N, S3N, S4N, S5N
+    EXPECT_EQ(S2N->getNumUnscheduledSuccs(), 3u); // S3N, S4N, S5N
+    EXPECT_EQ(S3N->getNumUnscheduledSuccs(), 2u); // S4N, S5N
+    EXPECT_EQ(S4N->getNumUnscheduledSuccs(), 1u); // S5N
+    EXPECT_EQ(S5N->getNumUnscheduledSuccs(), 0u);
+  }
+
+  {
+    // Check UnscheduledSuccs when a node is scheduled
+    sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+    DAG.extend({S2, S2});
+    auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+    S2N->setScheduled(true);
+
+    DAG.extend({S1, S1});
+    auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+    EXPECT_EQ(S1N->getNumUnscheduledSuccs(), 0u); // S1 is scheduled
+  }
+}
+
+TEST_F(DependencyGraphTest, CreateInstrCallback) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, ptr noalias %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check new instruction callback.
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({S1, Ret});
+  auto *Arg = F->getArg(3);
+  auto *Ptr = S1->getPointerOperand();
+  {
+    sandboxir::StoreInst *NewS =
+        sandboxir::StoreInst::create(Arg, Ptr, Align(8), S3->getIterator(),
+                                     /*IsVolatile=*/true, Ctx);
+    auto *NewSN = DAG.getNode(NewS);
+    EXPECT_TRUE(NewSN != nullptr);
+
+    // Check the MemDGNode chain.
+    auto *S2MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+    auto *NewMemSN = cast<sandboxir::MemDGNode>(NewSN);
+    auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    EXPECT_EQ(S2MemN->getNextNode(), NewMemSN);
+    EXPECT_EQ(NewMemSN->getPrevNode(), S2MemN);
+    EXPECT_EQ(NewMemSN->getNextNode(), S3MemN);
+    EXPECT_EQ(S3MemN->getPrevNode(), NewMemSN);
+  }
+
+  {
+    // Also check if new node is at the end of the BB, after Ret.
+    sandboxir::StoreInst *NewS =
+        sandboxir::StoreInst::create(Arg, Ptr, Align(8), BB->end(),
+                                     /*IsVolatile=*/true, Ctx);
+    // Check the MemDGNode chain.
+    auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    auto *NewMemSN = cast<sandboxir::MemDGNode>(DAG.getNode(NewS));
+    EXPECT_EQ(S3MemN->getNextNode(), NewMemSN);
+    EXPECT_EQ(NewMemSN->getPrevNode(), S3MemN);
+    EXPECT_EQ(NewMemSN->getNextNode(), nullptr);
+  }
+
+  // TODO: Check the dependencies to/from NewSN after they land.
+}
+
+TEST_F(DependencyGraphTest, EraseInstrCallback) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  // Check erase instruction callback.
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({S1, S3});
+  S2->eraseFromParent();
+  auto *DeletedN = DAG.getNodeOrNull(S2);
+  EXPECT_TRUE(DeletedN == nullptr);
+
+  // Check the MemDGNode chain.
+  auto *S1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+  EXPECT_EQ(S1MemN->getNextNode(), S3MemN);
+  EXPECT_EQ(S3MemN->getPrevNode(), S1MemN);
+
+  // Check the chain when we erase the top node.
+  S1->eraseFromParent();
+  EXPECT_EQ(S3MemN->getPrevNode(), nullptr);
+
+  // TODO: Check the dependencies to/from NewSN after they land.
+}
+
+TEST_F(DependencyGraphTest, MoveInstrCallback) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, ptr %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+  %ld0 = load i8, ptr %ptr2
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Ld, S3});
+  auto *LdN = cast<sandboxir::MemDGNode>(DAG.getNode(Ld));
+  auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+  EXPECT_EQ(S1N->getPrevNode(), LdN);
+  S1->moveBefore(Ld);
+  EXPECT_EQ(S1N->getPrevNode(), nullptr);
+  EXPECT_EQ(S1N->getNextNode(), LdN);
+  EXPECT_EQ(LdN->getPrevNode(), S1N);
+  EXPECT_EQ(LdN->getNextNode(), S2N);
 }

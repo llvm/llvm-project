@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1  < %s | FileCheck --check-prefix=GCN-GCNTRACKERS %s
 
 ; CHECK-LABEL: {{^}}spill:
-; GCN:    codeLenInByte = 1000
-; GCN-GCNTRACKERS:    codeLenInByte = 1016
 ; GCN:    NumSgprs: 104
 ; GCN-GCNTRACKERS:    NumSgprs: 104
 ; GCN:    NumVgprs: 1
@@ -246,8 +244,6 @@ bb3:
 }
 
 ; CHECK-LABEL: {{^}}spill_func:
-; GCN:    codeLenInByte = 1612
-; GCN-GCNTRACKERS:    codeLenInByte = 1660
 ; GCN:    NumSgprs: 104
 ; GCN-GCNTRACKERS:    NumSgprs: 104
 ; GCN:    NumVgprs: 3

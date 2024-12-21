@@ -53,7 +53,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
-    SavedLocalInSpecExpr)
+    SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
+    IgnoreIrrelevantAttributes, Unsigned)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -63,17 +64,16 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
     LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
     FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
-    FoldingFailure, FoldingLimit, Interoperability, Bounds, Preprocessing,
-    Scanning, OpenAccUsage, ProcPointerCompatibility, VoidMold,
-    KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
+    FoldingFailure, FoldingLimit, Interoperability, CharacterInteroperability,
+    Bounds, Preprocessing, Scanning, OpenAccUsage, ProcPointerCompatibility,
+    VoidMold, KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
     IgnoreTKRUsage, ExternalInterfaceMismatch, DefinedOperatorArgs, Final,
-    ZeroDoStep, UnusedForallIndex, OpenMPUsage, ModuleFile, DataLength,
-    IgnoredDirective, HomonymousSpecific, HomonymousResult,
-    IgnoredIntrinsicFunctionType, PreviousScalarUse,
-    RedeclaredInaccessibleComponent, ImplicitShared, IndexVarRedefinition,
-    IncompatibleImplicitInterfaces, BadTypeForTarget,
+    ZeroDoStep, UnusedForallIndex, OpenMPUsage, DataLength, IgnoredDirective,
+    HomonymousSpecific, HomonymousResult, IgnoredIntrinsicFunctionType,
+    PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
+    IndexVarRedefinition, IncompatibleImplicitInterfaces, BadTypeForTarget,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
-    MismatchingDummyProcedure)
+    MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

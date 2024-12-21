@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // A header file for containing functionallity that is used across Flang tools,
 // such as helper functions which apply or generate information needed accross
-// tools like bbc and flang-new.
+// tools like bbc and flang.
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
@@ -122,7 +122,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
-  bool NSWOnLoopVarInc = false; ///< Add nsw flag to loop variable increments.
+  bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenMP = false; ///< Enable OpenMP lowering.
 };
 
 struct OffloadModuleOpts {

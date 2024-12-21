@@ -375,7 +375,7 @@ mlir::LogicalResult AllocationAnalysis::visitOperation(
     }
   } else if (mlir::isa<fir::ResultOp>(op)) {
     mlir::Operation *parent = op->getParentOp();
-    LatticePoint *parentLattice = getLattice(parent);
+    LatticePoint *parentLattice = getLattice(getProgramPointAfter(parent));
     assert(parentLattice);
     mlir::ChangeResult parentChanged = parentLattice->join(*after);
     propagateIfChanged(parentLattice, parentChanged);
@@ -396,28 +396,29 @@ void AllocationAnalysis::setToEntryState(LatticePoint *lattice) {
 /// Mostly a copy of AbstractDenseLattice::processOperation - the difference
 /// being that call operations are passed through to the transfer function
 mlir::LogicalResult AllocationAnalysis::processOperation(mlir::Operation *op) {
+  mlir::ProgramPoint *point = getProgramPointAfter(op);
   // If the containing block is not executable, bail out.
-  if (!getOrCreateFor<mlir::dataflow::Executable>(op, op->getBlock())->isLive())
+  if (op->getBlock() != nullptr &&
+      !getOrCreateFor<mlir::dataflow::Executable>(
+           point, getProgramPointBefore(op->getBlock()))
+           ->isLive())
     return mlir::success();
 
   // Get the dense lattice to update
-  mlir::dataflow::AbstractDenseLattice *after = getLattice(op);
+  mlir::dataflow::AbstractDenseLattice *after = getLattice(point);
 
   // If this op implements region control-flow, then control-flow dictates its
   // transfer function.
   if (auto branch = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-    visitRegionBranchOperation(op, branch, after);
+    visitRegionBranchOperation(point, branch, after);
     return mlir::success();
   }
 
   // pass call operations through to the transfer function
 
   // Get the dense state before the execution of the op.
-  const mlir::dataflow::AbstractDenseLattice *before;
-  if (mlir::Operation *prev = op->getPrevNode())
-    before = getLatticeFor(op, prev);
-  else
-    before = getLatticeFor(op, op->getBlock());
+  const mlir::dataflow::AbstractDenseLattice *before =
+      getLatticeFor(point, getProgramPointBefore(op));
 
   /// Invoke the operation transfer function
   return visitOperationImpl(op, *before, after);
@@ -452,9 +453,10 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     return mlir::failure();
   }
 
-  LatticePoint point{func};
+  LatticePoint point{solver.getProgramPointAfter(func)};
   auto joinOperationLattice = [&](mlir::Operation *op) {
-    const LatticePoint *lattice = solver.lookupState<LatticePoint>(op);
+    const LatticePoint *lattice =
+        solver.lookupState<LatticePoint>(solver.getProgramPointAfter(op));
     // there will be no lattice for an unreachable block
     if (lattice)
       (void)point.join(*lattice);
@@ -791,8 +793,8 @@ void StackArraysPass::runOnOperation() {
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
-  if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,
-                                                std::move(patterns), config))) {
+  if (mlir::failed(mlir::applyOpPatternsGreedily(
+          opsToConvert, std::move(patterns), config))) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }

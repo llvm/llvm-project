@@ -89,7 +89,6 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -336,8 +335,8 @@ static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
   BasicBlock *Entry = &Func->getEntryBlock();
   IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
-  Function *Decl =
-      Intrinsic::getDeclaration(Func->getParent(), Intrinsic::donothing, {});
+  Function *Decl = Intrinsic::getOrInsertDeclaration(Func->getParent(),
+                                                     Intrinsic::donothing, {});
 
   Value *UseInstance[1] = {
       Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
@@ -358,7 +357,6 @@ void AMDGPUSwLowerLDS::buildSwLDSGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwLDS->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
@@ -377,7 +375,6 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwDynLDS->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::populateSwLDSAttributeAndMetadata(Function *Func) {
@@ -496,7 +493,6 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwLDSMetadata->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::populateLDSToReplacementIndicesMap(Function *Func) {
@@ -522,7 +518,6 @@ void AMDGPUSwLowerLDS::populateLDSToReplacementIndicesMap(Function *Func) {
   PopulateIndices(LDSParams.IndirectAccess.StaticLDSGlobals, Idx);
   PopulateIndices(LDSParams.DirectAccess.DynamicLDSGlobals, Idx);
   PopulateIndices(LDSParams.IndirectAccess.DynamicLDSGlobals, Idx);
-  return;
 }
 
 static void replacesUsesOfGlobalInFunction(Function *Func, GlobalVariable *GV,
@@ -921,8 +916,8 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
-  Value *ReturnAddr = IRB.CreateCall(
-      Intrinsic::getDeclaration(&M, Intrinsic::returnaddress), IRB.getInt32(0));
+  Value *ReturnAddr =
+      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
   Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
   Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
   IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
@@ -1055,9 +1050,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
   SetVector<Instruction *> LDSInstructions;
   getLDSMemoryInstructions(Func, LDSInstructions);
 
-  Function *Decl =
-      Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
-  auto *KernelId = IRB.CreateCall(Decl, {});
+  auto *KernelId = IRB.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
   GlobalVariable *LDSBaseTable = NKLDSParams.LDSBaseTable;
   GlobalVariable *LDSOffsetTable = NKLDSParams.LDSOffsetTable;
   auto &OrdereLDSGlobals = NKLDSParams.OrdereLDSGlobals;
@@ -1120,7 +1113,6 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
                                   false, &Offset, &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
   AsanInfo.Offset = Offset;
-  return;
 }
 
 bool AMDGPUSwLowerLDS::run() {

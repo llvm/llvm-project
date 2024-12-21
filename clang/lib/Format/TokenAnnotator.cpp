@@ -492,7 +492,8 @@ private:
             ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||
              (CurrentToken->Next->is(tok::l_square) &&
-              Line.MustBeDeclaration))) {
+              (Line.MustBeDeclaration ||
+               (PrevNonComment && PrevNonComment->isTypeName(LangOpts)))))) {
           OpeningParen.setType(OpeningParen.Next->is(tok::caret)
                                    ? TT_ObjCBlockLParen
                                    : TT_FunctionTypeLParen);
@@ -1175,26 +1176,19 @@ private:
 
     ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
     Contexts.back().ColonIsDictLiteral = true;
-
-    const auto *Prev = OpeningBrace.getPreviousNonComment();
-
-    if (OpeningBrace.is(BK_BracedInit)) {
+    if (OpeningBrace.is(BK_BracedInit))
       Contexts.back().IsExpression = true;
-      if (Prev) {
-        for (auto *Tok = Prev->Previous; Tok && Tok->isPointerOrReference();
-             Tok = Tok->Previous) {
-          Tok->setFinalizedType(TT_PointerOrReference);
-        }
-      }
-    }
-
-    if (Style.isJavaScript() && Prev && Prev->is(TT_JsTypeColon))
+    if (Style.isJavaScript() && OpeningBrace.Previous &&
+        OpeningBrace.Previous->is(TT_JsTypeColon)) {
       Contexts.back().IsExpression = false;
-
+    }
+    if (Style.isVerilog() &&
+        (!OpeningBrace.getPreviousNonComment() ||
+         OpeningBrace.getPreviousNonComment()->isNot(Keywords.kw_apostrophe))) {
+      Contexts.back().VerilogMayBeConcatenation = true;
+    }
     if (Style.isTableGen())
       Contexts.back().ColonIsDictLiteral = false;
-    else if (Style.isVerilog() && !(Prev && Prev->is(Keywords.kw_apostrophe)))
-      Contexts.back().VerilogMayBeConcatenation = true;
 
     unsigned CommaCount = 0;
     while (CurrentToken) {
@@ -1266,7 +1260,7 @@ private:
 
   bool parseConditional() {
     while (CurrentToken) {
-      if (CurrentToken->is(tok::colon)) {
+      if (CurrentToken->is(tok::colon) && CurrentToken->is(TT_Unknown)) {
         CurrentToken->setType(TT_ConditionalExpr);
         next();
         return true;
@@ -1551,7 +1545,8 @@ private:
           // Case D.
           if (Keywords.isVerilogIdentifier(*Prev) && PrevPrev->is(tok::comma)) {
             const FormatToken *PrevParen = PrevPrev->getPreviousNonComment();
-            if (PrevParen->is(tok::r_paren) && PrevParen->MatchingParen &&
+            if (PrevParen && PrevParen->is(tok::r_paren) &&
+                PrevParen->MatchingParen &&
                 PrevParen->MatchingParen->is(TT_VerilogInstancePortLParen)) {
               return true;
             }
@@ -1560,7 +1555,7 @@ private:
         };
 
         if (IsInstancePort())
-          Tok->setFinalizedType(TT_VerilogInstancePortLParen);
+          Tok->setType(TT_VerilogInstancePortLParen);
       }
 
       if (!parseParens())
@@ -1736,7 +1731,7 @@ private:
         Tok->setType(TT_InheritanceComma);
         break;
       case Context::VerilogInstancePortList:
-        Tok->setFinalizedType(TT_VerilogInstancePortComma);
+        Tok->setType(TT_VerilogInstancePortComma);
         break;
       default:
         if (Style.isVerilog() && Contexts.size() == 1 &&
@@ -2409,7 +2404,8 @@ private:
       // not auto operator->() -> xxx;
       Current.setType(TT_TrailingReturnArrow);
     } else if (Current.is(tok::arrow) && Current.Previous &&
-               Current.Previous->is(tok::r_brace)) {
+               Current.Previous->is(tok::r_brace) &&
+               Current.Previous->is(BK_Block)) {
       // Concept implicit conversion constraint needs to be treated like
       // a trailing return type  ... } -> <type>.
       Current.setType(TT_TrailingReturnArrow);
@@ -3907,6 +3903,11 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
 }
 
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
+  if (Line.Computed)
+    return;
+
+  Line.Computed = true;
+
   for (AnnotatedLine *ChildLine : Line.Children)
     calculateFormattingInformation(*ChildLine);
 
@@ -5515,8 +5516,10 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                                      const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
-  if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
+  if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0 &&
+      (!Style.RemoveEmptyLinesInUnwrappedLines || &Right == Line.First)) {
     return true;
+  }
 
   if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
       Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&
@@ -6109,6 +6112,35 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
   }
 
+  // We can break before an r_brace if there was a break after the matching
+  // l_brace, which is tracked by BreakBeforeClosingBrace, or if we are in a
+  // block-indented initialization list.
+  if (Right.is(tok::r_brace)) {
+    return Right.MatchingParen && (Right.MatchingParen->is(BK_Block) ||
+                                   (Right.isBlockIndentedInitRBrace(Style)));
+  }
+
+  // We only break before r_paren if we're in a block indented context.
+  if (Right.is(tok::r_paren)) {
+    if (Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent ||
+        !Right.MatchingParen) {
+      return false;
+    }
+    auto Next = Right.Next;
+    if (Next && Next->is(tok::r_paren))
+      Next = Next->Next;
+    if (Next && Next->is(tok::l_paren))
+      return false;
+    const FormatToken *Previous = Right.MatchingParen->Previous;
+    return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
+  }
+
+  if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
+      Right.is(TT_TrailingAnnotation) &&
+      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+    return false;
+  }
+
   if (Left.is(tok::at))
     return false;
   if (Left.Tok.getObjCKeywordID() == tok::objc_interface)
@@ -6261,34 +6293,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   if (Right.is(tok::r_square) && Right.MatchingParen &&
       Right.MatchingParen->is(TT_LambdaLSquare)) {
-    return false;
-  }
-
-  // We only break before r_brace if there was a corresponding break before
-  // the l_brace, which is tracked by BreakBeforeClosingBrace.
-  if (Right.is(tok::r_brace)) {
-    return Right.MatchingParen && (Right.MatchingParen->is(BK_Block) ||
-                                   (Right.isBlockIndentedInitRBrace(Style)));
-  }
-
-  // We only break before r_paren if we're in a block indented context.
-  if (Right.is(tok::r_paren)) {
-    if (Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent ||
-        !Right.MatchingParen) {
-      return false;
-    }
-    auto Next = Right.Next;
-    if (Next && Next->is(tok::r_paren))
-      Next = Next->Next;
-    if (Next && Next->is(tok::l_paren))
-      return false;
-    const FormatToken *Previous = Right.MatchingParen->Previous;
-    return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
-  }
-
-  if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
-      Right.is(TT_TrailingAnnotation) &&
-      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
     return false;
   }
 

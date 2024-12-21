@@ -5,7 +5,7 @@
 ; block to the enclosing loop and not get confused by the unreachable
 ; bogus loop entry.
 
-define void @is_extract_cab() nounwind {
+define void @is_extract_cab(i1 %arg) nounwind {
 entry:
   br label %header
 
@@ -13,7 +13,7 @@ header:                                       ; preds = %if.end206, %cond.end66,
   br label %while.body115
 
 while.body115:                                    ; preds = %9, %if.end192, %if.end101
-  br i1 undef, label %header, label %while.body115
+  br i1 %arg, label %header, label %while.body115
 
 foo:
   br label %while.body115

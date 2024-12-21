@@ -207,8 +207,8 @@ feature_test_macros = [
             "name": "__cpp_lib_barrier",
             "values": {"c++20": 201907},
             "headers": ["barrier"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_bind_back",
@@ -280,7 +280,7 @@ feature_test_macros = [
                 "string_view",
             ],
             "test_suite_guard": "defined(__cpp_char8_t)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_CHAR8_T)",
+            "libcxx_guard": "_LIBCPP_HAS_CHAR8_T",
         },
         {
             "name": "__cpp_lib_chrono",
@@ -502,8 +502,8 @@ feature_test_macros = [
             "name": "__cpp_lib_filesystem",
             "values": {"c++17": 201703},
             "headers": ["filesystem"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
+            "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
         },
         {
             "name": "__cpp_lib_format",
@@ -619,8 +619,8 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION)",
+            "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION",
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -809,15 +809,15 @@ feature_test_macros = [
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_latch",
             "values": {"c++20": 201907},
             "headers": ["latch"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_launder",
@@ -942,7 +942,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_optional",
-            "values": {"c++17": 201606, "c++23": 202110},
+            "values": {
+                "c++17": 201606,
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
+            },
             "headers": ["optional"],
         },
         {
@@ -994,8 +998,8 @@ feature_test_macros = [
             "name": "__cpp_lib_quoted_string_io",
             "values": {"c++14": 201304},
             "headers": ["iomanip"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION",
+            "libcxx_guard": "_LIBCPP_HAS_LOCALIZATION",
         },
         {
             "name": "__cpp_lib_ranges",
@@ -1143,15 +1147,15 @@ feature_test_macros = [
             "name": "__cpp_lib_scoped_lock",
             "values": {"c++17": 201703},
             "headers": ["mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_semaphore",
             "values": {"c++20": 201907},
             "headers": ["semaphore"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_senders",
@@ -1163,8 +1167,8 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_mutex",
             "values": {"c++17": 201505},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_shared_ptr_arrays",
@@ -1180,8 +1184,8 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_timed_mutex",
             "values": {"c++14": 201402},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_shift",
@@ -1192,7 +1196,6 @@ feature_test_macros = [
             "name": "__cpp_lib_smart_ptr_for_overwrite",
             "values": {"c++20": 202002},
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_smart_ptr_owner_equality",
@@ -1406,8 +1409,8 @@ feature_test_macros = [
             "name": "__cpp_lib_variant",
             "values": {
                 "c++17": 202102,  # std::visit for classes derived from std::variant
-                # "c++20": 202106,  # Fully constexpr std::variant
-                # "c++26": 202306,  # Member visit (implemented)
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++26": 202306,  # P2637R3 Member visit
             },
             "headers": ["variant"],
         },
@@ -1626,15 +1629,20 @@ def produce_version_header():
 
 */
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/version>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 // clang-format off
 
 {cxx_macros}
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 // clang-format on
 
@@ -2227,8 +2235,8 @@ class FeatureTestMacros:
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_VERSION
-#define _LIBCPP_VERSION
+#ifndef _LIBCPP_VERSIONH
+#define _LIBCPP_VERSIONH
 
 #include <__config>
 
@@ -2238,7 +2246,7 @@ class FeatureTestMacros:
 
 {feature_test_macros}
 
-#endif // _LIBCPP_VERSION
+#endif // _LIBCPP_VERSIONH
 """
         return template.format(
             feature_test_macros=generate_version_header_implementation(

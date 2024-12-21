@@ -38,7 +38,7 @@ void test1(int x) {
 }
 
 int a, b, c, d, e;
-void test2() {
+void test2(void) {
 
   if (a == 0)
     return;
@@ -50,31 +50,10 @@ void test2() {
   b = d;
   a -= d;
 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+
   if (a != 0)
     return;
 
-  clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
-
-  /* The BASELINE passes these checks ('wrning' is used to avoid lit to match)
-  // The parent state is already infeasible, look at this contradiction:
-  clang_analyzer_eval(b > 0);  // expected-wrning{{FALSE}}
-  clang_analyzer_eval(b <= 0); // expected-wrning{{FALSE}}
-  // Crashes with expensive checks.
-  if (b > 0) {
-    clang_analyzer_warnIfReached(); // no-warning, OK
-    return;
-  }
-  // Should not be reachable.
-  clang_analyzer_warnIfReached(); // expected-wrning{{REACHABLE}}
-  */
-
-  // The parent state is already infeasible, but we realize that only if b is
-  // constrained.
-  clang_analyzer_eval(b > 0);  // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(b <= 0); // expected-warning{{UNKNOWN}}
-  if (b > 0) {
-    clang_analyzer_warnIfReached(); // no-warning
-    return;
-  }
-  clang_analyzer_warnIfReached(); // no-warning
+  clang_analyzer_warnIfReached(); // no-warning: Unreachable due to contradiction.
 }

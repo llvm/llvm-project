@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
-#include "Opcode.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -33,7 +32,7 @@ const void *Program::getNativePointer(unsigned Idx) {
   return NativePointers[Idx];
 }
 
-unsigned Program::createGlobalString(const StringLiteral *S) {
+unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   const size_t CharWidth = S->getCharByteWidth();
   const size_t BitWidth = CharWidth * Ctx.getCharBit();
 
@@ -52,12 +51,15 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
     llvm_unreachable("unsupported character width");
   }
 
+  if (!Base)
+    Base = S;
+
   // Create a descriptor for the string.
-  Descriptor *Desc =
-      allocateDescriptor(S, CharType, Descriptor::GlobalMD, S->getLength() + 1,
-                         /*isConst=*/true,
-                         /*isTemporary=*/false,
-                         /*isMutable=*/false);
+  Descriptor *Desc = allocateDescriptor(Base, CharType, Descriptor::GlobalMD,
+                                        S->getLength() + 1,
+                                        /*isConst=*/true,
+                                        /*isTemporary=*/false,
+                                        /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -144,7 +146,7 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateDummy(const DeclTy &D) {
+unsigned Program::getOrCreateDummy(const DeclTy &D) {
   assert(D);
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyVariables.find(D.getOpaqueValue());
@@ -156,7 +158,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const DeclTy &D) {
   if (const auto *E = D.dyn_cast<const Expr *>()) {
     QT = E->getType();
   } else {
-    const ValueDecl *VD = cast<ValueDecl>(D.get<const Decl *>());
+    const ValueDecl *VD = cast<ValueDecl>(cast<const Decl *>(D));
     IsWeak = VD->isWeak();
     QT = VD->getType();
     if (const auto *RT = QT->getAs<ReferenceType>())
@@ -396,10 +398,10 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
   }
 
   // Arrays.
-  if (const auto ArrayType = Ty->getAsArrayTypeUnsafe()) {
+  if (const auto *ArrayType = Ty->getAsArrayTypeUnsafe()) {
     QualType ElemTy = ArrayType->getElementType();
     // Array of well-known bounds.
-    if (auto CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
       size_t NumElems = CAT->getZExtSize();
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.

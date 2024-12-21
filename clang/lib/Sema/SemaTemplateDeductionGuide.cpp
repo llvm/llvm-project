@@ -21,10 +21,10 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -43,7 +43,6 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -70,8 +69,8 @@ public:
   ExtractTypeForDeductionGuide(
       Sema &SemaRef,
       llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,
-      ClassTemplateDecl *NestedPattern,
-      const MultiLevelTemplateArgumentList *OuterInstantiationArgs)
+      ClassTemplateDecl *NestedPattern = nullptr,
+      const MultiLevelTemplateArgumentList *OuterInstantiationArgs = nullptr)
       : Base(SemaRef), MaterializedTypedefs(MaterializedTypedefs),
         NestedPattern(NestedPattern),
         OuterInstantiationArgs(OuterInstantiationArgs) {
@@ -637,8 +636,7 @@ private:
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     const TemplateParameterList *TemplateParamsList,
     ArrayRef<TemplateArgument> DeducedArgs) {
-  struct TemplateParamsReferencedFinder
-      : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
+  struct TemplateParamsReferencedFinder : DynamicRecursiveASTVisitor {
     const TemplateParameterList *TemplateParamList;
     llvm::BitVector ReferencedTemplateParams;
 
@@ -647,22 +645,22 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
         : TemplateParamList(TemplateParamList),
           ReferencedTemplateParams(TemplateParamList->size()) {}
 
-    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
+    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) override {
       // We use the index and depth to retrieve the corresponding template
       // parameter from the parameter list, which is more robost.
       Mark(TTP->getDepth(), TTP->getIndex());
       return true;
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
       MarkAppeared(DRE->getFoundDecl());
       return true;
     }
 
-    bool TraverseTemplateName(TemplateName Template) {
+    bool TraverseTemplateName(TemplateName Template) override {
       if (auto *TD = Template.getAsTemplateDecl())
         MarkAppeared(TD);
-      return RecursiveASTVisitor::TraverseTemplateName(Template);
+      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     }
 
     void MarkAppeared(NamedDecl *ND) {
@@ -765,7 +763,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
   }
   // Template arguments used to transform the template arguments in
   // DeducedResults.
-  SmallVector<TemplateArgument> InnerArgsForBuildingRC(
+  SmallVector<TemplateArgument> TemplateArgsForBuildingRC(
       F->getTemplateParameters()->size());
   // Transform the transformed template args
   MultiLevelTemplateArgumentList Args;
@@ -778,30 +776,33 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
       NamedDecl *TP = F->getTemplateParameters()->getParam(Index);
       MultiLevelTemplateArgumentList Args;
       Args.setKind(TemplateSubstitutionKind::Rewrite);
-      Args.addOuterTemplateArguments(InnerArgsForBuildingRC);
+      Args.addOuterTemplateArguments(TemplateArgsForBuildingRC);
       // Rebuild the template parameter with updated depth and index.
       NamedDecl *NewParam =
           transformTemplateParameter(SemaRef, F->getDeclContext(), TP, Args,
                                      /*NewIndex=*/FirstUndeducedParamIdx,
                                      getDepthAndIndex(TP).first + AdjustDepth);
       FirstUndeducedParamIdx += 1;
-      assert(InnerArgsForBuildingRC[Index].isNull());
-      InnerArgsForBuildingRC[Index] = Context.getInjectedTemplateArg(NewParam);
+      assert(TemplateArgsForBuildingRC[Index].isNull());
+      TemplateArgsForBuildingRC[Index] =
+          Context.getInjectedTemplateArg(NewParam);
       continue;
     }
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
     TemplateArgumentLoc Output;
     if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
-      assert(InnerArgsForBuildingRC[Index].isNull() &&
+      assert(TemplateArgsForBuildingRC[Index].isNull() &&
              "InstantiatedArgs must be null before setting");
-      InnerArgsForBuildingRC[Index] = Output.getArgument();
+      TemplateArgsForBuildingRC[Index] = Output.getArgument();
     }
   }
 
-  // A list of template arguments for transforming the require-clause using
-  // the transformed template arguments as the template argument list of F.
-  //
+  // A list of template arguments for transforming the require-clause of F.
+  // It must contain the entire set of template argument lists.
+  MultiLevelTemplateArgumentList ArgsForBuildingRC;
+  ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
+  ArgsForBuildingRC.addOuterTemplateArguments(TemplateArgsForBuildingRC);
   // For 2), if the underlying deduction guide F is nested in a class template,
   // we need the entire template argument list, as the constraint AST in the
   // require-clause of F remains completely uninstantiated.
@@ -824,15 +825,25 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
   //   - The occurrence of U in the function parameter is [depth:0, index:0]
   //   - The template parameter of U is [depth:0, index:0]
   //
+  // We add the outer template arguments which is [int] to the multi-level arg
+  // list to ensure that the occurrence U in `C<U>` will be replaced with int
+  // during the substitution.
+  //
   // NOTE: The underlying deduction guide F is instantiated -- either from an
   // explicitly-written deduction guide member, or from a constructor.
-  MultiLevelTemplateArgumentList ArgsForBuildingRC =
-      SemaRef.getTemplateInstantiationArgs(F, F->getLexicalDeclContext(),
-                                           /*Final=*/false,
-                                           /*Innermost=*/InnerArgsForBuildingRC,
-                                           /*RelativeToPrimary=*/true,
-                                           /*ForConstraintInstantiation=*/true);
-  ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
+  // getInstantiatedFromMemberTemplate() can only handle the former case, so we
+  // check the DeclContext kind.
+  if (F->getLexicalDeclContext()->getDeclKind() ==
+      clang::Decl::ClassTemplateSpecialization) {
+    auto OuterLevelArgs = SemaRef.getTemplateInstantiationArgs(
+        F, F->getLexicalDeclContext(),
+        /*Final=*/false, /*Innermost=*/std::nullopt,
+        /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr,
+        /*ForConstraintInstantiation=*/true);
+    for (auto It : OuterLevelArgs)
+      ArgsForBuildingRC.addOuterTemplateArguments(It.Args);
+  }
 
   ExprResult E = SemaRef.SubstExpr(RC, ArgsForBuildingRC);
   if (E.isInvalid())
@@ -1215,10 +1226,25 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate).first;
   if (!RHSTemplate)
     return nullptr;
+
+  llvm::SmallVector<TypedefNameDecl *> TypedefDecls;
+  llvm::SmallVector<QualType> NewParamTypes;
+  ExtractTypeForDeductionGuide TypeAliasTransformer(SemaRef, TypedefDecls);
+  for (QualType P : ParamTypes) {
+    QualType Type = TypeAliasTransformer.TransformType(P);
+    if (Type.isNull())
+      return nullptr;
+    NewParamTypes.push_back(Type);
+  }
+
   auto *RHSDeductionGuide = SemaRef.DeclareAggregateDeductionGuideFromInitList(
-      RHSTemplate, ParamTypes, Loc);
+      RHSTemplate, NewParamTypes, Loc);
   if (!RHSDeductionGuide)
     return nullptr;
+
+  for (TypedefNameDecl *TD : TypedefDecls)
+    TD->setDeclContext(RHSDeductionGuide->getTemplatedDecl());
+
   return BuildDeductionGuideForTypeAlias(SemaRef, AliasTemplate,
                                          RHSDeductionGuide, Loc);
 }
@@ -1373,7 +1399,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   //    additional function template derived as above from a hypothetical
   //    constructor C().
   if (!AddedAny)
-    Transform.buildSimpleDeductionGuide(std::nullopt);
+    Transform.buildSimpleDeductionGuide({});
 
   //    -- An additional function template derived as above from a hypothetical
   //    constructor C(C), called the copy deduction candidate.

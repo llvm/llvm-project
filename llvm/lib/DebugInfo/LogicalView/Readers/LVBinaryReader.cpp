@@ -87,20 +87,20 @@ LVSectionIndex LVSymbolTable::update(LVScope *Function) {
 
 const LVSymbolTableEntry &LVSymbolTable::getEntry(StringRef Name) {
   static LVSymbolTableEntry Empty = LVSymbolTableEntry();
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second : Empty;
 }
 LVAddress LVSymbolTable::getAddress(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.Address : 0;
 }
 LVSectionIndex LVSymbolTable::getIndex(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.SectionIndex
                                    : getReader().getDotTextSectionIndex();
 }
 bool LVSymbolTable::getIsComdat(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.IsComdat : false;
 }
 

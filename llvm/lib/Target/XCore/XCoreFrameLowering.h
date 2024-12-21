@@ -46,8 +46,6 @@ namespace llvm {
     eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I) const override;
 
-    bool hasFP(const MachineFunction &MF) const override;
-
     void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                               RegScavenger *RS = nullptr) const override;
 
@@ -58,6 +56,9 @@ namespace llvm {
     static int stackSlotSize() {
       return 4;
     }
+
+  protected:
+    bool hasFPImpl(const MachineFunction &MF) const override;
   };
 }
 

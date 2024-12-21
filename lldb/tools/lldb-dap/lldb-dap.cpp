@@ -7,20 +7,52 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "FifoFiles.h"
+#include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "OutputRedirector.h"
+#include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
+#include "lldb/Host/Config.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Base64.h"
-
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <memory>
 #include <optional>
+#include <set>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <thread>
+#include <vector>
+
 #if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
@@ -41,40 +73,6 @@
 #include <sys/prctl.h>
 #endif
 
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <fstream>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <set>
-#include <sstream>
-#include <thread>
-#include <vector>
-
-#include "lldb/API/SBEnvironment.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/Host/Config.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Option/Arg.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
-#include "llvm/Option/Option.h"
-#include "llvm/Support/Errno.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
-#include "OutputRedirector.h"
-
 #if defined(_WIN32)
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -94,12 +92,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -108,7 +107,9 @@ static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 };
 class LLDBDAPOptTable : public llvm::opt::GenericOptTable {
 public:
-  LLDBDAPOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
+  LLDBDAPOptTable()
+      : llvm::opt::GenericOptTable(OptionStrTable, OptionPrefixesTable,
+                                   InfoTable, true) {}
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
@@ -120,34 +121,34 @@ constexpr int StackPageSize = 20;
 
 /// Prints a welcome message on the editor if the preprocessor variable
 /// LLDB_DAP_WELCOME_MESSAGE is defined.
-static void PrintWelcomeMessage() {
+static void PrintWelcomeMessage(DAP &dap) {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
-  g_dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
+  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
 }
 
-lldb::SBValueList *GetTopLevelScope(int64_t variablesReference) {
+lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
   switch (variablesReference) {
   case VARREF_LOCALS:
-    return &g_dap.variables.locals;
+    return &dap.variables.locals;
   case VARREF_GLOBALS:
-    return &g_dap.variables.globals;
+    return &dap.variables.globals;
   case VARREF_REGS:
-    return &g_dap.variables.registers;
+    return &dap.variables.registers;
   default:
     return nullptr;
   }
 }
 
-SOCKET AcceptConnection(int portno) {
+SOCKET AcceptConnection(DAP &dap, int portno) {
   // Accept a socket connection from any host on "portno".
   SOCKET newsockfd = -1;
   struct sockaddr_in serv_addr, cli_addr;
   SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
-    if (g_dap.log)
-      *g_dap.log << "error: opening socket (" << strerror(errno) << ")"
-                 << std::endl;
+    if (dap.log)
+      *dap.log << "error: opening socket (" << strerror(errno) << ")"
+               << std::endl;
   } else {
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -155,9 +156,9 @@ SOCKET AcceptConnection(int portno) {
     serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      if (g_dap.log)
-        *g_dap.log << "error: binding socket (" << strerror(errno) << ")"
-                   << std::endl;
+      if (dap.log)
+        *dap.log << "error: binding socket (" << strerror(errno) << ")"
+                 << std::endl;
     } else {
       listen(sockfd, 5);
       socklen_t clilen = sizeof(cli_addr);
@@ -165,9 +166,8 @@ SOCKET AcceptConnection(int portno) {
           llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
                                       (struct sockaddr *)&cli_addr, &clilen);
       if (newsockfd < 0)
-        if (g_dap.log)
-          *g_dap.log << "error: accept (" << strerror(errno) << ")"
-                     << std::endl;
+        if (dap.log)
+          *dap.log << "error: accept (" << strerror(errno) << ")" << std::endl;
     }
 #if defined(_WIN32)
     closesocket(sockfd);
@@ -191,66 +191,65 @@ std::vector<const char *> MakeArgv(const llvm::ArrayRef<std::string> &strs) {
 }
 
 // Send a "exited" event to indicate the process has exited.
-void SendProcessExitedEvent(lldb::SBProcess &process) {
+void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
   llvm::json::Object event(CreateEventObject("exited"));
   llvm::json::Object body;
   body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
   event.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-void SendThreadExitedEvent(lldb::tid_t tid) {
+void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   llvm::json::Object event(CreateEventObject("thread"));
   llvm::json::Object body;
   body.try_emplace("reason", "exited");
   body.try_emplace("threadId", (int64_t)tid);
   event.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
 // Send a "continued" event to indicate the process is in the running state.
-void SendContinuedEvent() {
-  lldb::SBProcess process = g_dap.target.GetProcess();
+void SendContinuedEvent(DAP &dap) {
+  lldb::SBProcess process = dap.target.GetProcess();
   if (!process.IsValid()) {
     return;
   }
 
   // If the focus thread is not set then we haven't reported any thread status
   // to the client, so nothing to report.
-  if (!g_dap.configuration_done_sent ||
-      g_dap.focus_tid == LLDB_INVALID_THREAD_ID) {
+  if (!dap.configuration_done_sent || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
     return;
   }
 
   llvm::json::Object event(CreateEventObject("continued"));
   llvm::json::Object body;
-  body.try_emplace("threadId", (int64_t)g_dap.focus_tid);
+  body.try_emplace("threadId", (int64_t)dap.focus_tid);
   body.try_emplace("allThreadsContinued", true);
   event.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
 // Send a "terminated" event to indicate the process is done being
 // debugged.
-void SendTerminatedEvent() {
+void SendTerminatedEvent(DAP &dap) {
   // Prevent races if the process exits while we're being asked to disconnect.
-  llvm::call_once(g_dap.terminated_event_flag, [&] {
-    g_dap.RunTerminateCommands();
+  llvm::call_once(dap.terminated_event_flag, [&] {
+    dap.RunTerminateCommands();
     // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject());
-    g_dap.SendJSON(llvm::json::Value(std::move(event)));
+    llvm::json::Object event(CreateTerminatedEventObject(dap.target));
+    dap.SendJSON(llvm::json::Value(std::move(event)));
   });
 }
 
 // Send a thread stopped event for all threads as long as the process
 // is stopped.
-void SendThreadStoppedEvent() {
-  lldb::SBProcess process = g_dap.target.GetProcess();
+void SendThreadStoppedEvent(DAP &dap) {
+  lldb::SBProcess process = dap.target.GetProcess();
   if (process.IsValid()) {
     auto state = process.GetState();
     if (state == lldb::eStateStopped) {
       llvm::DenseSet<lldb::tid_t> old_thread_ids;
-      old_thread_ids.swap(g_dap.thread_ids);
+      old_thread_ids.swap(dap.thread_ids);
       uint32_t stop_id = process.GetStopID();
       const uint32_t num_threads = process.GetNumThreads();
 
@@ -266,10 +265,10 @@ void SendThreadStoppedEvent() {
         const lldb::tid_t tid = thread.GetThreadID();
         const bool has_reason = ThreadHasStopReason(thread);
         // If the focus thread doesn't have a stop reason, clear the thread ID
-        if (tid == g_dap.focus_tid) {
+        if (tid == dap.focus_tid) {
           focus_thread_exists = true;
           if (!has_reason)
-            g_dap.focus_tid = LLDB_INVALID_THREAD_ID;
+            dap.focus_tid = LLDB_INVALID_THREAD_ID;
         }
         if (has_reason) {
           ++num_threads_with_reason;
@@ -278,47 +277,46 @@ void SendThreadStoppedEvent() {
         }
       }
 
-      // We will have cleared g_dap.focus_tid if the focus thread doesn't have
+      // We will have cleared dap.focus_tid if the focus thread doesn't have
       // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
       // then set the focus thread to the first thread with a stop reason.
-      if (!focus_thread_exists || g_dap.focus_tid == LLDB_INVALID_THREAD_ID)
-        g_dap.focus_tid = first_tid_with_reason;
+      if (!focus_thread_exists || dap.focus_tid == LLDB_INVALID_THREAD_ID)
+        dap.focus_tid = first_tid_with_reason;
 
       // If no threads stopped with a reason, then report the first one so
       // we at least let the UI know we stopped.
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
-        g_dap.focus_tid = thread.GetThreadID();
-        g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
+        dap.focus_tid = thread.GetThreadID();
+        dap.SendJSON(CreateThreadStopped(dap, thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
           lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-          g_dap.thread_ids.insert(thread.GetThreadID());
+          dap.thread_ids.insert(thread.GetThreadID());
           if (ThreadHasStopReason(thread)) {
-            g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
+            dap.SendJSON(CreateThreadStopped(dap, thread, stop_id));
           }
         }
       }
 
       for (auto tid : old_thread_ids) {
-        auto end = g_dap.thread_ids.end();
-        auto pos = g_dap.thread_ids.find(tid);
+        auto end = dap.thread_ids.end();
+        auto pos = dap.thread_ids.find(tid);
         if (pos == end)
-          SendThreadExitedEvent(tid);
+          SendThreadExitedEvent(dap, tid);
       }
     } else {
-      if (g_dap.log)
-        *g_dap.log << "error: SendThreadStoppedEvent() when process"
-                      " isn't stopped ("
-                   << lldb::SBDebugger::StateAsCString(state) << ')'
-                   << std::endl;
+      if (dap.log)
+        *dap.log << "error: SendThreadStoppedEvent() when process"
+                    " isn't stopped ("
+                 << lldb::SBDebugger::StateAsCString(state) << ')' << std::endl;
     }
   } else {
-    if (g_dap.log)
-      *g_dap.log << "error: SendThreadStoppedEvent() invalid process"
-                 << std::endl;
+    if (dap.log)
+      *dap.log << "error: SendThreadStoppedEvent() invalid process"
+               << std::endl;
   }
-  g_dap.RunStopCommands();
+  dap.RunStopCommands();
 }
 
 // "ProcessEvent": {
@@ -375,14 +373,14 @@ void SendThreadStoppedEvent() {
 //     }
 //   ]
 // }
-void SendProcessEvent(LaunchMethod launch_method) {
-  lldb::SBFileSpec exe_fspec = g_dap.target.GetExecutable();
+void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
+  lldb::SBFileSpec exe_fspec = dap.target.GetExecutable();
   char exe_path[PATH_MAX];
   exe_fspec.GetPath(exe_path, sizeof(exe_path));
   llvm::json::Object event(CreateEventObject("process"));
   llvm::json::Object body;
   EmplaceSafeString(body, "name", std::string(exe_path));
-  const auto pid = g_dap.target.GetProcess().GetProcessID();
+  const auto pid = dap.target.GetProcess().GetProcessID();
   body.try_emplace("systemProcessId", (int64_t)pid);
   body.try_emplace("isLocalProcess", true);
   const char *startMethod = nullptr;
@@ -399,31 +397,31 @@ void SendProcessEvent(LaunchMethod launch_method) {
   }
   body.try_emplace("startMethod", startMethod);
   event.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
-void SendStdOutStdErr(lldb::SBProcess &process) {
+void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
   char buffer[OutputBufferSize];
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
-    g_dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
+    dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
   while ((count = process.GetSTDERR(buffer, sizeof(buffer))) > 0)
-    g_dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
+    dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
 }
 
-void ProgressEventThreadFunction() {
+void ProgressEventThreadFunction(DAP &dap) {
   lldb::SBListener listener("lldb-dap.progress.listener");
-  g_dap.debugger.GetBroadcaster().AddListener(
+  dap.debugger.GetBroadcaster().AddListener(
       listener, lldb::SBDebugger::eBroadcastBitProgress);
-  g_dap.broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
+  dap.broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
   lldb::SBEvent event;
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
       const auto event_mask = event.GetType();
-      if (event.BroadcasterMatchesRef(g_dap.broadcaster)) {
+      if (event.BroadcasterMatchesRef(dap.broadcaster)) {
         if (event_mask & eBroadcastBitStopProgressThread) {
           done = true;
         }
@@ -435,7 +433,7 @@ void ProgressEventThreadFunction() {
         const char *message = lldb::SBDebugger::GetProgressFromEvent(
             event, progress_id, completed, total, is_debugger_specific);
         if (message)
-          g_dap.SendProgressEvent(progress_id, message, completed, total);
+          dap.SendProgressEvent(progress_id, message, completed, total);
       }
     }
   }
@@ -446,9 +444,9 @@ void ProgressEventThreadFunction() {
 // "FILE *" to output packets back to VS Code and they have mutexes in them
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
-void EventThreadFunction() {
+void EventThreadFunction(DAP &dap) {
   lldb::SBEvent event;
-  lldb::SBListener listener = g_dap.debugger.GetListener();
+  lldb::SBListener listener = dap.debugger.GetListener();
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -484,50 +482,50 @@ void EventThreadFunction() {
             // stop events which we do not want to send an event for. We will
             // manually send a stopped event in request_configurationDone(...)
             // so don't send any before then.
-            if (g_dap.configuration_done_sent) {
+            if (dap.configuration_done_sent) {
               // Only report a stopped event if the process was not
               // automatically restarted.
               if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
-                SendStdOutStdErr(process);
-                SendThreadStoppedEvent();
+                SendStdOutStdErr(dap, process);
+                SendThreadStoppedEvent(dap);
               }
             }
             break;
           case lldb::eStateRunning:
-            g_dap.WillContinue();
-            SendContinuedEvent();
+            dap.WillContinue();
+            SendContinuedEvent(dap);
             break;
           case lldb::eStateExited:
             lldb::SBStream stream;
             process.GetStatus(stream);
-            g_dap.SendOutput(OutputType::Console, stream.GetData());
+            dap.SendOutput(OutputType::Console, stream.GetData());
 
             // When restarting, we can get an "exited" event for the process we
             // just killed with the old PID, or even with no PID. In that case
             // we don't have to terminate the session.
             if (process.GetProcessID() == LLDB_INVALID_PROCESS_ID ||
-                process.GetProcessID() == g_dap.restarting_process_id) {
-              g_dap.restarting_process_id = LLDB_INVALID_PROCESS_ID;
+                process.GetProcessID() == dap.restarting_process_id) {
+              dap.restarting_process_id = LLDB_INVALID_PROCESS_ID;
             } else {
               // Run any exit LLDB commands the user specified in the
               // launch.json
-              g_dap.RunExitCommands();
-              SendProcessExitedEvent(process);
-              SendTerminatedEvent();
+              dap.RunExitCommands();
+              SendProcessExitedEvent(dap, process);
+              SendTerminatedEvent(dap);
               done = true;
             }
             break;
           }
         } else if ((event_mask & lldb::SBProcess::eBroadcastBitSTDOUT) ||
                    (event_mask & lldb::SBProcess::eBroadcastBitSTDERR)) {
-          SendStdOutStdErr(process);
+          SendStdOutStdErr(dap, process);
         }
       } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
-          auto bp =
-              Breakpoint(lldb::SBBreakpoint::GetBreakpointFromEvent(event));
+          auto bp = Breakpoint(
+              dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
           // If the breakpoint was originated from the IDE, it will have the
           // BreakpointBase::GetBreakpointLabel() label attached. Regardless
           // of wether the locations were added or removed, the breakpoint
@@ -549,10 +547,10 @@ void EventThreadFunction() {
             body.try_emplace("breakpoint", source_bp);
             body.try_emplace("reason", "changed");
             bp_event.try_emplace("body", std::move(body));
-            g_dap.SendJSON(llvm::json::Value(std::move(bp_event)));
+            dap.SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
-      } else if (event.BroadcasterMatchesRef(g_dap.broadcaster)) {
+      } else if (event.BroadcasterMatchesRef(dap.broadcaster)) {
         if (event_mask & eBroadcastBitStopEventThread) {
           done = true;
         }
@@ -561,9 +559,11 @@ void EventThreadFunction() {
   }
 }
 
-lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name) {
+lldb::SBValue FindVariable(DAP &dap, uint64_t variablesReference,
+                           llvm::StringRef name) {
   lldb::SBValue variable;
-  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
+  if (lldb::SBValueList *top_scope =
+          GetTopLevelScope(dap, variablesReference)) {
     bool is_duplicated_variable_name = name.contains(" @");
     // variablesReference is one of our scopes, not an actual variable it is
     // asking for a variable in locals or globals or registers
@@ -585,7 +585,7 @@ lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name) {
 
     // We have a named item within an actual variable so we need to find it
     // withing the container variable by name.
-    lldb::SBValue container = g_dap.variables.GetVariable(variablesReference);
+    lldb::SBValue container = dap.variables.GetVariable(variablesReference);
     variable = container.GetChildMemberWithName(name.data());
     if (!variable.IsValid()) {
       if (name.starts_with("[")) {
@@ -603,7 +603,7 @@ lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name) {
 
 // Both attach and launch take a either a sourcePath or sourceMap
 // argument (or neither), from which we need to set the target.source-map.
-void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
+void SetSourceMapFromArguments(DAP &dap, const llvm::json::Object &arguments) {
   const char *sourceMapHelp =
       "source must be be an array of two-element arrays, "
       "each containing a source and replacement path string.\n";
@@ -622,7 +622,7 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
       if (mapping == nullptr || mapping->size() != 2 ||
           (*mapping)[0].kind() != llvm::json::Value::String ||
           (*mapping)[1].kind() != llvm::json::Value::String) {
-        g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
+        dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
         return;
       }
       const auto mapFrom = GetAsString((*mapping)[0]);
@@ -637,7 +637,7 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
     }
   } else {
     if (ObjectContainsKey(arguments, sourceMapKey)) {
-      g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
+      dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
       return;
     }
     if (sourcePath.empty())
@@ -646,7 +646,7 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
     strm << "\".\" \"" << sourcePath << "\"";
   }
   if (!sourceMapCommand.empty()) {
-    g_dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
+    dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
   }
 }
 
@@ -682,14 +682,15 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
 // 13. th3->s2
 //
 // s=3,l=3 = [th0->s3, label1, th1->s0]
-bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
-                     int64_t &offset, const int64_t start_frame,
-                     const int64_t levels) {
+bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
+                     llvm::json::Array &stack_frames, int64_t &offset,
+                     const int64_t start_frame, const int64_t levels) {
   bool reached_end_of_stack = false;
   for (int64_t i = start_frame;
        static_cast<int64_t>(stack_frames.size()) < levels; i++) {
     if (i == -1) {
-      stack_frames.emplace_back(CreateExtendedStackFrameLabel(thread));
+      stack_frames.emplace_back(
+          CreateExtendedStackFrameLabel(thread, dap.frame_format));
       continue;
     }
 
@@ -700,10 +701,10 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
       break;
     }
 
-    stack_frames.emplace_back(CreateStackFrame(frame));
+    stack_frames.emplace_back(CreateStackFrame(frame, dap.frame_format));
   }
 
-  if (g_dap.display_extended_backtrace && reached_end_of_stack) {
+  if (dap.display_extended_backtrace && reached_end_of_stack) {
     // Check for any extended backtraces.
     for (uint32_t bt = 0;
          bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {
@@ -713,7 +714,7 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
         continue;
 
       reached_end_of_stack = FillStackFrames(
-          backtrace, stack_frames, offset,
+          dap, backtrace, stack_frames, offset,
           (start_frame - offset) > 0 ? start_frame - offset : -1, levels);
       if (static_cast<int64_t>(stack_frames.size()) >= levels)
         break;
@@ -751,15 +752,15 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-void request_attach(const llvm::json::Object &request) {
-  g_dap.is_attach = true;
-  g_dap.last_launch_or_attach_request = request;
+void request_attach(DAP &dap, const llvm::json::Object &request) {
+  dap.is_attach = true;
+  dap.last_launch_or_attach_request = request;
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
   lldb::SBAttachInfo attach_info;
   const int invalid_port = 0;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
   const auto gdb_remote_port =
@@ -770,30 +771,29 @@ void request_attach(const llvm::json::Object &request) {
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
   attach_info.SetWaitForLaunch(wait_for, false /*async*/);
-  g_dap.init_commands = GetStrings(arguments, "initCommands");
-  g_dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
-  g_dap.stop_commands = GetStrings(arguments, "stopCommands");
-  g_dap.exit_commands = GetStrings(arguments, "exitCommands");
-  g_dap.terminate_commands = GetStrings(arguments, "terminateCommands");
+  dap.init_commands = GetStrings(arguments, "initCommands");
+  dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
+  dap.stop_commands = GetStrings(arguments, "stopCommands");
+  dap.exit_commands = GetStrings(arguments, "exitCommands");
+  dap.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
   llvm::StringRef core_file = GetString(arguments, "coreFile");
   const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
-  g_dap.stop_at_entry =
+  dap.stop_at_entry =
       core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
-  g_dap.post_run_commands = GetStrings(arguments, "postRunCommands");
+  dap.post_run_commands = GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
-  g_dap.enable_auto_variable_summaries =
+  dap.enable_auto_variable_summaries =
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
-  g_dap.enable_synthetic_child_debugging =
+  dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
-  g_dap.display_extended_backtrace =
+  dap.display_extended_backtrace =
       GetBoolean(arguments, "displayExtendedBacktrace", false);
-  g_dap.command_escape_prefix =
-      GetString(arguments, "commandEscapePrefix", "`");
-  g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
-  g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
+  dap.command_escape_prefix = GetString(arguments, "commandEscapePrefix", "`");
+  dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
+  dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
-  PrintWelcomeMessage();
+  PrintWelcomeMessage(dap);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -803,29 +803,29 @@ void request_attach(const llvm::json::Object &request) {
     llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
-  if (llvm::Error err = g_dap.RunInitCommands()) {
+  if (llvm::Error err = dap.RunInitCommands()) {
     response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
-  SetSourceMapFromArguments(*arguments);
+  SetSourceMapFromArguments(dap, *arguments);
 
   lldb::SBError status;
-  g_dap.SetTarget(g_dap.CreateTargetFromArguments(*arguments, status));
+  dap.SetTarget(dap.CreateTargetFromArguments(*arguments, status));
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", status.GetCString());
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  if (llvm::Error err = g_dap.RunPreRunCommands()) {
+  if (llvm::Error err = dap.RunPreRunCommands()) {
     response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
@@ -834,15 +834,15 @@ void request_attach(const llvm::json::Object &request) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
-                                   g_dap.target.GetExecutable().GetFilename());
-    g_dap.SendOutput(OutputType::Console,
-                     llvm::StringRef(attach_msg, attach_msg_len));
+                                   dap.target.GetExecutable().GetFilename());
+    dap.SendOutput(OutputType::Console,
+                   llvm::StringRef(attach_msg, attach_msg_len));
   }
   if (attachCommands.empty()) {
     // No "attachCommands", just attach normally.
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
-    g_dap.debugger.SetAsync(false);
+    dap.debugger.SetAsync(false);
     if (core_file.empty()) {
       if ((pid != LLDB_INVALID_PROCESS_ID) &&
           (gdb_remote_port != invalid_port)) {
@@ -850,44 +850,44 @@ void request_attach(const llvm::json::Object &request) {
         error.SetErrorString("The user can't specify both pid and port");
       } else if (gdb_remote_port != invalid_port) {
         // If port is specified and pid is not.
-        lldb::SBListener listener = g_dap.debugger.GetListener();
+        lldb::SBListener listener = dap.debugger.GetListener();
 
         // If the user hasn't provided the hostname property, default localhost
         // being used.
         std::string connect_url =
             llvm::formatv("connect://{0}:", gdb_remote_hostname);
         connect_url += std::to_string(gdb_remote_port);
-        g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
-                                   error);
+        dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                 error);
       } else {
         // Attach by process name or id.
-        g_dap.target.Attach(attach_info, error);
+        dap.target.Attach(attach_info, error);
       }
     } else
-      g_dap.target.LoadCore(core_file.data(), error);
+      dap.target.LoadCore(core_file.data(), error);
     // Reenable async events
-    g_dap.debugger.SetAsync(true);
+    dap.debugger.SetAsync(true);
   } else {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there
     // is no valid process after running these commands, we have failed.
-    if (llvm::Error err = g_dap.RunAttachCommands(attachCommands)) {
+    if (llvm::Error err = dap.RunAttachCommands(attachCommands)) {
       response["success"] = false;
       EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      dap.SendJSON(llvm::json::Value(std::move(response)));
       return;
     }
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
-    g_dap.target = g_dap.debugger.GetSelectedTarget();
+    dap.target = dap.debugger.GetSelectedTarget();
 
     // Make sure the process is attached and stopped before proceeding as the
     // the launch commands are not run using the synchronous mode.
-    error = g_dap.WaitForProcessToStop(timeout_seconds);
+    error = dap.WaitForProcessToStop(timeout_seconds);
   }
 
   if (error.Success() && core_file.empty()) {
-    auto attached_pid = g_dap.target.GetProcess().GetProcessID();
+    auto attached_pid = dap.target.GetProcess().GetProcessID();
     if (attached_pid == LLDB_INVALID_PROCESS_ID) {
       if (attachCommands.empty())
         error.SetErrorString("failed to attach to a process");
@@ -900,13 +900,13 @@ void request_attach(const llvm::json::Object &request) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
   } else {
-    g_dap.RunPostRunCommands();
+    dap.RunPostRunCommands();
   }
 
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
-    SendProcessEvent(Attach);
-    g_dap.SendJSON(CreateEventObject("initialized"));
+    SendProcessEvent(dap, Attach);
+    dap.SendJSON(CreateEventObject("initialized"));
   }
 }
 
@@ -964,15 +964,15 @@ void request_attach(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_continue(const llvm::json::Object &request) {
+void request_continue(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  lldb::SBProcess process = g_dap.target.GetProcess();
+  lldb::SBProcess process = dap.target.GetProcess();
   lldb::SBError error = process.Continue();
   llvm::json::Object body;
   body.try_emplace("allThreadsContinued", true);
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "ConfigurationDoneRequest": {
@@ -1006,15 +1006,15 @@ void request_continue(const llvm::json::Object &request) {
 //             just an acknowledgement, so no body field is required."
 //             }]
 // },
-void request_configurationDone(const llvm::json::Object &request) {
+void request_configurationDone(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
-  g_dap.configuration_done_sent = true;
-  if (g_dap.stop_at_entry)
-    SendThreadStoppedEvent();
+  dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.configuration_done_sent = true;
+  if (dap.stop_at_entry)
+    SendThreadStoppedEvent(dap);
   else
-    g_dap.target.GetProcess().Continue();
+    dap.target.GetProcess().Continue();
 }
 
 // "DisconnectRequest": {
@@ -1061,15 +1061,15 @@ void request_configurationDone(const llvm::json::Object &request) {
 //                     acknowledgement, so no body field is required."
 //   }]
 // }
-void request_disconnect(const llvm::json::Object &request) {
+void request_disconnect(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
 
-  bool defaultTerminateDebuggee = g_dap.is_attach ? false : true;
+  bool defaultTerminateDebuggee = dap.is_attach ? false : true;
   bool terminateDebuggee =
       GetBoolean(arguments, "terminateDebuggee", defaultTerminateDebuggee);
-  lldb::SBProcess process = g_dap.target.GetProcess();
+  lldb::SBProcess process = dap.target.GetProcess();
   auto state = process.GetState();
   switch (state) {
   case lldb::eStateInvalid:
@@ -1085,24 +1085,24 @@ void request_disconnect(const llvm::json::Object &request) {
   case lldb::eStateSuspended:
   case lldb::eStateStopped:
   case lldb::eStateRunning:
-    g_dap.debugger.SetAsync(false);
+    dap.debugger.SetAsync(false);
     lldb::SBError error = terminateDebuggee ? process.Kill() : process.Detach();
     if (!error.Success())
       EmplaceSafeString(response, "error", error.GetCString());
-    g_dap.debugger.SetAsync(true);
+    dap.debugger.SetAsync(true);
     break;
   }
-  SendTerminatedEvent();
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
-  if (g_dap.event_thread.joinable()) {
-    g_dap.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
-    g_dap.event_thread.join();
+  SendTerminatedEvent(dap);
+  dap.SendJSON(llvm::json::Value(std::move(response)));
+  if (dap.event_thread.joinable()) {
+    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
+    dap.event_thread.join();
   }
-  if (g_dap.progress_event_thread.joinable()) {
-    g_dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
-    g_dap.progress_event_thread.join();
+  if (dap.progress_event_thread.joinable()) {
+    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
+    dap.progress_event_thread.join();
   }
-  g_dap.disconnecting = true;
+  dap.disconnecting = true;
 }
 
 // "ExceptionInfoRequest": {
@@ -1202,18 +1202,18 @@ void request_disconnect(const llvm::json::Object &request) {
 //     }
 //   }
 // },
-void request_exceptionInfo(const llvm::json::Object &request) {
+void request_exceptionInfo(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   llvm::json::Object body;
-  lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
+  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
   if (thread.IsValid()) {
     auto stopReason = thread.GetStopReason();
     if (stopReason == lldb::eStopReasonSignal)
       body.try_emplace("exceptionId", "signal");
     else if (stopReason == lldb::eStopReasonBreakpoint) {
-      ExceptionBreakpoint *exc_bp = g_dap.GetExceptionBPFromStopReason(thread);
+      ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
       if (exc_bp) {
         EmplaceSafeString(body, "exceptionId", exc_bp->filter);
         EmplaceSafeString(body, "description", exc_bp->label);
@@ -1259,7 +1259,7 @@ void request_exceptionInfo(const llvm::json::Object &request) {
     response["success"] = llvm::json::Value(false);
   }
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "CompletionsRequest": {
@@ -1377,14 +1377,14 @@ void request_exceptionInfo(const llvm::json::Object &request) {
 //   "interface", "module", "property", "unit", "value", "enum", "keyword",
 //   "snippet", "text", "color", "file", "reference", "customcolor" ]
 // }
-void request_completions(const llvm::json::Object &request) {
+void request_completions(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
 
   // If we have a frame, try to set the context for variable completions.
-  lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
+  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
   if (frame.IsValid()) {
     frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
@@ -1404,19 +1404,19 @@ void request_completions(const llvm::json::Object &request) {
   llvm::json::Array targets;
 
   bool had_escape_prefix =
-      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix);
-  ReplMode completion_mode = g_dap.DetectReplMode(frame, text, true);
+      llvm::StringRef(text).starts_with(dap.command_escape_prefix);
+  ReplMode completion_mode = dap.DetectReplMode(frame, text, true);
 
   // Handle the offset change introduced by stripping out the
   // `command_escape_prefix`.
   if (had_escape_prefix) {
-    if (offset < static_cast<int64_t>(g_dap.command_escape_prefix.size())) {
+    if (offset < static_cast<int64_t>(dap.command_escape_prefix.size())) {
       body.try_emplace("targets", std::move(targets));
       response.try_emplace("body", std::move(body));
-      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      dap.SendJSON(llvm::json::Value(std::move(response)));
       return;
     }
-    offset -= g_dap.command_escape_prefix.size();
+    offset -= dap.command_escape_prefix.size();
   }
 
   // While the user is typing then we likely have an incomplete input and cannot
@@ -1433,9 +1433,8 @@ void request_completions(const llvm::json::Object &request) {
 
     lldb::SBStringList matches;
     lldb::SBStringList descriptions;
-    if (!g_dap.debugger.GetCommandInterpreter()
-             .HandleCompletionWithDescriptions(line.c_str(), cursor, 0, 100,
-                                               matches, descriptions))
+    if (!dap.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
+            line.c_str(), cursor, 0, 100, matches, descriptions))
       continue;
 
     // The first element is the common substring after the cursor position for
@@ -1465,7 +1464,7 @@ void request_completions(const llvm::json::Object &request) {
 
   body.try_emplace("targets", std::move(targets));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 //  "EvaluateRequest": {
@@ -1561,6 +1560,19 @@ void request_completions(const llvm::json::Object &request) {
 //                              client can use this optional information to
 //                              present the variables in a paged UI and fetch
 //                              them in chunks."
+//            },
+//            "valueLocationReference": {
+//              "type": "integer",
+//              "description": "A reference that allows the client to request
+//                              the location where the returned value is
+//                              declared. For example, if a function pointer is
+//                              returned, the adapter may be able to look up the
+//                              function's location. This should be present only
+//                              if the adapter is likely to be able to resolve
+//                              the location.\n\nThis reference shares the same
+//                              lifetime as the `variablesReference`. See
+//                              'Lifetime of Object References' in the
+//              Overview section for details."
 //            }
 //            "memoryReference": {
 //               "type": "string",
@@ -1579,31 +1591,31 @@ void request_completions(const llvm::json::Object &request) {
 //      "required": [ "body" ]
 //    }]
 //  }
-void request_evaluate(const llvm::json::Object &request) {
+void request_evaluate(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
-  auto arguments = request.getObject("arguments");
-  lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
+  const auto *arguments = request.getObject("arguments");
+  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
   std::string expression = GetString(arguments, "expression").str();
   llvm::StringRef context = GetString(arguments, "context");
   bool repeat_last_command =
-      expression.empty() && g_dap.last_nonempty_var_expression.empty();
+      expression.empty() && dap.last_nonempty_var_expression.empty();
 
   if (context == "repl" &&
       (repeat_last_command ||
        (!expression.empty() &&
-        g_dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
+        dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
-    g_dap.last_nonempty_var_expression.clear();
+    dap.last_nonempty_var_expression.clear();
     // If we're evaluating a command relative to the current frame, set the
     // focus_tid to the current frame for any thread related events.
     if (frame.IsValid()) {
-      g_dap.focus_tid = frame.GetThread().GetThreadID();
+      dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result =
-        RunLLDBCommandsVerbatim(llvm::StringRef(), {std::string(expression)});
+    auto result = RunLLDBCommandsVerbatim(dap.debugger, llvm::StringRef(),
+                                          {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1613,9 +1625,9 @@ void request_evaluate(const llvm::json::Object &request) {
       // evaluation); otherwise save the current non-empty expression for the
       // next (possibly empty) variable expression.
       if (expression.empty())
-        expression = g_dap.last_nonempty_var_expression;
+        expression = dap.last_nonempty_var_expression;
       else
-        g_dap.last_nonempty_var_expression = expression;
+        dap.last_nonempty_var_expression = expression;
     }
     // Always try to get the answer from the local variables if possible. If
     // this fails, then if the context is not "hover", actually evaluate an
@@ -1644,23 +1656,26 @@ void request_evaluate(const llvm::json::Object &request) {
       else
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
-      VariableDescription desc(value);
+      VariableDescription desc(value, dap.enable_auto_variable_summaries);
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
-      if (value.MightHaveChildren()) {
-        auto variableReference = g_dap.variables.InsertVariable(
+      int64_t var_ref = 0;
+      if (value.MightHaveChildren() || ValuePointsToCode(value))
+        var_ref = dap.variables.InsertVariable(
             value, /*is_permanent=*/context == "repl");
-        body.try_emplace("variablesReference", variableReference);
-      } else {
+      if (value.MightHaveChildren())
+        body.try_emplace("variablesReference", var_ref);
+      else
         body.try_emplace("variablesReference", (int64_t)0);
-      }
       if (lldb::addr_t addr = value.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
+      if (ValuePointsToCode(value))
+        body.try_emplace("valueLocationReference", var_ref);
     }
   }
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "compileUnitsRequest": {
@@ -1703,16 +1718,16 @@ void request_evaluate(const llvm::json::Object &request) {
 //     }
 //   }]
 // }
-void request_compileUnits(const llvm::json::Object &request) {
+void request_compileUnits(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
   llvm::json::Array units;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   std::string module_id = std::string(GetString(arguments, "moduleId"));
-  int num_modules = g_dap.target.GetNumModules();
+  int num_modules = dap.target.GetNumModules();
   for (int i = 0; i < num_modules; i++) {
-    auto curr_module = g_dap.target.GetModuleAtIndex(i);
+    auto curr_module = dap.target.GetModuleAtIndex(i);
     if (module_id == curr_module.GetUUIDString()) {
       int num_units = curr_module.GetNumCompileUnits();
       for (int j = 0; j < num_units; j++) {
@@ -1724,7 +1739,7 @@ void request_compileUnits(const llvm::json::Object &request) {
     }
   }
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "modulesRequest": {
@@ -1753,20 +1768,20 @@ void request_compileUnits(const llvm::json::Object &request) {
 //     }
 //   }]
 // }
-void request_modules(const llvm::json::Object &request) {
+void request_modules(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
 
   llvm::json::Array modules;
-  for (size_t i = 0; i < g_dap.target.GetNumModules(); i++) {
-    lldb::SBModule module = g_dap.target.GetModuleAtIndex(i);
-    modules.emplace_back(CreateModule(module));
+  for (size_t i = 0; i < dap.target.GetNumModules(); i++) {
+    lldb::SBModule module = dap.target.GetModuleAtIndex(i);
+    modules.emplace_back(CreateModule(dap.target, module));
   }
 
   llvm::json::Object body;
   body.try_emplace("modules", std::move(modules));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "InitializeRequest": {
@@ -1845,47 +1860,46 @@ void request_modules(const llvm::json::Object &request) {
 //     }
 //   }]
 // }
-void request_initialize(const llvm::json::Object &request) {
+void request_initialize(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
 
-  auto log_cb = [](const char *buf, void *baton) -> void {
-    g_dap.SendOutput(OutputType::Console, llvm::StringRef{buf});
-  };
-
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   // sourceInitFile option is not from formal DAP specification. It is only
   // used by unit tests to prevent sourcing .lldbinit files from environment
   // which may affect the outcome of tests.
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
-  g_dap.debugger = lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
-  if (llvm::Error err = g_dap.RunPreInitCommands()) {
+  dap.debugger = lldb::SBDebugger::Create(source_init_file);
+  if (llvm::Error err = dap.RunPreInitCommands()) {
     response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
-  g_dap.PopulateExceptionBreakpoints();
-  auto cmd = g_dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
+  dap.PopulateExceptionBreakpoints();
+  auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", new StartDebuggingRequestHandler(),
+        "start-debugging", new StartDebuggingRequestHandler(dap),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", new ReplModeRequestHandler(),
+      "repl-mode", new ReplModeRequestHandler(dap),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
+  cmd.AddCommand("send-event", new SendEventRequestHandler(dap),
+                 "Sends an DAP event to the client.");
 
-  g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
+  dap.progress_event_thread =
+      std::thread(ProgressEventThreadFunction, std::ref(dap));
 
   // Start our event thread so we can receive events from the debugger, target,
   // process and more.
-  g_dap.event_thread = std::thread(EventThreadFunction);
+  dap.event_thread = std::thread(EventThreadFunction, std::ref(dap));
 
   // The debug adapter supports the configurationDoneRequest.
   body.try_emplace("supportsConfigurationDoneRequest", true);
@@ -1901,7 +1915,7 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsEvaluateForHovers", true);
   // Available filters or options for the setExceptionBreakpoints request.
   llvm::json::Array filters;
-  for (const auto &exc_bp : *g_dap.exception_breakpoints) {
+  for (const auto &exc_bp : *dap.exception_breakpoints) {
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
@@ -1974,16 +1988,17 @@ void request_initialize(const llvm::json::Object &request) {
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;
-  lldb_json.try_emplace("version", g_dap.debugger.GetVersionString());
+  lldb_json.try_emplace("version", dap.debugger.GetVersionString());
   body.try_emplace("__lldb", std::move(lldb_json));
 
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-llvm::Error request_runInTerminal(const llvm::json::Object &launch_request,
+llvm::Error request_runInTerminal(DAP &dap,
+                                  const llvm::json::Object &launch_request,
                                   const uint64_t timeout_seconds) {
-  g_dap.is_attach = true;
+  dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
   llvm::Expected<std::shared_ptr<FifoFile>> comm_file_or_err =
@@ -1999,25 +2014,25 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request,
   debugger_pid = getpid();
 #endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      launch_request, g_dap.debug_adaptor_path, comm_file.m_path, debugger_pid);
-  g_dap.SendReverseRequest("runInTerminal", std::move(reverse_request),
-                           [](llvm::Expected<llvm::json::Value> value) {
-                             if (!value) {
-                               llvm::Error err = value.takeError();
-                               llvm::errs()
-                                   << "runInTerminal request failed: "
-                                   << llvm::toString(std::move(err)) << "\n";
-                             }
-                           });
+      launch_request, dap.debug_adaptor_path, comm_file.m_path, debugger_pid);
+  dap.SendReverseRequest("runInTerminal", std::move(reverse_request),
+                         [](llvm::Expected<llvm::json::Value> value) {
+                           if (!value) {
+                             llvm::Error err = value.takeError();
+                             llvm::errs()
+                                 << "runInTerminal request failed: "
+                                 << llvm::toString(std::move(err)) << "\n";
+                           }
+                         });
 
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else
     return pid.takeError();
 
-  g_dap.debugger.SetAsync(false);
+  dap.debugger.SetAsync(false);
   lldb::SBError error;
-  g_dap.target.Attach(attach_info, error);
+  dap.target.Attach(attach_info, error);
 
   if (error.Fail())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -2035,11 +2050,11 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request,
   // process right in the middle of the exec. To the user, what we are doing is
   // transparent, as they will only be able to see the process since the exec,
   // completely unaware of the preparatory work.
-  g_dap.target.GetProcess().Continue();
+  dap.target.GetProcess().Continue();
 
   // Now that the actual target is just starting (i.e. exec was just invoked),
   // we return the debugger to its async state.
-  g_dap.debugger.SetAsync(true);
+  dap.debugger.SetAsync(true);
 
   // If sending the notification failed, the launcher should be dead by now and
   // the async didAttach notification should have an error message, so we
@@ -2056,13 +2071,13 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request,
 // runInTerminal if applicable. It doesn't do any of the additional
 // initialization and bookkeeping stuff that is needed for `request_launch`.
 // This way we can reuse the process launching logic for RestartRequest too.
-lldb::SBError LaunchProcess(const llvm::json::Object &request) {
+lldb::SBError LaunchProcess(DAP &dap, const llvm::json::Object &request) {
   lldb::SBError error;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   auto launchCommands = GetStrings(arguments, "launchCommands");
 
   // Instantiate a launch info instance for the target.
-  auto launch_info = g_dap.target.GetLaunchInfo();
+  auto launch_info = dap.target.GetLaunchInfo();
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
@@ -2095,29 +2110,29 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
   const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
 
   if (GetBoolean(arguments, "runInTerminal", false)) {
-    if (llvm::Error err = request_runInTerminal(request, timeout_seconds))
+    if (llvm::Error err = request_runInTerminal(dap, request, timeout_seconds))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
   } else if (launchCommands.empty()) {
     // Disable async events so the launch will be successful when we return from
     // the launch call and the launch will happen synchronously
-    g_dap.debugger.SetAsync(false);
-    g_dap.target.Launch(launch_info, error);
-    g_dap.debugger.SetAsync(true);
+    dap.debugger.SetAsync(false);
+    dap.target.Launch(launch_info, error);
+    dap.debugger.SetAsync(true);
   } else {
     // Set the launch info so that run commands can access the configured
     // launch details.
-    g_dap.target.SetLaunchInfo(launch_info);
-    if (llvm::Error err = g_dap.RunLaunchCommands(launchCommands)) {
+    dap.target.SetLaunchInfo(launch_info);
+    if (llvm::Error err = dap.RunLaunchCommands(launchCommands)) {
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
       return error;
     }
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
-    g_dap.target = g_dap.debugger.GetSelectedTarget();
+    dap.target = dap.debugger.GetSelectedTarget();
     // Make sure the process is launched and stopped at the entry point before
     // proceeding as the launch commands are not run using the synchronous
     // mode.
-    error = g_dap.WaitForProcessToStop(timeout_seconds);
+    error = dap.WaitForProcessToStop(timeout_seconds);
   }
   return error;
 }
@@ -2156,32 +2171,31 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
 //                     acknowledgement, so no body field is required."
 //   }]
 // }
-void request_launch(const llvm::json::Object &request) {
-  g_dap.is_attach = false;
-  g_dap.last_launch_or_attach_request = request;
+void request_launch(DAP &dap, const llvm::json::Object &request) {
+  dap.is_attach = false;
+  dap.last_launch_or_attach_request = request;
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  g_dap.init_commands = GetStrings(arguments, "initCommands");
-  g_dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
-  g_dap.stop_commands = GetStrings(arguments, "stopCommands");
-  g_dap.exit_commands = GetStrings(arguments, "exitCommands");
-  g_dap.terminate_commands = GetStrings(arguments, "terminateCommands");
-  g_dap.post_run_commands = GetStrings(arguments, "postRunCommands");
-  g_dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
+  const auto *arguments = request.getObject("arguments");
+  dap.init_commands = GetStrings(arguments, "initCommands");
+  dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
+  dap.stop_commands = GetStrings(arguments, "stopCommands");
+  dap.exit_commands = GetStrings(arguments, "exitCommands");
+  dap.terminate_commands = GetStrings(arguments, "terminateCommands");
+  dap.post_run_commands = GetStrings(arguments, "postRunCommands");
+  dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
-  g_dap.enable_auto_variable_summaries =
+  dap.enable_auto_variable_summaries =
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
-  g_dap.enable_synthetic_child_debugging =
+  dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
-  g_dap.display_extended_backtrace =
+  dap.display_extended_backtrace =
       GetBoolean(arguments, "displayExtendedBacktrace", false);
-  g_dap.command_escape_prefix =
-      GetString(arguments, "commandEscapePrefix", "`");
-  g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
-  g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
+  dap.command_escape_prefix = GetString(arguments, "commandEscapePrefix", "`");
+  dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
+  dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
-  PrintWelcomeMessage();
+  PrintWelcomeMessage(dap);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which
@@ -2193,50 +2207,50 @@ void request_launch(const llvm::json::Object &request) {
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
-  if (llvm::Error err = g_dap.RunInitCommands()) {
+  if (llvm::Error err = dap.RunInitCommands()) {
     response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
-  SetSourceMapFromArguments(*arguments);
+  SetSourceMapFromArguments(dap, *arguments);
 
   lldb::SBError status;
-  g_dap.SetTarget(g_dap.CreateTargetFromArguments(*arguments, status));
+  dap.SetTarget(dap.CreateTargetFromArguments(*arguments, status));
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", status.GetCString());
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  if (llvm::Error err = g_dap.RunPreRunCommands()) {
+  if (llvm::Error err = dap.RunPreRunCommands()) {
     response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
-  status = LaunchProcess(request);
+  status = LaunchProcess(dap, request);
 
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(status.GetCString()));
   } else {
-    g_dap.RunPostRunCommands();
+    dap.RunPostRunCommands();
   }
 
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 
   if (!status.Fail()) {
-    if (g_dap.is_attach)
-      SendProcessEvent(Attach); // this happens when doing runInTerminal
+    if (dap.is_attach)
+      SendProcessEvent(dap, Attach); // this happens when doing runInTerminal
     else
-      SendProcessEvent(Launch);
+      SendProcessEvent(dap, Launch);
   }
-  g_dap.SendJSON(CreateEventObject("initialized"));
+  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 // Check if the step-granularity is `instruction`
@@ -2290,15 +2304,15 @@ static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
 //                     acknowledgement, so no body field is required."
 //   }]
 // }
-void request_next(const llvm::json::Object &request) {
+void request_next(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
+  const auto *arguments = request.getObject("arguments");
+  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
   if (thread.IsValid()) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
-    g_dap.focus_tid = thread.GetThreadID();
+    dap.focus_tid = thread.GetThreadID();
     if (hasInstructionGranularity(*arguments)) {
       thread.StepInstruction(/*step_over=*/true);
     } else {
@@ -2307,7 +2321,7 @@ void request_next(const llvm::json::Object &request) {
   } else {
     response["success"] = llvm::json::Value(false);
   }
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "PauseRequest": {
@@ -2346,12 +2360,12 @@ void request_next(const llvm::json::Object &request) {
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-void request_pause(const llvm::json::Object &request) {
+void request_pause(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  lldb::SBProcess process = g_dap.target.GetProcess();
+  lldb::SBProcess process = dap.target.GetProcess();
   lldb::SBError error = process.Stop();
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "RestartRequest": {
@@ -2395,14 +2409,14 @@ void request_pause(const llvm::json::Object &request) {
 //     acknowledgement, so no body field is required."
 //   }]
 // },
-void request_restart(const llvm::json::Object &request) {
+void request_restart(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  if (!g_dap.last_launch_or_attach_request) {
+  if (!dap.last_launch_or_attach_request) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message",
                       "Restart request received but no process was launched.");
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
   // Check if we were in a "launch" session or an "attach" session.
@@ -2414,35 +2428,36 @@ void request_restart(const llvm::json::Object &request) {
   // Note that when using runInTerminal we're technically attached, but it's an
   // implementation detail. The adapter *did* launch the process in response to
   // a "launch" command, so we can still stop it and re-run it. This is why we
-  // don't just check `g_dap.is_attach`.
-  if (GetString(*g_dap.last_launch_or_attach_request, "command") == "attach") {
+  // don't just check `dap.is_attach`.
+  if (GetString(*dap.last_launch_or_attach_request, "command") == "attach") {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message",
                       "Restarting an \"attach\" session is not supported.");
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
   // The optional `arguments` field in RestartRequest can contain an updated
   // version of the launch arguments. If there's one, use it.
-  auto restart_arguments = request.getObject("arguments");
+  const auto *restart_arguments = request.getObject("arguments");
   if (restart_arguments) {
-    auto launch_request_arguments = restart_arguments->getObject("arguments");
+    const auto *launch_request_arguments =
+        restart_arguments->getObject("arguments");
     if (launch_request_arguments) {
-      (*g_dap.last_launch_or_attach_request)["arguments"] =
+      (*dap.last_launch_or_attach_request)["arguments"] =
           llvm::json::Value(llvm::json::Object(*launch_request_arguments));
     }
   }
 
   // Keep track of the old PID so when we get a "process exited" event from the
   // killed process we can detect it and not shut down the whole session.
-  lldb::SBProcess process = g_dap.target.GetProcess();
-  g_dap.restarting_process_id = process.GetProcessID();
+  lldb::SBProcess process = dap.target.GetProcess();
+  dap.restarting_process_id = process.GetProcessID();
 
   // Stop the current process if necessary. The logic here is similar to
   // CommandObjectProcessLaunchOrAttach::StopProcessIfNecessary, except that
   // we don't ask the user for confirmation.
-  g_dap.debugger.SetAsync(false);
+  dap.debugger.SetAsync(false);
   if (process.IsValid()) {
     lldb::StateType state = process.GetState();
     if (state != lldb::eStateConnected) {
@@ -2450,21 +2465,21 @@ void request_restart(const llvm::json::Object &request) {
     }
     // Clear the list of thread ids to avoid sending "thread exited" events
     // for threads of the process we are terminating.
-    g_dap.thread_ids.clear();
+    dap.thread_ids.clear();
   }
-  g_dap.debugger.SetAsync(true);
-  LaunchProcess(*g_dap.last_launch_or_attach_request);
+  dap.debugger.SetAsync(true);
+  LaunchProcess(dap, *dap.last_launch_or_attach_request);
 
   // This is normally done after receiving a "configuration done" request.
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.
-  if (g_dap.stop_at_entry) {
-    SendThreadStoppedEvent();
+  if (dap.stop_at_entry) {
+    SendThreadStoppedEvent(dap);
   } else {
-    g_dap.target.GetProcess().Continue();
+    dap.target.GetProcess().Continue();
   }
 
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "ScopesRequest": {
@@ -2518,12 +2533,12 @@ void request_restart(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_scopes(const llvm::json::Object &request) {
+void request_scopes(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
-  auto arguments = request.getObject("arguments");
-  lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
+  const auto *arguments = request.getObject("arguments");
+  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
   // As the user selects different stack frames in the GUI, a "scopes" request
   // will be sent to the DAP. This is the only way we know that the user has
   // selected a frame in a thread. There are no other notifications that are
@@ -2543,18 +2558,18 @@ void request_scopes(const llvm::json::Object &request) {
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
   }
 
-  g_dap.variables.locals = frame.GetVariables(/*arguments=*/true,
-                                              /*locals=*/true,
-                                              /*statics=*/false,
-                                              /*in_scope_only=*/true);
-  g_dap.variables.globals = frame.GetVariables(/*arguments=*/false,
-                                               /*locals=*/false,
-                                               /*statics=*/true,
-                                               /*in_scope_only=*/true);
-  g_dap.variables.registers = frame.GetRegisters();
-  body.try_emplace("scopes", g_dap.CreateTopLevelScopes());
+  dap.variables.locals = frame.GetVariables(/*arguments=*/true,
+                                            /*locals=*/true,
+                                            /*statics=*/false,
+                                            /*in_scope_only=*/true);
+  dap.variables.globals = frame.GetVariables(/*arguments=*/false,
+                                             /*locals=*/false,
+                                             /*statics=*/true,
+                                             /*in_scope_only=*/true);
+  dap.variables.registers = frame.GetRegisters();
+  body.try_emplace("scopes", dap.CreateTopLevelScopes());
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "SetBreakpointsRequest": {
@@ -2667,14 +2682,14 @@ void request_scopes(const llvm::json::Object &request) {
 //   },
 //   "required": [ "line" ]
 // }
-void request_setBreakpoints(const llvm::json::Object &request) {
+void request_setBreakpoints(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  auto source = arguments->getObject("source");
+  const auto *arguments = request.getObject("arguments");
+  const auto *source = arguments->getObject("source");
   const auto path = GetString(source, "path");
-  auto breakpoints = arguments->getArray("breakpoints");
+  const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
 
   // Decode the source breakpoint infos for this "setBreakpoints" request
@@ -2683,28 +2698,19 @@ void request_setBreakpoints(const llvm::json::Object &request) {
   // to an empty array.
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
-      auto bp_obj = bp.getAsObject();
+      const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
-        SourceBreakpoint src_bp(*bp_obj);
-        request_bps[src_bp.line] = src_bp;
-
+        SourceBreakpoint src_bp(dap, *bp_obj);
+        request_bps.try_emplace(src_bp.line, src_bp);
+        const auto [iv, inserted] =
+            dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
         // We check if this breakpoint already exists to update it
-        auto existing_source_bps = g_dap.source_breakpoints.find(path);
-        if (existing_source_bps != g_dap.source_breakpoints.end()) {
-          const auto &existing_bp =
-              existing_source_bps->second.find(src_bp.line);
-          if (existing_bp != existing_source_bps->second.end()) {
-            existing_bp->second.UpdateBreakpoint(src_bp);
-            AppendBreakpoint(&existing_bp->second, response_breakpoints, path,
-                             src_bp.line);
-            continue;
-          }
-        }
-        // At this point the breakpoint is new
-        g_dap.source_breakpoints[path][src_bp.line] = src_bp;
-        SourceBreakpoint &new_bp = g_dap.source_breakpoints[path][src_bp.line];
-        new_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(&new_bp, response_breakpoints, path, new_bp.line);
+        if (inserted)
+          iv->getSecond().SetBreakpoint(path.data());
+        else
+          iv->getSecond().UpdateBreakpoint(src_bp);
+        AppendBreakpoint(&iv->getSecond(), response_breakpoints, path,
+                         src_bp.line);
       }
     }
   }
@@ -2712,13 +2718,13 @@ void request_setBreakpoints(const llvm::json::Object &request) {
   // Delete any breakpoints in this source file that aren't in the
   // request_bps set. There is no call to remove breakpoints other than
   // calling this function with a smaller or empty "breakpoints" list.
-  auto old_src_bp_pos = g_dap.source_breakpoints.find(path);
-  if (old_src_bp_pos != g_dap.source_breakpoints.end()) {
+  auto old_src_bp_pos = dap.source_breakpoints.find(path);
+  if (old_src_bp_pos != dap.source_breakpoints.end()) {
     for (auto &old_bp : old_src_bp_pos->second) {
       auto request_pos = request_bps.find(old_bp.first);
       if (request_pos == request_bps.end()) {
         // This breakpoint no longer exists in this source file, delete it
-        g_dap.target.BreakpointDelete(old_bp.second.bp.GetID());
+        dap.target.BreakpointDelete(old_bp.second.bp.GetID());
         old_src_bp_pos->second.erase(old_bp.first);
       }
     }
@@ -2727,7 +2733,7 @@ void request_setBreakpoints(const llvm::json::Object &request) {
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "SetExceptionBreakpointsRequest": {
@@ -2777,32 +2783,33 @@ void request_setBreakpoints(const llvm::json::Object &request) {
 //     just an acknowledgement, so no body field is required."
 //   }]
 // }
-void request_setExceptionBreakpoints(const llvm::json::Object &request) {
+void request_setExceptionBreakpoints(DAP &dap,
+                                     const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  auto filters = arguments->getArray("filters");
+  const auto *arguments = request.getObject("arguments");
+  const auto *filters = arguments->getArray("filters");
   // Keep a list of any exception breakpoint filter names that weren't set
   // so we can clear any exception breakpoints if needed.
   std::set<std::string> unset_filters;
-  for (const auto &bp : *g_dap.exception_breakpoints)
+  for (const auto &bp : *dap.exception_breakpoints)
     unset_filters.insert(bp.filter);
 
   for (const auto &value : *filters) {
     const auto filter = GetAsString(value);
-    auto exc_bp = g_dap.GetExceptionBreakpoint(std::string(filter));
+    auto *exc_bp = dap.GetExceptionBreakpoint(std::string(filter));
     if (exc_bp) {
       exc_bp->SetBreakpoint();
       unset_filters.erase(std::string(filter));
     }
   }
   for (const auto &filter : unset_filters) {
-    auto exc_bp = g_dap.GetExceptionBreakpoint(filter);
+    auto *exc_bp = dap.GetExceptionBreakpoint(filter);
     if (exc_bp)
       exc_bp->ClearBreakpoint();
   }
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "SetFunctionBreakpointsRequest": {
@@ -2883,61 +2890,49 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_setFunctionBreakpoints(const llvm::json::Object &request) {
+void request_setFunctionBreakpoints(DAP &dap,
+                                    const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  auto breakpoints = arguments->getArray("breakpoints");
-  FunctionBreakpointMap request_bps;
+  const auto *arguments = request.getObject("arguments");
+  const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
-  for (const auto &value : *breakpoints) {
-    auto bp_obj = value.getAsObject();
-    if (bp_obj == nullptr)
-      continue;
-    FunctionBreakpoint func_bp(*bp_obj);
-    request_bps[func_bp.functionName] = std::move(func_bp);
-  }
 
-  std::vector<llvm::StringRef> remove_names;
-  // Disable any function breakpoints that aren't in the request_bps.
+  // Disable any function breakpoints that aren't in this request.
   // There is no call to remove function breakpoints other than calling this
   // function with a smaller or empty "breakpoints" list.
-  for (auto &pair : g_dap.function_breakpoints) {
-    auto request_pos = request_bps.find(pair.first());
-    if (request_pos == request_bps.end()) {
-      // This function breakpoint no longer exists delete it from LLDB
-      g_dap.target.BreakpointDelete(pair.second.bp.GetID());
-      remove_names.push_back(pair.first());
-    } else {
-      // Update the existing breakpoint as any setting withing the function
-      // breakpoint might have changed.
-      pair.second.UpdateBreakpoint(request_pos->second);
-      // Remove this breakpoint from the request breakpoints since we have
-      // handled it here and we don't need to set a new breakpoint below.
-      request_bps.erase(request_pos);
-      // Add this breakpoint info to the response
-      AppendBreakpoint(&pair.second, response_breakpoints);
-    }
-  }
-  // Remove any breakpoints that are no longer in our list
-  for (const auto &name : remove_names)
-    g_dap.function_breakpoints.erase(name);
+  const auto name_iter = dap.function_breakpoints.keys();
+  llvm::DenseSet<llvm::StringRef> seen(name_iter.begin(), name_iter.end());
+  for (const auto &value : *breakpoints) {
+    const auto *bp_obj = value.getAsObject();
+    if (!bp_obj)
+      continue;
+    FunctionBreakpoint fn_bp(dap, *bp_obj);
+    const auto [it, inserted] =
+        dap.function_breakpoints.try_emplace(fn_bp.functionName, dap, *bp_obj);
+    if (inserted)
+      it->second.SetBreakpoint();
+    else
+      it->second.UpdateBreakpoint(fn_bp);
 
-  // Any breakpoints that are left in "request_bps" are breakpoints that
-  // need to be set.
-  for (auto &pair : request_bps) {
-    // Add this breakpoint info to the response
-    g_dap.function_breakpoints[pair.first()] = std::move(pair.second);
-    FunctionBreakpoint &new_bp = g_dap.function_breakpoints[pair.first()];
-    new_bp.SetBreakpoint();
-    AppendBreakpoint(&new_bp, response_breakpoints);
+    AppendBreakpoint(&it->second, response_breakpoints);
+    seen.erase(fn_bp.functionName);
+  }
+
+  // Remove any breakpoints that are no longer in our list
+  for (const auto &name : seen) {
+    auto fn_bp = dap.function_breakpoints.find(name);
+    if (fn_bp == dap.function_breakpoints.end())
+      continue;
+    dap.target.BreakpointDelete(fn_bp->second.bp.GetID());
+    dap.function_breakpoints.erase(name);
   }
 
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "DataBreakpointInfoRequest": {
@@ -3032,7 +3027,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_dataBreakpointInfo(const llvm::json::Object &request) {
+void request_dataBreakpointInfo(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
@@ -3042,8 +3037,8 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
   llvm::StringRef name = GetString(arguments, "name");
-  lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
-  lldb::SBValue variable = FindVariable(variablesReference, name);
+  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
+  lldb::SBValue variable = FindVariable(dap, variablesReference, name);
   std::string addr, size;
 
   if (variable.IsValid()) {
@@ -3078,7 +3073,7 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
         addr = llvm::utohexstr(load_addr);
         lldb::SBMemoryRegionInfo region;
         lldb::SBError err =
-            g_dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+            dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
         // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
         // request if SBProcess::GetMemoryRegionInfo returns error.
         if (err.Success()) {
@@ -3108,7 +3103,7 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
                      size + " bytes at " + addr + " " + name.str());
   }
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "SetDataBreakpointsRequest": {
@@ -3171,22 +3166,20 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_setDataBreakpoints(const llvm::json::Object &request) {
+void request_setDataBreakpoints(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
   const auto *arguments = request.getObject("arguments");
   const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
-  g_dap.target.DeleteAllWatchpoints();
+  dap.target.DeleteAllWatchpoints();
   std::vector<Watchpoint> watchpoints;
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
-      if (bp_obj) {
-        Watchpoint wp(*bp_obj);
-        watchpoints.push_back(wp);
-      }
+      if (bp_obj)
+        watchpoints.emplace_back(dap, *bp_obj);
     }
   }
   // If two watchpoints start at the same address, the latter overwrite the
@@ -3205,7 +3198,7 @@ void request_setDataBreakpoints(const llvm::json::Object &request) {
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "SourceRequest": {
@@ -3266,12 +3259,12 @@ void request_setDataBreakpoints(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_source(const llvm::json::Object &request) {
+void request_source(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body{{"content", ""}};
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "StackTraceRequest": {
@@ -3352,12 +3345,12 @@ void request_source(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_stackTrace(const llvm::json::Object &request) {
+void request_stackTrace(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   lldb::SBError error;
-  auto arguments = request.getObject("arguments");
-  lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
+  const auto *arguments = request.getObject("arguments");
+  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
   llvm::json::Array stack_frames;
   llvm::json::Object body;
 
@@ -3366,7 +3359,7 @@ void request_stackTrace(const llvm::json::Object &request) {
     const auto levels = GetUnsigned(arguments, "levels", 0);
     int64_t offset = 0;
     bool reached_end_of_stack =
-        FillStackFrames(thread, stack_frames, offset, start_frame,
+        FillStackFrames(dap, thread, stack_frames, offset, start_frame,
                         levels == 0 ? INT64_MAX : levels);
     body.try_emplace("totalFrames",
                      start_frame + stack_frames.size() +
@@ -3375,7 +3368,7 @@ void request_stackTrace(const llvm::json::Object &request) {
 
   body.try_emplace("stackFrames", std::move(stack_frames));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "StepInRequest": {
@@ -3428,25 +3421,25 @@ void request_stackTrace(const llvm::json::Object &request) {
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-void request_stepIn(const llvm::json::Object &request) {
+void request_stepIn(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
 
   std::string step_in_target;
   uint64_t target_id = GetUnsigned(arguments, "targetId", 0);
-  auto it = g_dap.step_in_targets.find(target_id);
-  if (it != g_dap.step_in_targets.end())
+  auto it = dap.step_in_targets.find(target_id);
+  if (it != dap.step_in_targets.end())
     step_in_target = it->second;
 
   const bool single_thread = GetBoolean(arguments, "singleThread", false);
   lldb::RunMode run_mode =
       single_thread ? lldb::eOnlyThisThread : lldb::eOnlyDuringStepping;
-  lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
+  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
   if (thread.IsValid()) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
-    g_dap.focus_tid = thread.GetThreadID();
+    dap.focus_tid = thread.GetThreadID();
     if (hasInstructionGranularity(*arguments)) {
       thread.StepInstruction(/*step_over=*/false);
     } else {
@@ -3455,7 +3448,7 @@ void request_stepIn(const llvm::json::Object &request) {
   } else {
     response["success"] = llvm::json::Value(false);
   }
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "StepInTargetsRequest": {
@@ -3511,24 +3504,24 @@ void request_stepIn(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_stepInTargets(const llvm::json::Object &request) {
+void request_stepInTargets(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
 
-  g_dap.step_in_targets.clear();
-  lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
+  dap.step_in_targets.clear();
+  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
   if (frame.IsValid()) {
     lldb::SBAddress pc_addr = frame.GetPCAddress();
     lldb::SBAddress line_end_addr =
         pc_addr.GetLineEntry().GetSameLineContiguousAddressRangeEnd(true);
-    lldb::SBInstructionList insts = g_dap.target.ReadInstructions(
+    lldb::SBInstructionList insts = dap.target.ReadInstructions(
         pc_addr, line_end_addr, /*flavor_string=*/nullptr);
 
     if (!insts.IsValid()) {
       response["success"] = false;
       response["message"] = "Failed to get instructions for frame.";
-      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      dap.SendJSON(llvm::json::Value(std::move(response)));
       return;
     }
 
@@ -3539,29 +3532,29 @@ void request_stepInTargets(const llvm::json::Object &request) {
       if (!inst.IsValid())
         break;
 
-      lldb::addr_t inst_addr = inst.GetAddress().GetLoadAddress(g_dap.target);
+      lldb::addr_t inst_addr = inst.GetAddress().GetLoadAddress(dap.target);
 
       // Note: currently only x86/x64 supports flow kind.
       lldb::InstructionControlFlowKind flow_kind =
-          inst.GetControlFlowKind(g_dap.target);
+          inst.GetControlFlowKind(dap.target);
       if (flow_kind == lldb::eInstructionControlFlowKindCall) {
         // Use call site instruction address as id which is easy to debug.
         llvm::json::Object step_in_target;
         step_in_target["id"] = inst_addr;
 
-        llvm::StringRef call_operand_name = inst.GetOperands(g_dap.target);
+        llvm::StringRef call_operand_name = inst.GetOperands(dap.target);
         lldb::addr_t call_target_addr;
         if (call_operand_name.getAsInteger(0, call_target_addr))
           continue;
 
         lldb::SBAddress call_target_load_addr =
-            g_dap.target.ResolveLoadAddress(call_target_addr);
+            dap.target.ResolveLoadAddress(call_target_addr);
         if (!call_target_load_addr.IsValid())
           continue;
 
         // The existing ThreadPlanStepInRange only accept step in target
         // function with debug info.
-        lldb::SBSymbolContext sc = g_dap.target.ResolveSymbolContextForAddress(
+        lldb::SBSymbolContext sc = dap.target.ResolveSymbolContextForAddress(
             call_target_load_addr, lldb::eSymbolContextFunction);
 
         // The existing ThreadPlanStepInRange only accept step in target
@@ -3574,7 +3567,7 @@ void request_stepInTargets(const llvm::json::Object &request) {
         if (step_in_target_name.empty())
           continue;
 
-        g_dap.step_in_targets.try_emplace(inst_addr, step_in_target_name);
+        dap.step_in_targets.try_emplace(inst_addr, step_in_target_name);
         step_in_target.try_emplace("label", step_in_target_name);
         step_in_targets.emplace_back(std::move(step_in_target));
       }
@@ -3586,7 +3579,7 @@ void request_stepInTargets(const llvm::json::Object &request) {
     response["success"] = llvm::json::Value(false);
     response["message"] = "Failed to get frame for input frameId.";
   }
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "StepOutRequest": {
@@ -3625,20 +3618,20 @@ void request_stepInTargets(const llvm::json::Object &request) {
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-void request_stepOut(const llvm::json::Object &request) {
+void request_stepOut(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
+  const auto *arguments = request.getObject("arguments");
+  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
   if (thread.IsValid()) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
-    g_dap.focus_tid = thread.GetThreadID();
+    dap.focus_tid = thread.GetThreadID();
     thread.StepOut();
   } else {
     response["success"] = llvm::json::Value(false);
   }
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "ThreadsRequest": {
@@ -3676,8 +3669,8 @@ void request_stepOut(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_threads(const llvm::json::Object &request) {
-  lldb::SBProcess process = g_dap.target.GetProcess();
+void request_threads(DAP &dap, const llvm::json::Object &request) {
+  lldb::SBProcess process = dap.target.GetProcess();
   llvm::json::Object response;
   FillResponse(request, response);
 
@@ -3685,7 +3678,7 @@ void request_threads(const llvm::json::Object &request) {
   llvm::json::Array threads;
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    threads.emplace_back(CreateThread(thread));
+    threads.emplace_back(CreateThread(thread, dap.thread_format));
   }
   if (threads.size() == 0) {
     response["success"] = llvm::json::Value(false);
@@ -3693,7 +3686,7 @@ void request_threads(const llvm::json::Object &request) {
   llvm::json::Object body;
   body.try_emplace("threads", std::move(threads));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "SetVariableRequest": {
@@ -3770,6 +3763,17 @@ void request_threads(const llvm::json::Object &request) {
 //             "description": "The number of indexed child variables. The client
 //             can use this optional information to present the variables in a
 //             paged UI and fetch them in chunks."
+//           },
+//           "valueLocationReference": {
+//             "type": "integer",
+//             "description": "A reference that allows the client to request the
+//             location where the new value is declared. For example, if the new
+//             value is function pointer, the adapter may be able to look up the
+//             function's location. This should be present only if the adapter
+//             is likely to be able to resolve the location.\n\nThis reference
+//             shares the same lifetime as the `variablesReference`. See
+//             'Lifetime of Object References' in the Overview section for
+//             details."
 //           }
 //         },
 //         "required": [ "value" ]
@@ -3778,12 +3782,12 @@ void request_threads(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_setVariable(const llvm::json::Object &request) {
+void request_setVariable(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array variables;
   llvm::json::Object body;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   // This is a reference to the containing variable/scope
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
@@ -3794,7 +3798,6 @@ void request_setVariable(const llvm::json::Object &request) {
   response.try_emplace("success", false);
 
   lldb::SBValue variable;
-  int64_t newVariablesReference = 0;
 
   // The "id" is the unique integer ID that is unique within the enclosing
   // variablesReference. It is optionally added to any "interface Variable"
@@ -3804,34 +3807,37 @@ void request_setVariable(const llvm::json::Object &request) {
   // only specifies the variable reference of the enclosing scope/variable, and
   // the name of the variable. We could have two shadowed variables with the
   // same name in "Locals" or "Globals". In our case the "id" absolute index
-  // of the variable within the g_dap.variables list.
+  // of the variable within the dap.variables list.
   const auto id_value = GetUnsigned(arguments, "id", UINT64_MAX);
   if (id_value != UINT64_MAX) {
-    variable = g_dap.variables.GetVariable(id_value);
+    variable = dap.variables.GetVariable(id_value);
   } else {
-    variable = FindVariable(variablesReference, name);
+    variable = FindVariable(dap, variablesReference, name);
   }
 
   if (variable.IsValid()) {
     lldb::SBError error;
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
-      VariableDescription desc(variable);
+      VariableDescription desc(variable, dap.enable_auto_variable_summaries);
       EmplaceSafeString(body, "result", desc.display_value);
       EmplaceSafeString(body, "type", desc.display_type_name);
 
-      // We don't know the index of the variable in our g_dap.variables
+      // We don't know the index of the variable in our dap.variables
       // so always insert a new one to get its variablesReference.
       // is_permanent is false because debug console does not support
       // setVariable request.
+      int64_t new_var_ref =
+          dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       if (variable.MightHaveChildren())
-        newVariablesReference =
-            g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
-      body.try_emplace("variablesReference", newVariablesReference);
-
+        body.try_emplace("variablesReference", new_var_ref);
+      else
+        body.try_emplace("variablesReference", 0);
       if (lldb::addr_t addr = variable.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
+      if (ValuePointsToCode(variable))
+        body.try_emplace("valueLocationReference", new_var_ref);
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
@@ -3841,7 +3847,7 @@ void request_setVariable(const llvm::json::Object &request) {
   }
 
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "VariablesRequest": {
@@ -3917,21 +3923,22 @@ void request_setVariable(const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_variables(const llvm::json::Object &request) {
+void request_variables(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array variables;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
   const int64_t start = GetSigned(arguments, "start", 0);
   const int64_t count = GetSigned(arguments, "count", 0);
   bool hex = false;
-  auto format = arguments->getObject("format");
+  const auto *format = arguments->getObject("format");
   if (format)
     hex = GetBoolean(format, "hex", false);
 
-  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
+  if (lldb::SBValueList *top_scope =
+          GetTopLevelScope(dap, variablesReference)) {
     // variablesReference is one of our scopes, not an actual variable it is
     // asking for the list of args, locals or globals.
     int64_t start_idx = 0;
@@ -3943,8 +3950,8 @@ void request_variables(const llvm::json::Object &request) {
       // and resolve what the pointer resolves to. Only change the format if the
       // format was set to the default format or if it was hex as some registers
       // have formats set for them.
-      const uint32_t addr_size = g_dap.target.GetProcess().GetAddressByteSize();
-      lldb::SBValue reg_set = g_dap.variables.registers.GetValueAtIndex(0);
+      const uint32_t addr_size = dap.target.GetProcess().GetAddressByteSize();
+      lldb::SBValue reg_set = dap.variables.registers.GetValueAtIndex(0);
       const uint32_t num_regs = reg_set.GetNumChildren();
       for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
         lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
@@ -4001,25 +4008,28 @@ void request_variables(const llvm::json::Object &request) {
         break;
 
       int64_t var_ref =
-          g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
+          dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
-          variable, var_ref, hex,
+          variable, var_ref, hex, dap.enable_auto_variable_summaries,
+          dap.enable_synthetic_child_debugging,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
     // We are expanding a variable that has children, so we will return its
     // children.
-    lldb::SBValue variable = g_dap.variables.GetVariable(variablesReference);
+    lldb::SBValue variable = dap.variables.GetVariable(variablesReference);
     if (variable.IsValid()) {
       auto addChild = [&](lldb::SBValue child,
                           std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
           return;
         bool is_permanent =
-            g_dap.variables.IsPermanentVariableReference(variablesReference);
-        int64_t var_ref = g_dap.variables.InsertVariable(child, is_permanent);
+            dap.variables.IsPermanentVariableReference(variablesReference);
+        int64_t var_ref = dap.variables.InsertVariable(child, is_permanent);
         variables.emplace_back(CreateVariable(
-            child, var_ref, hex, /*is_name_duplicated=*/false, custom_name));
+            child, var_ref, hex, dap.enable_auto_variable_summaries,
+            dap.enable_synthetic_child_debugging,
+            /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
       int64_t end_idx = start + ((count == 0) ? num_children : count);
@@ -4031,7 +4041,7 @@ void request_variables(const llvm::json::Object &request) {
       // "[raw]" child that can be used to inspect the raw version of a
       // synthetic member. That eliminates the need for the user to go to the
       // debug console and type `frame var <variable> to get these values.
-      if (g_dap.enable_synthetic_child_debugging && variable.IsSynthetic() &&
+      if (dap.enable_synthetic_child_debugging && variable.IsSynthetic() &&
           i == num_children)
         addChild(variable.GetNonSyntheticValue(), "[raw]");
     }
@@ -4039,7 +4049,7 @@ void request_variables(const llvm::json::Object &request) {
   llvm::json::Object body;
   body.try_emplace("variables", std::move(variables));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "LocationsRequest": {
@@ -4119,38 +4129,70 @@ void request_variables(const llvm::json::Object &request) {
 //     }
 //   }]
 // },
-void request_locations(const llvm::json::Object &request) {
+void request_locations(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  auto *arguments = request.getObject("arguments");
 
-  uint64_t reference_id = GetUnsigned(arguments, "locationReference", 0);
-  lldb::SBValue variable = g_dap.variables.GetVariable(reference_id);
+  uint64_t location_id = GetUnsigned(arguments, "locationReference", 0);
+  // We use the lowest bit to distinguish between value location and declaration
+  // location
+  auto [var_ref, is_value_location] = UnpackLocation(location_id);
+  lldb::SBValue variable = dap.variables.GetVariable(var_ref);
   if (!variable.IsValid()) {
     response["success"] = false;
     response["message"] = "Invalid variable reference";
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  // Get the declaration location
-  lldb::SBDeclaration decl = variable.GetDeclaration();
-  if (!decl.IsValid()) {
-    response["success"] = false;
-    response["message"] = "No declaration location available";
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
   llvm::json::Object body;
-  body.try_emplace("source", CreateSource(decl.GetFileSpec()));
-  if (int line = decl.GetLine())
-    body.try_emplace("line", line);
-  if (int column = decl.GetColumn())
-    body.try_emplace("column", column);
+  if (is_value_location) {
+    // Get the value location
+    if (!variable.GetType().IsPointerType() &&
+        !variable.GetType().IsReferenceType()) {
+      response["success"] = false;
+      response["message"] =
+          "Value locations are only available for pointers and references";
+      dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    lldb::addr_t addr = variable.GetValueAsAddress();
+    lldb::SBLineEntry line_entry =
+        dap.target.ResolveLoadAddress(addr).GetLineEntry();
+
+    if (!line_entry.IsValid()) {
+      response["success"] = false;
+      response["message"] = "Failed to resolve line entry for location";
+      dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    body.try_emplace("source", CreateSource(line_entry.GetFileSpec()));
+    if (int line = line_entry.GetLine())
+      body.try_emplace("line", line);
+    if (int column = line_entry.GetColumn())
+      body.try_emplace("column", column);
+  } else {
+    // Get the declaration location
+    lldb::SBDeclaration decl = variable.GetDeclaration();
+    if (!decl.IsValid()) {
+      response["success"] = false;
+      response["message"] = "No declaration location available";
+      dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    body.try_emplace("source", CreateSource(decl.GetFileSpec()));
+    if (int line = decl.GetLine())
+      body.try_emplace("line", line);
+    if (int column = decl.GetColumn())
+      body.try_emplace("column", column);
+  }
 
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "DisassembleRequest": {
@@ -4225,7 +4267,7 @@ void request_locations(const llvm::json::Object &request) {
 //     }
 //   }]
 // }
-void request_disassemble(const llvm::json::Object &request) {
+void request_disassemble(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
@@ -4236,28 +4278,27 @@ void request_disassemble(const llvm::json::Object &request) {
     response["success"] = false;
     response["message"] =
         "Malformed memory reference: " + memoryReference.str();
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
   lldb::addr_t addr_ptr = *addr_opt;
 
   addr_ptr += GetSigned(arguments, "instructionOffset", 0);
-  lldb::SBAddress addr(addr_ptr, g_dap.target);
+  lldb::SBAddress addr(addr_ptr, dap.target);
   if (!addr.IsValid()) {
     response["success"] = false;
     response["message"] = "Memory reference not found in the current binary.";
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
   const auto inst_count = GetUnsigned(arguments, "instructionCount", 0);
-  lldb::SBInstructionList insts =
-      g_dap.target.ReadInstructions(addr, inst_count);
+  lldb::SBInstructionList insts = dap.target.ReadInstructions(addr, inst_count);
 
   if (!insts.IsValid()) {
     response["success"] = false;
     response["message"] = "Failed to find instructions for memory address.";
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
@@ -4267,11 +4308,11 @@ void request_disassemble(const llvm::json::Object &request) {
   for (size_t i = 0; i < num_insts; ++i) {
     lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
     auto addr = inst.GetAddress();
-    const auto inst_addr = addr.GetLoadAddress(g_dap.target);
-    const char *m = inst.GetMnemonic(g_dap.target);
-    const char *o = inst.GetOperands(g_dap.target);
-    const char *c = inst.GetComment(g_dap.target);
-    auto d = inst.GetData(g_dap.target);
+    const auto inst_addr = addr.GetLoadAddress(dap.target);
+    const char *m = inst.GetMnemonic(dap.target);
+    const char *o = inst.GetOperands(dap.target);
+    const char *c = inst.GetComment(dap.target);
+    auto d = inst.GetData(dap.target);
 
     std::string bytes;
     llvm::raw_string_ostream sb(bytes);
@@ -4355,7 +4396,7 @@ void request_disassemble(const llvm::json::Object &request) {
   llvm::json::Object body;
   body.try_emplace("instructions", std::move(instructions));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "ReadMemoryRequest": {
@@ -4435,7 +4476,7 @@ void request_disassemble(const llvm::json::Object &request) {
 //     }
 //   }]
 // },
-void request_readMemory(const llvm::json::Object &request) {
+void request_readMemory(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
@@ -4446,7 +4487,7 @@ void request_readMemory(const llvm::json::Object &request) {
     response["success"] = false;
     response["message"] =
         "Malformed memory reference: " + memoryReference.str();
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
   lldb::addr_t addr_int = *addr_opt;
@@ -4460,13 +4501,13 @@ void request_readMemory(const llvm::json::Object &request) {
   std::vector<uint8_t> buf;
   buf.resize(count_read);
   lldb::SBError error;
-  lldb::SBAddress addr{addr_int, g_dap.target};
+  lldb::SBAddress addr{addr_int, dap.target};
   size_t count_result =
-      g_dap.target.ReadMemory(addr, buf.data(), count_read, error);
+      dap.target.ReadMemory(addr, buf.data(), count_read, error);
   if (count_result == 0) {
     response["success"] = false;
     EmplaceSafeString(response, "message", error.GetCString());
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
   buf.resize(std::min<size_t>(count_result, count_requested));
@@ -4476,31 +4517,33 @@ void request_readMemory(const llvm::json::Object &request) {
   body.try_emplace("address", formatted_addr);
   body.try_emplace("data", llvm::encodeBase64(buf));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // A request used in testing to get the details on all breakpoints that are
 // currently set in the target. This helps us to test "setBreakpoints" and
 // "setFunctionBreakpoints" requests to verify we have the correct set of
 // breakpoints currently set in LLDB.
-void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
+void request__testGetTargetBreakpoints(DAP &dap,
+                                       const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;
-  for (uint32_t i = 0; g_dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    auto bp = Breakpoint(g_dap.target.GetBreakpointAtIndex(i));
+  for (uint32_t i = 0; dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
+    auto bp = Breakpoint(dap, dap.target.GetBreakpointAtIndex(i));
     AppendBreakpoint(&bp, response_breakpoints);
   }
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-// "SetInstructionBreakpointsRequest" : {
-//   "allOf" : [
-//     {"$ref" : "#/definitions/Request"}, {
-//       "type" : "object",
+// "SetInstructionBreakpointsRequest": {
+//   "allOf": [
+//     {"$ref": "#/definitions/Request"},
+//     {
+//       "type": "object",
 //       "description" :
 //           "Replaces all existing instruction breakpoints. Typically, "
 //           "instruction breakpoints would be set from a disassembly window. "
@@ -4509,284 +4552,266 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
 //           "(with reason `instruction breakpoint`) is generated.\nClients "
 //           "should only call this request if the corresponding capability "
 //           "`supportsInstructionBreakpoints` is true.",
-//       "properties" : {
-//         "command" : {"type" : "string", "enum" :
-//         ["setInstructionBreakpoints"]}, "arguments" :
-//             {"$ref" : "#/definitions/SetInstructionBreakpointsArguments"}
+//       "properties": {
+//         "command": { "type": "string", "enum": ["setInstructionBreakpoints"]
+//         }, "arguments": {"$ref":
+//         "#/definitions/SetInstructionBreakpointsArguments"}
 //       },
-//       "required" : [ "command", "arguments" ]
+//       "required": [ "command", "arguments" ]
 //     }
 //   ]
 // },
-//                                      "SetInstructionBreakpointsArguments"
-//     : {
-//       "type" : "object",
-//       "description" : "Arguments for `setInstructionBreakpoints` request",
-//       "properties" : {
-//         "breakpoints" : {
-//           "type" : "array",
-//           "items" : {"$ref" : "#/definitions/InstructionBreakpoint"},
-//           "description" : "The instruction references of the breakpoints"
-//         }
-//       },
-//       "required" : ["breakpoints"]
-//     },
-//       "SetInstructionBreakpointsResponse"
-//     : {
-//       "allOf" : [
-//         {"$ref" : "#/definitions/Response"}, {
-//           "type" : "object",
-//           "description" : "Response to `setInstructionBreakpoints` request",
-//           "properties" : {
-//             "body" : {
-//               "type" : "object",
-//               "properties" : {
-//                 "breakpoints" : {
-//                   "type" : "array",
-//                   "items" : {"$ref" : "#/definitions/Breakpoint"},
-//                   "description" :
-//                       "Information about the breakpoints. The array elements
-//                       " "correspond to the elements of the `breakpoints`
-//                       array."
-//                 }
-//               },
-//               "required" : ["breakpoints"]
+// "SetInstructionBreakpointsArguments": {
+//   "type": "object",
+//   "description": "Arguments for `setInstructionBreakpoints` request",
+//   "properties": {
+//     "breakpoints": {
+//       "type": "array",
+//       "items": {"$ref": "#/definitions/InstructionBreakpoint"},
+//       "description": "The instruction references of the breakpoints"
+//     }
+//   },
+//   "required": ["breakpoints"]
+// },
+// "SetInstructionBreakpointsResponse": {
+//   "allOf": [
+//     {"$ref": "#/definitions/Response"},
+//     {
+//       "type": "object",
+//       "description": "Response to `setInstructionBreakpoints` request",
+//       "properties": {
+//         "body": {
+//           "type": "object",
+//           "properties": {
+//             "breakpoints": {
+//               "type": "array",
+//               "items": {"$ref": "#/definitions/Breakpoint"},
+//               "description":
+//                   "Information about the breakpoints. The array elements
+//                   " "correspond to the elements of the `breakpoints`
+//                   array."
 //             }
 //           },
-//           "required" : ["body"]
+//           "required": ["breakpoints"]
 //         }
-//       ]
-//     },
-// "InstructionBreakpoint" : {
-//   "type" : "object",
-//   "description" : "Properties of a breakpoint passed to the "
+//       },
+//       "required": ["body"]
+//     }
+//   ]
+// },
+// "InstructionBreakpoint": {
+//   "type": "object",
+//   "description": "Properties of a breakpoint passed to the "
 //                   "`setInstructionBreakpoints` request",
-//   "properties" : {
-//     "instructionReference" : {
-//       "type" : "string",
+//   "properties": {
+//     "instructionReference": {
+//       "type": "string",
 //       "description" :
 //           "The instruction reference of the breakpoint.\nThis should be a "
 //           "memory or instruction pointer reference from an
 //           `EvaluateResponse`, "
 //           "`Variable`, `StackFrame`, `GotoTarget`, or `Breakpoint`."
 //     },
-//     "offset" : {
-//       "type" : "integer",
-//       "description" : "The offset from the instruction reference in "
+//     "offset": {
+//       "type": "integer",
+//       "description": "The offset from the instruction reference in "
 //                       "bytes.\nThis can be negative."
 //     },
-//     "condition" : {
-//       "type" : "string",
-//       "description" : "An expression for conditional breakpoints.\nIt is only
+//     "condition": {
+//       "type": "string",
+//       "description": "An expression for conditional breakpoints.\nIt is only
 //       "
 //                       "honored by a debug adapter if the corresponding "
 //                       "capability `supportsConditionalBreakpoints` is true."
 //     },
-//     "hitCondition" : {
-//       "type" : "string",
-//       "description" : "An expression that controls how many hits of the "
+//     "hitCondition": {
+//       "type": "string",
+//       "description": "An expression that controls how many hits of the "
 //                       "breakpoint are ignored.\nThe debug adapter is expected
 //                       " "to interpret the expression as needed.\nThe
 //                       attribute " "is only honored by a debug adapter if the
 //                       corresponding " "capability
 //                       `supportsHitConditionalBreakpoints` is true."
 //     },
-//     "mode" : {
-//       "type" : "string",
-//       "description" : "The mode of this breakpoint. If defined, this must be
+//     "mode": {
+//       "type": "string",
+//       "description": "The mode of this breakpoint. If defined, this must be
 //       "
 //                       "one of the `breakpointModes` the debug adapter "
 //                       "advertised in its `Capabilities`."
 //     }
 //   },
-//   "required" : ["instructionReference"]
+//   "required": ["instructionReference"]
 // },
-// "Breakpoint"
-//     : {
-//       "type" : "object",
+// "Breakpoint": {
+//   "type": "object",
+//   "description" :
+//       "Information about a breakpoint created in `setBreakpoints`, "
+//       "`setFunctionBreakpoints`, `setInstructionBreakpoints`, or "
+//       "`setDataBreakpoints` requests.",
+//   "properties": {
+//     "id": {
+//       "type": "integer",
 //       "description" :
-//           "Information about a breakpoint created in `setBreakpoints`, "
-//           "`setFunctionBreakpoints`, `setInstructionBreakpoints`, or "
-//           "`setDataBreakpoints` requests.",
-//       "properties" : {
-//         "id" : {
-//           "type" : "integer",
-//           "description" :
-//               "The identifier for the breakpoint. It is needed if breakpoint
-//               " "events are used to update or remove breakpoints."
-//         },
-//         "verified" : {
-//           "type" : "boolean",
-//           "description" : "If true, the breakpoint could be set (but not "
-//                           "necessarily at the desired location)."
-//         },
-//         "message" : {
-//           "type" : "string",
-//           "description" : "A message about the state of the breakpoint.\nThis
-//           "
-//                           "is shown to the user and can be used to explain
-//                           why " "a breakpoint could not be verified."
-//         },
-//         "source" : {
-//           "$ref" : "#/definitions/Source",
-//           "description" : "The source where the breakpoint is located."
-//         },
-//         "line" : {
-//           "type" : "integer",
-//           "description" :
-//               "The start line of the actual range covered by the breakpoint."
-//         },
-//         "column" : {
-//           "type" : "integer",
-//           "description" :
-//               "Start position of the source range covered by the breakpoint.
-//               " "It is measured in UTF-16 code units and the client
-//               capability "
-//               "`columnsStartAt1` determines whether it is 0- or 1-based."
-//         },
-//         "endLine" : {
-//           "type" : "integer",
-//           "description" :
-//               "The end line of the actual range covered by the breakpoint."
-//         },
-//         "endColumn" : {
-//           "type" : "integer",
-//           "description" :
-//               "End position of the source range covered by the breakpoint. It
-//               " "is measured in UTF-16 code units and the client capability "
-//               "`columnsStartAt1` determines whether it is 0- or 1-based.\nIf
-//               " "no end line is given, then the end column is assumed to be
-//               in " "the start line."
-//         },
-//         "instructionReference" : {
-//           "type" : "string",
-//           "description" : "A memory reference to where the breakpoint is
-//           set."
-//         },
-//         "offset" : {
-//           "type" : "integer",
-//           "description" : "The offset from the instruction reference.\nThis "
-//                           "can be negative."
-//         },
-//         "reason" : {
-//           "type" : "string",
-//           "description" :
-//               "A machine-readable explanation of why a breakpoint may not be
-//               " "verified. If a breakpoint is verified or a specific reason
-//               is " "not known, the adapter should omit this property.
-//               Possible " "values include:\n\n- `pending`: Indicates a
-//               breakpoint might be " "verified in the future, but the adapter
-//               cannot verify it in the " "current state.\n - `failed`:
-//               Indicates a breakpoint was not " "able to be verified, and the
-//               adapter does not believe it can be " "verified without
-//               intervention.",
-//           "enum" : [ "pending", "failed" ]
-//         }
-//       },
-//       "required" : ["verified"]
+//           "The identifier for the breakpoint. It is needed if breakpoint
+//           " "events are used to update or remove breakpoints."
 //     },
-
-void request_setInstructionBreakpoints(const llvm::json::Object &request) {
+//     "verified": {
+//       "type": "boolean",
+//       "description": "If true, the breakpoint could be set (but not "
+//                       "necessarily at the desired location)."
+//     },
+//     "message": {
+//       "type": "string",
+//       "description": "A message about the state of the breakpoint.\nThis
+//       "
+//                       "is shown to the user and can be used to explain
+//                       why " "a breakpoint could not be verified."
+//     },
+//     "source": {
+//       "$ref": "#/definitions/Source",
+//       "description": "The source where the breakpoint is located."
+//     },
+//     "line": {
+//       "type": "integer",
+//       "description" :
+//           "The start line of the actual range covered by the breakpoint."
+//     },
+//     "column": {
+//       "type": "integer",
+//       "description" :
+//           "Start position of the source range covered by the breakpoint.
+//           " "It is measured in UTF-16 code units and the client
+//           capability "
+//           "`columnsStartAt1` determines whether it is 0- or 1-based."
+//     },
+//     "endLine": {
+//       "type": "integer",
+//       "description" :
+//           "The end line of the actual range covered by the breakpoint."
+//     },
+//     "endColumn": {
+//       "type": "integer",
+//       "description" :
+//           "End position of the source range covered by the breakpoint. It
+//           " "is measured in UTF-16 code units and the client capability "
+//           "`columnsStartAt1` determines whether it is 0- or 1-based.\nIf
+//           " "no end line is given, then the end column is assumed to be
+//           in " "the start line."
+//     },
+//     "instructionReference": {
+//       "type": "string",
+//       "description": "A memory reference to where the breakpoint is
+//       set."
+//     },
+//     "offset": {
+//       "type": "integer",
+//       "description": "The offset from the instruction reference.\nThis "
+//                       "can be negative."
+//     },
+//     "reason": {
+//       "type": "string",
+//       "description" :
+//           "A machine-readable explanation of why a breakpoint may not be
+//           " "verified. If a breakpoint is verified or a specific reason
+//           is " "not known, the adapter should omit this property.
+//           Possible " "values include:\n\n- `pending`: Indicates a
+//           breakpoint might be " "verified in the future, but the adapter
+//           cannot verify it in the " "current state.\n - `failed`:
+//           Indicates a breakpoint was not " "able to be verified, and the
+//           adapter does not believe it can be " "verified without
+//           intervention.",
+//       "enum": [ "pending", "failed" ]
+//     }
+//   },
+//   "required": ["verified"]
+// },
+void request_setInstructionBreakpoints(DAP &dap,
+                                       const llvm::json::Object &request) {
   llvm::json::Object response;
   llvm::json::Array response_breakpoints;
   llvm::json::Object body;
   FillResponse(request, response);
 
-  auto arguments = request.getObject("arguments");
-  auto breakpoints = arguments->getArray("breakpoints");
+  const auto *arguments = request.getObject("arguments");
+  const auto *breakpoints = arguments->getArray("breakpoints");
 
-  // It holds active instruction breakpoint list received from DAP.
-  InstructionBreakpointMap request_ibp;
-  if (breakpoints) {
-    for (const auto &bp : *breakpoints) {
-      auto bp_obj = bp.getAsObject();
-      if (bp_obj) {
-        // Read instruction breakpoint request.
-        InstructionBreakpoint inst_bp(*bp_obj);
-        // Store them into map for reference.
-        request_ibp[inst_bp.instructionAddressReference] = std::move(inst_bp);
-      }
-    }
+  // Disable any instruction breakpoints that aren't in this request.
+  // There is no call to remove instruction breakpoints other than calling this
+  // function with a smaller or empty "breakpoints" list.
+  llvm::DenseSet<lldb::addr_t> seen;
+  for (const auto &addr : dap.instruction_breakpoints)
+    seen.insert(addr.first);
 
-    // Iterate previous active instruction breakpoint list.
-    for (auto &prev_ibp : g_dap.instruction_breakpoints) {
-      // Find previous instruction breakpoint reference address in newly
-      // received instruction breakpoint list.
-      auto inst_reference = request_ibp.find(prev_ibp.first);
-      // Request for remove and delete the breakpoint, if the prev instruction
-      // breakpoint ID is not available in active instrcation breakpoint list.
-      // Means delete removed breakpoint instance.
-      if (inst_reference == request_ibp.end()) {
-        g_dap.target.BreakpointDelete(prev_ibp.second.id);
-        // Update Prev instruction breakpoint list.
-        g_dap.instruction_breakpoints.erase(prev_ibp.first);
-      } else {
-        // Instead of recreating breakpoint instance, update the breakpoint if
-        // there are any conditional changes.
-        prev_ibp.second.UpdateBreakpoint(inst_reference->second);
-        request_ibp.erase(inst_reference);
-        response_breakpoints.emplace_back(
-            CreateInstructionBreakpoint(&prev_ibp.second));
-      }
-    }
+  for (const auto &bp : *breakpoints) {
+    const auto *bp_obj = bp.getAsObject();
+    if (!bp_obj)
+      continue;
+    // Read instruction breakpoint request.
+    InstructionBreakpoint inst_bp(dap, *bp_obj);
+    const auto [iv, inserted] = dap.instruction_breakpoints.try_emplace(
+        inst_bp.instructionAddressReference, dap, *bp_obj);
+    if (inserted)
+      iv->second.SetBreakpoint();
+    else
+      iv->second.UpdateBreakpoint(inst_bp);
+    AppendBreakpoint(&iv->second, response_breakpoints);
+    seen.erase(inst_bp.instructionAddressReference);
+  }
 
-    for (auto &req_bpi : request_ibp) {
-      // Add this breakpoint info to the response
-      g_dap.instruction_breakpoints[req_bpi.first] = std::move(req_bpi.second);
-      InstructionBreakpoint &new_bp =
-          g_dap.instruction_breakpoints[req_bpi.first];
-      new_bp.SetInstructionBreakpoint();
-      response_breakpoints.emplace_back(CreateInstructionBreakpoint(&new_bp));
-    }
+  for (const auto &addr : seen) {
+    auto inst_bp = dap.instruction_breakpoints.find(addr);
+    if (inst_bp == dap.instruction_breakpoints.end())
+      continue;
+    dap.target.BreakpointDelete(inst_bp->second.bp.GetID());
+    dap.instruction_breakpoints.erase(addr);
   }
 
   body.try_emplace("breakpoints", std::move(response_breakpoints));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-void RegisterRequestCallbacks() {
-  g_dap.RegisterRequestCallback("attach", request_attach);
-  g_dap.RegisterRequestCallback("completions", request_completions);
-  g_dap.RegisterRequestCallback("continue", request_continue);
-  g_dap.RegisterRequestCallback("configurationDone", request_configurationDone);
-  g_dap.RegisterRequestCallback("disconnect", request_disconnect);
-  g_dap.RegisterRequestCallback("evaluate", request_evaluate);
-  g_dap.RegisterRequestCallback("exceptionInfo", request_exceptionInfo);
-  g_dap.RegisterRequestCallback("initialize", request_initialize);
-  g_dap.RegisterRequestCallback("launch", request_launch);
-  g_dap.RegisterRequestCallback("next", request_next);
-  g_dap.RegisterRequestCallback("pause", request_pause);
-  g_dap.RegisterRequestCallback("restart", request_restart);
-  g_dap.RegisterRequestCallback("scopes", request_scopes);
-  g_dap.RegisterRequestCallback("setBreakpoints", request_setBreakpoints);
-  g_dap.RegisterRequestCallback("setExceptionBreakpoints",
-                                request_setExceptionBreakpoints);
-  g_dap.RegisterRequestCallback("setFunctionBreakpoints",
-                                request_setFunctionBreakpoints);
-  g_dap.RegisterRequestCallback("dataBreakpointInfo",
-                                request_dataBreakpointInfo);
-  g_dap.RegisterRequestCallback("setDataBreakpoints",
-                                request_setDataBreakpoints);
-  g_dap.RegisterRequestCallback("setVariable", request_setVariable);
-  g_dap.RegisterRequestCallback("source", request_source);
-  g_dap.RegisterRequestCallback("stackTrace", request_stackTrace);
-  g_dap.RegisterRequestCallback("stepIn", request_stepIn);
-  g_dap.RegisterRequestCallback("stepInTargets", request_stepInTargets);
-  g_dap.RegisterRequestCallback("stepOut", request_stepOut);
-  g_dap.RegisterRequestCallback("threads", request_threads);
-  g_dap.RegisterRequestCallback("variables", request_variables);
-  g_dap.RegisterRequestCallback("locations", request_locations);
-  g_dap.RegisterRequestCallback("disassemble", request_disassemble);
-  g_dap.RegisterRequestCallback("readMemory", request_readMemory);
-  g_dap.RegisterRequestCallback("setInstructionBreakpoints",
-                                request_setInstructionBreakpoints);
+void RegisterRequestCallbacks(DAP &dap) {
+  dap.RegisterRequestCallback("attach", request_attach);
+  dap.RegisterRequestCallback("completions", request_completions);
+  dap.RegisterRequestCallback("continue", request_continue);
+  dap.RegisterRequestCallback("configurationDone", request_configurationDone);
+  dap.RegisterRequestCallback("disconnect", request_disconnect);
+  dap.RegisterRequestCallback("evaluate", request_evaluate);
+  dap.RegisterRequestCallback("exceptionInfo", request_exceptionInfo);
+  dap.RegisterRequestCallback("initialize", request_initialize);
+  dap.RegisterRequestCallback("launch", request_launch);
+  dap.RegisterRequestCallback("next", request_next);
+  dap.RegisterRequestCallback("pause", request_pause);
+  dap.RegisterRequestCallback("restart", request_restart);
+  dap.RegisterRequestCallback("scopes", request_scopes);
+  dap.RegisterRequestCallback("setBreakpoints", request_setBreakpoints);
+  dap.RegisterRequestCallback("setExceptionBreakpoints",
+                              request_setExceptionBreakpoints);
+  dap.RegisterRequestCallback("setFunctionBreakpoints",
+                              request_setFunctionBreakpoints);
+  dap.RegisterRequestCallback("dataBreakpointInfo", request_dataBreakpointInfo);
+  dap.RegisterRequestCallback("setDataBreakpoints", request_setDataBreakpoints);
+  dap.RegisterRequestCallback("setVariable", request_setVariable);
+  dap.RegisterRequestCallback("source", request_source);
+  dap.RegisterRequestCallback("stackTrace", request_stackTrace);
+  dap.RegisterRequestCallback("stepIn", request_stepIn);
+  dap.RegisterRequestCallback("stepInTargets", request_stepInTargets);
+  dap.RegisterRequestCallback("stepOut", request_stepOut);
+  dap.RegisterRequestCallback("threads", request_threads);
+  dap.RegisterRequestCallback("variables", request_variables);
+  dap.RegisterRequestCallback("locations", request_locations);
+  dap.RegisterRequestCallback("disassemble", request_disassemble);
+  dap.RegisterRequestCallback("readMemory", request_readMemory);
+  dap.RegisterRequestCallback("setInstructionBreakpoints",
+                              request_setInstructionBreakpoints);
   // Custom requests
-  g_dap.RegisterRequestCallback("compileUnits", request_compileUnits);
-  g_dap.RegisterRequestCallback("modules", request_modules);
+  dap.RegisterRequestCallback("compileUnits", request_compileUnits);
+  dap.RegisterRequestCallback("modules", request_modules);
   // Testing requests
-  g_dap.RegisterRequestCallback("_testGetTargetBreakpoints",
-                                request__testGetTargetBreakpoints);
+  dap.RegisterRequestCallback("_testGetTargetBreakpoints",
+                              request__testGetTargetBreakpoints);
 }
 
 } // anonymous namespace
@@ -4832,9 +4857,9 @@ EXAMPLES:
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adaptor.
-void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                               llvm::StringRef comm_file,
-                               lldb::pid_t debugger_pid, char *argv[]) {
+static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                                      llvm::StringRef comm_file,
+                                      lldb::pid_t debugger_pid, char *argv[]) {
 #if defined(_WIN32)
   llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
   exit(EXIT_FAILURE);
@@ -4878,7 +4903,7 @@ void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 }
 
 /// used only by TestVSCode_redirection_to_console.py
-void redirection_test() {
+static void redirection_test() {
   printf("stdout message\n");
   fprintf(stderr, "stderr message\n");
   fflush(stdout);
@@ -4892,31 +4917,28 @@ void redirection_test() {
 ///
 /// \return
 ///     A fd pointing to the original stdout.
-int SetupStdoutStderrRedirection() {
+static int SetupStdoutStderrRedirection(DAP &dap) {
   int stdoutfd = fileno(stdout);
   int new_stdout_fd = dup(stdoutfd);
-  auto output_callback_stderr = [](llvm::StringRef data) {
-    g_dap.SendOutput(OutputType::Stderr, data);
+  auto output_callback_stderr = [&dap](llvm::StringRef data) {
+    dap.SendOutput(OutputType::Stderr, data);
   };
-  auto output_callback_stdout = [](llvm::StringRef data) {
-    g_dap.SendOutput(OutputType::Stdout, data);
+  auto output_callback_stdout = [&dap](llvm::StringRef data) {
+    dap.SendOutput(OutputType::Stdout, data);
   };
   if (llvm::Error err = RedirectFd(stdoutfd, output_callback_stdout)) {
     std::string error_message = llvm::toString(std::move(err));
-    if (g_dap.log)
-      *g_dap.log << error_message << std::endl;
+    if (dap.log)
+      *dap.log << error_message << std::endl;
     output_callback_stderr(error_message);
   }
   if (llvm::Error err = RedirectFd(fileno(stderr), output_callback_stderr)) {
     std::string error_message = llvm::toString(std::move(err));
-    if (g_dap.log)
-      *g_dap.log << error_message << std::endl;
+    if (dap.log)
+      *dap.log << error_message << std::endl;
     output_callback_stderr(error_message);
   }
 
-  /// used only by TestVSCode_redirection_to_console.py
-  if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
-    redirection_test();
   return new_stdout_fd;
 }
 
@@ -4933,7 +4955,6 @@ int main(int argc, char *argv[]) {
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
-  g_dap.debug_adaptor_path = program_path.str().str();
 
   LLDBDAPOptTable T;
   unsigned MAI, MAC;
@@ -4945,15 +4966,16 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+  ReplMode default_repl_mode = ReplMode::Auto;
   if (input_args.hasArg(OPT_repl_mode)) {
     llvm::opt::Arg *repl_mode = input_args.getLastArg(OPT_repl_mode);
     llvm::StringRef repl_mode_value = repl_mode->getValue();
     if (repl_mode_value == "auto") {
-      g_dap.repl_mode = ReplMode::Auto;
+      default_repl_mode = ReplMode::Auto;
     } else if (repl_mode_value == "variable") {
-      g_dap.repl_mode = ReplMode::Variable;
+      default_repl_mode = ReplMode::Variable;
     } else if (repl_mode_value == "command") {
-      g_dap.repl_mode = ReplMode::Command;
+      default_repl_mode = ReplMode::Command;
     } else {
       llvm::errs()
           << "'" << repl_mode_value
@@ -4990,22 +5012,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // stdout/stderr redirection to the IDE's console
-  int new_stdout_fd = SetupStdoutStderrRedirection();
-
-  // Initialize LLDB first before we do anything.
-  lldb::SBDebugger::Initialize();
-
-  // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger =
-      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
-
-  RegisterRequestCallbacks();
-
   int portno = -1;
-
   if (auto *arg = input_args.getLastArg(OPT_port)) {
-    auto optarg = arg->getValue();
+    const auto *optarg = arg->getValue();
     char *remainder;
     portno = strtol(optarg, &remainder, 0);
     if (remainder == optarg || *remainder != '\0') {
@@ -5020,30 +5029,48 @@ int main(int argc, char *argv[]) {
     pause();
   }
 #endif
+
+  // Initialize LLDB first before we do anything.
+  lldb::SBDebugger::Initialize();
+
+  // Terminate the debugger before the C++ destructor chain kicks in.
+  auto terminate_debugger =
+      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+
+  DAP dap = DAP(program_path.str(), default_repl_mode);
+
+  RegisterRequestCallbacks(dap);
+
+  // stdout/stderr redirection to the IDE's console
+  int new_stdout_fd = SetupStdoutStderrRedirection(dap);
+
   if (portno != -1) {
     printf("Listening on port %i...\n", portno);
-    SOCKET socket_fd = AcceptConnection(portno);
+    SOCKET socket_fd = AcceptConnection(dap, portno);
     if (socket_fd >= 0) {
-      g_dap.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
-      g_dap.output.descriptor = StreamDescriptor::from_socket(socket_fd, false);
+      dap.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
+      dap.output.descriptor = StreamDescriptor::from_socket(socket_fd, false);
     } else {
       return EXIT_FAILURE;
     }
   } else {
-    g_dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
-    g_dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
+    dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
+    dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
+
+    /// used only by TestVSCode_redirection_to_console.py
+    if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
+      redirection_test();
   }
 
   for (const std::string &arg :
        input_args.getAllArgValues(OPT_pre_init_command)) {
-    g_dap.pre_init_commands.push_back(arg);
+    dap.pre_init_commands.push_back(arg);
   }
 
   bool CleanExit = true;
-  if (auto Err = g_dap.Loop()) {
-    if (g_dap.log)
-      *g_dap.log << "Transport Error: " << llvm::toString(std::move(Err))
-                 << "\n";
+  if (auto Err = dap.Loop()) {
+    if (dap.log)
+      *dap.log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
     CleanExit = false;
   }
 

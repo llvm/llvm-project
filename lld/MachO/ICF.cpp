@@ -115,16 +115,16 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return false;
     if (ra.offset != rb.offset)
       return false;
-    if (ra.referent.is<Symbol *>() != rb.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))
       return false;
 
     InputSection *isecA, *isecB;
 
     uint64_t valueA = 0;
     uint64_t valueB = 0;
-    if (ra.referent.is<Symbol *>()) {
-      const auto *sa = ra.referent.get<Symbol *>();
-      const auto *sb = rb.referent.get<Symbol *>();
+    if (isa<Symbol *>(ra.referent)) {
+      const auto *sa = cast<Symbol *>(ra.referent);
+      const auto *sb = cast<Symbol *>(rb.referent);
       if (sa->kind() != sb->kind())
         return false;
       // ICF runs before Undefineds are treated (and potentially converted into
@@ -143,9 +143,20 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       isecB = db->isec();
       valueB = db->value;
     } else {
-      isecA = ra.referent.get<InputSection *>();
-      isecB = rb.referent.get<InputSection *>();
+      isecA = cast<InputSection *>(ra.referent);
+      isecB = cast<InputSection *>(rb.referent);
     }
+
+    // Typically, we should not encounter sections marked with `keepUnique` at
+    // this point as they would have resulted in different hashes and therefore
+    // no need for a full comparison.
+    // However, in `safe_thunks` mode, it's possible for two different
+    // relocations to reference identical `keepUnique` functions that will be
+    // distinguished later via thunks - so we need to handle this case
+    // explicitly.
+    if ((isecA != isecB) && ((isecA->keepUnique && isCodeSection(isecA)) ||
+                             (isecB->keepUnique && isCodeSection(isecB))))
+      return false;
 
     if (isecA->parent != isecB->parent)
       return false;
@@ -156,7 +167,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return ra.addend == rb.addend;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
-    if (ra.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent))
       // For symbol relocs, we compare the contents at the symbol address. We
       // don't do `getOffset(value + addend)` because value + addend may not be
       // a valid offset in the literal section.
@@ -184,12 +195,12 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
     if (ra.referent == rb.referent)
       return true;
     const ConcatInputSection *isecA, *isecB;
-    if (ra.referent.is<Symbol *>()) {
+    if (isa<Symbol *>(ra.referent)) {
       // Matching DylibSymbols are already filtered out by the
       // identical-referent check above. Non-matching DylibSymbols were filtered
       // out in equalsConstant(). So we can safely cast to Defined here.
-      const auto *da = cast<Defined>(ra.referent.get<Symbol *>());
-      const auto *db = cast<Defined>(rb.referent.get<Symbol *>());
+      const auto *da = cast<Defined>(cast<Symbol *>(ra.referent));
+      const auto *db = cast<Defined>(cast<Symbol *>(rb.referent));
       if (da->isAbsolute())
         return true;
       isecA = dyn_cast<ConcatInputSection>(da->isec());
@@ -197,8 +208,8 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
         return true; // literal sections were checked in equalsConstant.
       isecB = cast<ConcatInputSection>(db->isec());
     } else {
-      const auto *sa = ra.referent.get<InputSection *>();
-      const auto *sb = rb.referent.get<InputSection *>();
+      const auto *sa = cast<InputSection *>(ra.referent);
+      const auto *sb = cast<InputSection *>(rb.referent);
       isecA = dyn_cast<ConcatInputSection>(sa);
       if (!isecA)
         return true;
@@ -470,6 +481,33 @@ void macho::markAddrSigSymbols() {
   }
 }
 
+// Given a symbol that was folded into a thunk, return the symbol pointing to
+// the actual body of the function. We use this approach rather than storing the
+// needed info in the Defined itself in order to minimize memory usage.
+Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
+  assert(isa<ConcatInputSection>(foldedSym->originalIsec) &&
+         "thunk-folded ICF symbol expected to be on a ConcatInputSection");
+  // foldedSec is the InputSection that was marked as deleted upon fold
+  ConcatInputSection *foldedSec =
+      cast<ConcatInputSection>(foldedSym->originalIsec);
+
+  // thunkBody is the actual live thunk, containing the code that branches to
+  // the actual body of the function.
+  InputSection *thunkBody = foldedSec->replacement;
+
+  // The actual (merged) body of the function that the thunk jumps to. This will
+  // end up in the final binary.
+  InputSection *functionBody = target->getThunkBranchTarget(thunkBody);
+
+  for (Symbol *sym : functionBody->symbols) {
+    Defined *d = dyn_cast<Defined>(sym);
+    // The symbol needs to be at the start of the InputSection
+    if (d && d->value == 0)
+      return d;
+  }
+
+  llvm_unreachable("could not find body symbol for ICF-generated thunk");
+}
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed
