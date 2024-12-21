@@ -724,6 +724,24 @@ static Error removeNote(Object &Obj, endianness Endianness,
                             RemoveNoteDetail::updateData(OldData, ToRemove),
                             RemoveNoteDetail::getSectionMapping(Seg, ToRemove));
   }
+  for (auto &Sec : Obj.sections()) {
+    if (Sec.Type != SHT_NOTE || Sec.ParentSegment || !Sec.hasContents())
+      continue;
+    ArrayRef<uint8_t> OldData = Sec.getContents();
+    size_t Align = std::max<size_t>(4, Sec.Align);
+    // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
+    // header, so the parsers are the same.
+    auto ToRemove = (Endianness == endianness::little)
+                        ? RemoveNoteDetail::findNotesToRemove<ELF64LE>(
+                              OldData, Align, NotesToRemove)
+                        : RemoveNoteDetail::findNotesToRemove<ELF64BE>(
+                              OldData, Align, NotesToRemove);
+    if (!ToRemove.empty()) {
+      if (Error E = Obj.updateSectionData(
+              Sec, RemoveNoteDetail::updateData(OldData, ToRemove)))
+        return E;
+    }
+  }
   return Error::success();
 }
 
