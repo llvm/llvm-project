@@ -28,8 +28,8 @@ static_assert(sizeof(SymbolUnion) <= 48,
               "symbols should be optimized for memory usage");
 
 // Returns a symbol name for an error message.
-static std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
-                                       StringRef symName) {
+std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
+                                StringRef symName) {
   if (ctx.config.demangle) {
     std::string prefix;
     StringRef prefixless = symName;
@@ -51,6 +51,17 @@ std::string toString(const COFFLinkerContext &ctx, coff::Symbol &b) {
 std::string toCOFFString(const COFFLinkerContext &ctx,
                          const Archive::Symbol &b) {
   return maybeDemangleSymbol(ctx, b.getName());
+}
+
+const COFFSyncStream &
+coff::operator<<(const COFFSyncStream &s,
+                 const llvm::object::Archive::Symbol *sym) {
+  s << maybeDemangleSymbol(s.ctx, sym->getName());
+  return s;
+}
+
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s, Symbol *sym) {
+  return s << maybeDemangleSymbol(s.ctx, sym->getName());
 }
 
 namespace coff {
@@ -116,6 +127,9 @@ Symbol *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
   DenseSet<Symbol *> weakChain;
   for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias) {
+    // Anti-dependency symbols can't be chained.
+    if (a->isAntiDep)
+      break;
     if (!isa<Undefined>(a))
       return a;
     if (!weakChain.insert(a).second)
@@ -135,6 +149,7 @@ bool Undefined::resolveWeakAlias() {
   // Symbols. For that reason we need to check which type of symbol we
   // are dealing with and copy the correct number of bytes.
   StringRef name = getName();
+  bool wasAntiDep = isAntiDep;
   if (isa<DefinedRegular>(d))
     memcpy(this, d, sizeof(DefinedRegular));
   else if (isa<DefinedAbsolute>(d))
@@ -144,16 +159,17 @@ bool Undefined::resolveWeakAlias() {
 
   nameData = name.data();
   nameSize = name.size();
+  isAntiDep = wasAntiDep;
   return true;
 }
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {
   Archive::Child c =
       CHECK(sym.getMember(), "could not get the member for symbol " +
-                                 toCOFFString(file->ctx, sym));
+                                 toCOFFString(file->symtab.ctx, sym));
   return CHECK(c.getMemoryBufferRef(),
                "could not get the buffer for the member defining symbol " +
-                   toCOFFString(file->ctx, sym));
+                   toCOFFString(file->symtab.ctx, sym));
 }
 } // namespace coff
 } // namespace lld

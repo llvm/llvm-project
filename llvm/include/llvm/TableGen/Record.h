@@ -401,9 +401,7 @@ public:
   /// variables which may not be defined at the time the expression is formed.
   /// If a value is set for the variable later, this method will be called on
   /// users of the value to allow the value to propagate out.
-  virtual const Init *resolveReferences(Resolver &R) const {
-    return const_cast<Init *>(this);
-  }
+  virtual const Init *resolveReferences(Resolver &R) const { return this; }
 
   /// Get the \p Init value of the specified bit.
   virtual const Init *getBit(unsigned Bit) const = 0;
@@ -475,9 +473,7 @@ public:
   const Init *getCastTo(const RecTy *Ty) const override;
   const Init *convertInitializerTo(const RecTy *Ty) const override;
 
-  const Init *getBit(unsigned Bit) const override {
-    return const_cast<UnsetInit*>(this);
-  }
+  const Init *getBit(unsigned Bit) const override { return this; }
 
   /// Is this a complete value with no unset (uninitialized) subvalues?
   bool isComplete() const override { return false; }
@@ -579,7 +575,7 @@ public:
 
   const Init *getBit(unsigned Bit) const override {
     assert(Bit < 1 && "Bit index out of range!");
-    return const_cast<BitInit*>(this);
+    return this;
   }
 
   bool isConcrete() const override { return true; }
@@ -864,6 +860,7 @@ public:
     LOG2,
     REPR,
     LISTFLATTEN,
+    INITIALIZED,
   };
 
 private:
@@ -1318,7 +1315,7 @@ public:
 
   const Init *getBit(unsigned B) const override {
     assert(B < 1 && "Bit index out of range!");
-    return const_cast<VarBitInit*>(this);
+    return this;
   }
 };
 
@@ -1359,11 +1356,11 @@ class VarDefInit final
       public FoldingSetNode,
       public TrailingObjects<VarDefInit, const ArgumentInit *> {
   SMLoc Loc;
-  Record *Class;
+  const Record *Class;
   const DefInit *Def = nullptr; // after instantiation
   unsigned NumArgs;
 
-  explicit VarDefInit(SMLoc Loc, Record *Class, unsigned N);
+  explicit VarDefInit(SMLoc Loc, const Record *Class, unsigned N);
 
   const DefInit *instantiate();
 
@@ -1377,7 +1374,7 @@ public:
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
   }
-  static const VarDefInit *get(SMLoc Loc, Record *Class,
+  static const VarDefInit *get(SMLoc Loc, const Record *Class,
                                ArrayRef<const ArgumentInit *> Args);
 
   void Profile(FoldingSetNodeID &ID) const;
@@ -2004,7 +2001,7 @@ public:
   const GlobalMap &getGlobals() const { return ExtraGlobals; }
 
   /// Get the class with the specified name.
-  Record *getClass(StringRef Name) const {
+  const Record *getClass(StringRef Name) const {
     auto I = Classes.find(Name);
     return I == Classes.end() ? nullptr : I->second.get();
   }

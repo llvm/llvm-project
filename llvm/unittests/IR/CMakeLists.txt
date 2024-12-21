@@ -50,6 +50,7 @@ add_llvm_unittest(IRTests
   ValueMapTest.cpp
   ValueTest.cpp
   VectorBuilderTest.cpp
+  VectorTypeUtilsTest.cpp
   VectorTypesTest.cpp
   VerifierTest.cpp
   VFABIDemanglerTest.cpp

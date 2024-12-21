@@ -972,8 +972,9 @@ static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
 LowLevelAllocator allocator_for_env;
 
 static bool ShouldCheckInterceptors() {
-  // Restrict "interceptors working?" check to ASan and TSan.
-  const char *sanitizer_names[] = {"AddressSanitizer", "ThreadSanitizer"};
+  // Restrict "interceptors working?" check
+  const char *sanitizer_names[] = {"AddressSanitizer", "ThreadSanitizer",
+                                   "RealtimeSanitizer"};
   size_t count = sizeof(sanitizer_names) / sizeof(sanitizer_names[0]);
   for (size_t i = 0; i < count; i++) {
     if (internal_strcmp(sanitizer_names[i], SanitizerToolName) == 0)

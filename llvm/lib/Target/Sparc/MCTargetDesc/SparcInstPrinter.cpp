@@ -14,7 +14,6 @@
 #include "Sparc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,7 +37,7 @@ bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
   return (STI.hasFeature(Sparc::FeatureV9)) != 0;
 }
 
-void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << '%' << getRegisterName(Reg);
 }
 

@@ -441,6 +441,8 @@ void CommandInterpreter::Initialize() {
 
   cmd_obj_sp = GetCommandSPExact("expression");
   if (cmd_obj_sp) {
+    // Ensure `e` runs `expression`.
+    AddAlias("e", cmd_obj_sp);
     AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
@@ -849,8 +851,7 @@ void CommandInterpreter::LoadCommandDictionary() {
     // now "bt 3" is the preferred form, in line with gdb.
     if (bt_regex_cmd_up->AddRegexCommand("^([[:digit:]]+)[[:space:]]*$",
                                          "thread backtrace -c %1") &&
-        bt_regex_cmd_up->AddRegexCommand("^-c ([[:digit:]]+)[[:space:]]*$",
-                                         "thread backtrace -c %1") &&
+        bt_regex_cmd_up->AddRegexCommand("^(-[^[:space:]].*)$", "thread backtrace %1") &&
         bt_regex_cmd_up->AddRegexCommand("^all[[:space:]]*$", "thread backtrace all") &&
         bt_regex_cmd_up->AddRegexCommand("^[[:space:]]*$", "thread backtrace")) {
       CommandObjectSP command_sp(bt_regex_cmd_up.release());
@@ -1272,7 +1273,7 @@ CommandObject *CommandInterpreter::GetUserCommandObject(
     llvm::StringRef cmd, StringList *matches, StringList *descriptions) const {
   std::string cmd_str(cmd);
   auto find_exact = [&](const CommandObject::CommandMap &map) {
-    auto found_elem = map.find(std::string(cmd));
+    auto found_elem = map.find(cmd);
     if (found_elem == map.end())
       return (CommandObject *)nullptr;
     CommandObject *exact_cmd = found_elem->second.get();
@@ -1308,7 +1309,7 @@ CommandObject *CommandInterpreter::GetAliasCommandObject(
     llvm::StringRef cmd, StringList *matches, StringList *descriptions) const {
   auto find_exact =
       [&](const CommandObject::CommandMap &map) -> CommandObject * {
-    auto found_elem = map.find(cmd.str());
+    auto found_elem = map.find(cmd);
     if (found_elem == map.end())
       return (CommandObject *)nullptr;
     CommandObject *exact_cmd = found_elem->second.get();
@@ -1338,13 +1339,12 @@ CommandObject *CommandInterpreter::GetAliasCommandObject(
 }
 
 bool CommandInterpreter::CommandExists(llvm::StringRef cmd) const {
-  return m_command_dict.find(std::string(cmd)) != m_command_dict.end();
+  return m_command_dict.find(cmd) != m_command_dict.end();
 }
 
 bool CommandInterpreter::GetAliasFullName(llvm::StringRef cmd,
                                           std::string &full_name) const {
-  bool exact_match =
-      (m_alias_dict.find(std::string(cmd)) != m_alias_dict.end());
+  bool exact_match = (m_alias_dict.find(cmd) != m_alias_dict.end());
   if (exact_match) {
     full_name.assign(std::string(cmd));
     return exact_match;
@@ -1372,15 +1372,15 @@ bool CommandInterpreter::GetAliasFullName(llvm::StringRef cmd,
 }
 
 bool CommandInterpreter::AliasExists(llvm::StringRef cmd) const {
-  return m_alias_dict.find(std::string(cmd)) != m_alias_dict.end();
+  return m_alias_dict.find(cmd) != m_alias_dict.end();
 }
 
 bool CommandInterpreter::UserCommandExists(llvm::StringRef cmd) const {
-  return m_user_dict.find(std::string(cmd)) != m_user_dict.end();
+  return m_user_dict.find(cmd) != m_user_dict.end();
 }
 
 bool CommandInterpreter::UserMultiwordCommandExists(llvm::StringRef cmd) const {
-  return m_user_mw_dict.find(std::string(cmd)) != m_user_mw_dict.end();
+  return m_user_mw_dict.find(cmd) != m_user_mw_dict.end();
 }
 
 CommandAlias *
@@ -1404,7 +1404,7 @@ CommandInterpreter::AddAlias(llvm::StringRef alias_name,
 }
 
 bool CommandInterpreter::RemoveAlias(llvm::StringRef alias_name) {
-  auto pos = m_alias_dict.find(std::string(alias_name));
+  auto pos = m_alias_dict.find(alias_name);
   if (pos != m_alias_dict.end()) {
     m_alias_dict.erase(pos);
     return true;
@@ -1413,7 +1413,7 @@ bool CommandInterpreter::RemoveAlias(llvm::StringRef alias_name) {
 }
 
 bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd, bool force) {
-  auto pos = m_command_dict.find(std::string(cmd));
+  auto pos = m_command_dict.find(cmd);
   if (pos != m_command_dict.end()) {
     if (force || pos->second->IsRemovable()) {
       // Only regular expression objects or python commands are removable under
@@ -1426,8 +1426,7 @@ bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd, bool force) {
 }
 
 bool CommandInterpreter::RemoveUser(llvm::StringRef user_name) {
-  CommandObject::CommandMap::iterator pos =
-      m_user_dict.find(std::string(user_name));
+  CommandObject::CommandMap::iterator pos = m_user_dict.find(user_name);
   if (pos != m_user_dict.end()) {
     m_user_dict.erase(pos);
     return true;
@@ -1436,8 +1435,7 @@ bool CommandInterpreter::RemoveUser(llvm::StringRef user_name) {
 }
 
 bool CommandInterpreter::RemoveUserMultiword(llvm::StringRef multi_name) {
-  CommandObject::CommandMap::iterator pos =
-      m_user_mw_dict.find(std::string(multi_name));
+  CommandObject::CommandMap::iterator pos = m_user_mw_dict.find(multi_name);
   if (pos != m_user_mw_dict.end()) {
     m_user_mw_dict.erase(pos);
     return true;
@@ -2211,7 +2209,7 @@ const CommandAlias *
 CommandInterpreter::GetAlias(llvm::StringRef alias_name) const {
   OptionArgVectorSP ret_val;
 
-  auto pos = m_alias_dict.find(std::string(alias_name));
+  auto pos = m_alias_dict.find(alias_name);
   if (pos != m_alias_dict.end())
     return (CommandAlias *)pos->second.get();
 

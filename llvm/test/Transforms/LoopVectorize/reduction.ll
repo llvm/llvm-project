@@ -25,7 +25,7 @@ define i32 @reduction_sum(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7]] = add <4 x i32> [[TMP6]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -96,7 +96,7 @@ define i32 @reduction_prod(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 1, i32 1, i32 1, i32 1>, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
@@ -106,7 +106,7 @@ define i32 @reduction_prod(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP5]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7]] = mul <4 x i32> [[TMP6]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
@@ -187,7 +187,7 @@ define i32 @reduction_mix(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[VEC_PHI]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP7]] = add <4 x i32> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
@@ -268,7 +268,7 @@ define i32 @reduction_mul(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP7]] = mul <4 x i32> [[TMP6]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
@@ -416,7 +416,7 @@ define i32 @reduction_and(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 -1, i32 -1, i32 -1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
@@ -760,16 +760,16 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD1]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i1> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i1> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[PREDPHI_V:%.*]] = select <4 x i1> [[TMP7]], <4 x float> [[WIDE_LOAD1]], <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[PREDPHI_V]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> splat (i1 true), <4 x i1> [[TMP9]]
 ; CHECK-NEXT:    [[PREDPHI3]] = select <4 x i1> [[TMP11]], <4 x float> [[VEC_PHI]], <4 x float> [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
@@ -1059,7 +1059,7 @@ define i32 @reduction_sum_multiuse(i32 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7]] = add <4 x i32> [[TMP6]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
@@ -1141,7 +1141,7 @@ define void @reduction_reset(i32 %N, ptr %arrayA, ptr %arrayB) {
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[DOTLR_PH_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ]
 ; CHECK-NEXT:    [[DOT017:%.*]] = phi i32 [ 100, [[DOTLR_PH_PREHEADER]] ], [ [[CSEL:%.*]], [[DOTLR_PH]] ]
-; CHECK-NEXT:    [[C6:%.*]] = getelementptr inbounds i32, ptr [[ARRAYA]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[C6:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYA]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[C7:%.*]] = load i32, ptr [[C6]], align 4
 ; CHECK-NEXT:    [[C8:%.*]] = icmp sgt i32 [[C7]], 0
 ; CHECK-NEXT:    [[C9:%.*]] = add nsw i32 [[C7]], [[DOT017]]

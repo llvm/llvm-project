@@ -388,7 +388,7 @@ class LLVMAnyType<ValueType vt> : LLVMType<vt> {
     !eq(vt, iAny)    : ArgKind.AnyInteger,
     !eq(vt, fAny)    : ArgKind.AnyFloat,
     !eq(vt, vAny)    : ArgKind.AnyVector,
-    !eq(vt, iPTRAny) : ArgKind.AnyPointer,
+    !eq(vt, pAny)    : ArgKind.AnyPointer,
   );
   let Sig = [
     IIT_ARG.Number,
@@ -412,8 +412,8 @@ class LLVMQualPointerType<int addrspace>
     ]);
 }
 
-class LLVMAnyPointerType : LLVMAnyType<iPTRAny> {
-  assert isAny, "iPTRAny should have isOverloaded";
+class LLVMAnyPointerType : LLVMAnyType<pAny> {
+  assert isAny, "pAny should have isOverloaded";
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -1006,6 +1006,17 @@ def int_memset_inline
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
 
+// Memset variant that writes a given pattern.
+def int_experimental_memset_pattern
+    : Intrinsic<[],
+      [llvm_anyptr_ty, // Destination.
+       llvm_anyint_ty, // Pattern value.
+       llvm_anyint_ty, // Count (number of times to fill value).
+       llvm_i1_ty],    // IsVolatile.
+      [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
+       NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
+       ImmArg<ArgIndex<3>>]>;
+
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
 
@@ -1050,6 +1061,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_nearbyint : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_round : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_roundeven    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_sincos : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
 
   // Truncate a floating point number with a specific rounding mode
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
@@ -1642,7 +1655,7 @@ def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
                                   [llvm_i64_ty, llvm_i32_ty, llvm_vararg_ty],
-                                  [Throws]>;
+                                  [Throws, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_experimental_patchpoint_void : Intrinsic<[],
                                                  [llvm_i64_ty, llvm_i32_ty,
                                                   llvm_ptr_ty, llvm_i32_ty,
@@ -1917,6 +1930,20 @@ def int_experimental_vector_histogram_add : DefaultAttrsIntrinsic<[],
                                llvm_anyint_ty,    // Increment
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                              [ IntrArgMemOnly ]>;
+
+// Experimental match
+def int_experimental_vector_match : DefaultAttrsIntrinsic<
+                             [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+                             [ llvm_anyvector_ty,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],  // Mask
+                             [ IntrNoMem, IntrNoSync, IntrWillReturn ]>;
+
+// Extract based on mask bits
+def int_experimental_vector_extract_last_active:
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+              [llvm_anyvector_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+               LLVMVectorElementType<0>], [IntrNoMem]>;
 
 // Operators
 let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {

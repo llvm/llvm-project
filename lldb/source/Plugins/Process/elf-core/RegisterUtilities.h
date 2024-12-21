@@ -144,6 +144,10 @@ constexpr RegsetDesc AARCH64_MTE_Desc[] = {
      llvm::ELF::NT_ARM_TAGGED_ADDR_CTRL},
 };
 
+constexpr RegsetDesc AARCH64_FPMR_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_FPMR},
+};
+
 constexpr RegsetDesc PPC_VMX_Desc[] = {
     {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VMX},
     {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VMX},

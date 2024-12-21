@@ -1357,17 +1357,17 @@ define amdgpu_kernel void @fdiv_fpmath_f32_vector(ptr addrspace(1) %out, <2 x fl
 define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath(ptr addrspace(1) %out, <2 x float> %x) {
 ; CHECK-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[NO_MD:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[NO_MD:%.*]] = fdiv <2 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]], !fpmath [[META1:![0-9]+]]
+; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv <2 x float> splat (float 1.000000e+00), [[X]], !fpmath [[META1:![0-9]+]]
 ; CHECK-NEXT:    store volatile <2 x float> [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[AFN_NO_MD:%.*]] = fdiv afn <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[AFN_NO_MD:%.*]] = fdiv afn <2 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    store volatile <2 x float> [[AFN_NO_MD]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[FAST_NO_MD:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[FAST_NO_MD:%.*]] = fdiv fast <2 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    store volatile <2 x float> [[FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[AFN_25ULP:%.*]] = fdiv afn <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]], !fpmath [[META0]]
+; CHECK-NEXT:    [[AFN_25ULP:%.*]] = fdiv afn <2 x float> splat (float 1.000000e+00), [[X]], !fpmath [[META0]]
 ; CHECK-NEXT:    store volatile <2 x float> [[AFN_25ULP]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[FAST_25ULP:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]], !fpmath [[META0]]
+; CHECK-NEXT:    [[FAST_25ULP:%.*]] = fdiv fast <2 x float> splat (float 1.000000e+00), [[X]], !fpmath [[META0]]
 ; CHECK-NEXT:    store volatile <2 x float> [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -2114,7 +2114,7 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath(
 ; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT_X_NO_MD]]
+; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> splat (float 1.000000e+00), [[SQRT_X_NO_MD]]
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META2]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 0
@@ -2185,7 +2185,7 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath(
 ; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT_X_NO_MD]]
+; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> splat (float 1.000000e+00), [[SQRT_X_NO_MD]]
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META2]]
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 0
@@ -2256,7 +2256,7 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath(
 ; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT_X_NO_MD]]
+; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> splat (float 1.000000e+00), [[SQRT_X_NO_MD]]
 ; DAZ-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META2:![0-9]+]]
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 0

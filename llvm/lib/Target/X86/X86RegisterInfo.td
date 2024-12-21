@@ -30,6 +30,8 @@ let Namespace = "X86" in {
   def sub_ymm      : SubRegIndex<256>;
   def sub_mask_0   : SubRegIndex<-1>;
   def sub_mask_1   : SubRegIndex<-1, -1>;
+  def sub_t0       : SubRegIndex<8192>;
+  def sub_t1       : SubRegIndex<8192, 8192>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -430,6 +432,10 @@ def TMM4:  X86Reg<"tmm4",   4>;
 def TMM5:  X86Reg<"tmm5",   5>;
 def TMM6:  X86Reg<"tmm6",   6>;
 def TMM7:  X86Reg<"tmm7",   7>;
+// TMM register pairs
+def TPAIRS : RegisterTuples<[sub_t0, sub_t1],
+                            [(add TMM0, TMM2, TMM4, TMM6),
+                             (add TMM1, TMM3, TMM5, TMM7)]>;
 }
 
 // Floating point stack registers. These don't map one-to-one to the FP
@@ -535,8 +541,8 @@ def SSP : X86Reg<"ssp", 0>;
 // R12, R13, R14, and R15 for X86-64) are callee-save registers.
 // In 64-mode, there are 12 additional i8 registers, SIL, DIL, BPL, SPL, and
 // R8B, ... R15B.
-// Allocate R12 and R13 last, as these require an extra byte when
-// encoded in x86_64 instructions.
+// Allocate R12, R13, R20, R21, R28 and R29 last, as these require an extra byte
+// when encoded in x86_64 instructions.
 // FIXME: Allow AH, CH, DH, BH to be used as general-purpose registers in
 // 64-bit mode. The main complication is that they cannot be encoded in an
 // instruction requiring a REX prefix, while SIL, DIL, BPL, R8D, etc.
@@ -544,9 +550,9 @@ def SSP : X86Reg<"ssp", 0>;
 // cannot be encoded.
 def GR8 : RegisterClass<"X86", [i8], 8,
                         (add AL, CL, DL, AH, CH, DH, BL, BH, SIL, DIL, BPL, SPL,
-                             R8B, R9B, R10B, R11B, R16B, R17B, R18B, R19B, R20B,
-                             R21B, R22B, R23B, R24B, R25B, R26B, R27B, R28B, R29B,
-                             R30B, R31B, R14B, R15B, R12B, R13B)> {
+                             R8B, R9B, R10B, R11B, R16B, R17B, R18B, R19B, R22B,
+                             R23B, R24B, R25B, R26B, R27B, R30B, R31B, R14B,
+                             R15B, R12B, R13B, R20B, R21B, R28B, R29B)> {
   let AltOrders = [(sub GR8, AH, BH, CH, DH)];
   let AltOrderSelect = [{
     return MF.getSubtarget<X86Subtarget>().is64Bit();
@@ -561,9 +567,9 @@ def GRH8 : RegisterClass<"X86", [i8], 8,
                               R26BH, R27BH, R28BH, R29BH, R30BH, R31BH)>;
 def GR16 : RegisterClass<"X86", [i16], 16,
                          (add AX, CX, DX, SI, DI, BX, BP, SP, R8W, R9W, R10W,
-                              R11W, R16W, R17W, R18W, R19W, R20W, R21W, R22W, R23W,
-                              R24W, R25W, R26W, R27W, R28W, R29W, R30W, R31W, R14W,
-                              R15W, R12W, R13W)>;
+                              R11W, R16W, R17W, R18W, R19W, R22W, R23W, R24W,
+                              R25W, R26W, R27W, R30W, R31W, R14W, R15W, R12W,
+                              R13W, R20W, R21W, R28W, R29W)>;
 
 let isAllocatable = 0 in
 def GRH16 : RegisterClass<"X86", [i16], 16,
@@ -573,9 +579,9 @@ def GRH16 : RegisterClass<"X86", [i16], 16,
                          R25WH, R26WH, R27WH, R28WH, R29WH, R30WH, R31WH)>;
 def GR32 : RegisterClass<"X86", [i32], 32,
                          (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP, R8D, R9D,
-                              R10D, R11D, R16D, R17D, R18D, R19D, R20D, R21D, R22D,
-                              R23D, R24D, R25D, R26D, R27D, R28D, R29D, R30D, R31D,
-                              R14D, R15D, R12D, R13D)>;
+                              R10D, R11D, R16D, R17D, R18D, R19D, R22D, R23D,
+                              R24D, R25D, R26D, R27D, R30D, R31D, R14D, R15D,
+                              R12D, R13D, R20D, R21D, R28D, R29D)>;
 
 // GR64 - 64-bit GPRs. This oddly includes RIP, which isn't accurate, since
 // RIP isn't really a register and it can't be used anywhere except in an
@@ -584,8 +590,8 @@ def GR32 : RegisterClass<"X86", [i32], 32,
 // tests because of the inclusion of RIP in this register class.
 def GR64 : RegisterClass<"X86", [i64], 64,
                     (add RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11, R16, R17,
-                         R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29,
-                         R30, R31, RBX, R14, R15, R12, R13, RBP, RSP, RIP)>;
+                         R18, R19, R22, R23, R24, R25, R26, R27, R30, R31, RBX,
+                         R14, R15, R12, R13, R20, R21, R28, R29, RBP, RSP, RIP)>;
 
 // GR64PLTSafe - 64-bit GPRs without R10, R11, RSP and RIP. Could be used when
 // emitting code for intrinsics, which use implict input registers.
@@ -835,6 +841,9 @@ def VK64WM  : RegisterClass<"X86", [v64i1], 64, (add VK32WM)> {let Size = 64;}
 let CopyCost = -1 in // Don't allow copying of tile registers
 def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
+// Need check alignment 3rd operand size=1024*2*8
+let isAllocatable = 1 in
+def TILEPAIR : RegisterClass<"X86", [untyped], 512, (add TPAIRS)> {let Size = 16384;}
 
 //===----------------------------------------------------------------------===//
 // Register categories.

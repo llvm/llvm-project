@@ -41,5 +41,5 @@ void Test() {
 
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop async(1)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

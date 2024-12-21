@@ -57,8 +57,8 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806528
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806528
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806784
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806784
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
@@ -77,8 +77,8 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806528
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806528
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806784
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806784
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
@@ -129,7 +129,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z7foo_ovli.default(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[DOTADDR]], align 4
@@ -137,21 +137,12 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z7foo_ovlv.default(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2:[0-9]+]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
 // CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
@@ -160,8 +151,17 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 1
 //
 //
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -173,16 +173,16 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36591746972385280
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36591746972385280
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36596145153180416
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36596145153180416
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
 // CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777216
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777472
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777472
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label %[[RESOLVER_RETURN1:.*]], label %[[RESOLVER_ELSE2:.*]]
 // CHECK:       [[RESOLVER_RETURN1]]:
@@ -192,15 +192,6 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
 // CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
@@ -209,8 +200,17 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 2
 //
 //
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 2
+//
+//
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR1]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -222,16 +222,16 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36591746972385280
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36591746972385280
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36596145153180416
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36596145153180416
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
 // CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777216
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777472
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777472
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label %[[RESOLVER_RETURN1:.*]], label %[[RESOLVER_ELSE2:.*]]
 // CHECK:       [[RESOLVER_RETURN1]]:

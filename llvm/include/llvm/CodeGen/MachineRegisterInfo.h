@@ -754,7 +754,7 @@ public:
   /// Returns register class or bank and low level type of \p Reg. Always safe
   /// to use. Special values are returned when \p Reg does not have some of the
   /// attributes.
-  VRegAttrs getVRegAttrs(Register Reg) {
+  VRegAttrs getVRegAttrs(Register Reg) const {
     return {getRegClassOrRegBank(Reg), getType(Reg)};
   }
 
