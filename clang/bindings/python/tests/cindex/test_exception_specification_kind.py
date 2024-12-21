@@ -1,18 +1,17 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import Config, CursorKind, ExceptionSpecificationKind
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-import clang.cindex
-from clang.cindex import ExceptionSpecificationKind
-from .util import get_tu
-
 import unittest
+
+from .util import get_tu
 
 
 def find_function_declarations(node, declarations=[]):
-    if node.kind == clang.cindex.CursorKind.FUNCTION_DECL:
+    if node.kind == CursorKind.FUNCTION_DECL:
         declarations.append(node)
     for child in node.get_children():
         declarations = find_function_declarations(child, declarations)

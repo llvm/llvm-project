@@ -29,12 +29,15 @@
 // Define fake functions to prevent the compiler from failing on undefined
 // functions in case the CPU extension is not present.
 #if !defined(__AVX512BW__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm512_cmpneq_epi8_mask
 #define _mm512_cmpneq_epi8_mask(A, B) 0
 #endif
 #if !defined(__AVX2__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm256_movemask_epi8
 #define _mm256_movemask_epi8(A) 0
 #endif
 #if !defined(__SSE2__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm_movemask_epi8
 #define _mm_movemask_epi8(A) 0
 #endif
 

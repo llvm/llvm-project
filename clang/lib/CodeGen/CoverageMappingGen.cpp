@@ -14,8 +14,6 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -23,7 +21,6 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
-#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <optional>
@@ -649,7 +646,7 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
     if (MappingRegions.empty())
       return;
 
-    CoverageMappingWriter Writer(FileIDMapping, std::nullopt, MappingRegions);
+    CoverageMappingWriter Writer(FileIDMapping, {}, MappingRegions);
     Writer.write(OS);
   }
 };
@@ -1167,12 +1164,15 @@ struct CounterCoverageMappingBuilder
 
   /// Create a Branch Region around a SwitchCase for code coverage
   /// and add it to the function's SourceRegions.
-  void createSwitchCaseRegion(const SwitchCase *SC, Counter TrueCnt) {
+  /// Returns Counter that corresponds to SC.
+  Counter createSwitchCaseRegion(const SwitchCase *SC, Counter ParentCount) {
     // Push region onto RegionStack but immediately pop it (which adds it to
     // the function's SourceRegions) because it doesn't apply to any other
     // source other than the SwitchCase.
+    Counter TrueCnt = getRegionCounter(SC);
     popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(),
-                          Counter::getZero()));
+                          subtractCounters(ParentCount, TrueCnt)));
+    return TrueCnt;
   }
 
   /// Check whether a region with bounds \c StartLoc and \c EndLoc
@@ -1900,17 +1900,22 @@ struct CounterCoverageMappingBuilder
     const SwitchCase *Case = S->getSwitchCaseList();
     for (; Case; Case = Case->getNextSwitchCase()) {
       HasDefaultCase = HasDefaultCase || isa<DefaultStmt>(Case);
-      auto CaseCount = getRegionCounter(Case);
+      auto CaseCount = createSwitchCaseRegion(Case, ParentCount);
       CaseCountSum = addCounters(CaseCountSum, CaseCount, /*Simplify=*/false);
-      createSwitchCaseRegion(Case, CaseCount);
     }
     // If no explicit default case exists, create a branch region to represent
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      Counter DefaultCount = getSwitchImplicitDefaultCounter(
-          S->getCond(), ParentCount, CaseCountSum);
-      createBranchRegion(S->getCond(), Counter::getZero(), DefaultCount);
+      // Simplify is skipped while building the counters above: it can get
+      // really slow on top of switches with thousands of cases. Instead,
+      // trigger simplification by adding zero to the last counter.
+      CaseCountSum =
+          addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
+
+      // This is considered as the False count on SwitchStmt.
+      Counter SwitchFalse = subtractCounters(ParentCount, CaseCountSum);
+      createBranchRegion(S->getCond(), CaseCountSum, SwitchFalse);
     }
   }
 
@@ -2401,8 +2406,7 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
     } else {
       Ctx.dump(R.Count, OS);
 
-      if (R.Kind == CounterMappingRegion::BranchRegion ||
-          R.Kind == CounterMappingRegion::MCDCBranchRegion) {
+      if (R.isBranch()) {
         OS << ", ";
         Ctx.dump(R.FalseCount, OS);
       }

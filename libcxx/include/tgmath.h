@@ -17,18 +17,22 @@
 
 */
 
-#include <__config>
+#if 0
+#else // 0
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
-#ifdef __cplusplus
-#  include <ctgmath>
-#else
-#  if __has_include_next(<tgmath.h>)
-#    include_next <tgmath.h>
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
 #  endif
-#endif
+
+#  ifdef __cplusplus
+#    include <cmath>
+#    include <complex>
+#  else
+#    if __has_include_next(<tgmath.h>)
+#      include_next <tgmath.h>
+#    endif
+#  endif
+#endif // 0
 
 #endif // _LIBCPP_TGMATH_H

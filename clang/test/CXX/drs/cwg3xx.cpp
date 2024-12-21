@@ -537,9 +537,9 @@ namespace cwg330 { // cwg330: 7
     void f(A *a) {
       (void) reinterpret_cast<B1*>(a);
       (void) reinterpret_cast<B2*>(a);
-      // expected-error@-1 {{ISO C++ does not allow reinterpret_cast from 'A *' (aka 'const volatile int (*)[1][2][3]') to 'B2 *' (aka 'int *const cwg330::swift_17882::X::***') because it casts away qualifiers, even though the source and destination types are unrelated}}
+      // expected-error@-1 {{ISO C++ does not allow reinterpret_cast from 'A *' (aka 'const volatile int (*)[1][2][3]') to 'B2 *' (aka 'int *const X::***') because it casts away qualifiers, even though the source and destination types are unrelated}}
       (void) reinterpret_cast<B3*>(a);
-      // expected-error@-1 {{ISO C++ does not allow reinterpret_cast from 'A *' (aka 'const volatile int (*)[1][2][3]') to 'B3 *' (aka 'int *cwg330::swift_17882::X::*volatile **') because it casts away qualifiers, even though the source and destination types are unrelated}}
+      // expected-error@-1 {{ISO C++ does not allow reinterpret_cast from 'A *' (aka 'const volatile int (*)[1][2][3]') to 'B3 *' (aka 'int *X::*volatile **') because it casts away qualifiers, even though the source and destination types are unrelated}}
       (void) reinterpret_cast<B4*>(a);
     }
   }
@@ -636,6 +636,8 @@ namespace cwg337 { // cwg337: yes
   // expected-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'void'}}
   struct B { virtual ~B() = 0; };
 }
+
+// cwg338: dup 1884
 
 namespace cwg339 { // cwg339: 2.8
   template <int I> struct A { static const int value = I; };
@@ -969,9 +971,9 @@ namespace cwg354 { // cwg354: yes c++11
   ptr<(int S::*)0> p3; // #cwg354-p3
   // cxx98-error@#cwg354-p3 {{non-type template argument does not refer to any declaration}}
   //   cxx98-note@#cwg354-ptr {{template parameter is declared here}}
-  // cxx11-14-error@#cwg354-p3 {{null non-type template argument of type 'int cwg354::S::*' does not match template parameter of type 'int *'}}
+  // cxx11-14-error@#cwg354-p3 {{null non-type template argument of type 'int S::*' does not match template parameter of type 'int *'}}
   //   cxx11-14-note@#cwg354-ptr {{template parameter is declared here}}
-  // since-cxx17-error@#cwg354-p3 {{value of type 'int cwg354::S::*' is not implicitly convertible to 'int *'}}
+  // since-cxx17-error@#cwg354-p3 {{value of type 'int S::*' is not implicitly convertible to 'int *'}}
 
   template<int*> int both(); // #cwg354-both-int-ptr
   template<int> int both(); // #cwg354-both-int
@@ -983,25 +985,25 @@ namespace cwg354 { // cwg354: yes c++11
 
   template<int S::*> struct ptr_mem {}; // #cwg354-ptr_mem
   ptr_mem<0> m0; // #cwg354-m0
-  // cxx98-error@#cwg354-m0 {{non-type template argument of type 'int' cannot be converted to a value of type 'int cwg354::S::*'}}
+  // cxx98-error@#cwg354-m0 {{non-type template argument of type 'int' cannot be converted to a value of type 'int S::*'}}
   //   cxx98-note@#cwg354-ptr_mem {{template parameter is declared here}}
-  // cxx11-14-error@#cwg354-m0 {{null non-type template argument must be cast to template parameter type 'int cwg354::S::*'}}
+  // cxx11-14-error@#cwg354-m0 {{null non-type template argument must be cast to template parameter type 'int S::*'}}
   //   cxx11-14-note@#cwg354-ptr_mem {{template parameter is declared here}}
-  // since-cxx17-error@#cwg354-m0 {{conversion from 'int' to 'int cwg354::S::*' is not allowed in a converted constant expression}}
+  // since-cxx17-error@#cwg354-m0 {{conversion from 'int' to 'int S::*' is not allowed in a converted constant expression}}
   ptr_mem<(int S::*)0> m1;
   // cxx98-error@-1 {{non-type template argument is not a pointer to member constant}}
   ptr_mem<(float S::*)0> m2; // #cwg354-m2
-  // cxx98-error@#cwg354-m2 {{non-type template argument of type 'float cwg354::S::*' cannot be converted to a value of type 'int cwg354::S::*'}}
+  // cxx98-error@#cwg354-m2 {{non-type template argument of type 'float S::*' cannot be converted to a value of type 'int S::*'}}
   //   cxx98-note@#cwg354-ptr_mem {{template parameter is declared here}}
-  // cxx11-14-error@#cwg354-m2 {{null non-type template argument of type 'float cwg354::S::*' does not match template parameter of type 'int cwg354::S::*'}}
+  // cxx11-14-error@#cwg354-m2 {{null non-type template argument of type 'float S::*' does not match template parameter of type 'int S::*'}}
   //   cxx11-14-note@#cwg354-ptr_mem {{template parameter is declared here}}
-  // since-cxx17-error@#cwg354-m2 {{value of type 'float cwg354::S::*' is not implicitly convertible to 'int cwg354::S::*'}}
+  // since-cxx17-error@#cwg354-m2 {{value of type 'float S::*' is not implicitly convertible to 'int S::*'}}
   ptr_mem<(int *)0> m3; // #cwg354-m3
-  // cxx98-error@#cwg354-m3 {{non-type template argument of type 'int *' cannot be converted to a value of type 'int cwg354::S::*'}}
+  // cxx98-error@#cwg354-m3 {{non-type template argument of type 'int *' cannot be converted to a value of type 'int S::*'}}
   //   cxx98-note@#cwg354-ptr_mem {{template parameter is declared here}}
-  // cxx11-14-error@#cwg354-m3 {{null non-type template argument of type 'int *' does not match template parameter of type 'int cwg354::S::*'}}
+  // cxx11-14-error@#cwg354-m3 {{null non-type template argument of type 'int *' does not match template parameter of type 'int S::*'}}
   //   cxx11-14-note@#cwg354-ptr_mem {{template parameter is declared here}}
-  // since-cxx17-error@#cwg354-m3 {{value of type 'int *' is not implicitly convertible to 'int cwg354::S::*'}}
+  // since-cxx17-error@#cwg354-m3 {{value of type 'int *' is not implicitly convertible to 'int S::*'}}
 }
 
 struct cwg355_S; // cwg355: yes
@@ -1699,7 +1701,7 @@ namespace cwg395 { // cwg395: 3.0
     }
   } null1;
   int (S::*p)() = null1;
-  // expected-error@-1 {{no viable conversion from 'struct null1_t' to 'int (cwg395::S::*)()'}}
+  // expected-error@-1 {{no viable conversion from 'struct null1_t' to 'int (S::*)()'}}
   //   expected-note@#cwg395-conv-func {{candidate template ignored: couldn't infer template argument 'T'}}
 
   template <typename T> using id = T;

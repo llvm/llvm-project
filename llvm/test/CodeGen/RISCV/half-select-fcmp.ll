@@ -358,8 +358,8 @@ define half @select_fcmp_ord(half %a, half %b) nounwind {
 ; CHECKIZHINXMIN-LABEL: select_fcmp_ord:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a1
-; CHECKIZHINXMIN-NEXT:    feq.s a2, a2, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a3, a0
+; CHECKIZHINXMIN-NEXT:    feq.s a2, a2, a2
 ; CHECKIZHINXMIN-NEXT:    feq.s a3, a3, a3
 ; CHECKIZHINXMIN-NEXT:    and a2, a3, a2
 ; CHECKIZHINXMIN-NEXT:    bnez a2, .LBB7_2
@@ -689,8 +689,8 @@ define half @select_fcmp_uno(half %a, half %b) nounwind {
 ; CHECKIZHINXMIN-LABEL: select_fcmp_uno:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a1
-; CHECKIZHINXMIN-NEXT:    feq.s a2, a2, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a3, a0
+; CHECKIZHINXMIN-NEXT:    feq.s a2, a2, a2
 ; CHECKIZHINXMIN-NEXT:    feq.s a3, a3, a3
 ; CHECKIZHINXMIN-NEXT:    and a2, a3, a2
 ; CHECKIZHINXMIN-NEXT:    beqz a2, .LBB14_2

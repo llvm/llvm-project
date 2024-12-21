@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=x86 -o - %s -run-pass=none -verify-machineinstrs \
+# RUN: not --crash llc -mtriple=i686 -o - %s -run-pass=none -verify-machineinstrs \
 # RUN:   2>&1 | FileCheck %s
 # REQUIRES: x86-registered-target
 #

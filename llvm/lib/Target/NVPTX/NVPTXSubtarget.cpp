@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXSubtarget.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -55,17 +56,15 @@ NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      FullSmVersion(200), SmVersion(getSmVersion()), TM(TM),
-      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {}
+      FullSmVersion(200), SmVersion(getSmVersion()),
+      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {
+  TSInfo = std::make_unique<NVPTXSelectionDAGInfo>();
+}
 
-bool NVPTXSubtarget::hasImageHandles() const {
-  // Enable handles for Kepler+, where CUDA supports indirect surfaces and
-  // textures
-  if (TM.getDrvInterface() == NVPTX::CUDA)
-    return (SmVersion >= 30);
+NVPTXSubtarget::~NVPTXSubtarget() = default;
 
-  // Disabled, otherwise
-  return false;
+const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 bool NVPTXSubtarget::allowFP16Math() const {
