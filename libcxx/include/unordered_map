@@ -583,8 +583,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/unordered_map>
+#else
 #  include <__algorithm/is_permutation.h>
 #  include <__assert>
 #  include <__config>
@@ -2571,6 +2572,6 @@ _LIBCPP_POP_MACROS
 #    include <iterator>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_UNORDERED_MAP
