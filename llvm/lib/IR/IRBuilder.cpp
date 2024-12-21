@@ -1273,6 +1273,13 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   return CreateAlignmentAssumptionHelper(DL, PtrValue, Alignment, OffsetValue);
 }
 
+CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
+                                                         unsigned Size) {
+  SmallVector<Value *, 4> Vals({PtrValue, getInt64(Size)});
+  OperandBundleDefT<Value *> AlignOpB("dereferenceable", Vals);
+  return CreateAssumption(ConstantInt::getTrue(getContext()), {AlignOpB});
+}
+
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;
 IRBuilderCallbackInserter::~IRBuilderCallbackInserter() = default;
 IRBuilderFolder::~IRBuilderFolder() = default;

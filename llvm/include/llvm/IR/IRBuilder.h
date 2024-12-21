@@ -2676,6 +2676,8 @@ public:
   CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
                                       Value *Alignment,
                                       Value *OffsetValue = nullptr);
+
+  CallInst *CreateDereferenceableAssumption(Value *PtrValue, unsigned Size);
 };
 
 /// This provides a uniform API for creating instructions and inserting

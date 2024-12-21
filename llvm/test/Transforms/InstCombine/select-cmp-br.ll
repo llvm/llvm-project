@@ -14,6 +14,8 @@ define void @test1(ptr %arg) {
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 0) ]
 ; CHECK-NEXT:    [[TMP5_NOT:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5_NOT]], label [[BB8:%.*]], label [[BB10:%.*]]
 ; CHECK:       bb:
@@ -22,7 +24,6 @@ define void @test1(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]
@@ -56,6 +57,8 @@ define void @test2(ptr %arg) {
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 0) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:
@@ -64,7 +67,6 @@ define void @test2(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]
@@ -98,6 +100,8 @@ define void @test3(ptr %arg) {
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 0) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB8:%.*]], label [[BB10:%.*]]
 ; CHECK:       bb:
@@ -106,7 +110,6 @@ define void @test3(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]
@@ -140,6 +143,8 @@ define void @test4(ptr %arg) {
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 0) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:
@@ -148,7 +153,6 @@ define void @test4(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]
