@@ -463,16 +463,6 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     size = SLiteral->getLength() + 1;
   }
 
-  if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
-    const APInt ArrIdx = IdxLit->getValue();
-    // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
-    // bug
-    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < size)
-      return true;
-  }
-
-  // Array index wasn't an integer literal, let's see if it was an enum or
-  // something similar
   const auto IntConst = Node.getIdx()->getIntegerConstantExpr(Finder->getASTContext());
   if (IntConst && 0 <= *IntConst && *IntConst < size) {
     return true;
