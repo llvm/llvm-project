@@ -33,8 +33,10 @@ int main(int, char**) {
     const auto& const_c = c;
     c.push_front(1);
 
-    (void)c.front(); // Check that there's no assertion on valid access.
-    (void)const_c.front(); // Check that there's no assertion on valid access.
+    // Check that there's no assertion on valid access.
+    (void)c.front();
+    (void)const_c.front();
+
     c.pop_front();
     TEST_LIBCPP_ASSERT_FAILURE(c.pop_front(), "forward_list::pop_front called on an empty list");
     TEST_LIBCPP_ASSERT_FAILURE(c.front(), "forward_list::front called on an empty list");
