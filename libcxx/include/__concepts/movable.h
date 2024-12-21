@@ -13,7 +13,6 @@
 #include <__concepts/constructible.h>
 #include <__concepts/swappable.h>
 #include <__config>
-#include <__type_traits/is_object.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [concepts.object]
 
 template <class _Tp>
-concept movable = is_object_v<_Tp> && move_constructible<_Tp> && assignable_from<_Tp&, _Tp> && swappable<_Tp>;
+concept movable = __is_object(_Tp) && move_constructible<_Tp> && assignable_from<_Tp&, _Tp> && swappable<_Tp>;
 
 #endif // _LIBCPP_STD_VER >= 20
 

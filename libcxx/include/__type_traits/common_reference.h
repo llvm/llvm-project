@@ -13,10 +13,6 @@
 #include <__type_traits/common_type.h>
 #include <__type_traits/copy_cv.h>
 #include <__type_traits/copy_cvref.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
 #include <__utility/declval.h>
 
@@ -59,7 +55,7 @@ using __cv_cond_res = __cond_res<__copy_cv_t<_Xp, _Yp>&, __copy_cv_t<_Yp, _Xp>&>
 template <class _Ap, class _Bp, class _Xp, class _Yp>
   requires
     requires { typename __cv_cond_res<_Xp, _Yp>; } &&
-    is_reference_v<__cv_cond_res<_Xp, _Yp>>
+    __is_reference(__cv_cond_res<_Xp, _Yp>)
 struct __common_ref<_Ap&, _Bp&, _Xp, _Yp> {
   using __type = __cv_cond_res<_Xp, _Yp>;
 };
@@ -75,8 +71,8 @@ using __common_ref_C = remove_reference_t<__common_ref_t<_Xp&, _Yp&>>&&;
 template <class _Ap, class _Bp, class _Xp, class _Yp>
   requires
     requires { typename __common_ref_C<_Xp, _Yp>; } &&
-    is_convertible_v<_Ap&&, __common_ref_C<_Xp, _Yp>> &&
-    is_convertible_v<_Bp&&, __common_ref_C<_Xp, _Yp>>
+    __is_convertible(_Ap&&, __common_ref_C<_Xp, _Yp>) &&
+    __is_convertible(_Bp&&, __common_ref_C<_Xp, _Yp>)
 struct __common_ref<_Ap&&, _Bp&&, _Xp, _Yp> {
   using __type = __common_ref_C<_Xp, _Yp>;
 };
@@ -92,7 +88,7 @@ using __common_ref_D = __common_ref_t<const _Tp&, _Up&>;
 template <class _Ap, class _Bp, class _Xp, class _Yp>
   requires
     requires { typename __common_ref_D<_Xp, _Yp>; } &&
-    is_convertible_v<_Ap&&, __common_ref_D<_Xp, _Yp>>
+    __is_convertible(_Ap&&, __common_ref_D<_Xp, _Yp>)
 struct __common_ref<_Ap&&, _Bp&, _Xp, _Yp> {
   using __type = __common_ref_D<_Xp, _Yp>;
 };
@@ -139,7 +135,7 @@ template <class _Tp, class _Up>
 struct common_reference<_Tp, _Up> : __common_reference_sub_bullet1<_Tp, _Up> {};
 
 template <class _Tp, class _Up>
-  requires is_reference_v<_Tp> && is_reference_v<_Up> && requires { typename __common_ref_t<_Tp, _Up>; }
+  requires(__is_reference(_Tp) && __is_reference(_Up) && requires { typename __common_ref_t<_Tp, _Up>; })
 struct __common_reference_sub_bullet1<_Tp, _Up> {
   using type = __common_ref_t<_Tp, _Up>;
 };
@@ -151,8 +147,8 @@ struct basic_common_reference {};
 
 template <class _Tp, class _Up>
 using __basic_common_reference_t =
-    typename basic_common_reference<remove_cvref_t<_Tp>,
-                                    remove_cvref_t<_Up>,
+    typename basic_common_reference<__remove_cvref(_Tp),
+                                    __remove_cvref(_Up),
                                     __xref<_Tp>::template __apply,
                                     __xref<_Up>::template __apply>::type;
 

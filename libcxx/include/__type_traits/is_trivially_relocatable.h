@@ -12,7 +12,6 @@
 #include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -33,8 +32,7 @@ struct __libcpp_is_trivially_relocatable : is_trivially_copyable<_Tp> {};
 #endif
 
 template <class _Tp>
-struct __libcpp_is_trivially_relocatable<_Tp,
-                                         __enable_if_t<is_same<_Tp, typename _Tp::__trivially_relocatable>::value> >
+struct __libcpp_is_trivially_relocatable<_Tp, __enable_if_t<__is_same(_Tp, typename _Tp::__trivially_relocatable)> >
     : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD

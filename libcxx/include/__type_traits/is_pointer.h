@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,7 +50,7 @@ template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __unsafe_unretai
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_pointer
-    : public __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<__remove_cv_t<_Tp> >::type> {};
+    : public __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<__remove_cv(_Tp)>::type> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>

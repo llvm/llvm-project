@@ -18,7 +18,6 @@
 #include <__type_traits/extent.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/remove_cvref.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -46,7 +45,7 @@ void swap(_Tp&, _Tp&) = delete;
 // clang-format off
 template <class _Tp, class _Up>
 concept __unqualified_swappable_with =
-    (__class_or_enum<remove_cvref_t<_Tp>> || __class_or_enum<remove_cvref_t<_Up>>) &&
+    (__class_or_enum<__remove_cvref(_Tp)> || __class_or_enum<__remove_cvref(_Up)>) &&
     requires(_Tp&& __t, _Up&& __u) {
         swap(std::forward<_Tp>(__t), std::forward<_Up>(__u));
     };

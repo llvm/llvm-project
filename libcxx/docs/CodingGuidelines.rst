@@ -184,3 +184,13 @@ headers (which is sometimes required for ``constexpr`` support).
 
 When defining a function at the ABI boundary, it can also be useful to consider which attributes (like ``[[gnu::pure]]``
 and ``[[clang::noescape]]``) can be added to the function to improve the compiler's ability to optimize.
+
+Don't use type traits builtins directly
+=======================================
+
+Except for ``<__type_traits/*>`` and ``<__concepts/*>``, headers should avoid using the builtins for any type traits
+directly, since that makes it a lot harder to work around compiler bugs or add support for new compilers. Since the type
+traits and concepts themselves are instantiated a lot it is worth the speedup to use the builtins directly instead of
+instantiating additional templates. Note that the builtins cannot be used directly in cases where they may become part
+of the mangling of a function, since GCC doesn't mangle them. If you are unsure whether that is the case somewhere, use
+the library trait instead of the builtin.

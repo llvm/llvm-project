@@ -13,7 +13,6 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cv.h>
@@ -64,7 +63,7 @@ template <class _Tp, class _Up>
 struct __libcpp_is_trivially_equality_comparable_impl<
     _Tp,
     _Up,
-    __enable_if_t<is_integral<_Tp>::value && is_integral<_Up>::value && !is_same<_Tp, _Up>::value &&
+    __enable_if_t<is_integral<_Tp>::value && is_integral<_Up>::value && !__is_same(_Tp, _Up) &&
                   is_signed<_Tp>::value == is_signed<_Up>::value && sizeof(_Tp) == sizeof(_Up)> > : true_type {};
 
 template <class _Tp>
@@ -76,8 +75,7 @@ struct __libcpp_is_trivially_equality_comparable_impl<_Tp*, _Up*>
     : integral_constant<
           bool,
           __is_equality_comparable<_Tp*, _Up*>::value &&
-              (is_same<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >::value || is_void<_Tp>::value || is_void<_Up>::value)> {
-};
+              (__is_same(__remove_cv(_Tp), __remove_cv(_Up)) || is_void<_Tp>::value || is_void<_Up>::value)> {};
 
 template <class _Tp, class _Up>
 using __libcpp_is_trivially_equality_comparable =

@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_IS_EXECUTION_POLICY_H
 
 #include <__config>
-#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,14 +26,13 @@ template <class>
 inline constexpr bool __is_unsequenced_execution_policy_impl = false;
 
 template <class _Tp>
-inline constexpr bool __is_unsequenced_execution_policy_v =
-    __is_unsequenced_execution_policy_impl<__remove_cvref_t<_Tp>>;
+inline constexpr bool __is_unsequenced_execution_policy_v = __is_unsequenced_execution_policy_impl<__remove_cvref(_Tp)>;
 
 template <class>
 inline constexpr bool __is_parallel_execution_policy_impl = false;
 
 template <class _Tp>
-inline constexpr bool __is_parallel_execution_policy_v = __is_parallel_execution_policy_impl<__remove_cvref_t<_Tp>>;
+inline constexpr bool __is_parallel_execution_policy_v = __is_parallel_execution_policy_impl<__remove_cvref(_Tp)>;
 
 namespace execution {
 struct __disable_user_instantiations_tag {

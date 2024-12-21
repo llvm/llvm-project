@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,7 +26,7 @@ template <>          struct __libcpp_is_floating_point<long double> : public tru
 // clang-format on
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_floating_point : public __libcpp_is_floating_point<__remove_cv_t<_Tp> > {};
+struct _LIBCPP_TEMPLATE_VIS is_floating_point : public __libcpp_is_floating_point<__remove_cv(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

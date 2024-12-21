@@ -12,7 +12,6 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/destructible.h>
 #include <__config>
-#include <__type_traits/is_constructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.constructible]
 template <class _Tp, class... _Args>
-concept constructible_from = destructible<_Tp> && is_constructible_v<_Tp, _Args...>;
+concept constructible_from = destructible<_Tp> && __is_constructible(_Tp, _Args...);
 
 // [concept.default.init]
 

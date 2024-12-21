@@ -12,8 +12,6 @@
 #include <__config>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_enum.h>
-#include <__type_traits/is_member_pointer.h>
 #include <__type_traits/is_null_pointer.h>
 #include <__type_traits/is_pointer.h>
 
@@ -47,11 +45,11 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_scalar
     : public integral_constant<
           bool, is_arithmetic<_Tp>::value ||
-                is_member_pointer<_Tp>::value ||
+                __is_member_pointer(_Tp) ||
                 is_pointer<_Tp>::value ||
                 __is_null_pointer_v<_Tp> ||
                 __is_block<_Tp>::value ||
-                is_enum<_Tp>::value> {};
+                __is_enum(_Tp)> {};
 // clang-format on
 
 template <>

@@ -11,7 +11,6 @@
 
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class _Up>
-concept __different_from = !same_as<remove_cvref_t<_Tp>, remove_cvref_t<_Up>>;
+concept __different_from = !same_as<__remove_cvref(_Tp), __remove_cvref(_Up)>;
 
 #endif // _LIBCPP_STD_VER >= 20
 

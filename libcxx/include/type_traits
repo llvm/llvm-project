@@ -517,6 +517,7 @@ namespace std
 #    include <__type_traits/is_constant_evaluated.h>
 #    include <__type_traits/is_nothrow_convertible.h>
 #    include <__type_traits/is_unbounded_array.h>
+#    include <__type_traits/remove_cvref.h>
 #    include <__type_traits/type_identity.h>
 #    include <__type_traits/unwrap_ref.h>
 #  endif
