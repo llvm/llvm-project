@@ -86,6 +86,29 @@ for.end:
   ret void
 }
 
+define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
+; DEBUGLOC-LABEL: define void @scalar_cast_dbg(
+; DEBUGLOC:   = trunc i64 %index to i32, !dbg [[CASTLOC:![0-9]+]]
+;
+; DEBUGLOC: loop:
+; DEBUGLOC-NOT:   %trunc.iv = trunc i64 %iv to i32, !dbg [[CASTLOC]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %trunc.iv = trunc i64 %iv to i32
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %trunc.iv
+  store i32 %trunc.iv, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %k
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 ; CHECK-NOT: !{metadata !"llvm.loop.vectorize.width", i32 4}
