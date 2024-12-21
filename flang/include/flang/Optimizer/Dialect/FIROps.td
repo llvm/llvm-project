@@ -2735,8 +2735,9 @@ def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
-    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType,"
-              "fir::LogicalType, mlir::FloatType, mlir::ComplexType,"
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType, "
+              "fir::UnsignedType, fir::LogicalType, mlir::FloatType, "
+              "mlir::ComplexType, "
               "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
     >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
@@ -3078,7 +3079,7 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // debug information so we would like to keep this around even if the value
 // is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    MemoryEffects<[MemAlloc<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 

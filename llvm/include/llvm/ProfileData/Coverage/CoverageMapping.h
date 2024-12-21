@@ -278,6 +278,10 @@ struct CounterMappingRegion {
 
   RegionKind Kind;
 
+  bool isBranch() const {
+    return (Kind == BranchRegion || Kind == MCDCBranchRegion);
+  }
+
   CounterMappingRegion(Counter Count, unsigned FileID, unsigned ExpandedFileID,
                        unsigned LineStart, unsigned ColumnStart,
                        unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
@@ -366,19 +370,16 @@ struct CountedRegion : public CounterMappingRegion {
   uint64_t FalseExecutionCount;
   bool TrueFolded;
   bool FalseFolded;
-  bool HasSingleByteCoverage;
 
-  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
-                bool HasSingleByteCoverage)
+  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true),
-        HasSingleByteCoverage(HasSingleByteCoverage) {}
+        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true) {}
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
-                uint64_t FalseExecutionCount, bool HasSingleByteCoverage)
+                uint64_t FalseExecutionCount)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
         FalseExecutionCount(FalseExecutionCount), TrueFolded(false),
-        FalseFolded(false), HasSingleByteCoverage(HasSingleByteCoverage) {}
+        FalseFolded(false) {}
 };
 
 /// MCDC Record grouping all information together.
@@ -467,7 +468,7 @@ public:
         Folded(std::move(Folded)), PosToID(std::move(PosToID)),
         CondLoc(std::move(CondLoc)){};
 
-  CounterMappingRegion getDecisionRegion() const { return Region; }
+  const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }
@@ -721,11 +722,9 @@ struct FunctionRecord {
   }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
-                  uint64_t FalseCount, bool HasSingleByteCoverage) {
-    if (Region.Kind == CounterMappingRegion::BranchRegion ||
-        Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      CountedBranchRegions.emplace_back(Region, Count, FalseCount,
-                                        HasSingleByteCoverage);
+                  uint64_t FalseCount) {
+    if (Region.isBranch()) {
+      CountedBranchRegions.emplace_back(Region, Count, FalseCount);
       // If either counter is hard-coded to zero, then this region represents a
       // constant-folded branch.
       CountedBranchRegions.back().TrueFolded = Region.Count.isZero();
@@ -734,8 +733,7 @@ struct FunctionRecord {
     }
     if (CountedRegions.empty())
       ExecutionCount = Count;
-    CountedRegions.emplace_back(Region, Count, FalseCount,
-                                HasSingleByteCoverage);
+    CountedRegions.emplace_back(Region, Count, FalseCount);
   }
 };
 
@@ -898,13 +896,18 @@ class CoverageData {
   std::vector<CountedRegion> BranchRegions;
   std::vector<MCDCRecord> MCDCRecords;
 
-public:
-  CoverageData() = default;
+  bool SingleByteCoverage;
 
-  CoverageData(StringRef Filename) : Filename(Filename) {}
+public:
+  CoverageData() = delete;
+
+  CoverageData(bool Single, StringRef Filename = StringRef())
+      : Filename(Filename), SingleByteCoverage(Single) {}
 
   /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
+
+  bool getSingleByteCoverage() const { return SingleByteCoverage; }
 
   /// Get an iterator over the coverage segments for this object. The segments
   /// are guaranteed to be uniqued and sorted by location.
@@ -938,7 +941,9 @@ class CoverageMapping {
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
 
-  CoverageMapping() = default;
+  bool SingleByteCoverage;
+
+  CoverageMapping(bool Single) : SingleByteCoverage(Single) {}
 
   // Load coverage records from readers.
   static Error loadFromReaders(
@@ -981,6 +986,8 @@ public:
        StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);
+
+  bool getSingleByteCoverage() const { return SingleByteCoverage; }
 
   /// The number of functions that couldn't have their profiles mapped.
   ///

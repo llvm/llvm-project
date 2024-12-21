@@ -2,12 +2,10 @@
 ; RUN: opt -S -passes=openmp-opt-postlink < %s | FileCheck %s --check-prefix=POSTLINK
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s --check-prefix=PRELINK
 
-@client = internal addrspace(1) global i32 zeroinitializer, align 8
-@__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+@__llvm_rpc_client = internal addrspace(1) global i32 zeroinitializer, align 8
 
 ;.
-; PRELINK: @client = internal addrspace(1) global i32 0, align 8
-; PRELINK: @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+; PRELINK: @__llvm_rpc_client = internal addrspace(1) global i32 0, align 8
 ;.
 define void @a() {
 ; POSTLINK-LABEL: define {{[^@]+}}@a() {

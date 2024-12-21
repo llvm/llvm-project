@@ -33,7 +33,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -661,21 +661,23 @@ static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
   if (auto ty = mlir::dyn_cast<mlir::IntegerType>(type)) {
-    switch (ty.getWidth()) {
-    case 1:
-      return getIORuntimeFunc<mkIOKey(OutputLogical)>(loc, builder);
-    case 8:
-      return getIORuntimeFunc<mkIOKey(OutputInteger8)>(loc, builder);
-    case 16:
-      return getIORuntimeFunc<mkIOKey(OutputInteger16)>(loc, builder);
-    case 32:
-      return getIORuntimeFunc<mkIOKey(OutputInteger32)>(loc, builder);
-    case 64:
-      return getIORuntimeFunc<mkIOKey(OutputInteger64)>(loc, builder);
-    case 128:
-      return getIORuntimeFunc<mkIOKey(OutputInteger128)>(loc, builder);
+    if (!ty.isUnsigned()) {
+      switch (ty.getWidth()) {
+      case 1:
+        return getIORuntimeFunc<mkIOKey(OutputLogical)>(loc, builder);
+      case 8:
+        return getIORuntimeFunc<mkIOKey(OutputInteger8)>(loc, builder);
+      case 16:
+        return getIORuntimeFunc<mkIOKey(OutputInteger16)>(loc, builder);
+      case 32:
+        return getIORuntimeFunc<mkIOKey(OutputInteger32)>(loc, builder);
+      case 64:
+        return getIORuntimeFunc<mkIOKey(OutputInteger64)>(loc, builder);
+      case 128:
+        return getIORuntimeFunc<mkIOKey(OutputInteger128)>(loc, builder);
+      }
+      llvm_unreachable("unknown OutputInteger kind");
     }
-    llvm_unreachable("unknown OutputInteger kind");
   }
   if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
     if (auto width = ty.getWidth(); width == 32)
@@ -777,10 +779,13 @@ static mlir::func::FuncOp getInputFunc(mlir::Location loc,
     return getIORuntimeFunc<mkIOKey(InputDerivedType)>(loc, builder);
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
-  if (auto ty = mlir::dyn_cast<mlir::IntegerType>(type))
+  if (auto ty = mlir::dyn_cast<mlir::IntegerType>(type)) {
+    if (type.isUnsignedInteger())
+      return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
     return ty.getWidth() == 1
                ? getIORuntimeFunc<mkIOKey(InputLogical)>(loc, builder)
                : getIORuntimeFunc<mkIOKey(InputInteger)>(loc, builder);
+  }
   if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
     if (auto width = ty.getWidth(); width == 32)
       return getIORuntimeFunc<mkIOKey(InputReal32)>(loc, builder);
@@ -929,7 +934,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   mlir::arith::IntegerOverflowFlags flags{};
-  if (converter.getLoweringOptions().getNSWOnLoopVarInc())
+  if (!converter.getLoweringOptions().getIntegerWrapAround())
     flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
   auto iofAttr =
       mlir::arith::IntegerOverflowFlagsAttr::get(builder.getContext(), flags);

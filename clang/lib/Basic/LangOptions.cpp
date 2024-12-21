@@ -203,8 +203,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   }
 
-  Opts.RenderScript = Lang == Language::RenderScript;
-
   // OpenCL, C++ and C23 have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C23;
 

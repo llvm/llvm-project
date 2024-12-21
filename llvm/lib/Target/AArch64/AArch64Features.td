@@ -160,7 +160,7 @@ def FeatureSVE : ExtensionWithMArch<"sve", "SVE", "FEAT_SVE",
 
 let ArchExtKindSpelling = "AEK_I8MM" in
 def FeatureMatMulInt8 : ExtensionWithMArch<"i8mm", "MatMulInt8", "FEAT_I8MM",
-  "Enable Matrix Multiply Int8 Extension">;
+  "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
 
 let ArchExtKindSpelling = "AEK_F32MM" in
 def FeatureMatMulFP32 : ExtensionWithMArch<"f32mm", "MatMulFP32", "FEAT_F32MM",
@@ -207,7 +207,7 @@ def FeatureLSE2 : Extension<"lse2", "LSE2", "FEAT_LSE2",
   "Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules">;
 
 def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML", "FEAT_FHM",
-  "Enable FP16 FML instructions", [FeatureFullFP16]>;
+  "Enable FP16 FML instructions", [FeatureFullFP16, FeatureNEON]>;
 
 def FeatureDotProd : ExtensionWithMArch<"dotprod", "DotProd", "FEAT_DotProd",
   "Enable dot product support", [FeatureNEON]>;
@@ -243,11 +243,12 @@ def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO", "FEAT_LRCPC2",
 //===----------------------------------------------------------------------===//
 
 def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV", "FEAT_FlagM2",
-  "Enable alternative NZCV format for floating point comparisons">;
+  "Enable alternative NZCV format for floating point comparisons", [FeatureFlagM]>;
 
 def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
-  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int">;
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int",
+  [FeatureFPARMv8]>;
 
 def FeatureSB : ExtensionWithMArch<"sb", "SB", "FEAT_SB",
   "Enable Armv8.5-A Speculation Barrier">;
@@ -259,7 +260,7 @@ def FeaturePredRes : ExtensionWithMArch<"predres", "PredRes", "FEAT_SPECRES",
   "Enable Armv8.5-A execution and data prediction invalidation instructions">;
 
 def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP", "FEAT_DPB2",
-  "Enable Armv8.5-A Cache Clean to Point of Deep Persistence">;
+  "Enable Armv8.5-A Cache Clean to Point of Deep Persistence", [FeatureCCPP]>;
 
 def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI", "FEAT_BTI",
   "Enable Branch Target Identification">;
@@ -279,7 +280,7 @@ def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
 //===----------------------------------------------------------------------===//
 
 def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16", "FEAT_BF16",
-  "Enable BFloat16 Extension">;
+  "Enable BFloat16 Extension", [FeatureNEON]>;
 
 def FeatureAMVS : Extension<"amvs", "AMVS", "FEAT_AMUv1p1",
   "Enable Armv8.6-A Activity Monitors Virtualization support",
@@ -358,20 +359,16 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
-  "UseFixedOverScalableIfEqualCost", "true",
-  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
-
-def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
-  "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
-
 def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
   "Enable Scalable Vector Extension 2 (SVE2) instructions",
-  [FeatureSVE, FeatureUseScalarIncVL]>;
+  [FeatureSVE]>;
 
-def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
+def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
   "FEAT_SVE_AES, FEAT_SVE_PMULL128",
-  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+  "Enable SVE AES and quadword SVE polynomial multiply instructions", [FeatureAES]>;
+
+def FeatureAliasSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
+  "", "Shorthand for +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
 
 def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
   "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
@@ -407,7 +404,7 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
   "Enable Realm Management Extension">;
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
-  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -439,7 +436,7 @@ def FeatureSVEB16B16: ExtensionWithMArch<"sve-b16b16", "SVEB16B16", "FEAT_SVE_B1
   "Enable SVE2 non-widening and SME2 Z-targeting non-widening BFloat16 instructions">;
 
 def FeatureSMEB16B16 : ExtensionWithMArch<"sme-b16b16", "SMEB16B16", "FEAT_SME_B16B16",
-  "Enable SME2.1 ZA-targeting non-widening BFloat16 instructions", 
+  "Enable SME2.1 ZA-targeting non-widening BFloat16 instructions",
   [FeatureSME2, FeatureSVEB16B16]>;
 
 def FeatureSMEF16F16 : ExtensionWithMArch<"sme-f16f16", "SMEF16F16", "FEAT_SME_F16F16",
@@ -478,10 +475,10 @@ def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
 
 def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
  "Enable Lookup Table instructions">;
-   
+
 def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
   "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
-  
+
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
   "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
 
@@ -490,7 +487,7 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
   "Enable FP8 4-way dot instructions", [FeatureFP8FMA]>;
-  
+
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
   "Enable FP8 2-way dot instructions", [FeatureFP8DOT4]>;
 
@@ -526,35 +523,47 @@ def FeatureCMPBR : ExtensionWithMArch<"cmpbr", "CMPBR", "FEAT_CMPBR",
   "Enable Armv9.6-A base compare and branch instructions">;
 
 def FeatureF8F32MM: ExtensionWithMArch<"f8f32mm", "F8F32MM", "FEAT_F8F32MM",
-  "Enable Armv9.6-A FP8 to Single-Precision Matrix Multiplication">;
+  "Enable Armv9.6-A FP8 to Single-Precision Matrix Multiplication", [FeatureNEON, FeatureFP8]>;
 
 def FeatureF8F16MM: ExtensionWithMArch<"f8f16mm", "F8F16MM", "FEAT_F8F16MM",
-  "Enable Armv9.6-A FP8 to Half-Precision Matrix Multiplication">;
+  "Enable Armv9.6-A FP8 to Half-Precision Matrix Multiplication", [FeatureNEON, FeatureFP8]>;
 
 def FeatureFPRCVT: ExtensionWithMArch<"fprcvt", "FPRCVT", "FEAT_FPRCVT",
   "Enable Armv9.6-A base convert instructions for SIMD&FP scalar register operands of"
-  " different input and output sizes">;
+  " different input and output sizes", [FeatureFPARMv8]>;
 
 def FeatureLSFE : ExtensionWithMArch<"lsfe", "LSFE", "FEAT_LSFE",
-  "Enable Armv9.6-A base Atomic floating-point in-memory instructions">;
+  "Enable Armv9.6-A base Atomic floating-point in-memory instructions", [FeatureFPARMv8]>;
 
 def FeatureSME2p2: ExtensionWithMArch<"sme2p2", "SME2p2", "FEAT_SME2p2",
   "Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
 
 def FeatureSSVE_AES : ExtensionWithMArch<"ssve-aes", "SSVE_AES", "FEAT_SSVE_AES",
-  "Enable Armv9.6-A SVE2 AES support in streaming SVE mode">;
+  "Enable Armv9.6-A SVE AES support in streaming SVE mode", [FeatureSME2, FeatureSVEAES]>;
 
 def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
   "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
 
 def FeatureSVEAES2: ExtensionWithMArch<"sve-aes2", "SVE_AES2", "FEAT_SVE_AES2",
-  "Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions">;
+  "Enable Armv9.6-A SVE multi-vector AES and multi-vector quadword polynomial multiply instructions">;
 
 def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SVE_BFSCALE",
   "Enable Armv9.6-A SVE BFloat16 scaling instructions">;
 
 def FeatureSVE_F16F32MM: ExtensionWithMArch<"sve-f16f32mm", "SVE_F16F32MM", "FEAT_SVE_F16F32MM",
-  "Enable Armv9.6-A FP16 to FP32 Matrix Multiply instructions">;
+  "Enable Armv9.6-A FP16 to FP32 Matrix Multiply instructions", [FeatureSVE]>;
+
+def FeatureLSUI: ExtensionWithMArch<"lsui", "LSUI", "FEAT_LSUI",
+  "Enable Armv9.6-A unprivileged load/store instructions">;
+
+def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
+  "Enable Armv9.6-A Outer cacheable cache maintenance operations">;
+
+def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
+  "Enable Armv9.6-A Producer Consumer Data Placement hints">;
+
+def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
+  "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -785,6 +794,10 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
+def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+  "UseFixedOverScalableIfEqualCost", "true",
+  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -835,7 +848,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX, FeatureSPE_EEF],
   !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
@@ -866,8 +879,9 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2],
-  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2])>;
+  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2, FeatureLSUI, FeatureOCCMO],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2,
+    FeatureLSUI, FeatureOCCMO])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

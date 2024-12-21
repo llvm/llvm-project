@@ -505,6 +505,10 @@ define void @memmove_test(i32 %0, ptr %1, ptr %2) {
 define void @memset_test(i32 %0, ptr %1, i8 %2) {
   ; CHECK: "llvm.intr.memset"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   call void @llvm.memset.p0.i32(ptr %1, i8 %2, i32 %0, i1 false)
+  ; CHECK: "llvm.intr.memset.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, i8) -> ()
+  call void @llvm.memset.inline.p0.i64(ptr %1, i8 %2, i64 10, i1 false)
+  ; CHECK: "llvm.intr.memset.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i32}> : (!llvm.ptr, i8) -> ()
+  call void @llvm.memset.inline.p0.i32(ptr %1, i8 %2, i32 10, i1 false)
   ret void
 }
 
@@ -799,6 +803,15 @@ define void @invariant(ptr %0) {
   %2 = call ptr @llvm.invariant.start.p0(i64 16, ptr %0)
   ; CHECK: llvm.intr.invariant.end %[[START]], 32, %{{.*}} : !llvm.ptr
   call void @llvm.invariant.end.p0(ptr %2, i64 32, ptr %0)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @invariant_group
+define void @invariant_group(ptr %0) {
+  ; CHECK: %{{.+}} = llvm.intr.launder.invariant.group %{{.*}} : !llvm.ptr
+  %2 = call ptr @llvm.launder.invariant.group.p0(ptr %0)
+  ; CHECK: %{{.+}} = llvm.intr.strip.invariant.group %{{.*}} : !llvm.ptr
+  %3 = call ptr @llvm.strip.invariant.group.p0(ptr %0)
   ret void
 }
 
@@ -1191,6 +1204,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+declare ptr @llvm.launder.invariant.group.p0(ptr nocapture)
+declare ptr @llvm.strip.invariant.group.p0(ptr nocapture)
 
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)

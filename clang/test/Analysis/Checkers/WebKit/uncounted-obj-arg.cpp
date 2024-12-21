@@ -238,6 +238,8 @@ public:
   using BaseType::BaseType;
 };
 
+void __libcpp_verbose_abort(const char *__format, ...);
+
 class RefCounted {
 public:
   void ref() const;
@@ -361,6 +363,11 @@ public:
   void trivial62() { WTFReportBacktrace(); }
   SomeType trivial63() { return SomeType(0); }
   SomeType trivial64() { return SomeType(); }
+  void trivial65() {
+    __libcpp_verbose_abort("%s", "aborting");
+  }
+  RefPtr<RefCounted> trivial66() { return children[0]; }
+  Ref<RefCounted> trivial67() { return *children[0]; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -544,6 +551,9 @@ public:
     getFieldTrivial().trivial62(); // no-warning
     getFieldTrivial().trivial63(); // no-warning
     getFieldTrivial().trivial64(); // no-warning
+    getFieldTrivial().trivial65(); // no-warning
+    getFieldTrivial().trivial66()->trivial6(); // no-warning
+    getFieldTrivial().trivial67()->trivial6(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning

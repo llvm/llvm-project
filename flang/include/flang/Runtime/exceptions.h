@@ -24,6 +24,10 @@ extern "C" {
 // This mapping is done at runtime to support cross compilation.
 std::uint32_t RTNAME(MapException)(std::uint32_t excepts);
 
+// Get and set the ieee underflow mode if supported; otherwise nops.
+bool RTNAME(GetUnderflowMode)(void);
+void RTNAME(SetUnderflowMode)(bool flag);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_EXCEPTIONS_H_
