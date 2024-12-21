@@ -1,0 +1,12 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+---
+name: invalid_reg_spill_phys_vgprs
+machineFunctionInfo:
+# ERR: [[@LINE+1]]:21: unknown register name 'notareg'
+  spillPhysVGPRs: ['$notareg']
+body: |
+  bb.0:
+    S_ENDPGM 0
+
+...

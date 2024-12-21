@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-// CHECK: |{{ +}}[[C4:4|1]]|void func(
+// CHECK: | [[#min(C,4)]]|void func(
 void func(int a, int b) {
   bool b0 = a <= b;
   bool b1 = a == b;
@@ -13,62 +13,62 @@ void func(int a, int b) {
   bool b4 = a > b;
   bool b5 = a != b;
 
-  bool c = b0 &&           // CHECK: Branch ([[@LINE]]:12): [True: [[C3:3|1]], False: 1]
-           b1 &&           // CHECK: Branch ([[@LINE]]:12): [True: [[C2:2|1]], False: 1]
-           b2 &&           // CHECK: Branch ([[@LINE]]:12): [True: [[C2]], False: 0]
-           b3 &&           // CHECK: Branch ([[@LINE]]:12): [True: 0, False: [[C2]]]
+  bool c = b0 &&           // CHECK: Branch ([[@LINE]]:12): [True: [[#min(C,3)]], False: 1]
+           b1 &&           // CHECK: Branch ([[@LINE]]:12): [True: [[#min(C,2)]], False: 1]
+           b2 &&           // CHECK: Branch ([[@LINE]]:12): [True: [[#min(C,2)]], False: 0]
+           b3 &&           // CHECK: Branch ([[@LINE]]:12): [True: 0, False: [[#min(C,2)]]]
            b4 &&           // CHECK: Branch ([[@LINE]]:12): [True: 0, False: 0]
            b5;             // CHECK: Branch ([[@LINE]]:12): [True: 0, False: 0]
 
-  bool d = b0 ||           // CHECK: Branch ([[@LINE]]:12): [True: [[C3]], False: 1]
+  bool d = b0 ||           // CHECK: Branch ([[@LINE]]:12): [True: [[#min(C,3)]], False: 1]
            b1 ||           // CHECK: Branch ([[@LINE]]:12): [True: 0, False: 1]
            b2 ||           // CHECK: Branch ([[@LINE]]:12): [True: 1, False: 0]
            b3 ||           // CHECK: Branch ([[@LINE]]:12): [True: 0, False: 0]
            b4 ||           // CHECK: Branch ([[@LINE]]:12): [True: 0, False: 0]
            b5;             // CHECK: Branch ([[@LINE]]:12): [True: 0, False: 0]
 
-  bool e = (b0  &&         // CHECK: Branch ([[@LINE]]:13): [True: [[C3]], False: 1]
-            b5) ||         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[C2]]]
-           (b1  &&         // CHECK: Branch ([[@LINE]]:13): [True: [[C2]], False: 1]
-            b4) ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[C2]]]
-           (b2  &&         // CHECK: Branch ([[@LINE]]:13): [True: [[C3]], False: 0]
-            b3) ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[C3]]]
-           (b3  &&         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[C3]]]
+  bool e = (b0  &&         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,3)]], False: 1]
+            b5) ||         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[#min(C,2)]]]
+           (b1  &&         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,2)]], False: 1]
+            b4) ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[#min(C,2)]]]
+           (b2  &&         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,3)]], False: 0]
+            b3) ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[#min(C,3)]]]
+           (b3  &&         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[#min(C,3)]]]
             b2) ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: 0]
-           (b4  &&         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[C2]]]
+           (b4  &&         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[#min(C,2)]]]
             b1) ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: 1]
-           (b5  &&         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[C2]]]
+           (b5  &&         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[#min(C,2)]]]
             b0);           // CHECK: Branch ([[@LINE]]:13): [True: 0, False: 1]
 
-  bool f = (b0  ||         // CHECK: Branch ([[@LINE]]:13): [True: [[C3]], False: 1]
+  bool f = (b0  ||         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,3)]], False: 1]
             b5) &&         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: 0]
-           (b1  ||         // CHECK: Branch ([[@LINE]]:13): [True: [[C2]], False: [[C2]]]
+           (b1  ||         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,2)]], False: [[#min(C,2)]]]
             b4) &&         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: 1]
-           (b2  ||         // CHECK: Branch ([[@LINE]]:13): [True: [[C3]], False: 0]
+           (b2  ||         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,3)]], False: 0]
             b3) &&         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: 0]
-           (b3  ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[C3]]]
-            b2) &&         // CHECK: Branch ([[@LINE]]:13): [True: [[C3]], False: 0]
-           (b4  ||         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[C2]]]
-            b1) &&         // CHECK: Branch ([[@LINE]]:13): [True: [[C2]], False: 0]
-           (b5  ||         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[C2]]]
-            b0);           // CHECK: Branch ([[@LINE]]:13): [True: [[C2]], False: 0]
+           (b3  ||         // CHECK: Branch ([[@LINE]]:13): [True: 0, False: [[#min(C,3)]]]
+            b2) &&         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,3)]], False: 0]
+           (b4  ||         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[#min(C,2)]]]
+            b1) &&         // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,2)]], False: 0]
+           (b5  ||         // CHECK: Branch ([[@LINE]]:13): [True: 1, False: [[#min(C,2)]]]
+            b0);           // CHECK: Branch ([[@LINE]]:13): [True: [[#min(C,2)]], False: 0]
 
-  if (c)                   // CHECK: Branch ([[@LINE]]:7): [True: 0, False: [[C4]]]
+  if (c)                   // CHECK: Branch ([[@LINE]]:7): [True: 0, False: [[#min(C,4)]]]
     printf("case0\n");
   else
     printf("case1\n");
 
-  if (d)                   // CHECK: Branch ([[@LINE]]:7): [True: [[C4]], False: 0]
+  if (d)                   // CHECK: Branch ([[@LINE]]:7): [True: [[#min(C,4)]], False: 0]
     printf("case2\n");
   else
     printf("case3\n");
 
-  if (e)                   // CHECK: Branch ([[@LINE]]:7): [True: 1, False: [[C3]]]
+  if (e)                   // CHECK: Branch ([[@LINE]]:7): [True: 1, False: [[#min(C,3)]]]
     printf("case4\n");
   else
     printf("case5\n");
 
-  if (f)                   // CHECK: Branch ([[@LINE]]:7): [True: [[C3]], False: 1]
+  if (f)                   // CHECK: Branch ([[@LINE]]:7): [True: [[#min(C,3)]], False: 1]
     printf("case6\n");
   else
     printf("case7\n");

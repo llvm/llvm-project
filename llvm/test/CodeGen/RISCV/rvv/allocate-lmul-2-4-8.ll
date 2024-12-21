@@ -756,3 +756,104 @@ define void @lmul_8_x9() nounwind {
   %v9 = alloca <vscale x 8 x i64>
   ret void
 }
+
+define void @lmul_16_align() nounwind {
+; NOZBA-LABEL: lmul_16_align:
+; NOZBA:       # %bb.0:
+; NOZBA-NEXT:    addi sp, sp, -144
+; NOZBA-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    addi s0, sp, 144
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    li a1, 24
+; NOZBA-NEXT:    mul a0, a0, a1
+; NOZBA-NEXT:    sub sp, sp, a0
+; NOZBA-NEXT:    andi sp, sp, -128
+; NOZBA-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; NOZBA-NEXT:    vmv.v.i v8, 0
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    add a0, sp, a0
+; NOZBA-NEXT:    addi a0, a0, 128
+; NOZBA-NEXT:    csrr a1, vlenb
+; NOZBA-NEXT:    vs8r.v v8, (a0)
+; NOZBA-NEXT:    slli a1, a1, 3
+; NOZBA-NEXT:    add a0, a0, a1
+; NOZBA-NEXT:    vs8r.v v8, (a0)
+; NOZBA-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; NOZBA-NEXT:    vmv.v.i v8, 0
+; NOZBA-NEXT:    addi a0, sp, 128
+; NOZBA-NEXT:    vs1r.v v8, (a0)
+; NOZBA-NEXT:    addi sp, s0, -144
+; NOZBA-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    addi sp, sp, 144
+; NOZBA-NEXT:    ret
+;
+; ZBA-LABEL: lmul_16_align:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    addi sp, sp, -144
+; ZBA-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    addi s0, sp, 144
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    slli a0, a0, 3
+; ZBA-NEXT:    sh1add a0, a0, a0
+; ZBA-NEXT:    sub sp, sp, a0
+; ZBA-NEXT:    andi sp, sp, -128
+; ZBA-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; ZBA-NEXT:    vmv.v.i v8, 0
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    add a0, sp, a0
+; ZBA-NEXT:    addi a0, a0, 128
+; ZBA-NEXT:    csrr a1, vlenb
+; ZBA-NEXT:    vs8r.v v8, (a0)
+; ZBA-NEXT:    sh3add a0, a1, a0
+; ZBA-NEXT:    vs8r.v v8, (a0)
+; ZBA-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; ZBA-NEXT:    vmv.v.i v8, 0
+; ZBA-NEXT:    addi a0, sp, 128
+; ZBA-NEXT:    vs1r.v v8, (a0)
+; ZBA-NEXT:    addi sp, s0, -144
+; ZBA-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    addi sp, sp, 144
+; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul_16_align:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    addi sp, sp, -144
+; NOMUL-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    addi s0, sp, 144
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 3
+; NOMUL-NEXT:    mv a1, a0
+; NOMUL-NEXT:    slli a0, a0, 1
+; NOMUL-NEXT:    add a0, a0, a1
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    andi sp, sp, -128
+; NOMUL-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; NOMUL-NEXT:    vmv.v.i v8, 0
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    add a0, sp, a0
+; NOMUL-NEXT:    addi a0, a0, 128
+; NOMUL-NEXT:    csrr a1, vlenb
+; NOMUL-NEXT:    vs8r.v v8, (a0)
+; NOMUL-NEXT:    slli a1, a1, 3
+; NOMUL-NEXT:    add a0, a0, a1
+; NOMUL-NEXT:    vs8r.v v8, (a0)
+; NOMUL-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; NOMUL-NEXT:    vmv.v.i v8, 0
+; NOMUL-NEXT:    addi a0, sp, 128
+; NOMUL-NEXT:    vs1r.v v8, (a0)
+; NOMUL-NEXT:    addi sp, s0, -144
+; NOMUL-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    addi sp, sp, 144
+; NOMUL-NEXT:    ret
+  %v1 = alloca <vscale x 16 x i64>
+  %v2 = alloca <vscale x 1 x i64>
+  store <vscale x 16 x i64> zeroinitializer, ptr %v1
+  store <vscale x 1 x i64> zeroinitializer, ptr %v2
+  ret void
+}

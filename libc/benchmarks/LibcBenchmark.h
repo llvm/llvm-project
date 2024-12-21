@@ -211,7 +211,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &Options,
     // Measuring this Batch.
     const auto StartTime = Clock.now();
     for (const auto Parameter : Batch) {
-      const auto Production = foo(Parameter);
+      auto Production = foo(Parameter);
       benchmark::DoNotOptimize(Production);
     }
     const auto EndTime = Clock.now();

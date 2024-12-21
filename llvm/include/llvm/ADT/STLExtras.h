@@ -416,7 +416,8 @@ static constexpr bool HasFreeFunctionRBegin =
 } // namespace detail
 
 // Returns an iterator_range over the given container which iterates in reverse.
-template <typename ContainerTy> auto reverse(ContainerTy &&C) {
+// Does not mutate the container.
+template <typename ContainerTy> [[nodiscard]] auto reverse(ContainerTy &&C) {
   if constexpr (detail::HasFreeFunctionRBegin<ContainerTy>)
     return make_range(adl_rbegin(C), adl_rend(C));
   else
@@ -1182,11 +1183,13 @@ public:
 
 } // end namespace detail
 
-/// Concatenated range across two or more ranges.
+/// Returns a concatenated range across two or more ranges. Does not modify the
+/// ranges.
 ///
 /// The desired value type must be explicitly specified.
 template <typename ValueT, typename... RangeTs>
-detail::concat_range<ValueT, RangeTs...> concat(RangeTs &&... Ranges) {
+[[nodiscard]] detail::concat_range<ValueT, RangeTs...>
+concat(RangeTs &&...Ranges) {
   static_assert(sizeof...(RangeTs) > 1,
                 "Need more than one range to concatenate!");
   return detail::concat_range<ValueT, RangeTs...>(

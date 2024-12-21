@@ -109,6 +109,18 @@ protected:
 
   //===--- Statement bitfields classes ---===//
 
+  enum { NumStmtBits = 9 };
+
+#define STMT(CLASS, PARENT)
+#define STMT_RANGE(BASE, FIRST, LAST)
+#define LAST_STMT_RANGE(BASE, FIRST, LAST)                                     \
+  static_assert(                                                               \
+      llvm::isInt<NumStmtBits>(StmtClass::LAST##Class),                        \
+      "The number of 'StmtClass'es is strictly bounded under two to "          \
+      "the power of 'NumStmtBits'");
+#define ABSTRACT_STMT(STMT)
+#include "clang/AST/StmtNodes.inc"
+
   class StmtBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -116,9 +128,8 @@ protected:
 
     /// The statement class.
     LLVM_PREFERRED_TYPE(StmtClass)
-    unsigned sClass : 8;
+    unsigned sClass : NumStmtBits;
   };
-  enum { NumStmtBits = 8 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;

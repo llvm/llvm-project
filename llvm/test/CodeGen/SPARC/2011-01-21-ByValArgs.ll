@@ -1,4 +1,4 @@
-;RUN: llc -march=sparc < %s | FileCheck %s
+;RUN: llc -mtriple=sparc < %s | FileCheck %s
 
 %struct.foo_t = type { i32, i32, i32 }
 

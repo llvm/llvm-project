@@ -59,8 +59,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY $q1
-    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x p0>) = G_SHUFFLE_VECTOR [[COPY]](<2 x p0>), [[COPY1]], shufflemask(0, 0)
-    ; CHECK-NEXT: $q0 = COPY [[SHUF]](<2 x p0>)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[COPY]](<2 x p0>)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[COPY1]](<2 x p0>)
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[PTRTOINT]](<2 x s64>), [[PTRTOINT1]], shufflemask(0, 0)
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(<2 x p0>) = G_INTTOPTR [[SHUF]](<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[INTTOPTR]](<2 x p0>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x p0>) = COPY $q0
     %1:_(<2 x p0>) = COPY $q1

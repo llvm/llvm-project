@@ -8,7 +8,6 @@
 
 #include "SystemZFrameLowering.h"
 #include "SystemZCallingConv.h"
-#include "SystemZInstrBuilder.h"
 #include "SystemZInstrInfo.h"
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZRegisterInfo.h"
@@ -1450,11 +1449,6 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
 }
 
 bool SystemZXPLINKFrameLowering::hasFPImpl(const MachineFunction &MF) const {
-  // Naked functions have no stack frame pushed, so we don't have a frame
-  // pointer.
-  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
-    return false;
-
   return (MF.getFrameInfo().hasVarSizedObjects());
 }
 

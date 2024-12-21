@@ -11,21 +11,21 @@ declare dso_local { i32, i128, i64 } @implicit_sret_decl() unnamed_addr
 define internal void @test() unnamed_addr nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %start
-; CHECK-NEXT:    daddiu $sp, $sp, -48
-; CHECK-NEXT:    sd $ra, 40($sp) # 8-byte Folded Spill
-; CHECK-NEXT:    daddiu $4, $sp, 8
+; CHECK-NEXT:    daddiu $sp, $sp, -64
+; CHECK-NEXT:    sd $ra, 56($sp) # 8-byte Folded Spill
+; CHECK-NEXT:    daddiu $4, $sp, 0
 ; CHECK-NEXT:    jal implicit_sret_decl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $6, 24($sp)
 ; CHECK-NEXT:    ld $5, 16($sp)
 ; CHECK-NEXT:    ld $7, 32($sp)
-; CHECK-NEXT:    lw $1, 8($sp)
+; CHECK-NEXT:    lw $1, 0($sp)
 ; CHECK-NEXT:    # implicit-def: $a0_64
 ; CHECK-NEXT:    move $4, $1
 ; CHECK-NEXT:    jal use_sret
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    ld $ra, 40($sp) # 8-byte Folded Reload
-; CHECK-NEXT:    daddiu $sp, $sp, 48
+; CHECK-NEXT:    ld $ra, 56($sp) # 8-byte Folded Reload
+; CHECK-NEXT:    daddiu $sp, $sp, 64
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    nop
 start:
@@ -42,11 +42,11 @@ define internal { i32, i128, i64 } @implicit_sret_impl() unnamed_addr nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $at_64 killed $a0_64
 ; CHECK-NEXT:    daddiu $1, $zero, 20
-; CHECK-NEXT:    sd $1, 16($4)
-; CHECK-NEXT:    daddiu $1, $zero, 0
-; CHECK-NEXT:    sd $zero, 8($4)
-; CHECK-NEXT:    daddiu $1, $zero, 30
 ; CHECK-NEXT:    sd $1, 24($4)
+; CHECK-NEXT:    daddiu $1, $zero, 0
+; CHECK-NEXT:    sd $zero, 16($4)
+; CHECK-NEXT:    daddiu $1, $zero, 30
+; CHECK-NEXT:    sd $1, 32($4)
 ; CHECK-NEXT:    addiu $1, $zero, 10
 ; CHECK-NEXT:    sw $1, 0($4)
 ; CHECK-NEXT:    jr $ra
