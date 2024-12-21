@@ -1087,7 +1087,7 @@ TEST(TestRtsanInterceptors, PpollDiesWhenRealtime) {
   fds[0].fd = 0;
   fds[0].events = POLLIN;
 
-  timespec ts = {0};
+  timespec ts = {0, 0};
 
   auto Func = [&fds, &ts]() { ppoll(fds, 1, &ts, nullptr); };
 
