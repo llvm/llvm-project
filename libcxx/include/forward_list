@@ -766,8 +766,14 @@ public:
     return std::min<size_type>(__node_traits::max_size(this->__alloc_), numeric_limits<difference_type>::max());
   }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() { return __base::__before_begin()->__next_->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return __base::__before_begin()->__next_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference front() {
+    _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::front called on an empty list");
+    return __base::__before_begin()->__next_->__get_value();
+  }
+  _LIBCPP_HIDE_FROM_ABI const_reference front() const {
+    _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::front called on an empty list");
+    return __base::__before_begin()->__next_->__get_value();
+  }
 
 #  ifndef _LIBCPP_CXX03_LANG
 #    if _LIBCPP_STD_VER >= 17
@@ -1085,6 +1091,7 @@ void forward_list<_Tp, _Alloc>::push_front(const value_type& __v) {
 
 template <class _Tp, class _Alloc>
 void forward_list<_Tp, _Alloc>::pop_front() {
+  _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::pop_front called on an empty list");
   __node_pointer __p                = __base::__before_begin()->__next_;
   __base::__before_begin()->__next_ = __p->__next_;
   this->__delete_node(__p);
