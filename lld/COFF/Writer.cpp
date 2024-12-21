@@ -1748,7 +1748,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   pe->SizeOfImage = sizeOfImage;
   pe->SizeOfHeaders = sizeOfHeaders;
   if (!config->noEntry) {
-    Defined *entry = cast<Defined>(config->entry);
+    Defined *entry = cast<Defined>(ctx.symtab.entry);
     pe->AddressOfEntryPoint = entry->getRVA();
     // Pointer to thumb code must have the LSB set, so adjust it.
     if (config->machine == ARMNT)
@@ -2031,8 +2031,10 @@ void Writer::createGuardCFTables() {
   }
 
   // Mark the image entry as address-taken.
-  if (config->entry)
-    maybeAddAddressTakenFunction(addressTakenSyms, config->entry);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (symtab.entry)
+      maybeAddAddressTakenFunction(addressTakenSyms, symtab.entry);
+  });
 
   // Mark exported symbols in executable sections as address-taken.
   for (Export &e : config->exports)
@@ -2583,6 +2585,16 @@ void Writer::createDynamicRelocs() {
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint16_t),
                          coffHeaderOffset + offsetof(coff_file_header, Machine),
                          AMD64);
+
+  if (ctx.symtab.entry || ctx.hybridSymtab->entry) {
+    Defined *entrySym = ctx.hybridSymtab->entry
+                            ? dyn_cast<Defined>(ctx.hybridSymtab->entry)
+                            : nullptr;
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           peHeaderOffset +
+                               offsetof(pe32plus_header, AddressOfEntryPoint),
+                           entrySym);
+  }
 
   // Set the hybrid load config to the EC load config.
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
