@@ -10,6 +10,7 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
+#include <Uefi.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -19,8 +20,16 @@ ssize_t read_from_stdin(char *buf, size_t size) {
   return 0;
 }
 
-void write_to_stdout(cpp::string_view msg) { (void)msg; }
+void write_to_stdout(cpp::string_view msg) {
+  // TODO: use mbstowcs once implemented
+  efi_system_table->ConOut->OutputString(
+      efi_system_table->ConOut, reinterpret_cast<const char16_t *>(msg.data()));
+}
 
-void write_to_stderr(cpp::string_view msg) { (void)msg; }
+void write_to_stderr(cpp::string_view msg) {
+  // TODO: use mbstowcs once implemented
+  efi_system_table->StdErr->OutputString(
+      efi_system_table->StdErr, reinterpret_cast<const char16_t *>(msg.data()));
+}
 
 } // namespace LIBC_NAMESPACE_DECL
