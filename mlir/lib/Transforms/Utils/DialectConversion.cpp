@@ -169,10 +169,15 @@ struct ConversionValueMapping {
   ValueVector lookupOrNull(const ValueVector &from,
                            TypeRange desiredTypes = {}) const;
 
+  template <typename T>
+  struct IsValueVector : std::is_same<std::decay_t<T>, ValueVector> {};
+
   /// Map a value to the one provided.
-  void map(const ValueVector &oldVal, const ValueVector &newVal) {
+  template <typename OldVal, typename NewVal>
+  std::enable_if_t<IsValueVector<OldVal>{} && IsValueVector<NewVal>{}>
+  map(OldVal &&oldVal, NewVal &&newVal) {
     LLVM_DEBUG({
-      ValueVector next = newVal;
+      ValueVector next(newVal);
       while (true) {
         assert(next != oldVal && "inserting cyclic mapping");
         auto it = mapping.find(next);
@@ -181,9 +186,22 @@ struct ConversionValueMapping {
         next = it->second;
       }
     });
-    mapping[oldVal] = newVal;
     for (Value v : newVal)
       mappedTo.insert(v);
+
+    mapping[std::forward<OldVal>(oldVal)] = std::forward<NewVal>(newVal);
+  }
+
+  template <typename OldVal, typename NewVal>
+  std::enable_if_t<!IsValueVector<OldVal>{} || !IsValueVector<NewVal>{}>
+  map(OldVal &&oldVal, NewVal &&newVal) {
+    if constexpr (IsValueVector<OldVal>{}) {
+      map(std::forward<OldVal>(oldVal), ValueVector{newVal});
+    } else if constexpr (IsValueVector<NewVal>{}) {
+      map(ValueVector{oldVal}, std::forward<NewVal>(newVal));
+    } else {
+      map(ValueVector{oldVal}, ValueVector{newVal});
+    }
   }
 
   /// Drop the last mapping for the given values.
@@ -1405,7 +1423,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       assert(inputMap->size == 0 &&
              "invalid to provide a replacement value when the argument isn't "
              "dropped");
-      mapping.map({origArg}, {repl});
+      mapping.map(origArg, repl);
       appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
       continue;
     }
@@ -1417,7 +1435,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
     ValueVector replArgVals = llvm::to_vector_of<Value, 1>(replArgs);
-    mapping.map({origArg}, replArgVals);
+    mapping.map(origArg, std::move(replArgVals));
     appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
   }
 
@@ -1447,7 +1465,7 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
   // Avoid materializing an unnecessary cast.
   if (TypeRange(inputs) == outputTypes) {
     if (!valuesToMap.empty())
-      mapping.map(valuesToMap, inputs);
+      mapping.map(std::move(valuesToMap), inputs);
     return inputs;
   }
 
@@ -1501,7 +1519,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
                                      /*outputType=*/value.getType(),
                                      /*originalType=*/Type(), converter)
           .front();
-  mapping.map({value}, {castValue});
+  mapping.map(value, castValue);
   return castValue;
 }
 
@@ -1571,7 +1589,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(
     // Remap result to replacement value.
     if (repl.empty())
       continue;
-    mapping.map({result}, repl);
+    mapping.map(result, repl);
   }
 
   appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter);
@@ -1724,7 +1742,7 @@ void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
   });
   impl->appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from,
                                               impl->currentTypeConverter);
-  impl->mapping.map(impl->mapping.lookupOrDefault({from}), {to});
+  impl->mapping.map(impl->mapping.lookupOrDefault({from}), to);
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
