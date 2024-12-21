@@ -215,10 +215,10 @@ public:
   /// LHS.
   Counter subtract(Counter LHS, Counter RHS, bool Simplify = true);
 
-  using ReplaceMap = std::map<Counter, Counter>;
+  using SubstMap = std::map<Counter, Counter>;
 
-  /// Return a counter for each term in the expression replaced by ReplaceMap.
-  Counter replace(Counter C, const ReplaceMap &Map);
+  /// Return a counter for each term in the expression replaced by SubstMap.
+  Counter subst(Counter C, const SubstMap &Map);
 };
 
 using LineColPair = std::pair<unsigned, unsigned>;

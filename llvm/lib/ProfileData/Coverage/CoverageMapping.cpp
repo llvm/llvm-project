@@ -135,7 +135,7 @@ Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS,
   return Simplify ? simplify(Cnt) : Cnt;
 }
 
-Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
+Counter CounterExpressionBuilder::subst(Counter C, const SubstMap &Map) {
   // Replace C with the value found in Map even if C is Expression.
   if (auto I = Map.find(C); I != Map.end())
     return I->second;
@@ -143,10 +143,9 @@ Counter CounterExpressionBuilder::replace(Counter C, const ReplaceMap &Map) {
   if (!C.isExpression())
     return C;
 
-  // Traverse both sides of Expression.
   auto CE = Expressions[C.getExpressionID()];
-  auto NewLHS = replace(CE.LHS, Map);
-  auto NewRHS = replace(CE.RHS, Map);
+  auto NewLHS = subst(CE.LHS, Map);
+  auto NewRHS = subst(CE.RHS, Map);
 
   // Reconstruct Expression with induced subexpressions.
   switch (CE.Kind) {

@@ -884,7 +884,7 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
 
-  CounterExpressionBuilder::ReplaceMap MapToExpand;
+  CounterExpressionBuilder::SubstMap MapToExpand;
   unsigned NextCounterNum;
 
   MCDC::State &MCDCState;
@@ -959,12 +959,22 @@ struct CounterCoverageMappingBuilder
     return {ExecCnt, SkipCnt};
   }
 
-  Counter getSwitchImplicitDefaultCounter(const Stmt *Cond, Counter ParentCount,
-                                          Counter CaseCountSum) {
-    return (
-        llvm::EnableSingleByteCoverage
-            ? Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)
-            : Builder.subtract(ParentCount, CaseCountSum));
+  /// Returns {TrueCnt,FalseCnt} for "implicit default".
+  /// FalseCnt is considered as the False count on SwitchStmt.
+  std::pair<Counter, Counter>
+  getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
+                                      Counter CaseCountSum) {
+    if (llvm::EnableSingleByteCoverage)
+      return {Counter::getZero(), // Folded
+              Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)};
+
+    // Simplify is skipped while building the counters above: it can get
+    // really slow on top of switches with thousands of cases. Instead,
+    // trigger simplification by adding zero to the last counter.
+    CaseCountSum =
+        addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
+
+    return {CaseCountSum, Builder.subtract(ParentCount, CaseCountSum)};
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
@@ -972,7 +982,7 @@ struct CounterCoverageMappingBuilder
       return true;
 
     // Try comaparison with pre-replaced expressions.
-    if (Builder.replace(Builder.subtract(OutCount, ParentCount), MapToExpand)
+    if (Builder.subst(Builder.subtract(OutCount, ParentCount), MapToExpand)
             .isZero())
       return true;
 
@@ -1189,12 +1199,14 @@ struct CounterCoverageMappingBuilder
   /// and add it to the function's SourceRegions.
   /// Returns Counter that corresponds to SC.
   Counter createSwitchCaseRegion(const SwitchCase *SC, Counter ParentCount) {
+    Counter TrueCnt = getRegionCounter(SC);
+    Counter FalseCnt = (llvm::EnableSingleByteCoverage
+                            ? Counter::getZero() // Folded
+                            : subtractCounters(ParentCount, TrueCnt));
     // Push region onto RegionStack but immediately pop it (which adds it to
     // the function's SourceRegions) because it doesn't apply to any other
     // source other than the SwitchCase.
-    Counter TrueCnt = getRegionCounter(SC);
-    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(),
-                          subtractCounters(ParentCount, TrueCnt)));
+    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(), FalseCnt));
     return TrueCnt;
   }
 
@@ -1931,15 +1943,9 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      // Simplify is skipped while building the counters above: it can get
-      // really slow on top of switches with thousands of cases. Instead,
-      // trigger simplification by adding zero to the last counter.
-      CaseCountSum =
-          addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
-
-      // This is considered as the False count on SwitchStmt.
-      Counter SwitchFalse = subtractCounters(ParentCount, CaseCountSum);
-      createBranchRegion(S->getCond(), CaseCountSum, SwitchFalse);
+      auto Counters = getSwitchImplicitDefaultCounterPair(
+          S->getCond(), ParentCount, CaseCountSum);
+      createBranchRegion(S->getCond(), Counters.first, Counters.second);
     }
   }
 
