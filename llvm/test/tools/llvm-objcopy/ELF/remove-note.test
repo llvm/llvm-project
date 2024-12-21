@@ -63,26 +63,40 @@
 
 # CHECK:      NoteSections [
 # CHECK-NEXT:   NoteSection {
-# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Name: .note0
 # CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0]]
-# CHECK-NEXT:     Size: 0x[[#%X,SIZE0+SIZE1]]
+# CHECK-NEXT:     Size: 0x[[#%X,SIZE0]]
 # CHECK-NEXT:     Notes [
 # CHECK-NEXT:       {
 # CHECK-NEXT:         Owner: CORE
 # CHECK-NEXT:         Data size: 0x2
-# CHECK-NEXT:         Type: NT_FPREGSET
+# CHECK-NEXT:         Type: NT_ARCH
 # CHECK-NEXT:         Description data (
 # CHECK-NEXT:           0000: 0202
 # CHECK-NEXT:         )
 # CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name: .note1
+# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0]]
+# CHECK-NEXT:     Size: 0x[[#%X,SIZE1]]
+# CHECK-NEXT:     Notes [
 # CHECK-NEXT:       {
 # CHECK-NEXT:         Owner: CORE
 # CHECK-NEXT:         Data size: 0x2
-# CHECK-NEXT:         Type: NT_TASKSTRUCT
+# CHECK-NEXT:         Type: Unknown (0x00000004)
 # CHECK-NEXT:         Description data (
 # CHECK-NEXT:           0000: 0404
 # CHECK-NEXT:         )
 # CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name: .note2
+# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0+SIZE1]]
+# CHECK-NEXT:     Size: 0x0
+# CHECK-NEXT:     Notes [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
@@ -91,7 +105,7 @@
 FileHeader:
   Class:          ELFCLASS64
   Data:           ELFDATA2LSB
-  Type:           ET_CORE
+  Type:           ET_EXEC
   Machine:        EM_X86_64
 ProgramHeaders:
   - Type:         PT_NOTE
