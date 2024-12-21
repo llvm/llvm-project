@@ -61,10 +61,16 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::ICmp:
   case VPInstruction::ActiveLaneMask:
     return inferScalarType(R->getOperand(1));
+  case VPInstruction::ComputeReductionResult: {
+    auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
+    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
+    return OrigPhi->getType();
+  }
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
+  case VPInstruction::ResumePhi:
     return SetResultTyFromOp();
   case VPInstruction::ExtractFromEnd: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
