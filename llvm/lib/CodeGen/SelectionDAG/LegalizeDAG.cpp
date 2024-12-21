@@ -1534,7 +1534,8 @@ SDValue SelectionDAGLegalize::ExpandConcatVectors(SDNode *Node) {
   MVT VectorIdxType = TLI.getVectorIdxTy(DAG.getDataLayout());
   EVT VectorValueType = Node->getOperand(0).getValueType();
   unsigned NumSubElem = VectorValueType.getVectorNumElements();
-  EVT ElementValueType = TLI.getTypeToTransformTo(*DAG.getContext(), VectorValueType.getVectorElementType());
+  EVT ElementValueType = TLI.getTypeToTransformTo(
+      *DAG.getContext(), VectorValueType.getVectorElementType());
   for (unsigned I = 0; I < NumOperands; ++I) {
     SDValue SubOp = Node->getOperand(I);
     for (unsigned Idx = 0; Idx < NumSubElem; ++Idx) {
@@ -3404,7 +3405,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandInsertToVectorThroughStack(SDValue(Node, 0)));
     break;
   case ISD::CONCAT_VECTORS:
-    Results.push_back(ExpandConcatVectors(Node));
+    if (EVT ElementValueType =
+            Node->getOperand(0).getValueType().getVectorElementType();
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT,
+                                     ElementValueType)) {
+      Results.push_back(ExpandConcatVectors(Node));
+    } else {
+      Results.push_back(ExpandVectorBuildThroughStack(Node));
+    }
     break;
   case ISD::SCALAR_TO_VECTOR:
     Results.push_back(ExpandSCALAR_TO_VECTOR(Node));
