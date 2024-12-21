@@ -33,15 +33,23 @@ class NextUseResult {
   TimerGroup *TG;
   Timer *T1;
   Timer *T2;
+
+  using VRegDistances = DenseMap<Register, unsigned>;
+  class NextUseInfo {
+    // FIXME: need to elaborate proper class interface!
+    public:
+    VRegDistances Bottom;
+    DenseMap<const MachineInstr *, VRegDistances> InstrDist;
+  };
   
   
-  DenseMap<const MachineInstr *, DenseMap<Register, unsigned>> InstrCache;
+  DenseMap<unsigned, NextUseInfo> NextUseMap;
 
 public:
-  using VRegDistances = DenseMap<Register, unsigned>;
+  
 
 private:
-  DenseMap<unsigned, VRegDistances> NextUseMap;
+  //DenseMap<unsigned, VRegDistances> NextUseMap;
   DenseMap<unsigned, SetVector<Register>> UsedInBlock;
   DenseMap<int, int> EdgeWeigths;
   const uint16_t Infinity = std::numeric_limits<unsigned short>::max();
@@ -75,20 +83,20 @@ private:
     }
   }
 
-  void dump(raw_ostream &O = dbgs()) const {
-    for (auto P : NextUseMap) {
-      O << "\nMBB_" << P.first << "\n";
-      printVregDistances(P.second, O);
-    }
-  }
+  // void dump(raw_ostream &O = dbgs()) const {
+  //   for (auto P : NextUseMap) {
+  //     O << "\nMBB_" << P.first << "\n";
+  //     printVregDistances(P.second, O);
+  //   }
+  // }
 
-  std::optional<std::reference_wrapper<VRegDistances>>
-  getVRegMap(const MachineBasicBlock *MBB) {
-    if (NextUseMap.contains(MBB->getNumber())) {
-      return NextUseMap[MBB->getNumber()];
-    }
-    return std::nullopt;
-  }
+  // std::optional<std::reference_wrapper<VRegDistances>>
+  // getVRegMap(const MachineBasicBlock *MBB) {
+  //   if (NextUseMap.contains(MBB->getNumber())) {
+  //     return NextUseMap[MBB->getNumber()];
+  //   }
+  //   return std::nullopt;
+  // }
 
   VRegDistances &mergeDistances(VRegDistances &LHS, const VRegDistances &RHS,
                                 unsigned Weight = 0) {
@@ -106,17 +114,17 @@ private:
     return LHS;
   }
 
-  void setNextUseDistance(const MachineBasicBlock *MBB, Register VReg,
-                          int Distance) {
-    auto VMapRef = getVRegMap(MBB);
-    if (!VMapRef)
-      VMapRef = NextUseMap[MBB->getNumber()];
-    VRegDistances &VRegs = VMapRef.value();
-    VRegs[VReg] = Distance;
-  }
+  // void setNextUseDistance(const MachineBasicBlock *MBB, Register VReg,
+  //                         int Distance) {
+  //   auto VMapRef = getVRegMap(MBB);
+  //   if (!VMapRef)
+  //     VMapRef = NextUseMap[MBB->getNumber()];
+  //   VRegDistances &VRegs = VMapRef.value();
+  //   VRegs[VReg] = Distance;
+  // }
 
-  unsigned computeNextUseDistance(const MachineBasicBlock &MBB,
-                                  const SlotIndex I, Register Vreg);
+  // unsigned computeNextUseDistance(const MachineBasicBlock &MBB,
+  //                                 const SlotIndex I, Register Vreg);
 
   void clear() {
     NextUseMap.clear();
@@ -132,72 +140,83 @@ public:
   }
   ~NextUseResult() { clear(); }
 
-  void print(raw_ostream &O) const { dump(O); }
+  // void print(raw_ostream &O) const { dump(O); }
 
-  unsigned getNextUseDistance(const MachineInstr &MI, Register VReg);
-  unsigned getNextUseDistance(const MachineBasicBlock &MBB, Register VReg);
+  // unsigned getNextUseDistance(const MachineInstr &MI, Register VReg);
+  unsigned getNextUseDistance(const MachineBasicBlock &MBB,
+                              const Register VReg);
+  unsigned getNextUseDistance(const MachineBasicBlock::iterator I,
+                              const Register VReg);
 
-  bool isDead(MachineBasicBlock &MBB, Register R) {
+  bool isDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+              Register R) {
     if (!R.isVirtual())
       report_fatal_error("Only virtual registers allowed!\n", true);
-    return getNextUseDistance(MBB, R) == Infinity;
+    return I == MBB.end() ? getNextUseDistance(MBB, R) == Infinity
+                          : getNextUseDistance(I, R) == Infinity;
   }
 
-  bool isDead(MachineInstr &MI, Register R) {
-    if (!R.isVirtual())
-      report_fatal_error("Only virtual registers allowed!\n", true);
-    return getNextUseDistance(MI, R) == Infinity;
-  }
+  // bool isDead(MachineBasicBlock &MBB, Register R) {
+  //   if (!R.isVirtual())
+  //     report_fatal_error("Only virtual registers allowed!\n", true);
+  //   return getNextUseDistance(MBB, R) == Infinity;
+  // }
 
-  void getSortedForBlockEnd(MachineBasicBlock &MBB,
-                               SetVector<Register> &Regs) {
-    auto SortByDist = [&](const Register LHS, const Register RHS) {
-      return getNextUseDistance(MBB, LHS) < getNextUseDistance(MBB, RHS);
-    };
-    SmallVector<Register> Tmp(Regs.takeVector());
-    sort(Tmp, SortByDist);
-    Regs.insert(Tmp.begin(), Tmp.end());
-  }
+  // bool isDead(MachineInstr &MI, Register R) {
+  //   if (!R.isVirtual())
+  //     report_fatal_error("Only virtual registers allowed!\n", true);
+  //   return getNextUseDistance(MI, R) == Infinity;
+  // }
 
-  void getSortedForInstruction(const MachineInstr &MI,
-                                   SetVector<Register> &Regs) {
-    // auto SortByDist = [&](const Register LHS, const Register RHS) {
-    //   unsigned LDist = getNextUseDistance(MI, LHS);
-    //   unsigned RDist = getNextUseDistance(MI, RHS);
-    //   if (LDist == RDist) {
-    //     const TargetRegisterClass *LRC = TRI->getRegClassForReg(*MRI, LHS);
-    //     unsigned LSize = TRI->getRegClassWeight(LRC).RegWeight;
-    //     const TargetRegisterClass *RRC = TRI->getRegClassForReg(*MRI, RHS);
-    //     unsigned RSize = TRI->getRegClassWeight(RRC).RegWeight;
-    //     return LSize < RSize;
-    //   }
-    //   return LDist < RDist;
-    // };
-    auto SortByDist = [&](const Register LHS, const Register RHS) {
-      return getNextUseDistance(MI, LHS) < getNextUseDistance(MI, RHS);
-    };
-    SmallVector<Register> Tmp(Regs.takeVector());
-    sort(Tmp, SortByDist);
-    Regs.insert(Tmp.begin(), Tmp.end());
-  }
+//   void getSortedForBlockEnd(MachineBasicBlock &MBB,
+//                                SetVector<Register> &Regs) {
+//     auto SortByDist = [&](const Register LHS, const Register RHS) {
+//       return getNextUseDistance(MBB, LHS) < getNextUseDistance(MBB, RHS);
+//     };
+//     SmallVector<Register> Tmp(Regs.takeVector());
+//     sort(Tmp, SortByDist);
+//     Regs.insert(Tmp.begin(), Tmp.end());
+//   }
 
-  std::vector<std::pair<Register, unsigned>>
-  getSortedByDistance(const MachineInstr &MI, std::vector<Register> &W) {
-    std::vector<std::pair<Register, unsigned>> Result;
-    auto compareByVal = [](std::pair<Register, unsigned> &LHS,
-                           std::pair<Register, unsigned> &RHS) -> bool {
-      return LHS.second < RHS.second;
-    };
+//   void getSortedForInstruction(const MachineInstr &MI,
+//                                    SetVector<Register> &Regs) {
+//     // auto SortByDist = [&](const Register LHS, const Register RHS) {
+//     //   unsigned LDist = getNextUseDistance(MI, LHS);
+//     //   unsigned RDist = getNextUseDistance(MI, RHS);
+//     //   if (LDist == RDist) {
+//     //     const TargetRegisterClass *LRC = TRI->getRegClassForReg(*MRI, LHS);
+//     //     unsigned LSize = TRI->getRegClassWeight(LRC).RegWeight;
+//     //     const TargetRegisterClass *RRC = TRI->getRegClassForReg(*MRI, RHS);
+//     //     unsigned RSize = TRI->getRegClassWeight(RRC).RegWeight;
+//     //     return LSize < RSize;
+//     //   }
+//     //   return LDist < RDist;
+//     // };
+//     auto SortByDist = [&](const Register LHS, const Register RHS) {
+//       return getNextUseDistance(MI, LHS) < getNextUseDistance(MI, RHS);
+//     };
+//     SmallVector<Register> Tmp(Regs.takeVector());
+//     sort(Tmp, SortByDist);
+//     Regs.insert(Tmp.begin(), Tmp.end());
+//   }
 
-    for (auto R : W) {
-      dbgs() << printReg(R);
-      Result.push_back(std::make_pair(R, getNextUseDistance(MI, R)));
-    }
+//   std::vector<std::pair<Register, unsigned>>
+//   getSortedByDistance(const MachineInstr &MI, std::vector<Register> &W) {
+//     std::vector<std::pair<Register, unsigned>> Result;
+//     auto compareByVal = [](std::pair<Register, unsigned> &LHS,
+//                            std::pair<Register, unsigned> &RHS) -> bool {
+//       return LHS.second < RHS.second;
+//     };
 
-    std::sort(Result.begin(), Result.end(), compareByVal);
+//     for (auto R : W) {
+//       dbgs() << printReg(R);
+//       Result.push_back(std::make_pair(R, getNextUseDistance(MI, R)));
+//     }
 
-    return std::move(Result);
-  }
+//     std::sort(Result.begin(), Result.end(), compareByVal);
+
+//     return std::move(Result);
+//   }
 
   SetVector<Register> usedInBlock(MachineBasicBlock &MBB) {
     return std::move(UsedInBlock[MBB.getNumber()]);
@@ -227,10 +246,10 @@ public:
   bool runOnMachineFunction(MachineFunction &) override;
   void releaseMemory() override { NU.clear(); }
 
-  /// Implement the dump method.
-  void print(raw_ostream &O, const Module * = nullptr) const override {
-    NU.print(O);
-  }
+  // /// Implement the dump method.
+  // void print(raw_ostream &O, const Module * = nullptr) const override {
+  //   NU.print(O);
+  // }
 
   NextUseResult &getNU() { return NU; }
 };
