@@ -307,14 +307,14 @@ declare void @read_global(ptr nocapture noundef initializes((0, 2))) nounwind
 
 define i16 @global_var_alias() {
 ; CHECK-LABEL: @global_var_alias(
-; CHECK-NEXT:    store i32 0, ptr @g, align 4
-; CHECK-NEXT:    [[G_ADDR:%.*]] = getelementptr i32, ptr @g, i64 1
+; CHECK-NEXT:    store i16 0, ptr @g, align 4
+; CHECK-NEXT:    [[G_ADDR:%.*]] = getelementptr i8, ptr @g, i64 1
 ; CHECK-NEXT:    call void @read_global(ptr [[G_ADDR]])
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr @g, align 2
 ; CHECK-NEXT:    ret i16 [[L]]
 ;
-  store i32 0, ptr @g, align 4
-  %g_addr = getelementptr i32, ptr @g, i64 1
+  store i16 0, ptr @g, align 4
+  %g_addr = getelementptr i8, ptr @g, i64 1
   call void @read_global(ptr %g_addr)
   %l = load i16, ptr @g
   ret i16 %l
