@@ -2649,6 +2649,8 @@ public:
                 return false;
               LanguageType lt1 = lang1->GetLanguageType();
               LanguageType lt2 = lang2->GetLanguageType();
+              if (lt1 == lt2)
+                return false;
               if (lt1 == guessed_language)
                 return true; // make the selected frame's language come first
               if (lt2 == guessed_language)

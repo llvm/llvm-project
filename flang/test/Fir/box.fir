@@ -24,7 +24,7 @@ func.func private @g(%b : !fir.box<f32>)
 func.func private @ga(%b : !fir.box<!fir.array<?xf32>>)
 
 // CHECK-LABEL: define void @f
-// CHECK: (ptr %[[ARG:.*]])
+// CHECK: (ptr nocapture %[[ARG:.*]])
 func.func @f(%a : !fir.ref<f32>) {
   // CHECK: %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
   // CHECK: %[[INS0:.*]] = insertvalue {{.*}} { ptr undef, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 27, i8 0, i8 0 }, ptr %[[ARG]], 0
@@ -38,7 +38,7 @@ func.func @f(%a : !fir.ref<f32>) {
 }
 
 // CHECK-LABEL: define void @fa
-// CHECK: (ptr %[[ARG:.*]])
+// CHECK: (ptr nocapture %[[ARG:.*]])
 func.func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
   %c = fir.convert %a : (!fir.ref<!fir.array<100xf32>>) -> !fir.ref<!fir.array<?xf32>>
   %c1 = arith.constant 1 : index
@@ -54,36 +54,41 @@ func.func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
 
 // Boxing of a scalar character of dynamic length
 // CHECK-LABEL: define void @b1(
-// CHECK-SAME: ptr %[[res:.*]], ptr %[[arg0:.*]], i64 %[[arg1:.*]])
+// CHECK-SAME: ptr nocapture %[[res:.*]], ptr nocapture %[[arg0:.*]], i64 %[[arg1:.*]])
 func.func @b1(%arg0 : !fir.ref<!fir.char<1,?>>, %arg1 : index) -> !fir.box<!fir.char<1,?>> {
+  // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
   // CHECK: %[[size:.*]] = mul i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), %[[arg1]]
   // CHECK: insertvalue {{.*}} undef, i64 %[[size]], 1
   // CHECK: insertvalue {{.*}} i32 20240719, 2
   // CHECK: insertvalue {{.*}} ptr %[[arg0]], 0
   %x = fir.embox %arg0 typeparams %arg1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-  // CHECK: store {{.*}}, ptr %[[res]]
+  // CHECK: store {{.*}}, ptr %[[alloca]]
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[res]], ptr %[[alloca]], i32 24, i1 false)
   return %x : !fir.box<!fir.char<1,?>>
 }
 
 // Boxing of a dynamic array of character with static length (5)
 // CHECK-LABEL: define void @b2(
-// CHECK-SAME: ptr %[[res]],
-// CHECK-SAME: ptr %[[arg0:.*]], i64 %[[arg1:.*]])
+// CHECK-SAME: ptr nocapture %[[res]],
+// CHECK-SAME: ptr nocapture %[[arg0:.*]], i64 %[[arg1:.*]])
 func.func @b2(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,5>>>, %arg1 : index) -> !fir.box<!fir.array<?x!fir.char<1,5>>> {
   %1 = fir.shape %arg1 : (index) -> !fir.shape<1>
+  // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   // CHECK: insertvalue {{.*}} { ptr undef, i64 ptrtoint (ptr getelementptr ([5 x i8], ptr null, i32 1) to i64), i32 20240719, i8 1, i8 40, i8 0, i8 0, {{.*}} }, i64 %[[arg1]], 7, 0, 1
   // CHECK: insertvalue {{.*}} %{{.*}}, i64 ptrtoint (ptr getelementptr ([5 x i8], ptr null, i32 1) to i64), 7, 0, 2
   // CHECK: insertvalue {{.*}} ptr %[[arg0]], 0
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<?x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
-  // CHECK: store {{.*}}, ptr %[[res]]
+  // CHECK: store {{.*}}, ptr %[[alloca]]
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[res]], ptr %[[alloca]], i32 48, i1 false)
   return %2 : !fir.box<!fir.array<?x!fir.char<1,5>>>
 }
 
 // Boxing of a dynamic array of character of dynamic length
 // CHECK-LABEL: define void @b3(
-// CHECK-SAME: ptr %[[res:.*]], ptr %[[arg0:.*]], i64 %[[arg1:.*]], i64 %[[arg2:.*]])
+// CHECK-SAME: ptr nocapture %[[res:.*]], ptr nocapture %[[arg0:.*]], i64 %[[arg1:.*]], i64 %[[arg2:.*]])
 func.func @b3(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,?>>>, %arg1 : index, %arg2 : index) -> !fir.box<!fir.array<?x!fir.char<1,?>>> {
   %1 = fir.shape %arg2 : (index) -> !fir.shape<1>
+  // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   // CHECK: %[[size:.*]] = mul i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), %[[arg1]]
   // CHECK: insertvalue {{.*}} i64 %[[size]], 1
   // CHECK: insertvalue {{.*}} i32 20240719, 2
@@ -91,16 +96,18 @@ func.func @b3(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,?>>>, %arg1 : index, %ar
   // CHECK: insertvalue {{.*}} i64 %[[size]], 7, 0, 2
   // CHECK: insertvalue {{.*}} ptr %[[arg0]], 0
   %2 = fir.embox %arg0(%1) typeparams %arg1 : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-  // CHECK: store {{.*}}, ptr %[[res]]
+  // CHECK: store {{.*}}, ptr %[[alloca]]
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[res]], ptr %[[alloca]], i32 48, i1 false)
   return %2 : !fir.box<!fir.array<?x!fir.char<1,?>>>
 }
 
 // Boxing of a static array of character of dynamic length
 // CHECK-LABEL: define void @b4(
-// CHECK-SAME: ptr %[[res:.*]], ptr %[[arg0:.*]], i64 %[[arg1:.*]])
+// CHECK-SAME: ptr nocapture %[[res:.*]], ptr nocapture %[[arg0:.*]], i64 %[[arg1:.*]])
 func.func @b4(%arg0 : !fir.ref<!fir.array<7x!fir.char<1,?>>>, %arg1 : index) -> !fir.box<!fir.array<7x!fir.char<1,?>>> {
   %c_7 = arith.constant 7 : index
   %1 = fir.shape %c_7 : (index) -> !fir.shape<1>
+  // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   // CHECK:   %[[size:.*]] = mul i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), %[[arg1]]
   // CHECK: insertvalue {{.*}} i64 %[[size]], 1
   // CHECK: insertvalue {{.*}} i32 20240719, 2
@@ -108,24 +115,24 @@ func.func @b4(%arg0 : !fir.ref<!fir.array<7x!fir.char<1,?>>>, %arg1 : index) -> 
   // CHECK: insertvalue {{.*}} i64 %[[size]], 7, 0, 2
   // CHECK: insertvalue {{.*}} ptr %[[arg0]], 0
   %x = fir.embox %arg0(%1) typeparams %arg1 : (!fir.ref<!fir.array<7x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<7x!fir.char<1,?>>>
-  // CHECK: store {{.*}}, ptr %[[res]]
+  // CHECK: store {{.*}}, ptr %[[alloca]]
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[res]], ptr %[[alloca]], i32 48, i1 false)
   return %x : !fir.box<!fir.array<7x!fir.char<1,?>>>
 }
 
 // Storing a fir.box into a fir.ref<fir.box> (modifying descriptors).
 // CHECK-LABEL: define void @b5(
-// CHECK-SAME: ptr %[[arg0:.*]], ptr %[[arg1:.*]])
+// CHECK-SAME: ptr nocapture %[[arg0:.*]], ptr %[[arg1:.*]])
 func.func @b5(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, %arg1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>) {
   fir.store %arg1 to %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
-  // CHECK: %[[boxLoad:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[arg1]]
-  // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %[[boxLoad]], ptr %[[arg0]]
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %0, ptr %1, i32 72, i1 false)
   return
 }
 
 func.func private @callee6(!fir.box<none>) -> i32
 
 // CHECK-LABEL: define i32 @box6(
-// CHECK-SAME: ptr %[[ARG0:.*]], i64 %[[ARG1:.*]], i64 %[[ARG2:.*]])
+// CHECK-SAME: ptr nocapture %[[ARG0:.*]], i64 %[[ARG1:.*]], i64 %[[ARG2:.*]])
 func.func @box6(%0 : !fir.ref<!fir.array<?x?x?x?xf32>>, %1 : index, %2 : index) -> i32 {
   %c100 = arith.constant 100 : index
   %c50 = arith.constant 50 : index

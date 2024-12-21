@@ -355,7 +355,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
                                   std::nullopt, true, false,
                                   /*IsMutable=*/false, nullptr);
     }
-    return this->emitNull(classifyPrim(CE->getType()), Desc, CE);
+
+    uint64_t Val = Ctx.getASTContext().getTargetNullPointerValue(CE->getType());
+    return this->emitNull(classifyPrim(CE->getType()), Val, Desc, CE);
   }
 
   case CK_PointerToIntegral: {
@@ -448,6 +450,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     QualType SubExprTy = SubExpr->getType();
     std::optional<PrimType> FromT = classify(SubExprTy);
+    // Casts from integer/vector to vector.
+    if (CE->getType()->isVectorType())
+      return this->emitBuiltinBitCast(CE);
+
     std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
       return false;
@@ -469,6 +475,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     return this->emitDecayPtr(*FromT, *ToT, CE);
   }
+
+  case CK_LValueToRValueBitCast:
+    return this->emitBuiltinBitCast(CE);
 
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean:
@@ -993,7 +1002,10 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
     if (!visitAsPointer(RHS, *RT) || !visitAsPointer(LHS, *LT))
       return false;
 
-    return this->emitSubPtr(classifyPrim(E->getType()), E);
+    PrimType IntT = classifyPrim(E->getType());
+    if (!this->emitSubPtr(IntT, E))
+      return false;
+    return DiscardResult ? this->emitPop(IntT, E) : true;
   }
 
   PrimType OffsetType;
@@ -1639,22 +1651,8 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
   if (QT->isIncompleteArrayType())
     return true;
 
-  if (QT->isArrayType()) {
-    const ArrayType *AT = QT->getAsArrayTypeUnsafe();
-    assert(AT);
-    const auto *CAT = cast<ConstantArrayType>(AT);
-    size_t NumElems = CAT->getZExtSize();
-    PrimType ElemT = classifyPrim(CAT->getElementType());
-
-    for (size_t I = 0; I != NumElems; ++I) {
-      if (!this->visitZeroInitializer(ElemT, CAT->getElementType(), E))
-        return false;
-      if (!this->emitInitElem(ElemT, I, E))
-        return false;
-    }
-
-    return true;
-  }
+  if (QT->isArrayType())
+    return this->visitZeroArrayInitializer(QT, E);
 
   if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
     assert(Initializing);
@@ -2371,9 +2369,9 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
-  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
-    return this->emitGetPtrGlobal(*I, E);
-  return false;
+  if (DiscardResult)
+    return true;
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
@@ -2732,7 +2730,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
-      return this->visitInitializer(SubExpr);
+      return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
     }
   }
   return false;
@@ -3445,11 +3443,8 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
   assert(RD);
   // If the definiton of the result type is incomplete, just return a dummy.
   // If (and when) that is read from, we will fail, but not now.
-  if (!RD->isCompleteDefinition()) {
-    if (std::optional<unsigned> I = P.getOrCreateDummy(GuidDecl))
-      return this->emitGetPtrGlobal(*I, E);
-    return false;
-  }
+  if (!RD->isCompleteDefinition())
+    return this->emitDummyPtr(GuidDecl, E);
 
   std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(GuidDecl);
   if (!GlobalIndex)
@@ -3687,11 +3682,11 @@ bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   if (!E->isExpressibleAsConstantInitializer())
     return this->discard(SubExpr) && this->emitInvalid(E);
 
-  assert(classifyPrim(E) == PT_Ptr);
-  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
-    return this->emitGetPtrGlobal(*I, E);
+  if (DiscardResult)
+    return true;
 
-  return false;
+  assert(classifyPrim(E) == PT_Ptr);
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
@@ -3824,7 +3819,7 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 
   // Convert pointers to bool.
   if (T == PT_Ptr || T == PT_FnPtr) {
-    if (!this->emitNull(*T, nullptr, E))
+    if (!this->emitNull(*T, 0, nullptr, E))
       return false;
     return this->emitNE(*T, E);
   }
@@ -3864,11 +3859,12 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
   case PT_IntAPS:
     return this->emitZeroIntAPS(Ctx.getBitWidth(QT), E);
   case PT_Ptr:
-    return this->emitNullPtr(nullptr, E);
+    return this->emitNullPtr(Ctx.getASTContext().getTargetNullPointerValue(QT),
+                             nullptr, E);
   case PT_FnPtr:
-    return this->emitNullFnPtr(nullptr, E);
+    return this->emitNullFnPtr(0, nullptr, E);
   case PT_MemberPtr:
-    return this->emitNullMemberPtr(nullptr, E);
+    return this->emitNullMemberPtr(0, nullptr, E);
   case PT_Float:
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
   case PT_FixedPoint: {
@@ -3916,18 +3912,9 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
           return false;
       }
     } else if (D->isCompositeArray()) {
-      const Record *ElemRecord = D->ElemDesc->ElemRecord;
-      assert(D->ElemDesc->ElemRecord);
-      for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
-        if (!this->emitConstUint32(I, E))
-          return false;
-        if (!this->emitArrayElemPtr(PT_Uint32, E))
-          return false;
-        if (!this->visitZeroRecordInitializer(ElemRecord, E))
-          return false;
-        if (!this->emitPopPtr(E))
-          return false;
-      }
+      // Can't be a vector or complex field.
+      if (!this->visitZeroArrayInitializer(D->getType(), E))
+        return false;
     } else if (D->isRecord()) {
       if (!this->visitZeroRecordInitializer(D->ElemRecord, E))
         return false;
@@ -3956,6 +3943,52 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   // FIXME: Virtual bases.
 
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
+  assert(T->isArrayType() || T->isAnyComplexType() || T->isVectorType());
+  const ArrayType *AT = T->getAsArrayTypeUnsafe();
+  QualType ElemType = AT->getElementType();
+  size_t NumElems = cast<ConstantArrayType>(AT)->getZExtSize();
+
+  if (std::optional<PrimType> ElemT = classify(ElemType)) {
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->visitZeroInitializer(*ElemT, ElemType, E))
+        return false;
+      if (!this->emitInitElem(*ElemT, I, E))
+        return false;
+    }
+    return true;
+  } else if (ElemType->isRecordType()) {
+    const Record *R = getRecord(ElemType);
+
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->emitConstUint32(I, E))
+        return false;
+      if (!this->emitArrayElemPtr(PT_Uint32, E))
+        return false;
+      if (!this->visitZeroRecordInitializer(R, E))
+        return false;
+      if (!this->emitPopPtr(E))
+        return false;
+    }
+    return true;
+  } else if (ElemType->isArrayType()) {
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->emitConstUint32(I, E))
+        return false;
+      if (!this->emitArrayElemPtr(PT_Uint32, E))
+        return false;
+      if (!this->visitZeroArrayInitializer(ElemType, E))
+        return false;
+      if (!this->emitPopPtr(E))
+        return false;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 template <class Emitter>
@@ -4033,7 +4066,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, Descriptor::InlineDescMD, IsConst,
-                                     Src.is<const Expr *>());
+                                     isa<const Expr *>(Src));
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
@@ -4391,7 +4424,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
 
   if (Val.isLValue()) {
     if (Val.isNullPointer())
-      return this->emitNull(ValType, nullptr, E);
+      return this->emitNull(ValType, 0, nullptr, E);
     APValue::LValueBase Base = Val.getLValueBase();
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
@@ -4401,7 +4434,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   } else if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
       return this->emitGetMemberPtr(MemberDecl, E);
-    return this->emitNullMemberPtr(nullptr, E);
+    return this->emitNullMemberPtr(0, nullptr, E);
   }
 
   return false;
@@ -4483,15 +4516,9 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString ||
       BuiltinID == Builtin::BI__builtin_ptrauth_sign_constant ||
       BuiltinID == Builtin::BI__builtin_function_start) {
-    if (std::optional<unsigned> GlobalOffset = P.getOrCreateDummy(E)) {
-      if (!this->emitGetPtrGlobal(*GlobalOffset, E))
-        return false;
-
-      if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT))
-        return this->emitDecayPtr(PT_Ptr, PT, E);
+    if (DiscardResult)
       return true;
-    }
-    return false;
+    return this->emitDummyPtr(E, E);
   }
 
   QualType ReturnType = E->getType();
@@ -4759,7 +4786,8 @@ bool Compiler<Emitter>::VisitCXXNullPtrLiteralExpr(
   if (DiscardResult)
     return true;
 
-  return this->emitNullPtr(nullptr, E);
+  uint64_t Val = Ctx.getASTContext().getTargetNullPointerValue(E->getType());
+  return this->emitNullPtr(Val, nullptr, E);
 }
 
 template <class Emitter>
@@ -5309,7 +5337,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
   // one here, and we don't need one either because the lambda cannot have
   // any captures, as verified above. Emit a null pointer. This is then
   // special-cased when interpreting to not emit any misleading diagnostics.
-  if (!this->emitNullPtr(nullptr, MD))
+  if (!this->emitNullPtr(0, nullptr, MD))
     return false;
 
   // Forward all arguments from the static invoker to the lambda call operator.
@@ -5738,9 +5766,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult)
+    if (DiscardResult) {
+      // assert(false);
       return this->discard(SubExpr);
-    return this->visit(SubExpr);
+    }
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (classifyPrim(SubExpr) == PT_Ptr)
+      return this->emitNarrowPtr(E);
+    return true;
+
   case UO_Not: // ~x
     if (!T)
       return this->emitError(E);
@@ -5882,6 +5918,9 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     return this->discard(SubExpr);
 
   auto UnaryOp = E->getOpcode();
+  if (UnaryOp == UO_Extension)
+    return this->delegate(SubExpr);
+
   if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
       UnaryOp != UO_Not && UnaryOp != UO_AddrOf)
     return this->emitInvalid(E);
@@ -6089,7 +6128,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
           if (VD->evaluateValue())
             return revisit(VD);
-          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E), E);
+
+          if (!D->getType()->isReferenceType())
+            return this->emitDummyPtr(D, E);
+
+          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                          /*InitializerFailed=*/true, E);
         }
       }
     } else {
@@ -6100,23 +6144,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
   }
 
-  if (std::optional<unsigned> I = P.getOrCreateDummy(D)) {
-    if (!this->emitGetPtrGlobal(*I, E))
-      return false;
-    if (E->getType()->isVoidType())
-      return true;
-    // Convert the dummy pointer to another pointer type if we have to.
-    if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
-      if (isPtrType(PT))
-        return this->emitDecayPtr(PT_Ptr, PT, E);
-      return false;
-    }
-    return true;
-  }
-
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return this->emitInvalidDeclRef(DRE, E);
-  return false;
+  return this->emitDummyPtr(D, E);
 }
 
 template <class Emitter>
@@ -6417,6 +6445,101 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
     return true;
 
   return this->emitRecordDestruction(Desc->ElemRecord, Loc);
+}
+
+/// Create a dummy pointer for the given decl (or expr) and
+/// push a pointer to it on the stack.
+template <class Emitter>
+bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
+  assert(!DiscardResult && "Should've been checked before");
+
+  unsigned DummyID = P.getOrCreateDummy(D);
+
+  if (!this->emitGetPtrGlobal(DummyID, E))
+    return false;
+  if (E->getType()->isVoidType())
+    return true;
+
+  // Convert the dummy pointer to another pointer type if we have to.
+  if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
+    if (isPtrType(PT))
+      return this->emitDecayPtr(PT_Ptr, PT, E);
+    return false;
+  }
+  return true;
+}
+
+//  This function is constexpr if and only if To, From, and the types of
+//  all subobjects of To and From are types T such that...
+//  (3.1) - is_union_v<T> is false;
+//  (3.2) - is_pointer_v<T> is false;
+//  (3.3) - is_member_pointer_v<T> is false;
+//  (3.4) - is_volatile_v<T> is false; and
+//  (3.5) - T has no non-static data members of reference type
+template <class Emitter>
+bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  QualType FromType = SubExpr->getType();
+  QualType ToType = E->getType();
+  std::optional<PrimType> ToT = classify(ToType);
+
+  assert(!ToType->isReferenceType());
+
+  // Prepare storage for the result in case we discard.
+  if (DiscardResult && !Initializing && !ToT) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  // Get a pointer to the value-to-cast on the stack.
+  // For CK_LValueToRValueBitCast, this is always an lvalue and
+  // we later assume it to be one (i.e. a PT_Ptr). However,
+  // we call this function for other utility methods where
+  // a bitcast might be useful, so convert it to a PT_Ptr in that case.
+  if (SubExpr->isGLValue() || FromType->isVectorType()) {
+    if (!this->visit(SubExpr))
+      return false;
+  } else if (std::optional<PrimType> FromT = classify(SubExpr)) {
+    unsigned TempOffset = allocateLocalPrimitive(
+        SubExpr, *FromT, /*IsConst=*/true, /*IsExtended=*/false);
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(*FromT, TempOffset, E))
+      return false;
+    if (!this->emitGetPtrLocal(TempOffset, E))
+      return false;
+  } else {
+    return false;
+  }
+
+  if (!ToT) {
+    if (!this->emitBitCast(E))
+      return false;
+    return DiscardResult ? this->emitPopPtr(E) : true;
+  }
+  assert(ToT);
+
+  const llvm::fltSemantics *TargetSemantics = nullptr;
+  if (ToT == PT_Float)
+    TargetSemantics = &Ctx.getFloatSemantics(ToType);
+
+  // Conversion to a primitive type. FromType can be another
+  // primitive type, or a record/array.
+  bool ToTypeIsUChar = (ToType->isSpecificBuiltinType(BuiltinType::UChar) ||
+                        ToType->isSpecificBuiltinType(BuiltinType::Char_U));
+  uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
+
+  if (!this->emitBitCastPrim(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
+                             ResultBitWidth, TargetSemantics, E))
+    return false;
+
+  if (DiscardResult)
+    return this->emitPop(*ToT, E);
+
+  return true;
 }
 
 namespace clang {

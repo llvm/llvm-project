@@ -44,6 +44,7 @@ struct ARM64 : ARM64Common {
 
   void initICFSafeThunkBody(InputSection *thunk,
                             InputSection *branchTarget) const override;
+  InputSection *getThunkBranchTarget(InputSection *thunk) const override;
   uint32_t getICFSafeThunkSize() const override;
 };
 
@@ -195,6 +196,16 @@ void ARM64::initICFSafeThunkBody(InputSection *thunk,
                              /*pcrel=*/true, /*length=*/2,
                              /*offset=*/0, /*addend=*/0,
                              /*referent=*/branchTarget);
+}
+
+InputSection *ARM64::getThunkBranchTarget(InputSection *thunk) const {
+  assert(thunk->relocs.size() == 1 &&
+         "expected a single reloc on ARM64 ICF thunk");
+  auto &reloc = thunk->relocs[0];
+  assert(isa<InputSection *>(reloc.referent) &&
+         "ARM64 thunk reloc is expected to point to an InputSection");
+
+  return reloc.referent.dyn_cast<InputSection *>();
 }
 
 uint32_t ARM64::getICFSafeThunkSize() const { return sizeof(icfSafeThunkCode); }

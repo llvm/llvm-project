@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
-  rpc::Client::Port port = rpc::client.open<RPC_CLEARERR>();
+  rpc::Client::Port port = rpc::client.open<LIBC_CLEARERR>();
   port.send_and_recv(
       [=](rpc::Buffer *buffer, uint32_t) {
         buffer->data[0] = file::from_stream(stream);

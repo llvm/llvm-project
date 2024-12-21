@@ -133,4 +133,8 @@ typedef llvm::Registry<URIScheme> URISchemeRegistry;
 } // namespace clangd
 } // namespace clang
 
+namespace llvm {
+extern template class Registry<clang::clangd::URIScheme>;
+} // namespace llvm
+
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_URI_H

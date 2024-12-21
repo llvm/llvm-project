@@ -16,22 +16,18 @@
 #include "Program.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
-#include <limits>
-#include <vector>
 
 using namespace clang;
 using namespace clang::interp;
 
-static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
+static bool RetValue(InterpState &S, CodePtr &Pt) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }
 
@@ -81,11 +77,17 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (!D->getType().isConstQualified())
+  if (!D->getType().isConstQualified()) {
     diagnoseNonConstVariable(S, OpPC, D);
-  else if (const auto *VD = dyn_cast<VarDecl>(D);
-           VD && !VD->getAnyInitializer())
-    diagnoseMissingInitializer(S, OpPC, VD);
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getAnyInitializer()) {
+      diagnoseMissingInitializer(S, OpPC, VD);
+    } else {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    }
+  }
 
   return false;
 }
@@ -394,7 +396,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
@@ -507,8 +509,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   AccessKinds AK) {
+static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK) {
   assert(Ptr.isLive());
 
   // FIXME: This check here might be kinda expensive. Maybe it would be better
@@ -996,6 +998,13 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
   return runRecordDestructor(S, OpPC, Pointer(const_cast<Block *>(B)), Desc);
 }
 
+static bool hasVirtualDestructor(QualType T) {
+  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    if (const CXXDestructorDecl *DD = RD->getDestructor())
+      return DD->isVirtual();
+  return false;
+}
+
 bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
           bool IsGlobalDelete) {
   if (!CheckDynamicMemoryAllocation(S, OpPC))
@@ -1013,8 +1022,19 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return true;
 
     // Remove base casts.
+    QualType InitialType = Ptr.getType();
     while (Ptr.isBaseClass())
       Ptr = Ptr.getBase();
+
+    // For the non-array case, the types must match if the static type
+    // does not have a virtual destructor.
+    if (!DeleteIsArrayForm && Ptr.getType() != InitialType &&
+        !hasVirtualDestructor(InitialType)) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_delete_base_nonvirt_dtor)
+          << InitialType << Ptr.getType();
+      return false;
+    }
 
     if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1185,11 +1205,10 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S, CallResult)) {
+  if (Interpret(S)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
@@ -1250,11 +1269,10 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame.get();
 
   InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
-  APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S, CallResult)) {
+  if (Interpret(S)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
@@ -1342,7 +1360,10 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID) {
-  if (S.checkingPotentialConstantExpression())
+  // A little arbitrary, but the current interpreter allows evaluation
+  // of builtin functions in this mode, with some exceptions.
+  if (BuiltinID == Builtin::BI__builtin_operator_new &&
+      S.checkingPotentialConstantExpression())
     return false;
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
@@ -1350,9 +1371,15 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame.get();
 
   if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
-    NewFrame.release();
+    // Release ownership of NewFrame to prevent it from being deleted.
+    NewFrame.release(); // Frame was deleted already.
+    // Ensure that S.Current is correctly reset to the previous frame.
+    assert(S.Current == FrameBefore);
     return true;
   }
+
+  // Interpreting the function failed somehow. Reset to
+  // previous state.
   S.Current = FrameBefore;
   return false;
 }
@@ -1445,15 +1472,21 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
         << StorageType << AllocType;
     return false;
   }
+
+  // Can't activate fields in a union, unless the direct base is the union.
+  if (Ptr.inUnion() && !Ptr.isActive() && !Ptr.getBase().getRecord()->isUnion())
+    return CheckActive(S, OpPC, Ptr, AK_Construct);
+
   return true;
 }
 
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   assert(E);
-  const auto &Loc = S.Current->getSource(OpPC);
 
   if (S.getLangOpts().CPlusPlus26)
     return true;
+
+  const auto &Loc = S.Current->getSource(OpPC);
 
   if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
@@ -1545,11 +1578,28 @@ bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   return true;
 }
 
+bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
+                  bool TargetIsUCharOrByte) {
+  // This is always fine.
+  if (!HasIndeterminateBits)
+    return true;
+
+  // Indeterminate bits can only be bitcast to unsigned char or std::byte.
+  if (TargetIsUCharOrByte)
+    return true;
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  QualType ExprType = E->getType();
+  S.FFDiag(E, diag::note_constexpr_bit_cast_indet_dest)
+      << ExprType << S.getLangOpts().CharIsSigned << E->getSourceRange();
+  return false;
+}
+
 // https://github.com/llvm/llvm-project/issues/102513
-#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma optimize("", off)
 #endif
-bool Interpret(InterpState &S, APValue &Result) {
+bool Interpret(InterpState &S) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
   // to return from this function and thus terminate
@@ -1574,7 +1624,7 @@ bool Interpret(InterpState &S, APValue &Result) {
   }
 }
 // https://github.com/llvm/llvm-project/issues/102513
-#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma optimize("", on)
 #endif
 

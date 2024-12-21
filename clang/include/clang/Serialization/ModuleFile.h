@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SERIALIZATION_MODULEFILE_H
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -61,8 +62,9 @@ enum ModuleKind {
 
 /// The input file info that has been loaded from an AST file.
 struct InputFileInfo {
-  std::string FilenameAsRequested;
-  std::string Filename;
+  StringRef UnresolvedImportedFilenameAsRequested;
+  StringRef UnresolvedImportedFilename;
+
   uint64_t ContentHash;
   off_t StoredSize;
   time_t StoredTime;
@@ -70,6 +72,10 @@ struct InputFileInfo {
   bool Transient;
   bool TopLevel;
   bool ModuleMap;
+
+  bool isValid() const {
+    return !UnresolvedImportedFilenameAsRequested.empty();
+  }
 };
 
 /// The input file that has been loaded from this AST file, along with
@@ -144,8 +150,8 @@ public:
   /// The base directory of the module.
   std::string BaseDirectory;
 
-  std::string getTimestampFilename() const {
-    return FileName + ".timestamp";
+  static std::string getTimestampFilename(StringRef FileName) {
+    return (FileName + ".timestamp").str();
   }
 
   /// The original source file name that was used to build the

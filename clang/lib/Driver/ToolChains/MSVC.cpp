@@ -84,6 +84,12 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (TC.getTriple().isWindowsArm64EC())
     CmdArgs.push_back("-machine:arm64ec");
 
+  if (const Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef V = A->getValue();
+    if (V == "ArmPL")
+      CmdArgs.push_back(Args.MakeArgString("--dependent-lib=amath"));
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
       !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
     CmdArgs.push_back("-defaultlib:libcmt");
