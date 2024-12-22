@@ -322,7 +322,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
 
   VPPredInstPHIRecipe *PHIRecipe = nullptr;
   if (PredRecipe->getNumUsers() != 0) {
-    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask);
+    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
+                                        RecipeWithoutMask->getDebugLoc());
     PredRecipe->replaceAllUsesWith(PHIRecipe);
     PHIRecipe->setOperand(0, RecipeWithoutMask);
   }
@@ -527,11 +528,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     VPValue *StartV, VPValue *Step, VPBuilder &Builder) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  VPSingleDefRecipe *BaseIV = CanonicalIV;
-  if (!CanonicalIV->isCanonical(Kind, StartV, Step)) {
-    BaseIV = Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step,
-                                     "offset.idx");
-  }
+  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
+      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
 
   // Truncate base induction if needed.
   Type *CanonicalIVType = CanonicalIV->getScalarType();
@@ -1063,6 +1061,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   if (match(&R, m_Not(m_Not(m_VPValue(A)))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
+
+  // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
+  if ((match(&R,
+             m_DerivedIV(m_SpecificInt(0), m_VPValue(A), m_SpecificInt(1))) ||
+       match(&R,
+             m_DerivedIV(m_SpecificInt(0), m_SpecificInt(0), m_VPValue()))) &&
+      TypeInfo.inferScalarType(R.getOperand(1)) ==
+          TypeInfo.inferScalarType(R.getVPSingleValue()))
+    return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
@@ -1251,11 +1258,11 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   simplifyRecipes(Plan);
   legalizeAndOptimizeInductions(Plan);
+  removeRedundantExpandSCEVRecipes(Plan);
+  simplifyRecipes(Plan);
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);
-
-  removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
   licm(Plan);
 }
@@ -1487,24 +1494,23 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
               .Case<VPWidenIntrinsicRecipe>(
-                  [&](VPWidenIntrinsicRecipe *CInst) -> VPRecipeBase * {
-                    auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
+                  [&](VPWidenIntrinsicRecipe *CallR) -> VPRecipeBase * {
                     Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
-                        CI->getCalledFunction()->getIntrinsicID());
-                    if (VPID == Intrinsic::not_intrinsic)
-                      return nullptr;
-
-                    SmallVector<VPValue *> Ops(CInst->operands());
+                        CallR->getVectorIntrinsicID());
+                    assert(VPID != Intrinsic::not_intrinsic &&
+                           "Expected vp.casts Instrinsic");
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
+
+                    SmallVector<VPValue *> Ops(CallR->operands());
+                    VPValue *Mask =
+                        Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
                     Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
-                        *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
-                        CInst->getDebugLoc());
+                        VPID, Ops, TypeInfo.inferScalarType(CallR),
+                        CallR->getDebugLoc());
                   })
               .Case<VPWidenCastRecipe>(
                   [&](VPWidenCastRecipe *CastR) -> VPRecipeBase * {
