@@ -1365,8 +1365,8 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
 ; CHECK-NEXT:    vstr.16 s5, [r6, #2]
 ; CHECK-NEXT:    add.w r12, r12, #10
+; CHECK-NEXT:    adds r6, #4
 ; CHECK-NEXT:    subs.w r9, r9, #1
-; CHECK-NEXT:    add.w r6, r6, #4
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    beq .LBB17_8
 ; CHECK-NEXT:  .LBB17_3: @ %do.body

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_TYPE_TRAITS
-#define _LIBCPP_EXPERIMENTAL_TYPE_TRAITS
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL_TYPE_TRAITS
+#define _LIBCPP___CXX03_EXPERIMENTAL_TYPE_TRAITS
 
 /**
     experimental/type_traits synopsis
@@ -150,4 +150,4 @@ _LIBCPP_END_NAMESPACE_LFTS
 
 #endif /* _LIBCPP_STD_VER >= 14 */
 
-#endif /* _LIBCPP_EXPERIMENTAL_TYPE_TRAITS */
+#endif /* _LIBCPP___CXX03_EXPERIMENTAL_TYPE_TRAITS */

@@ -512,7 +512,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           break;
         do {
           NextTok = Tokens->getNextToken();
-        } while (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof));
+        } while (!NextTok->HasUnescapedNewline && NextTok->isNot(tok::eof));
 
         while (NextTok->is(tok::comment))
           NextTok = Tokens->getNextToken();
@@ -570,8 +570,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
                                 NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,
                                                  Keywords.kw_as));
           ProbablyBracedList =
-              ProbablyBracedList || (IsCpp && (PrevTok->Tok.isLiteral() ||
-                                               NextTok->is(tok::l_paren)));
+              ProbablyBracedList ||
+              (IsCpp && (PrevTok->Tok.isLiteral() ||
+                         NextTok->isOneOf(tok::l_paren, tok::arrow)));
 
           // If there is a comma, semicolon or right paren after the closing
           // brace, we assume this is a braced initializer list.
@@ -4441,7 +4442,8 @@ unsigned UnwrappedLineParser::parseVerilogHierarchyHeader() {
           Prev->setFinalizedType(TT_VerilogDimensionedTypeName);
         parseSquare();
       } else if (Keywords.isVerilogIdentifier(*FormatTok) ||
-                 FormatTok->isOneOf(Keywords.kw_automatic, tok::kw_static)) {
+                 FormatTok->isOneOf(tok::hash, tok::hashhash, tok::coloncolon,
+                                    Keywords.kw_automatic, tok::kw_static)) {
         nextToken();
       } else {
         break;

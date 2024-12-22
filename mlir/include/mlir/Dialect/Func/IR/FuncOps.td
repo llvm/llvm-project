@@ -49,7 +49,8 @@ def CallOp : Func_Op<"call",
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands,
+                       UnitAttr:$no_inline);
   let results = (outs Variadic<AnyType>);
 
   let builders = [
@@ -270,7 +271,8 @@ def FuncOp : Func_Op<"func", [
                        TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       UnitAttr:$no_inline);
   let regions = (region AnyRegion:$body);
 
   let builders = [OpBuilder<(ins

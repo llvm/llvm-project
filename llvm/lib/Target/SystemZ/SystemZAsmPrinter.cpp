@@ -32,7 +32,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ConvertEBCDIC.h"
-#include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -705,6 +704,11 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstBuilder(SystemZ::EXRL).addReg(LenMinus1Reg).addExpr(Dot));
     return;
   }
+
+  // EH_SjLj_Setup is a dummy terminator instruction of size 0.
+  // It is used to handle the clobber register for builtin setjmp.
+  case SystemZ::EH_SjLj_Setup:
+    return;
 
   default:
     Lower.lower(MI, LoweredMI);

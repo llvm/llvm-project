@@ -411,7 +411,7 @@ define ptr @ptrmask_to_modified_gep_zero_argument() {
 define ptr @ptrmask_to_preserves_inbounds(ptr align 16 %p) {
 ; CHECK-LABEL: define ptr @ptrmask_to_preserves_inbounds
 ; CHECK-SAME: (ptr align 16 [[P:%.*]]) {
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 28
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 28
 ; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep = getelementptr inbounds i8, ptr %p, i32 31
@@ -577,4 +577,17 @@ define ptr @ptrmask_is_useless_fail1(i64 %i, i64 %m) {
   %p0 = inttoptr i64 %i0 to ptr
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p0, i64 %m0)
   ret ptr %r
+}
+
+@GC_arrays = external global { i8, i8, i64 }
+
+define ptr @ptrmask_demandedbits_constantexpr() {
+; CHECK-LABEL: define ptr @ptrmask_demandedbits_constantexpr() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALIGNED_RESULT:%.*]] = call align 8 ptr @llvm.ptrmask.p0.i64(ptr nonnull @GC_arrays, i64 -8)
+; CHECK-NEXT:    ret ptr [[ALIGNED_RESULT]]
+;
+entry:
+  %aligned_result = call ptr @llvm.ptrmask.p0.i64(ptr getelementptr inbounds (i8, ptr @GC_arrays, i64 1), i64 -8)
+  ret ptr %aligned_result
 }

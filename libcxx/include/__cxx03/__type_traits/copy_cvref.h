@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_COPY_CVREF_H
-#define _LIBCPP___TYPE_TRAITS_COPY_CVREF_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_COPY_CVREF_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_COPY_CVREF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/add_lvalue_reference.h>
@@ -40,4 +40,4 @@ using __copy_cvref_t = typename __copy_cvref<_From, _To>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_COPY_CVREF_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_COPY_CVREF_H

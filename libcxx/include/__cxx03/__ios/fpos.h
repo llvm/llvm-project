@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___IOS_FPOS_H
-#define _LIBCPP___IOS_FPOS_H
+#ifndef _LIBCPP___CXX03___IOS_FPOS_H
+#define _LIBCPP___CXX03___IOS_FPOS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/ios.h>
@@ -73,4 +73,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const fpos<_StateT>& __x, const fpo
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___IOS_FPOS_H
+#endif // _LIBCPP___CXX03___IOS_FPOS_H

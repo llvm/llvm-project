@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SYSTEM_ERROR
-#define _LIBCPP_SYSTEM_ERROR
+#ifndef _LIBCPP___CXX03_SYSTEM_ERROR
+#define _LIBCPP___CXX03_SYSTEM_ERROR
 
 /*
     system_error synopsis
@@ -168,4 +168,4 @@ template <> struct hash<std::error_condition>;
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_SYSTEM_ERROR
+#endif // _LIBCPP___CXX03_SYSTEM_ERROR

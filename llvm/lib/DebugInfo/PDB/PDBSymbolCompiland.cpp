@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::pdb;

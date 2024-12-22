@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 ; Check if all or's in the loop were predicated.
 ; CHECK: if{{.*}} = or
 ; CHECK: if{{.*}} = or

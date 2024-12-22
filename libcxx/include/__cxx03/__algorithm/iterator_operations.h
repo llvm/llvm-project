@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
-#define _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H
+#define _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H
 
 #include <__cxx03/__algorithm/iter_swap.h>
 #include <__cxx03/__algorithm/ranges_iterator_concept.h>
@@ -220,4 +220,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
+#endif // _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H
