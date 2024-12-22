@@ -1488,24 +1488,23 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
               .Case<VPWidenIntrinsicRecipe>(
-                  [&](VPWidenIntrinsicRecipe *CInst) -> VPRecipeBase * {
-                    auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
+                  [&](VPWidenIntrinsicRecipe *CallR) -> VPRecipeBase * {
                     Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
-                        CI->getCalledFunction()->getIntrinsicID());
-                    if (VPID == Intrinsic::not_intrinsic)
-                      return nullptr;
-
-                    SmallVector<VPValue *> Ops(CInst->operands());
+                        CallR->getVectorIntrinsicID());
+                    assert(VPID != Intrinsic::not_intrinsic &&
+                           "Expected vp.casts Instrinsic");
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
+
+                    SmallVector<VPValue *> Ops(CallR->operands());
+                    VPValue *Mask =
+                        Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
                     Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
-                        *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
-                        CInst->getDebugLoc());
+                        VPID, Ops, TypeInfo.inferScalarType(CallR),
+                        CallR->getDebugLoc());
                   })
               .Case<VPWidenCastRecipe>(
                   [&](VPWidenCastRecipe *CastR) -> VPRecipeBase * {
