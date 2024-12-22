@@ -2261,37 +2261,17 @@ struct DSEState {
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
 
-// Return true if "Arg" is an Alloca or GEP from Alloca, and the alloca ptr
-// doesn't escape.
-bool ValidFromAlloca(Value *Arg) {
-  const auto *AI = dyn_cast<AllocaInst>(Arg);
+// Return true if "Arg" is function local and isn't captured before "CB" or
+// if "Arg" is GEP whose base pointer is function local and isn't captured
+// before "CB".
+bool IsFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
+                               EarliestEscapeAnalysis &EA) {
+  if (isIdentifiedFunctionLocal(Arg))
+    return EA.isNotCapturedBefore(Arg, CB, /*OrAt*/ true);
   const auto *GEP = dyn_cast<GetElementPtrInst>(Arg);
-  if (!AI) {
-    if (!GEP || !dyn_cast<AllocaInst>(GEP->getPointerOperand()))
-      return false;
-  }
-
-  // No need for a visited set as we don't look through phis.
-  SmallVector<Use *, 4> Worklist;
-  for (Use &U : Arg->uses())
-    Worklist.push_back(&U);
-
-  while (!Worklist.empty()) {
-    Use *U = Worklist.pop_back_val();
-    Instruction *I = cast<Instruction>(U->getUser());
-
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-      for (Use &U : GEP->uses())
-        Worklist.push_back(&U);
-    } else if (auto *CB = dyn_cast<CallBase>(I)) {
-      if (CB->isArgOperand(U)) {
-        unsigned ArgNo = CB->getArgOperandNo(U);
-        if (!CB->paramHasAttr(ArgNo, Attribute::NoCapture))
-          return false;
-      }
-    }
-  }
-  return true;
+  if (GEP && isIdentifiedFunctionLocal(GEP->getPointerOperand()))
+    return EA.isNotCapturedBefore(GEP->getPointerOperand(), CB, /*OrAt*/ true);
+  return false;
 }
 
 SmallVector<MemoryLocation, 1>
@@ -2310,9 +2290,9 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
 
     Value *CurArg = CB->getArgOperand(Idx);
     // Check whether "CurArg" could alias with global variables. We require
-    // either it's an Alloca that doesn't escape or the "CB" only accesses arg
-    // or inaccessible mem.
-    if (!Inits.empty() && !ValidFromAlloca(CurArg) &&
+    // either it's function local and isn't captured before or the "CB" only
+    // accesses arg or inaccessible mem.
+    if (!Inits.empty() && !IsFuncLocalAndNotCaptured(CurArg, CB, EA) &&
         !CB->onlyAccessesInaccessibleMemOrArgMem())
       Inits = ConstantRangeList();
 
