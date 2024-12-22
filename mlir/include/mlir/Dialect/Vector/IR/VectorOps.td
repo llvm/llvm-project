@@ -434,7 +434,7 @@ def Vector_ShuffleOp
     The shuffle operation constructs a permutation (or duplication) of elements
     from two input vectors, returning a vector with the same element type as
     the input and a length that is the same as the shuffle mask. The two input
-    vectors must have the same element type, same rank , and trailing dimension
+    vectors must have the same element type, same rank, and trailing dimension
     sizes and shuffles their values in the
     leading dimension (which may differ in size) according to the given mask.
     The legality rules are:
@@ -448,7 +448,8 @@ def Vector_ShuffleOp
     * the mask length equals the leading dimension size of the result
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
-      above, all mask values are in the range [0,s_1+t_1)
+      above, all mask values are in the range [0,s_1+t_1). -1 is used to
+      represent a poison mask value.
 
     Note, scalable vectors are not supported.
 
@@ -463,10 +464,15 @@ def Vector_ShuffleOp
                : vector<2xf32>, vector<2xf32>       ; yields vector<4xf32>
     %3 = vector.shuffle %a, %b[0, 1]
                : vector<f32>, vector<f32>           ; yields vector<2xf32>
+    %4 = vector.shuffle %a, %b[0, 4, -1, -1, -1, -1]
+               : vector<4xf32>, vector<4xf32>       ; yields vector<6xf32>
     ```
   }];
 
   let extraClassDeclaration = [{
+    // Integer to represent a poison value in a vector shuffle mask.
+    static constexpr int64_t kMaskPoisonValue = -1;
+
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
     }
