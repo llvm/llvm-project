@@ -38,5 +38,6 @@ TEST(LlvmLibcStrCatTest, NonEmptyDest) {
 }
 
 TEST(LlvmLibcStrCatTest, CrashOnNullPtr) {
-  ASSERT_DEATH( [](){LIBC_NAMESPACE::strcat(nullptr, nullptr);} , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::strcat(nullptr, nullptr); },
+               WITH_SIGNAL(SIGSEGV));
 }

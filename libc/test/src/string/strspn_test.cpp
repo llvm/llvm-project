@@ -86,5 +86,6 @@ TEST(LlvmLibcStrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
 }
 
 TEST(LlvmLibcStrSpnTest, CrashOnNullPtr) {
-  ASSERT_DEATH([](){ LIBC_NAMESPACE::strspn(nullptr, nullptr); } , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::strspn(nullptr, nullptr); },
+               WITH_SIGNAL(SIGSEGV));
 }

@@ -67,7 +67,8 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
 
 #include "hdr/signal_macros.h"
 TEST(LlvmLibcMemcmpTest, CrashOnNullPtr) {
-  ASSERT_DEATH([](){ LIBC_NAMESPACE::memcmp(nullptr, 1, 1); } , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memcmp(nullptr, 1, 1); },
+               WITH_SIGNAL(SIGSEGV));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

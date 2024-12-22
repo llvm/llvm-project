@@ -53,5 +53,6 @@ TEST(LlvmLibcStrsepTest, DelimitersShouldNotBeIncludedInToken) {
   }
 }
 TEST(LlvmLibcStrsepTest, CrashOnNullPtr) {
-  ASSERT_DEATH( [](){LIBC_NAMESPACE::strsep(nullptr, nullptr);} , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::strsep(nullptr, nullptr); },
+               WITH_SIGNAL(SIGSEGV));
 }

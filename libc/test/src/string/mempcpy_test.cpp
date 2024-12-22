@@ -28,5 +28,6 @@ TEST(LlvmLibcMempcpyTest, ZeroCount) {
 }
 
 TEST(LlvmLibcMempcpyTest, CrashOnNullPtr) {
-  ASSERT_DEATH([](){ LIBC_NAMESPACE::mempcpy(nullptr, nullptr, 0); } , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::mempcpy(nullptr, nullptr, 0); },
+               WITH_SIGNAL(SIGSEGV));
 }
