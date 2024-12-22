@@ -1038,7 +1038,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({s32, s64, v8s8, v16s8})
       .widenScalarToNextPow2(0, /*Min = */ 32)
-      .clampScalar(0, s32, s64);
+      .clampScalar(0, s32, s64)
+      .lower();
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
