@@ -161,7 +161,7 @@ public:
 private:
   _LIBCPP_COMPRESSED_PAIR(pointer, __ptr_, deleter_type, __deleter_);
 
-  typedef _LIBCPP_NODEBUG __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
+  using _DeleterSFINAE _LIBCPP_NODEBUG = __unique_ptr_deleter_sfinae<_Dp>;
 
   template <bool _Dummy>
   using _LValRefType _LIBCPP_NODEBUG = typename __dependent_type<_DeleterSFINAE, _Dummy>::__lval_ref_type;
