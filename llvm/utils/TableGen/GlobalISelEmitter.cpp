@@ -396,27 +396,26 @@ private:
   Expected<BuildMIAction &>
   createAndImportInstructionRenderer(RuleMatcher &M,
                                      InstructionMatcher &InsnMatcher,
-                                     const TreePatternNode &Dst);
+                                     const TreePatternNode &Dst) const;
   Expected<action_iterator> createAndImportSubInstructionRenderer(
       action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst,
-      unsigned TempReg);
+      unsigned TempReg) const;
   Expected<action_iterator>
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
-                            const TreePatternNode &Dst);
+                            const TreePatternNode &Dst) const;
 
-  Expected<action_iterator>
-  importExplicitDefRenderers(action_iterator InsertPt, RuleMatcher &M,
-                             BuildMIAction &DstMIBuilder,
-                             const TreePatternNode &Dst, unsigned Start = 0);
+  Expected<action_iterator> importExplicitDefRenderers(
+      action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
+      const TreePatternNode &Dst, unsigned Start = 0) const;
 
   Expected<action_iterator>
   importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
                              BuildMIAction &DstMIBuilder,
-                             const TreePatternNode &Dst);
+                             const TreePatternNode &Dst) const;
   Expected<action_iterator>
   importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
                             BuildMIAction &DstMIBuilder,
-                            const TreePatternNode &Dst);
+                            const TreePatternNode &Dst) const;
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
                                       const DAGDefaultOperand &DefaultOp) const;
@@ -441,30 +440,31 @@ private:
   const CodeGenRegisterClass *
   inferSuperRegisterClassForNode(const TypeSetByHwMode &Ty,
                                  const TreePatternNode &SuperRegNode,
-                                 const TreePatternNode &SubRegIdxNode);
+                                 const TreePatternNode &SubRegIdxNode) const;
   const CodeGenSubRegIndex *
-  inferSubRegIndexForNode(const TreePatternNode &SubRegIdxNode);
+  inferSubRegIndexForNode(const TreePatternNode &SubRegIdxNode) const;
 
   /// Infer a CodeGenRegisterClass which suppoorts \p Ty and \p SubRegIdxNode.
   /// Return nullptr if no such class exists.
   const CodeGenRegisterClass *
   inferSuperRegisterClass(const TypeSetByHwMode &Ty,
-                          const TreePatternNode &SubRegIdxNode);
+                          const TreePatternNode &SubRegIdxNode) const;
 
   /// Return the CodeGenRegisterClass associated with \p Leaf if it has one.
-  const CodeGenRegisterClass *getRegClassFromLeaf(const TreePatternNode &Leaf);
+  const CodeGenRegisterClass *
+  getRegClassFromLeaf(const TreePatternNode &Leaf) const;
 
   /// Return a CodeGenRegisterClass for \p N if one can be found. Return
   /// nullptr otherwise.
   const CodeGenRegisterClass *
-  inferRegClassFromPattern(const TreePatternNode &N);
+  inferRegClassFromPattern(const TreePatternNode &N) const;
 
   const CodeGenRegisterClass *
   inferRegClassFromInstructionPattern(const TreePatternNode &N,
-                                      unsigned ResIdx);
+                                      unsigned ResIdx) const;
 
   Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
-                          unsigned InsnID, const TreePatternNode &Dst);
+                          unsigned InsnID, const TreePatternNode &Dst) const;
 
   /// Return the size of the MemoryVT in this predicate, if possible.
   std::optional<unsigned>
@@ -1178,8 +1178,8 @@ Error GlobalISelEmitter::importChildMatcher(
       // has to succeed.
       OperandMatcher &OM =
           InsnOperand.getInsnMatcher().addOperand(0, "", TempOpIdx);
-      if (auto Error =
-              OM.addTypeCheckPredicate(TypeSetByHwMode(VTy), false /* OperandIsAPointer */))
+      if (auto Error = OM.addTypeCheckPredicate(TypeSetByHwMode(VTy),
+                                                /*OperandIsAPointer=*/false))
         return failedImport(toString(std::move(Error)) +
                             " for result of Src pattern operator");
 
@@ -1198,7 +1198,7 @@ Error GlobalISelEmitter::importChildMatcher(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &Dst) {
+    const TreePatternNode &Dst) const {
 
   const auto &SubOperand = Rule.getComplexSubOperand(Dst.getName());
   if (SubOperand) {
@@ -1360,7 +1360,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
 /// source DAG; this information is available via RuleMatcher::hasOperand.
 Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     RuleMatcher &M, InstructionMatcher &InsnMatcher,
-    const TreePatternNode &Dst) {
+    const TreePatternNode &Dst) const {
   auto InsertPtOrError = createInstructionRenderer(M.actions_end(), M, Dst);
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
@@ -1393,7 +1393,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
 Expected<action_iterator>
 GlobalISelEmitter::createAndImportSubInstructionRenderer(
     action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst,
-    unsigned TempRegID) {
+    unsigned TempRegID) const {
   auto InsertPtOrError = createInstructionRenderer(InsertPt, M, Dst);
 
   // TODO: Assert there's exactly one result.
@@ -1425,8 +1425,10 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   return InsertPtOrError.get();
 }
 
-Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
-    action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst) {
+Expected<action_iterator>
+GlobalISelEmitter::createInstructionRenderer(action_iterator InsertPt,
+                                             RuleMatcher &M,
+                                             const TreePatternNode &Dst) const {
   const Record *DstOp = Dst.getOperator();
   if (!DstOp->isSubClassOf("Instruction")) {
     if (DstOp->isSubClassOf("ValueType"))
@@ -1448,7 +1450,7 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &Dst, unsigned Start) {
+    const TreePatternNode &Dst, unsigned Start) const {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
 
   // Process explicit defs. The caller may have already handled the first def.
@@ -1516,7 +1518,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &Dst) {
+    const TreePatternNode &Dst) const {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst.getOperator());
 
@@ -1740,7 +1742,7 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
 
 Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
                                            RuleMatcher &M, unsigned InsnID,
-                                           const TreePatternNode &Dst) {
+                                           const TreePatternNode &Dst) const {
   const Record *DstOp = Dst.getOperator();
   const CodeGenInstruction &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
@@ -1853,7 +1855,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
 }
 
 const CodeGenRegisterClass *
-GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) {
+GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) const {
   assert(Leaf.isLeaf() && "Expected leaf?");
   const Record *RCRec = getInitValueAsRegClass(Leaf.getLeafValue());
   if (!RCRec)
@@ -1862,7 +1864,7 @@ GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) {
 }
 
 const CodeGenRegisterClass *
-GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
+GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) const {
   if (N.isLeaf())
     return getRegClassFromLeaf(N);
 
@@ -1886,7 +1888,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
 
 const CodeGenRegisterClass *
 GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
-                                                       unsigned ResIdx) {
+                                                       unsigned ResIdx) const {
   const CodeGenInstruction &Inst = Target.getInstruction(N.getOperator());
   assert(ResIdx < Inst.Operands.NumDefs &&
          "Can only infer register class for explicit defs");
@@ -1965,7 +1967,7 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
 }
 
 const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
-    const TypeSetByHwMode &Ty, const TreePatternNode &SubRegIdxNode) {
+    const TypeSetByHwMode &Ty, const TreePatternNode &SubRegIdxNode) const {
   // We need a ValueTypeByHwMode for getSuperRegForSubReg.
   if (!Ty.isValueTypeByHwMode(false))
     return nullptr;
@@ -1984,7 +1986,7 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
 
 const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClassForNode(
     const TypeSetByHwMode &Ty, const TreePatternNode &SuperRegNode,
-    const TreePatternNode &SubRegIdxNode) {
+    const TreePatternNode &SubRegIdxNode) const {
   // Check if we already have a defined register class for the super register
   // node. If we do, then we should preserve that rather than inferring anything
   // from the subregister index node. We can assume that whoever wrote the
@@ -1997,7 +1999,7 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClassForNode(
 }
 
 const CodeGenSubRegIndex *GlobalISelEmitter::inferSubRegIndexForNode(
-    const TreePatternNode &SubRegIdxNode) {
+    const TreePatternNode &SubRegIdxNode) const {
   if (!SubRegIdxNode.isLeaf())
     return nullptr;
 
@@ -2200,15 +2202,15 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
       OpcodeOrder[Opcode] = CurrentOrdering++;
   }
 
-  llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
-                                               const Matcher *B) {
-    auto *L = static_cast<const RuleMatcher *>(A);
-    auto *R = static_cast<const RuleMatcher *>(B);
-    return std::tuple(OpcodeOrder[L->getOpcode()],
-                      L->insnmatchers_front().getNumOperandMatchers()) <
-           std::tuple(OpcodeOrder[R->getOpcode()],
-                      R->insnmatchers_front().getNumOperandMatchers());
-  });
+  llvm::stable_sort(
+      InputRules, [&OpcodeOrder](const Matcher *A, const Matcher *B) {
+        auto *L = static_cast<const RuleMatcher *>(A);
+        auto *R = static_cast<const RuleMatcher *>(B);
+        return std::tuple(OpcodeOrder[L->getOpcode()],
+                          L->insnmatchers_front().getNumOperandMatchers()) <
+               std::tuple(OpcodeOrder[R->getOpcode()],
+                          R->insnmatchers_front().getNumOperandMatchers());
+      });
 
   for (Matcher *Rule : InputRules)
     Rule->optimize();
