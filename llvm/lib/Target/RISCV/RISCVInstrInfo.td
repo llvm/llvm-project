@@ -1348,9 +1348,10 @@ def add_like : PatFrags<(ops node:$lhs, node:$rhs),
 
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
-def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),
-          (SRAI (XLenVT (SLLI $rs, (ImmSubFromXLen (XLenVT 1)))),
-                (ImmSubFromXLen (XLenVT 1)))>;
+def : Pat<(i32 (sub 0, (and_oneuse GPR:$rs, 1))),
+          (SRAI (i32 (SLLI $rs, 31)), 31)>, Requires<[IsRV32]>;
+def : Pat<(i64 (sub 0, (and_oneuse GPR:$rs, 1))),
+          (SRAI (i64 (SLLI $rs, 63)), 63)>, Requires<[IsRV64]>;
 
 // AND with leading/trailing ones mask exceeding simm32/simm12.
 def : Pat<(i64 (and GPR:$rs, immop_oneuse<LeadingOnesMask>:$mask)),
