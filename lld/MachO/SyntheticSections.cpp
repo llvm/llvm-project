@@ -2079,12 +2079,12 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
-    assert(buf - bufStart == long(isec->outSecOff) &&
+    assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
     buf += writtenSize;
   }
-  assert(buf - bufStart == long(sectionSize) &&
+  assert(buf - bufStart == std::ptrdiff_t(sectionSize) &&
          "Written size does not match expected section size");
 }
 
