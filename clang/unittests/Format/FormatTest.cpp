@@ -11187,6 +11187,42 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                "  };\n"
                "}\n",
                Style);
+  // with no column limit, two parameters can go on the same line:
+  verifyFormat("void foo() {\n"
+               "  auto lambda = []<\n"
+               "                    typename T, typename Foo\n"
+               "                >(T t) {\n"
+               "  };\n"
+               "}\n",
+               "void foo() {\n"
+               "  auto lambda = []<\n"
+               "  typename T, typename Foo>(T t){\n"
+               "  };\n"
+               "}\n",
+               Style);
+  // or on different lines:
+  verifyFormat("void foo() {\n"
+               "  auto lambda = []<\n"
+               "                    typename T,\n"
+               "                    typename Foo\n"
+               "                >(T t) {\n"
+               "  };\n"
+               "}\n",
+               "void foo() {\n"
+               "  auto lambda = []<\n"
+               "  typename T,\n"
+               "  typename Foo>(T t){\n"
+               "  };\n"
+               "}\n",
+               Style);
+
+  // same line with no column limit
+  verifyFormat("void foo() {\n"
+               "  auto lambda = []<typename "
+               "Looooooooooooooooooooooooooooong>("
+               "Looooooooooooooooooooooooooooong t) {};\n"
+               "}\n",
+               Style);
 
   // test template usage goes to next line:
   verifyFormat("void foo() {\n"
@@ -11268,6 +11304,30 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
       "  auto lambda =\n"
       "      [looooooooooooooong]<\n"
       "          typename Loooooooooooooooooooooooooooooooooong\n"
+      "      >(T t) {};\n"
+      "  auto lambda =\n"
+      "      []<typename T,\n"
+      "         typename Loooooooooooooooooooooooooooooooooong\n"
+      "      >(T t) {};\n"
+      // nested:
+      "  auto lambda =\n"
+      "      []<template <typename, typename>\n"
+      "         typename Looooooooooooooooooong\n"
+      "      >(T t) {};\n"
+      // nested with long capture:
+      "  auto lambda =\n"
+      "      [loooooooooooooooooooong]<\n"
+      "          template <typename, typename>\n"
+      "          typename Looooooooooooooooooong\n"
+      "      >(T t) {};\n"
+      // nested, with long name and long captures:
+      "  auto lambda =\n"
+      "      [loooooooooooooooooooong]<\n"
+      "          template <\n"
+      "              typename Foooooooooooooooo,\n"
+      "              typename\n"
+      "          >\n"
+      "          typename T\n"
       "      >(T t) {};\n"
       "}\n",
       Style);
