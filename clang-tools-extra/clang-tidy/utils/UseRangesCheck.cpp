@@ -28,7 +28,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <iostream>
 #include <optional>
 #include <string>
 
@@ -165,6 +164,33 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
 static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
                                ArrayRef<unsigned> Indexes,
                                const ASTContext &Ctx) {
+  auto GetCommaLoc =
+      [&](SourceLocation BeginLoc,
+          SourceLocation EndLoc) -> std::optional<CharSourceRange> {
+    auto Invalid = false;
+    auto SourceText = Lexer::getSourceText(
+        CharSourceRange::getCharRange({BeginLoc, EndLoc}),
+        Ctx.getSourceManager(), Ctx.getLangOpts(), &Invalid);
+    assert(!Invalid);
+
+    size_t I = 0;
+    while (I < SourceText.size() && SourceText[I] != ',') {
+      I++;
+    }
+
+    if (I < SourceText.size()) {
+      // also remove space after ,
+      size_t J = I + 1;
+      while (J < SourceText.size() && SourceText[J] == ' ') {
+        J++;
+      }
+
+      return std::make_optional(CharSourceRange::getCharRange(
+          {BeginLoc.getLocWithOffset(I), BeginLoc.getLocWithOffset(J)}));
+    }
+    return std::nullopt;
+  };
+
   llvm::SmallVector<unsigned> Sorted(Indexes);
   llvm::sort(Sorted);
   // Keep track of commas removed
@@ -176,20 +202,25 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
     if (Commas[Index]) {
       if (Index + 1 < Call.getNumArgs()) {
         // Remove the next comma
-        Commas[Index + 1] = true;
         const Expr *NextArg = Call.getArg(Index + 1);
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            {Arg->getBeginLoc(), NextArg->getBeginLoc().getLocWithOffset(-1)}));
-      } else {
-        Diag << FixItHint::CreateRemoval(Arg->getSourceRange());
+        auto CommaLoc = GetCommaLoc(Arg->getEndLoc().getLocWithOffset(1),
+                                    NextArg->getBeginLoc());
+        if (CommaLoc) {
+          Commas[Index + 1] = true;
+          Diag << FixItHint::CreateRemoval(*CommaLoc);
+        }
       }
     } else {
       // At this point we know Index > 0 because `Commas[0] = true` earlier
-      Commas[Index] = true;
       const Expr *PrevArg = Call.getArg(Index - 1);
-      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-          PrevArg->getEndLoc().getLocWithOffset(1), Arg->getEndLoc()));
+      auto CommaLoc = GetCommaLoc(PrevArg->getEndLoc().getLocWithOffset(1),
+                                  Arg->getBeginLoc());
+      if (CommaLoc) {
+        Commas[Index] = true;
+        Diag << FixItHint::CreateRemoval(*CommaLoc);
+      }
     }
+    Diag << FixItHint::CreateRemoval(Arg->getSourceRange());
   }
 }
 
