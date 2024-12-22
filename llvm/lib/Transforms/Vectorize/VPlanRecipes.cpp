@@ -2392,6 +2392,7 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(State.Lane && "Predicated instruction PHI works per instance.");
   Instruction *ScalarPredInst =
       cast<Instruction>(State.get(getOperand(0), *State.Lane));
