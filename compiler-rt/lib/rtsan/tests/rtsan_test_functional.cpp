@@ -65,6 +65,12 @@ TEST(TestRtsan, SleepingAThreadDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST(TestRtsan, YieldingDiesWhenRealtime) {
+  auto Func = []() { std::this_thread::yield(); };
+  ExpectRealtimeDeath(Func);
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST(TestRtsan, IfstreamCreationDiesWhenRealtime) {
   auto Func = []() { std::ifstream ifs{"./file.txt"}; };
   ExpectRealtimeDeath(Func);

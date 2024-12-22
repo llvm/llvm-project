@@ -13,10 +13,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -3474,6 +3474,16 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     Clause = ParseOpenMPOMPXAttributesClause(WrongDirective);
     break;
   case OMPC_ompx_bare:
+    if (DKind == llvm::omp::Directive::OMPD_target) {
+      // Flang splits the combined directives which requires OMPD_target to be
+      // marked as accepting the `ompx_bare` clause in `OMP.td`. Thus, we need
+      // to explicitly check whether this clause is applied to an `omp target`
+      // without `teams` and emit an error.
+      Diag(Tok, diag::err_omp_unexpected_clause)
+          << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
+      ErrorFound = true;
+      WrongDirective = true;
+    }
     if (WrongDirective)
       Diag(Tok, diag::note_ompx_bare_clause)
           << getOpenMPClauseName(CKind) << "target teams";

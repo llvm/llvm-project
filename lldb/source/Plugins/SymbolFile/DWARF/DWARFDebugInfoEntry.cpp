@@ -14,25 +14,24 @@
 #include <limits>
 #include <optional>
 
-#include "llvm/Support/LEB128.h"
-
+#include "LogChannelDWARF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/LEB128.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
-#include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDwo.h"
-
-#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -83,24 +82,11 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   return true;
 }
 
-static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
-                                             const DWARFDebugInfoEntry &die,
-                                             const DWARFFormValue &value) {
-  llvm::Expected<DWARFRangeList> expected_ranges =
-      (value.Form() == DW_FORM_rnglistx)
-          ? unit.FindRnglistFromIndex(value.Unsigned())
-          : unit.FindRnglistFromOffset(value.Unsigned());
-  if (expected_ranges)
-    return std::move(*expected_ranges);
-
-  unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-      "[{0:x16}]: DIE has DW_AT_ranges({1} {2:x16}) attribute, but "
-      "range extraction failed ({3}), please file a bug "
-      "and attach the file at the start of this error message",
-      die.GetOffset(),
-      llvm::dwarf::FormEncodingString(value.Form()).str().c_str(),
-      value.Unsigned(), toString(expected_ranges.takeError()).c_str());
-  return DWARFRangeList();
+static llvm::Expected<llvm::DWARFAddressRangesVector>
+GetRanges(DWARFUnit &unit, const DWARFFormValue &value) {
+  return (value.Form() == DW_FORM_rnglistx)
+             ? unit.FindRnglistFromIndex(value.Unsigned())
+             : unit.FindRnglistFromOffset(value.Unsigned());
 }
 
 static void ExtractAttrAndFormValue(
@@ -118,7 +104,7 @@ static void ExtractAttrAndFormValue(
 // DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
 bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     DWARFUnit *cu, const char *&name, const char *&mangled,
-    DWARFRangeList &ranges, std::optional<int> &decl_file,
+    llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
     std::optional<int> &decl_line, std::optional<int> &decl_column,
     std::optional<int> &call_file, std::optional<int> &call_line,
     std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
@@ -174,7 +160,17 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           break;
 
         case DW_AT_ranges:
-          ranges = GetRangesOrReportError(*cu, *this, form_value);
+          if (llvm::Expected<llvm::DWARFAddressRangesVector> r =
+                  GetRanges(*cu, form_value)) {
+            ranges = std::move(*r);
+          } else {
+            module->ReportError(
+                "[{0:x16}]: DIE has DW_AT_ranges({1} {2:x16}) attribute, but "
+                "range extraction failed ({3}), please file a bug "
+                "and attach the file at the start of this error message",
+                GetOffset(), llvm::dwarf::FormEncodingString(form_value.Form()),
+                form_value.Unsigned(), fmt_consume(r.takeError()));
+          }
           break;
 
         case DW_AT_name:
@@ -260,22 +256,20 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     }
   }
 
-  if (ranges.IsEmpty()) {
-    if (lo_pc != LLDB_INVALID_ADDRESS) {
-      if (hi_pc != LLDB_INVALID_ADDRESS && hi_pc > lo_pc)
-        ranges.Append(DWARFRangeList::Entry(lo_pc, hi_pc - lo_pc));
-      else
-        ranges.Append(DWARFRangeList::Entry(lo_pc, 0));
-    }
+  if (ranges.empty() && lo_pc != LLDB_INVALID_ADDRESS) {
+    lldb::addr_t range_hi_pc =
+        (hi_pc != LLDB_INVALID_ADDRESS && hi_pc > lo_pc) ? hi_pc : lo_pc;
+    ranges.emplace_back(lo_pc, range_hi_pc);
   }
 
-  if (set_frame_base_loclist_addr) {
-    dw_addr_t lowest_range_pc = ranges.GetMinRangeBase(0);
+  if (set_frame_base_loclist_addr && !ranges.empty()) {
+    // TODO: Use the first range instead.
+    dw_addr_t lowest_range_pc = llvm::min_element(ranges)->LowPC;
     assert(lowest_range_pc >= cu->GetBaseAddress());
     frame_base->SetFuncFileAddress(lowest_range_pc);
   }
 
-  if (ranges.IsEmpty() || name == nullptr || mangled == nullptr) {
+  if (ranges.empty() || name == nullptr || mangled == nullptr) {
     for (const DWARFDIE &die : dies) {
       if (die) {
         die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
@@ -284,7 +278,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
       }
     }
   }
-  return !ranges.IsEmpty();
+  return !ranges.empty();
 }
 
 // Get all attribute values for a given DIE, including following any
@@ -500,24 +494,23 @@ bool DWARFDebugInfoEntry::GetAttributeAddressRange(
   return false;
 }
 
-DWARFRangeList DWARFDebugInfoEntry::GetAttributeAddressRanges(
+llvm::Expected<llvm::DWARFAddressRangesVector>
+DWARFDebugInfoEntry::GetAttributeAddressRanges(
     DWARFUnit *cu, bool check_hi_lo_pc, bool check_elaborating_dies) const {
 
   DWARFFormValue form_value;
   if (GetAttributeValue(cu, DW_AT_ranges, form_value))
-    return GetRangesOrReportError(*cu, *this, form_value);
+    return GetRanges(*cu, form_value);
 
-  DWARFRangeList ranges;
   if (check_hi_lo_pc) {
     dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
     dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
     if (GetAttributeAddressRange(cu, lo_pc, hi_pc, LLDB_INVALID_ADDRESS,
-                                 check_elaborating_dies)) {
-      if (lo_pc < hi_pc)
-        ranges.Append(DWARFRangeList::Entry(lo_pc, hi_pc - lo_pc));
-    }
+                                 check_elaborating_dies) &&
+        lo_pc < hi_pc)
+      return llvm::DWARFAddressRangesVector{{lo_pc, hi_pc}};
   }
-  return ranges;
+  return llvm::createStringError("DIE has no address range information");
 }
 
 // GetName
@@ -578,13 +571,15 @@ const char *DWARFDebugInfoEntry::GetPubname(const DWARFUnit *cu) const {
 /// table instead of the compile unit offset.
 void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
     DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
+  Log *log = GetLog(DWARFLog::DebugInfo);
   if (m_tag) {
     if (m_tag == DW_TAG_subprogram) {
-      DWARFRangeList ranges =
-          GetAttributeAddressRanges(cu, /*check_hi_lo_pc=*/true);
-      for (const auto &r : ranges) {
-        debug_aranges->AppendRange(GetOffset(), r.GetRangeBase(),
-                                   r.GetRangeEnd());
+      if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
+              GetAttributeAddressRanges(cu, /*check_hi_lo_pc=*/true)) {
+        for (const auto &r : *ranges)
+          debug_aranges->AppendRange(GetOffset(), r.LowPC, r.HighPC);
+      } else {
+        LLDB_LOG_ERROR(log, ranges.takeError(), "DIE({1:x}): {0}", GetOffset());
       }
     }
 

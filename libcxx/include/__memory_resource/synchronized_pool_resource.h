@@ -10,10 +10,12 @@
 #define _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory_resource/memory_resource.h>
 #include <__memory_resource/pool_options.h>
 #include <__memory_resource/unsynchronized_pool_resource.h>
-#include <mutex>
+#include <__mutex/mutex.h>
+#include <__mutex/unique_lock.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

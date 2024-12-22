@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ;
 ; Remove the unnecessary 'add' instruction used for the hardware loop setup.
 

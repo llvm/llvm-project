@@ -1609,6 +1609,14 @@ bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   return SetArchitecture(merged_arch);
 }
 
+void Module::ResetStatistics() {
+  m_symtab_parse_time.reset();
+  m_symtab_index_time.reset();
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    sym_file->ResetStatistics();
+}
+
 llvm::VersionTuple Module::GetVersion() {
   if (ObjectFile *obj_file = GetObjectFile())
     return obj_file->GetVersion();

@@ -133,6 +133,11 @@ private:
     return CurDAG->getTargetConstant(Imm, SDLoc(Node), Node->getValueType(0));
   }
 
+  inline SDValue getSignedImm(const SDNode *Node, int64_t Imm) {
+    return CurDAG->getSignedTargetConstant(Imm, SDLoc(Node),
+                                           Node->getValueType(0));
+  }
+
   virtual void processFunctionAfterISel(MachineFunction &MF) = 0;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,

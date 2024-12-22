@@ -1,4 +1,4 @@
-; RUN: llc %s -march=mipsel -mattr=micromips -filetype=asm \
+; RUN: llc %s -mtriple=mipsel -mattr=micromips -filetype=asm \
 ; RUN: -relocation-model=pic -O3 -o - | FileCheck %s
 
 ; Function Attrs: noinline nounwind

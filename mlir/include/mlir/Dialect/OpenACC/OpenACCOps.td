@@ -381,17 +381,18 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     OpenACC_Op<mnemonic, !listconcat(traits,
         [AttrSizedOperandSegments,
          MemoryEffects<[MemRead<OpenACC_CurrentDeviceIdResource>]>])> {
-  let arguments = !con(additionalArgs,
-                      (ins
-                       Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
-                       Variadic<OpenACC_DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
-                       Variadic<IntOrIndex>:$asyncOperands,
-                       OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
-                       OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
-                       DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
-                       DefaultValuedAttr<BoolAttr, "true">:$structured,
-                       DefaultValuedAttr<BoolAttr, "false">:$implicit,
-                       OptionalAttr<StrAttr>:$name));
+  let arguments = !con(
+      additionalArgs,
+      (ins TypeAttr:$varType,
+          Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
+          Variadic<OpenACC_DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
+          Variadic<IntOrIndex>:$asyncOperands,
+          OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
+          OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
+          DefaultValuedAttr<OpenACC_DataClauseAttr, clause>:$dataClause,
+          DefaultValuedAttr<BoolAttr, "true">:$structured,
+          DefaultValuedAttr<BoolAttr, "false">:$implicit,
+          OptionalAttr<StrAttr>:$name));
 
   let description = !strconcat(extraDescription, [{
     Description of arguments:
@@ -458,7 +459,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
   }];
 
   let assemblyFormat = [{
-    `varPtr` `(` $varPtr `:` type($varPtr) `)`
+    `varPtr` `(` $varPtr `:` custom<VarPtrType>(type($varPtr), $varType)
     oilist(
         `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
       | `bounds` `(` $bounds `)`
@@ -469,32 +470,35 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
 
   let hasVerifier = 1;
 
-  let builders = [
-    OpBuilder<(ins "::mlir::Value":$varPtr,
-      "bool":$structured,
-      "bool":$implicit,
-      CArg<"::mlir::ValueRange", "{}">:$bounds), [{
-        build($_builder, $_state, varPtr.getType(), varPtr, /*varPtrPtr=*/{},
-          bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
+  let builders = [OpBuilder<(ins "::mlir::Value":$varPtr, "bool":$structured,
+                                "bool":$implicit,
+                                CArg<"::mlir::ValueRange", "{}">:$bounds),
+                            [{
+        build($_builder, $_state, varPtr.getType(), varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+            ::mlir::cast<::mlir::acc::PointerLikeType>(
+              varPtr.getType()).getElementType()),
+          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
+          /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
-      }]
-    >,
-    OpBuilder<(ins "::mlir::Value":$varPtr,
-      "bool":$structured,
-      "bool":$implicit,
-      "const ::llvm::Twine &":$name,
-      CArg<"::mlir::ValueRange", "{}">:$bounds), [{
-        build($_builder, $_state, varPtr.getType(), varPtr, /*varPtrPtr=*/{},
-          bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
+      }]>,
+                  OpBuilder<(ins "::mlir::Value":$varPtr, "bool":$structured,
+                                "bool":$implicit, "const ::llvm::Twine &":$name,
+                                CArg<"::mlir::ValueRange", "{}">:$bounds),
+                            [{
+        build($_builder, $_state, varPtr.getType(), varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+            ::mlir::cast<::mlir::acc::PointerLikeType>(
+              varPtr.getType()).getElementType()),
+          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
+          /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit),
           /*name=*/$_builder.getStringAttr(name));
-      }]
-    >
-  ];
+      }]>];
 }
 
 //===----------------------------------------------------------------------===//
@@ -794,63 +798,58 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
     }
   }];
 
-  let assemblyFormat = [{
-    `accPtr` `(` $accPtr `:` type($accPtr) `)`
-    oilist(
-        `bounds` `(` $bounds `)`
-      | `to` `varPtr` `(` $varPtr `:` type($varPtr) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
-    ) attr-dict
-  }];
-
   let hasVerifier = 1;
 }
 
-class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause> :
-    OpenACC_DataExitOp<mnemonic, clause,
-      "- `varPtr`: The address of variable to copy back to.",
-      [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
-                      MemWrite<OpenACC_RuntimeCounters>]>],
-      (ins Arg<OpenACC_PointerLikeTypeInterface,"Address of device variable",[MemRead]>:$accPtr,
-           Arg<OpenACC_PointerLikeTypeInterface,"Address of variable",[MemWrite]>:$varPtr)> {
+class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
+    : OpenACC_DataExitOp<
+          mnemonic, clause,
+          "- `varPtr`: The address of variable to copy back to.",
+          [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
+                          MemWrite<OpenACC_RuntimeCounters>]>],
+          (ins Arg<OpenACC_PointerLikeTypeInterface,
+                   "Address of device variable", [MemRead]>:$accPtr,
+              Arg<OpenACC_PointerLikeTypeInterface,
+                  "Address of variable", [MemWrite]>:$varPtr,
+              TypeAttr:$varType)> {
   let assemblyFormat = [{
     `accPtr` `(` $accPtr `:` type($accPtr) `)`
     (`bounds` `(` $bounds^ `)` )?
     (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
-    `to` `varPtr` `(` $varPtr `:` type($varPtr) `)`
+    `to` `varPtr` `(` $varPtr `:` custom<VarPtrType>(type($varPtr), $varType)
     attr-dict
   }];
 
-  let builders = [
-    OpBuilder<(ins "::mlir::Value":$accPtr,
-      "::mlir::Value":$varPtr,
-      "bool":$structured,
-      "bool":$implicit,
-      CArg<"::mlir::ValueRange", "{}">:$bounds), [{
+  let builders = [OpBuilder<(ins "::mlir::Value":$accPtr,
+                                "::mlir::Value":$varPtr, "bool":$structured,
+                                "bool":$implicit,
+                                CArg<"::mlir::ValueRange", "{}">:$bounds),
+                            [{
         build($_builder, $_state, accPtr, varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+          ::mlir::cast<::mlir::acc::PointerLikeType>(
+              varPtr.getType()).getElementType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
-      }]
-    >,
-    OpBuilder<(ins "::mlir::Value":$accPtr,
-      "::mlir::Value":$varPtr,
-      "bool":$structured,
-      "bool":$implicit,
-      "const ::llvm::Twine &":$name,
-      CArg<"::mlir::ValueRange", "{}">:$bounds), [{
+      }]>,
+                  OpBuilder<(ins "::mlir::Value":$accPtr,
+                                "::mlir::Value":$varPtr, "bool":$structured,
+                                "bool":$implicit, "const ::llvm::Twine &":$name,
+                                CArg<"::mlir::ValueRange", "{}">:$bounds),
+                            [{
         build($_builder, $_state, accPtr, varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+          ::mlir::cast<::mlir::acc::PointerLikeType>(
+              varPtr.getType()).getElementType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit),
           /*name=*/$_builder.getStringAttr(name));
-      }]
-    >
-  ];
+      }]>];
 }
 
 class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :

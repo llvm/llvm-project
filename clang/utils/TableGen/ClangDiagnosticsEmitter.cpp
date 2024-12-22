@@ -1,4 +1,4 @@
-//=- ClangDiagnosticsEmitter.cpp - Generate Clang diagnostics tables -*- C++ -*-
+//===-- ClangDiagnosticsEmitter.cpp - Generate Clang diagnostics tables ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -362,7 +362,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(R);
     else
-      DiagsInPedantic.get<RecordSet *>()->insert(R);
+      cast<RecordSet *>(DiagsInPedantic)->insert(R);
   }
 
   if (!GroupsInPedantic)
@@ -389,7 +389,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(Group);
     else
-      GroupsInPedantic.get<RecordSet *>()->insert(Group);
+      cast<RecordSet *>(GroupsInPedantic)->insert(Group);
   }
 }
 
@@ -1907,8 +1907,7 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
   // Write out the diagnostic groups.
   for (const Record *G : DiagGroups) {
     bool IsRemarkGroup = isRemarkGroup(G, DiagsInGroup);
-    auto &GroupInfo =
-        DiagsInGroup[std::string(G->getValueAsString("GroupName"))];
+    auto &GroupInfo = DiagsInGroup[G->getValueAsString("GroupName")];
     bool IsSynonym = GroupInfo.DiagsInGroup.empty() &&
                      GroupInfo.SubGroups.size() == 1;
 

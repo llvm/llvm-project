@@ -336,6 +336,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_i32(<vsca
 ; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    li a3, 2
 ; RV32-NEXT:    vs8r.v v16, (a1)
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv8r.v v8, v0
 ; RV32-NEXT:    vmv8r.v v16, v24
 ; RV32-NEXT:    call ext2
@@ -374,6 +375,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_i32(<vsca
 ; RV64-NEXT:    add a1, a3, a1
 ; RV64-NEXT:    li a3, 2
 ; RV64-NEXT:    vs8r.v v16, (a1)
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv8r.v v8, v0
 ; RV64-NEXT:    vmv8r.v v16, v24
 ; RV64-NEXT:    call ext2
@@ -451,6 +453,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_nxv32i32_
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 128
 ; RV32-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv8r.v v16, v0
 ; RV32-NEXT:    call ext3
 ; RV32-NEXT:    addi sp, s0, -144
@@ -523,6 +526,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_nxv32i32_
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 128
 ; RV64-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv8r.v v16, v0
 ; RV64-NEXT:    call ext3
 ; RV64-NEXT:    addi sp, s0, -144

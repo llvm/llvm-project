@@ -6,7 +6,7 @@
 ! PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
 ! PARSE-TREE:  OmpBeginBlockDirective
 ! PARSE-TREE:   OmpBlockDirective -> llvm::omp::Directive = parallel
-! PARSE-TREE:   OmpClauseList -> OmpClause -> ProcBind -> OmpProcBindClause -> Type = Primary
+! PARSE-TREE:   OmpClauseList -> OmpClause -> ProcBind -> OmpProcBindClause -> AffinityPolicy = Primary
 subroutine sb1
   !$omp parallel proc_bind(primary)
   print *, "Hello"

@@ -376,7 +376,11 @@ def AArch64fadda_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
      (AArch64fadda_p_node (SVEAllActive), node:$op2,
              (vselect node:$op1, node:$op3, (splat_vector (f64 fpimm_minus0))))]>;
 
-def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
+def SDT_AArch64PTest : SDTypeProfile<1, 2, [
+  SDTCisVT<0, i32>,  // out flags
+  SDTCisVec<1>,      // governing predicate
+  SDTCisSameAs<2, 1> // source predicate
+]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def AArch64ptest_any : SDNode<"AArch64ISD::PTEST_ANY", SDT_AArch64PTest>;
 
@@ -670,6 +674,14 @@ let Predicates = [HasSVEorSME] in {
   defm NOT_ZPmZ  : sve_int_un_pred_arit_bitwise<   0b110, "not",  AArch64not_mt>;
   defm FABS_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b101, "fneg", AArch64fneg_mt>;
+
+  let Predicates = [HasSVEorSME, UseUnaryUndefPseudos] in {
+    defm FABS_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fabs_mt>;
+    defm FNEG_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fneg_mt>;
+
+    defm ABS_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64abs_mt>;
+    defm NEG_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64neg_mt>;
+  }
 
   foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
     // No dedicated instruction, so just clear the sign bit.
@@ -971,7 +983,7 @@ let Predicates = [HasSVEorSME] in {
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
 } // End HasSVEorSME
 
-let Predicates = [HasSVE] in {
+let Predicates = [HasNonStreamingSVEorSME2p2] in {
   defm FEXPA_ZZ : sve_int_bin_cons_misc_0_c_fexpa<"fexpa", int_aarch64_sve_fexpa_x>;
 } // End HasSVE
 
@@ -2336,8 +2348,8 @@ let Predicates = [HasSVEorSME] in {
   defm FCVT_ZPmZ_HtoD   : sve_fp_2op_p_zd< 0b1101001, "fcvt",   ZPR16, ZPR64, int_aarch64_sve_fcvt_f64f16,   AArch64fcvte_mt,  nxv2f64, nxv2i1, nxv2f16, ElementSizeD>;
   defm FCVT_ZPmZ_DtoS   : sve_fp_2op_p_zdr<0b1101010, "fcvt",   ZPR64, ZPR32, int_aarch64_sve_fcvt_f32f64,   AArch64fcvtr_mt,  nxv2f32, nxv2i1, nxv2f64, ElementSizeD>;
   defm FCVT_ZPmZ_StoD   : sve_fp_2op_p_zd< 0b1101011, "fcvt",   ZPR32, ZPR64, int_aarch64_sve_fcvt_f64f32,   AArch64fcvte_mt,  nxv2f64, nxv2i1, nxv2f32, ElementSizeD>;
-  defm SCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110000, "scvtf",  ZPR32, ZPR64, int_aarch64_sve_scvtf_f64i32,  AArch64scvtf_mt,  nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
-  defm UCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110001, "ucvtf",  ZPR32, ZPR64, int_aarch64_sve_ucvtf_f64i32,  AArch64ucvtf_mt,  nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
+  defm SCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110000, "scvtf",  ZPR32, ZPR64, int_aarch64_sve_scvtf_f64i32,  null_frag,        nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
+  defm UCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110001, "ucvtf",  ZPR32, ZPR64, int_aarch64_sve_ucvtf_f64i32,  null_frag,        nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
   defm UCVTF_ZPmZ_StoH  : sve_fp_2op_p_zd< 0b0110101, "ucvtf",  ZPR32, ZPR16, int_aarch64_sve_ucvtf_f16i32,  AArch64ucvtf_mt,  nxv4f16, nxv4i1, nxv4i32, ElementSizeS>;
   defm SCVTF_ZPmZ_DtoS  : sve_fp_2op_p_zd< 0b1110100, "scvtf",  ZPR64, ZPR32, int_aarch64_sve_scvtf_f32i64,  AArch64scvtf_mt,  nxv2f32, nxv2i1, nxv2i64, ElementSizeD>;
   defm SCVTF_ZPmZ_StoH  : sve_fp_2op_p_zd< 0b0110100, "scvtf",  ZPR32, ZPR16, int_aarch64_sve_scvtf_f16i32,  AArch64scvtf_mt,  nxv4f16, nxv4i1, nxv4i32, ElementSizeS>;
@@ -2443,8 +2455,9 @@ let Predicates = [HasBF16, HasSVEorSME] in {
   defm BFMLALT_ZZZ : sve2_fp_mla_long<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt>;
   defm BFMLALB_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b100, "bfmlalb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalb_lane_v2>;
   defm BFMLALT_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt_lane_v2>;
-  defm BFCVT_ZPmZ   : sve_bfloat_convert<0b1, "bfcvt",   int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
-  defm BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
+
+  defm BFCVT_ZPmZ   : sve_bfloat_convert<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
+  defm BFCVTNT_ZPmZ : sve_bfloat_convert_top<"bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
 } // End HasBF16, HasSVEorSME
 
 let Predicates = [HasSVEorSME] in {
@@ -4253,25 +4266,24 @@ defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p2orSME2p2] in {
   // SVE Floating-point convert precision, zeroing predicate
-  defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt">;
+  defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt", "int_aarch64_sve_fcvt">;
 
   // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
-  defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
-  def FCVTXNT_ZPzZ_DtoS : sve_fp_fcvt2z<0b0010, "fcvtxnt", ZPR32, ZPR64>;
+  defm FCVTNT_ZPzZ : sve2_fp_convert_down_narrow_z<"fcvtnt">;
+  def FCVTXNT_ZPzZ : sve2_fp_convert_precision<0b0010, 0b0, "fcvtxnt", ZPR32, ZPR64, /*destructive*/ true>;
   // Placing even
-  def FCVTX_ZPzZ_DtoS   : sve_fp_z2op_p_zd<0b0001010, "fcvtx", ZPR64, ZPR32>;
+  defm FCVTX_ZPzZ  : sve_fp_z2op_p_zd<"fcvtx", int_aarch64_sve_fcvtx_f32f64>;
 
   // SVE2p2 floating-point convert precision up, zeroing predicate
-  defm FCVTLT_ZPzZ      : sve_fp_fcvtltz<"fcvtlt">;
+  defm FCVTLT_ZPzZ : sve2_fp_convert_up_long_z<"fcvtlt", "int_aarch64_sve_fcvtlt">;
 
   // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
-  def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
-  // Placing corresponding
-  def BFCVT_ZPzZ_StoH   : sve_fp_z2op_p_zd<0b1001010, "bfcvt", ZPR32, ZPR16>;
+  def BFCVTNT_ZPzZ      : sve2_fp_convert_precision<0b1010, 0b0, "bfcvtnt", ZPR16, ZPR32, /*destructive*/ true>;
+  defm BFCVT_ZPzZ_StoH  : sve_fp_z2op_p_zd_bfcvt<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2>;
 
   // Floating-point convert to integer, zeroing predicate
-  defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;
-  defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu">;
+  defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs", "int_aarch64_sve_fcvtzs", AArch64fcvtzs_mt>;
+  defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu", "int_aarch64_sve_fcvtzu", AArch64fcvtzu_mt>;
   // Integer convert to floating-point, zeroing predicate
   defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf">;
   defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf">;
@@ -4317,16 +4329,16 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm NOT_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b110, "not">;
 
   // floating point
-  defm FABS_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b100, "fabs">;
-  defm FNEG_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b101, "fneg">;
+  defm FABS_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b100, "fabs", AArch64fabs_mt>;
+  defm FNEG_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b101, "fneg", AArch64fneg_mt>;
 
   // SVE2p2 integer unary arithmetic, zeroing predicate
   defm SXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b000, "sxtb">;
   defm UXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b001, "uxtb">;
   defm SXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b010, "sxth">;
   defm UXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b011, "uxth">;
-  defm ABS_ZPzZ   : sve_int_un_pred_arit_z<  0b110, "abs">;
-  defm NEG_ZPzZ   : sve_int_un_pred_arit_z<  0b111, "neg">;
+  defm ABS_ZPzZ   : sve_int_un_pred_arit_z<  0b110, "abs", AArch64abs_mt>;
+  defm NEG_ZPzZ   : sve_int_un_pred_arit_z<  0b111, "neg", AArch64neg_mt>;
   def SXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1000, "sxtw", ZPR64>;
   def UXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1010, "uxtw", ZPR64>;
 
@@ -4357,20 +4369,21 @@ let Predicates = [HasNonStreamingSVE2p2orSME2p2] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2orSME2, HasFP8] in {
 // FP8 upconvert
-defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt">;
-defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt">;
-defm BF1CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b10, "bf1cvt">;
-defm BF2CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b11, "bf2cvt">;
-defm F1CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b00, "f1cvtlt">;
-defm F2CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b01, "f2cvtlt">;
-defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt">;
-defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt">;
+defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt",    nxv8f16,  int_aarch64_sve_fp8_cvt1>;
+defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt",    nxv8f16,  int_aarch64_sve_fp8_cvt2>;
+defm BF1CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b10, "bf1cvt",   nxv8bf16, int_aarch64_sve_fp8_cvt1>;
+defm BF2CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b11, "bf2cvt",   nxv8bf16, int_aarch64_sve_fp8_cvt2>;
+defm F1CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b00, "f1cvtlt",  nxv8f16,  int_aarch64_sve_fp8_cvtlt1>;
+defm F2CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b01, "f2cvtlt",  nxv8f16,  int_aarch64_sve_fp8_cvtlt2>;
+defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt", nxv8bf16, int_aarch64_sve_fp8_cvtlt1>;
+defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt", nxv8bf16, int_aarch64_sve_fp8_cvtlt2>;
 
 // FP8 downconvert
-defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn", ZZ_h_mul_r>;
-defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r>;
-defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r>;
-defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
+defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn",  ZZ_h_mul_r, nxv8f16,  int_aarch64_sve_fp8_cvtn>;
+defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnb>;
+defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r, nxv8bf16, int_aarch64_sve_fp8_cvtn>;
+
+defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single_top<0b11, "fcvtnt", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnt>;
 } // End HasSVE2orSME2, HasFP8
 
 let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
@@ -4383,21 +4396,21 @@ defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<AArch64famin_p>;
 
 let Predicates = [HasSSVE_FP8FMA] in {
 // FP8 Widening Multiply-Add Long - Indexed Group
-def FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb">;
-def FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt">;
+defm FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb", int_aarch64_sve_fp8_fmlalb_lane>;
+defm FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt", int_aarch64_sve_fp8_fmlalt_lane>;
 // FP8 Widening Multiply-Add Long Group
-def FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb">;
-def FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt">;
+defm FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb", nxv8f16, int_aarch64_sve_fp8_fmlalb>;
+defm FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt", nxv8f16, int_aarch64_sve_fp8_fmlalt>;
 // FP8 Widening Multiply-Add Long Long - Indexed Group
-def FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb">;
-def FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt">;
-def FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb">;
-def FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt">;
+defm FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb", int_aarch64_sve_fp8_fmlallbb_lane>;
+defm FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt", int_aarch64_sve_fp8_fmlallbt_lane>;
+defm FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb", int_aarch64_sve_fp8_fmlalltb_lane>;
+defm FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt", int_aarch64_sve_fp8_fmlalltt_lane>;
 // FP8 Widening Multiply-Add Long Long Group
-def FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb">;
-def FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt">;
-def FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb">;
-def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
+defm FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb", nxv4f32, int_aarch64_sve_fp8_fmlallbb>;
+defm FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt", nxv4f32, int_aarch64_sve_fp8_fmlallbt>;
+defm FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb", nxv4f32, int_aarch64_sve_fp8_fmlalltb>;
+defm FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt", nxv4f32, int_aarch64_sve_fp8_fmlalltt>;
 } // End HasSSVE_FP8FMA
 
 let Predicates = [HasSVE2, HasF8F32MM] in {
@@ -4410,18 +4423,17 @@ let Predicates = [HasSVE2, HasF8F16MM] in {
 
 let Predicates = [HasSSVE_FP8DOT2] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot">;
+defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-// TODO: Replace nxv16i8 by nxv16f8
-defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot">;
+defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot", nxv8f16, int_aarch64_sve_fp8_fdot>;
 }
 
 // TODO: Replace nxv16i8 by nxv16f8
 let Predicates = [HasSSVE_FP8DOT4] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot">;
+defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot">;
+defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot", nxv4f32, int_aarch64_sve_fp8_fdot>;
 }
 
 let Predicates = [HasSVE2orSME2, HasLUT] in {

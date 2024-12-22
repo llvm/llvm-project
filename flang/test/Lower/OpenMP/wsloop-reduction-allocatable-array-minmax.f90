@@ -206,10 +206,10 @@ end program
 ! CHECK:             %[[VAL_48:.*]] = fir.convert %[[VAL_47]] : (i32) -> i64
 ! CHECK:             %[[VAL_49:.*]] = hlfir.designate %[[VAL_46]] (%[[VAL_48]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, i64) -> !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_45]] to %[[VAL_49]] : i32, !fir.ref<i32>
-! CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_43]], %[[VAL_40]] : index
+! CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_43]], %[[VAL_40]] overflow<nsw> : index
 ! CHECK:             %[[VAL_51:.*]] = fir.convert %[[VAL_40]] : (index) -> i32
 ! CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<i32>
-! CHECK:             %[[VAL_53:.*]] = arith.addi %[[VAL_52]], %[[VAL_51]] : i32
+! CHECK:             %[[VAL_53:.*]] = arith.addi %[[VAL_52]], %[[VAL_51]] overflow<nsw> : i32
 ! CHECK:             fir.result %[[VAL_50]], %[[VAL_53]] : index, i32
 ! CHECK:           }
 ! CHECK:           fir.store %[[VAL_54:.*]]#1 to %[[VAL_3]]#1 : !fir.ref<i32>

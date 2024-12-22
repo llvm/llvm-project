@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot], -10>;
-def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
-def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
+let WantsRoot = true in {
+  def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [], -10>;
+  def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [], -10>;
+  def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [], -10>;
 
-def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
+  def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [], -10>;
+  def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [], -10>;
+  def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [], -10>;
+}
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -207,14 +209,13 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   opName,
   (outs vdata_op:$vdst),
   !con(
-    !con(
-      !if(EnableSaddr,
-        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
-        (ins VReg_64:$vaddr)),
-        (ins flat_offset:$offset)),
-        // FIXME: Operands with default values do not work with following non-optional operands.
-        !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                           (ins CPol_0:$cpol))),
+    !if(EnableSaddr,
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
+      (ins VReg_64:$vaddr)),
+      (ins flat_offset:$offset),
+      // FIXME: Operands with default values do not work with following non-optional operands.
+      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                         (ins CPol_0:$cpol))),
   " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
   let has_data = 0;
   let mayLoad = 1;
@@ -516,7 +517,6 @@ class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
 class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
                             string asm, list<dag> pattern = []>
   : FLAT_AtomicNoRet_Pseudo<opName, outs, ins, asm, pattern> {
-  let hasPostISelHook = 1;
   let has_vdst = 1;
   let glcValue = 1;
   let sccbValue = 0;
@@ -933,6 +933,11 @@ defm GLOBAL_LOAD_LDS_SBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sbyt
 defm GLOBAL_LOAD_LDS_USHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ushort">;
 defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sshort">;
 defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dword">;
+
+let SubtargetPredicate = HasGFX950Insts in {
+defm GLOBAL_LOAD_LDS_DWORDX3 : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dwordx3">;
+defm GLOBAL_LOAD_LDS_DWORDX4 : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dwordx4">;
+}
 
 let SubtargetPredicate = isGFX12Plus in {
   defm GLOBAL_ATOMIC_COND_SUB_U32    : FLAT_Global_Atomic_Pseudo <"global_atomic_cond_sub_u32", VGPR_32, i32>;
@@ -1979,6 +1984,10 @@ defm GLOBAL_LOAD_LDS_SBYTE  : FLAT_Real_AllAddr_LDS <0x027, 0x11>;
 defm GLOBAL_LOAD_LDS_USHORT : FLAT_Real_AllAddr_LDS <0x028, 0x12>;
 defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Real_AllAddr_LDS <0x029, 0x13>;
 defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Real_AllAddr_LDS <0x02a, 0x14>;
+
+defm GLOBAL_LOAD_LDS_DWORDX3 : FLAT_Real_AllAddr_LDS <0x07e, 0x07e>;
+defm GLOBAL_LOAD_LDS_DWORDX4 : FLAT_Real_AllAddr_LDS <0x07d, 0x07d>;
+
 
 defm GLOBAL_ATOMIC_SWAP       : FLAT_Global_Real_Atomics_vi <0x40>;
 defm GLOBAL_ATOMIC_CMPSWAP    : FLAT_Global_Real_Atomics_vi <0x41>;

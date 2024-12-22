@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -3222,6 +3223,53 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
         << ParamName << (FDecl != nullptr) << FDecl;
 }
 
+void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
+                                  const Expr *ThisArg,
+                                  ArrayRef<const Expr *> Args) {
+  if (!FD || Args.empty())
+    return;
+  auto GetArgAt = [&](int Idx) -> const Expr * {
+    if (Idx == LifetimeCaptureByAttr::GLOBAL ||
+        Idx == LifetimeCaptureByAttr::UNKNOWN)
+      return nullptr;
+    if (IsMemberFunction && Idx == 0)
+      return ThisArg;
+    return Args[Idx - IsMemberFunction];
+  };
+  auto HandleCaptureByAttr = [&](const LifetimeCaptureByAttr *Attr,
+                                 unsigned ArgIdx) {
+    if (!Attr)
+      return;
+
+    Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
+    for (int CapturingParamIdx : Attr->params()) {
+      // lifetime_capture_by(this) case is handled in the lifetimebound expr
+      // initialization codepath.
+      if (CapturingParamIdx == LifetimeCaptureByAttr::THIS &&
+          isa<CXXConstructorDecl>(FD))
+        continue;
+      Expr *Capturing = const_cast<Expr *>(GetArgAt(CapturingParamIdx));
+      CapturingEntity CE{Capturing};
+      // Ensure that 'Captured' outlives the 'Capturing' entity.
+      checkCaptureByLifetime(*this, CE, Captured);
+    }
+  };
+  for (unsigned I = 0; I < FD->getNumParams(); ++I)
+    HandleCaptureByAttr(FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>(),
+                        I + IsMemberFunction);
+  // Check when the implicit object param is captured.
+  if (IsMemberFunction) {
+    TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+    if (!TSI)
+      return;
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = TSI->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc())
+      HandleCaptureByAttr(ATL.getAttrAs<LifetimeCaptureByAttr>(), 0);
+  }
+}
+
 void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
@@ -3262,7 +3310,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
   }
-
+  if (FD)
+    checkLifetimeCaptureBy(FD, IsMemberFunction, ThisArg, Args);
   if (FDecl || Proto) {
     CheckNonNullArguments(*this, FDecl, Proto, Args, Loc);
 
@@ -5271,9 +5320,11 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
   {
     ExprResult FirstArgResult =
         DefaultFunctionArrayLvalueConversion(FirstArg);
-    if (checkBuiltinArgument(*this, TheCall, 0))
+    if (!FirstArgResult.get()->getType()->isPointerType()) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_assume_aligned_invalid_arg)
+          << TheCall->getSourceRange();
       return true;
-    /// In-place updation of FirstArg by checkBuiltinArgument is ignored.
+    }
     TheCall->setArg(0, FirstArgResult.get());
   }
 
@@ -5619,6 +5670,45 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
 
   TheCall->setType(Context.getPointerType(Context.VoidTy));
   return false;
+}
+
+/// The result of __builtin_counted_by_ref cannot be assigned to a variable.
+/// It allows leaking and modification of bounds safety information.
+bool Sema::CheckInvalidBuiltinCountedByRef(const Expr *E,
+                                           BuiltinCountedByRefKind K) {
+  const CallExpr *CE =
+      E ? dyn_cast<CallExpr>(E->IgnoreParenImpCasts()) : nullptr;
+  if (!CE || CE->getBuiltinCallee() != Builtin::BI__builtin_counted_by_ref)
+    return false;
+
+  switch (K) {
+  case AssignmentKind:
+  case InitializerKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 0 << E->getSourceRange();
+    break;
+  case FunctionArgKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 1 << E->getSourceRange();
+    break;
+  case ReturnArgKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 2 << E->getSourceRange();
+    break;
+  case ArraySubscriptKind:
+    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 0 << E->getSourceRange();
+    break;
+  case BinaryExprKind:
+    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 1 << E->getSourceRange();
+    break;
+  }
+
+  return true;
 }
 
 namespace {
@@ -7992,8 +8082,9 @@ static void CheckFormatString(
   }
 
   if (Type == Sema::FST_Printf || Type == Sema::FST_NSString ||
-      Type == Sema::FST_FreeBSDKPrintf || Type == Sema::FST_OSLog ||
-      Type == Sema::FST_OSTrace || Type == Sema::FST_Syslog) {
+      Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf ||
+      Type == Sema::FST_OSLog || Type == Sema::FST_OSTrace ||
+      Type == Sema::FST_Syslog) {
     CheckPrintfHandler H(
         S, FExpr, OrigFormatExpr, Type, firstDataArg, numDataArgs,
         (Type == Sema::FST_NSString || Type == Sema::FST_OSTrace), Str, APK,
@@ -8002,7 +8093,7 @@ static void CheckFormatString(
 
     if (!analyze_format_string::ParsePrintfString(
             H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
-            Type == Sema::FST_FreeBSDKPrintf))
+            Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf))
       H.DoneProcessing();
   } else if (Type == Sema::FST_Scanf) {
     CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
@@ -12005,7 +12096,8 @@ void Sema::CheckForIntOverflow (const Expr *E) {
              New && New->isArray()) {
       if (auto ArraySize = New->getArraySize())
         Exprs.push_back(*ArraySize);
-    }
+    } else if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(OriginalE))
+      Exprs.push_back(MTE->getSubExpr());
   } while (!Exprs.empty());
 }
 

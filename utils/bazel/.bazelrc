@@ -9,7 +9,10 @@
 
 # Flip off to disable MODULE.bazel until we're ready.
 # https://github.com/llvm/llvm-project/issues/55924
-common --enable_bzlmod=false
+common --enable_bzlmod=false --enable_workspace
+
+# TODO: Remove lit test reliance on this
+common --legacy_external_runfiles
 
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes

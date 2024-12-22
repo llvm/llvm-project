@@ -160,6 +160,10 @@ wording a diagnostic.
   named in a diagnostic message. e.g., prefer wording like ``'this' pointer
   cannot be null in well-defined C++ code`` over wording like ``this pointer
   cannot be null in well-defined C++ code``.
+* Prefer diagnostic wording without contractions whenever possible. The single
+  quote in a contraction can be visually distracting due to its use with
+  syntactic constructs and contractions can be harder to understand for non-
+  native English speakers.
 
 The Format String
 ^^^^^^^^^^^^^^^^^
