@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/CPP/span.h"
 #include "src/string/stpncpy.h"
 #include "test/UnitTest/Test.h"
@@ -70,4 +71,7 @@ TEST_F(LlvmLibcStpncpyTest, CopyTwoWithNull) {
   const char src[] = {'x', '\0'};
   const char expected[] = {'x', '\0'};
   check_stpncpy(dst, src, 2, expected, 1);
+}
+TEST_F(LlvmLibcStpncpyTest, CrashOnNullPtr) {
+  ASSERT_DEATH( [](){LIBC_NAMESPACE::stpncpy(nullptr, nullptr, 1);} , WITH_SIGNAL(SIGSEGV));
 }

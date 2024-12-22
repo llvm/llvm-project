@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/string/strcoll.h"
 #include "test/UnitTest/Test.h"
 
@@ -27,4 +28,7 @@ TEST(LlvmLibcStrcollTest, SimpleTest) {
 
   result = LIBC_NAMESPACE::strcoll(s3, s1);
   ASSERT_GT(result, 0);
+}
+TEST(LlvmLibcStrcollTest, CrashOnNullPtr) {
+  ASSERT_DEATH( [](){LIBC_NAMESPACE::strcoll(nullptr, nullptr);} , WITH_SIGNAL(SIGSEGV));
 }

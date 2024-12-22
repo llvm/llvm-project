@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/string/memrchr.h"
 #include "test/UnitTest/Test.h"
 #include <stddef.h>
@@ -111,4 +112,8 @@ TEST(LlvmLibcMemRChrTest, ZeroLengthShouldReturnNullptr) {
   const unsigned char src[4] = {'a', 'b', 'c', '\0'};
   // This will iterate over exactly zero characters, so should return nullptr.
   ASSERT_STREQ(call_memrchr(src, 'd', 0), nullptr);
+}
+
+TEST(LlvmLibcMemRChrTest, CrashOnNullPtr) {
+  ASSERT_DEATH([](){ LIBC_NAMESPACE::memrchr(nullptr, 'd', 1); } , WITH_SIGNAL(SIGSEGV));
 }

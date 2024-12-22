@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/string/strsep.h"
 #include "test/UnitTest/Test.h"
 
@@ -50,4 +51,7 @@ TEST(LlvmLibcStrsepTest, DelimitersShouldNotBeIncludedInToken) {
   for (int i = 0; expected[i]; i++) {
     ASSERT_STREQ(LIBC_NAMESPACE::strsep(&string, "_:"), expected[i]);
   }
+}
+TEST(LlvmLibcStrsepTest, CrashOnNullPtr) {
+  ASSERT_DEATH( [](){LIBC_NAMESPACE::strsep(nullptr, nullptr);} , WITH_SIGNAL(SIGSEGV));
 }

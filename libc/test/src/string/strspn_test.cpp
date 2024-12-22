@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/string/strspn.h"
 
 #include "test/UnitTest/Test.h"
@@ -82,4 +83,8 @@ TEST(LlvmLibcStrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
   EXPECT_EQ(LIBC_NAMESPACE::strspn("aa", "aa"), size_t{2});
   EXPECT_EQ(LIBC_NAMESPACE::strspn("aaa", "aa"), size_t{3});
   EXPECT_EQ(LIBC_NAMESPACE::strspn("aaaa", "aa"), size_t{4});
+}
+
+TEST(LlvmLibcStrSpnTest, CrashOnNullPtr) {
+  ASSERT_DEATH([](){ LIBC_NAMESPACE::strspn(nullptr, nullptr); } , WITH_SIGNAL(SIGSEGV));
 }

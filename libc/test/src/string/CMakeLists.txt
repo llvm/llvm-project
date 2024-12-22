@@ -20,6 +20,7 @@ add_libc_test(
 
 add_libc_test(
   mempcpy_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -40,6 +41,7 @@ add_libc_test(
 
 add_libc_test(
   memchr_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -50,6 +52,7 @@ add_libc_test(
 
 add_libc_test(
   memrchr_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -70,6 +73,7 @@ add_libc_test(
 
 add_libc_test(
   stpncpy_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -80,6 +84,7 @@ add_libc_test(
 
 add_libc_test(
   strcat_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -131,6 +136,7 @@ add_libc_test(
 
 add_libc_test(
   strcoll_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -141,6 +147,7 @@ add_libc_test(
 
 add_libc_test(
   strcpy_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -296,6 +303,7 @@ add_libc_test(
 
 add_libc_test(
   strsep_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -316,6 +324,7 @@ add_libc_test(
 
 add_libc_test(
   strspn_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
