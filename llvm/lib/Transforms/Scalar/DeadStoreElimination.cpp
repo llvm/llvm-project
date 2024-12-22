@@ -2261,17 +2261,12 @@ struct DSEState {
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
 
-// Return true if "Arg" is function local and isn't captured before "CB" or
-// if "Arg" is GEP whose base pointer is function local and isn't captured
-// before "CB".
-bool IsFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
+// Return true if "Arg" is function local and isn't captured before "CB".
+bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                EarliestEscapeAnalysis &EA) {
-  if (isIdentifiedFunctionLocal(Arg))
-    return EA.isNotCapturedBefore(Arg, CB, /*OrAt*/ true);
-  const auto *GEP = dyn_cast<GetElementPtrInst>(Arg);
-  if (GEP && isIdentifiedFunctionLocal(GEP->getPointerOperand()))
-    return EA.isNotCapturedBefore(GEP->getPointerOperand(), CB, /*OrAt*/ true);
-  return false;
+  const Value *UnderlyingObj = getUnderlyingObject(Arg);
+  return isIdentifiedFunctionLocal(UnderlyingObj) &&
+         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
 }
 
 SmallVector<MemoryLocation, 1>
@@ -2292,7 +2287,7 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
     // Check whether "CurArg" could alias with global variables. We require
     // either it's function local and isn't captured before or the "CB" only
     // accesses arg or inaccessible mem.
-    if (!Inits.empty() && !IsFuncLocalAndNotCaptured(CurArg, CB, EA) &&
+    if (!Inits.empty() && !isFuncLocalAndNotCaptured(CurArg, CB, EA) &&
         !CB->onlyAccessesInaccessibleMemOrArgMem())
       Inits = ConstantRangeList();
 
