@@ -5246,7 +5246,8 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
     SmallVector<APInt> EltBits;
     if (getTargetConstantBitsFromNode(V.getOperand(0),
                                       V.getScalarValueSizeInBits(), UndefElts,
-                                      EltBits)) {
+                                      EltBits) &&
+        !ISD::isBuildVectorOfConstantSDNodes(V.getOperand(1).getNode())) {
       // Don't fold min_signed_value -> (min_signed_value - 1)
       bool MinSigned = false;
       for (APInt &Elt : EltBits) {
