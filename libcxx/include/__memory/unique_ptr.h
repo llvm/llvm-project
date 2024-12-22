@@ -492,8 +492,8 @@ public:
             bool _Dummy = true,
             class       = _EnableIfDeleterDefaultConstructible<_Dummy>,
             class       = _EnableIfPointerConvertible<_Pp> >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit unique_ptr(_Pp __p) _NOEXCEPT
-      : __ptr_(__p),
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit unique_ptr(_Pp __ptr) _NOEXCEPT
+      : __ptr_(__ptr),
         __deleter_() {}
 
   // Private constructor used by make_unique & friends to pass the size that was allocated
@@ -506,29 +506,31 @@ public:
             bool _Dummy = true,
             class       = _EnableIfDeleterConstructible<_LValRefType<_Dummy> >,
             class       = _EnableIfPointerConvertible<_Pp> >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(_Pp __p, _LValRefType<_Dummy> __d) _NOEXCEPT
-      : __ptr_(__p),
-        __deleter_(__d) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(_Pp __ptr, _LValRefType<_Dummy> __deleter) _NOEXCEPT
+      : __ptr_(__ptr),
+        __deleter_(__deleter) {}
 
   template <bool _Dummy = true, class = _EnableIfDeleterConstructible<_LValRefType<_Dummy> > >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(nullptr_t, _LValRefType<_Dummy> __d) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(nullptr_t, _LValRefType<_Dummy> __deleter) _NOEXCEPT
       : __ptr_(nullptr),
-        __deleter_(__d) {}
+        __deleter_(__deleter) {}
 
   template <class _Pp,
             bool _Dummy = true,
             class       = _EnableIfDeleterConstructible<_GoodRValRefType<_Dummy> >,
             class       = _EnableIfPointerConvertible<_Pp> >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(_Pp __p, _GoodRValRefType<_Dummy> __d) _NOEXCEPT
-      : __ptr_(__p),
-        __deleter_(std::move(__d)) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+  unique_ptr(_Pp __ptr, _GoodRValRefType<_Dummy> __deleter) _NOEXCEPT
+      : __ptr_(__ptr),
+        __deleter_(std::move(__deleter)) {
     static_assert(!is_reference<deleter_type>::value, "rvalue deleter bound to reference");
   }
 
   template <bool _Dummy = true, class = _EnableIfDeleterConstructible<_GoodRValRefType<_Dummy> > >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(nullptr_t, _GoodRValRefType<_Dummy> __d) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+  unique_ptr(nullptr_t, _GoodRValRefType<_Dummy> __deleter) _NOEXCEPT
       : __ptr_(nullptr),
-        __deleter_(std::move(__d)) {
+        __deleter_(std::move(__deleter)) {
     static_assert(!is_reference<deleter_type>::value, "rvalue deleter bound to reference");
   }
 
@@ -536,7 +538,7 @@ public:
             bool _Dummy = true,
             class       = _EnableIfDeleterConstructible<_BadRValRefType<_Dummy> >,
             class       = _EnableIfPointerConvertible<_Pp> >
-  _LIBCPP_HIDE_FROM_ABI unique_ptr(_Pp __p, _BadRValRefType<_Dummy> __d) = delete;
+  _LIBCPP_HIDE_FROM_ABI unique_ptr(_Pp __ptr, _BadRValRefType<_Dummy> __deleter) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr&& __u) _NOEXCEPT
       : __ptr_(__u.release()),
@@ -608,9 +610,9 @@ public:
   }
 
   template <class _Pp, __enable_if_t<_CheckArrayPointerConversion<_Pp>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void reset(_Pp __p) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void reset(_Pp __ptr) _NOEXCEPT {
     pointer __tmp = __ptr_;
-    __ptr_        = __p;
+    __ptr_        = __ptr;
     __checker_    = _BoundsChecker();
     if (__tmp)
       __deleter_(__tmp);
