@@ -1,9 +1,9 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
 
 v_dual_add_f32 v255, v4, v2 :: v_dual_add_f32 v6, v1, v3
 // GFX12: v_dual_add_f32 v255, v4, v2 :: v_dual_add_f32 v6, v1, v3 ; encoding: [0x04,0x05,0x08,0xc9,0x01,0x07,0x06,0xff]

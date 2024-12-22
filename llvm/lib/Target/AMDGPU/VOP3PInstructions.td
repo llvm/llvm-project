@@ -483,16 +483,16 @@ defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
 
 let OtherPredicates = [HasDot7Insts] in {
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot4, 1>;
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
 let OtherPredicates = [HasDot1Insts] in {
 defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot8, 1>;
 } // End OtherPredicates = [HasDot1Insts]
 
 def DOT2_BF16_Profile
@@ -511,7 +511,7 @@ defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16", DOT2_BF16_Profile,
 
 multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
   let IsDOT = 1 in
-  defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>,
+  defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>,
                         null_frag, 1>;
   // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
   // Dot-iu Intrinsics have extra operands and require separate codegen pattern.

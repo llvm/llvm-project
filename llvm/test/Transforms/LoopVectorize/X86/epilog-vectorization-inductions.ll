@@ -92,7 +92,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N16]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i64 [ [[IND_END5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END6]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IV_START]], [[ITER_CHECK:%.*]] ], [ [[IV_START]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i64 [ [[IND_END5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IV_START]], [[VECTOR_SCEVCHECK]] ], [ [[IV_START]], [[ITER_CHECK:%.*]] ], [ [[IND_END6]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL7]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -225,8 +225,8 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[CMP_N25:%.*]] = icmp eq i64 [[L]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N25]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i16 [ [[IND_END8]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END10]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i16 [ [[IND_END8]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[IND_END10]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

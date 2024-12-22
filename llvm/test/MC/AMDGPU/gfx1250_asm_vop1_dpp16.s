@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefixes=GFX1250 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefixes=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 v_tanh_f32 v5, v1 quad_perm:[3,2,1,0]
 // GFX1250: v_tanh_f32_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x3c,0x0a,0x7e,0x01,0x1b,0x00,0xff]

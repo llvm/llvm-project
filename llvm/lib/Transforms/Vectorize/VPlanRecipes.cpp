@@ -629,15 +629,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *IncomingFromOtherPreds =
         State.get(getOperand(1), /* IsScalar */ true);
     auto *NewPhi =
-        Builder.CreatePHI(IncomingFromOtherPreds->getType(), 2, Name);
+        Builder.CreatePHI(State.TypeAnalysis.inferScalarType(this), 2, Name);
     BasicBlock *VPlanPred =
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    // TODO: Predecessors are temporarily reversed to reduce test changes.
-    // Remove it and update remaining tests after functional change landed.
-    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
-    for (auto *OtherPred : reverse(Predecessors)) {
+    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
       if (OtherPred == VPlanPred)
         continue;
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
@@ -970,7 +967,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     // Some intrinsics have a scalar argument - don't replace it with a
     // vector.
     Value *Arg;
-    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
+    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index(),
+                                           State.TTI))
       Arg = State.get(I.value(), VPLane(0));
     else
       Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
@@ -2394,6 +2392,7 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(State.Lane && "Predicated instruction PHI works per instance.");
   Instruction *ScalarPredInst =
       cast<Instruction>(State.get(getOperand(0), *State.Lane));
@@ -3125,24 +3124,6 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPCanonicalIVPHIRecipe::isCanonical(
-    InductionDescriptor::InductionKind Kind, VPValue *Start,
-    VPValue *Step) const {
-  // Must be an integer induction.
-  if (Kind != InductionDescriptor::IK_IntInduction)
-    return false;
-  // Start must match the start value of this canonical induction.
-  if (Start != getStartValue())
-    return false;
-
-  // If the step is defined by a recipe, it is not a ConstantInt.
-  if (Step->getDefiningRecipe())
-    return false;
-
-  ConstantInt *StepC = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
-  return StepC && StepC->isOne();
-}
-
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return IsScalarAfterVectorization &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
@@ -3416,7 +3397,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     // TODO: The sentinel value is not always necessary. When the start value is
     // a constant, and smaller than the start value of the induction variable,
     // the start value can be directly used to initialize the reduction phi.
-    StartV = Iden = StartV;
+    Iden = StartV;
     if (!ScalarPHI) {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());

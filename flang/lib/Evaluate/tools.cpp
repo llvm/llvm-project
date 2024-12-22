@@ -122,12 +122,46 @@ ConvertRealOperandsResult ConvertRealOperands(
                     defaultRealKind, std::move(iy)))};
           },
           [&](Expr<SomeInteger> &&ix,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](Expr<SomeUnsigned> &&ix,
+              Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](Expr<SomeUnsigned> &&ix,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](Expr<SomeInteger> &&ix,
+              Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertTo(ry, std::move(ix)), std::move(ry))};
+          },
+          [&](Expr<SomeUnsigned> &&ix,
               Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(ix)), std::move(ry))};
           },
           [&](Expr<SomeReal> &&rx,
               Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                std::move(rx), ConvertTo(rx, std::move(iy)))};
+          },
+          [&](Expr<SomeReal> &&rx,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 std::move(rx), ConvertTo(rx, std::move(iy)))};
           },
@@ -144,8 +178,24 @@ ConvertRealOperandsResult ConvertRealOperands(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(by)))};
           },
+          [&](Expr<SomeUnsigned> &&ix,
+              BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(by)))};
+          },
           [&](BOZLiteralConstant &&bx,
               Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(bx)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](BOZLiteralConstant &&bx,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(bx)),
@@ -163,7 +213,8 @@ ConvertRealOperandsResult ConvertRealOperands(
                 ConvertTo(ry, std::move(bx)), std::move(ry))};
           },
           [&](auto &&, auto &&) -> ConvertRealOperandsResult { // C718
-            messages.Say("operands must be INTEGER or REAL"_err_en_US);
+            messages.Say(
+                "operands must be INTEGER, UNSIGNED, REAL, or BOZ"_err_en_US);
             return std::nullopt;
           },
       },
@@ -437,7 +488,7 @@ Expr<SomeComplex> PromoteMixedComplexReal(
 // N.B. When a "typeless" BOZ literal constant appears as one (not both!) of
 // the operands to a dyadic operation where one is permitted, it assumes the
 // type and kind of the other operand.
-template <template <typename> class OPR>
+template <template <typename> class OPR, bool CAN_BE_UNSIGNED>
 std::optional<Expr<SomeType>> NumericOperation(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -450,6 +501,15 @@ std::optional<Expr<SomeType>> NumericOperation(
           [](Expr<SomeReal> &&rx, Expr<SomeReal> &&ry) {
             return Package(PromoteAndCombine<OPR, TypeCategory::Real>(
                 std::move(rx), std::move(ry)));
+          },
+          [&](Expr<SomeUnsigned> &&ix, Expr<SomeUnsigned> &&iy) {
+            if constexpr (CAN_BE_UNSIGNED) {
+              return Package(PromoteAndCombine<OPR, TypeCategory::Unsigned>(
+                  std::move(ix), std::move(iy)));
+            } else {
+              messages.Say("Operands must not be UNSIGNED"_err_en_US);
+              return NoExpr();
+            }
           },
           // Mixed REAL/INTEGER operations
           [](Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
@@ -508,24 +568,44 @@ std::optional<Expr<SomeType>> NumericOperation(
           },
           // Operations with one typeless operand
           [&](BOZLiteralConstant &&bx, Expr<SomeInteger> &&iy) {
-            return NumericOperation<OPR>(messages,
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
+                defaultRealKind);
+          },
+          [&](BOZLiteralConstant &&bx, Expr<SomeUnsigned> &&iy) {
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](BOZLiteralConstant &&bx, Expr<SomeReal> &&ry) {
-            return NumericOperation<OPR>(messages,
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
                 AsGenericExpr(ConvertTo(ry, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](Expr<SomeInteger> &&ix, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR>(messages, std::move(x),
-                AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
+                defaultRealKind);
+          },
+          [&](Expr<SomeUnsigned> &&ix, BOZLiteralConstant &&by) {
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
+                defaultRealKind);
           },
           [&](Expr<SomeReal> &&rx, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR>(messages, std::move(x),
-                AsGenericExpr(ConvertTo(rx, std::move(by))), defaultRealKind);
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                std::move(x), AsGenericExpr(ConvertTo(rx, std::move(by))),
+                defaultRealKind);
           },
-          // Default case
+          // Error cases
+          [&](Expr<SomeUnsigned> &&, auto &&) {
+            messages.Say("Both operands must be UNSIGNED"_err_en_US);
+            return NoExpr();
+          },
+          [&](auto &&, Expr<SomeUnsigned> &&) {
+            messages.Say("Both operands must be UNSIGNED"_err_en_US);
+            return NoExpr();
+          },
           [&](auto &&, auto &&) {
             messages.Say("non-numeric operands to numeric operation"_err_en_US);
             return NoExpr();
@@ -534,7 +614,7 @@ std::optional<Expr<SomeType>> NumericOperation(
       std::move(x.u), std::move(y.u));
 }
 
-template std::optional<Expr<SomeType>> NumericOperation<Power>(
+template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -581,6 +661,7 @@ std::optional<Expr<SomeType>> Negation(
             messages.Say("LOGICAL cannot be negated"_err_en_US);
             return NoExpr();
           },
+          [&](Expr<SomeUnsigned> &&x) { return Package(-std::move(x)); },
           [&](Expr<SomeDerived> &&) {
             messages.Say("Operand cannot be negated"_err_en_US);
             return NoExpr();
@@ -611,6 +692,10 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
       common::visitors{
           [=](Expr<SomeInteger> &&ix,
               Expr<SomeInteger> &&iy) -> std::optional<Expr<LogicalResult>> {
+            return PromoteAndRelate(opr, std::move(ix), std::move(iy));
+          },
+          [=](Expr<SomeUnsigned> &&ix,
+              Expr<SomeUnsigned> &&iy) -> std::optional<Expr<LogicalResult>> {
             return PromoteAndRelate(opr, std::move(ix), std::move(iy));
           },
           [=](Expr<SomeReal> &&rx,
@@ -718,6 +803,16 @@ std::optional<Expr<SomeType>> ConvertToType(
           ConvertToKind<TypeCategory::Integer>(type.kind(), std::move(*boz))};
     }
     return ConvertToNumeric<TypeCategory::Integer>(type.kind(), std::move(x));
+  case TypeCategory::Unsigned:
+    if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
+      return Expr<SomeType>{
+          ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*boz))};
+    }
+    if (auto *cx{UnwrapExpr<Expr<SomeUnsigned>>(x)}) {
+      return Expr<SomeType>{
+          ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*cx))};
+    }
+    break;
   case TypeCategory::Real:
     if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
       return Expr<SomeType>{

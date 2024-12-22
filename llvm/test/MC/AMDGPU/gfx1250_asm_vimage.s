@@ -1,5 +1,5 @@
 ; RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefixes=GFX1250 %s
-; RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 tensor_load_to_lds s[0:3], s[4:11] r128
 // GFX1250: tensor_load_to_lds s[0:3], s[4:11] r128 ; encoding: [0x11,0x00,0x71,0xd0,0x00,0x00,0x00,0x00,0x00,0x04,0x7c,0x7c]

@@ -1,4 +1,4 @@
-; RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
+; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
 ;; DOT4_F32_*, DOT2_F32_*, DOT2_F16 and DOT2_BF16
 

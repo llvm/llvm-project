@@ -127,6 +127,8 @@ namespace {
     void PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                      bool ForceNoStmt = false);
     void PrintFPPragmas(CompoundStmt *S);
+    void PrintOpenACCClauseList(OpenACCConstructStmt *S);
+    void PrintOpenACCConstruct(OpenACCConstructStmt *S);
 
     void PrintExpr(Expr *E) {
       if (E)
@@ -1155,87 +1157,76 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 //===----------------------------------------------------------------------===//
 //  OpenACC construct printing methods
 //===----------------------------------------------------------------------===//
-void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
-  Indent() << "#pragma acc " << S->getDirectiveKind();
-
+void StmtPrinter::PrintOpenACCClauseList(OpenACCConstructStmt *S) {
   if (!S->clauses().empty()) {
     OS << ' ';
     OpenACCClausePrinter Printer(OS, Policy);
     Printer.VisitClauseList(S->clauses());
   }
+}
+void StmtPrinter::PrintOpenACCConstruct(OpenACCConstructStmt *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+  PrintOpenACCClauseList(S);
   OS << '\n';
-
+}
+void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  PrintOpenACCConstruct(S);
   PrintStmt(S->getStructuredBlock());
 }
 
 void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
-  Indent() << "#pragma acc loop";
-
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
-  }
-  OS << '\n';
-
+  PrintOpenACCConstruct(S);
   PrintStmt(S->getLoop());
 }
 
 void StmtPrinter::VisitOpenACCCombinedConstruct(OpenACCCombinedConstruct *S) {
-  Indent() << "#pragma acc " << S->getDirectiveKind();
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
-  }
-  OS << '\n';
-
+  PrintOpenACCConstruct(S);
   PrintStmt(S->getLoop());
 }
 
 void StmtPrinter::VisitOpenACCDataConstruct(OpenACCDataConstruct *S) {
-  Indent() << "#pragma acc data";
-
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
-  }
-  OS << '\n';
-
+  PrintOpenACCConstruct(S);
+  PrintStmt(S->getStructuredBlock());
+}
+void StmtPrinter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
+  PrintOpenACCConstruct(S);
   PrintStmt(S->getStructuredBlock());
 }
 void StmtPrinter::VisitOpenACCEnterDataConstruct(OpenACCEnterDataConstruct *S) {
-  Indent() << "#pragma acc enter data";
-
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
-  }
-  OS << '\n';
+  PrintOpenACCConstruct(S);
 }
 void StmtPrinter::VisitOpenACCExitDataConstruct(OpenACCExitDataConstruct *S) {
-  Indent() << "#pragma acc exit data";
-
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
-  }
-  OS << '\n';
+  PrintOpenACCConstruct(S);
 }
-void StmtPrinter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
-  Indent() << "#pragma acc host_data";
+void StmtPrinter::VisitOpenACCInitConstruct(OpenACCInitConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+void StmtPrinter::VisitOpenACCShutdownConstruct(OpenACCShutdownConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
 
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
+void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
+  Indent() << "#pragma acc wait";
+  if (!S->getLParenLoc().isInvalid()) {
+    OS << "(";
+    if (S->hasDevNumExpr()) {
+      OS << "devnum: ";
+      S->getDevNumExpr()->printPretty(OS, nullptr, Policy);
+      OS << " : ";
+    }
+
+    if (S->hasQueuesTag())
+      OS << "queues: ";
+
+    llvm::interleaveComma(S->getQueueIdExprs(), OS, [&](const Expr *E) {
+      E->printPretty(OS, nullptr, Policy);
+    });
+
+    OS << ")";
   }
-  OS << '\n';
 
-  PrintStmt(S->getStructuredBlock());
+  PrintOpenACCClauseList(S);
+  OS << '\n';
 }
 
 //===----------------------------------------------------------------------===//

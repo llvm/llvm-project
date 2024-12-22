@@ -444,6 +444,10 @@ public:
   bool isBitcastCompatible(const SPIRVType *Type1,
                            const SPIRVType *Type2) const;
 
+  // Informs about removal of the machine instruction and invalidates data
+  // structures referring this instruction.
+  void invalidateMachineInstr(MachineInstr *MI);
+
 private:
   SPIRVType *getOpTypeBool(MachineIRBuilder &MIRBuilder);
 

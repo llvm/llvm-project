@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 v_bitop3_b32_e64_dpp v5, v1, v2, v3 quad_perm:[3,2,1,0]
 // GFX1250: v_bitop3_b32_e64_dpp v5, v1, v2, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x34,0xd6,0xfa,0x04,0x0e,0x04,0x01,0x1b,0x00,0xff]

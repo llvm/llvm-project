@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding < %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 v_pk_fma_f32 v[8:9], v[0:1], s[0:1], v[4:5]
 // GFX1250: v_pk_fma_f32 v[8:9], v[0:1], s[0:1], v[4:5] ; encoding: [0x08,0x40,0x1f,0xcc,0x00,0x01,0x10,0x1c]

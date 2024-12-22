@@ -84,8 +84,8 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[CMP_N14:%.*]] = icmp eq i64 [[N_VEC3]], [[ZEXT]]
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N14]], label [[FOR_END]], label [[FOR_BODY]]
 ; AUTO_VEC:       for.body:
-; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ [[CONV1:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END8]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ [[CONV1:%.*]], [[FOR_BODY]] ], [ [[IND_END8]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    store float [[X_06]], ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1]] = fadd fast float [[X_06]], 5.000000e-01
@@ -468,8 +468,8 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC:       for.cond.cleanup:
 ; AUTO_VEC-NEXT:    ret void
 ; AUTO_VEC:       for.body:
-; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; AUTO_VEC-NEXT:    [[X_012:%.*]] = phi float [ [[ADD3:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[X_012:%.*]] = phi float [ [[ADD3:%.*]], [[FOR_BODY]] ], [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[P]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[ADD:%.*]] = fadd reassoc float [[X_012]], [[TMP16]]

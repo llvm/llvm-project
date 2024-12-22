@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX1250
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX1250
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX1250
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX1250
 
 # GFX1250: v_dual_add_f32 v0, -v1, v2 :: v_dual_add_nc_u32 v5, v6, v7 ; encoding: [0x01,0x01,0x11,0xcf,0x06,0x03,0x02,0x00,0x00,0x07,0x00,0x05]
 0x01,0x01,0x11,0xcf,0x06,0x03,0x02,0x00,0x00,0x07,0x00,0x05

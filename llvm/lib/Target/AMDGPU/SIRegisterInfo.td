@@ -1031,10 +1031,10 @@ multiclass SRegClass<int numRegs,
 
     def SReg_ # suffix :
       SIRegisterClass<"AMDGPU", regTypes, 32,
-                    !con(!dag(add, [!cast<RegisterClass>(sgprName)], ["sgpr"]),
-                    !if(hasTTMP,
-                        !dag(add, [!cast<RegisterClass>(ttmpName)], ["ttmp"]),
-                        (add)))> {
+                      !con((add !cast<RegisterClass>(sgprName)),
+                           !if(hasTTMP,
+                               (add !cast<RegisterClass>(ttmpName)),
+                               (add)))> {
       let isAllocatable = 0;
       let BaseClassOrder = !mul(numRegs, 32);
     }
@@ -1432,7 +1432,11 @@ def SSrc_f32_Deferred : SrcRegOrImmDeferred9<SReg_32, "OPW32", "OPERAND_REG_IMM_
 //  SCSrc_* Operands with an SGPR or a inline constant
 //===----------------------------------------------------------------------===//
 
+def SCSrc_bf16: SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_BF16", 16, OperandSemantics.BF16>;
+def SCSrc_f16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_FP16", 16, OperandSemantics.FP16>;
+def SCSrc_b16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_INT16", 16, OperandSemantics.INT>;
 def SCSrc_b32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def SCSrc_f32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_FP32", 32, OperandSemantics.FP32>;
 def SCSrc_b64 : SrcRegOrImm9 <SReg_64, "OPW64", "OPERAND_REG_INLINE_C_INT64", 64, OperandSemantics.INT>;
 
 //===----------------------------------------------------------------------===//

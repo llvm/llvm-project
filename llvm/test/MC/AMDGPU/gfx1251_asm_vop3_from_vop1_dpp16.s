@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1251 -show-encoding < %s | FileCheck --check-prefix=GFX1251 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1251 -show-encoding < %s | FileCheck --check-prefix=GFX1251 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
 v_mov_b64_e64_dpp v[4:5], v[2:3] row_share:1
 // GFX1251: v_mov_b64_e64_dpp v[4:5], v[2:3] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0x04,0x00,0x9d,0xd5,0xfa,0x00,0x00,0x00,0x02,0x51,0x01,0xff]
