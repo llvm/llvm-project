@@ -90,7 +90,7 @@
 "`P0521R0 <https://wg21.link/P0521R0>`__","Proposed Resolution for CA 14 (shared_ptr use_count/unique)","2016-11 (Issaquah)","|Complete|","18",""
 "","","","","",""
 "`P0156R2 <https://wg21.link/P0156R2>`__","Variadic Lock guard(rev 5)","2017-02 (Kona)","|Complete|","5",""
-"`P0270R3 <https://wg21.link/P0270R3>`__","Removing C dependencies from signal handler wording","2017-02 (Kona)","","",""
+"`P0270R3 <https://wg21.link/P0270R3>`__","Removing C dependencies from signal handler wording","2017-02 (Kona)","|Nothing To Do|","",""
 "`P0298R3 <https://wg21.link/P0298R3>`__","A byte type definition","2017-02 (Kona)","|Complete|","5",""
 "`P0317R1 <https://wg21.link/P0317R1>`__","Directory Entry Caching for Filesystem","2017-02 (Kona)","|Complete|","7",""
 "`P0430R2 <https://wg21.link/P0430R2>`__","File system library on non-POSIX-like operating systems","2017-02 (Kona)","|Complete|","7",""
