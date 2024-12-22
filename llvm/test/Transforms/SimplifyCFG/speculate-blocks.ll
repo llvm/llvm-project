@@ -78,3 +78,250 @@ final_right:
 
 declare void @sideeffect0()
 declare void @sideeffect1()
+
+define i1 @speculate_empty_bb(i32 %x, i32 %y) {
+; YES-LABEL: define i1 @speculate_empty_bb
+; YES-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; YES-NEXT:  start:
+; YES-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; YES-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; YES:       bb6:
+; YES-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; YES-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; YES:       bb5:
+; YES-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; YES-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; YES:       bb2:
+; YES-NEXT:    br label [[BB3]]
+; YES:       bb3:
+; YES-NEXT:    [[RET:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[BB6]] ], [ false, [[BB5]] ]
+; YES-NEXT:    ret i1 [[RET]]
+;
+; NO-LABEL: define i1 @speculate_empty_bb
+; NO-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; NO-NEXT:  start:
+; NO-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; NO-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; NO:       bb6:
+; NO-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; NO-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; NO:       bb5:
+; NO-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; NO-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; NO:       bb2:
+; NO-NEXT:    br label [[BB3]]
+; NO:       bb3:
+; NO-NEXT:    [[RET:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[BB6]] ], [ false, [[BB5]] ]
+; NO-NEXT:    ret i1 [[RET]]
+;
+start:
+  %cmp1 = icmp eq i32 %x, 0
+  br i1 %cmp1, label %bb6, label %bb5
+
+bb6:
+  %cmp2 = icmp eq i32 %y, 0
+  br i1 %cmp2, label %bb2, label %bb3
+
+bb5:
+  %cmp3 = icmp ult i32 %x, %y
+  br i1 %cmp3, label %bb3, label %bb2
+
+bb2:
+  br label %bb3
+
+bb3:
+  %ret = phi i1 [ true, %bb2 ], [ false, %bb6 ], [ false, %bb5 ]
+  ret i1 %ret
+}
+
+define i32 @speculate_empty_bb_not_simplifiable(i32 %x, i32 %y) {
+; YES-LABEL: define i32 @speculate_empty_bb_not_simplifiable
+; YES-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; YES-NEXT:  start:
+; YES-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; YES-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; YES:       bb6:
+; YES-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; YES-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; YES:       bb5:
+; YES-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; YES-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; YES:       bb2:
+; YES-NEXT:    br label [[BB3]]
+; YES:       bb3:
+; YES-NEXT:    [[RET:%.*]] = phi i32 [ 10, [[BB2]] ], [ 20, [[BB6]] ], [ 30, [[BB5]] ]
+; YES-NEXT:    ret i32 [[RET]]
+;
+; NO-LABEL: define i32 @speculate_empty_bb_not_simplifiable
+; NO-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; NO-NEXT:  start:
+; NO-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; NO-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; NO:       bb6:
+; NO-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; NO-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; NO:       bb5:
+; NO-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; NO-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; NO:       bb2:
+; NO-NEXT:    br label [[BB3]]
+; NO:       bb3:
+; NO-NEXT:    [[RET:%.*]] = phi i32 [ 10, [[BB2]] ], [ 20, [[BB6]] ], [ 30, [[BB5]] ]
+; NO-NEXT:    ret i32 [[RET]]
+;
+start:
+  %cmp1 = icmp eq i32 %x, 0
+  br i1 %cmp1, label %bb6, label %bb5
+
+bb6:
+  %cmp2 = icmp eq i32 %y, 0
+  br i1 %cmp2, label %bb2, label %bb3
+
+bb5:
+  %cmp3 = icmp ult i32 %x, %y
+  br i1 %cmp3, label %bb3, label %bb2
+
+bb2:
+  br label %bb3
+
+bb3:
+  %ret = phi i32 [ 10, %bb2 ], [ 20, %bb6 ], [ 30, %bb5 ]
+  ret i32 %ret
+}
+
+define i1 @speculate_nonempty_bb(i32 %x, i32 %y) {
+; YES-LABEL: define i1 @speculate_nonempty_bb
+; YES-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; YES-NEXT:  start:
+; YES-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; YES-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; YES:       bb6:
+; YES-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; YES-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; YES:       bb5:
+; YES-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; YES-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; YES:       bb2:
+; YES-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[BB6]] ], [ [[Y]], [[BB5]] ]
+; YES-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[PHI]], 0
+; YES-NEXT:    br label [[BB3]]
+; YES:       bb3:
+; YES-NEXT:    [[RET:%.*]] = phi i1 [ [[CMP4]], [[BB2]] ], [ false, [[BB6]] ], [ false, [[BB5]] ]
+; YES-NEXT:    ret i1 [[RET]]
+;
+; NO-LABEL: define i1 @speculate_nonempty_bb
+; NO-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; NO-NEXT:  start:
+; NO-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; NO-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; NO:       bb6:
+; NO-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; NO-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; NO:       bb5:
+; NO-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; NO-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; NO:       bb2:
+; NO-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[BB6]] ], [ [[Y]], [[BB5]] ]
+; NO-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[PHI]], 0
+; NO-NEXT:    br label [[BB3]]
+; NO:       bb3:
+; NO-NEXT:    [[RET:%.*]] = phi i1 [ [[CMP4]], [[BB2]] ], [ false, [[BB6]] ], [ false, [[BB5]] ]
+; NO-NEXT:    ret i1 [[RET]]
+;
+start:
+  %cmp1 = icmp eq i32 %x, 0
+  br i1 %cmp1, label %bb6, label %bb5
+
+bb6:
+  %cmp2 = icmp eq i32 %y, 0
+  br i1 %cmp2, label %bb2, label %bb3
+
+bb5:
+  %cmp3 = icmp ult i32 %x, %y
+  br i1 %cmp3, label %bb3, label %bb2
+
+bb2:
+  %phi = phi i32 [ %x, %bb6 ], [ %y, %bb5 ]
+  %cmp4 = icmp eq i32 %phi, 0
+  br label %bb3
+
+bb3:
+  %ret = phi i1 [ %cmp4, %bb2 ], [ false, %bb6 ], [ false, %bb5 ]
+  ret i1 %ret
+}
+
+define i1 @speculate_empty_bb_too_many_select(i32 %x, i32 %y) {
+; YES-LABEL: define i1 @speculate_empty_bb_too_many_select
+; YES-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; YES-NEXT:  start:
+; YES-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; YES-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; YES:       bb6:
+; YES-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; YES-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; YES:       bb5:
+; YES-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; YES-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; YES:       bb2:
+; YES-NEXT:    br label [[BB3]]
+; YES:       bb3:
+; YES-NEXT:    [[RET:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[BB6]] ], [ false, [[BB5]] ]
+; YES-NEXT:    [[RET2:%.*]] = phi i32 [ [[X]], [[BB2]] ], [ [[Y]], [[BB6]] ], [ [[X]], [[BB5]] ]
+; YES-NEXT:    [[RET3:%.*]] = phi i32 [ [[Y]], [[BB2]] ], [ [[X]], [[BB6]] ], [ [[X]], [[BB5]] ]
+; YES-NEXT:    [[RET4:%.*]] = phi i32 [ 0, [[BB2]] ], [ 3, [[BB6]] ], [ 5, [[BB5]] ]
+; YES-NEXT:    [[ADD:%.*]] = add i32 [[RET2]], [[RET3]]
+; YES-NEXT:    [[ADD2:%.*]] = add i32 [[ADD]], [[RET4]]
+; YES-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[ADD2]], 0
+; YES-NEXT:    [[AND:%.*]] = and i1 [[RET]], [[CMP4]]
+; YES-NEXT:    ret i1 [[AND]]
+;
+; NO-LABEL: define i1 @speculate_empty_bb_too_many_select
+; NO-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; NO-NEXT:  start:
+; NO-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 0
+; NO-NEXT:    br i1 [[CMP1]], label [[BB6:%.*]], label [[BB5:%.*]]
+; NO:       bb6:
+; NO-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
+; NO-NEXT:    br i1 [[CMP2]], label [[BB2:%.*]], label [[BB3:%.*]]
+; NO:       bb5:
+; NO-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[X]], [[Y]]
+; NO-NEXT:    br i1 [[CMP3]], label [[BB3]], label [[BB2]]
+; NO:       bb2:
+; NO-NEXT:    br label [[BB3]]
+; NO:       bb3:
+; NO-NEXT:    [[RET:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[BB6]] ], [ false, [[BB5]] ]
+; NO-NEXT:    [[RET2:%.*]] = phi i32 [ [[X]], [[BB2]] ], [ [[Y]], [[BB6]] ], [ [[X]], [[BB5]] ]
+; NO-NEXT:    [[RET3:%.*]] = phi i32 [ [[Y]], [[BB2]] ], [ [[X]], [[BB6]] ], [ [[X]], [[BB5]] ]
+; NO-NEXT:    [[RET4:%.*]] = phi i32 [ 0, [[BB2]] ], [ 3, [[BB6]] ], [ 5, [[BB5]] ]
+; NO-NEXT:    [[ADD:%.*]] = add i32 [[RET2]], [[RET3]]
+; NO-NEXT:    [[ADD2:%.*]] = add i32 [[ADD]], [[RET4]]
+; NO-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[ADD2]], 0
+; NO-NEXT:    [[AND:%.*]] = and i1 [[RET]], [[CMP4]]
+; NO-NEXT:    ret i1 [[AND]]
+;
+start:
+  %cmp1 = icmp eq i32 %x, 0
+  br i1 %cmp1, label %bb6, label %bb5
+
+bb6:
+  %cmp2 = icmp eq i32 %y, 0
+  br i1 %cmp2, label %bb2, label %bb3
+
+bb5:
+  %cmp3 = icmp ult i32 %x, %y
+  br i1 %cmp3, label %bb3, label %bb2
+
+bb2:
+  br label %bb3
+
+bb3:
+  %ret = phi i1 [ true, %bb2 ], [ false, %bb6 ], [ false, %bb5 ]
+  %ret2 = phi i32 [ %x, %bb2 ], [ %y, %bb6 ], [ %x, %bb5 ]
+  %ret3 = phi i32 [ %y, %bb2 ], [ %x, %bb6 ], [ %x, %bb5 ]
+  %ret4 = phi i32 [ 0, %bb2 ], [ 3, %bb6 ], [ 5, %bb5 ]
+  %add = add i32 %ret2, %ret3
+  %add2 = add i32 %add, %ret4
+  %cmp4 = icmp eq i32 %add2, 0
+  %and = and i1 %ret, %cmp4
+  ret i1 %and
+}
