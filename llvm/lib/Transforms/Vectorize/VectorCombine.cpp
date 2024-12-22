@@ -2376,6 +2376,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   if (NumVisited <= 1)
     return false;
 
+  LLVM_DEBUG(dbgs() << "Found a superfluous identity shuffle: " << I << "\n");
+
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
   Builder.SetInsertPoint(&I);
