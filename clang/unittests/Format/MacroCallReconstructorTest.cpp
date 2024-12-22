@@ -219,7 +219,7 @@ TEST_F(MacroCallReconstructorTest, Identifier) {
   EXPECT_THAT(std::move(Unexp).takeResult(), matchesLine(line(U.consume("X"))));
 }
 
-TEST_F(MacroCallReconstructorTest, IdentifierObject) {
+TEST_F(MacroCallReconstructorTest, EmptyDefinition) {
   auto Macros = createExpander({"X"});
   Expansion Exp(Lex, *Macros);
   TokenList Call = Exp.expand("X");
