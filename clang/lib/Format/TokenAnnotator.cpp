@@ -17,6 +17,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "format-token-annotator"
@@ -37,6 +39,9 @@ static bool mustBreakAfterAttributes(const FormatToken &Tok,
 }
 
 namespace {
+
+SmallVector<llvm::StringRef, 100> castIdentifiers{"__type_identity_t",
+                                                  "remove_reference_t"};
 
 /// Returns \c true if the line starts with a token that can start a statement
 /// with an initializer.
@@ -2474,6 +2479,9 @@ private:
           Current.getNextNonComment()->isOneOf(tok::comma, tok::r_brace)) {
         Current.setType(TT_StringInConcatenation);
       }
+    } else if (Current.is(tok::kw_using)) {
+      if (Current.Next->Next->Next->isTypeName(LangOpts))
+        castIdentifiers.push_back(Current.Next->TokenText);
     } else if (Current.is(tok::l_paren)) {
       if (lParenStartsCppCast(Current))
         Current.setType(TT_CppCastLParen);
@@ -2831,8 +2839,18 @@ private:
         IsQualifiedPointerOrReference(BeforeRParen, LangOpts);
     bool ParensCouldEndDecl =
         AfterRParen->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
-    if (ParensAreType && !ParensCouldEndDecl)
+    if (ParensAreType && !ParensCouldEndDecl) {
+      if (BeforeRParen->is(TT_TemplateCloser)) {
+        auto *Prev = BeforeRParen->MatchingParen->getPreviousNonComment();
+        if (Prev) {
+          for (auto &name : castIdentifiers)
+            if (Prev->TokenText == name)
+              return true;
+          return false;
+        }
+      }
       return true;
+    }
 
     // At this point, we heuristically assume that there are no casts at the
     // start of the line. We assume that we have found most cases where there
