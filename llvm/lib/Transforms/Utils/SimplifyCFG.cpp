@@ -6531,17 +6531,8 @@ SwitchLookupTable::SwitchLookupTable(
     uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
     TableContents[Idx] = CaseRes;
 
-    if (SingleValue && CaseRes != SingleValue) {
-      if (isa<PoisonValue>(SingleValue)) {
-        // All of the switch cases until now have returned poison.
-        // If this case returns a non-poison value, ignore the previous
-        // poisons and use this case's result as the single constant
-        // value.
-        if (!isa<PoisonValue>(CaseRes))
-          SingleValue = CaseRes;
-      } else if (!isa<PoisonValue>(CaseRes))
-        SingleValue = nullptr;
-    }
+    if (SingleValue && !isa<PoisonValue>(CaseRes) && CaseRes != SingleValue)
+      SingleValue = isa<PoisonValue>(SingleValue) ? CaseRes : nullptr;
   }
 
   // Fill in any holes in the table with the default result.
