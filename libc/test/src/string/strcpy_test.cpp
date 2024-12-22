@@ -45,5 +45,6 @@ TEST(LlvmLibcStrCpyTest, OffsetDest) {
 }
 
 TEST(LlvmLibcStrCpyTest, CrashOnNullPtr) {
-  ASSERT_DEATH( [](){LIBC_NAMESPACE::strcpy(nullptr, nullptr); } , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::strcpy(nullptr, nullptr); },
+               WITH_SIGNAL(SIGSEGV));
 }

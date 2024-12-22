@@ -123,5 +123,6 @@ TEST(LlvmLibcMemChrTest, SignedCharacterFound) {
 }
 
 TEST(LlvmLibcMemChrTest, CrashOnNullPtr) {
-  ASSERT_DEATH([](){ LIBC_NAMESPACE::memchr(nullptr, 1, 1); } , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memchr(nullptr, 1, 1); },
+               WITH_SIGNAL(SIGSEGV));
 }

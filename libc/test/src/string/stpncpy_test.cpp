@@ -73,5 +73,6 @@ TEST_F(LlvmLibcStpncpyTest, CopyTwoWithNull) {
   check_stpncpy(dst, src, 2, expected, 1);
 }
 TEST_F(LlvmLibcStpncpyTest, CrashOnNullPtr) {
-  ASSERT_DEATH( [](){LIBC_NAMESPACE::stpncpy(nullptr, nullptr, 1);} , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::stpncpy(nullptr, nullptr, 1); },
+               WITH_SIGNAL(SIGSEGV));
 }

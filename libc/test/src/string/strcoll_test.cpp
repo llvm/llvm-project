@@ -30,5 +30,6 @@ TEST(LlvmLibcStrcollTest, SimpleTest) {
   ASSERT_GT(result, 0);
 }
 TEST(LlvmLibcStrcollTest, CrashOnNullPtr) {
-  ASSERT_DEATH( [](){LIBC_NAMESPACE::strcoll(nullptr, nullptr);} , WITH_SIGNAL(SIGSEGV));
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::strcoll(nullptr, nullptr); },
+               WITH_SIGNAL(SIGSEGV));
 }
