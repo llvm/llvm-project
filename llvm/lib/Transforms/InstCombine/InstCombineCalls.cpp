@@ -3172,6 +3172,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         MaybeSimplifyHint(OBU.Inputs[0]);
         MaybeSimplifyHint(OBU.Inputs[1]);
       }
+
+      // Try to clean up some assumption that are not very useful after this
+      // point.
+      if (CleanupAssumptions && OBU.getTagName() == "dereferenceable") {
+        auto *New = CallBase::removeOperandBundle(II, OBU.getTagID());
+        return New;
+      }
     }
 
     // Convert nonnull assume like:

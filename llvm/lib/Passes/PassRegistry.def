@@ -540,7 +540,7 @@ FUNCTION_PASS_WITH_PARAMS(
     [](InstCombineOptions Opts) { return InstCombinePass(Opts); },
     parseInstCombineOptions,
     "no-use-loop-info;use-loop-info;no-verify-fixpoint;verify-fixpoint;"
-    "max-iterations=N")
+    "max-iterations=N;cleanup-assumptions")
 FUNCTION_PASS_WITH_PARAMS(
     "loop-unroll", "LoopUnrollPass",
     [](LoopUnrollOptions Opts) { return LoopUnrollPass(Opts); },

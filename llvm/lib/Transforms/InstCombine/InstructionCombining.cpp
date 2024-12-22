@@ -5524,7 +5524,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, RPOT);
+                        ORE, BFI, BPI, PSI, DL, RPOT, Opts.CleanupAssumptions);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
@@ -5573,7 +5573,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &LRT = AM.getResult<LastRunTrackingAnalysis>(F);
   // No changes since last InstCombine pass, exit early.
-  if (LRT.shouldSkip(&ID))
+  if (LRT.shouldSkip(&ID) && !Options.CleanupAssumptions)
     return PreservedAnalyses::all();
 
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
