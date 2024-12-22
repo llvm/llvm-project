@@ -3506,6 +3506,96 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   return true;
 }
 
+/// Speculate a conditional basic block flattening the CFG.
+/// Compared to speculativelyExecuteBB, it allows \p ThenBB to have multiple
+/// predecessors other than the current BB. An illustration of this transform is
+/// turning this IR:
+/// \code
+///   BB:
+///     %cmp = icmp ult %x, %y
+///     br i1 %cmp, label %EndBB, label %ThenBB
+///   ThenBB:
+///     br label BB2
+///   EndBB:
+///     %phi = phi i1 [ true, %ThenBB ], [ false, %BB ], [ false, %OtherBB ]
+///     ...
+/// \endcode
+///
+/// Into this IR:
+/// \code
+///   BB:
+///     %cmp = icmp ult %x, %y
+///     %sel = select i1 %cmp, i1 true, i1 false
+///     br label %EndBB
+///   ThenBB:
+///     br label BB2
+///   EndBB:
+///     %phi = phi i1 [ %sel, %ThenBB ], [ false, %BB ], [ false, %OtherBB ]
+///     ...
+/// \endcode
+/// \returns true if the branch edge is removed.
+static bool speculativelyExecuteEmptyBB(BranchInst *BI, bool Invert,
+                                        DomTreeUpdater *DTU,
+                                        const TargetTransformInfo &TTI) {
+  BasicBlock *BB = BI->getParent();
+  BasicBlock *ThenBB = BI->getSuccessor(Invert);
+  BasicBlock *EndBB = BI->getSuccessor(!Invert);
+
+  BranchInst *SuccBI = dyn_cast<BranchInst>(ThenBB->getTerminator());
+  if (!SuccBI || !SuccBI->isUnconditional() || SuccBI->getSuccessor(0) != EndBB)
+    return false;
+  if (&ThenBB->front() != SuccBI)
+    return false;
+  if (!isProfitableToSpeculate(BI, Invert, TTI))
+    return false;
+
+  InstructionCost Budget =
+      PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
+  InstructionCost Cost = 0;
+  unsigned SpeculatedInstructions = 0;
+  if (!validateAndCostRequiredSelects(BB, ThenBB, EndBB, SpeculatedInstructions,
+                                      Cost, TTI) ||
+      Cost > Budget)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
+
+  // Insert selects and rewrite the PHI operands.
+  Value *BrCond = BI->getCondition();
+  IRBuilder<NoFolder> Builder(BI);
+  for (PHINode &PN : EndBB->phis()) {
+    unsigned OrigI = PN.getBasicBlockIndex(BB);
+    unsigned ThenI = PN.getBasicBlockIndex(ThenBB);
+    Value *OrigV = PN.getIncomingValue(OrigI);
+    Value *ThenV = PN.getIncomingValue(ThenI);
+
+    // Skip PHIs which are trivial.
+    if (OrigV == ThenV)
+      continue;
+
+    // Create a select whose true value is the speculatively executed value and
+    // false value is the pre-existing value. Swap them if the branch
+    // destinations were inverted.
+    Value *TrueV = ThenV, *FalseV = OrigV;
+    if (Invert)
+      std::swap(TrueV, FalseV);
+    Value *V = Builder.CreateSelect(BrCond, TrueV, FalseV, "spec.select", BI);
+    PN.setIncomingValue(OrigI, V);
+  }
+
+  // Modify CFG
+  ThenBB->removePredecessor(BB);
+  BranchInst *NewBI = Builder.CreateBr(EndBB);
+  // Transfer the metadata to the new branch instruction.
+  NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
+                            LLVMContext::MD_annotation});
+  BI->eraseFromParent();
+  if (DTU)
+    DTU->applyUpdates({{DominatorTree::Delete, BB, ThenBB}});
+
+  return true;
+}
+
 /// Return true if we can thread a branch across this block.
 static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   int Size = 0;
@@ -8123,6 +8213,13 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
         Succ1TI->getSuccessor(0) == BI->getSuccessor(0))
       if (speculativelyExecuteBB(BI, BI->getSuccessor(1)))
         return requestResimplify();
+  }
+
+  if (Options.SpeculateBlocks) {
+    if (speculativelyExecuteEmptyBB(BI, /*Invert=*/false, DTU, TTI))
+      return true;
+    if (speculativelyExecuteEmptyBB(BI, /*Invert=*/true, DTU, TTI))
+      return true;
   }
 
   // If this is a branch on something for which we know the constant value in
