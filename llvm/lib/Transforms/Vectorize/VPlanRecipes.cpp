@@ -3124,24 +3124,6 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPCanonicalIVPHIRecipe::isCanonical(
-    InductionDescriptor::InductionKind Kind, VPValue *Start,
-    VPValue *Step) const {
-  // Must be an integer induction.
-  if (Kind != InductionDescriptor::IK_IntInduction)
-    return false;
-  // Start must match the start value of this canonical induction.
-  if (Start != getStartValue())
-    return false;
-
-  // If the step is defined by a recipe, it is not a ConstantInt.
-  if (Step->getDefiningRecipe())
-    return false;
-
-  ConstantInt *StepC = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
-  return StepC && StepC->isOne();
-}
-
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return IsScalarAfterVectorization &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
