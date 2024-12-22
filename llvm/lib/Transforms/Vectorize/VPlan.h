@@ -1688,6 +1688,9 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
+  /// Return the ID of the intrinsic.
+  Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
+
   /// Return the scalar return type of the intrinsic.
   Type *getResultType() const { return ResultTy; }
 
