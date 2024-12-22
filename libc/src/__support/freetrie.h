@@ -96,7 +96,7 @@ public:
   LIBC_INLINE bool empty() const { return !root; }
 
   /// Push a block to the trie.
-  void push(Block<> *block);
+  void push(Block *block);
 
   /// Remove a node from this trie node's free list.
   void remove(Node *node);
@@ -117,7 +117,7 @@ private:
   SizeRange range;
 };
 
-LIBC_INLINE void FreeTrie::push(Block<> *block) {
+LIBC_INLINE void FreeTrie::push(Block *block) {
   LIBC_ASSERT(block->inner_size_free() >= sizeof(Node) &&
               "block too small to accomodate free trie node");
   size_t size = block->inner_size();

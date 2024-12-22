@@ -38,7 +38,6 @@
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <new>
 #include <tuple>
 #include <typeinfo>
 
@@ -147,8 +146,8 @@ class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)> {
   _LIBCPP_COMPRESSED_PAIR(_Fp, __func_, _Ap, __alloc_);
 
 public:
-  typedef _LIBCPP_NODEBUG _Fp _Target;
-  typedef _LIBCPP_NODEBUG _Ap _Alloc;
+  using _Target _LIBCPP_NODEBUG = _Fp;
+  using _Alloc _LIBCPP_NODEBUG  = _Ap;
 
   _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __func_; }
 
@@ -199,7 +198,7 @@ class __default_alloc_func<_Fp, _Rp(_ArgTypes...)> {
   _Fp __f_;
 
 public:
-  typedef _LIBCPP_NODEBUG _Fp _Target;
+  using _Target _LIBCPP_NODEBUG = _Fp;
 
   _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __f_; }
 

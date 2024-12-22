@@ -1,7 +1,7 @@
 # It is not safe to make the transformation if the definition is killed by a call.
 # Use debug output for simplicity and test resilience.
 #
-# RUN: llc -march=hexagon -run-pass amode-opt %s -print-after-all -o %t_1.mir 2>&1 | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass amode-opt %s -print-after-all -o %t_1.mir 2>&1 | FileCheck %s
 # CHECK: bb.4.if.else
 # CHECK-NOT: liveins: $r2
 --- |

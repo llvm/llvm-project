@@ -15,6 +15,7 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
@@ -36,7 +37,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

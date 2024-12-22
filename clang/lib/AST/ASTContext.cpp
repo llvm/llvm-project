@@ -112,6 +112,27 @@ enum FloatingRank {
   Ibm128Rank
 };
 
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
+  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
+
+  static FoldingSetNodeID getTombstoneKey() {
+    FoldingSetNodeID id;
+    for (size_t i = 0; i < sizeof(id) / sizeof(unsigned); ++i) {
+      id.AddInteger(std::numeric_limits<unsigned>::max());
+    }
+    return id;
+  }
+
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.ComputeHash();
+  }
+
+  static bool isEqual(const FoldingSetNodeID &LHS,
+                      const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+
 /// \returns The locations that are relevant when searching for Doc comments
 /// related to \p D.
 static SmallVector<SourceLocation, 2>
@@ -374,10 +395,10 @@ static const Decl &adjustDeclToTemplate(const Decl &D) {
       llvm::PointerUnion<ClassTemplateDecl *,
                          ClassTemplatePartialSpecializationDecl *>
           PU = CTSD->getSpecializedTemplateOrPartial();
-      return PU.is<ClassTemplateDecl *>()
-                 ? *static_cast<const Decl *>(PU.get<ClassTemplateDecl *>())
+      return isa<ClassTemplateDecl *>(PU)
+                 ? *static_cast<const Decl *>(cast<ClassTemplateDecl *>(PU))
                  : *static_cast<const Decl *>(
-                       PU.get<ClassTemplatePartialSpecializationDecl *>());
+                       cast<ClassTemplatePartialSpecializationDecl *>(PU));
     }
 
     // Class is instantiated from a member definition of a class template?
@@ -899,7 +920,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       TemplateSpecializationTypes(this_()),
-      DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
+      DependentTemplateSpecializationTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
@@ -3558,7 +3579,7 @@ ASTContext::adjustType(QualType Orig,
                        llvm::function_ref<QualType(QualType)> Adjust) const {
   switch (Orig->getTypeClass()) {
   case Type::Attributed: {
-    const auto *AT = dyn_cast<AttributedType>(Orig);
+    const auto *AT = cast<AttributedType>(Orig);
     return getAttributedType(AT->getAttrKind(),
                              adjustType(AT->getModifiedType(), Adjust),
                              adjustType(AT->getEquivalentType(), Adjust),
@@ -6223,13 +6244,11 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                          ArrayRef<QualType> Expansions,
                                          int Index) const {
   QualType Canonical;
-  bool ExpandsToEmptyPack = FullySubstituted && Expansions.empty();
   if (FullySubstituted && Index != -1) {
     Canonical = getCanonicalType(Expansions[Index]);
   } else {
     llvm::FoldingSetNodeID ID;
-    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr,
-                              ExpandsToEmptyPack);
+    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr, FullySubstituted);
     void *InsertPos = nullptr;
     PackIndexingType *Canon =
         DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -6238,7 +6257,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
       Canon = new (Mem) PackIndexingType(*this, QualType(), Pattern, IndexExpr,
-                                         ExpandsToEmptyPack, Expansions);
+                                         FullySubstituted, Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -6248,7 +6267,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
                TypeAlignment);
   auto *T = new (Mem) PackIndexingType(*this, Canonical, Pattern, IndexExpr,
-                                       ExpandsToEmptyPack, Expansions);
+                                       FullySubstituted, Expansions);
   Types.push_back(T);
   return QualType(T, 0);
 }
@@ -6296,12 +6315,14 @@ QualType ASTContext::getAutoTypeInternal(
     return getAutoDeductType();
 
   // Look in the folding set for an existing type.
-  void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  AutoType::Profile(ID, *this, DeducedType, Keyword, IsDependent,
-                    TypeConstraintConcept, TypeConstraintArgs);
-  if (AutoType *AT = AutoTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(AT, 0);
+  bool IsDeducedDependent =
+      !DeducedType.isNull() && DeducedType->isDependentType();
+  AutoType::Profile(ID, *this, DeducedType, Keyword,
+                    IsDependent || IsDeducedDependent, TypeConstraintConcept,
+                    TypeConstraintArgs);
+  if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
+    return QualType(AT_iter->getSecond(), 0);
 
   QualType Canon;
   if (!IsCanon) {
@@ -6316,10 +6337,6 @@ QualType ASTContext::getAutoTypeInternal(
         Canon =
             getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
                                 CanonicalConcept, CanonicalConceptArgs, true);
-        // Find the insert position again.
-        [[maybe_unused]] auto *Nothing =
-            AutoTypes.FindNodeOrInsertPos(ID, InsertPos);
-        assert(!Nothing && "canonical type broken");
       }
     }
   }
@@ -6333,8 +6350,13 @@ QualType ASTContext::getAutoTypeInternal(
                    : TypeDependence::None) |
           (IsPack ? TypeDependence::UnexpandedPack : TypeDependence::None),
       Canon, TypeConstraintConcept, TypeConstraintArgs);
+#ifndef NDEBUG
+  llvm::FoldingSetNodeID InsertedID;
+  AT->Profile(InsertedID, *this);
+  assert(InsertedID == ID && "ID does not match");
+#endif
   Types.push_back(AT);
-  AutoTypes.InsertNode(AT, InsertPos);
+  AutoTypes.try_emplace(ID, AT);
   return QualType(AT, 0);
 }
 

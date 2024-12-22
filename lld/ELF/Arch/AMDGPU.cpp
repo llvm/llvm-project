@@ -73,7 +73,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
   // features in the same category are either ANY, ANY and ON, or ANY and OFF).
   for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (retMach != (getEFlags(f) & EF_AMDGPU_MACH)) {
-      ErrAlways(ctx) << "incompatible mach: " << f;
+      Err(ctx) << "incompatible mach: " << f;
       return 0;
     }
 
@@ -82,7 +82,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
             (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)
                 != EF_AMDGPU_FEATURE_XNACK_ANY_V4)) {
       if (retXnack != (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)) {
-        ErrAlways(ctx) << "incompatible xnack: " << f;
+        Err(ctx) << "incompatible xnack: " << f;
         return 0;
       }
     } else {
@@ -95,7 +95,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
             (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4) !=
                 EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)) {
       if (retSramEcc != (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4)) {
-        ErrAlways(ctx) << "incompatible sramecc: " << f;
+        Err(ctx) << "incompatible sramecc: " << f;
         return 0;
       }
     } else {
@@ -143,7 +143,7 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V6:
     return calcEFlagsV6();
   default:
-    ErrAlways(ctx) << "unknown abi version: " << abiVersion;
+    Err(ctx) << "unknown abi version: " << abiVersion;
     return 0;
   }
 }

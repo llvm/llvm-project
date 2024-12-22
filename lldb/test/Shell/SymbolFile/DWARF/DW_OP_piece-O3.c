@@ -5,9 +5,10 @@
 //                 DW_AT_type      (0x00000032 "char[5]")
 //                 DW_AT_location  (DW_OP_piece 0x2, DW_OP_addrx 0x0, DW_OP_piece 0x1)
 
+// UNSUPPORTED: system-windows
 // RUN: %clang_host -O3 -gdwarf %s -o %t
 // RUN: %lldb %t \
-// RUN:   -o "b 25" \
+// RUN:   -o "b 26" \
 // RUN:   -o "r" \
 // RUN:   -o "p/x array[2]" \
 // RUN:   -b | FileCheck %s

@@ -6971,16 +6971,16 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSSZrri:
   case X86::VGETMANTSSZrrib:
   case X86::VGETMANTSSZrmi:
-  case X86::VRNDSCALESDZr:
-  case X86::VRNDSCALESDZr_Int:
-  case X86::VRNDSCALESDZrb_Int:
-  case X86::VRNDSCALESDZm:
-  case X86::VRNDSCALESDZm_Int:
-  case X86::VRNDSCALESSZr:
-  case X86::VRNDSCALESSZr_Int:
-  case X86::VRNDSCALESSZrb_Int:
-  case X86::VRNDSCALESSZm:
-  case X86::VRNDSCALESSZm_Int:
+  case X86::VRNDSCALESDZrri:
+  case X86::VRNDSCALESDZrri_Int:
+  case X86::VRNDSCALESDZrrib_Int:
+  case X86::VRNDSCALESDZrmi:
+  case X86::VRNDSCALESDZrmi_Int:
+  case X86::VRNDSCALESSZrri:
+  case X86::VRNDSCALESSZrri_Int:
+  case X86::VRNDSCALESSZrrib_Int:
+  case X86::VRNDSCALESSZrmi:
+  case X86::VRNDSCALESSZrmi_Int:
   case X86::VRCP14SDZrr:
   case X86::VRCP14SDZrm:
   case X86::VRCP14SSZrr:
@@ -6998,11 +6998,11 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSHZrri:
   case X86::VGETMANTSHZrrib:
   case X86::VGETMANTSHZrmi:
-  case X86::VRNDSCALESHZr:
-  case X86::VRNDSCALESHZr_Int:
-  case X86::VRNDSCALESHZrb_Int:
-  case X86::VRNDSCALESHZm:
-  case X86::VRNDSCALESHZm_Int:
+  case X86::VRNDSCALESHZrri:
+  case X86::VRNDSCALESHZrri_Int:
+  case X86::VRNDSCALESHZrrib_Int:
+  case X86::VRNDSCALESHZrmi:
+  case X86::VRNDSCALESHZrmi_Int:
   case X86::VSQRTSHZr:
   case X86::VSQRTSHZr_Int:
   case X86::VSQRTSHZrb_Int:
@@ -7790,9 +7790,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESSZrri:
     case X86::VREDUCESSZrrik:
     case X86::VREDUCESSZrrikz:
-    case X86::VRNDSCALESSZr_Int:
-    case X86::VRNDSCALESSZr_Intk:
-    case X86::VRNDSCALESSZr_Intkz:
+    case X86::VRNDSCALESSZrri_Int:
+    case X86::VRNDSCALESSZrri_Intk:
+    case X86::VRNDSCALESSZrri_Intkz:
     case X86::VRSQRT14SSZrr:
     case X86::VRSQRT14SSZrrk:
     case X86::VRSQRT14SSZrrkz:
@@ -7959,9 +7959,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESDZrri:
     case X86::VREDUCESDZrrik:
     case X86::VREDUCESDZrrikz:
-    case X86::VRNDSCALESDZr_Int:
-    case X86::VRNDSCALESDZr_Intk:
-    case X86::VRNDSCALESDZr_Intkz:
+    case X86::VRNDSCALESDZrri_Int:
+    case X86::VRNDSCALESDZrri_Intk:
+    case X86::VRNDSCALESDZrri_Intkz:
     case X86::VRSQRT14SDZrr:
     case X86::VRSQRT14SDZrrk:
     case X86::VRSQRT14SDZrrkz:

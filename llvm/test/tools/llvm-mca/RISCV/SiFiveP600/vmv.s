@@ -260,12 +260,12 @@ vmv8r.v	v8, v16
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      256
-# CHECK-NEXT: Total Cycles:      237
+# CHECK-NEXT: Total Cycles:      255
 # CHECK-NEXT: Total uOps:        256
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.08
-# CHECK-NEXT: IPC:               1.08
+# CHECK-NEXT: uOps Per Cycle:    1.00
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 240.0
 
 # CHECK:      Instruction Info:

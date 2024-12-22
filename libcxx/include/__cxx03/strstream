@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STRSTREAM
-#define _LIBCPP_STRSTREAM
+#ifndef _LIBCPP___CXX03_STRSTREAM
+#define _LIBCPP___CXX03_STRSTREAM
 
 /*
     strstream synopsis
@@ -348,4 +348,4 @@ _LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM) || defined(_LIBCPP_BUILDING_LIBRARY)
 
-#endif // _LIBCPP_STRSTREAM
+#endif // _LIBCPP___CXX03_STRSTREAM

@@ -82,7 +82,7 @@ define void @vectorized(ptr noalias nocapture %A, ptr noalias nocapture readonly
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 16, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 16, [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -146,7 +146,7 @@ define void @vectorized1(ptr noalias nocapture %A, ptr noalias nocapture readonl
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[TMP5]], i32 4, <8 x i1> [[TMP1]], <8 x float> poison), !llvm.access.group [[ACC_GRP7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <8 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v8f32.p0(<8 x float> [[TMP6]], ptr [[TMP5]], i32 4, <8 x i1> [[TMP1]]), !llvm.access.group [[ACC_GRP7]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:

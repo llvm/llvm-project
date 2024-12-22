@@ -1711,10 +1711,9 @@ public:
                        GlobalValue::GUID OrigGUID) {
     if (OrigGUID == 0 || ValueGUID == OrigGUID)
       return;
-    if (OidGuidMap.count(OrigGUID) && OidGuidMap[OrigGUID] != ValueGUID)
-      OidGuidMap[OrigGUID] = 0;
-    else
-      OidGuidMap[OrigGUID] = ValueGUID;
+    auto [It, Inserted] = OidGuidMap.try_emplace(OrigGUID, ValueGUID);
+    if (!Inserted && It->second != ValueGUID)
+      It->second = 0;
   }
 
   /// Find the summary for ValueInfo \p VI in module \p ModuleId, or nullptr if
@@ -1913,6 +1912,11 @@ public:
 
   /// Checks if we can import global variable from another module.
   bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
+
+  /// Same as above but checks whether the global var is importable as a
+  /// declaration.
+  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs,
+                          bool &CanImportDecl) const;
 };
 
 /// GraphTraits definition to build SCC for the index

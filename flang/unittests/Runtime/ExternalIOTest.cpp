@@ -13,7 +13,7 @@
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-consts.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
 #include "llvm/Support/raw_ostream.h"
