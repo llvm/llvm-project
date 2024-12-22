@@ -382,7 +382,7 @@ You can test this locally with the following command:
             # We skip checking in MIR files as undef is a valid token and not
             # going away.
             if file.endswith(".mir"):
-              continue
+                continue
             # search for additions of undef
             if re.search(r"^[+](?!\s*#\s*).*(\bundef\b|UndefValue::get)", file, re.MULTILINE):
                 files.append(re.match("a/([^ ]+)", file.splitlines()[0])[1])
