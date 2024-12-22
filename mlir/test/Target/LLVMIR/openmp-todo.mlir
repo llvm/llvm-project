@@ -346,24 +346,6 @@ llvm.func @target_firstprivate(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-} dealloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield
-}
-llvm.func @target_struct_privatization(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: privatization of structures in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @target_thread_limit(%x : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause thread_limit in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
@@ -458,17 +440,6 @@ llvm.func @task_priority(%x : i32) {
 
 // -----
 
-llvm.func @task_untied() {
-  // expected-error@below {{not yet implemented: Unhandled clause untied in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task untied {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @taskgroup_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskgroup operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
@@ -512,6 +483,19 @@ llvm.func @taskloop(%lb : i32, %ub : i32, %step : i32) {
   // expected-error@below {{not yet implemented: omp.taskloop}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
   omp.taskloop {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @taskloop_untied(%lb : i32, %ub : i32, %step : i32) {
+  // expected-error@below {{not yet implemented: omp.taskloop}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
+  omp.taskloop untied {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }

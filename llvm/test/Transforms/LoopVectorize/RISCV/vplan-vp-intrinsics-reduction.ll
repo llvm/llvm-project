@@ -29,7 +29,10 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
 ; IF-EVL-OUTLOOP-NEXT: Live-in ir<%n> = original trip-count
 ; IF-EVL-OUTLOOP-EMPTY:
-; IF-EVL-OUTLOOP:      vector.ph:
+; IF-EVL-OUTLOOP-NEXT: ir-bb<entry>:
+; IF-EVL-OUTLOOP-NEXT: Successor(s): vector.ph
+; IF-EVL-OUTLOOP-EMPTY:
+; IF-EVL-OUTLOOP-NEXT: vector.ph:
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): vector loop
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: <x1> vector loop: {

@@ -44,6 +44,8 @@ static_library("Orc") {
     "Layer.cpp",
     "LazyObjectLinkingLayer.cpp",
     "LazyReexports.cpp",
+    "LinkGraphLayer.cpp",
+    "LinkGraphLinkingLayer.cpp",
     "LoadLinkableFile.cpp",
     "LookupAndRecordAddrs.cpp",
     "MachO.cpp",

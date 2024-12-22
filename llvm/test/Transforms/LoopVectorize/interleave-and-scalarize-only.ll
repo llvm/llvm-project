@@ -11,7 +11,7 @@
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
-; DBG-NEXT: No successors
+; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -71,6 +71,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG:       Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; DBG-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT:  Live-in ir<1000> = original trip-count
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<entry>:
+; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -192,7 +195,7 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
-; DBG-NEXT: No successors
+; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
