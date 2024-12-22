@@ -196,6 +196,8 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
+STATISTIC(NumTruncatedInts, "Number of switch instructions turned into lookup "
+                            "tables with a truncated value");
 STATISTIC(NumLookupTables,
           "Number of switch instructions turned into lookup tables");
 STATISTIC(
@@ -6486,6 +6488,13 @@ private:
     // shift and mask operations.
     BitMapKind,
 
+    // For tables with integer elements which only differ in a small subset
+    // of their bits, we can truncate the values to a smaller type to discard
+    // the bits which are the same for all values, saving memory. Values are
+    // retrieved by retrieving the truncated value from a lookup table, then
+    // extending and OR-ing to re-construct the original values.
+    TruncatedIntKind,
+
     // The table is stored as an array of values. Values are retrieved by load
     // instructions from the table.
     ArrayKind
@@ -6502,6 +6511,14 @@ private:
   ConstantInt *LinearOffset = nullptr;
   ConstantInt *LinearMultiplier = nullptr;
   bool LinearMapValWrapped = false;
+
+  // For TruncatedIntKind, these are the truncated lookup table and the
+  // constants used to reconstruct original values from their truncated forms.
+  std::unique_ptr<SwitchLookupTable> TruncatedLookupTable = nullptr;
+  IntegerType *TruncatedOrigTy = nullptr;
+  ConstantInt *TruncatedShift = nullptr;
+  ConstantInt *TruncatedMask = nullptr;
+  bool TruncatedValWrapped = false;
 
   // For ArrayKind, this is the array.
   GlobalVariable *Array = nullptr;
@@ -6622,6 +6639,132 @@ SwitchLookupTable::SwitchLookupTable(
     return;
   }
 
+  // Check if we can truncate the value to a smaller form by discarding leading
+  // and trailing bits which are the same for all values.
+  if (isa<IntegerType>(ValueType)) {
+    IntegerType *IT = cast<IntegerType>(ValueType);
+    unsigned OrigWidth = IT->getBitWidth();
+
+    // Figure out which bits are always the same.
+    APInt AlwaysOneBits = APInt::getAllOnes(OrigWidth);
+    APInt AlwaysZeroBits = APInt::getAllOnes(OrigWidth);
+    for (Constant *TableEntry : TableContents) {
+      // Each entry in the lookup table may be a constant integer, otherwise
+      // it must be undefined (Undef or poison) in which case we can simply
+      // skip it.
+      if (isa<ConstantInt>(TableEntry)) {
+        const APInt &Val = cast<ConstantInt>(TableEntry)->getValue();
+        AlwaysOneBits &= Val;
+        AlwaysZeroBits &= ~Val;
+      }
+    }
+    assert((AlwaysOneBits & AlwaysZeroBits).isZero() &&
+           "A bit cannot be both zero and one in every case");
+    APInt NotChangingBits = AlwaysOneBits | AlwaysZeroBits;
+
+    unsigned DiscardedHighBits = NotChangingBits.countLeadingOnes();
+    unsigned DiscardedLowBits = NotChangingBits.countTrailingOnes();
+    unsigned TotalDiscardedBits = DiscardedHighBits + DiscardedLowBits;
+    unsigned TruncatedWidth = OrigWidth - TotalDiscardedBits;
+
+    // If the original type's width is a power of two, we want to ensure
+    // that the truncated size is also a power of two. Otherwise, the higher
+    // cost of indexing into the array with non-power-of-two-sized elements is
+    // probably going to cancel out any benefits we might get from making the
+    // table smaller.
+    if (has_single_bit(OrigWidth)) {
+      unsigned OldTruncatedWidth = TruncatedWidth;
+      TruncatedWidth = bit_ceil(TruncatedWidth);
+
+      // If the truncated size increased, we need to decrease DiscardedHighBits
+      // and/or DiscardedLowBits accordingly.
+      unsigned TruncatedWidthIncrease = TruncatedWidth - OldTruncatedWidth;
+      if (TruncatedWidthIncrease) {
+        TotalDiscardedBits -= TruncatedWidthIncrease;
+
+        // Prioritize decreasing the number of least significant bits discarded:
+        // if we can get this to 0, we won't need to shift left
+        unsigned LowBitsDecrease =
+            std::min(TruncatedWidthIncrease, DiscardedLowBits);
+        DiscardedLowBits -= LowBitsDecrease;
+
+        unsigned HighBitsDecrease = std::min(
+            TruncatedWidthIncrease - LowBitsDecrease, DiscardedHighBits);
+        DiscardedHighBits -= HighBitsDecrease;
+
+        assert(TruncatedWidthIncrease == LowBitsDecrease + HighBitsDecrease);
+
+        assert(DiscardedHighBits + DiscardedLowBits == TotalDiscardedBits &&
+               TotalDiscardedBits + TruncatedWidth == OrigWidth);
+      }
+    }
+
+    // We'll only truncate the values if the truncated values would be less than
+    // half the size of the original values, as otherwise there's unlikely to be
+    // any benefit.
+    if (TruncatedWidth <= OrigWidth / 2) {
+      IntegerType *TruncatedTy =
+          IntegerType::get(M.getContext(), TruncatedWidth);
+
+      PoisonValue *TruncatedPoison = PoisonValue::get(TruncatedTy);
+
+      // Truncate the values and build a new lookup table containing them
+      SmallVector<std::pair<ConstantInt *, Constant *>, 64> TruncatedValues(
+          TableSize);
+      for (uint64_t I = 0; I < TableSize; ++I) {
+        ConstantInt *CaseVal =
+            ConstantInt::get(M.getContext(), Offset->getValue() + I);
+        Constant *CaseRes = TableContents[I];
+
+        Constant *TruncatedCaseRes;
+        if (ConstantInt *IntCaseRes = dyn_cast<ConstantInt>(CaseRes)) {
+          APInt TruncatedVal = IntCaseRes->getValue().extractBits(
+              TruncatedWidth, DiscardedLowBits);
+          TruncatedCaseRes = ConstantInt::get(M.getContext(), TruncatedVal);
+        } else if (isa<PoisonValue>(CaseRes)) {
+          TruncatedCaseRes = TruncatedPoison;
+        } else {
+          assert(isa<UndefValue>(CaseRes));
+          // To avoid making a call to the deprecated
+          // 'UndefValue ::get(TruncatedTy)', we'll simply replace undefined
+          // table entries with zero.
+          TruncatedCaseRes =
+              ConstantInt::get(M.getContext(), APInt::getZero(TruncatedWidth));
+        }
+
+        assert(TruncatedCaseRes->getType() == TruncatedTy);
+
+        TruncatedValues[I] = {CaseVal, TruncatedCaseRes};
+      }
+
+      // Recursively construct a new lookup table with the truncated values.
+      // This enables us to use more efficient table kinds which weren't
+      // possible originally, such as a bitmap.
+      TruncatedLookupTable = std::make_unique<SwitchLookupTable>(
+          M, TableSize, Offset, TruncatedValues, TruncatedPoison, DL,
+          ("switch.truncated." + FuncName).str());
+      TruncatedOrigTy = IT;
+
+      if (DiscardedLowBits > 0) {
+        TruncatedShift = ConstantInt::get(IT, DiscardedLowBits);
+        TruncatedValWrapped = DiscardedHighBits == 0;
+      }
+
+      // The mask we OR on at the end consists of all the bits which are always
+      // one, excluding the bits which fit into the truncated value and didn't
+      // need to be changed.
+      APInt Mask =
+          AlwaysOneBits & ~APInt::getBitsSet(OrigWidth, DiscardedLowBits,
+                                             OrigWidth - DiscardedHighBits);
+      if (!Mask.isZero())
+        TruncatedMask = ConstantInt::get(M.getContext(), Mask);
+
+      Kind = TruncatedIntKind;
+      ++NumTruncatedInts;
+      return;
+    }
+  }
+
   // Store the table in an array.
   ArrayType *ArrayTy = ArrayType::get(ValueType, TableSize);
   Constant *Initializer = ConstantArray::get(ArrayTy, TableContents);
@@ -6676,6 +6819,23 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder) {
         Builder.CreateLShr(BitMap, ShiftAmt, "switch.downshift");
     // Mask off.
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
+  }
+  case TruncatedIntKind: {
+    // Load the truncated value from the lookup table
+    Value *TruncatedVal = TruncatedLookupTable->buildLookup(Index, Builder);
+
+    // Derive the original value from the truncated version
+    Value *Result = Builder.CreateIntCast(TruncatedVal, TruncatedOrigTy, false,
+                                          "switch.truncatedint.cast");
+    if (TruncatedShift)
+      Result =
+          Builder.CreateShl(Result, TruncatedShift, "switch.truncatedint.shift",
+                            /*HasNUW =*/true,
+                            /*HasNSW =*/!TruncatedValWrapped);
+    if (TruncatedMask)
+      Result =
+          Builder.CreateOr(Result, TruncatedMask, "switch.truncatedint.mask");
+    return Result;
   }
   case ArrayKind: {
     // Make sure the table index will not overflow when treated as signed.

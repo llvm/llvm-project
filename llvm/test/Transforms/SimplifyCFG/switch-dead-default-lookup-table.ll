@@ -8,8 +8,11 @@ define i64 @test_1(i64 %0) {
 ; CHECK-SAME: i64 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  switch.lookup:
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[TMP0]], 4
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i64], ptr @switch.table.test_1, i32 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i64, ptr [[SWITCH_GEP]], align 8
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TMP1]] to i8
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i8 [[SWITCH_CAST]], 2
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i8 -108, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i8 [[SWITCH_DOWNSHIFT]] to i2
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i2 [[SWITCH_MASKED]] to i64
 ; CHECK-NEXT:    ret i64 [[SWITCH_LOAD]]
 ;
   %2 = urem i64 %0, 4
