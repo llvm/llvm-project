@@ -1,11 +1,14 @@
-// RUN: %clang  --driver-mode=dxc -Zi -Fc - -T cs_6_6 -O0 %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s -debug-info-kind=standalone -dwarf-version=4  | FileCheck %s
 
-// CHECK: #dbg_declare(ptr [[ThisReg:%this\..*]], [[ThisMd:![0-9]+]],
-// CHECK-DAG: [[ThisMd]] = !DILocalVariable(name: "this", arg: 1, scope: !{{[0-9]+}}, type: ![[type:[0-9]+]], flags: DIFlagArtificial | DIFlagObjectPointer)
 
-RWBuffer<float4> Out : register(u7, space4);
+// CHECK: [[DWTag:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "RWBuffer<float>", 
+// CHECK: [[RWBuffer:![0-9]+]] = distinct !DISubprogram(name: "RWBuffer",
+// CHECK-SAME: scope: [[DWTag]]
+// CHECK: [[FirstThis:![0-9]+]] = !DILocalVariable(name: "this", arg: 1, scope: [[RWBuffer]], type: [[thisType:![0-9]+]]
+// CHECK: [[thisType]] = !DIDerivedType(tag: DW_TAG_reference_type, baseType: [[DWTag]], size: 32)
+RWBuffer<float> Out : register(u7, space4);
 
 [numthreads(8,1,1)]
-void main(uint GI : SV_GroupIndex) {
+void main(int GI : SV_GroupIndex) {
   Out[GI] = 0;
 }
