@@ -1024,16 +1024,13 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last,
   if (__new_size <= capacity()) {
     if (__new_size > size()) {
 #if _LIBCPP_STD_VER >= 23
-      if constexpr (!forward_iterator<_Iterator>) {
-        auto __mid = ranges::copy_n(std::move(__first), size(), this->__begin_).in;
-        __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
-      } else
+      auto __mid = ranges::copy_n(std::move(__first), size(), this->__begin_).in;
+      __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
+#else
+      _Iterator __mid = std::next(__first, size());
+      std::copy(__first, __mid, this->__begin_);
+      __construct_at_end(__mid, __last, __new_size - size());
 #endif
-      {
-        _Iterator __mid = std::next(__first, size());
-        std::copy(__first, __mid, this->__begin_);
-        __construct_at_end(__mid, __last, __new_size - size());
-      }
     } else {
       pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
       this->__destruct_at_end(__m);
