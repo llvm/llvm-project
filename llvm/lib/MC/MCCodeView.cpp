@@ -137,7 +137,7 @@ MCDataFragment *CodeViewContext::getStringTableFragment() {
   if (!StrTabFragment) {
     StrTabFragment = MCCtx->allocFragment<MCDataFragment>();
     // Start a new string table out with a null byte.
-    StrTabFragment->getContents().push_back('\0');
+    StrTabFragment->appendContents(1, '\0');
   }
   return StrTabFragment;
 }
@@ -151,7 +151,8 @@ std::pair<StringRef, unsigned> CodeViewContext::addToStringTable(StringRef S) {
       std::make_pair(Insertion.first->first(), Insertion.first->second);
   if (Insertion.second) {
     // The string map key is always null terminated.
-    Contents.append(Ret.first.begin(), Ret.first.end() + 1);
+    StrTabFragment->appendContents(
+        ArrayRef(Ret.first.begin(), Ret.first.end() + 1));
   }
   return Ret;
 }
