@@ -924,18 +924,19 @@ SDValue DAGTypeLegalizer::LowerBitcast(SDNode *Node) const {
                              Node->getOperand(0), DAG.getIntPtrConstant(0, DL));
   SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
                              Node->getOperand(0), DAG.getIntPtrConstant(1, DL));
-  
+
   SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
   SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
-  
-  EVT ShiftAmtTy = TLI.getShiftAmountTy(Extend1.getValueType(), DAG.getDataLayout());
+
+  EVT ShiftAmtTy =
+      TLI.getShiftAmountTy(Extend1.getValueType(), DAG.getDataLayout());
   SDValue ShiftConst = DAG.getShiftAmountConstant(8, ShiftAmtTy, DL);
   SDValue AsInt = DAG.getNode(
       ISD::OR, DL, MVT::i16, Extend0,
       DAG.getNode(ISD::SHL, DL, Extend1.getValueType(), Extend1, ShiftConst));
   EVT ToVT = Node->getValueType(0);
-  
-  return DAG.getBitcast( ToVT, AsInt);
+
+  return DAG.getBitcast(ToVT, AsInt);
 }
 
 /// Replace the node's results with custom code provided by the target and
