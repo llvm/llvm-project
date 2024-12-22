@@ -17,8 +17,10 @@
 #include <cassert>
 #include <vector>
 
+#include "common.h"
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 #include "user_defined_integral.h"
 
 class PaddedBase {
@@ -36,21 +38,29 @@ public:
   std::int8_t c_;
 };
 
-template <class InIter, class OutIter>
-TEST_CONSTEXPR_CXX20 void test_copy_backward() {
-  {
-    const unsigned N = 1000;
-    int ia[N]        = {};
-    for (unsigned i = 0; i < N; ++i)
-      ia[i] = i;
-    int ib[N] = {0};
-
-    OutIter r = std::copy_backward(InIter(ia), InIter(ia + N), OutIter(ib + N));
-    assert(base(r) == ib);
-    for (unsigned i = 0; i < N; ++i)
-      assert(ia[i] == ib[i]);
+struct TestIterators {
+  template <class InIter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    types::for_each(types::bidirectional_iterator_list<int*>(), TestImpl<InIter>());
   }
-}
+
+  template <class InIter>
+  struct TestImpl {
+    template <class OutIter>
+    TEST_CONSTEXPR_CXX20 void operator()() {
+      const unsigned N = 1000;
+      int ia[N]        = {};
+      for (unsigned i = 0; i < N; ++i)
+        ia[i] = i;
+      int ib[N] = {0};
+
+      OutIter r = std::copy_backward(InIter(ia), InIter(ia + N), OutIter(ib + N));
+      assert(base(r) == ib);
+      for (unsigned i = 0; i < N; ++i)
+        assert(ia[i] == ib[i]);
+    }
+  };
+};
 
 TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
   std::vector<bool> in(N, false);
@@ -70,32 +80,11 @@ TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
   }
 
   return true;
-};
+} 
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  test_copy_backward<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-  test_copy_backward<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-  test_copy_backward<bidirectional_iterator<const int*>, int*>();
-
-  test_copy_backward<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-  test_copy_backward<random_access_iterator<const int*>, random_access_iterator<int*> >();
-  test_copy_backward<random_access_iterator<const int*>, int*>();
-
-  test_copy_backward<const int*, bidirectional_iterator<int*> >();
-  test_copy_backward<const int*, random_access_iterator<int*> >();
-  test_copy_backward<const int*, int*>();
-
-#if TEST_STD_VER > 17
-  test_copy_backward<contiguous_iterator<const int*>, bidirectional_iterator<int*>>();
-  test_copy_backward<contiguous_iterator<const int*>, random_access_iterator<int*>>();
-  test_copy_backward<contiguous_iterator<const int*>, int*>();
-
-  test_copy_backward<bidirectional_iterator<const int*>, contiguous_iterator<int*>>();
-  test_copy_backward<random_access_iterator<const int*>, contiguous_iterator<int*>>();
-  test_copy_backward<contiguous_iterator<const int*>, contiguous_iterator<int*>>();
-  test_copy_backward<const int*, contiguous_iterator<int*>>();
-#endif
-
+  types::for_each(types::bidirectional_iterator_list<const int*>(), TestIterators());
+  
   { // Make sure that padding bits aren't copied
     Derived src(1, 2, 3);
     Derived dst(4, 5, 6);
@@ -105,7 +94,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(dst.b_ == 2);
     assert(dst.c_ == 6);
   }
-
+  
   { // Make sure that overlapping ranges can be copied
     int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::copy_backward(a, a + 7, a + 10);
