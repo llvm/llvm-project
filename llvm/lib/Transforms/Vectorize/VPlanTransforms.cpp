@@ -322,7 +322,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
 
   VPPredInstPHIRecipe *PHIRecipe = nullptr;
   if (PredRecipe->getNumUsers() != 0) {
-    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask);
+    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
+                                        RecipeWithoutMask->getDebugLoc());
     PredRecipe->replaceAllUsesWith(PHIRecipe);
     PHIRecipe->setOperand(0, RecipeWithoutMask);
   }
