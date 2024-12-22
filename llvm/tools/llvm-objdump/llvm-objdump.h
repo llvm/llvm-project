@@ -38,6 +38,7 @@ class ELFObjectFileBase;
 class MachOObjectFile;
 class WasmObjectFile;
 class XCOFFObjectFile;
+class BinaryObjectFile;
 } // namespace object
 
 namespace objdump {
@@ -105,6 +106,7 @@ std::unique_ptr<Dumper> createELFDumper(const object::ELFObjectFileBase &Obj);
 std::unique_ptr<Dumper> createMachODumper(const object::MachOObjectFile &Obj);
 std::unique_ptr<Dumper> createWasmDumper(const object::WasmObjectFile &Obj);
 std::unique_ptr<Dumper> createXCOFFDumper(const object::XCOFFObjectFile &Obj);
+std::unique_ptr<Dumper> createBinaryDumper(const object::BinaryObjectFile &Obj);
 
 // Various helper functions.
 

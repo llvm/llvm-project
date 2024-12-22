@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-objdump.h"
+#include "BinaryDump.h"
 #include "COFFDump.h"
 #include "ELFDump.h"
 #include "MachODump.h"
@@ -51,6 +52,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/BinaryObjectFile.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -305,6 +307,7 @@ enum class ColorOutput {
 
 static uint64_t AdjustVMA;
 static bool AllHeaders;
+static bool BinaryFile;
 static std::string ArchName;
 bool objdump::ArchiveHeaders;
 bool objdump::Demangle;
@@ -391,6 +394,8 @@ static Expected<std::unique_ptr<Dumper>> createDumper(const ObjectFile &Obj) {
     return createWasmDumper(*O);
   if (const auto *O = dyn_cast<XCOFFObjectFile>(&Obj))
     return createXCOFFDumper(*O);
+  if (const auto *O = dyn_cast<BinaryObjectFile>(&Obj))
+    return createBinaryDumper(*O);
 
   return createStringError(errc::invalid_argument,
                            "unsupported object file format");
@@ -558,6 +563,8 @@ static Error getRelocationValueString(const RelocationRef &Rel,
   if (auto *XCOFF = dyn_cast<XCOFFObjectFile>(Obj))
     return getXCOFFRelocationValueString(*XCOFF, Rel, SymbolDescription,
                                          Result);
+  if (auto *Binary = dyn_cast<BinaryObjectFile>(Obj))
+    return getBinaryRelocationValueString(Binary, Rel, Result);
   llvm_unreachable("unknown object file format");
 }
 
@@ -3398,7 +3405,8 @@ static void dumpInput(StringRef file) {
   }
 
   // Attempt to open the binary.
-  OwningBinary<Binary> OBinary = unwrapOrError(createBinary(file), file);
+  OwningBinary<Binary> OBinary =
+      unwrapOrError(createBinary(file, nullptr, true, BinaryFile), file);
   Binary &Binary = *OBinary.getBinary();
 
   if (Archive *A = dyn_cast<Archive>(&Binary))
@@ -3582,6 +3590,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);
 
   parseMachOOptions(InputArgs);
+
+  if (InputArgs.getLastArg(OBJDUMP_binary)) {
+    BinaryFile = true;
+  }
 
   // Parse -M (--disassembler-options) and deprecated
   // --x86-asm-syntax={att,intel}.

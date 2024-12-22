@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/BinaryObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/Minidump.h"
@@ -44,8 +45,13 @@ MemoryBufferRef Binary::getMemoryBufferRef() const { return Data; }
 
 Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
                                                        LLVMContext *Context,
-                                                       bool InitContent) {
+                                                       bool InitContent,
+                                                       bool RawBinary) {
   file_magic Type = identify_magic(Buffer.getBuffer());
+
+  if (RawBinary) {
+    return ObjectFile::createBinaryObjectFile(Buffer);
+  }
 
   switch (Type) {
   case file_magic::archive:
@@ -103,8 +109,10 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   llvm_unreachable("Unexpected Binary File Type");
 }
 
-Expected<OwningBinary<Binary>>
-object::createBinary(StringRef Path, LLVMContext *Context, bool InitContent) {
+Expected<OwningBinary<Binary>> object::createBinary(StringRef Path,
+                                                    LLVMContext *Context,
+                                                    bool InitContent,
+                                                    bool RawBinary) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
                                    /*RequiresNullTerminator=*/false);
@@ -113,7 +121,7 @@ object::createBinary(StringRef Path, LLVMContext *Context, bool InitContent) {
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
-      createBinary(Buffer->getMemBufferRef(), Context, InitContent);
+      createBinary(Buffer->getMemBufferRef(), Context, InitContent, RawBinary);
   if (!BinOrErr)
     return BinOrErr.takeError();
   std::unique_ptr<Binary> &Bin = BinOrErr.get();

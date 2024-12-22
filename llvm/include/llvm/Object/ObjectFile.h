@@ -43,6 +43,7 @@ class SectionRef;
 class SymbolRef;
 class symbol_iterator;
 class WasmObjectFile;
+class BinaryObjectFile;
 
 using section_iterator = content_iterator<SectionRef>;
 
@@ -400,6 +401,9 @@ public:
 
   static Expected<std::unique_ptr<WasmObjectFile>>
   createWasmObjectFile(MemoryBufferRef Object);
+
+  static Expected<std::unique_ptr<BinaryObjectFile>>
+  createBinaryObjectFile(MemoryBufferRef Object);
 };
 
 /// A filtered iterator for SectionRefs that skips sections based on some given
