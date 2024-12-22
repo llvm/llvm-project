@@ -6923,8 +6923,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                              Loads.size());
     Align Alignment = computeCommonAlignment<LoadInst>(Values);
     auto *Ty = getWidenedType(Loads.front()->getType(), Loads.size());
-    return TTI->isLegalMaskedGather(Ty, Alignment) &&
-           !TTI->forceScalarizeMaskedGather(Ty, Alignment);
+    return this->TTI->isLegalMaskedGather(Ty, Alignment) &&
+           !this->TTI->forceScalarizeMaskedGather(Ty, Alignment);
   };
 
   auto GetVectorizedRanges = [this](ArrayRef<LoadInst *> Loads,
@@ -7085,9 +7085,10 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
           }
           SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
           SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
-          transform(
-              LoadsDists, OriginalLoads.begin(),
-              [](const std::pair<LoadInst *, int> &L) { return L.first; });
+          transform(LoadsDists, OriginalLoads.begin(),
+                    [](const std::pair<LoadInst *, int> &L) -> LoadInst * {
+                      return L.first;
+                    });
           stable_sort(LocalLoadsDists, LoadSorter);
           SmallVector<LoadInst *> Loads;
           unsigned MaxConsecutiveDistance = 0;
@@ -7314,7 +7315,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     if (!Ref.empty() && !NonVectorized.empty() &&
         std::accumulate(
             Ref.begin(), Ref.end(), 0u,
-            [](unsigned S, ArrayRef<std::pair<LoadInst *, int>> LoadsDists) {
+            [](unsigned S,
+               ArrayRef<std::pair<LoadInst *, int>> LoadsDists) -> unsigned {
               return S + LoadsDists.size();
             }) != NonVectorized.size() &&
         IsMaskedGatherSupported(NonVectorized)) {
@@ -17003,8 +17005,8 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           TTI->getNumberOfParts(SI1->getType()) ==
-               TTI->getNumberOfParts(
+           this->TTI->getNumberOfParts(SI1->getType()) ==
+               this->TTI->getNumberOfParts(
                    getWidenedType(SI1->getType()->getElementType(),
                                   SM1.size() - LastUndefsCnt));
   };
@@ -17784,8 +17786,8 @@ bool BoUpSLP::collectValuesToDemote(
       const unsigned VF = E.Scalars.size();
       Type *OrigScalarTy = E.Scalars.front()->getType();
       if (UniqueBases.size() <= 2 ||
-          TTI->getNumberOfParts(getWidenedType(OrigScalarTy, VF)) ==
-              TTI->getNumberOfParts(getWidenedType(
+          this->TTI->getNumberOfParts(getWidenedType(OrigScalarTy, VF)) ==
+              this->TTI->getNumberOfParts(getWidenedType(
                   IntegerType::get(OrigScalarTy->getContext(), BitWidth), VF)))
         ToDemote.push_back(E.Idx);
     }
