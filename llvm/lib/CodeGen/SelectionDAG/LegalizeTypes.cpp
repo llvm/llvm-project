@@ -918,8 +918,7 @@ static SDValue MaybeBitcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
 }
 
 SDValue DAGTypeLegalizer::LowerBitcast(SDNode *Node) const {
-  assert(Node->getOpcode() == ISD::BITCAST ||
-         Node->getOpcode() == ISD::FP_ROUND && "Unexpected opcode!");
+  assert(Node->getOpcode() == ISD::BITCAST && "Unexpected opcode!");
   // Handle bitcasting from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
   EVT FromVT = Node->getOperand(0)->getValueType(0);
