@@ -1382,34 +1382,6 @@ func.func @compose_expand_of_collapse_0_rank_to_collapse(%arg0 : tensor<1x1x1x1x
 
 // -----
 
-func.func @compose_expand_of_collapse_static(%arg0 : tensor<4x32x10x64x2xf16>) -> tensor<4x32x10x128xf16> {
-  %collapsed = tensor.collapse_shape %arg0 [[0, 1], [2], [3, 4]] : tensor<4x32x10x64x2xf16> into tensor<128x10x128xf16>
-  %expanded = tensor.expand_shape %collapsed [[0, 1], [2], [3]] output_shape [4, 32, 10, 128] : tensor<128x10x128xf16> into tensor<4x32x10x128xf16>
-  return %expanded : tensor<4x32x10x128xf16>
-}
-
-// CHECK-LABEL: func @compose_expand_of_collapse_static
-// CHECK-SAME:   %[[ARG0:.+]]: tensor<4x32x10x64x2xf16>
-//      CHECK:   %[[RESULT:.+]] = tensor.collapse_shape %[[ARG0]]
-// CHECK-SAME:     [0], [1], [2], [3, 4]
-//      CHECK:   return %[[RESULT]]
-
-// -----
-
-func.func @compose_expand_of_collapse_dynamic(%arg0 : tensor<4x?x10x64x2xf16>, %arg1 : index) -> tensor<4x?x10x128xf16> {
-  %collapsed = tensor.collapse_shape %arg0 [[0, 1], [2], [3, 4]] : tensor<4x?x10x64x2xf16> into tensor<?x10x128xf16>
-  %expanded = tensor.expand_shape %collapsed [[0, 1], [2], [3]] output_shape [4, %arg1,  10, 128] : tensor<?x10x128xf16> into tensor<4x?x10x128xf16>
-  return %expanded : tensor<4x?x10x128xf16>
-}
-
-// CHECK-LABEL: func @compose_expand_of_collapse_dynamic
-// CHECK-SAME:   %[[ARG0:.+]]: tensor<4x?x10x64x2xf16>
-//      CHECK:   %[[RESULT:.+]] = tensor.collapse_shape %[[ARG0]]
-// CHECK-SAME:     [0], [1], [2], [3, 4]
-//      CHECK:   return %[[RESULT]]
-
-// -----
-
 // CHECK-LABEL: func @zero_rank_reshape_multi
 func.func @zero_rank_reshape_multi(%arg0: tensor<f32>) -> tensor<f32> {
   // CHECK: return %arg0
@@ -2339,20 +2311,6 @@ func.func @dim_of_collapse_shape(%t: tensor<?x?x?x7x?xf32>) -> index {
   %0 = tensor.collapse_shape %t [[0], [1, 2, 3, 4]]
       : tensor<?x?x?x7x?xf32> into tensor<?x?xf32>
   %1 = tensor.dim %0, %c1 : tensor<?x?xf32>
-  return %1 : index
-}
-
-// -----
-
-// Can't fold when dim is out of bound.
-// CHECK-LABEL: func @out_of_bound_dim_of_collapse_shape(
-//       CHECK:   %[[DIM:.*]] = tensor.dim
-//       CHECK:   return %[[DIM]]
-func.func @out_of_bound_dim_of_collapse_shape(%t: tensor<?x?x?x7x?xf32>) -> index {
-  %c5 = arith.constant 5 : index
-  %0 = tensor.collapse_shape %t [[0], [1, 2, 3, 4]]
-      : tensor<?x?x?x7x?xf32> into tensor<?x?xf32>
-  %1 = tensor.dim %0, %c5 : tensor<?x?xf32>
   return %1 : index
 }
 

@@ -631,7 +631,7 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
 /// We can look through PHIs, GEPs and casts in order to determine a common base
 /// between GEPLHS and RHS.
 static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
-                                              CmpPredicate Cond,
+                                              ICmpInst::Predicate Cond,
                                               const DataLayout &DL,
                                               InstCombiner &IC) {
   // FIXME: Support vector of pointers.
@@ -675,7 +675,8 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
 /// Fold comparisons between a GEP instruction and something else. At this point
 /// we know that the GEP is on the LHS of the comparison.
 Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
-                                           CmpPredicate Cond, Instruction &I) {
+                                           ICmpInst::Predicate Cond,
+                                           Instruction &I) {
   // Don't transform signed compares of GEPs into index compares. Even if the
   // GEP is inbounds, the final add of the base pointer can have signed overflow
   // and would change the result of the icmp.
@@ -689,32 +690,12 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   if (!isa<GetElementPtrInst>(RHS))
     RHS = RHS->stripPointerCasts();
 
-  auto CanFold = [Cond](GEPNoWrapFlags NW) {
-    if (ICmpInst::isEquality(Cond))
-      return true;
-
-    // Unsigned predicates can be folded if the GEPs have *any* nowrap flags.
-    assert(ICmpInst::isUnsigned(Cond));
-    return NW != GEPNoWrapFlags::none();
-  };
-
-  auto NewICmp = [Cond](GEPNoWrapFlags NW, Value *Op1, Value *Op2) {
-    if (!NW.hasNoUnsignedWrap()) {
-      // Convert signed to unsigned comparison.
-      return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Op1, Op2);
-    }
-
-    auto *I = new ICmpInst(Cond, Op1, Op2);
-    I->setSameSign(NW.hasNoUnsignedSignedWrap());
-    return I;
-  };
-
   Value *PtrBase = GEPLHS->getOperand(0);
-  if (PtrBase == RHS && CanFold(GEPLHS->getNoWrapFlags())) {
+  if (PtrBase == RHS && (GEPLHS->isInBounds() || ICmpInst::isEquality(Cond))) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     Value *Offset = EmitGEPOffset(GEPLHS);
-    return NewICmp(GEPLHS->getNoWrapFlags(), Offset,
-                   Constant::getNullValue(Offset->getType()));
+    return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
+                        Constant::getNullValue(Offset->getType()));
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
@@ -804,7 +785,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
-    GEPNoWrapFlags NW = GEPLHS->getNoWrapFlags() & GEPRHS->getNoWrapFlags();
+    bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();
     if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
         GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType()) {
       // If the GEPs only differ by one index, compare it.
@@ -832,18 +813,19 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         return replaceInstUsesWith(I, // No comparison is needed here.
           ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
 
-      else if (NumDifferences == 1 && CanFold(NW)) {
+      else if (NumDifferences == 1 && GEPsInBounds) {
         Value *LHSV = GEPLHS->getOperand(DiffOperand);
         Value *RHSV = GEPRHS->getOperand(DiffOperand);
-        return NewICmp(NW, LHSV, RHSV);
+        // Make sure we do a signed comparison here.
+        return new ICmpInst(ICmpInst::getSignedPredicate(Cond), LHSV, RHSV);
       }
     }
 
-    if (CanFold(NW)) {
+    if (GEPsInBounds || CmpInst::isEquality(Cond)) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
       Value *L = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
       Value *R = EmitGEPOffset(GEPRHS, /*RewriteGEP=*/true);
-      return NewICmp(NW, L, R);
+      return new ICmpInst(ICmpInst::getSignedPredicate(Cond), L, R);
     }
   }
 
@@ -930,7 +912,7 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
 
 /// Fold "icmp pred (X+C), X".
 Instruction *InstCombinerImpl::foldICmpAddOpConst(Value *X, const APInt &C,
-                                                  CmpPredicate Pred) {
+                                                  ICmpInst::Predicate Pred) {
   // From this point on, we know that (X+C <= X) --> (X+C < X) because C != 0,
   // so the values can never be equal.  Similarly for all other "or equals"
   // operators.
@@ -1173,7 +1155,7 @@ Instruction *InstCombinerImpl::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
   // This fold is only valid for equality predicates.
   if (!I.isEquality())
     return nullptr;
-  CmpPredicate Pred;
+  ICmpInst::Predicate Pred;
   Value *X, *Y, *Zero;
   if (!match(&I, m_ICmp(Pred, m_OneUse(m_IRem(m_Value(X), m_Value(Y))),
                         m_CombineAnd(m_Zero(), m_Value(Zero)))))
@@ -1190,7 +1172,7 @@ Instruction *InstCombinerImpl::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
 /// by one-less-than-bitwidth into a sign test on the original value.
 Instruction *InstCombinerImpl::foldSignBitTest(ICmpInst &I) {
   Instruction *Val;
-  CmpPredicate Pred;
+  ICmpInst::Predicate Pred;
   if (!I.isEquality() || !match(&I, m_ICmp(Pred, m_Instruction(Val), m_Zero())))
     return nullptr;
 
@@ -1404,7 +1386,7 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   };
 
   for (BranchInst *BI : DC.conditionsFor(X)) {
-    CmpPredicate DomPred;
+    ICmpInst::Predicate DomPred;
     const APInt *DomC;
     if (!match(BI->getCondition(),
                m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))))
@@ -1517,7 +1499,7 @@ Instruction *
 InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
                                               const SimplifyQuery &Q) {
   Value *X, *Y;
-  CmpPredicate Pred;
+  ICmpInst::Predicate Pred;
   bool YIsSExt = false;
   // Try to match icmp (trunc X), (trunc Y)
   if (match(&Cmp, m_ICmp(Pred, m_Trunc(m_Value(X)), m_Trunc(m_Value(Y))))) {
@@ -1777,17 +1759,6 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
   Value *X;
   if (!match(And, m_And(m_Value(X), m_APInt(C2))))
     return nullptr;
-
-  // (and X, highmask) s> [0, ~highmask] --> X s> ~highmask
-  if (Cmp.getPredicate() == ICmpInst::ICMP_SGT && C1.ule(~*C2) &&
-      C2->isNegatedPowerOf2())
-    return new ICmpInst(ICmpInst::ICMP_SGT, X,
-                        ConstantInt::get(X->getType(), ~*C2));
-  // (and X, highmask) s< [1, -highmask] --> X s< -highmask
-  if (Cmp.getPredicate() == ICmpInst::ICMP_SLT && !C1.isSignMask() &&
-      (C1 - 1).ule(~*C2) && C2->isNegatedPowerOf2() && !C2->isSignMask())
-    return new ICmpInst(ICmpInst::ICMP_SLT, X,
-                        ConstantInt::get(X->getType(), -*C2));
 
   // Don't perform the following transforms if the AND has multiple uses
   if (!And->hasOneUse())
@@ -3212,29 +3183,6 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                         Builder.CreateAdd(X, ConstantInt::get(Ty, *C2 - C - 1)),
                         ConstantInt::get(Ty, ~C));
 
-  // zext(V) + C2 pred C -> V + C3 pred' C4
-  Value *V;
-  if (match(X, m_ZExt(m_Value(V)))) {
-    Type *NewCmpTy = V->getType();
-    unsigned NewCmpBW = NewCmpTy->getScalarSizeInBits();
-    if (shouldChangeType(Ty, NewCmpTy)) {
-      if (CR.getActiveBits() <= NewCmpBW) {
-        ConstantRange SrcCR = CR.truncate(NewCmpBW);
-        CmpInst::Predicate EquivPred;
-        APInt EquivInt;
-        APInt EquivOffset;
-
-        SrcCR.getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
-        return new ICmpInst(
-            EquivPred,
-            EquivOffset.isZero()
-                ? V
-                : Builder.CreateAdd(V, ConstantInt::get(NewCmpTy, EquivOffset)),
-            ConstantInt::get(NewCmpTy, EquivInt));
-      }
-    }
-  }
-
   return nullptr;
 }
 
@@ -3249,7 +3197,7 @@ bool InstCombinerImpl::matchThreeWayIntCompare(SelectInst *SI, Value *&LHS,
   //        i32 Equal,
   //        i32 (select i1 (a < b), i32 Less, i32 Greater)
   // where Equal, Less and Greater are placeholders for any three constants.
-  CmpPredicate PredA;
+  ICmpInst::Predicate PredA;
   if (!match(SI->getCondition(), m_ICmp(PredA, m_Value(LHS), m_Value(RHS))) ||
       !ICmpInst::isEquality(PredA))
     return false;
@@ -3260,7 +3208,7 @@ bool InstCombinerImpl::matchThreeWayIntCompare(SelectInst *SI, Value *&LHS,
     std::swap(EqualVal, UnequalVal);
   if (!match(EqualVal, m_ConstantInt(Equal)))
     return false;
-  CmpPredicate PredB;
+  ICmpInst::Predicate PredB;
   Value *LHS2, *RHS2;
   if (!match(UnequalVal, m_Select(m_ICmp(PredB, m_Value(LHS2), m_Value(RHS2)),
                                   m_ConstantInt(Less), m_ConstantInt(Greater))))
@@ -3622,8 +3570,7 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
               m_OneUse(m_c_Or(m_CombineAnd(m_Value(Sel),
                                            m_Select(m_Value(Cond), m_Value(TV),
                                                     m_Value(FV))),
-                              m_Value(Other)))) &&
-        Cond->getType() == Cmp.getType()) {
+                              m_Value(Other))))) {
       const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
       // Easy case is if eq/ne matches whether 0 is trueval/falseval.
       if (Pred == ICmpInst::ICMP_EQ
@@ -3979,8 +3926,8 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
 }
 
 static Instruction *
-foldICmpUSubSatOrUAddSatWithConstant(CmpPredicate Pred, SaturatingInst *II,
-                                     const APInt &C,
+foldICmpUSubSatOrUAddSatWithConstant(ICmpInst::Predicate Pred,
+                                     SaturatingInst *II, const APInt &C,
                                      InstCombiner::BuilderTy &Builder) {
   // This transform may end up producing more than one instruction for the
   // intrinsic, so limit it to one user of the intrinsic.
@@ -4064,7 +4011,7 @@ foldICmpUSubSatOrUAddSatWithConstant(CmpPredicate Pred, SaturatingInst *II,
 }
 
 static Instruction *
-foldICmpOfCmpIntrinsicWithConstant(CmpPredicate Pred, IntrinsicInst *I,
+foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
                                    const APInt &C,
                                    InstCombiner::BuilderTy &Builder) {
   std::optional<ICmpInst::Predicate> NewPredicate = std::nullopt;
@@ -4263,8 +4210,9 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
-                                              Value *RHS, const ICmpInst &I) {
+Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
+                                              SelectInst *SI, Value *RHS,
+                                              const ICmpInst &I) {
   // Try to fold the comparison into the select arms, which will cause the
   // select to be converted into a logical and/or.
   auto SimplifyOp = [&](Value *Op, bool SelectCondIsTrue) -> Value * {
@@ -4433,7 +4381,7 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
 /// The Mask can be a constant, too.
 /// For some predicates, the operands are commutative.
 /// For others, x can only be on a specific side.
-static Value *foldICmpWithLowBitMaskedVal(CmpPredicate Pred, Value *Op0,
+static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
                                           Value *Op1, const SimplifyQuery &Q,
                                           InstCombiner &IC) {
 
@@ -4565,7 +4513,7 @@ static Value *foldICmpWithLowBitMaskedVal(CmpPredicate Pred, Value *Op0,
 static Value *
 foldICmpWithTruncSignExtendedVal(ICmpInst &I,
                                  InstCombiner::BuilderTy &Builder) {
-  CmpPredicate SrcPred;
+  ICmpInst::Predicate SrcPred;
   Value *X;
   const APInt *C0, *C1; // FIXME: non-splats, potentially with undef.
   // We are ok with 'shl' having multiple uses, but 'ashr' must be one-use.
@@ -4811,7 +4759,7 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
 /// Note that the comparison is commutative, while inverted (u>=, ==) predicate
 /// will mean that we are looking for the opposite answer.
 Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
-  CmpPredicate Pred;
+  ICmpInst::Predicate Pred;
   Value *X, *Y;
   Instruction *Mul;
   Instruction *Div;
@@ -4881,7 +4829,7 @@ Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
 
 static Instruction *foldICmpXNegX(ICmpInst &I,
                                   InstCombiner::BuilderTy &Builder) {
-  CmpPredicate Pred;
+  CmpInst::Predicate Pred;
   Value *X;
   if (match(&I, m_c_ICmp(Pred, m_NSWNeg(m_Value(X)), m_Deferred(X)))) {
 
@@ -5366,15 +5314,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
             return new ICmpInst(Pred, X, Y);
           if (ZKnown.isNegative())
             return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), X, Y);
-          Value *LessThan = simplifyICmpInst(ICmpInst::ICMP_SLT, X, Y,
-                                             SQ.getWithInstruction(&I));
-          if (LessThan && match(LessThan, m_One()))
-            return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Z,
-                                Constant::getNullValue(Z->getType()));
-          Value *GreaterThan = simplifyICmpInst(ICmpInst::ICMP_SGT, X, Y,
-                                                SQ.getWithInstruction(&I));
-          if (GreaterThan && match(GreaterThan, m_One()))
-            return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
         }
       } else {
         bool NonZero;
@@ -5553,7 +5492,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 /// Fold icmp Pred min|max(X, Y), Z.
 Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
                                                   MinMaxIntrinsic *MinMax,
-                                                  Value *Z, CmpPredicate Pred) {
+                                                  Value *Z,
+                                                  ICmpInst::Predicate Pred) {
   Value *X = MinMax->getLHS();
   Value *Y = MinMax->getRHS();
   if (ICmpInst::isSigned(Pred) && !MinMax->isSigned())
@@ -6822,7 +6762,7 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
 /// then try to reduce patterns based on that limit.
 Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
   Value *X, *Y;
-  CmpPredicate Pred;
+  ICmpInst::Predicate Pred;
 
   // X must be 0 and bool must be true for "ULT":
   // X <u (zext i1 Y) --> (X == 0) & Y
@@ -6837,7 +6777,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
     return BinaryOperator::CreateOr(Builder.CreateIsNull(X), Y);
 
   // icmp eq/ne X, (zext/sext (icmp eq/ne X, C))
-  CmpPredicate Pred1, Pred2;
+  ICmpInst::Predicate Pred1, Pred2;
   const APInt *C;
   Instruction *ExtI;
   if (match(&I, m_c_ICmp(Pred1, m_Value(X),
@@ -6906,8 +6846,8 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
   return nullptr;
 }
 
-std::optional<std::pair<CmpPredicate, Constant *>>
-InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred,
+std::optional<std::pair<CmpInst::Predicate, Constant *>>
+InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
                                                        Constant *C) {
   assert(ICmpInst::isRelational(Pred) && ICmpInst::isIntPredicate(Pred) &&
          "Only for relational integer predicates.");
@@ -7107,7 +7047,7 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
 //   (X l>> Y) == 0
 static Instruction *foldICmpWithHighBitMask(ICmpInst &Cmp,
                                             InstCombiner::BuilderTy &Builder) {
-  CmpPredicate Pred, NewPred;
+  ICmpInst::Predicate Pred, NewPred;
   Value *X, *Y;
   if (match(&Cmp,
             m_c_ICmp(Pred, m_OneUse(m_Shl(m_One(), m_Value(Y))), m_Value(X)))) {
@@ -7272,7 +7212,7 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
                                        const DataLayout &DL) {
   if (I.getType()->isVectorTy())
     return nullptr;
-  CmpPredicate OuterPred, InnerPred;
+  ICmpInst::Predicate OuterPred, InnerPred;
   Value *LHS, *RHS;
 
   // Match lowering of @llvm.vector.reduce.and. Turn
@@ -7313,7 +7253,7 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
 }
 
 // This helper will be called with icmp operands in both orders.
-Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
+Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
                                                    Value *Op0, Value *Op1,
                                                    ICmpInst &CxtI) {
   // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
@@ -7441,7 +7381,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     Changed = true;
   }
 
-  if (Value *V = simplifyICmpInst(I.getCmpPredicate(), Op0, Op1, Q))
+  if (Value *V = simplifyICmpInst(I.getPredicate(), Op0, Op1, Q))
     return replaceInstUsesWith(I, V);
 
   // Comparing -val or val with non-zero is the same as just comparing val
@@ -7548,10 +7488,10 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
     return Res;
 
-  if (Instruction *Res = foldICmpCommutative(I.getCmpPredicate(), Op0, Op1, I))
+  if (Instruction *Res = foldICmpCommutative(I.getPredicate(), Op0, Op1, I))
     return Res;
   if (Instruction *Res =
-          foldICmpCommutative(I.getSwappedCmpPredicate(), Op1, Op0, I))
+          foldICmpCommutative(I.getSwappedPredicate(), Op1, Op0, I))
     return Res;
 
   if (I.isCommutative()) {
@@ -8497,7 +8437,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     case Instruction::Select:
       // fcmp eq (cond ? x : -x), 0 --> fcmp eq x, 0
       if (FCmpInst::isEquality(Pred) && match(RHSC, m_AnyZeroFP()) &&
-          match(LHSI, m_c_Select(m_FNeg(m_Value(X)), m_Deferred(X))))
+          (match(LHSI,
+                 m_Select(m_Value(), m_Value(X), m_FNeg(m_Deferred(X)))) ||
+           match(LHSI, m_Select(m_Value(), m_FNeg(m_Value(X)), m_Deferred(X)))))
         return replaceOperand(I, 0, X);
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
         return NV;

@@ -1,4 +1,4 @@
-//===-- ClangSyntaxEmitter.cpp - Generate clang Syntax Tree nodes ---------===//
+//===- ClangSyntaxEmitter.cpp - Generate clang Syntax Tree nodes ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

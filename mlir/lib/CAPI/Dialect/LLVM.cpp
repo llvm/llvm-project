@@ -43,10 +43,6 @@ MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
   return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
 }
 
-MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
-  return wrap(cast<LLVM::LLVMArrayType>(unwrap(type)).getElementType());
-}
-
 MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
                                  MlirType const *argumentTypes, bool isVarArg) {
   SmallVector<Type, 2> argumentStorage;

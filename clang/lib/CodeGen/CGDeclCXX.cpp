@@ -479,10 +479,6 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
       !isInNoSanitizeList(SanitizerKind::MemtagStack, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
 
-  if (getLangOpts().Sanitize.has(SanitizerKind::Type) &&
-      !isInNoSanitizeList(SanitizerKind::Type, Fn, Loc))
-    Fn->addFnAttr(llvm::Attribute::SanitizeType);
-
   if (getLangOpts().Sanitize.has(SanitizerKind::Thread) &&
       !isInNoSanitizeList(SanitizerKind::Thread, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::SanitizeThread);

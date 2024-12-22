@@ -162,7 +162,6 @@ struct Method {
   bool DesignatedInit = false;
   bool Required = false;
   StringRef ResultType;
-  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Method> MethodsSeq;
@@ -197,8 +196,6 @@ template <> struct MappingTraits<Method> {
     IO.mapOptional("DesignatedInit", M.DesignatedInit, false);
     IO.mapOptional("Required", M.Required, false);
     IO.mapOptional("ResultType", M.ResultType, StringRef(""));
-    IO.mapOptional("SwiftReturnOwnership", M.SwiftReturnOwnership,
-                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -294,7 +291,6 @@ struct Function {
   StringRef SwiftName;
   StringRef Type;
   StringRef ResultType;
-  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -317,8 +313,6 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
-    IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
-                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -831,7 +825,6 @@ public:
       emitError("'FactoryAsInit' is no longer valid; use 'SwiftName' instead");
 
     MI.ResultType = std::string(M.ResultType);
-    MI.SwiftReturnOwnership = std::string(M.SwiftReturnOwnership);
 
     // Translate parameter information.
     convertParams(M.Params, MI, MI.Self);
@@ -957,7 +950,6 @@ public:
     convertNullability(Function.Nullability, Function.NullabilityOfRet, FI,
                        Function.Name);
     FI.ResultType = std::string(Function.ResultType);
-    FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
   }
 

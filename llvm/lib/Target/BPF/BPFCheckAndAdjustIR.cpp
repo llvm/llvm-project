@@ -21,7 +21,9 @@
 
 #include "BPF.h"
 #include "BPFCORE.h"
+#include "BPFTargetMachine.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -29,6 +31,7 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"

@@ -9,7 +9,6 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
-#include "AArch64MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace {
@@ -38,11 +37,6 @@ public:
   /// Callback used to implement the .note.gnu.property section.
   void emitNoteSection(unsigned Flags, uint64_t PAuthABIPlatform = -1,
                        uint64_t PAuthABIVersion = -1);
-
-  /// Callback used to emit AUTH expressions (e.g. signed
-  /// personality function pointer).
-  void emitAuthValue(const MCExpr *Expr, uint16_t Discriminator,
-                     AArch64PACKey::ID Key, bool HasAddressDiversity);
 
   /// Callback used to implement the .inst directive.
   virtual void emitInst(uint32_t Inst);

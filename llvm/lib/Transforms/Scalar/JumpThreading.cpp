@@ -591,7 +591,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       // 'getPredicateOnEdge' method. This would be able to handle value
       // inequalities better, for example if the compare is "X < 4" and "X < 3"
       // is known true but "X < 4" itself is not available.
-      CmpPredicate Pred;
+      CmpInst::Predicate Pred;
       Value *Val;
       Constant *Cst;
       if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst))))
@@ -2744,7 +2744,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 // Pred is a predecessor of BB with an unconditional branch to BB. SI is
 // a Select instruction in Pred. BB has other predecessors and SI is used in
 // a PHI node in BB. SI has no other use.
-// A new basic block, NewBB, is created and SI is converted to compare and
+// A new basic block, NewBB, is created and SI is converted to compare and 
 // conditional branch. SI is erased from parent.
 void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
                                           SelectInst *SI, PHINode *SIUse,

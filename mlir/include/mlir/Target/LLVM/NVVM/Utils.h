@@ -46,15 +46,14 @@ public:
   /// Returns the CUDA toolkit path.
   StringRef getToolkitPath() const;
 
-  /// Returns the bitcode libraries to be linked into the gpu module after
-  /// translation to LLVM IR.
-  ArrayRef<Attribute> getLibrariesToLink() const;
+  /// Returns the bitcode files to be loaded.
+  ArrayRef<std::string> getFileList() const;
 
-  /// Appends `nvvm/libdevice.bc` into `librariesToLink`. Returns failure if the
+  /// Appends `nvvm/libdevice.bc` into `fileList`. Returns failure if the
   /// library couldn't be found.
   LogicalResult appendStandardLibs();
 
-  /// Loads the bitcode files in `librariesToLink`.
+  /// Loads the bitcode files in `fileList`.
   virtual std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
   loadBitcodeFiles(llvm::Module &module) override;
 
@@ -65,10 +64,8 @@ protected:
   /// CUDA toolkit path.
   std::string toolkitPath;
 
-  /// List of LLVM bitcode to link into after translation to LLVM IR.
-  /// The attributes can be StringAttr pointing to a file path, or
-  /// a Resource blob pointing to the LLVM bitcode in-memory.
-  SmallVector<Attribute> librariesToLink;
+  /// List of LLVM bitcode files to link to.
+  SmallVector<std::string> fileList;
 };
 } // namespace NVVM
 } // namespace mlir

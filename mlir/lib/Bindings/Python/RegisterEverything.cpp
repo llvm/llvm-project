@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/RegisterEverything.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
 
-NB_MODULE(_mlirRegisterEverything, m) {
+PYBIND11_MODULE(_mlirRegisterEverything, m) {
   m.doc() = "MLIR All Upstream Dialects, Translations and Passes Registration";
 
   m.def("register_dialects", [](MlirDialectRegistry registry) {

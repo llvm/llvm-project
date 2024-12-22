@@ -175,7 +175,7 @@ define i32 @knownbits_phi_select_test1(ptr %p1, ptr %p2, i8 %x) {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[INDVAR1]], 34
 ; CHECK-NEXT:    [[EXT3:%.*]] = zext i1 [[CMP6]] to i32
 ; CHECK-NEXT:    [[INDVAR5_NEXT]] = xor i32 [[INDVAR5]], [[EXT3]]
-; CHECK-NEXT:    [[INDVAR3_NEXT]] = getelementptr inbounds nuw i8, ptr [[INDVAR3]], i64 1
+; CHECK-NEXT:    [[INDVAR3_NEXT]] = getelementptr inbounds i8, ptr [[INDVAR3]], i64 1
 ; CHECK-NEXT:    [[LOAD2]] = load i8, ptr [[INDVAR3_NEXT]], align 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:

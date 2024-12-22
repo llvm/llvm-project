@@ -38,5 +38,5 @@ add_libc_fuzzer(
   SRCS
     bcmp_fuzz.cpp
   DEPENDS
-    libc.src.strings.bcmp
+    libc.src.string.bcmp
 )

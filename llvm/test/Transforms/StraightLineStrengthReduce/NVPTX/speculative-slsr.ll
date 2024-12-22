@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=sm_35 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"

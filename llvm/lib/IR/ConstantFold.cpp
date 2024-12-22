@@ -71,51 +71,50 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   if (SrcTy == DestTy)
     return V; // no-op cast
 
-  if (V->isAllOnesValue())
-    return Constant::getAllOnesValue(DestTy);
+  // Handle casts from one vector constant to another.  We know that the src
+  // and dest type have the same size (otherwise its an illegal cast).
+  if (VectorType *DestPTy = dyn_cast<VectorType>(DestTy)) {
+    if (V->isAllOnesValue())
+      return Constant::getAllOnesValue(DestTy);
 
-  // Handle ConstantInt -> ConstantFP
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
-    if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
-      return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
-
-    // Make sure dest type is compatible with the folded fp constant.
-    // See note below regarding the PPC_FP128 restriction.
-    if (!DestTy->isFPOrFPVectorTy() || DestTy->isPPC_FP128Ty() ||
-        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
-      return nullptr;
-
-    return ConstantFP::get(
-        DestTy,
-        APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
+    if (!isa<VectorType>(SrcTy))
+      if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
+        return ConstantExpr::getBitCast(ConstantVector::get(V), DestPTy);
+    return nullptr;
   }
 
-  // Handle ConstantFP -> ConstantInt
-  if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
-    // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
-    // This allows for other simplifications (although some of them
-    // can only be handled by Analysis/ConstantFolding.cpp).
-    if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
-      return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
+  // Handle integral constant input.
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+    // See note below regarding the PPC_FP128 restriction.
+    if (DestTy->isFloatingPointTy() && !DestTy->isPPC_FP128Ty())
+      return ConstantFP::get(DestTy->getContext(),
+                             APFloat(DestTy->getFltSemantics(),
+                                     CI->getValue()));
 
+    // Otherwise, can't fold this (vector?)
+    return nullptr;
+  }
+
+  // Handle ConstantFP input: FP -> Integral.
+  if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
     // PPC_FP128 is really the sum of two consecutive doubles, where the first
     // double is always stored first in memory, regardless of the target
     // endianness. The memory layout of i128, however, depends on the target
     // endianness, and so we can't fold this without target endianness
     // information. This should instead be handled by
     // Analysis/ConstantFolding.cpp
-    if (SrcTy->isPPC_FP128Ty())
+    if (FP->getType()->isPPC_FP128Ty())
       return nullptr;
 
     // Make sure dest type is compatible with the folded integer constant.
-    if (!DestTy->isIntOrIntVectorTy() ||
-        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
+    if (!DestTy->isIntegerTy())
       return nullptr;
 
-    return ConstantInt::get(DestTy, FP->getValueAPF().bitcastToAPInt());
+    return ConstantInt::get(FP->getContext(),
+                            FP->getValueAPF().bitcastToAPInt());
   }
 
   return nullptr;
@@ -198,9 +197,9 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     if (ConstantFP *FPC = dyn_cast<ConstantFP>(V)) {
       bool ignored;
       APFloat Val = FPC->getValueAPF();
-      Val.convert(DestTy->getScalarType()->getFltSemantics(),
-                  APFloat::rmNearestTiesToEven, &ignored);
-      return ConstantFP::get(DestTy, Val);
+      Val.convert(DestTy->getFltSemantics(), APFloat::rmNearestTiesToEven,
+                  &ignored);
+      return ConstantFP::get(V->getContext(), Val);
     }
     return nullptr; // Can't fold.
   case Instruction::FPToUI:
@@ -208,25 +207,26 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     if (ConstantFP *FPC = dyn_cast<ConstantFP>(V)) {
       const APFloat &V = FPC->getValueAPF();
       bool ignored;
-      APSInt IntVal(DestTy->getScalarSizeInBits(), opc == Instruction::FPToUI);
+      uint32_t DestBitWidth = cast<IntegerType>(DestTy)->getBitWidth();
+      APSInt IntVal(DestBitWidth, opc == Instruction::FPToUI);
       if (APFloat::opInvalidOp ==
           V.convertToInteger(IntVal, APFloat::rmTowardZero, &ignored)) {
         // Undefined behavior invoked - the destination type can't represent
         // the input constant.
         return PoisonValue::get(DestTy);
       }
-      return ConstantInt::get(DestTy, IntVal);
+      return ConstantInt::get(FPC->getContext(), IntVal);
     }
     return nullptr; // Can't fold.
   case Instruction::UIToFP:
   case Instruction::SIToFP:
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
       const APInt &api = CI->getValue();
-      APFloat apf(DestTy->getScalarType()->getFltSemantics(),
-                  APInt::getZero(DestTy->getScalarSizeInBits()));
+      APFloat apf(DestTy->getFltSemantics(),
+                  APInt::getZero(DestTy->getPrimitiveSizeInBits()));
       apf.convertFromAPInt(api, opc==Instruction::SIToFP,
                            APFloat::rmNearestTiesToEven);
-      return ConstantFP::get(DestTy, apf);
+      return ConstantFP::get(V->getContext(), apf);
     }
     return nullptr;
   case Instruction::ZExt:
@@ -572,7 +572,7 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
     default:
       break;
     case Instruction::FNeg:
-      return ConstantFP::get(C->getType(), neg(CV));
+      return ConstantFP::get(C->getContext(), neg(CV));
     }
   } else if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
     // Fast path for splatted constants.
@@ -856,19 +856,19 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         break;
       case Instruction::FAdd:
         (void)C3V.add(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        return ConstantFP::get(C1->getContext(), C3V);
       case Instruction::FSub:
         (void)C3V.subtract(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        return ConstantFP::get(C1->getContext(), C3V);
       case Instruction::FMul:
         (void)C3V.multiply(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        return ConstantFP::get(C1->getContext(), C3V);
       case Instruction::FDiv:
         (void)C3V.divide(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        return ConstantFP::get(C1->getContext(), C3V);
       case Instruction::FRem:
         (void)C3V.mod(C2V);
-        return ConstantFP::get(C1->getType(), C3V);
+        return ConstantFP::get(C1->getContext(), C3V);
       }
     }
   }

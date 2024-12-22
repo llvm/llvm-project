@@ -536,11 +536,12 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
                                          // don't do the work to trap them.
   expr_options.SetTimeout(process->GetUtilityExpressionTimeout());
 
-  ExpressionResults result = UserExpression::Evaluate(
-      exe_ctx, expr_options, expr_cstr, expr_prefix, result_valobj_sp);
+  Status expr_error;
+  ExpressionResults result =
+      UserExpression::Evaluate(exe_ctx, expr_options, expr_cstr, expr_prefix,
+                               result_valobj_sp, expr_error);
   if (result != eExpressionCompleted)
-    return result_valobj_sp ? result_valobj_sp->GetError().Clone()
-                            : Status("unknown error");
+    return expr_error;
 
   if (result_valobj_sp->GetError().Fail())
     return result_valobj_sp->GetError().Clone();

@@ -1012,7 +1012,7 @@ class Selector {
   }
 
   MultiKeywordSelector *getMultiKeywordSelector() const {
-    return cast<MultiKeywordSelector *>(InfoPtr.getPointer());
+    return InfoPtr.getPointer().get<MultiKeywordSelector *>();
   }
 
   unsigned getIdentifierInfoFlag() const {
@@ -1020,7 +1020,7 @@ class Selector {
     // IMPORTANT NOTE: We have to reconstitute this data rather than use the
     // value directly from the PointerIntPair. See the comments in `InfoPtr`
     // for more details.
-    if (isa<MultiKeywordSelector *>(InfoPtr.getPointer()))
+    if (InfoPtr.getPointer().is<MultiKeywordSelector *>())
       new_flags |= MultiArg;
     return new_flags;
   }

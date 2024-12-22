@@ -121,7 +121,7 @@ public:
       : MachineFunctionPass(ID), customPassID(cPassID) {
     initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveStacksWrapperLegacyPass(*PassRegistry::getPassRegistry());
+    initializeLiveStacksPass(*PassRegistry::getPassRegistry());
     initializeVirtRegMapWrapperLegacyPass(*PassRegistry::getPassRegistry());
   }
 
@@ -550,8 +550,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   //au.addRequiredID(SplitCriticalEdgesID);
   if (customPassID)
     au.addRequiredID(*customPassID);
-  au.addRequired<LiveStacksWrapperLegacy>();
-  au.addPreserved<LiveStacksWrapperLegacy>();
+  au.addRequired<LiveStacks>();
+  au.addPreserved<LiveStacks>();
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   au.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();

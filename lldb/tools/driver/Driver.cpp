@@ -61,13 +61,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -77,8 +76,7 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class LLDBOptTable : public opt::GenericOptTable {
 public:
-  LLDBOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLDBOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 } // namespace
 
@@ -446,8 +444,12 @@ int Driver::MainLoop() {
   m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
   m_debugger.SetShowInlineDiagnostics(true);
 
-  // Set the terminal dimensions.
-  UpdateWindowSize();
+  struct winsize window_size;
+  if ((isatty(STDIN_FILENO) != 0) &&
+      ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
+    if (window_size.ws_col > 0)
+      m_debugger.SetTerminalWidth(window_size.ws_col);
+  }
 
   SBCommandInterpreter sb_interpreter = m_debugger.GetCommandInterpreter();
 
@@ -623,22 +625,18 @@ int Driver::MainLoop() {
   return sb_interpreter.GetQuitStatus();
 }
 
-void Driver::UpdateWindowSize() {
-  struct winsize window_size;
-  if ((isatty(STDIN_FILENO) != 0) &&
-      ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if (window_size.ws_col > 0)
-      m_debugger.SetTerminalWidth(window_size.ws_col);
-#ifndef _WIN32
-    if (window_size.ws_row > 0)
-      m_debugger.SetTerminalHeight(window_size.ws_row);
-#endif
-  }
+void Driver::ResizeWindow(unsigned short col) {
+  GetDebugger().SetTerminalWidth(col);
 }
 
 void sigwinch_handler(int signo) {
-  if (g_driver != nullptr)
-    g_driver->UpdateWindowSize();
+  struct winsize window_size;
+  if ((isatty(STDIN_FILENO) != 0) &&
+      ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
+    if ((window_size.ws_col > 0) && g_driver != nullptr) {
+      g_driver->ResizeWindow(window_size.ws_col);
+    }
+  }
 }
 
 void sigint_handler(int signo) {

@@ -6185,7 +6185,7 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
   case ValID::t_EmptyArray:
     if (!Ty->isArrayTy() || cast<ArrayType>(Ty)->getNumElements() != 0)
       return error(ID.Loc, "invalid empty array initializer");
-    V = PoisonValue::get(Ty);
+    V = UndefValue::get(Ty);
     return false;
   case ValID::t_Zero:
     // FIXME: LabelTy should not be a first-class type.
@@ -6261,8 +6261,6 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
   case ValID::t_APSInt:
   case ValID::t_APFloat:
   case ValID::t_Undef:
-  case ValID::t_Poison:
-  case ValID::t_Zero:
   case ValID::t_Constant:
   case ValID::t_ConstantSplat:
   case ValID::t_ConstantStruct:
@@ -7004,6 +7002,8 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     return false;
   }
   case lltok::kw_sext:
+  case lltok::kw_fptrunc:
+  case lltok::kw_fpext:
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
   case lltok::kw_sitofp:
@@ -7012,16 +7012,6 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_inttoptr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
-  case lltok::kw_fptrunc:
-  case lltok::kw_fpext: {
-    FastMathFlags FMF = EatFastMathFlagsIfPresent();
-    if (parseCast(Inst, PFS, KeywordVal))
-      return true;
-    if (FMF.any())
-      Inst->setFastMathFlags(FMF);
-    return false;
-  }
-
   // Other.
   case lltok::kw_select: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
@@ -7796,10 +7786,12 @@ bool LLParser::parseCast(Instruction *&Inst, PerFunctionState &PFS,
       parseType(DestTy))
     return true;
 
-  if (!CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy))
+  if (!CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy)) {
+    CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy);
     return error(Loc, "invalid cast opcode for cast from '" +
                           getTypeString(Op->getType()) + "' to '" +
                           getTypeString(DestTy) + "'");
+  }
   Inst = CastInst::Create((Instruction::CastOps)Opc, Op, DestTy);
   return false;
 }

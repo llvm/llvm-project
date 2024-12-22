@@ -27,7 +27,7 @@ if (NOT PACKAGE_VERSION)
 endif()
 
 if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
-  # "Symbol version prefix for libLLVM.so and libclang-cpp.so"
+  # "Symbol version prefix for libLLVM.so"
   set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
@@ -150,13 +150,6 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 endif()
 
-if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
-    "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
-    "https://libc.llvm.org/ for building the runtimes.")
-endif()
-
 # Select the runtimes to build
 #
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
@@ -186,8 +179,13 @@ if(LIBC_GPU_BUILD)
   list(APPEND RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
 endif()
 
+set(NEED_LIBC_HDRGEN FALSE)
+if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(NEED_LIBC_HDRGEN TRUE)
+endif()
 foreach(_name ${LLVM_RUNTIME_TARGETS})
   if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+    set(NEED_LIBC_HDRGEN TRUE)
     if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
       set(LLVM_LIBC_GPU_BUILD ON)
     endif()
@@ -197,10 +195,26 @@ if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
   set(LLVM_LIBC_GPU_BUILD ON)
 endif()
-if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS AND LLVM_LIBC_GPU_BUILD)
-  message(STATUS "Enabling libc project to build libc testing tools")
-  list(APPEND LLVM_ENABLE_PROJECTS "libc")
+if(NEED_LIBC_HDRGEN)
+  # To build the libc runtime, we need to be able to build few libc build
+  # tools from the "libc" project. So, we add it to the list of enabled
+  # projects.
+  if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling libc project to build libc build tools")
+    list(APPEND LLVM_ENABLE_PROJECTS "libc")
+  endif()
 endif()
+
+foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
+  if("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
+    # The 'libc' project bootstraps a few executables via the project build and
+    # should not emit an error currently.
+    if(NOT (NEED_LIBC_HDRGEN AND "${proj}" STREQUAL "libc"))
+      message(FATAL_ERROR "Runtime project \"${proj}\" found in LLVM_ENABLE_PROJECTS and LLVM_ENABLE_RUNTIMES. It must only appear in one of them and that one should almost always be LLVM_ENABLE_RUNTIMES.")
+    endif()
+  endif()
+endforeach()
+unset(NEED_LIBC_HDRGEN)
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for

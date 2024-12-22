@@ -2312,17 +2312,6 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
   return T;
 }
 
-static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
-                                   const BitIntType *BIT,
-                                   bool ForMatrixType = false) {
-  // Only support _BitInt elements with byte-sized power of 2 NumBits.
-  unsigned NumBits = BIT->getNumBits();
-  if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8)
-    return S.Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
-           << ForMatrixType << (NumBits < 8);
-  return false;
-}
-
 QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                SourceLocation AttrLoc) {
   // The base type must be integer (not Boolean or enumeration) or float, and
@@ -2335,10 +2324,15 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << CurType;
     return QualType();
   }
-
-  if (const auto *BIT = CurType->getAs<BitIntType>();
-      BIT && CheckBitIntElementType(*this, AttrLoc, BIT))
-    return QualType();
+  // Only support _BitInt elements with byte-sized power of 2 NumBits.
+  if (const auto *BIT = CurType->getAs<BitIntType>()) {
+    unsigned NumBits = BIT->getNumBits();
+    if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
+      Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
+          << (NumBits < 8);
+      return QualType();
+    }
+  }
 
   if (SizeExpr->isTypeDependent() || SizeExpr->isValueDependent())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
@@ -2408,9 +2402,15 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
     return QualType();
   }
 
-  if (const auto *BIT = T->getAs<BitIntType>();
-      BIT && CheckBitIntElementType(*this, AttrLoc, BIT))
-    return QualType();
+  // Only support _BitInt elements with byte-sized power of 2 NumBits.
+  if (T->isBitIntType()) {
+    unsigned NumBits = T->castAs<BitIntType>()->getNumBits();
+    if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
+      Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
+          << (NumBits < 8);
+      return QualType();
+    }
+  }
 
   if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
     std::optional<llvm::APSInt> vecSize =
@@ -2454,11 +2454,6 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     Diag(AttrLoc, diag::err_attribute_invalid_matrix_type) << ElementTy;
     return QualType();
   }
-
-  if (const auto *BIT = ElementTy->getAs<BitIntType>();
-      BIT &&
-      CheckBitIntElementType(*this, AttrLoc, BIT, /*ForMatrixType=*/true))
-    return QualType();
 
   if (NumRows->isTypeDependent() || NumCols->isTypeDependent() ||
       NumRows->isValueDependent() || NumCols->isValueDependent())
@@ -4887,17 +4882,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
-            // Attach a valid source location for diagnostics on functions with
-            // trailing return types missing 'auto'. Attempt to get the location
-            // from the declared type; if invalid, fall back to the trailing
-            // return type's location.
-            SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
-            SourceRange SR = D.getDeclSpec().getSourceRange();
-            if (Loc.isInvalid()) {
-              Loc = FTI.getTrailingReturnTypeLoc();
-              SR = D.getSourceRange();
-            }
-            S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
+            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
+                   diag::err_trailing_return_without_auto)
+                << T << D.getDeclSpec().getSourceRange();
             D.setInvalidType(true);
             // FIXME: recover and fill decls in `TypeLoc`s.
             AreDeclaratorChunksValid = false;
@@ -5352,23 +5339,15 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         case NestedNameSpecifier::TypeSpec:
         case NestedNameSpecifier::TypeSpecWithTemplate:
-          const Type *NNSType = NNS->getAsType();
-          ClsType = QualType(NNSType, 0);
+          ClsType = QualType(NNS->getAsType(), 0);
           // Note: if the NNS has a prefix and ClsType is a nondependent
-          // TemplateSpecializationType or a RecordType, then the NNS prefix is
-          // NOT included in ClsType; hence we wrap ClsType into an
-          // ElaboratedType. NOTE: in particular, no wrap occurs if ClsType
-          // already is an Elaborated, DependentName, or
-          // DependentTemplateSpecialization.
-          if (isa<DependentTemplateSpecializationType>(NNSType)) {
-            // FIXME: Rebuild DependentTemplateSpecializationType, adding the
-            // Prefix.
-          } else if (isa<TemplateSpecializationType, RecordType>(NNSType)) {
-            // Either the dependent case (TemplateSpecializationType), or the
-            // non-dependent one (RecordType).
+          // TemplateSpecializationType, then the NNS prefix is NOT included
+          // in ClsType; hence we wrap ClsType into an ElaboratedType.
+          // NOTE: in particular, no wrap occurs if ClsType already is an
+          // Elaborated, DependentName, or DependentTemplateSpecialization.
+          if (isa<TemplateSpecializationType>(NNS->getAsType()))
             ClsType = Context.getElaboratedType(ElaboratedTypeKeyword::None,
                                                 NNSPrefix, ClsType);
-          }
           break;
         }
       } else {
@@ -5694,9 +5673,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   assert(!T.isNull() && "T must not be null at the end of this function");
   if (!AreDeclaratorChunksValid)
     return Context.getTrivialTypeSourceInfo(T);
-
-  if (state.didParseHLSLParamMod() && !T->isConstantArrayType())
-    T = S.HLSL().getInoutParameterType(T);
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
@@ -8650,6 +8626,7 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
       Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
+    CurType = S.HLSL().getInoutParameterType(CurType);
     State.setParsedHLSLParamMod(true);
   }
 }

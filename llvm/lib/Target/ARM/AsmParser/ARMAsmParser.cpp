@@ -5129,8 +5129,7 @@ ParseStatus ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_MB::RESERVED_0 + Val;
   } else
-    return Error(Parser.getTok().getLoc(),
-                 "expected an immediate or barrier type");
+    return ParseStatus::Failure;
 
   Operands.push_back(
       ARMOperand::CreateMemBarrierOpt((ARM_MB::MemBOpt)Opt, S, *this));
@@ -5194,8 +5193,7 @@ ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_ISB::RESERVED_0 + Val;
   } else
-    return Error(Parser.getTok().getLoc(),
-                 "expected an immediate or barrier type");
+    return ParseStatus::Failure;
 
   Operands.push_back(ARMOperand::CreateInstSyncBarrierOpt(
       (ARM_ISB::InstSyncBOpt)Opt, S, *this));
@@ -9055,11 +9053,10 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDR_PRE_imm ? ARM::t2LDR_PRE
                                                              : ARM::t2LDR_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9069,12 +9066,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     MCInst TmpInst;
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STR_PRE_imm ? ARM::t2STR_PRE
                                                              : ARM::t2STR_POST);
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9096,11 +9092,10 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRB_PRE
                           : ARM::t2LDRB_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9121,12 +9116,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRB_PRE_imm
                           ? ARM::t2STRB_PRE
                           : ARM::t2STRB_POST);
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9148,11 +9142,10 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRH_PRE
                           : ARM::t2LDRH_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9173,12 +9166,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRH_PRE_imm
                           ? ARM::t2STRH_PRE
                           : ARM::t2STRH_POST);
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9200,11 +9192,10 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRSB_PRE
                           : ARM::t2LDRSB_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9226,11 +9217,10 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRSH_PRE
                           : ARM::t2LDRSH_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
-    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }

@@ -236,7 +236,7 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
   // This algorithm requires a reasonably low use count before finding a match
   // to avoid uselessly blowing up compile time in large blocks.
   unsigned UseCount = 0;
-  for (SDNode::user_iterator I = Chain->user_begin(), E = Chain->user_end();
+  for (SDNode::use_iterator I = Chain->use_begin(), E = Chain->use_end();
        I != E && UseCount < 100; ++I, ++UseCount) {
     if (I.getUse().getResNo() != Chain.getResNo())
       continue;
@@ -388,7 +388,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
 
       // There are either zero or one users of the Glue result.
       bool HasGlueUse = false;
-      for (SDNode *U : N->users())
+      for (SDNode *U : N->uses())
         if (GlueVal.isOperandOf(U)) {
           HasGlueUse = true;
           assert(N->getNodeId() == -1 && "Node already inserted!");

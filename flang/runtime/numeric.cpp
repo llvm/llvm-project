@@ -94,7 +94,7 @@ template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
   return std::ldexp(x, ip); // x*2**p
 }
 
-// SELECTED_INT_KIND (16.9.169) and SELECTED_UNSIGNED_KIND extension
+// SELECTED_INT_KIND (16.9.169)
 template <typename X, typename M>
 inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(
     X x, M mask) {
@@ -781,7 +781,7 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedCharKind)(
     return -1;
   }
 }
-// SELECTED_INT_KIND and SELECTED_UNSIGNED_KIND extension
+// SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedIntKind)(
     const char *source, int line, void *x, int xKind) {
   return RTNAME(SelectedIntKindMasked)(source, line, x, xKind,

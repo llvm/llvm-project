@@ -65,10 +65,11 @@ static bool hasType(const MCInst &MI, const MCInstrInfo &MII) {
   // If we define an output, and have at least one other argument.
   if (MCDesc.getNumDefs() == 1 && MCDesc.getNumOperands() >= 2) {
     // Check if we define an ID, and take a type as operand 1.
-    return MCDesc.operands()[0].RegClass >= 0 &&
-           MCDesc.operands()[1].RegClass >= 0 &&
-           MCDesc.operands()[0].RegClass != SPIRV::TYPERegClassID &&
-           MCDesc.operands()[1].RegClass == SPIRV::TYPERegClassID;
+    auto &DefOpInfo = MCDesc.operands()[0];
+    auto &FirstArgOpInfo = MCDesc.operands()[1];
+    return DefOpInfo.RegClass >= 0 && FirstArgOpInfo.RegClass >= 0 &&
+           DefOpInfo.RegClass != SPIRV::TYPERegClassID &&
+           FirstArgOpInfo.RegClass == SPIRV::TYPERegClassID;
   }
   return false;
 }

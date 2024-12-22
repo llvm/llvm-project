@@ -32,9 +32,3 @@ MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadata())
 // TODO: rename to print<foo> after NPM switch
 MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinter(dbgs()))
 #undef MODULE_PASS
-
-#ifndef FUNCTION_PASS
-#define FUNCTION_PASS(NAME, CREATE_PASS)
-#endif
-FUNCTION_PASS("dxil-resource-access", DXILResourceAccess())
-#undef FUNCTION_PASS

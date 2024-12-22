@@ -374,9 +374,9 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       ++NumDirectoryCacheHits;
 
       // We've been redirected to another directory for answers. Follow it.
-      if (Known->second && isa<DirectoryEntryRef>(Known->second)) {
+      if (Known->second && Known->second.is<DirectoryEntryRef>()) {
         DirsVisited.insert(*Dir);
-        Dir = cast<DirectoryEntryRef>(Known->second);
+        Dir = Known->second.get<DirectoryEntryRef>();
         continue;
       }
 

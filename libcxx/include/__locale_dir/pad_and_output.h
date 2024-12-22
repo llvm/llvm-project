@@ -10,14 +10,11 @@
 #define _LIBCPP___LOCALE_DIR_PAD_AND_OUTPUT_H
 
 #include <__config>
+#include <ios>
 
-#if _LIBCPP_HAS_LOCALIZATION
-
-#  include <ios>
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -82,7 +79,5 @@ _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_CharT, _Traits> __pad_and_output(
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___LOCALE_DIR_PAD_AND_OUTPUT_H

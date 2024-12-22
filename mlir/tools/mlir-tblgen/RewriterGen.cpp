@@ -655,7 +655,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
     }
 
     // Next handle DAG leaf: operand or attribute
-    if (isa<NamedTypeConstraint *>(opArg)) {
+    if (opArg.is<NamedTypeConstraint *>()) {
       auto operandName =
           formatv("{0}.getODSOperands({1})", castedName, nextOperand);
       emitOperandMatch(tree, castedName, operandName.str(), opArgIdx,
@@ -663,7 +663,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
                        /*argName=*/tree.getArgName(i), opArgIdx,
                        /*variadicSubIndex=*/std::nullopt);
       ++nextOperand;
-    } else if (isa<NamedAttribute *>(opArg)) {
+    } else if (opArg.is<NamedAttribute *>()) {
       emitAttributeMatch(tree, opName, opArgIdx, depth);
     } else {
       PrintFatalError(loc, "unhandled case when matching op");
@@ -680,7 +680,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
                                       int argIndex,
                                       std::optional<int> variadicSubIndex) {
   Operator &op = tree.getDialectOp(opMap);
-  auto *operand = cast<NamedTypeConstraint *>(op.getArg(operandIndex));
+  auto *operand = op.getArg(operandIndex).get<NamedTypeConstraint *>();
 
   // If a constraint is specified, we need to generate C++ statements to
   // check the constraint.
@@ -770,7 +770,7 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
       // need to queue the operation only if the matching success. Thus we emit
       // the code at the end.
       tblgenOps << formatv("tblgen_ops.push_back({0});\n", argName);
-    } else if (isa<NamedTypeConstraint *>(op.getArg(argIndex))) {
+    } else if (op.getArg(argIndex).is<NamedTypeConstraint *>()) {
       emitOperandMatch(tree, opName, /*operandName=*/formatv("v{0}", i).str(),
                        operandIndex,
                        /*operandMatcher=*/eitherArgTree.getArgAsLeaf(i),
@@ -851,7 +851,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
       os << formatv("tblgen_ops.push_back({0});\n", argName);
 
       os.unindent() << "}\n";
-    } else if (isa<NamedTypeConstraint *>(op.getArg(argIndex))) {
+    } else if (op.getArg(argIndex).is<NamedTypeConstraint *>()) {
       auto operandName = formatv("variadic_operand_range.slice({0}, 1)", i);
       emitOperandMatch(tree, opName, operandName.str(), operandIndex,
                        /*operandMatcher=*/variadicArgTree.getArgAsLeaf(i),
@@ -867,7 +867,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
 void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
                                         int argIndex, int depth) {
   Operator &op = tree.getDialectOp(opMap);
-  auto *namedAttr = cast<NamedAttribute *>(op.getArg(argIndex));
+  auto *namedAttr = op.getArg(argIndex).get<NamedAttribute *>();
   const auto &attr = namedAttr->attr;
 
   os << "{\n";
@@ -1775,7 +1775,7 @@ void PatternEmitter::supplyValuesForOpArgs(
       auto patArgName = node.getArgName(argIndex);
       if (leaf.isConstantAttr() || leaf.isEnumAttrCase()) {
         // TODO: Refactor out into map to avoid recomputing these.
-        if (!isa<NamedAttribute *>(opArg))
+        if (!opArg.is<NamedAttribute *>())
           PrintFatalError(loc, Twine("expected attribute ") + Twine(argIndex));
         if (!patArgName.empty())
           os << "/*" << patArgName << "=*/";
@@ -1805,7 +1805,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
   bool hasOperandSegmentSizes = false;
   std::vector<std::string> sizes;
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
-    if (isa<NamedAttribute *>(resultOp.getArg(argIndex))) {
+    if (resultOp.getArg(argIndex).is<NamedAttribute *>()) {
       // The argument in the op definition.
       auto opArgName = resultOp.getArgName(argIndex);
       hasOperandSegmentSizes =
@@ -1826,7 +1826,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
     }
 
     const auto *operand =
-        cast<NamedTypeConstraint *>(resultOp.getArg(argIndex));
+        resultOp.getArg(argIndex).get<NamedTypeConstraint *>();
     std::string varName;
     if (operand->isVariadic()) {
       ++numVariadic;

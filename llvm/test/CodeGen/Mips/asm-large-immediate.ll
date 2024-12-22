@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel -no-integrated-as < %s | FileCheck %s
+; RUN: llc -march=mipsel -no-integrated-as < %s | FileCheck %s
 
 define void @test() {
 entry:

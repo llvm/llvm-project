@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Pick lsr (in bit-simplification) for extracting high halfword.
 ; CHECK: lsr{{.*}}#16
 

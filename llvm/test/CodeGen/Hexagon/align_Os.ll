@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK: {{.balign 4|.p2align 2}}
 ; CHECK: {{.balign 4|.p2align 2}}
 

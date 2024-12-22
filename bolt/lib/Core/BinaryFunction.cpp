@@ -385,7 +385,16 @@ bool BinaryFunction::isForwardCall(const MCSymbol *CalleeSymbol) const {
   if (CalleeBF) {
     if (CalleeBF->isInjected())
       return true;
-    return compareBinaryFunctionByIndex(this, CalleeBF);
+
+    if (hasValidIndex() && CalleeBF->hasValidIndex()) {
+      return getIndex() < CalleeBF->getIndex();
+    } else if (hasValidIndex() && !CalleeBF->hasValidIndex()) {
+      return true;
+    } else if (!hasValidIndex() && CalleeBF->hasValidIndex()) {
+      return false;
+    } else {
+      return getAddress() < CalleeBF->getAddress();
+    }
   } else {
     // Absolute symbol.
     ErrorOr<uint64_t> CalleeAddressOrError = BC.getSymbolValue(*CalleeSymbol);
@@ -1504,20 +1513,6 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
   return Target;
 }
 
-void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
-  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
-    if (!Op.isExpr())
-      continue;
-    const MCExpr &Expr = *Op.getExpr();
-    if (Expr.getKind() != MCExpr::SymbolRef)
-      continue;
-    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-    // Set HasAddressTaken for a function regardless of the ICF level.
-    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
-      BF->setHasAddressTaken(true);
-  }
-}
-
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
@@ -1638,8 +1633,6 @@ bool BinaryFunction::scanExternalRefs() {
                              [](const MCOperand &Op) { return Op.isExpr(); })) {
       // Skip assembly if the instruction may not have any symbolic operands.
       continue;
-    } else {
-      analyzeInstructionForFuncReference(Instruction);
     }
 
     // Emit the instruction using temp emitter and generate relocations.

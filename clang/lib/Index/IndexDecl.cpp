@@ -665,9 +665,9 @@ public:
                        ClassTemplatePartialSpecializationDecl *>
         Template = D->getSpecializedTemplateOrPartial();
     const Decl *SpecializationOf =
-        isa<ClassTemplateDecl *>(Template)
-            ? (Decl *)cast<ClassTemplateDecl *>(Template)
-            : cast<ClassTemplatePartialSpecializationDecl *>(Template);
+        Template.is<ClassTemplateDecl *>()
+            ? (Decl *)Template.get<ClassTemplateDecl *>()
+            : Template.get<ClassTemplatePartialSpecializationDecl *>();
     if (!D->isThisDeclarationADefinition())
       IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), D);
     IndexCtx.indexTagDecl(

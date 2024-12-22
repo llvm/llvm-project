@@ -73,7 +73,7 @@ struct TestVectorToVectorLowering
     populateVectorToVectorCanonicalizationPatterns(patterns);
     populateBubbleVectorBitCastOpPatterns(patterns);
     populateCastAwayVectorLeadingOneDimPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 
 private:
@@ -137,7 +137,7 @@ struct TestVectorContractionPrepareForMMTLowering
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     vector::populateVectorContractCanonicalizeMatmulToMMT(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -223,7 +223,7 @@ struct TestVectorUnrollingPatterns
                                        }));
     }
     populateVectorToVectorCanonicalizationPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 
   ListOption<int64_t> unrollOrder{*this, "unroll-order",
@@ -283,7 +283,7 @@ struct TestVectorTransferUnrollingPatterns
     }
     populateVectorUnrollPatterns(patterns, opts);
     populateVectorToVectorCanonicalizationPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 
   Option<bool> reverseUnrollOrder{
@@ -326,7 +326,7 @@ struct TestScalarVectorTransferLoweringPatterns
     RewritePatternSet patterns(ctx);
     vector::populateScalarVectorTransferLoweringPatterns(
         patterns, /*benefit=*/1, allowMultipleUses.getValue());
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -363,14 +363,14 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that reduces the rank of the vector "
+    return "Test lowering patterns that reducedes the rank of the vector "
            "transfer memory and vector operands.";
   }
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorTransferCollapseInnerMostContiguousDimsPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -388,14 +388,14 @@ struct TestVectorSinkPatterns
   StringRef getArgument() const final { return "test-vector-sink-patterns"; }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that eliminate redundant broadcast "
+    return "Test lowering patterns that eliminate redundant brodacast "
            "and transpose operations.";
   }
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateSinkVectorOpsPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -415,7 +415,7 @@ struct TestVectorReduceToContractPatternsPatterns
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorReductionToContractPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -434,7 +434,7 @@ struct TestVectorChainedReductionFoldingPatterns
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateChainedVectorReductionFoldingPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -455,7 +455,7 @@ struct TestVectorBreakDownReductionPatterns
     RewritePatternSet patterns(&getContext());
     populateBreakDownVectorReductionPatterns(patterns,
                                              /*maxNumElementsToExtract=*/2);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -496,7 +496,7 @@ struct TestFlattenVectorTransferPatterns
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateFlattenVectorTransferPatterns(patterns, targetVectorBitwidth);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -512,14 +512,14 @@ struct TestVectorScanLowering
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorScanLoweringPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
 /// Allocate shared memory for a single warp to test lowering of
 /// WarpExecuteOnLane0Op.
 static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
-                                        gpu::WarpExecuteOnLane0Op warpOp,
+                                        WarpExecuteOnLane0Op warpOp,
                                         Type type) {
   static constexpr int64_t kSharedMemorySpace = 3;
   // Compute type of shared memory buffer.
@@ -583,9 +583,8 @@ struct TestVectorDistribution
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistribution)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<vector::VectorDialect, scf::SCFDialect, memref::MemRefDialect,
-                gpu::GPUDialect, affine::AffineDialect>();
+    registry.insert<scf::SCFDialect, memref::MemRefDialect, gpu::GPUDialect,
+                    affine::AffineDialect>();
   }
 
   StringRef getArgument() const final { return "test-vector-warp-distribute"; }
@@ -617,13 +616,13 @@ struct TestVectorDistribution
 
   Option<bool> propagateDistribution{
       *this, "propagate-distribution",
-      llvm::cl::desc("Test distribution propagation"), llvm::cl::init(false)};
+      llvm::cl::desc("Test distribution propgation"), llvm::cl::init(false)};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
 
     getOperation().walk([&](Operation *op) {
-      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
+      if (auto warpOp = dyn_cast<WarpExecuteOnLane0Op>(op)) {
         if (hoistUniform) {
           moveScalarUniformCode(warpOp);
         }
@@ -662,29 +661,29 @@ struct TestVectorDistribution
           /*readBenefit=*/0);
       vector::populateDistributeReduction(patterns, warpReduction, 1);
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn, 2);
-      (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     } else if (distributeTransferWriteOps) {
       RewritePatternSet patterns(ctx);
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn,
                                                 maxTransferWriteElements);
-      (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     } else if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
       vector::populatePropagateWarpVectorDistributionPatterns(
           patterns, distributionFn, shuffleFn);
       vector::populateDistributeReduction(patterns, warpReduction);
-      (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
     WarpExecuteOnLane0LoweringOptions options;
     options.warpAllocationFn = allocateGlobalSharedMemory;
     options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
-                                      gpu::WarpExecuteOnLane0Op warpOp) {
+                                      WarpExecuteOnLane0Op warpOp) {
       builder.create<gpu::BarrierOp>(loc);
     };
     // Test on one pattern in isolation.
     if (warpOpToSCF) {
       populateWarpExecuteOnLane0OpToScfForPattern(patterns, options);
-      (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
       return;
     }
   }
@@ -706,7 +705,7 @@ struct TestVectorExtractStridedSliceLowering
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorExtractStridedSliceToExtractInsertChainPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -726,7 +725,7 @@ struct TestVectorBreakDownBitCast
     populateBreakDownVectorBitCastOpPatterns(patterns, [](BitCastOp op) {
       return op.getSourceVectorType().getShape().back() > 4;
     });
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -782,7 +781,7 @@ struct TestVectorGatherLowering
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorGatherLoweringPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -809,7 +808,7 @@ struct TestFoldArithExtensionIntoVectorContractPatterns
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateFoldArithExtensionPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -834,7 +833,7 @@ struct TestVectorEmulateMaskedLoadStore final
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorMaskedLoadStoreEmulationPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 

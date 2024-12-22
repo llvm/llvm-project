@@ -17,7 +17,6 @@
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpLowering.h"
 #include "DXILPrettyPrinter.h"
-#include "DXILResourceAccess.h"
 #include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DXILTranslateMetadata.h"
@@ -57,7 +56,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
-  initializeDXILResourceAccessLegacyPass(*PR);
   initializeDXILTranslateMetadataLegacyPass(*PR);
   initializeDXILResourceMDWrapperPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
@@ -91,16 +89,15 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
-    addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
-    addPass(createDXILFlattenArraysLegacyPass());
-    addPass(createDXILResourceAccessLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
+    addPass(createDXILFlattenArraysLegacyPass());
     addPass(createScalarizerPass(DxilScalarOptions));
-    addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
+    addPass(createDXILFinalizeLinkageLegacyPass());
+    addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILPrepareModulePass());
   }
 };

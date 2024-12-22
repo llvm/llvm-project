@@ -456,7 +456,7 @@ void MCMachOStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixup);
   }
   DF->setHasInstructions(STI);
-  DF->appendContents(Code);
+  DF->getContents().append(Code.begin(), Code.end());
 }
 
 void MCMachOStreamer::finishImpl() {
@@ -523,7 +523,8 @@ void MCMachOStreamer::finalizeCGProfile() {
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
   cast<MCDataFragment>(*CGProfileSection->begin())
-      .appendContents(SectionBytes, 0);
+      .getContents()
+      .resize(SectionBytes);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -558,5 +559,5 @@ void MCMachOStreamer::createAddrSigSection() {
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->appendContents(8, 0);
+  Frag->getContents().resize(8);
 }

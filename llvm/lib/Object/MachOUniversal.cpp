@@ -17,6 +17,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/type_traits.h"
 
 using namespace llvm;
 using namespace object;
@@ -131,7 +132,7 @@ MachOUniversalBinary::create(MemoryBufferRef Source) {
 MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_MachOUniversalBinary, Source), Magic(0),
       NumberOfObjects(0) {
-  ErrorAsOutParameter ErrAsOutParam(Err);
+  ErrorAsOutParameter ErrAsOutParam(&Err);
   if (Data.getBufferSize() < sizeof(MachO::fat_header)) {
     Err = make_error<GenericBinaryError>("File too small to be a Mach-O "
                                          "universal file",

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
+; RUN: llc -march=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; This test caused an assert because there was a use of an instruction

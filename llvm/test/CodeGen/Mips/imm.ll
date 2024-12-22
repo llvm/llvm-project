@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel < %s | FileCheck %s
+; RUN: llc -march=mipsel < %s | FileCheck %s
 
 define i32 @foo0() nounwind readnone {
 entry:

@@ -69,10 +69,6 @@ public:
 private:
   ContainerTy Nodes;
 
-  /// Called by the DGNode destructor to avoid accessing freed memory.
-  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
-  friend DGNode::~DGNode(); // For eraseFromBundle().
-
 public:
   SchedBundle() = default;
   SchedBundle(ContainerTy &&Nodes) : Nodes(std::move(Nodes)) {
@@ -110,6 +106,8 @@ class Scheduler {
   std::optional<BasicBlock::iterator> ScheduleTopItOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
+  Context &Ctx;
+  Context::CallbackID CreateInstrCB;
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -139,8 +137,11 @@ class Scheduler {
   Scheduler &operator=(const Scheduler &) = delete;
 
 public:
-  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx) {}
-  ~Scheduler() {}
+  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA), Ctx(Ctx) {
+    CreateInstrCB = Ctx.registerCreateInstrCallback(
+        [this](Instruction *I) { DAG.notifyCreateInstr(I); });
+  }
+  ~Scheduler() { Ctx.unregisterCreateInstrCallback(CreateInstrCB); }
 
   bool trySchedule(ArrayRef<Instruction *> Instrs);
 

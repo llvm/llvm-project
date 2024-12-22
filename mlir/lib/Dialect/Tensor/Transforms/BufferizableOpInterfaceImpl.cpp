@@ -480,6 +480,10 @@ struct FromElementsOpInterface
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
     auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
 
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+      return op->emitError("memory space not implemented yet");
+
     // Allocate a buffer for the result.
     Location loc = op->getLoc();
     auto shape = tensorType.getShape();
@@ -489,12 +493,10 @@ struct FromElementsOpInterface
         /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
-    FailureOr<BaseMemRefType> memrefType =
-        bufferization::getBufferType(*tensorAlloc, options);
-    if (failed(memrefType))
-      return failure();
+    auto memrefType =
+        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
     Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), *memrefType, *tensorAlloc);
+        op->getLoc(), memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
     if (fromElementsOp.getElements().empty()) {
@@ -761,8 +763,8 @@ struct PadOpInterface
     RankedTensorType srcType = padOp.getSourceType();
 
     auto toValue = [&](OpFoldResult ofr) {
-      if (auto value = dyn_cast<Value>(ofr))
-        return value;
+      if (ofr.is<Value>())
+        return ofr.get<Value>();
       return rewriter
           .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
           .getResult();

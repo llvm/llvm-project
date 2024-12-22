@@ -48,7 +48,6 @@
 // CHECK-SAME: {{^}}, gfx940
 // CHECK-SAME: {{^}}, gfx941
 // CHECK-SAME: {{^}}, gfx942
-// CHECK-SAME: {{^}}, gfx950
 // CHECK-SAME: {{^}}, gfx1010
 // CHECK-SAME: {{^}}, gfx1011
 // CHECK-SAME: {{^}}, gfx1012

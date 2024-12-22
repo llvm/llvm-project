@@ -288,7 +288,7 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
      << "  return PressureLimitTable[Idx];\n"
      << "}\n\n";
 
-  SequenceToOffsetTable<std::vector<int>> PSetsSeqs(/*Terminator=*/-1);
+  SequenceToOffsetTable<std::vector<int>> PSetsSeqs;
 
   // This table may be larger than NumRCs if some register units needed a list
   // of unit sets that did not correspond to a register class.
@@ -309,7 +309,7 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
 
   OS << "/// Table of pressure sets per register class or unit.\n"
      << "static const int RCSetsTable[] = {\n";
-  PSetsSeqs.emit(OS, printInt);
+  PSetsSeqs.emit(OS, printInt, "-1");
   OS << "};\n\n";
 
   OS << "/// Get the dimensions of register pressure impacted by this "
@@ -610,7 +610,7 @@ static void printSimpleValueType(raw_ostream &OS, MVT::SimpleValueType VT) {
 }
 
 static void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx) {
-  OS << (Idx ? Idx->EnumValue : 0);
+  OS << Idx->EnumValue;
 }
 
 // Differentially encoded register and regunit lists allow for better
@@ -875,14 +875,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   SmallVector<DiffVec, 4> RegUnitLists(Regs.size());
 
   // List of lane masks accompanying register unit sequences.
-  SequenceToOffsetTable<MaskVec> LaneMaskSeqs(/*Terminator=*/std::nullopt);
+  SequenceToOffsetTable<MaskVec> LaneMaskSeqs;
   SmallVector<MaskVec, 4> RegUnitLaneMasks(Regs.size());
 
   // Keep track of sub-register names as well. These are not differentially
   // encoded.
   typedef SmallVector<const CodeGenSubRegIndex *, 4> SubRegIdxVec;
-  SequenceToOffsetTable<SubRegIdxVec, deref<std::less<>>> SubRegIdxSeqs(
-      /*Terminator=*/std::nullopt);
+  SequenceToOffsetTable<SubRegIdxVec, deref<std::less<>>> SubRegIdxSeqs;
   SmallVector<SubRegIdxVec, 4> SubRegIdxLists(Regs.size());
 
   SequenceToOffsetTable<std::string> RegStrings;
@@ -937,7 +936,9 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   // Emit the shared table of regunit lane mask sequences.
   OS << "extern const LaneBitmask " << TargetName << "LaneMaskLists[] = {\n";
-  LaneMaskSeqs.emit(OS, printMask);
+  // TODO: Omit the terminator since it is never used. The length of this list
+  // is known implicitly from the corresponding reg unit list.
+  LaneMaskSeqs.emit(OS, printMask, "LaneBitmask::getAll()");
   OS << "};\n\n";
 
   // Emit the table of sub-register indexes.
@@ -1208,8 +1209,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   unsigned NumModes = CGH.getNumModeIds();
 
   // Build a shared array of value types.
-  SequenceToOffsetTable<std::vector<MVT::SimpleValueType>> VTSeqs(
-      /*Terminator=*/MVT::Other);
+  SequenceToOffsetTable<std::vector<MVT::SimpleValueType>> VTSeqs;
   for (unsigned M = 0; M < NumModes; ++M) {
     for (const auto &RC : RegisterClasses) {
       std::vector<MVT::SimpleValueType> S;
@@ -1221,7 +1221,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   }
   VTSeqs.layout();
   OS << "\nstatic const MVT::SimpleValueType VTLists[] = {\n";
-  VTSeqs.emit(OS, printSimpleValueType);
+  VTSeqs.emit(OS, printSimpleValueType, "MVT::Other");
   OS << "};\n";
 
   // Emit SubRegIndex names, skipping 0.
@@ -1286,6 +1286,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     }
     OS << "};\n";
 
+    OS << "\nstatic const TargetRegisterClass *const "
+       << "NullRegClasses[] = { nullptr };\n\n";
+
     // Emit register class bit mask tables. The first bit mask emitted for a
     // register class, RC, is the set of sub-classes, including RC itself.
     //
@@ -1337,18 +1340,19 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     SuperRegIdxSeqs.emit(OS, printSubRegIndex);
     OS << "};\n\n";
 
-    // Emit super-class lists.
+    // Emit NULL terminated super-class lists.
     for (const auto &RC : RegisterClasses) {
       ArrayRef<CodeGenRegisterClass *> Supers = RC.getSuperClasses();
 
-      // Skip classes without supers.
+      // Skip classes without supers.  We can reuse NullRegClasses.
       if (Supers.empty())
         continue;
 
-      OS << "static unsigned const " << RC.getName() << "Superclasses[] = {\n";
+      OS << "static const TargetRegisterClass *const " << RC.getName()
+         << "Superclasses[] = {\n";
       for (const auto *Super : Supers)
-        OS << "  " << Super->getQualifiedIdName() << ",\n";
-      OS << "};\n\n";
+        OS << "  &" << Super->getQualifiedName() << "RegClass,\n";
+      OS << "  nullptr\n};\n\n";
     }
 
     // Emit methods.
@@ -1402,10 +1406,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
          << (RC.CoveredBySubRegs ? "true" : "false")
          << ", /* CoveredBySubRegs */\n    ";
       if (RC.getSuperClasses().empty())
-        OS << "nullptr, ";
+        OS << "NullRegClasses,\n    ";
       else
-        OS << RC.getName() << "Superclasses,  ";
-      OS << RC.getSuperClasses().size() << ",\n    ";
+        OS << RC.getName() << "Superclasses,\n    ";
       if (RC.AltOrderSelect.empty())
         OS << "nullptr\n";
       else

@@ -66,7 +66,7 @@ mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
     int64_t inputIndex = it.index();
     // Call get<Value>() under the assumption that we're not casting
     // dynamism.
-    Value indexGroupSize = cast<Value>(inputShape[inputIndex]);
+    Value indexGroupSize = inputShape[inputIndex].get<Value>();
     Value indexGroupStaticSizesProduct =
         b.create<arith::ConstantIndexOp>(loc, indexGroupStaticSizesProductInt);
     Value dynamicDimSize = b.createOrFold<arith::DivUIOp>(

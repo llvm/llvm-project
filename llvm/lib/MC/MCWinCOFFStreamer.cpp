@@ -18,7 +18,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
@@ -72,7 +71,7 @@ void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixups[i]);
   }
   DF->setHasInstructions(STI);
-  DF->appendContents(Code);
+  DF->getContents().append(Code.begin(), Code.end());
 }
 
 void MCWinCOFFStreamer::initSections(bool NoExecStack,
@@ -240,7 +239,7 @@ void MCWinCOFFStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
   const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, FK_SecRel_2);
   DF->getFixups().push_back(Fixup);
-  DF->appendContents(2, 0);
+  DF->getContents().resize(DF->getContents().size() + 2, 0);
 }
 
 void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
@@ -258,7 +257,7 @@ void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
   // Record the relocation.
   DF->getFixups().push_back(Fixup);
   // Emit 4 bytes (zeros) to the object file.
-  DF->appendContents(4, 0);
+  DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
 void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
@@ -277,7 +276,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
   // Record the relocation.
   DF->getFixups().push_back(Fixup);
   // Emit 4 bytes (zeros) to the object file.
-  DF->appendContents(4, 0);
+  DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
 void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
@@ -371,7 +370,6 @@ void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
 }
 
 void MCWinCOFFStreamer::finishImpl() {
-  getContext().getCVContext().finish();
   MCAssembler &Asm = getAssembler();
   if (Asm.getWriter().getEmitAddrsigSection()) {
     // Register the section.

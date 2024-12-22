@@ -4,4 +4,4 @@
 
 #undef __CLC_FUNCTION
 #define __CLC_FUNCTION floor
-#include <clc/math/unary_builtin.inc>
+#include "unary_builtin.inc"

@@ -140,8 +140,8 @@ LLVM_DUMP_METHOD void SeedContainer::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
 template <typename LoadOrStoreT> static bool isValidMemSeed(LoadOrStoreT *LSI) {
-  if (!LSI->isSimple())
-    return false;
+  if (LSI->isSimple())
+    return true;
   auto *Ty = Utils::getExpectedType(LSI);
   // Omit types that are architecturally unvectorizable
   if (Ty->isX86_FP80Ty() || Ty->isPPC_FP128Ty())

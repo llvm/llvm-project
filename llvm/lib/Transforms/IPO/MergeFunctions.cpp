@@ -196,10 +196,7 @@ public:
   MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
   }
 
-  template <typename FuncContainer> bool run(FuncContainer &Functions);
-  DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> F);
-
-  SmallPtrSet<GlobalValue *, 4> &getUsed();
+  bool runOnModule(Module &M);
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -300,34 +297,15 @@ private:
   // dangling iterators into FnTree. The invariant that preserves this is that
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
-
-  /// Deleted-New functions mapping
-  DenseMap<Function *, Function *> DelToNewMap;
 };
 } // end anonymous namespace
 
 PreservedAnalyses MergeFunctionsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  if (!MergeFunctionsPass::runOnModule(M))
+  MergeFunctions MF;
+  if (!MF.runOnModule(M))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
-}
-
-SmallPtrSet<GlobalValue *, 4> &MergeFunctions::getUsed() { return Used; }
-
-bool MergeFunctionsPass::runOnModule(Module &M) {
-  MergeFunctions MF;
-  SmallVector<GlobalValue *, 4> UsedV;
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-  MF.getUsed().insert(UsedV.begin(), UsedV.end());
-  return MF.run(M);
-}
-
-DenseMap<Function *, Function *>
-MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> F) {
-  MergeFunctions MF;
-  return MF.runOnFunctions(F);
 }
 
 #ifndef NDEBUG
@@ -431,19 +409,20 @@ static bool isEligibleForMerging(Function &F) {
          !hasDistinctMetadataIntrinsic(F);
 }
 
-inline Function *asPtr(Function *Fn) { return Fn; }
-inline Function *asPtr(Function &Fn) { return &Fn; }
-
-template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
+bool MergeFunctions::runOnModule(Module &M) {
   bool Changed = false;
+
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
+  Used.insert(UsedV.begin(), UsedV.end());
 
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
   std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
-  for (auto &Func : M) {
-    Function *FuncPtr = asPtr(Func);
-    if (isEligibleForMerging(*FuncPtr)) {
-      HashedFuncs.push_back({StructuralHash(*FuncPtr), FuncPtr});
+  for (Function &Func : M) {
+    if (isEligibleForMerging(Func)) {
+      HashedFuncs.push_back({StructuralHash(Func), &Func});
     }
   }
 
@@ -454,7 +433,7 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
     // If the hash value matches the previous value or the next one, we must
     // consider merging it. Otherwise it is dropped and never considered again.
     if ((I != S && std::prev(I)->first == I->first) ||
-        (std::next(I) != IE && std::next(I)->first == I->first)) {
+        (std::next(I) != IE && std::next(I)->first == I->first) ) {
       Deferred.push_back(WeakTrackingVH(I->second));
     }
   }
@@ -488,16 +467,9 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
   return Changed;
 }
 
-DenseMap<Function *, Function *>
-MergeFunctions::runOnFunctions(ArrayRef<Function *> F) {
-  [[maybe_unused]] bool MergeResult = this->run(F);
-  assert(MergeResult == !DelToNewMap.empty());
-  return this->DelToNewMap;
-}
-
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
-  for (Use &U : make_early_inc_range(Old->uses())) {
+  for (Use &U : llvm::make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
       // Do not copy attributes from the called function to the call-site.
@@ -796,8 +768,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   ReturnInst *RI = nullptr;
   bool isSwiftTailCall = F->getCallingConv() == CallingConv::SwiftTail &&
                          G->getCallingConv() == CallingConv::SwiftTail;
-  CI->setTailCallKind(isSwiftTailCall ? CallInst::TCK_MustTail
-                                      : CallInst::TCK_Tail);
+  CI->setTailCallKind(isSwiftTailCall ? llvm::CallInst::TCK_MustTail
+                                      : llvm::CallInst::TCK_Tail);
   CI->setCallingConv(F->getCallingConv());
   CI->setAttributes(F->getAttributes());
   if (H->getReturnType()->isVoidTy()) {
@@ -1031,7 +1003,6 @@ bool MergeFunctions::insert(Function *NewFunction) {
 
   Function *DeleteF = NewFunction;
   mergeTwoFunctions(OldF.getFunc(), DeleteF);
-  this->DelToNewMap.insert({DeleteF, OldF.getFunc()});
   return true;
 }
 

@@ -425,7 +425,7 @@ def _looks_like_llvm_dir(directory):
 
     contents = set(os.listdir(directory))
     expected_contents = [
-        "Maintainers.md",
+        "CODE_OWNERS.TXT",
         "cmake",
         "docs",
         "include",

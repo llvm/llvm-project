@@ -89,9 +89,7 @@ if(LLVM_ENABLE_MODULES)
 endif()
 
 # Add the dependency on the generation step.
-set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp
-  APPEND PROPERTY OBJECT_DEPENDS ${BUILDVARIABLES_OBJPATH}
-)
+add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})
 
 if(CMAKE_CROSSCOMPILING)
   if (LLVM_NATIVE_TOOL_DIR AND NOT LLVM_CONFIG_PATH)

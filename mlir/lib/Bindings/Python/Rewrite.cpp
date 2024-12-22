@@ -9,14 +9,13 @@
 #include "Rewrite.h"
 
 #include "IRModule.h"
+#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Rewrite.h"
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir/Config/mlir-config.h"
 
-namespace nb = nanobind;
+namespace py = pybind11;
 using namespace mlir;
-using namespace nb::literals;
+using namespace py::literals;
 using namespace mlir::python;
 
 namespace {
@@ -55,17 +54,18 @@ public:
   }
   MlirFrozenRewritePatternSet get() { return set; }
 
-  nb::object getCapsule() {
-    return nb::steal<nb::object>(
+  pybind11::object getCapsule() {
+    return py::reinterpret_steal<py::object>(
         mlirPythonFrozenRewritePatternSetToCapsule(get()));
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static pybind11::object createFromCapsule(pybind11::object capsule) {
     MlirFrozenRewritePatternSet rawPm =
         mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
     if (rawPm.ptr == nullptr)
-      throw nb::python_error();
-    return nb::cast(PyFrozenRewritePatternSet(rawPm), nb::rv_policy::move);
+      throw py::error_already_set();
+    return py::cast(PyFrozenRewritePatternSet(rawPm),
+                    py::return_value_policy::move);
   }
 
 private:
@@ -75,27 +75,25 @@ private:
 } // namespace
 
 /// Create the `mlir.rewrite` here.
-void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
+void mlir::python::populateRewriteSubmodule(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  nb::class_<PyPDLPatternModule>(m, "PDLModule")
-      .def(
-          "__init__",
-          [](PyPDLPatternModule &self, MlirModule module) {
-            new (&self)
-                PyPDLPatternModule(mlirPDLPatternModuleFromModule(module));
-          },
-          "module"_a, "Create a PDL module from the given module.")
+  py::class_<PyPDLPatternModule>(m, "PDLModule", py::module_local())
+      .def(py::init<>([](MlirModule module) {
+             return mlirPDLPatternModuleFromModule(module);
+           }),
+           "module"_a, "Create a PDL module from the given module.")
       .def("freeze", [](PyPDLPatternModule &self) {
         return new PyFrozenRewritePatternSet(mlirFreezeRewritePattern(
             mlirRewritePatternSetFromPDLPatternModule(self.get())));
       });
-#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
-      .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR,
-                   &PyFrozenRewritePatternSet::getCapsule)
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCg
+  py::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet",
+                                        py::module_local())
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyFrozenRewritePatternSet::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR,
            &PyFrozenRewritePatternSet::createFromCapsule);
   m.def(
@@ -104,7 +102,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
         auto status = mlirApplyPatternsAndFoldGreedily(module, set, {});
         if (mlirLogicalResultIsFailure(status))
           // FIXME: Not sure this is the right error to throw here.
-          throw nb::value_error("pattern application failed to converge");
+          throw py::value_error("pattern application failed to converge");
       },
       "module"_a, "set"_a,
       "Applys the given patterns to the given module greedily while folding "

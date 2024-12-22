@@ -13,14 +13,6 @@
 using namespace mlir;
 using namespace mlir::func;
 
-/// Flatten the given value ranges into a single vector of values.
-static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
-  SmallVector<Value> result;
-  for (const auto &vals : values)
-    llvm::append_range(result, vals);
-  return result;
-}
-
 namespace {
 /// Converts the operand and result types of the CallOp, used together with the
 /// FuncOpSignatureConversion.
@@ -29,36 +21,23 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
   /// Hook for derived classes to implement combined matching and rewriting.
   LogicalResult
-  matchAndRewrite(CallOp callOp, OneToNOpAdaptor adaptor,
+  matchAndRewrite(CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Convert the original function results. Keep track of how many result
-    // types an original result type is converted into.
-    SmallVector<size_t> numResultsReplacments;
+    // Convert the original function results.
     SmallVector<Type, 1> convertedResults;
-    size_t numFlattenedResults = 0;
-    for (auto [idx, type] : llvm::enumerate(callOp.getResultTypes())) {
-      if (failed(typeConverter->convertTypes(type, convertedResults)))
-        return failure();
-      numResultsReplacments.push_back(convertedResults.size() -
-                                      numFlattenedResults);
-      numFlattenedResults = convertedResults.size();
-    }
+    if (failed(typeConverter->convertTypes(callOp.getResultTypes(),
+                                           convertedResults)))
+      return failure();
+
+    // If this isn't a one-to-one type mapping, we don't know how to aggregate
+    // the results.
+    if (callOp->getNumResults() != convertedResults.size())
+      return failure();
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
-    auto newCallOp = rewriter.create<CallOp>(
-        callOp.getLoc(), callOp.getCallee(), convertedResults,
-        flattenValues(adaptor.getOperands()));
-    SmallVector<ValueRange> replacements;
-    size_t offset = 0;
-    for (int i = 0, e = callOp->getNumResults(); i < e; ++i) {
-      replacements.push_back(
-          newCallOp->getResults().slice(offset, numResultsReplacments[i]));
-      offset += numResultsReplacments[i];
-    }
-    assert(offset == convertedResults.size() &&
-           "expected that all converted results are used");
-    rewriter.replaceOpWithMultiple(callOp, replacements);
+    rewriter.replaceOpWithNewOp<CallOp>(
+        callOp, callOp.getCallee(), convertedResults, adaptor.getOperands());
     return success();
   }
 };
@@ -124,10 +103,12 @@ public:
   using OpConversionPattern<ReturnOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp op, OneToNOpAdaptor adaptor,
+  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<ReturnOp>(op,
-                                          flattenValues(adaptor.getOperands()));
+    // For a return, all operands go to the results of the parent, so
+    // rewrite them all.
+    rewriter.modifyOpInPlace(op,
+                             [&] { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };

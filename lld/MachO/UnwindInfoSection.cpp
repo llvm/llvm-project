@@ -390,7 +390,7 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
     cu.encoding = support::endian::read32le(buf + cuLayout.encodingOffset);
     for (const Reloc &r : d->unwindEntry()->relocs) {
       if (r.offset == cuLayout.personalityOffset)
-        cu.personality = cast<Symbol *>(r.referent);
+        cu.personality = r.referent.get<Symbol *>();
       else if (r.offset == cuLayout.lsdaOffset)
         cu.lsda = r.getReferentInputSection();
     }

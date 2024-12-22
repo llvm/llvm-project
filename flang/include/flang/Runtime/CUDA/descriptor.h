@@ -9,7 +9,7 @@
 #ifndef FORTRAN_RUNTIME_CUDA_DESCRIPTOR_H_
 #define FORTRAN_RUNTIME_CUDA_DESCRIPTOR_H_
 
-#include "flang/Runtime/descriptor-consts.h"
+#include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
 
@@ -18,11 +18,11 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 
 /// Allocate a descriptor in managed.
-Descriptor *RTDECL(CUFAllocDescriptor)(
+Descriptor *RTDECL(CUFAllocDesciptor)(
     std::size_t, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Deallocate a descriptor allocated in managed or unified memory.
-void RTDECL(CUFFreeDescriptor)(
+void RTDECL(CUFFreeDesciptor)(
     Descriptor *, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Retrieve the device pointer from the host one.

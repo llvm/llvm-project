@@ -1262,15 +1262,12 @@ public:
   ///                    cannot be resumed until execution of the structured
   ///                    block that is associated with the generated task is
   ///                    completed.
-  /// \param EventHandle If present, signifies the event handle as part of
-  ///			 the detach clause
-  /// \param Mergeable	 If the given task is `mergeable`
-  InsertPointOrErrorTy
-  createTask(const LocationDescription &Loc, InsertPointTy AllocaIP,
-             BodyGenCallbackTy BodyGenCB, bool Tied = true,
-             Value *Final = nullptr, Value *IfCondition = nullptr,
-             SmallVector<DependData> Dependencies = {}, bool Mergeable = false,
-             Value *EventHandle = nullptr);
+  InsertPointOrErrorTy createTask(const LocationDescription &Loc,
+                                  InsertPointTy AllocaIP,
+                                  BodyGenCallbackTy BodyGenCB, bool Tied = true,
+                                  Value *Final = nullptr,
+                                  Value *IfCondition = nullptr,
+                                  SmallVector<DependData> Dependencies = {});
 
   /// Generator for the taskgroup construct
   ///
@@ -2857,67 +2854,6 @@ public:
   ///        if any.
   using GenMapInfoCallbackTy =
       function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
-
-private:
-  /// Emit the array initialization or deletion portion for user-defined mapper
-  /// code generation. First, it evaluates whether an array section is mapped
-  /// and whether the \a MapType instructs to delete this section. If \a IsInit
-  /// is true, and \a MapType indicates to not delete this array, array
-  /// initialization code is generated. If \a IsInit is false, and \a MapType
-  /// indicates to delete this array, array deletion code is generated.
-  void emitUDMapperArrayInitOrDel(Function *MapperFn, llvm::Value *MapperHandle,
-                                  llvm::Value *Base, llvm::Value *Begin,
-                                  llvm::Value *Size, llvm::Value *MapType,
-                                  llvm::Value *MapName, TypeSize ElementSize,
-                                  llvm::BasicBlock *ExitBB, bool IsInit);
-
-public:
-  /// Emit the user-defined mapper function. The code generation follows the
-  /// pattern in the example below.
-  /// \code
-  /// void .omp_mapper.<type_name>.<mapper_id>.(void *rt_mapper_handle,
-  ///                                           void *base, void *begin,
-  ///                                           int64_t size, int64_t type,
-  ///                                           void *name = nullptr) {
-  ///   // Allocate space for an array section first or add a base/begin for
-  ///   // pointer dereference.
-  ///   if ((size > 1 || (base != begin && maptype.IsPtrAndObj)) &&
-  ///       !maptype.IsDelete)
-  ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
-  ///                                 size*sizeof(Ty), clearToFromMember(type));
-  ///   // Map members.
-  ///   for (unsigned i = 0; i < size; i++) {
-  ///     // For each component specified by this mapper:
-  ///     for (auto c : begin[i]->all_components) {
-  ///       if (c.hasMapper())
-  ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin,
-  ///         c.arg_size,
-  ///                       c.arg_type, c.arg_name);
-  ///       else
-  ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
-  ///                                     c.arg_begin, c.arg_size, c.arg_type,
-  ///                                     c.arg_name);
-  ///     }
-  ///   }
-  ///   // Delete the array section.
-  ///   if (size > 1 && maptype.IsDelete)
-  ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
-  ///                                 size*sizeof(Ty), clearToFromMember(type));
-  /// }
-  /// \endcode
-  ///
-  /// \param PrivAndGenMapInfoCB Callback that privatizes code and populates the
-  /// MapInfos and returns.
-  /// \param ElemTy DeclareMapper element type.
-  /// \param FuncName Optional param to specify mapper function name.
-  /// \param CustomMapperCB Optional callback to generate code related to
-  /// custom mappers.
-  Function *emitUserDefinedMapper(
-      function_ref<MapInfosTy &(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
-                                llvm::Value *BeginArg)>
-          PrivAndGenMapInfoCB,
-      llvm::Type *ElemTy, StringRef FuncName,
-      function_ref<bool(unsigned int, Function **)> CustomMapperCB = nullptr);
 
   /// Generator for '#omp target data'
   ///

@@ -495,11 +495,11 @@ define <vscale x 32 x half> @vfmul_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    slli a1, a1, 3
 ; ZVFHMIN-NEXT:    sub sp, sp, a1
 ; ZVFHMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v7, v0
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
 ; ZVFHMIN-NEXT:    addi a1, sp, 16
 ; ZVFHMIN-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v20
 ; ZVFHMIN-NEXT:    slli a1, a2, 1
 ; ZVFHMIN-NEXT:    srli a2, a2, 2
@@ -614,12 +614,12 @@ define <vscale x 32 x half> @vfmul_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 ; ZVFHMIN-NEXT:    add a1, a2, a1
 ; ZVFHMIN-NEXT:    sub sp, sp, a1
 ; ZVFHMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x11, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 17 * vlenb
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmv8r.v v16, v8
 ; ZVFHMIN-NEXT:    fmv.x.h a1, fa0
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
 ; ZVFHMIN-NEXT:    addi a3, sp, 16
 ; ZVFHMIN-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vsetvli a3, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v20
 ; ZVFHMIN-NEXT:    vsetvli a3, zero, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv.v.x v16, a1
@@ -706,10 +706,10 @@ define <vscale x 32 x half> @vfmul_vf_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    slli a1, a1, 4
 ; ZVFHMIN-NEXT:    sub sp, sp, a1
 ; ZVFHMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmv8r.v v16, v8
 ; ZVFHMIN-NEXT:    fmv.x.h a1, fa0
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
+; ZVFHMIN-NEXT:    vsetvli a3, zero, e8, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmset.m v7
 ; ZVFHMIN-NEXT:    addi a3, sp, 16
 ; ZVFHMIN-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill

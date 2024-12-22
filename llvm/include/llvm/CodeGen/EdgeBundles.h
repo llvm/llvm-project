@@ -18,16 +18,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class EdgeBundlesWrapperLegacy;
-class EdgeBundlesAnalysis;
 
-class EdgeBundles {
-  friend class EdgeBundlesWrapperLegacy;
-  friend class EdgeBundlesAnalysis;
-
+class EdgeBundles : public MachineFunctionPass {
   const MachineFunction *MF = nullptr;
 
   /// EC - Each edge bundle is an equivalence class. The keys are:
@@ -38,10 +32,10 @@ class EdgeBundles {
   /// Blocks - Map each bundle to a list of basic block numbers.
   SmallVector<SmallVector<unsigned, 8>, 4> Blocks;
 
-  void init();
-  EdgeBundles(MachineFunction &MF);
-
 public:
+  static char ID;
+  EdgeBundles() : MachineFunctionPass(ID) {}
+
   /// getBundle - Return the ingoing (Out = false) or outgoing (Out = true)
   /// bundle number for basic block #N
   unsigned getBundle(unsigned N, bool Out) const { return EC[2 * N + Out]; }
@@ -58,32 +52,9 @@ public:
   /// view - Visualize the annotated bipartite CFG with Graphviz.
   void view() const;
 
-  // Handle invalidation for the new pass manager
-  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &Inv);
-};
-
-class EdgeBundlesWrapperLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-  EdgeBundlesWrapperLegacy() : MachineFunctionPass(ID) {}
-
-  EdgeBundles &getEdgeBundles() { return *Impl; }
-  const EdgeBundles &getEdgeBundles() const { return *Impl; }
-
 private:
-  std::unique_ptr<EdgeBundles> Impl;
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction&) override;
   void getAnalysisUsage(AnalysisUsage&) const override;
-};
-
-class EdgeBundlesAnalysis : public AnalysisInfoMixin<EdgeBundlesAnalysis> {
-  friend AnalysisInfoMixin<EdgeBundlesAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  using Result = EdgeBundles;
-  EdgeBundles run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

@@ -159,7 +159,7 @@ consteval bool __use_fraction() {
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return chrono::hh_mm_ss<typename _Tp::duration>::fractional_width;
 #    endif
-  else if constexpr (chrono::__is_duration_v<_Tp>)
+  else if constexpr (chrono::__is_duration<_Tp>::value)
     return chrono::hh_mm_ss<_Tp>::fractional_width;
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return _Tp::fractional_width;
@@ -273,7 +273,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
       } break;
 
       case _CharT('j'):
-        if constexpr (chrono::__is_duration_v<_Tp>)
+        if constexpr (chrono::__is_duration<_Tp>::value)
           // Converting a duration where the period has a small ratio to days
           // may fail to compile. This due to loss of precision in the
           // conversion. In order to avoid that issue convert to seconds as
@@ -285,7 +285,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         break;
 
       case _CharT('q'):
-        if constexpr (chrono::__is_duration_v<_Tp>) {
+        if constexpr (chrono::__is_duration<_Tp>::value) {
           __sstr << chrono::__units_suffix<_CharT, typename _Tp::period>();
           break;
         }
@@ -301,7 +301,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         // MSVC STL ignores precision but uses separator
         // FMT honours precision and has a bug for separator
         // https://godbolt.org/z/78b7sMxns
-        if constexpr (chrono::__is_duration_v<_Tp>) {
+        if constexpr (chrono::__is_duration<_Tp>::value) {
           __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{}"), __value.count());
           break;
         }
@@ -351,7 +351,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
 
       case _CharT('Y'):
         // Depending on the platform's libc the range of supported years is
-        // limited. Instead of of testing all conditions use the internal
+        // limited. Intead of of testing all conditions use the internal
         // implementation unconditionally.
         __formatter::__format_year(__sstr, __t.tm_year + 1900);
         break;
@@ -627,7 +627,7 @@ __format_chrono(const _Tp& __value,
   if (__chrono_specs.empty())
     __sstr << __value;
   else {
-    if constexpr (chrono::__is_duration_v<_Tp>) {
+    if constexpr (chrono::__is_duration<_Tp>::value) {
       // A duration can be a user defined arithmetic type. Users may specialize
       // numeric_limits, but they may not specialize is_signed.
       if constexpr (numeric_limits<typename _Tp::rep>::is_signed) {

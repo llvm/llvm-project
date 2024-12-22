@@ -59,6 +59,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stack>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 
@@ -1815,10 +1816,11 @@ static Value *emitTaskDependencies(
   return DepArray;
 }
 
-OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
-    const LocationDescription &Loc, InsertPointTy AllocaIP,
-    BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    SmallVector<DependData> Dependencies, bool Mergeable, Value *EventHandle) {
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createTask(const LocationDescription &Loc,
+                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
+                            bool Tied, Value *Final, Value *IfCondition,
+                            SmallVector<DependData> Dependencies) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -1864,8 +1866,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      Mergeable, EventHandle, TaskAllocaBB,
-                      ToBeDeleted](Function &OutlinedFn) mutable {
+                      TaskAllocaBB, ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
@@ -1890,8 +1891,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     // Task is untied iff (Flags & 1) == 0.
     // Task is final iff (Flags & 2) == 2.
     // Task is not final iff (Flags & 2) == 0.
-    // Task is mergeable iff (Flags & 4) == 4.
-    // Task is not mergeable iff (Flags & 4) == 0.
     // TODO: Handle the other flags.
     Value *Flags = Builder.getInt32(Tied);
     if (Final) {
@@ -1899,9 +1898,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
           Builder.CreateSelect(Final, Builder.getInt32(2), Builder.getInt32(0));
       Flags = Builder.CreateOr(FinalFlag, Flags);
     }
-
-    if (Mergeable)
-      Flags = Builder.CreateOr(Builder.getInt32(4), Flags);
 
     // Argument - `sizeof_kmp_task_t` (TaskSize)
     // Tasksize refers to the size in bytes of kmp_task_t data structure
@@ -1935,20 +1931,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
 
-    // Emit detach clause initialization.
-    // evt = (typeof(evt))__kmpc_task_allow_completion_event(loc, tid,
-    // task_descriptor);
-    if (EventHandle) {
-      Function *TaskDetachFn = getOrCreateRuntimeFunctionPtr(
-          OMPRTL___kmpc_task_allow_completion_event);
-      llvm::Value *EventVal =
-          Builder.CreateCall(TaskDetachFn, {Ident, ThreadID, TaskData});
-      llvm::Value *EventHandleAddr =
-          Builder.CreatePointerBitCastOrAddrSpaceCast(EventHandle,
-                                                      Builder.getPtrTy(0));
-      EventVal = Builder.CreatePtrToInt(EventVal, Builder.getInt64Ty());
-      Builder.CreateStore(EventVal, EventHandleAddr);
-    }
     // Copy the arguments for outlined function
     if (HasShareds) {
       Value *Shareds = StaleCI->getArgOperand(1);
@@ -6821,11 +6803,8 @@ static Expected<Function *> createOutlinedFunction(
     OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   // Insert target deinit call in the device compilation pass.
-  BasicBlock *OutlinedBodyBB =
-      splitBB(Builder, /*CreateBranch=*/true, "outlined.body");
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = CBFunc(
-      Builder.saveIP(),
-      OpenMPIRBuilder::InsertPointTy(OutlinedBodyBB, OutlinedBodyBB->begin()));
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      CBFunc(Builder.saveIP(), Builder.saveIP());
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
@@ -6984,7 +6963,8 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
     assert(ArgStructAlloca &&
            "Unable to find the alloca instruction corresponding to arguments "
            "for extracted function");
-    auto *ArgStructType = cast<StructType>(ArgStructAlloca->getAllocatedType());
+    auto *ArgStructType =
+        dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
 
     AllocaInst *NewArgStructAlloca =
         Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
@@ -7720,295 +7700,6 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
         DAddr, P, M.getDataLayout().getPrefTypeAlign(Builder.getPtrTy()));
     ++L;
   }
-}
-
-void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
-    Function *MapperFn, Value *MapperHandle, Value *Base, Value *Begin,
-    Value *Size, Value *MapType, Value *MapName, TypeSize ElementSize,
-    BasicBlock *ExitBB, bool IsInit) {
-  StringRef Prefix = IsInit ? ".init" : ".del";
-
-  // Evaluate if this is an array section.
-  BasicBlock *BodyBB = BasicBlock::Create(
-      M.getContext(), createPlatformSpecificName({"omp.array", Prefix}));
-  Value *IsArray =
-      Builder.CreateICmpSGT(Size, Builder.getInt64(1), "omp.arrayinit.isarray");
-  Value *DeleteBit = Builder.CreateAnd(
-      MapType,
-      Builder.getInt64(
-          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-              OpenMPOffloadMappingFlags::OMP_MAP_DELETE)));
-  Value *DeleteCond;
-  Value *Cond;
-  if (IsInit) {
-    // base != begin?
-    Value *BaseIsBegin = Builder.CreateICmpNE(Base, Begin);
-    // IsPtrAndObj?
-    Value *PtrAndObjBit = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ)));
-    PtrAndObjBit = Builder.CreateIsNotNull(PtrAndObjBit);
-    BaseIsBegin = Builder.CreateAnd(BaseIsBegin, PtrAndObjBit);
-    Cond = Builder.CreateOr(IsArray, BaseIsBegin);
-    DeleteCond = Builder.CreateIsNull(
-        DeleteBit,
-        createPlatformSpecificName({"omp.array", Prefix, ".delete"}));
-  } else {
-    Cond = IsArray;
-    DeleteCond = Builder.CreateIsNotNull(
-        DeleteBit,
-        createPlatformSpecificName({"omp.array", Prefix, ".delete"}));
-  }
-  Cond = Builder.CreateAnd(Cond, DeleteCond);
-  Builder.CreateCondBr(Cond, BodyBB, ExitBB);
-
-  emitBlock(BodyBB, MapperFn);
-  // Get the array size by multiplying element size and element number (i.e., \p
-  // Size).
-  Value *ArraySize = Builder.CreateNUWMul(Size, Builder.getInt64(ElementSize));
-  // Remove OMP_MAP_TO and OMP_MAP_FROM from the map type, so that it achieves
-  // memory allocation/deletion purpose only.
-  Value *MapTypeArg = Builder.CreateAnd(
-      MapType,
-      Builder.getInt64(
-          ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-              OpenMPOffloadMappingFlags::OMP_MAP_TO |
-              OpenMPOffloadMappingFlags::OMP_MAP_FROM)));
-  MapTypeArg = Builder.CreateOr(
-      MapTypeArg,
-      Builder.getInt64(
-          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-              OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT)));
-
-  // Call the runtime API __tgt_push_mapper_component to fill up the runtime
-  // data structure.
-  Value *OffloadingArgs[] = {MapperHandle, Base,       Begin,
-                             ArraySize,    MapTypeArg, MapName};
-  Builder.CreateCall(
-      getOrCreateRuntimeFunction(M, OMPRTL___tgt_push_mapper_component),
-      OffloadingArgs);
-}
-
-Function *OpenMPIRBuilder::emitUserDefinedMapper(
-    function_ref<MapInfosTy &(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
-                              llvm::Value *BeginArg)>
-        GenMapInfoCB,
-    Type *ElemTy, StringRef FuncName,
-    function_ref<bool(unsigned int, Function **)> CustomMapperCB) {
-  SmallVector<Type *> Params;
-  Params.emplace_back(Builder.getPtrTy());
-  Params.emplace_back(Builder.getPtrTy());
-  Params.emplace_back(Builder.getPtrTy());
-  Params.emplace_back(Builder.getInt64Ty());
-  Params.emplace_back(Builder.getInt64Ty());
-  Params.emplace_back(Builder.getPtrTy());
-
-  auto *FnTy =
-      FunctionType::get(Builder.getVoidTy(), Params, /* IsVarArg */ false);
-
-  SmallString<64> TyStr;
-  raw_svector_ostream Out(TyStr);
-  Function *MapperFn =
-      Function::Create(FnTy, GlobalValue::InternalLinkage, FuncName, M);
-  MapperFn->addFnAttr(Attribute::NoInline);
-  MapperFn->addFnAttr(Attribute::NoUnwind);
-  MapperFn->addParamAttr(0, Attribute::NoUndef);
-  MapperFn->addParamAttr(1, Attribute::NoUndef);
-  MapperFn->addParamAttr(2, Attribute::NoUndef);
-  MapperFn->addParamAttr(3, Attribute::NoUndef);
-  MapperFn->addParamAttr(4, Attribute::NoUndef);
-  MapperFn->addParamAttr(5, Attribute::NoUndef);
-
-  // Start the mapper function code generation.
-  BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", MapperFn);
-  auto SavedIP = Builder.saveIP();
-  Builder.SetInsertPoint(EntryBB);
-
-  Value *MapperHandle = MapperFn->getArg(0);
-  Value *BaseIn = MapperFn->getArg(1);
-  Value *BeginIn = MapperFn->getArg(2);
-  Value *Size = MapperFn->getArg(3);
-  Value *MapType = MapperFn->getArg(4);
-  Value *MapName = MapperFn->getArg(5);
-
-  // Compute the starting and end addresses of array elements.
-  // Prepare common arguments for array initiation and deletion.
-  // Convert the size in bytes into the number of array elements.
-  TypeSize ElementSize = M.getDataLayout().getTypeStoreSize(ElemTy);
-  Size = Builder.CreateExactUDiv(Size, Builder.getInt64(ElementSize));
-  Value *PtrBegin = Builder.CreateBitCast(BeginIn, Builder.getPtrTy());
-  Value *PtrEnd = Builder.CreateGEP(ElemTy, PtrBegin, Size);
-
-  // Emit array initiation if this is an array section and \p MapType indicates
-  // that memory allocation is required.
-  BasicBlock *HeadBB = BasicBlock::Create(M.getContext(), "omp.arraymap.head");
-  emitUDMapperArrayInitOrDel(MapperFn, MapperHandle, BaseIn, BeginIn, Size,
-                             MapType, MapName, ElementSize, HeadBB,
-                             /*IsInit=*/true);
-
-  // Emit a for loop to iterate through SizeArg of elements and map all of them.
-
-  // Emit the loop header block.
-  emitBlock(HeadBB, MapperFn);
-  BasicBlock *BodyBB = BasicBlock::Create(M.getContext(), "omp.arraymap.body");
-  BasicBlock *DoneBB = BasicBlock::Create(M.getContext(), "omp.done");
-  // Evaluate whether the initial condition is satisfied.
-  Value *IsEmpty =
-      Builder.CreateICmpEQ(PtrBegin, PtrEnd, "omp.arraymap.isempty");
-  Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
-
-  // Emit the loop body block.
-  emitBlock(BodyBB, MapperFn);
-  BasicBlock *LastBB = BodyBB;
-  PHINode *PtrPHI =
-      Builder.CreatePHI(PtrBegin->getType(), 2, "omp.arraymap.ptrcurrent");
-  PtrPHI->addIncoming(PtrBegin, HeadBB);
-
-  // Get map clause information. Fill up the arrays with all mapped variables.
-  MapInfosTy &Info = GenMapInfoCB(Builder.saveIP(), PtrPHI, BeginIn);
-
-  // Call the runtime API __tgt_mapper_num_components to get the number of
-  // pre-existing components.
-  Value *OffloadingArgs[] = {MapperHandle};
-  Value *PreviousSize = Builder.CreateCall(
-      getOrCreateRuntimeFunction(M, OMPRTL___tgt_mapper_num_components),
-      OffloadingArgs);
-  Value *ShiftedPreviousSize =
-      Builder.CreateShl(PreviousSize, Builder.getInt64(getFlagMemberOffset()));
-
-  // Fill up the runtime mapper handle for all components.
-  for (unsigned I = 0; I < Info.BasePointers.size(); ++I) {
-    Value *CurBaseArg =
-        Builder.CreateBitCast(Info.BasePointers[I], Builder.getPtrTy());
-    Value *CurBeginArg =
-        Builder.CreateBitCast(Info.Pointers[I], Builder.getPtrTy());
-    Value *CurSizeArg = Info.Sizes[I];
-    Value *CurNameArg = Info.Names.size()
-                            ? Info.Names[I]
-                            : Constant::getNullValue(Builder.getPtrTy());
-
-    // Extract the MEMBER_OF field from the map type.
-    Value *OriMapType = Builder.getInt64(
-        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            Info.Types[I]));
-    Value *MemberMapType =
-        Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
-
-    // Combine the map type inherited from user-defined mapper with that
-    // specified in the program. According to the OMP_MAP_TO and OMP_MAP_FROM
-    // bits of the \a MapType, which is the input argument of the mapper
-    // function, the following code will set the OMP_MAP_TO and OMP_MAP_FROM
-    // bits of MemberMapType.
-    // [OpenMP 5.0], 1.2.6. map-type decay.
-    //        | alloc |  to   | from  | tofrom | release | delete
-    // ----------------------------------------------------------
-    // alloc  | alloc | alloc | alloc | alloc  | release | delete
-    // to     | alloc |  to   | alloc |   to   | release | delete
-    // from   | alloc | alloc | from  |  from  | release | delete
-    // tofrom | alloc |  to   | from  | tofrom | release | delete
-    Value *LeftToFrom = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                OpenMPOffloadMappingFlags::OMP_MAP_FROM)));
-    BasicBlock *AllocBB = BasicBlock::Create(M.getContext(), "omp.type.alloc");
-    BasicBlock *AllocElseBB =
-        BasicBlock::Create(M.getContext(), "omp.type.alloc.else");
-    BasicBlock *ToBB = BasicBlock::Create(M.getContext(), "omp.type.to");
-    BasicBlock *ToElseBB =
-        BasicBlock::Create(M.getContext(), "omp.type.to.else");
-    BasicBlock *FromBB = BasicBlock::Create(M.getContext(), "omp.type.from");
-    BasicBlock *EndBB = BasicBlock::Create(M.getContext(), "omp.type.end");
-    Value *IsAlloc = Builder.CreateIsNull(LeftToFrom);
-    Builder.CreateCondBr(IsAlloc, AllocBB, AllocElseBB);
-    // In case of alloc, clear OMP_MAP_TO and OMP_MAP_FROM.
-    emitBlock(AllocBB, MapperFn);
-    Value *AllocMapType = Builder.CreateAnd(
-        MemberMapType,
-        Builder.getInt64(
-            ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                OpenMPOffloadMappingFlags::OMP_MAP_FROM)));
-    Builder.CreateBr(EndBB);
-    emitBlock(AllocElseBB, MapperFn);
-    Value *IsTo = Builder.CreateICmpEQ(
-        LeftToFrom,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_TO)));
-    Builder.CreateCondBr(IsTo, ToBB, ToElseBB);
-    // In case of to, clear OMP_MAP_FROM.
-    emitBlock(ToBB, MapperFn);
-    Value *ToMapType = Builder.CreateAnd(
-        MemberMapType,
-        Builder.getInt64(
-            ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_FROM)));
-    Builder.CreateBr(EndBB);
-    emitBlock(ToElseBB, MapperFn);
-    Value *IsFrom = Builder.CreateICmpEQ(
-        LeftToFrom,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_FROM)));
-    Builder.CreateCondBr(IsFrom, FromBB, EndBB);
-    // In case of from, clear OMP_MAP_TO.
-    emitBlock(FromBB, MapperFn);
-    Value *FromMapType = Builder.CreateAnd(
-        MemberMapType,
-        Builder.getInt64(
-            ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_TO)));
-    // In case of tofrom, do nothing.
-    emitBlock(EndBB, MapperFn);
-    LastBB = EndBB;
-    PHINode *CurMapType =
-        Builder.CreatePHI(Builder.getInt64Ty(), 4, "omp.maptype");
-    CurMapType->addIncoming(AllocMapType, AllocBB);
-    CurMapType->addIncoming(ToMapType, ToBB);
-    CurMapType->addIncoming(FromMapType, FromBB);
-    CurMapType->addIncoming(MemberMapType, ToElseBB);
-
-    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
-                               CurSizeArg,   CurMapType, CurNameArg};
-    Function *ChildMapperFn = nullptr;
-    if (CustomMapperCB && CustomMapperCB(I, &ChildMapperFn)) {
-      // Call the corresponding mapper function.
-      Builder.CreateCall(ChildMapperFn, OffloadingArgs)->setDoesNotThrow();
-    } else {
-      // Call the runtime API __tgt_push_mapper_component to fill up the runtime
-      // data structure.
-      Builder.CreateCall(
-          getOrCreateRuntimeFunction(M, OMPRTL___tgt_push_mapper_component),
-          OffloadingArgs);
-    }
-  }
-
-  // Update the pointer to point to the next element that needs to be mapped,
-  // and check whether we have mapped all elements.
-  Value *PtrNext = Builder.CreateConstGEP1_32(ElemTy, PtrPHI, /*Idx0=*/1,
-                                              "omp.arraymap.next");
-  PtrPHI->addIncoming(PtrNext, LastBB);
-  Value *IsDone = Builder.CreateICmpEQ(PtrNext, PtrEnd, "omp.arraymap.isdone");
-  BasicBlock *ExitBB = BasicBlock::Create(M.getContext(), "omp.arraymap.exit");
-  Builder.CreateCondBr(IsDone, ExitBB, BodyBB);
-
-  emitBlock(ExitBB, MapperFn);
-  // Emit array deletion if this is an array section and \p MapType indicates
-  // that deletion is required.
-  emitUDMapperArrayInitOrDel(MapperFn, MapperHandle, BaseIn, BeginIn, Size,
-                             MapType, MapName, ElementSize, DoneBB,
-                             /*IsInit=*/false);
-
-  // Emit the function exit block.
-  emitBlock(DoneBB, MapperFn, /*IsFinished=*/true);
-
-  Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
-  return MapperFn;
 }
 
 void OpenMPIRBuilder::emitOffloadingArrays(

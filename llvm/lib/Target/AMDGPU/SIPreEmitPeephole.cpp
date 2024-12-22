@@ -362,10 +362,6 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
       if (MI.isConditionalBranch())
         return true;
 
-      if (MI.isUnconditionalBranch() &&
-          TII->getBranchDestBlock(MI) != MBB.getNextNode())
-        return true;
-
       if (MI.isMetaInstruction())
         continue;
 

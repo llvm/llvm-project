@@ -343,7 +343,6 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   Value operandB = op.getOperand(1);
   Type opType = operandA.getType();
   Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter);
   Value two = createFloatConst(op->getLoc(), opType, 2.00, rewriter);
   Value negOne = createFloatConst(op->getLoc(), opType, -1.00, rewriter);
   Value opASquared = b.create<arith::MulFOp>(opType, operandA, operandA);
@@ -360,15 +359,8 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
       b.create<arith::CmpFOp>(arith::CmpFPredicate::ONE, remainder, zero);
   Value oddAndNeg = b.create<arith::AndIOp>(op->getLoc(), oddPower, negCheck);
 
-  // First, we select between the exp value and the adjusted value for odd
-  // powers of negatives. Then, we ensure that one is produced if `b` is zero.
-  // This corresponds to `libm` behavior, even for `0^0`. Without this check,
-  // `exp(0 * ln(0)) = exp(0 *-inf) = exp(-nan) = -nan`.
-  Value zeroCheck =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, operandB, zero);
   Value res = b.create<arith::SelectOp>(op->getLoc(), oddAndNeg, negExpResult,
                                         expResult);
-  res = b.create<arith::SelectOp>(op->getLoc(), zeroCheck, one, res);
   rewriter.replaceOp(op, res);
   return success();
 }

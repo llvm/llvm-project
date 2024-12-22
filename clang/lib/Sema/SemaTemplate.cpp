@@ -4157,13 +4157,6 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
              << IsPartialSpecialization;
   }
 
-  if (const auto *DSA = VarTemplate->getAttr<NoSpecializationsAttr>()) {
-    auto Message = DSA->getMessage();
-    Diag(TemplateNameLoc, diag::warn_invalid_specialization)
-        << VarTemplate << !Message.empty() << Message;
-    Diag(DSA->getLoc(), diag::note_marked_here) << DSA;
-  }
-
   // Check for unexpanded parameter packs in any of the template arguments.
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     if (DiagnoseUnexpandedParameterPack(TemplateArgs[I],
@@ -8298,13 +8291,6 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     return true;
   }
 
-  if (const auto *DSA = ClassTemplate->getAttr<NoSpecializationsAttr>()) {
-    auto Message = DSA->getMessage();
-    Diag(TemplateNameLoc, diag::warn_invalid_specialization)
-        << ClassTemplate << !Message.empty() << Message;
-    Diag(DSA->getLoc(), diag::note_marked_here) << DSA;
-  }
-
   if (S->isTemplateParamScope())
     EnterTemplatedContext(S, ClassTemplate->getTemplatedDecl());
 
@@ -9188,14 +9174,6 @@ bool Sema::CheckFunctionTemplateSpecialization(
 
   // Ignore access information;  it doesn't figure into redeclaration checking.
   FunctionDecl *Specialization = cast<FunctionDecl>(*Result);
-
-  if (const auto *PT = Specialization->getPrimaryTemplate();
-      const auto *DSA = PT->getAttr<NoSpecializationsAttr>()) {
-    auto Message = DSA->getMessage();
-    Diag(FD->getLocation(), diag::warn_invalid_specialization)
-        << PT << !Message.empty() << Message;
-    Diag(DSA->getLoc(), diag::note_marked_here) << DSA;
-  }
 
   // C++23 [except.spec]p13:
   //   An exception specification is considered to be needed when:

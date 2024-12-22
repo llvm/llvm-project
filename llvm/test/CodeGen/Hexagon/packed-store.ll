@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Honor the alignment of a halfword on byte boundaries.
 ; CHECK-NOT: memh
 

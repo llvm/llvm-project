@@ -350,13 +350,10 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
                                     bool IsLowerArgs = false) {
   if (T->isIntegerTy())
     return true;
-  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy() || T->isFP128Ty())
+  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())
     return true;
-  if (T->isArrayTy())
-    return isSupportedArgumentType(T->getArrayElementType(), Subtarget,
-                                   IsLowerArgs);
   // TODO: Support fixed vector types.
   if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&
@@ -595,8 +592,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &AInfo : Info.OrigArgs) {
     if (!isSupportedArgumentType(AInfo.Ty, Subtarget))
-      return false;
-    if (AInfo.Flags[0].isByVal())
       return false;
   }
 

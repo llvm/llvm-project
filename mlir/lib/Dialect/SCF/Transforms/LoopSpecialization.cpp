@@ -331,7 +331,7 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopPeelingPattern>(ctx, peelFront, skipPartial);
-    (void)applyPatternsGreedily(parentOp, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
 
     // Drop the markers.
     parentOp->walk([](Operation *op) {

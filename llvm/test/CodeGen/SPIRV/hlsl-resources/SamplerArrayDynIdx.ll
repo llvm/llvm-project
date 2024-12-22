@@ -24,13 +24,13 @@ define void @main() #0 {
 ; CHECK: [[ac:%[0-9]+]] = OpAccessChain [[SamplerPtrType]] [[Var]] [[Zero]]
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[SamplerType]] [[ac]]
   %buffer0 = call target("spirv.Sampler")
-      @llvm.spv.resource.handlefrombinding.tspirv.Image(
+      @llvm.spv.handle.fromBinding.tspirv.Image(
           i32 3, i32 4, i32 3, i32 0, i1 false)
 
 ; CHECK: [[ac:%[0-9]+]] = OpAccessChain [[SamplerPtrType]] [[Var]] [[One]]
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[SamplerType]] [[ac]]
   %buffer1 = call target("spirv.Sampler")
-      @llvm.spv.resource.handlefrombinding.tspirv.Image(
+      @llvm.spv.handle.fromBinding.tspirv.Image(
           i32 3, i32 4, i32 3, i32 1, i1 false)
   ret void
 }

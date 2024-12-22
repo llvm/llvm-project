@@ -392,17 +392,19 @@ public:
   }
 
   bool isArgExpr(unsigned Arg) const {
-    return Arg < NumArgs && isa<Expr *>(getArg(Arg));
+    return Arg < NumArgs && getArg(Arg).is<Expr*>();
   }
 
-  Expr *getArgAsExpr(unsigned Arg) const { return cast<Expr *>(getArg(Arg)); }
+  Expr *getArgAsExpr(unsigned Arg) const {
+    return getArg(Arg).get<Expr*>();
+  }
 
   bool isArgIdent(unsigned Arg) const {
-    return Arg < NumArgs && isa<IdentifierLoc *>(getArg(Arg));
+    return Arg < NumArgs && getArg(Arg).is<IdentifierLoc*>();
   }
 
   IdentifierLoc *getArgAsIdent(unsigned Arg) const {
-    return cast<IdentifierLoc *>(getArg(Arg));
+    return getArg(Arg).get<IdentifierLoc*>();
   }
 
   const AvailabilityChange &getAvailabilityIntroduced() const {

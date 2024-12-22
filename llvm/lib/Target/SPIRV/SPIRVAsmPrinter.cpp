@@ -45,7 +45,6 @@ using namespace llvm;
 namespace {
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
-  SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
 
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
@@ -153,9 +152,13 @@ void SPIRVAsmPrinter::outputOpFunctionEnd() {
   outputMCInst(FunctionEndInst);
 }
 
+// Emit OpFunctionEnd at the end of MF and clear BBNumToRegMap.
 void SPIRVAsmPrinter::emitFunctionBodyEnd() {
-  if (!isHidden())
-    outputOpFunctionEnd();
+  // Do not emit anything if it's an internal service function.
+  if (isHidden())
+    return;
+  outputOpFunctionEnd();
+  MAI->BBNumToRegMap.clear();
 }
 
 void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
@@ -168,7 +171,6 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
   LabelInst.addOperand(MCOperand::createReg(MAI->getOrCreateMBBRegister(MBB)));
   outputMCInst(LabelInst);
   ++NLabels;
-  LabeledMBB.insert(&MBB);
 }
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
@@ -265,7 +267,7 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   // Output OpLabel after OpFunction and OpFunctionParameter in the first MBB.
   const MachineInstr *NextMI = MI->getNextNode();
-  if (!LabeledMBB.contains(MI->getParent()) && isFuncOrHeaderInstr(MI, TII) &&
+  if (!MAI->hasMBBRegister(*MI->getParent()) && isFuncOrHeaderInstr(MI, TII) &&
       (!NextMI || !isFuncOrHeaderInstr(NextMI, TII))) {
     assert(MI->getParent()->getNumber() == MF->front().getNumber() &&
            "OpFunction is not in the front MBB of MF");

@@ -1655,7 +1655,7 @@ def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
                                   [llvm_i64_ty, llvm_i32_ty, llvm_vararg_ty],
-                                  [Throws, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+                                  [Throws]>;
 def int_experimental_patchpoint_void : Intrinsic<[],
                                                  [llvm_i64_ty, llvm_i32_ty,
                                                   llvm_ptr_ty, llvm_i32_ty,

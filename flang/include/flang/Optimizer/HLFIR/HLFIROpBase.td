@@ -155,12 +155,6 @@ def IsPolymorphicObjectPred
 def AnyPolymorphicObject : Type<IsPolymorphicObjectPred,
     "any polymorphic object">;
 
-def IsFortranIntegerScalarOrArrayPred
-    : CPred<"::hlfir::isFortranIntegerScalarOrArrayObject($_self)">;
-def AnyFortranIntegerScalarOrArrayObject
-    : Type<IsFortranIntegerScalarOrArrayPred,
-           "A scalar or array object containing integers">;
-
 def hlfir_CharExtremumPredicateAttr : I32EnumAttr<
     "CharExtremumPredicate", "",
     [

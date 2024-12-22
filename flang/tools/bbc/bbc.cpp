@@ -234,11 +234,11 @@ static llvm::cl::opt<bool> integerWrapAround(
     llvm::cl::desc("Treat signed integer overflow as two's complement"),
     llvm::cl::init(false));
 
+// TODO: integrate this option with the above
 static llvm::cl::opt<bool>
-    reallocateLHS("frealloc-lhs",
-                  llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
-                                 "the LHS of the intrinsic assignment"),
-                  llvm::cl::init(true));
+    setNSW("integer-overflow",
+           llvm::cl::desc("add nsw flag to internal operations"),
+           llvm::cl::init(false));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
@@ -381,7 +381,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
-  loweringOptions.setReallocateLHS(reallocateLHS);
+  loweringOptions.setNSWOnLoopVarInc(setNSW);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -452,8 +452,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
-      fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP,
-                                        llvm::OptimizationLevel::O2);
+      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
         return mlir::failure();
@@ -468,9 +467,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
-    if (enableOpenMP)
-      config.EnableOpenMP = true;
-    config.NSWOnLoopVarInc = !integerWrapAround;
+    config.NSWOnLoopVarInc = setNSW;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }

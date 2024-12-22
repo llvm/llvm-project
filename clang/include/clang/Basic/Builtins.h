@@ -103,7 +103,9 @@ public:
   llvm::StringRef getName(unsigned ID) const { return getRecord(ID).Name; }
 
   /// Get the type descriptor string for the specified builtin.
-  const char *getTypeString(unsigned ID) const { return getRecord(ID).Type; }
+  const char *getTypeString(unsigned ID) const {
+    return getRecord(ID).Type;
+  }
 
   /// Return true if this function is a target-specific builtin.
   bool isTSBuiltin(unsigned ID) const {

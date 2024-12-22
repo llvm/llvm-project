@@ -241,8 +241,6 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case Freescale: return "fsl";
   case IBM: return "ibm";
   case ImaginationTechnologies: return "img";
-  case Intel:
-    return "intel";
   case Mesa: return "mesa";
   case MipsTechnologies: return "mti";
   case NVIDIA: return "nvidia";
@@ -362,8 +360,6 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case OpenHOS: return "ohos";
   case PAuthTest:
     return "pauthtest";
-  case LLVM:
-    return "llvm";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -629,22 +625,21 @@ static Triple::ArchType parseArch(StringRef ArchName) {
 
 static Triple::VendorType parseVendor(StringRef VendorName) {
   return StringSwitch<Triple::VendorType>(VendorName)
-      .Case("apple", Triple::Apple)
-      .Case("pc", Triple::PC)
-      .Case("scei", Triple::SCEI)
-      .Case("sie", Triple::SCEI)
-      .Case("fsl", Triple::Freescale)
-      .Case("ibm", Triple::IBM)
-      .Case("img", Triple::ImaginationTechnologies)
-      .Case("mti", Triple::MipsTechnologies)
-      .Case("nvidia", Triple::NVIDIA)
-      .Case("csr", Triple::CSR)
-      .Case("amd", Triple::AMD)
-      .Case("mesa", Triple::Mesa)
-      .Case("suse", Triple::SUSE)
-      .Case("oe", Triple::OpenEmbedded)
-      .Case("intel", Triple::Intel)
-      .Default(Triple::UnknownVendor);
+    .Case("apple", Triple::Apple)
+    .Case("pc", Triple::PC)
+    .Case("scei", Triple::SCEI)
+    .Case("sie", Triple::SCEI)
+    .Case("fsl", Triple::Freescale)
+    .Case("ibm", Triple::IBM)
+    .Case("img", Triple::ImaginationTechnologies)
+    .Case("mti", Triple::MipsTechnologies)
+    .Case("nvidia", Triple::NVIDIA)
+    .Case("csr", Triple::CSR)
+    .Case("amd", Triple::AMD)
+    .Case("mesa", Triple::Mesa)
+    .Case("suse", Triple::SUSE)
+    .Case("oe", Triple::OpenEmbedded)
+    .Default(Triple::UnknownVendor);
 }
 
 static Triple::OSType parseOS(StringRef OSName) {
@@ -745,7 +740,6 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("opencl", Triple::OpenCL)
       .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
-      .StartsWith("llvm", Triple::LLVM)
       .Default(Triple::UnknownEnvironment);
 }
 

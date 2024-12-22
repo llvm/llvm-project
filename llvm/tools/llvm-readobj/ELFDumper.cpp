@@ -1619,7 +1619,6 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),                          \
@@ -6057,7 +6056,6 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
     {ELF::NT_ARM_FPMR, "NT_ARM_FPMR (AArch64 Floating Point Mode Register)"},
-    {ELF::NT_ARM_GCS, "NT_ARM_GCS (AArch64 Guarded Control Stack state)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
     {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},

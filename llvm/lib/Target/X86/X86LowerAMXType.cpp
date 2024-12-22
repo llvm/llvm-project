@@ -1407,7 +1407,9 @@ class X86LowerAMXTypeLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  X86LowerAMXTypeLegacyPass() : FunctionPass(ID) {}
+  X86LowerAMXTypeLegacyPass() : FunctionPass(ID) {
+    initializeX86LowerAMXTypeLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnFunction(Function &F) override {
     // Performance optimization: most code doesn't use AMX, so return early if

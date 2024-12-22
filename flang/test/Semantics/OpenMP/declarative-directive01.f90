@@ -23,7 +23,6 @@ end subroutine requires_2
 
 subroutine declare_simd_1(a, b)
   real(8), intent(inout) :: a, b
-  !ERROR: 'a' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
   !$omp declare simd(declare_simd_1) aligned(a)
   a = 3.14 + b
 end subroutine declare_simd_1

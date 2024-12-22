@@ -394,16 +394,12 @@ bb:
 
 TEST_F(SeedBundleTest, VectorStores) {
   parseIR(C, R"IR(
-define void @foo(ptr noalias %ptr, <2 x float> %val0, i64 %val1) {
+define void @foo(ptr noalias %ptr, <2 x float> %val) {
 bb:
   %ptr0 = getelementptr float, ptr %ptr, i32 0
   %ptr1 = getelementptr float, ptr %ptr, i32 1
-  %ptr2 = getelementptr i64, ptr %ptr, i32 2
-  store <2 x float> %val0, ptr %ptr1
-  store <2 x float> %val0, ptr %ptr0
-  store atomic i64 %val1, ptr %ptr2 unordered, align 8
-  store volatile i64 %val1, ptr %ptr2
-
+  store <2 x float> %val, ptr %ptr1
+  store <2 x float> %val, ptr %ptr0
   ret void
 }
 )IR");
@@ -422,7 +418,7 @@ bb:
   sandboxir::SeedCollector SC(&*BB, SE);
 
   // Find the stores
-  auto It = std::next(BB->begin(), 3);
+  auto It = std::next(BB->begin(), 2);
   // StX with X as the order by offset in memory
   auto *St1 = &*It++;
   auto *St0 = &*It++;
@@ -430,8 +426,6 @@ bb:
   auto StoreSeedsRange = SC.getStoreSeeds();
   EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   auto &SB = *StoreSeedsRange.begin();
-  // isValidMemSeed check: The atomic and volatile stores should not
-  // be included in the bundle, but the vector stores should be.
   ExpectThatElementsAre(SB, {St0, St1});
 }
 
@@ -472,50 +466,5 @@ bb:
   auto StoreSeedsRange = SC.getStoreSeeds();
   EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   auto &SB = *StoreSeedsRange.begin();
-  // isValidMemSeedCheck here: all of the three stores should be included.
   ExpectThatElementsAre(SB, {St0, St1, St3});
-}
-
-TEST_F(SeedBundleTest, VectorLoads) {
-  parseIR(C, R"IR(
-define void @foo(ptr noalias %ptr, <2 x float> %val0) {
-bb:
-  %ptr0 = getelementptr float, ptr %ptr, i32 0
-  %ptr1 = getelementptr float, ptr %ptr, i32 1
-  %r0 = load <2 x float>, ptr %ptr0
-  %r1 = load <2 x float>, ptr %ptr1
-  %r2 = load atomic i64, ptr %ptr0 unordered, align 8
-  %r3 = load volatile i64, ptr %ptr1
-  %r4 = load void()*, ptr %ptr1
-
-  ret void
-}
-)IR");
-  Function &LLVMF = *M->getFunction("foo");
-  DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
-  TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
-  LoopInfo LI(DT);
-  AssumptionCache AC(LLVMF);
-  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
-
-  sandboxir::Context Ctx(C);
-  auto &F = *Ctx.createFunction(&LLVMF);
-  auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
-
-  // Find the loads
-  auto It = std::next(BB->begin(), 2);
-  // StX with X as the order by offset in memory
-  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
-  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
-
-  auto LoadSeedsRange = SC.getLoadSeeds();
-  EXPECT_EQ(range_size(LoadSeedsRange), 2u);
-  auto &SB = *LoadSeedsRange.begin();
-  // isValidMemSeed check: The atomic and volatile loads should not
-  // be included in the bundle, the vector stores should be, but the
-  // void-typed load should not.
-  ExpectThatElementsAre(SB, {Ld0, Ld1});
 }

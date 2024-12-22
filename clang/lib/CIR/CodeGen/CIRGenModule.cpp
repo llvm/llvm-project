@@ -25,38 +25,17 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
-                           clang::ASTContext &astContext,
+CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
+                           clang::ASTContext &astctx,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
-    : builder(mlirContext, *this), astContext(astContext),
-      langOpts(astContext.getLangOpts()),
-      theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
-      diags(diags), target(astContext.getTargetInfo()), genTypes(*this) {
-
-  // Initialize cached types
-  VoidTy = cir::VoidType::get(&getMLIRContext());
-  SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
-  SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
-  SInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
-  SInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
-  SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
-  UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
-  UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
-  UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
-  UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
-  UInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
-  FP16Ty = cir::FP16Type::get(&getMLIRContext());
-  BFloat16Ty = cir::BF16Type::get(&getMLIRContext());
-  FloatTy = cir::SingleType::get(&getMLIRContext());
-  DoubleTy = cir::DoubleType::get(&getMLIRContext());
-  FP80Ty = cir::FP80Type::get(&getMLIRContext());
-  FP128Ty = cir::FP128Type::get(&getMLIRContext());
-}
+    : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
+      theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&context))},
+      diags(diags), target(astCtx.getTargetInfo()) {}
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
-  const SourceManager &sm = astContext.getSourceManager();
+  const SourceManager &sm = astCtx.getSourceManager();
   PresumedLoc pLoc = sm.getPresumedLoc(cLoc);
   StringRef filename = pLoc.getFilename();
   return mlir::FileLineColLoc::get(builder.getStringAttr(filename),
@@ -88,8 +67,7 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       return;
     }
   } else {
-    assert(cast<VarDecl>(global)->isFileVarDecl() &&
-           "Cannot emit local var decl as global");
+    errorNYI(global->getSourceRange(), "global variable declaration");
   }
 
   // TODO(CIR): Defer emitting some global definitions until later
@@ -99,27 +77,9 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
                                                 mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
-  if (clang::IdentifierInfo *identifier = funcDecl->getIdentifier()) {
-    auto funcOp = builder.create<cir::FuncOp>(
-        getLoc(funcDecl->getSourceRange()), identifier->getName());
-    theModule.push_back(funcOp);
-  } else {
-    errorNYI(funcDecl->getSourceRange().getBegin(),
-             "function definition with a non-identifier for a name");
-  }
-}
-
-void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
-                                           bool isTentative) {
-  mlir::Type type = getTypes().convertType(vd->getType());
-  if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
-    auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
-                                               identifier->getName(), type);
-    theModule.push_back(varOp);
-  } else {
-    errorNYI(vd->getSourceRange().getBegin(),
-             "variable definition with a non-identifier for a name");
-  }
+  auto funcOp = builder.create<cir::FuncOp>(
+      getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
+  theModule.push_back(funcOp);
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
@@ -142,9 +102,6 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
     emitGlobalFunctionDefinition(gd, op);
     return;
   }
-
-  if (const auto *vd = dyn_cast<VarDecl>(decl))
-    return emitGlobalVarDefinition(vd, !vd->hasDefinition());
 
   llvm_unreachable("Invalid argument to CIRGenModule::emitGlobalDefinition");
 }
@@ -169,13 +126,13 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
+  }
+}
 
-  case Decl::Var: {
-    auto *vd = cast<VarDecl>(decl);
-    emitGlobal(vd);
-    break;
-  }
-  }
+DiagnosticBuilder CIRGenModule::errorNYI(llvm::StringRef feature) {
+  unsigned diagID = diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
+  return diags.Report(diagID) << feature;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
@@ -185,7 +142,21 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
   return diags.Report(loc, diagID) << feature;
 }
 
+DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
+                                         llvm::StringRef feature,
+                                         llvm::StringRef name) {
+  unsigned diagID = diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0: %1");
+  return diags.Report(loc, diagID) << feature << name;
+}
+
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
+                                         llvm::StringRef feature,
+                                         llvm::StringRef name) {
+  return errorNYI(loc.getBegin(), feature, name) << loc;
 }

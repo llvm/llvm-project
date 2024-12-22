@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O2 < %s
+; RUN: llc -march=hexagon -O2 < %s
 ; Check for successful compilation. It originally caused an abort due to
 ; the "isBarrier" flag set on instructions that were not meant to have it.
 

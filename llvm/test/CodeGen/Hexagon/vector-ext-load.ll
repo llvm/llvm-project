@@ -1,6 +1,6 @@
 ; A copy of 2012-06-08-APIntCrash.ll with arch explicitly set to hexagon.
 
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 
 define void @test1(ptr %ptr) {
   %1 = load <8 x i32>, ptr %ptr, align 32

@@ -118,7 +118,7 @@ namespace llvm {
   extern char &MachineRegionInfoPassID;
 
   /// EdgeBundles analysis - Bundle machine CFG edges.
-  extern char &EdgeBundlesWrapperLegacyID;
+  extern char &EdgeBundlesID;
 
   /// LiveVariables pass - This pass computes the set of blocks in which each
   /// variable is life and sets machine operand kill flags.
@@ -363,7 +363,7 @@ namespace llvm {
 
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
-  extern char &PeepholeOptimizerLegacyID;
+  extern char &PeepholeOptimizerID;
 
   /// OptimizePHIs - This pass optimizes machine instruction PHIs
   /// to take advantage of opportunities created during DAG legalization.

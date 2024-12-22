@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_FUNCTION_H
-#define _LIBCPP___CXX03___FUNCTIONAL_FUNCTION_H
+#ifndef _LIBCPP___FUNCTIONAL_FUNCTION_H
+#define _LIBCPP___FUNCTIONAL_FUNCTION_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -1045,4 +1045,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_FUNCTION_H
+#endif // _LIBCPP___FUNCTIONAL_FUNCTION_H

@@ -20,7 +20,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 namespace llvm {
@@ -36,7 +35,7 @@ struct TestCompiler {
                clang::CodeGenOptions CGO = clang::CodeGenOptions()) {
     compiler.getLangOpts() = LO;
     compiler.getCodeGenOpts() = CGO;
-    compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+    compiler.createDiagnostics();
 
     std::string TrStr = llvm::Triple::normalize(llvm::sys::getProcessTriple());
     llvm::Triple Tr(TrStr);

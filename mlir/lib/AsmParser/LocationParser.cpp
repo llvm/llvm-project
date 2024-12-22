@@ -12,7 +12,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
-#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -98,82 +97,37 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
   return success();
 }
 
-ParseResult Parser::parseNameOrFileLineColRange(LocationAttr &loc) {
+ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
   auto *ctx = getContext();
   auto str = getToken().getStringValue();
   consumeToken(Token::string);
-
-  std::optional<unsigned> startLine, startColumn, endLine, endColumn;
 
   // If the next token is ':' this is a filelinecol location.
   if (consumeIf(Token::colon)) {
     // Parse the line number.
     if (getToken().isNot(Token::integer))
       return emitWrongTokenError(
-          "expected integer line number in FileLineColRange");
-    startLine = getToken().getUnsignedIntegerValue();
-    if (!startLine)
+          "expected integer line number in FileLineColLoc");
+    auto line = getToken().getUnsignedIntegerValue();
+    if (!line)
       return emitWrongTokenError(
-          "expected integer line number in FileLineColRange");
+          "expected integer line number in FileLineColLoc");
     consumeToken(Token::integer);
 
     // Parse the ':'.
-    if (getToken().isNot(Token::colon)) {
-      loc = FileLineColRange::get(StringAttr::get(ctx, str), *startLine);
-      return success();
-    }
-    consumeToken(Token::colon);
+    if (parseToken(Token::colon, "expected ':' in FileLineColLoc"))
+      return failure();
 
     // Parse the column number.
-    if (getToken().isNot(Token::integer)) {
+    if (getToken().isNot(Token::integer))
       return emitWrongTokenError(
-          "expected integer column number in FileLineColRange");
-    }
-    startColumn = getToken().getUnsignedIntegerValue();
-    if (!startColumn.has_value())
-      return emitError("expected integer column number in FileLineColRange");
+          "expected integer column number in FileLineColLoc");
+    auto column = getToken().getUnsignedIntegerValue();
+    if (!column.has_value())
+      return emitError("expected integer column number in FileLineColLoc");
     consumeToken(Token::integer);
 
-    if (!isCurrentTokenAKeyword() || getTokenSpelling() != "to") {
-      loc = FileLineColLoc::get(ctx, str, *startLine, *startColumn);
-      return success();
-    }
-    consumeToken();
-
-    // Parse the line number.
-    if (getToken().is(Token::integer)) {
-      endLine = getToken().getUnsignedIntegerValue();
-      if (!endLine) {
-        return emitWrongTokenError(
-            "expected integer line number in FileLineColRange");
-      }
-      consumeToken(Token::integer);
-    }
-
-    // Parse the ':'.
-    if (getToken().isNot(Token::colon)) {
-      return emitWrongTokenError(
-          "expected either integer or `:` post `to` in FileLineColRange");
-    }
-    consumeToken(Token::colon);
-
-    // Parse the column number.
-    if (getToken().isNot(Token::integer)) {
-      return emitWrongTokenError(
-          "expected integer column number in FileLineColRange");
-    }
-    endColumn = getToken().getUnsignedIntegerValue();
-    if (!endColumn.has_value())
-      return emitError("expected integer column number in FileLineColRange");
-    consumeToken(Token::integer);
-
-    if (endLine.has_value()) {
-      loc = FileLineColRange::get(StringAttr::get(ctx, str), *startLine,
-                                  *startColumn, *endLine, *endColumn);
-    } else {
-      loc = FileLineColRange::get(StringAttr::get(ctx, str), *startLine,
-                                  *startColumn, *endColumn);
-    }
+    loc = FileLineColLoc::get(ctx, str, *line, *column);
     return success();
   }
 
@@ -212,7 +166,7 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
 
   // Handle either name or filelinecol locations.
   if (getToken().is(Token::string))
-    return parseNameOrFileLineColRange(loc);
+    return parseNameOrFileLineColLocation(loc);
 
   // Bare tokens required for other cases.
   if (!getToken().is(Token::bare_identifier))

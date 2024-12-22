@@ -826,5 +826,5 @@ entry:
 ; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "uniform-work-group-size"="false" }
+; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 attributes #0 = { nounwind }

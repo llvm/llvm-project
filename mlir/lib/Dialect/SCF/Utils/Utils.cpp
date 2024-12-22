@@ -130,7 +130,7 @@ FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
 
   // Outline before current function.
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(region.getParentOfType<FunctionOpInterface>());
+  rewriter.setInsertionPoint(region.getParentOfType<func::FuncOp>());
 
   SetVector<Value> captures;
   getUsedValuesDefinedAbove(region, captures);

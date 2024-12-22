@@ -10,7 +10,6 @@ add_clang_library(clangAnalysisFlowSensitive
   Logger.cpp
   RecordOps.cpp
   SimplifyConstraints.cpp
-  SmartPointerAccessorCaching.cpp
   Transfer.cpp
   TypeErasedDataflowAnalysis.cpp
   Value.cpp

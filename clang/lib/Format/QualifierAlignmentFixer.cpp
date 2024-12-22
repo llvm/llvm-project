@@ -348,7 +348,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
       }
     }
 
-    if (Next && Next->is(tok::kw_auto))
+    if (Next->is(tok::kw_auto))
       TypeToken = Next;
 
     // Place the Qualifier at the end of the list of qualifiers.

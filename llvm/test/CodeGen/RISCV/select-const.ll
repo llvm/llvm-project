@@ -61,22 +61,22 @@ define signext i32 @select_const_int_pow2_zero(i1 zeroext %a) nounwind {
 define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ; RV32-LABEL: select_const_int_harder:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bnez a0, .LBB3_2
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 6
+; RV32-NEXT:    bnez a1, .LBB3_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 38
-; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB3_2:
-; RV32-NEXT:    li a0, 6
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: select_const_int_harder:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    bnez a0, .LBB3_2
+; RV64-NEXT:    mv a1, a0
+; RV64-NEXT:    li a0, 6
+; RV64-NEXT:    bnez a1, .LBB3_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 38
-; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB3_2:
-; RV64-NEXT:    li a0, 6
 ; RV64-NEXT:    ret
   %1 = select i1 %a, i32 6, i32 38
   ret i32 %1

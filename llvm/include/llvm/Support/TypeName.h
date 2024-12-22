@@ -13,8 +13,18 @@
 
 namespace llvm {
 
-namespace detail {
-template <typename DesiredTypeName> inline StringRef getTypeNameImpl() {
+/// We provide a function which tries to compute the (demangled) name of a type
+/// statically.
+///
+/// This routine may fail on some platforms or for particularly unusual types.
+/// Do not use it for anything other than logging and debugging aids. It isn't
+/// portable or dependendable in any real sense.
+///
+/// The returned StringRef will point into a static storage duration string.
+/// However, it may not be null terminated and may be some strangely aligned
+/// inner substring of a larger string.
+template <typename DesiredTypeName>
+inline StringRef getTypeName() {
 #if defined(__clang__) || defined(__GNUC__)
   StringRef Name = __PRETTY_FUNCTION__;
 
@@ -28,7 +38,7 @@ template <typename DesiredTypeName> inline StringRef getTypeNameImpl() {
 #elif defined(_MSC_VER)
   StringRef Name = __FUNCSIG__;
 
-  StringRef Key = "getTypeNameImpl<";
+  StringRef Key = "getTypeName<";
   Name = Name.substr(Name.find(Key));
   assert(!Name.empty() && "Unable to find the function name!");
   Name = Name.drop_front(Key.size());
@@ -47,22 +57,6 @@ template <typename DesiredTypeName> inline StringRef getTypeNameImpl() {
   // We return a string that is unlikely to look like any type in LLVM.
   return "UNKNOWN_TYPE";
 #endif
-}
-} // namespace detail
-
-/// We provide a function which tries to compute the (demangled) name of a type
-/// statically.
-///
-/// This routine may fail on some platforms or for particularly unusual types.
-/// Do not use it for anything other than logging and debugging aids. It isn't
-/// portable or dependendable in any real sense.
-///
-/// The returned StringRef will point into a static storage duration string.
-/// However, it may not be null terminated and may be some strangely aligned
-/// inner substring of a larger string.
-template <typename DesiredTypeName> inline StringRef getTypeName() {
-  static StringRef Name = detail::getTypeNameImpl<DesiredTypeName>();
-  return Name;
 }
 
 } // namespace llvm

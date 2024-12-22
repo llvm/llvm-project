@@ -119,8 +119,6 @@ public:
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
 
-  bool selectInvLogicImm(SDValue N, SDValue &Val);
-
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
   bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }

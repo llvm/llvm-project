@@ -474,7 +474,7 @@ define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
 ; SSE-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[B]], [[SHIFT1]]
 ; SSE-NEXT:    [[SHIFT2:%.*]] = shufflevector <4 x float> [[B]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
 ; SSE-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[SHIFT2]], [[B]]
-; SSE-NEXT:    [[V1:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 4, i32 2, i32 6, i32 7>
+; SSE-NEXT:    [[V1:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 6, i32 2, i32 3>
 ; SSE-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
 ; SSE-NEXT:    [[V3:%.*]] = shufflevector <4 x float> [[V2]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; SSE-NEXT:    ret <4 x float> [[V3]]
@@ -489,7 +489,7 @@ define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
 ; AVX-NEXT:    [[B01:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 ; AVX-NEXT:    [[SHIFT2:%.*]] = shufflevector <4 x float> [[B]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
 ; AVX-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[SHIFT2]], [[B]]
-; AVX-NEXT:    [[V1:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 4, i32 2, i32 6, i32 7>
+; AVX-NEXT:    [[V1:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 6, i32 2, i32 3>
 ; AVX-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[B01]], i32 2
 ; AVX-NEXT:    [[V3:%.*]] = shufflevector <4 x float> [[V2]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; AVX-NEXT:    ret <4 x float> [[V3]]

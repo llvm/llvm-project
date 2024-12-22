@@ -113,9 +113,7 @@ public:
   static SmallVector<int64_t, 8> negate(SmallVector<int64_t, 8> R) {
     // The negated constraint R is obtained by multiplying by -1 and adding 1 to
     // the constant.
-    if (AddOverflow(R[0], int64_t(1), R[0]))
-      return {};
-
+    R[0] += 1;
     return negateOrEqual(R);
   }
 

@@ -1,8 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
- integer :: m(100)
- integer, constant :: c(10)
- integer, parameter :: p(5) = [1,2,3,4,5]
  contains
   attributes(device) subroutine devsub
     !ERROR: Statement may not appear in device code
@@ -18,42 +15,6 @@ module m
     !WARNING: I/O statement might not be supported on device
     write(12,'(10F4.1)'), x
   end
-  attributes(global) subroutine hostglobal(a)
-    integer :: a(*)
-    i = threadIdx%x
-    !ERROR: Host array 'm' cannot be present in device context
-    if (i .le. N) a(i) = m(i)
-  end subroutine
-
-  attributes(global) subroutine hostparameter(a)
-    integer :: a(*)
-    i = threadIdx%x
-    if (i .le. N) a(i) = p(i) ! ok. p is parameter
-  end subroutine
-
-  attributes(global) subroutine localarray()
-    integer :: a(10)
-    i = threadIdx%x
-    a(i) = i
-  end subroutine
-
-  attributes(global) subroutine sharedarray(a)
-    integer, device :: a(10)
-    integer, shared :: s(10)
-    i = threadIdx%x
-    a(i) = s(10) ! ok, a is device and s is shared
-  end subroutine
-
-  attributes(global) subroutine cstarray(a)
-    integer, device :: a(10)
-    i = threadIdx%x
-    a(i) = c(10) ! ok, a is device and c is constant
-  end subroutine
-
-  attributes(global) subroutine stoptest()
-    print*,threadIdx%x
-    stop ! ok
-  end subroutine
 end
 
 program main
@@ -135,7 +96,7 @@ program main
   !$cuf kernel do (2) <<<*, *>>>
   do j = 1, 10
      do i = 1, 10
-        !ERROR: Host array 'b' cannot be present in device context
+        !ERROR: Host array 'b' cannot be present in CUF kernel
         a_d(i,j) = b(i,j)
      enddo
   enddo

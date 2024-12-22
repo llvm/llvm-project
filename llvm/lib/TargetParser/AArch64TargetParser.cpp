@@ -48,33 +48,12 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
   return {};
 }
 
-unsigned AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
-  constexpr unsigned MaxFMVPriority = 1000;
-  unsigned Priority = 0;
-  unsigned NumFeatures = 0;
-  for (StringRef Feature : Features) {
-    if (auto Ext = parseFMVExtension(Feature)) {
-      Priority = std::max(Priority, Ext->Priority);
-      NumFeatures++;
-    }
-  }
-  return Priority + MaxFMVPriority * NumFeatures;
-}
-
-uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
-  // Transitively enable the Arch Extensions which correspond to each feature.
-  ExtensionSet FeatureBits;
-  for (const StringRef Feature : Features)
-    if (std::optional<FMVInfo> Info = parseFMVExtension(Feature))
-      if (Info->ID)
-        FeatureBits.enable(*Info->ID);
-
-  // Construct a bitmask for all the transitively enabled Arch Extensions.
+uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   uint64_t FeaturesMask = 0;
-  for (const FMVInfo &Info : getFMVInfo())
-    if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
-      FeaturesMask |= (1ULL << Info.Bit);
-
+  for (const StringRef &FeatureStr : FeatureStrs) {
+    if (auto Ext = parseFMVExtension(FeatureStr))
+      FeaturesMask |= (1ULL << Ext->Bit);
+  }
   return FeaturesMask;
 }
 

@@ -21,10 +21,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_INSTRINTERVAL_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
-#include <type_traits>
 
 namespace llvm::sandboxir {
 
@@ -207,28 +205,6 @@ public:
     auto *NewTop = Top->comesBefore(Other.Top) ? Top : Other.Top;
     auto *NewBottom = Bottom->comesBefore(Other.Bottom) ? Other.Bottom : Bottom;
     return {NewTop, NewBottom};
-  }
-
-  /// Update the interval when \p I is about to be moved before \p Before.
-  // SFINAE disables this for non-Instructions.
-  template <typename HelperT = T>
-  std::enable_if_t<std::is_same<HelperT, Instruction>::value, void>
-  notifyMoveInstr(HelperT *I, decltype(I->getIterator()) BeforeIt) {
-    assert(contains(I) && "Expect `I` in interval!");
-    assert(I->getIterator() != BeforeIt && "Can't move `I` before itself!");
-
-    // Nothing to do if the instruction won't move.
-    if (std::next(I->getIterator()) == BeforeIt)
-      return;
-
-    T *NewTop = Top->getIterator() == BeforeIt ? I
-                : I == Top                     ? Top->getNextNode()
-                                               : Top;
-    T *NewBottom = std::next(Bottom->getIterator()) == BeforeIt ? I
-                   : I == Bottom ? Bottom->getPrevNode()
-                                 : Bottom;
-    Top = NewTop;
-    Bottom = NewBottom;
   }
 
 #ifndef NDEBUG

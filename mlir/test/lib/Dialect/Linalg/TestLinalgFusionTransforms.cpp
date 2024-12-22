@@ -84,7 +84,7 @@ struct TestLinalgGreedyFusion
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createCSEPass());
     do {
-      (void)applyPatternsGreedily(getOperation(), frozenPatterns);
+      (void)applyPatternsAndFoldGreedily(getOperation(), frozenPatterns);
       if (failed(runPipeline(pm, getOperation())))
         this->signalPassFailure();
     } while (succeeded(fuseLinalgOpsGreedily(getOperation())));

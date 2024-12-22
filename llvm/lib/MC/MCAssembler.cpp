@@ -829,7 +829,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // into a virtual section. This is to support clients which use standard
         // directives to fill the contents of virtual sections.
         const MCDataFragment &DF = cast<MCDataFragment>(F);
-        if (DF.getFixups().size())
+        if (DF.fixup_begin() != DF.fixup_end())
           getContext().reportError(SMLoc(), Sec->getVirtualSectionKind() +
                                                 " section '" + Sec->getName() +
                                                 "' cannot have fixups");

@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVSupport.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <iomanip>
 
 using namespace llvm;
 using namespace llvm::logicalview;

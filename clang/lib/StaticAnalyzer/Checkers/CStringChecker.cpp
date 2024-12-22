@@ -1025,8 +1025,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       BasicValueFactory &BVF = svalBuilder.getBasicValueFactory();
       const llvm::APSInt &maxValInt = BVF.getMaxValue(sizeTy);
       llvm::APSInt fourInt = APSIntType(maxValInt).getValue(4);
-      std::optional<APSIntPtr> maxLengthInt =
-          BVF.evalAPSInt(BO_Div, maxValInt, fourInt);
+      const llvm::APSInt *maxLengthInt = BVF.evalAPSInt(BO_Div, maxValInt,
+                                                        fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
       SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
                                                 svalBuilder.getConditionType());

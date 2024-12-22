@@ -239,8 +239,6 @@ private:
   bool
   applyClause(const tomp::clause::OmpxAttributeT<TypeTy, IdTy, ExprTy> &clause,
               const ClauseTy *);
-  bool applyClause(const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
-                   const ClauseTy *);
 
   uint32_t version;
   llvm::omp::Directive construct;
@@ -1101,13 +1099,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::NowaitT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  return applyToOutermost(node);
-}
-
-template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
   return applyToOutermost(node);
 }

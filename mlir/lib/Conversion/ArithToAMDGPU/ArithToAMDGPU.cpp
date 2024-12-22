@@ -385,6 +385,6 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   arith::populateArithToAMDGPUConversionPatterns(
       patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
       *maybeChipset);
-  if (failed(applyPatternsGreedily(op, std::move(patterns))))
+  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
     return signalPassFailure();
 }

@@ -53,7 +53,7 @@ mlir::reifyResultShapes(OpBuilder &b, Operation *op,
       // * Attribute for static dimensions
       // * Value for dynamic dimensions
       assert(shapedType.isDynamicDim(dim) ==
-                 isa<Value>(reifiedReturnShapes[resultIdx][dim]) &&
+                 reifiedReturnShapes[resultIdx][dim].is<Value>() &&
              "incorrect implementation of ReifyRankedShapedTypeOpInterface");
     }
     ++resultIdx;
@@ -70,9 +70,9 @@ bool ShapeAdaptor::hasRank() const {
     return false;
   if (auto t = llvm::dyn_cast_if_present<Type>(val))
     return cast<ShapedType>(t).hasRank();
-  if (isa<Attribute>(val))
+  if (val.is<Attribute>())
     return true;
-  return cast<ShapedTypeComponents *>(val)->hasRank();
+  return val.get<ShapedTypeComponents *>()->hasRank();
 }
 
 Type ShapeAdaptor::getElementType() const {
@@ -80,9 +80,9 @@ Type ShapeAdaptor::getElementType() const {
     return nullptr;
   if (auto t = llvm::dyn_cast_if_present<Type>(val))
     return cast<ShapedType>(t).getElementType();
-  if (isa<Attribute>(val))
+  if (val.is<Attribute>())
     return nullptr;
-  return cast<ShapedTypeComponents *>(val)->getElementType();
+  return val.get<ShapedTypeComponents *>()->getElementType();
 }
 
 void ShapeAdaptor::getDims(SmallVectorImpl<int64_t> &res) const {
@@ -97,7 +97,7 @@ void ShapeAdaptor::getDims(SmallVectorImpl<int64_t> &res) const {
     for (auto it : dattr.getValues<APInt>())
       res.push_back(it.getSExtValue());
   } else {
-    auto vals = cast<ShapedTypeComponents *>(val)->getDims();
+    auto vals = val.get<ShapedTypeComponents *>()->getDims();
     res.assign(vals.begin(), vals.end());
   }
 }
@@ -116,7 +116,7 @@ int64_t ShapeAdaptor::getDimSize(int index) const {
     return cast<DenseIntElementsAttr>(attr)
         .getValues<APInt>()[index]
         .getSExtValue();
-  auto *stc = cast<ShapedTypeComponents *>(val);
+  auto *stc = val.get<ShapedTypeComponents *>();
   return stc->getDims()[index];
 }
 
@@ -126,7 +126,7 @@ int64_t ShapeAdaptor::getRank() const {
     return cast<ShapedType>(t).getRank();
   if (auto attr = llvm::dyn_cast_if_present<Attribute>(val))
     return cast<DenseIntElementsAttr>(attr).size();
-  return cast<ShapedTypeComponents *>(val)->getDims().size();
+  return val.get<ShapedTypeComponents *>()->getDims().size();
 }
 
 bool ShapeAdaptor::hasStaticShape() const {
@@ -142,7 +142,7 @@ bool ShapeAdaptor::hasStaticShape() const {
         return false;
     return true;
   }
-  auto *stc = cast<ShapedTypeComponents *>(val);
+  auto *stc = val.get<ShapedTypeComponents *>();
   return llvm::none_of(stc->getDims(), ShapedType::isDynamic);
 }
 
@@ -162,7 +162,7 @@ int64_t ShapeAdaptor::getNumElements() const {
     return num;
   }
 
-  auto *stc = cast<ShapedTypeComponents *>(val);
+  auto *stc = val.get<ShapedTypeComponents *>();
   int64_t num = 1;
   for (int64_t dim : stc->getDims()) {
     num *= dim;

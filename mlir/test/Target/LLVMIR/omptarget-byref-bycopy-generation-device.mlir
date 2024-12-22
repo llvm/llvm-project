@@ -33,12 +33,9 @@ module attributes {omp.is_target_device = true} {
 
 // CHECK: user_code.entry:                                  ; preds = %entry
 // CHECK: %[[LOAD_BYREF:.*]] = load ptr, ptr %[[ALLOCA_BYREF]], align 8
-// CHECK: br label %outlined.body
-
-// CHECK: outlined.body:
 // CHECK: br label %omp.target
 
-// CHECK: omp.target:
+// CHECK: omp.target:                                       ; preds = %user_code.entry
 // CHECK:  %[[VAL_LOAD_BYCOPY:.*]] = load i32, ptr %[[ALLOCA_BYCOPY]], align 4
 // CHECK:  store i32 %[[VAL_LOAD_BYCOPY]], ptr %[[LOAD_BYREF]], align 4
 // CHECK: br label %omp.region.cont

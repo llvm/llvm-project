@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; This checks for a bug in the DAG combiner where a SETCC was created with

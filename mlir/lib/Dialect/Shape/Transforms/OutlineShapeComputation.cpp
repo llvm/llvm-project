@@ -207,7 +207,7 @@ void OutlineShapeComputationPass::runOnOperation() {
     MLIRContext *context = funcOp.getContext();
     RewritePatternSet prevPatterns(context);
     prevPatterns.insert<TensorDimOpRewriter>(context);
-    if (failed(applyPatternsGreedily(funcOp, std::move(prevPatterns))))
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(prevPatterns))))
       return signalPassFailure();
 
     // initialize class member `onlyUsedByWithShapes`
@@ -254,7 +254,7 @@ void OutlineShapeComputationPass::runOnOperation() {
     }
 
     // Apply patterns, note this also performs DCE.
-    if (failed(applyPatternsGreedily(funcOp, {})))
+    if (failed(applyPatternsAndFoldGreedily(funcOp, {})))
       return signalPassFailure();
   });
 }

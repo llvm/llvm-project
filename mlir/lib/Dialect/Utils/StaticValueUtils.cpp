@@ -50,7 +50,7 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<int64_t> &staticVec) {
   auto v = llvm::dyn_cast_if_present<Value>(ofr);
   if (!v) {
-    APInt apInt = cast<IntegerAttr>(cast<Attribute>(ofr)).getValue();
+    APInt apInt = cast<IntegerAttr>(ofr.get<Attribute>()).getValue();
     staticVec.push_back(apInt.getSExtValue());
     return;
   }
@@ -212,11 +212,11 @@ decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
   SmallVector<int64_t> staticValues;
   SmallVector<Value> dynamicValues;
   for (const auto &it : mixedValues) {
-    if (auto attr = dyn_cast<Attribute>(it)) {
-      staticValues.push_back(cast<IntegerAttr>(attr).getInt());
+    if (it.is<Attribute>()) {
+      staticValues.push_back(cast<IntegerAttr>(it.get<Attribute>()).getInt());
     } else {
       staticValues.push_back(ShapedType::kDynamic);
-      dynamicValues.push_back(cast<Value>(it));
+      dynamicValues.push_back(it.get<Value>());
     }
   }
   return {staticValues, dynamicValues};
@@ -294,10 +294,10 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
                                    bool onlyNonNegative, bool onlyNonZero) {
   bool valuesChanged = false;
   for (OpFoldResult &ofr : ofrs) {
-    if (isa<Attribute>(ofr))
+    if (ofr.is<Attribute>())
       continue;
     Attribute attr;
-    if (matchPattern(cast<Value>(ofr), m_Constant(&attr))) {
+    if (matchPattern(ofr.get<Value>(), m_Constant(&attr))) {
       // Note: All ofrs have index type.
       if (onlyNonNegative && *getConstantIntValue(attr) < 0)
         continue;

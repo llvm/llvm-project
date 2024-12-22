@@ -135,20 +135,31 @@ struct NormalizedConstraint {
     return *this;
   }
 
-  bool isAtomic() const { return llvm::isa<AtomicConstraint *>(Constraint); }
+  bool isAtomic() const { return Constraint.is<AtomicConstraint *>(); }
   bool isFoldExpanded() const {
-    return llvm::isa<FoldExpandedConstraint *>(Constraint);
+    return Constraint.is<FoldExpandedConstraint *>();
   }
-  bool isCompound() const { return llvm::isa<CompoundConstraint>(Constraint); }
+  bool isCompound() const { return Constraint.is<CompoundConstraint>(); }
 
-  CompoundConstraintKind getCompoundKind() const;
+  CompoundConstraintKind getCompoundKind() const {
+    assert(isCompound() && "getCompoundKind on a non-compound constraint..");
+    return Constraint.get<CompoundConstraint>().getInt();
+  }
 
   NormalizedConstraint &getLHS() const;
   NormalizedConstraint &getRHS() const;
 
-  AtomicConstraint *getAtomicConstraint() const;
+  AtomicConstraint *getAtomicConstraint() const {
+    assert(isAtomic() &&
+           "getAtomicConstraint called on non-atomic constraint.");
+    return Constraint.get<AtomicConstraint *>();
+  }
 
-  FoldExpandedConstraint *getFoldExpandedConstraint() const;
+  FoldExpandedConstraint *getFoldExpandedConstraint() const {
+    assert(isFoldExpanded() &&
+           "getFoldExpandedConstraint called on non-fold-expanded constraint.");
+    return Constraint.get<FoldExpandedConstraint *>();
+  }
 
 private:
   static std::optional<NormalizedConstraint>
@@ -199,17 +210,17 @@ bool subsumes(const NormalForm &PDNF, const NormalForm &QCNF,
       bool Found = false;
       for (NormalFormConstraint Pia : Pi) {
         for (NormalFormConstraint Qjb : Qj) {
-          if (isa<FoldExpandedConstraint *>(Pia) &&
-              isa<FoldExpandedConstraint *>(Qjb)) {
-            if (cast<FoldExpandedConstraint *>(Pia)->subsumes(
-                    *cast<FoldExpandedConstraint *>(Qjb), E)) {
+          if (Pia.is<FoldExpandedConstraint *>() &&
+              Qjb.is<FoldExpandedConstraint *>()) {
+            if (Pia.get<FoldExpandedConstraint *>()->subsumes(
+                    *Qjb.get<FoldExpandedConstraint *>(), E)) {
               Found = true;
               break;
             }
-          } else if (isa<AtomicConstraint *>(Pia) &&
-                     isa<AtomicConstraint *>(Qjb)) {
-            if (E(*cast<AtomicConstraint *>(Pia),
-                  *cast<AtomicConstraint *>(Qjb))) {
+          } else if (Pia.is<AtomicConstraint *>() &&
+                     Qjb.is<AtomicConstraint *>()) {
+            if (E(*Pia.get<AtomicConstraint *>(),
+                  *Qjb.get<AtomicConstraint *>())) {
               Found = true;
               break;
             }

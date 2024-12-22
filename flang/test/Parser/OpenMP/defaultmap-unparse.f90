@@ -38,7 +38,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = Tofrom
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Scalar
+!PARSE-TREE:          VariableCategory = Scalar
 
 !CHECK: !$omp target defaultmap(alloc:scalar)
   !$omp target defaultmap(alloc:scalar)
@@ -50,7 +50,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = Alloc
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Scalar
+!PARSE-TREE:          VariableCategory = Scalar
 
 !CHECK: !$omp target defaultmap(none)
   !$omp target defaultmap(none)
@@ -73,7 +73,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = None
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Scalar
+!PARSE-TREE:          VariableCategory = Scalar
 
 !CHECK: !$omp target defaultmap(to:scalar)
   !$omp target defaultmap(to:scalar)
@@ -85,7 +85,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = To
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Scalar
+!PARSE-TREE:          VariableCategory = Scalar
 
 !CHECK: !$omp target defaultmap(firstprivate:scalar)
   !$omp target defaultmap(firstprivate:scalar)
@@ -97,7 +97,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = Firstprivate
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Scalar
+!PARSE-TREE:          VariableCategory = Scalar
  
 !CHECK: !$omp target defaultmap(tofrom:aggregate)
   !$omp target defaultmap(tofrom:aggregate)
@@ -112,7 +112,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = Tofrom
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Aggregate
+!PARSE-TREE:          VariableCategory = Aggregate
  
 !CHECK: !$omp target defaultmap(tofrom:allocatable)  
   !$omp target defaultmap(tofrom:allocatable)
@@ -124,7 +124,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = Tofrom
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Allocatable
+!PARSE-TREE:          VariableCategory = Allocatable
  
 !CHECK: !$omp target defaultmap(default:pointer)
   !$omp target defaultmap(default:pointer)
@@ -138,7 +138,7 @@ program main
 !PARSE-TREE:        OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE:        OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE:          ImplicitBehavior = Default
-!PARSE-TREE:          Modifier -> OmpVariableCategory -> Value = Pointer
+!PARSE-TREE:          VariableCategory = Pointer
 
 end program main
 !CHECK-LABEL: end program main

@@ -391,8 +391,6 @@ public:
     return ST->useFixedOverScalableIfEqualCost();
   }
 
-  unsigned getEpilogueVectorizationMinVF() const;
-
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
   bool supportsScalableVectors() const {
@@ -423,8 +421,7 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<Value *> VL = {});
+                                           TTI::TargetCostKind CostKind);
 
   /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store

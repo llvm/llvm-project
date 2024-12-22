@@ -1,4 +1,5 @@
-//===- MapsForPrivatizedSymbols.cpp ---------------------------------------===//
+//===- MapsForPrivatizedSymbols.cpp
+//-----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +28,6 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -49,6 +49,13 @@ class MapsForPrivatizedSymbolsPass
     : public flangomp::impl::MapsForPrivatizedSymbolsPassBase<
           MapsForPrivatizedSymbolsPass> {
 
+  bool privatizerNeedsMap(omp::PrivateClauseOp &privatizer) {
+    Region &allocRegion = privatizer.getAllocRegion();
+    Value blockArg0 = allocRegion.getArgument(0);
+    if (blockArg0.use_empty())
+      return false;
+    return true;
+  }
   omp::MapInfoOp createMapInfo(Location loc, Value var,
                                fir::FirOpBuilder &builder) {
     uint64_t mapTypeTo = static_cast<
@@ -117,8 +124,6 @@ class MapsForPrivatizedSymbolsPass
       if (targetOp.getPrivateVars().empty())
         return;
       OperandRange privVars = targetOp.getPrivateVars();
-      llvm::SmallVector<int64_t> privVarMapIdx;
-
       std::optional<ArrayAttr> privSyms = targetOp.getPrivateSyms();
       SmallVector<omp::MapInfoOp, 4> mapInfoOps;
       for (auto [privVar, privSym] : llvm::zip_equal(privVars, *privSyms)) {
@@ -127,26 +132,18 @@ class MapsForPrivatizedSymbolsPass
         omp::PrivateClauseOp privatizer =
             SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
                 targetOp, privatizerName);
-        if (!privatizer.needsMap()) {
-          privVarMapIdx.push_back(-1);
+        if (!privatizerNeedsMap(privatizer)) {
           continue;
         }
-
-        privVarMapIdx.push_back(targetOp.getMapVars().size() +
-                                mapInfoOps.size());
-
         builder.setInsertionPoint(targetOp);
         Location loc = targetOp.getLoc();
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
         mapInfoOps.push_back(mapInfoOp);
-
         LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
         LLVM_DEBUG(mapInfoOp.dump());
       }
       if (!mapInfoOps.empty()) {
         mapInfoOpsForTarget.insert({targetOp.getOperation(), mapInfoOps});
-        targetOp.setPrivateMapsAttr(
-            mlir::DenseI64ArrayAttr::get(targetOp.getContext(), privVarMapIdx));
       }
     });
     if (!mapInfoOpsForTarget.empty()) {

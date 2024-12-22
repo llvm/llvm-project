@@ -10,7 +10,6 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "ExportTrie.h"
-#include "ICF.h"
 #include "InputFiles.h"
 #include "MachOStructs.h"
 #include "ObjC.h"
@@ -1205,18 +1204,6 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
   stabs.emplace_back(std::move(stab));
 }
 
-// Given a pointer to a function symbol, return the symbol that points to the
-// actual function body that will go in the final binary. Generally this is the
-// symbol itself, but if the symbol was folded using a thunk, we retrieve the
-// target function body from the thunk.
-Defined *SymtabSection::getFuncBodySym(Defined *originalSym) {
-  if (originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::None ||
-      originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
-    return originalSym;
-
-  return macho::getBodyForThunkFoldedSym(originalSym);
-}
-
 void SymtabSection::emitStabs() {
   if (config->omitDebugInfo)
     return;
@@ -1242,10 +1229,20 @@ void SymtabSection::emitStabs() {
       if (defined->isAbsolute())
         continue;
 
+      // Never generate a STABS entry for a symbol that has been ICF'ed using a
+      // thunk, just as we do for fully ICF'ed functions. Otherwise, we end up
+      // generating invalid DWARF as dsymutil will assume the entire function
+      // body is at that location, when, in reality, only the thunk is
+      // present. This will end up causing overlapping DWARF entries.
+      // TODO: Find an implementation that works in combination with
+      // `--keep-icf-stabs`.
+      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk)
+        continue;
+
       // Constant-folded symbols go in the executable's symbol table, but don't
-      // get a stabs entry unless --keep-icf-stabs flag is specified.
+      // get a stabs entry unless --keep-icf-stabs flag is specified
       if (!config->keepICFStabs &&
-          defined->identicalCodeFoldingKind != Symbol::ICFFoldKind::None)
+          defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
         continue;
 
       ObjFile *file = defined->getObjectFile();
@@ -1254,8 +1251,8 @@ void SymtabSection::emitStabs() {
 
       // We use 'originalIsec' to get the file id of the symbol since 'isec()'
       // might point to the merged ICF symbol's file
-      symbolsNeedingStabs.emplace_back(
-          defined, getFuncBodySym(defined)->originalIsec->getFile()->id);
+      symbolsNeedingStabs.emplace_back(defined,
+                                       defined->originalIsec->getFile()->id);
     }
   }
 
@@ -1272,8 +1269,7 @@ void SymtabSection::emitStabs() {
     Defined *defined = pair.first;
     // We use 'originalIsec' of the symbol since we care about the actual origin
     // of the symbol, not the canonical location returned by `isec()`.
-    Defined *funcBodySym = getFuncBodySym(defined);
-    InputSection *isec = funcBodySym->originalIsec;
+    InputSection *isec = defined->originalIsec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1288,12 +1284,12 @@ void SymtabSection::emitStabs() {
     StabsEntry symStab;
     symStab.sect = isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
-    symStab.value = funcBodySym->getVA();
+    symStab.value = defined->getVA();
 
     if (isCodeSection(isec)) {
       symStab.type = N_FUN;
       stabs.emplace_back(std::move(symStab));
-      emitEndFunStab(funcBodySym);
+      emitEndFunStab(defined);
     } else {
       symStab.type = defined->isExternal() ? N_GSYM : N_STSYM;
       stabs.emplace_back(std::move(symStab));
@@ -1990,7 +1986,7 @@ void InitOffsetsSection::setUp() {
       if (rel.addend != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
-      if (isa<InputSection *>(rel.referent))
+      if (rel.referent.is<InputSection *>())
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
@@ -2136,12 +2132,12 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = selRef->getVA();
     assert(selRef->data.size() == target->wordSize &&
            "Expected one selref per ConcatInputSection");
-  } else if (auto *sym = dyn_cast<Symbol *>(reloc->referent)) {
-    auto *def = dyn_cast_or_null<Defined>(sym);
+  } else if (reloc->referent.is<Symbol *>()) {
+    auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
     assert(def && "Expected all syms in __objc_methlist to be defined");
     symVA = def->getVA();
   } else {
-    auto *isec = cast<InputSection *>(reloc->referent);
+    auto *isec = reloc->referent.get<InputSection *>();
     symVA = isec->getVA(reloc->addend);
   }
 

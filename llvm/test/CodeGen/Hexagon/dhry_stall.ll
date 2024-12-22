@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
 
 ; CHECK: }
 ; CHECK: [[REG0:r([0-9]+)]] = addasl

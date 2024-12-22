@@ -1581,12 +1581,7 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
           .Case<IntegerAttr>([&](auto intAttr) {
             attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
           })
-          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); })
-          .Case<LLVM::ConstantRangeAttr>([&](auto rangeAttr) {
-            attrBuilder.addConstantRangeAttr(
-                llvmKind, llvm::ConstantRange(rangeAttr.getLower(),
-                                              rangeAttr.getUpper()));
-          });
+          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); });
     } else if (namedAttr.getNameDialect()) {
       if (failed(iface.convertParameterAttr(func, argIdx, namedAttr, *this)))
         return failure();

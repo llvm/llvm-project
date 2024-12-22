@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRModule.h"
+#include "Globals.h"
+#include "PybindUtils.h"
+
+#include "mlir-c/Bindings/Python/Interop.h"
+#include "mlir-c/Support.h"
 
 #include <optional>
 #include <vector>
 
-#include "Globals.h"
-#include "NanobindUtils.h"
-#include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
-
-namespace nb = nanobind;
+namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
 
@@ -42,14 +41,14 @@ bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
     return true;
   // Since re-entrancy is possible, make a copy of the search prefixes.
   std::vector<std::string> localSearchPrefixes = dialectSearchPrefixes;
-  nb::object loaded = nb::none();
+  py::object loaded = py::none();
   for (std::string moduleName : localSearchPrefixes) {
     moduleName.push_back('.');
     moduleName.append(dialectNamespace.data(), dialectNamespace.size());
 
     try {
-      loaded = nb::module_::import_(moduleName.c_str());
-    } catch (nb::python_error &e) {
+      loaded = py::module::import(moduleName.c_str());
+    } catch (py::error_already_set &e) {
       if (e.matches(PyExc_ModuleNotFoundError)) {
         continue;
       }
@@ -67,39 +66,41 @@ bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
 }
 
 void PyGlobals::registerAttributeBuilder(const std::string &attributeKind,
-                                         nb::callable pyFunc, bool replace) {
-  nb::object &found = attributeBuilderMap[attributeKind];
+                                         py::function pyFunc, bool replace) {
+  py::object &found = attributeBuilderMap[attributeKind];
   if (found && !replace) {
     throw std::runtime_error((llvm::Twine("Attribute builder for '") +
                               attributeKind +
                               "' is already registered with func: " +
-                              nb::cast<std::string>(nb::str(found)))
+                              py::str(found).operator std::string())
                                  .str());
   }
   found = std::move(pyFunc);
 }
 
 void PyGlobals::registerTypeCaster(MlirTypeID mlirTypeID,
-                                   nb::callable typeCaster, bool replace) {
-  nb::object &found = typeCasterMap[mlirTypeID];
+                                   pybind11::function typeCaster,
+                                   bool replace) {
+  pybind11::object &found = typeCasterMap[mlirTypeID];
   if (found && !replace)
     throw std::runtime_error("Type caster is already registered with caster: " +
-                             nb::cast<std::string>(nb::str(found)));
+                             py::str(found).operator std::string());
   found = std::move(typeCaster);
 }
 
 void PyGlobals::registerValueCaster(MlirTypeID mlirTypeID,
-                                    nb::callable valueCaster, bool replace) {
-  nb::object &found = valueCasterMap[mlirTypeID];
+                                    pybind11::function valueCaster,
+                                    bool replace) {
+  pybind11::object &found = valueCasterMap[mlirTypeID];
   if (found && !replace)
     throw std::runtime_error("Value caster is already registered: " +
-                             nb::cast<std::string>(nb::repr(found)));
+                             py::repr(found).cast<std::string>());
   found = std::move(valueCaster);
 }
 
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
-                                    nb::object pyClass) {
-  nb::object &found = dialectClassMap[dialectNamespace];
+                                    py::object pyClass) {
+  py::object &found = dialectClassMap[dialectNamespace];
   if (found) {
     throw std::runtime_error((llvm::Twine("Dialect namespace '") +
                               dialectNamespace + "' is already registered.")
@@ -109,8 +110,8 @@ void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
 }
 
 void PyGlobals::registerOperationImpl(const std::string &operationName,
-                                      nb::object pyClass, bool replace) {
-  nb::object &found = operationClassMap[operationName];
+                                      py::object pyClass, bool replace) {
+  py::object &found = operationClassMap[operationName];
   if (found && !replace) {
     throw std::runtime_error((llvm::Twine("Operation '") + operationName +
                               "' is already registered.")
@@ -119,7 +120,7 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
   found = std::move(pyClass);
 }
 
-std::optional<nb::callable>
+std::optional<py::function>
 PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
   const auto foundIt = attributeBuilderMap.find(attributeKind);
   if (foundIt != attributeBuilderMap.end()) {
@@ -129,7 +130,7 @@ PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
   return std::nullopt;
 }
 
-std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
+std::optional<py::function> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
                                                         MlirDialect dialect) {
   // Try to load dialect module.
   (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
@@ -141,7 +142,7 @@ std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
   return std::nullopt;
 }
 
-std::optional<nb::callable> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
+std::optional<py::function> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
                                                          MlirDialect dialect) {
   // Try to load dialect module.
   (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
@@ -153,7 +154,7 @@ std::optional<nb::callable> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
   return std::nullopt;
 }
 
-std::optional<nb::object>
+std::optional<py::object>
 PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   // Make sure dialect module is loaded.
   if (!loadDialectModule(dialectNamespace))
@@ -167,7 +168,7 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   return std::nullopt;
 }
 
-std::optional<nb::object>
+std::optional<pybind11::object>
 PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   // Make sure dialect module is loaded.
   auto split = operationName.split('.');

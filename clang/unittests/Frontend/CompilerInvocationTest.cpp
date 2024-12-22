@@ -12,7 +12,6 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
@@ -31,19 +30,17 @@ class CommandLineTest : public ::testing::Test {
 public:
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   SmallVector<const char *, 32> GeneratedArgs;
-  BumpPtrAllocator Alloc;
-  StringSaver StringPool;
+  SmallVector<std::string, 32> GeneratedArgsStorage;
   CompilerInvocation Invocation;
 
   const char *operator()(const Twine &Arg) {
-    return StringPool.save(Arg).data();
+    return GeneratedArgsStorage.emplace_back(Arg.str()).c_str();
   }
 
   CommandLineTest()
-      : Diags(CompilerInstance::createDiagnostics(
-            *llvm::vfs::getRealFileSystem(), new DiagnosticOptions(),
-            new TextDiagnosticBuffer())),
-        StringPool(Alloc) {}
+      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions(),
+                                                  new TextDiagnosticBuffer())) {
+  }
 };
 
 template <typename M>

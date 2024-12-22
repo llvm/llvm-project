@@ -256,12 +256,9 @@ public:
   /// The module destructor. This will dropAllReferences.
   ~Module();
 
-  /// Move assignment.
-  Module &operator=(Module &&Other);
-
-  /// @}
-  /// @name Module Level Accessors
-  /// @{
+/// @}
+/// @name Module Level Accessors
+/// @{
 
   /// Get the module identifier which is, essentially, the name of the module.
   /// @returns the module identifier as a string

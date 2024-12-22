@@ -22,21 +22,21 @@ include "mlir/IR/DialectBase.td"
 
 // Whether a type is a VectorType.
 // Explicitly disallow 0-D vectors for now until we have good enough coverage.
-def IsVectorOfNonZeroRankTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
-                                         CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
-def IsFixedVectorOfNonZeroRankTypePred : And<[CPred<"::llvm::isa<::mlir::FixedVectorType>($_self)">,
-                                              CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
+def IsVectorTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
+                            CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
 
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
 // TODO: Remove this when all ops support 0-D vectors.
 def IsVectorOfAnyRankTypePred : CPred<"::llvm::isa<::mlir::VectorType>($_self)">;
 
 // Whether a type is a fixed-length VectorType.
-def IsFixedVectorOfAnyRankTypePred : CPred<[{::llvm::isa<::mlir::FixedVectorType>($_self)}]>;
+def IsFixedVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
+                                  !::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a scalable VectorType.
 def IsVectorTypeWithAnyDimScalablePred
-        : CPred<[{::llvm::isa<::mlir::ScalableVectorType>($_self)}]>;
+        : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
+                  ::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a scalable VectorType, with a single trailing scalable dimension.
 // Examples:
@@ -53,7 +53,7 @@ def IsVectorTypeWithOnlyTrailingDimScalablePred : And<[
 
 // Whether a type is a VectorType and all dimensions are scalable.
 def IsVectorTypeWithAllDimsScalablePred : And<[
-  IsVectorOfNonZeroRankTypePred,
+  IsVectorTypePred,
   CPred<[{::llvm::cast<::mlir::VectorType>($_self).allDimsScalable()}]>
 ]>;
 
@@ -428,13 +428,9 @@ class ValueSemanticsContainerOf<list<Type> allowedTypes> :
 
 // Vector types.
 
-class VectorOfNonZeroRankOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsVectorOfNonZeroRankTypePred, "vector",
+class VectorOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsVectorTypePred, "vector",
                       "::mlir::VectorType">;
-
-class FixedVectorOfNonZeroRankOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsFixedVectorOfNonZeroRankTypePred,
-                      "fixed-length vector", "::mlir::VectorType">;
 
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
 // TODO: Remove this when all ops support 0-D vectors.
@@ -442,11 +438,11 @@ class VectorOfAnyRankOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorOfAnyRankTypePred, "vector",
                       "::mlir::VectorType">;
 
-class FixedVectorOfAnyRank<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsFixedVectorOfAnyRankTypePred,
+class FixedVectorOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsFixedVectorTypePred,
           "fixed-length vector", "::mlir::VectorType">;
 
-class ScalableVectorOfAnyRank<list<Type> allowedTypes> :
+class ScalableVectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypeWithAnyDimScalablePred,
           "scalable vector", "::mlir::VectorType">;
 
@@ -462,7 +458,7 @@ class VectorWithTrailingDimScalableOf<list<Type> allowedTypes> :
 // Whether the number of elements of a vector is from the given
 // `allowedRanks` list
 class IsVectorOfRankPred<list<int> allowedRanks> :
-  And<[IsVectorOfNonZeroRankTypePred,
+  And<[IsVectorTypePred,
        Or<!foreach(allowedlength, allowedRanks,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getRank()
                            == }]
@@ -471,7 +467,7 @@ class IsVectorOfRankPred<list<int> allowedRanks> :
 // Whether the number of elements of a fixed-length vector is from the given
 // `allowedRanks` list
 class IsFixedVectorOfRankPred<list<int> allowedRanks> :
-  And<[IsFixedVectorOfAnyRankTypePred,
+  And<[IsFixedVectorTypePred,
        Or<!foreach(allowedlength, allowedRanks,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getRank()
                            == }]
@@ -505,22 +501,22 @@ class ScalableVectorOfRank<list<int> allowedRanks> : Type<
 // is from the given `allowedTypes` list
 class VectorOfRankAndType<list<int> allowedRanks,
                           list<Type> allowedTypes> : AllOfType<
-  [VectorOfNonZeroRankOf<allowedTypes>, VectorOfRank<allowedRanks>],
-   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
+  [VectorOf<allowedTypes>, VectorOfRank<allowedRanks>],
+  VectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
 // Fixed-width vector where the rank is from the given `allowedRanks` list and
 // the type is from the given `allowedTypes` list
 class FixedVectorOfRankAndType<list<int> allowedRanks,
                           list<Type> allowedTypes> : AllOfType<
-  [FixedVectorOfAnyRank<allowedTypes>, VectorOfRank<allowedRanks>],
-  FixedVectorOfAnyRank<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
+  [FixedVectorOf<allowedTypes>, VectorOfRank<allowedRanks>],
+  FixedVectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
 // Whether the number of elements of a vector is from the given
 // `allowedLengths` list
 class IsVectorOfLengthPred<list<int> allowedLengths> :
-  And<[IsVectorOfNonZeroRankTypePred,
+  And<[IsVectorTypePred,
        Or<!foreach(allowedlength, allowedLengths,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
                            == }]
@@ -529,7 +525,7 @@ class IsVectorOfLengthPred<list<int> allowedLengths> :
 // Whether the number of elements of a fixed-length vector is from the given
 // `allowedLengths` list
 class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
-  And<[IsFixedVectorOfAnyRankTypePred,
+  And<[IsFixedVectorTypePred,
        Or<!foreach(allowedlength, allowedLengths,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
                            == }]
@@ -608,16 +604,16 @@ class ScalableVectorOfLength<list<int> allowedLengths> : Type<
 // list
 class VectorOfLengthAndType<list<int> allowedLengths,
                             list<Type> allowedTypes> : AllOfType<
-  [VectorOfNonZeroRankOf<allowedTypes>, VectorOfLength<allowedLengths>],
-   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
+  [VectorOf<allowedTypes>, VectorOfLength<allowedLengths>],
+  VectorOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,
                                  list<Type> allowedTypes> : AllOfType<
-  [FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
-  FixedVectorOfAnyRank<allowedTypes>.summary #
+  [FixedVectorOf<allowedTypes>, FixedVectorOfLength<allowedLengths>],
+  FixedVectorOf<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
@@ -625,8 +621,8 @@ class FixedVectorOfLengthAndType<list<int> allowedLengths,
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class ScalableVectorOfLengthAndType<list<int> allowedLengths,
                                     list<Type> allowedTypes> : AllOfType<
-  [ScalableVectorOfAnyRank<allowedTypes>, ScalableVectorOfLength<allowedLengths>],
-  ScalableVectorOfAnyRank<allowedTypes>.summary #
+  [ScalableVectorOf<allowedTypes>, ScalableVectorOfLength<allowedLengths>],
+  ScalableVectorOf<allowedTypes>.summary #
   ScalableVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
@@ -636,10 +632,10 @@ class ScalableVectorOfLengthAndType<list<int> allowedLengths,
 class ScalableVectorOfRankAndLengthAndType<list<int> allowedRanks,
                                            list<int> allowedLengths,
                                            list<Type> allowedTypes> : AllOfType<
-  [ScalableVectorOfRank<allowedRanks>, ScalableVectorOfAnyRank<allowedTypes>,
+  [ScalableVectorOfRank<allowedRanks>, ScalableVectorOf<allowedTypes>,
    ScalableVectorOfLength<allowedLengths>],
   ScalableVectorOfRank<allowedRanks>.summary #
-  ScalableVectorOfAnyRank<allowedTypes>.summary #
+  ScalableVectorOf<allowedTypes>.summary #
   ScalableVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
@@ -661,16 +657,13 @@ class VectorWithTrailingDimScalableOfSizeAndType<list<int> allowedTrailingSizes,
    ShapedTypeWithNthDimOfSize<-1, allowedTrailingSizes>.summary,
   "::mlir::VectorType">;
 
-// Unlike the following definitions, this one excludes 0-D vectors
-def AnyVectorOfNonZeroRank : VectorOfNonZeroRankOf<[AnyType]>;
-
-def AnyFixedVectorOfNonZeroRank : FixedVectorOfNonZeroRankOf<[AnyType]>;
-
+def AnyVector : VectorOf<[AnyType]>;
+// Temporary vector type clone that allows gradual transition to 0-D vectors.
 def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
 
-def AnyFixedVectorOfAnyRank : FixedVectorOfAnyRank<[AnyType]>;
+def AnyFixedVector : FixedVectorOf<[AnyType]>;
 
-def AnyScalableVectorOfAnyRank : ScalableVectorOfAnyRank<[AnyType]>;
+def AnyScalableVector : ScalableVectorOf<[AnyType]>;
 
 // Shaped types.
 

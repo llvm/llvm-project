@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++23 -verify %s
 
 namespace usage_invalid {
-  void void_return(int &param [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute cannot be applied to a parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
+  void void_return(int &param [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute cannot be applied to a parameter of a function that returns void}}
 
   int *not_class_member() [[clang::lifetimebound]]; // expected-error {{non-member function has no implicit object parameter}}
   struct A {
@@ -11,7 +11,7 @@ namespace usage_invalid {
     int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
     int not_function [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
     int [[clang::lifetimebound]] also_not_function; // expected-error {{cannot be applied to types}}
-    void void_return_member() [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
+    void void_return_member() [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void}}
   };
   int *attr_with_param(int &param [[clang::lifetimebound(42)]]); // expected-error {{takes no arguments}}
 }

@@ -18,5 +18,4 @@
 // CHECK-SAME: {{^}}, hexagonv71
 // CHECK-SAME: {{^}}, hexagonv71t
 // CHECK-SAME: {{^}}, hexagonv73
-// CHECK-SAME: {{^}}, hexagonv75
 // CHECK-SAME: {{$}}

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=16 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-hvx-widen=16 < %s | FileCheck %s
 
 ; CHECK-LABEL: f0:
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r{{[0-9]+}})

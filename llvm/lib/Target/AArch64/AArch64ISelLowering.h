@@ -477,14 +477,15 @@ enum NodeType : unsigned {
   MSRR,
 
   // Strict (exception-raising) floating point comparison
-  FIRST_STRICTFP_OPCODE,
-  STRICT_FCMP = FIRST_STRICTFP_OPCODE,
+  STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCMPE,
-  LAST_STRICTFP_OPCODE = STRICT_FCMPE,
+
+  // SME ZA loads and stores
+  SME_ZA_LDR,
+  SME_ZA_STR,
 
   // NEON Load/Store with post-increment base updates
-  FIRST_MEMORY_OPCODE,
-  LD2post = FIRST_MEMORY_OPCODE,
+  LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,
   LD4post,
   ST2post,
@@ -519,11 +520,6 @@ enum NodeType : unsigned {
   STP,
   STILP,
   STNP,
-  LAST_MEMORY_OPCODE = STNP,
-
-  // SME ZA loads and stores
-  SME_ZA_LDR,
-  SME_ZA_STR,
 };
 
 } // end namespace AArch64ISD
@@ -1352,10 +1348,6 @@ private:
   unsigned getMinimumJumpTableEntries() const override;
 
   bool softPromoteHalfType() const override { return true; }
-
-  bool shouldScalarizeBinop(SDValue VecOp) const override {
-    return VecOp.getOpcode() == ISD::SETCC;
-  }
 };
 
 namespace AArch64 {

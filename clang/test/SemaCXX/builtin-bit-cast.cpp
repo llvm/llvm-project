@@ -32,10 +32,10 @@ struct not_trivially_copyable {
   virtual void foo() {}
 };
 
-// expected-error@+1{{'__builtin_bit_cast' source type must be trivially copyable}}
+// expected-error@+1{{__builtin_bit_cast source type must be trivially copyable}}
 constexpr unsigned long ul = __builtin_bit_cast(unsigned long, not_trivially_copyable{});
 
-// expected-error@+1 {{'__builtin_bit_cast' destination type must be trivially copyable}}
+// expected-error@+1 {{__builtin_bit_cast destination type must be trivially copyable}}
 constexpr long us = __builtin_bit_cast(unsigned long &, 0L);
 
 namespace PR42936 {

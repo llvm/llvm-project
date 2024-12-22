@@ -31,7 +31,6 @@ set(NVPTXCodeGen_sources
   NVPTXPrologEpilogPass.cpp
   NVPTXRegisterInfo.cpp
   NVPTXReplaceImageHandles.cpp
-  NVPTXSelectionDAGInfo.cpp
   NVPTXSubtarget.cpp
   NVPTXTargetMachine.cpp
   NVPTXTargetTransformInfo.cpp

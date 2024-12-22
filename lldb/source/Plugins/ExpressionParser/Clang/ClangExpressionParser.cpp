@@ -780,7 +780,7 @@ ClangExpressionParser::ClangExpressionParser(
   SetupTargetOpts(*m_compiler, *target_sp);
 
   // 3. Create and install the target on the compiler.
-  m_compiler->createDiagnostics(m_compiler->getVirtualFileSystem());
+  m_compiler->createDiagnostics();
   // Limit the number of error diagnostics we emit.
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());

@@ -7,10 +7,10 @@ add_mlir_unittest(MLIRParserTests
 )
 target_include_directories(MLIRParserTests PRIVATE "${MLIR_BINARY_DIR}/test/lib/Dialect/Test")
 
-mlir_target_link_libraries(MLIRParserTests PRIVATE
+target_link_libraries(MLIRParserTests PRIVATE
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRIR
   MLIRParser
+  MLIRTestDialect
 )
-target_link_libraries(MLIRParserTests PRIVATE MLIRTestDialect)

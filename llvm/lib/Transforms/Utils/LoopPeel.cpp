@@ -378,7 +378,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
       return;
     }
 
-    CmpPredicate Pred;
+    CmpInst::Predicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
       return;
 

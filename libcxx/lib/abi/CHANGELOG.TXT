@@ -16,19 +16,6 @@ New entries should be added directly below the "Version" header.
 Version 20.0
 ------------
 
-* [libc++] Remove the pointer safety functions from the dylib
-
-  The pointer safety functions were never implemented by anyone in a non-trivial
-  way, which lead us to removing them entirely from the headers when they were
-  removed in C++23. This also means that just about nobody ever called these
-  functions, especially not in production code. Because of that, we expect there
-  to be no references in the wild to the functions in the dylib.
-
-  Symbol removed: _ZNSt3__117declare_reachableEPv
-  Symbol removed: _ZNSt3__119declare_no_pointersEPcm
-  Symbol removed: _ZNSt3__121__undeclare_reachableEPv
-  Symbol removed: _ZNSt3__121undeclare_no_pointersEPcm
-
 * [libcxx][libc] Implements from_chars floating-point
 
   All platforms

@@ -463,37 +463,6 @@ struct MatmulTransposeOpConversion
   }
 };
 
-class CShiftOpConversion : public HlfirIntrinsicConversion<hlfir::CShiftOp> {
-  using HlfirIntrinsicConversion<hlfir::CShiftOp>::HlfirIntrinsicConversion;
-
-  llvm::LogicalResult
-  matchAndRewrite(hlfir::CShiftOp cshift,
-                  mlir::PatternRewriter &rewriter) const override {
-    fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
-    const mlir::Location &loc = cshift->getLoc();
-
-    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
-    mlir::Value array = cshift.getArray();
-    inArgs.push_back({array, array.getType()});
-    mlir::Value shift = cshift.getShift();
-    inArgs.push_back({shift, shift.getType()});
-    inArgs.push_back({cshift.getDim(), builder.getI32Type()});
-
-    auto *argLowering = fir::getIntrinsicArgumentLowering("cshift");
-    llvm::SmallVector<fir::ExtendedValue, 3> args =
-        lowerArguments(cshift, inArgs, rewriter, argLowering);
-
-    mlir::Type scalarResultType =
-        hlfir::getFortranElementType(cshift.getType());
-
-    auto [resultExv, mustBeFreed] =
-        fir::genIntrinsicCall(builder, loc, "cshift", scalarResultType, args);
-
-    processReturnValue(cshift, resultExv, mustBeFreed, builder, rewriter);
-    return mlir::success();
-  }
-};
-
 class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
@@ -506,8 +475,7 @@ public:
                 AllOpConversion, AnyOpConversion, SumOpConversion,
                 ProductOpConversion, TransposeOpConversion, CountOpConversion,
                 DotProductOpConversion, MaxvalOpConversion, MinvalOpConversion,
-                MinlocOpConversion, MaxlocOpConversion, CShiftOpConversion>(
-            context);
+                MinlocOpConversion, MaxlocOpConversion>(context);
 
     // While conceptually this pass is performing dialect conversion, we use
     // pattern rewrites here instead of dialect conversion because this pass
@@ -520,8 +488,8 @@ public:
     config.enableRegionSimplification =
         mlir::GreedySimplifyRegionLevel::Disabled;
 
-    if (mlir::failed(
-            mlir::applyPatternsGreedily(module, std::move(patterns), config))) {
+    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+            module, std::move(patterns), config))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "failure in HLFIR intrinsic lowering");
       signalPassFailure();

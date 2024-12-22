@@ -19,17 +19,21 @@ using namespace jitlink;
 
 #define DEBUG_TYPE "jitlink"
 
-#define OPTTABLE_STR_TABLE_CODE
+// Create prefix string literals used in Options.td
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "COFFOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
+#undef PREFIX
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
+static constexpr const StringLiteral PrefixTable_init[] =
+#define PREFIX_UNION(VALUES) VALUES
 #include "COFFOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_UNION_CODE
-#include "COFFOptions.inc"
-#undef OPTTABLE_PREFIXES_UNION_CODE
+#undef PREFIX_UNION
+    ;
+static constexpr const ArrayRef<StringLiteral>
+    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
 
 // Create table mapping all options defined in COFFOptions.td
 using namespace llvm::opt;
@@ -42,9 +46,7 @@ static constexpr opt::OptTable::Info infoTable[] = {
 
 class COFFOptTable : public opt::PrecomputedOptTable {
 public:
-  COFFOptTable()
-      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, infoTable,
-                            OptionPrefixesUnion, true) {}
+  COFFOptTable() : PrecomputedOptTable(infoTable, PrefixTable, true) {}
 };
 
 static COFFOptTable optTable;

@@ -118,24 +118,12 @@ For developers to commit changes from Git
 -----------------------------------------
 
 Once a patch is reviewed, you can select the "Squash and merge" button in the
-GitHub web interface.
+GitHub web interface. You might need to rebase your change before pushing
+it to the repo.
 
-When pushing directly from the command-line to the ``main`` branch, you will need
-to rebase your change. LLVM has a linear-history policy, which means
-that merge commits are not allowed and the ``main`` branch is configured to reject
-pushes that include merges.
-
-GitHub will display a message that looks like this:
-
-.. code-block:: console
-
-  remote: Bypassed rule violations for refs/heads/main:
-  remote:
-  remote: - Required status check “buildkite/github-pull-requests” is expected.
-
-This can seem scary, but this is just an artifact of the GitHub setup: it is
-intended as a warning for people merging pull-requests with failing CI. We can't
-disable it for people pushing on the command-line.
+LLVM currently has a linear-history policy, which means that merge commits are
+not allowed. The `llvm-project` repo on github is configured to reject pushes
+that include merges, so the `git rebase` step above is required.
 
 Please ask for help if you're having trouble with your particular git workflow.
 

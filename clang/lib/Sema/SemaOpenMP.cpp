@@ -1611,10 +1611,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        isa<const Expr *>(ReductionData.ReductionOp))
+        ReductionData.ReductionOp.is<const Expr *>())
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    BOK = cast<ReductionData::BOKPtrType>(ReductionData.ReductionOp);
+    BOK = ReductionData.ReductionOp.get<ReductionData::BOKPtrType>();
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -1638,10 +1638,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        !isa<const Expr *>(ReductionData.ReductionOp))
+        !ReductionData.ReductionOp.is<const Expr *>())
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    ReductionRef = cast<const Expr *>(ReductionData.ReductionOp);
+    ReductionRef = ReductionData.ReductionOp.get<const Expr *>();
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -11102,8 +11102,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
   for (const OMPClause *C : Clauses) {
     if (C->getClauseKind() == OMPC_acq_rel ||
         C->getClauseKind() == OMPC_acquire ||
-        C->getClauseKind() == OMPC_release ||
-        C->getClauseKind() == OMPC_seq_cst /*OpenMP 5.1*/) {
+        C->getClauseKind() == OMPC_release) {
       if (MemOrderKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
             << getOpenMPDirectiveName(OMPD_flush) << 1

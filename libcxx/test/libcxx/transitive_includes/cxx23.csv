@@ -9,6 +9,7 @@ algorithm cwctype
 algorithm initializer_list
 algorithm iosfwd
 algorithm limits
+algorithm new
 algorithm optional
 algorithm ratio
 algorithm tuple
@@ -17,6 +18,7 @@ any cstdint
 any cstring
 any initializer_list
 any limits
+any new
 any typeinfo
 any version
 array cctype
@@ -26,6 +28,7 @@ array cwchar
 array cwctype
 array initializer_list
 array limits
+array new
 array stdexcept
 array version
 atomic climits
@@ -40,6 +43,7 @@ barrier cstdint
 barrier cstring
 barrier ctime
 barrier limits
+barrier new
 barrier ratio
 barrier version
 bit cstdint
@@ -56,6 +60,7 @@ bitset cwctype
 bitset initializer_list
 bitset iosfwd
 bitset limits
+bitset new
 bitset stdexcept
 bitset string
 bitset string_view
@@ -83,6 +88,7 @@ ccomplex iosfwd
 ccomplex istream
 ccomplex limits
 ccomplex locale
+ccomplex new
 ccomplex ratio
 ccomplex sstream
 ccomplex stdexcept
@@ -96,6 +102,7 @@ charconv cerrno
 charconv cstdint
 charconv initializer_list
 charconv limits
+charconv new
 charconv version
 chrono array
 chrono bitset
@@ -121,6 +128,7 @@ chrono iosfwd
 chrono istream
 chrono limits
 chrono locale
+chrono new
 chrono optional
 chrono ratio
 chrono sstream
@@ -148,6 +156,7 @@ codecvt cwctype
 codecvt initializer_list
 codecvt iosfwd
 codecvt limits
+codecvt new
 codecvt stdexcept
 codecvt string
 codecvt string_view
@@ -178,6 +187,7 @@ complex iosfwd
 complex istream
 complex limits
 complex locale
+complex new
 complex ratio
 complex sstream
 complex stdexcept
@@ -196,6 +206,7 @@ condition_variable cstring
 condition_variable ctime
 condition_variable initializer_list
 condition_variable limits
+condition_variable new
 condition_variable ratio
 condition_variable typeinfo
 condition_variable version
@@ -227,6 +238,7 @@ ctgmath iosfwd
 ctgmath istream
 ctgmath limits
 ctgmath locale
+ctgmath new
 ctgmath ratio
 ctgmath sstream
 ctgmath stdexcept
@@ -247,16 +259,19 @@ deque cwchar
 deque cwctype
 deque initializer_list
 deque limits
+deque new
 deque stdexcept
 deque tuple
 deque version
 exception cstdint
 exception cstdlib
+exception new
 exception typeinfo
 exception version
 execution version
 expected cstdint
 expected initializer_list
+expected new
 expected version
 experimental/iterator bitset
 experimental/iterator cctype
@@ -279,6 +294,7 @@ experimental/iterator iosfwd
 experimental/iterator iterator
 experimental/iterator limits
 experimental/iterator locale
+experimental/iterator new
 experimental/iterator ratio
 experimental/iterator stdexcept
 experimental/iterator streambuf
@@ -324,6 +340,7 @@ filesystem ios
 filesystem iosfwd
 filesystem limits
 filesystem locale
+filesystem new
 filesystem ratio
 filesystem stdexcept
 filesystem streambuf
@@ -341,6 +358,7 @@ flat_map cwchar
 flat_map cwctype
 flat_map initializer_list
 flat_map limits
+flat_map new
 flat_map optional
 flat_map stdexcept
 flat_map tuple
@@ -362,6 +380,7 @@ format cwctype
 format initializer_list
 format iosfwd
 format limits
+format new
 format optional
 format stdexcept
 format string
@@ -376,6 +395,7 @@ forward_list cwchar
 forward_list cwctype
 forward_list initializer_list
 forward_list limits
+forward_list new
 forward_list tuple
 forward_list version
 fstream bitset
@@ -400,6 +420,7 @@ fstream iosfwd
 fstream istream
 fstream limits
 fstream locale
+fstream new
 fstream ratio
 fstream stdexcept
 fstream streambuf
@@ -417,12 +438,15 @@ functional cwchar
 functional cwctype
 functional initializer_list
 functional limits
+functional new
 functional optional
 functional stdexcept
 functional tuple
 functional typeinfo
 functional unordered_map
 functional version
+future array
+future atomic
 future bitset
 future cctype
 future cerrno
@@ -443,12 +467,15 @@ future iosfwd
 future istream
 future limits
 future locale
+future mutex
+future new
 future ratio
 future sstream
 future stdexcept
 future streambuf
 future string
 future string_view
+future thread
 future tuple
 future typeinfo
 future version
@@ -471,6 +498,7 @@ iomanip ios
 iomanip iosfwd
 iomanip limits
 iomanip locale
+iomanip new
 iomanip ratio
 iomanip stdexcept
 iomanip streambuf
@@ -495,6 +523,7 @@ ios cwctype
 ios initializer_list
 ios iosfwd
 ios limits
+ios new
 ios ratio
 ios stdexcept
 ios string
@@ -526,6 +555,7 @@ iostream iosfwd
 iostream istream
 iostream limits
 iostream locale
+iostream new
 iostream optional
 iostream ostream
 iostream print
@@ -556,7 +586,7 @@ istream ios
 istream iosfwd
 istream limits
 istream locale
-
+istream new
 istream ratio
 istream stdexcept
 istream streambuf
@@ -576,6 +606,7 @@ iterator cwctype
 iterator initializer_list
 iterator iosfwd
 iterator limits
+iterator new
 iterator variant
 iterator version
 latch climits
@@ -594,6 +625,7 @@ list cwchar
 list cwctype
 list initializer_list
 list limits
+list new
 list tuple
 list version
 locale cctype
@@ -613,6 +645,7 @@ locale initializer_list
 locale ios
 locale iosfwd
 locale limits
+locale new
 locale ratio
 locale stdexcept
 locale streambuf
@@ -629,6 +662,7 @@ map cwchar
 map cwctype
 map initializer_list
 map limits
+map new
 map optional
 map stdexcept
 map tuple
@@ -642,6 +676,7 @@ mdspan cwchar
 mdspan cwctype
 mdspan initializer_list
 mdspan limits
+mdspan new
 mdspan span
 mdspan stdexcept
 mdspan version
@@ -650,6 +685,7 @@ memory cstdint
 memory cstring
 memory initializer_list
 memory limits
+memory new
 memory tuple
 memory typeinfo
 memory version
@@ -659,8 +695,11 @@ memory_resource compare
 memory_resource cstdint
 memory_resource ctime
 memory_resource limits
+memory_resource mutex
+memory_resource new
 memory_resource ratio
 memory_resource tuple
+memory_resource typeinfo
 memory_resource version
 mutex cerrno
 mutex climits
@@ -681,6 +720,7 @@ numeric cstring
 numeric ctime
 numeric initializer_list
 numeric limits
+numeric new
 numeric optional
 numeric ratio
 numeric tuple
@@ -690,6 +730,7 @@ optional cstdint
 optional cstring
 optional initializer_list
 optional limits
+optional new
 optional version
 ostream array
 ostream bitset
@@ -713,6 +754,7 @@ ostream ios
 ostream iosfwd
 ostream limits
 ostream locale
+ostream new
 ostream optional
 ostream print
 ostream ratio
@@ -741,6 +783,7 @@ print format
 print initializer_list
 print iosfwd
 print limits
+print new
 print optional
 print stdexcept
 print string
@@ -765,6 +808,7 @@ queue deque
 queue initializer_list
 queue iosfwd
 queue limits
+queue new
 queue stdexcept
 queue string
 queue string_view
@@ -785,6 +829,7 @@ random cwctype
 random initializer_list
 random iosfwd
 random limits
+random new
 random numeric
 random optional
 random ratio
@@ -805,6 +850,7 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
+ranges new
 ranges optional
 ranges span
 ranges stdexcept
@@ -831,6 +877,7 @@ regex deque
 regex initializer_list
 regex iosfwd
 regex limits
+regex new
 regex stdexcept
 regex string
 regex string_view
@@ -841,6 +888,7 @@ regex version
 scoped_allocator compare
 scoped_allocator cstdint
 scoped_allocator limits
+scoped_allocator new
 scoped_allocator tuple
 scoped_allocator version
 semaphore climits
@@ -858,6 +906,7 @@ set cwchar
 set cwctype
 set initializer_list
 set limits
+set new
 set optional
 set tuple
 set version
@@ -894,6 +943,7 @@ sstream iosfwd
 sstream istream
 sstream limits
 sstream locale
+sstream new
 sstream ratio
 sstream stdexcept
 sstream streambuf
@@ -911,6 +961,7 @@ stack cwctype
 stack deque
 stack initializer_list
 stack limits
+stack new
 stack stdexcept
 stack tuple
 stack version
@@ -939,6 +990,7 @@ streambuf initializer_list
 streambuf ios
 streambuf iosfwd
 streambuf limits
+streambuf new
 streambuf ratio
 streambuf stdexcept
 streambuf string
@@ -957,6 +1009,7 @@ string cwctype
 string initializer_list
 string iosfwd
 string limits
+string new
 string stdexcept
 string string_view
 string tuple
@@ -971,6 +1024,7 @@ string_view cwctype
 string_view initializer_list
 string_view iosfwd
 string_view limits
+string_view new
 string_view stdexcept
 string_view version
 strstream bitset
@@ -993,6 +1047,7 @@ strstream iosfwd
 strstream istream
 strstream limits
 strstream locale
+strstream new
 strstream ratio
 strstream stdexcept
 strstream streambuf
@@ -1024,6 +1079,8 @@ syncstream iosfwd
 syncstream limits
 syncstream locale
 syncstream map
+syncstream mutex
+syncstream new
 syncstream optional
 syncstream ostream
 syncstream print
@@ -1048,6 +1105,7 @@ system_error cwctype
 system_error initializer_list
 system_error iosfwd
 system_error limits
+system_error new
 system_error stdexcept
 system_error string
 system_error string_view
@@ -1075,6 +1133,7 @@ thread iosfwd
 thread istream
 thread limits
 thread locale
+thread new
 thread ratio
 thread sstream
 thread stdexcept
@@ -1102,6 +1161,7 @@ unordered_map cstdint
 unordered_map cstring
 unordered_map initializer_list
 unordered_map limits
+unordered_map new
 unordered_map optional
 unordered_map stdexcept
 unordered_map tuple
@@ -1111,6 +1171,7 @@ unordered_set cstdint
 unordered_set cstring
 unordered_set initializer_list
 unordered_set limits
+unordered_set new
 unordered_set optional
 unordered_set tuple
 unordered_set version
@@ -1123,12 +1184,14 @@ valarray cmath
 valarray cstdint
 valarray initializer_list
 valarray limits
+valarray new
 valarray version
 variant compare
 variant cstdint
 variant cstring
 variant initializer_list
 variant limits
+variant new
 variant version
 vector array
 vector cctype
@@ -1146,6 +1209,7 @@ vector cwctype
 vector initializer_list
 vector iosfwd
 vector limits
+vector new
 vector stdexcept
 vector string
 vector string_view

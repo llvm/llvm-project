@@ -158,14 +158,6 @@ inline bool isOpenACCCombinedDirectiveKind(OpenACCDirectiveKind K) {
          K == OpenACCDirectiveKind::KernelsLoop;
 }
 
-// Tests 'K' to see if it is 'data', 'host_data', 'enter data', or 'exit data'.
-inline bool isOpenACCDataDirectiveKind(OpenACCDirectiveKind K) {
-  return K == OpenACCDirectiveKind::Data ||
-         K == OpenACCDirectiveKind::EnterData ||
-         K == OpenACCDirectiveKind::ExitData ||
-         K == OpenACCDirectiveKind::HostData;
-}
-
 enum class OpenACCAtomicKind : uint8_t {
   Read,
   Write,

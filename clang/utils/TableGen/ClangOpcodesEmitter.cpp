@@ -1,4 +1,4 @@
-//===-- ClangOpcodesEmitter.cpp - constexpr interpreter opcodes -----------===//
+//=== ClangOpcodesEmitter.cpp - constexpr interpreter opcodes ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -146,6 +146,8 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N,
                 OS << ", PC";
               else
                 OS << ", OpPC";
+              if (CanReturn)
+                OS << ", Result";
               for (size_t I = 0, N = Args.size(); I < N; ++I)
                 OS << ", V" << I;
               OS << "))\n";

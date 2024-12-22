@@ -8,13 +8,14 @@
 
 #include "mlir-c/Dialect/GPU.h"
 
-#include "mlir/Bindings/Python/Nanobind.h"
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
 
 // -----------------------------------------------------------------------------
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-NB_MODULE(_mlirGPUPasses, m) {
+PYBIND11_MODULE(_mlirGPUPasses, m) {
   m.doc() = "MLIR GPU Dialect Passes";
 
   // Register all GPU passes on load.

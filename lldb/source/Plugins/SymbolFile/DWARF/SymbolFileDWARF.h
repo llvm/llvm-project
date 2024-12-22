@@ -54,6 +54,7 @@ class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
+class DWARFDebugRanges;
 class DWARFDeclContext;
 class DWARFFormValue;
 class DWARFTypeUnit;
@@ -211,6 +212,8 @@ public:
 
   DWARFDebugInfo &DebugInfo();
 
+  DWARFDebugRanges *GetDebugRanges();
+
   static bool SupportedVersion(uint16_t version);
 
   DWARFDIE
@@ -222,6 +225,8 @@ public:
 
   virtual void GetObjCMethods(ConstString class_name,
                               llvm::function_ref<bool(DWARFDIE die)> callback);
+
+  bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
 
   DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
@@ -313,8 +318,6 @@ public:
 
   StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
 
-  void ResetStatistics() override;
-
   virtual lldb::offset_t
   GetVendorDWARFOpcodeSize(const DataExtractor &data,
                            const lldb::offset_t data_offset,
@@ -393,7 +396,8 @@ protected:
   Function *ParseFunction(CompileUnit &comp_unit, const DWARFDIE &die);
 
   size_t ParseBlocksRecursive(CompileUnit &comp_unit, Block *parent_block,
-                              DWARFDIE die, lldb::addr_t subprogram_low_pc);
+                              const DWARFDIE &die,
+                              lldb::addr_t subprogram_low_pc, uint32_t depth);
 
   size_t ParseTypes(const SymbolContext &sc, const DWARFDIE &die,
                     bool parse_siblings, bool parse_children);
@@ -522,10 +526,12 @@ protected:
   ExternalTypeModuleMap m_external_type_modules;
   std::unique_ptr<DWARFIndex> m_index;
   bool m_fetched_external_modules : 1;
+  LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
 
   typedef std::set<DIERef> DIERefSet;
   typedef llvm::StringMap<DIERefSet> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
+  std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   // A map from DIE to lldb_private::Type. For record type, the key might be
   // either declaration DIE or definition DIE.

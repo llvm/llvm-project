@@ -15,8 +15,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -2222,15 +2222,8 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
     }
   }
 
-  if (SS.isEmpty()) {
-    if (getLangOpts().ObjC && !getLangOpts().CPlusPlus &&
-        Tok.is(tok::coloncolon)) {
-      // ObjectiveC does not allow :: as as a scope token.
-      Diag(ConsumeToken(), diag::err_expected_type);
-      return true;
-    }
+  if (SS.isEmpty())
     return false;
-  }
 
   // A C++ scope specifier that isn't followed by a typename.
   AnnotateScopeToken(SS, IsNewScope);

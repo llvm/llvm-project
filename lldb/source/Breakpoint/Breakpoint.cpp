@@ -1138,5 +1138,3 @@ json::Value Breakpoint::GetStatistics() {
   }
   return json::Value(std::move(bp));
 }
-
-void Breakpoint::ResetStatistics() { m_resolve_time.reset(); }

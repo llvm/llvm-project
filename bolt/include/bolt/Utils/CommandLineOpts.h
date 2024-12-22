@@ -18,7 +18,6 @@
 namespace opts {
 
 extern bool HeatmapMode;
-extern bool BinaryAnalysisMode;
 
 extern llvm::cl::OptionCategory BoltCategory;
 extern llvm::cl::OptionCategory BoltDiffCategory;
@@ -28,7 +27,6 @@ extern llvm::cl::OptionCategory BoltOutputCategory;
 extern llvm::cl::OptionCategory AggregatorCategory;
 extern llvm::cl::OptionCategory BoltInstrCategory;
 extern llvm::cl::OptionCategory HeatmapCategory;
-extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;

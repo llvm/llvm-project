@@ -326,9 +326,8 @@ void TableSection::addTable(InputTable *table) {
       // to assign table number 0 to the indirect function table.
       for (const auto *culprit : out.importSec->importedSymbols) {
         if (isa<UndefinedTable>(culprit)) {
-          error("object file not built with 'reference-types' or "
-                "'call-indirect-overlong' feature conflicts with import of "
-                "table " +
+          error("object file not built with 'reference-types' feature "
+                "conflicts with import of table " +
                 culprit->getName() + " by file " +
                 toString(culprit->getFile()));
           return;
@@ -515,10 +514,7 @@ void GlobalSection::writeBody() {
     } else {
       WasmInitExpr initExpr;
       if (auto *d = dyn_cast<DefinedData>(sym))
-        // In the sharedMemory case TLS globals are set during
-        // `__wasm_apply_global_tls_relocs`, but in the non-shared case
-        // we know the absolute value at link time.
-        initExpr = intConst(d->getVA(/*absolute=*/!config->sharedMemory), is64);
+        initExpr = intConst(d->getVA(), is64);
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {

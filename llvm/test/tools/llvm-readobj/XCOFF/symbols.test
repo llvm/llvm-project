@@ -170,7 +170,7 @@ Symbols:
 # SYMBOL32-NEXT:     Value (SymbolTableIndex): 0x0
 # SYMBOL32-NEXT:     Section: N_DEBUG
 # SYMBOL32-NEXT:     Source Language ID: TB_C (0x0)
-# SYMBOL32-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
+# SYMBOL32-NEXT:     CPU Version ID: 0x0
 # SYMBOL32-NEXT:     StorageClass: C_FILE (0x67)
 # SYMBOL32-NEXT:     NumberOfAuxEntries: 3
 # SYMBOL32-NEXT:     File Auxiliary Entry {

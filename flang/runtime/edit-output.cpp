@@ -109,10 +109,10 @@ static RT_API_ATTRS bool EditBOZOutput(IoStatementState &io,
 
 template <int KIND>
 bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
-    common::HostSignedIntType<8 * KIND> n, bool isSigned) {
+    common::HostSignedIntType<8 * KIND> n) {
   addSpaceBeforeCharacter(io);
   char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
-  bool isNegative{isSigned && n < 0};
+  bool isNegative{n < 0};
   using Unsigned = common::HostUnsignedIntType<8 * KIND>;
   Unsigned un{static_cast<Unsigned>(n)};
   int signChars{0};
@@ -933,15 +933,15 @@ RT_API_ATTRS bool EditCharacterOutput(IoStatementState &io,
 }
 
 template RT_API_ATTRS bool EditIntegerOutput<1>(
-    IoStatementState &, const DataEdit &, std::int8_t, bool);
+    IoStatementState &, const DataEdit &, std::int8_t);
 template RT_API_ATTRS bool EditIntegerOutput<2>(
-    IoStatementState &, const DataEdit &, std::int16_t, bool);
+    IoStatementState &, const DataEdit &, std::int16_t);
 template RT_API_ATTRS bool EditIntegerOutput<4>(
-    IoStatementState &, const DataEdit &, std::int32_t, bool);
+    IoStatementState &, const DataEdit &, std::int32_t);
 template RT_API_ATTRS bool EditIntegerOutput<8>(
-    IoStatementState &, const DataEdit &, std::int64_t, bool);
+    IoStatementState &, const DataEdit &, std::int64_t);
 template RT_API_ATTRS bool EditIntegerOutput<16>(
-    IoStatementState &, const DataEdit &, common::int128_t, bool);
+    IoStatementState &, const DataEdit &, common::int128_t);
 
 template class RealOutputEditing<2>;
 template class RealOutputEditing<3>;

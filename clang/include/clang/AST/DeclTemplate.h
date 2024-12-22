@@ -319,7 +319,8 @@ class DefaultArgStorage {
     const DefaultArgStorage &Storage = Parm->getDefaultArgStorage();
     if (auto *Prev = Storage.ValueOrInherited.template dyn_cast<ParmDecl *>())
       Parm = Prev;
-    assert(!isa<ParmDecl *>(Parm->getDefaultArgStorage().ValueOrInherited) &&
+    assert(!Parm->getDefaultArgStorage()
+                .ValueOrInherited.template is<ParmDecl *>() &&
            "should only be one level of indirection");
     return Parm;
   }
@@ -332,7 +333,7 @@ public:
 
   /// Determine whether the default argument for this parameter was inherited
   /// from a previous declaration of the same entity.
-  bool isInherited() const { return isa<ParmDecl *>(ValueOrInherited); }
+  bool isInherited() const { return ValueOrInherited.template is<ParmDecl*>(); }
 
   /// Get the default argument's value. This does not consider whether the
   /// default argument is visible.
@@ -342,7 +343,7 @@ public:
       Storage = &Prev->getDefaultArgStorage();
     if (const auto *C = Storage->ValueOrInherited.template dyn_cast<Chain *>())
       return C->Value;
-    return cast<ArgType>(Storage->ValueOrInherited);
+    return Storage->ValueOrInherited.template get<ArgType>();
   }
 
   /// Get the parameter from which we inherit the default argument, if any.
@@ -378,7 +379,7 @@ public:
       Inherited->PrevDeclWithDefaultArg = InheritedFrom;
     } else
       ValueOrInherited = new (allocateDefaultArgStorageChain(C))
-          Chain{InheritedFrom, cast<ArgType>(ValueOrInherited)};
+          Chain{InheritedFrom, ValueOrInherited.template get<ArgType>()};
   }
 
   /// Remove the default argument, even if it was inherited.
@@ -734,7 +735,6 @@ class RedeclarableTemplateDecl : public TemplateDecl,
   }
 
   void anchor() override;
-
 protected:
   template <typename EntryType> struct SpecEntryTraits {
     using DeclType = EntryType;
@@ -775,21 +775,12 @@ protected:
     return SpecIterator<EntryType>(isEnd ? Specs.end() : Specs.begin());
   }
 
-  void loadLazySpecializationsImpl(bool OnlyPartial = false) const;
-
-  bool loadLazySpecializationsImpl(llvm::ArrayRef<TemplateArgument> Args,
-                                   TemplateParameterList *TPL = nullptr) const;
+  void loadLazySpecializationsImpl() const;
 
   template <class EntryType, typename ...ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType*
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
                          void *&InsertPos, ProfileArguments &&...ProfileArgs);
-
-  template <class EntryType, typename... ProfileArguments>
-  typename SpecEntryTraits<EntryType>::DeclType *
-  findSpecializationLocally(llvm::FoldingSetVector<EntryType> &Specs,
-                            void *&InsertPos,
-                            ProfileArguments &&...ProfileArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
@@ -805,6 +796,13 @@ protected:
     /// was explicitly specialized.
     llvm::PointerIntPair<RedeclarableTemplateDecl *, 1, bool>
         InstantiatedFromMember;
+
+    /// If non-null, points to an array of specializations (including
+    /// partial specializations) known only by their external declaration IDs.
+    ///
+    /// The first value in the array is the number of specializations/partial
+    /// specializations that follow.
+    GlobalDeclID *LazySpecializations = nullptr;
   };
 
   /// Pointer to the common data shared by all declarations of this
@@ -1964,7 +1962,7 @@ public:
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return PartialSpec->PartialSpecialization;
 
-    return cast<ClassTemplateDecl *>(SpecializedTemplate);
+    return SpecializedTemplate.get<ClassTemplateDecl*>();
   }
 
   /// Retrieve the set of template arguments that should be used
@@ -1991,7 +1989,7 @@ public:
   /// template arguments have been deduced.
   void setInstantiationOf(ClassTemplatePartialSpecializationDecl *PartialSpec,
                           const TemplateArgumentList *TemplateArgs) {
-    assert(!isa<SpecializedPartialSpecialization *>(SpecializedTemplate) &&
+    assert(!SpecializedTemplate.is<SpecializedPartialSpecialization*>() &&
            "Already set to a class template partial specialization!");
     auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
     PS->PartialSpecialization = PartialSpec;
@@ -2002,7 +2000,7 @@ public:
   /// Note that this class template specialization is an instantiation
   /// of the given class template.
   void setInstantiationOf(ClassTemplateDecl *TemplDecl) {
-    assert(!isa<SpecializedPartialSpecialization *>(SpecializedTemplate) &&
+    assert(!SpecializedTemplate.is<SpecializedPartialSpecialization*>() &&
            "Previously set to a class template partial specialization!");
     SpecializedTemplate = TemplDecl;
   }
@@ -2012,7 +2010,7 @@ public:
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateArgsAsWritten;
-    return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
+    return ExplicitInfo.get<const ASTTemplateArgumentListInfo *>();
   }
 
   /// Set the template argument list as written in the sources.
@@ -2285,7 +2283,7 @@ public:
   friend class TemplateDeclInstantiator;
 
   /// Load any lazily-loaded specializations from the external source.
-  void LoadLazySpecializations(bool OnlyPartial = false) const;
+  void LoadLazySpecializations() const;
 
   /// Get the underlying class declarations of the template.
   CXXRecordDecl *getTemplatedDecl() const {
@@ -2733,7 +2731,7 @@ public:
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return PartialSpec->PartialSpecialization;
 
-    return cast<VarTemplateDecl *>(SpecializedTemplate);
+    return SpecializedTemplate.get<VarTemplateDecl *>();
   }
 
   /// Retrieve the set of template arguments that should be used
@@ -2760,7 +2758,7 @@ public:
   /// template arguments have been deduced.
   void setInstantiationOf(VarTemplatePartialSpecializationDecl *PartialSpec,
                           const TemplateArgumentList *TemplateArgs) {
-    assert(!isa<SpecializedPartialSpecialization *>(SpecializedTemplate) &&
+    assert(!SpecializedTemplate.is<SpecializedPartialSpecialization *>() &&
            "Already set to a variable template partial specialization!");
     auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
     PS->PartialSpecialization = PartialSpec;
@@ -2771,7 +2769,7 @@ public:
   /// Note that this variable template specialization is an instantiation
   /// of the given variable template.
   void setInstantiationOf(VarTemplateDecl *TemplDecl) {
-    assert(!isa<SpecializedPartialSpecialization *>(SpecializedTemplate) &&
+    assert(!SpecializedTemplate.is<SpecializedPartialSpecialization *>() &&
            "Previously set to a variable template partial specialization!");
     SpecializedTemplate = TemplDecl;
   }
@@ -2781,7 +2779,7 @@ public:
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateArgsAsWritten;
-    return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
+    return ExplicitInfo.get<const ASTTemplateArgumentListInfo *>();
   }
 
   /// Set the template argument list as written in the sources.
@@ -3035,7 +3033,7 @@ public:
   friend class ASTDeclWriter;
 
   /// Load any lazily-loaded specializations from the external source.
-  void LoadLazySpecializations(bool OnlyPartial = false) const;
+  void LoadLazySpecializations() const;
 
   /// Get the underlying variable declarations of the template.
   VarDecl *getTemplatedDecl() const {
@@ -3308,7 +3306,7 @@ inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
     return PD;
   if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl *>())
     return PD;
-  return cast<TemplateTemplateParmDecl *>(P);
+  return P.get<TemplateTemplateParmDecl *>();
 }
 
 inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {

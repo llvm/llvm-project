@@ -161,9 +161,6 @@ inline QualType getUnderlyingType(const FriendDecl &Node) {
 inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
   return Node.getType();
 }
-inline QualType getUnderlyingType(const ObjCInterfaceDecl &Node) {
-  return Node.getTypeForDecl()->getPointeeType();
-}
 
 /// Unifies obtaining a `TypeSourceInfo` from different node types.
 template <typename T,
@@ -1116,11 +1113,6 @@ private:
     return matchesDecl(Node.getDecl(), Finder, Builder);
   }
 
-  bool matchesSpecialized(const ObjCInterfaceDecl &Node, ASTMatchFinder *Finder,
-                          BoundNodesTreeBuilder *Builder) const {
-    return matchesDecl(Node.getCanonicalDecl(), Finder, Builder);
-  }
-
   /// Extracts the operator new of the new call and returns whether the
   /// inner matcher matches on it.
   bool matchesSpecialized(const CXXNewExpr &Node,
@@ -1221,7 +1213,7 @@ using HasDeclarationSupportedTypes =
              ElaboratedType, InjectedClassNameType, LabelStmt, AddrLabelExpr,
              MemberExpr, QualType, RecordType, TagType,
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
-             UnresolvedUsingType, ObjCIvarRefExpr, ObjCInterfaceDecl>;
+             UnresolvedUsingType, ObjCIvarRefExpr>;
 
 /// A Matcher that allows binding the node it matches to an id.
 ///

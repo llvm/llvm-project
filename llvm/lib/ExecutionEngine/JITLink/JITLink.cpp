@@ -17,6 +17,8 @@
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -85,8 +87,6 @@ const char *getScopeName(Scope S) {
     return "default";
   case Scope::Hidden:
     return "hidden";
-  case Scope::SideEffectsOnly:
-    return "side-effects-only";
   case Scope::Local:
     return "local";
   }
@@ -125,7 +125,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
      << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
      << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
      << (Sym.isLive() ? "live" : "dead") << "  -   "
-     << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>");
+     << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>");
   return OS;
 }
 
@@ -167,16 +167,6 @@ Section::~Section() {
     B->~Block();
 }
 
-LinkGraph::~LinkGraph() {
-  for (auto *Sym : AbsoluteSymbols) {
-    Sym->~Symbol();
-  }
-  for (auto *Sym : external_symbols()) {
-    Sym->~Symbol();
-  }
-  ExternalSymbols.clear();
-}
-
 std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
                                                SplitBlockCache *Cache) {
   assert(!Blocks.empty() && "Blocks must at least contain the original block");
@@ -214,9 +204,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 
     auto TransferSymbol = [](Symbol &Sym, Block &B) {
       Sym.setOffset(Sym.getAddress() - B.getAddress());
-      Sym.setBlock(B);
       if (Sym.getSize() > B.getSize())
         Sym.setSize(B.getSize() - Sym.getOffset());
+      Sym.setBlock(B);
     };
 
     // Transfer symbols to all blocks except the last one.
@@ -491,25 +481,22 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
-                          std::shared_ptr<orc::SymbolStringPool> SSP) {
+createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
   auto Magic = identify_magic(ObjectBuffer.getBuffer());
   switch (Magic) {
   case file_magic::macho_object:
-    return createLinkGraphFromMachOObject(ObjectBuffer, std::move(SSP));
+    return createLinkGraphFromMachOObject(ObjectBuffer);
   case file_magic::elf_relocatable:
-    return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
+    return createLinkGraphFromELFObject(ObjectBuffer);
   case file_magic::coff_object:
-    return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
+    return createLinkGraphFromCOFFObject(ObjectBuffer);
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
 }
 
-std::unique_ptr<LinkGraph>
-absoluteSymbolsLinkGraph(const Triple &TT,
-                         std::shared_ptr<orc::SymbolStringPool> SSP,
-                         orc::SymbolMap Symbols) {
+std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
+                                                    orc::SymbolMap Symbols) {
   unsigned PointerSize;
   endianness Endianness =
       TT.isLittleEndian() ? endianness::little : endianness::big;
@@ -531,8 +518,8 @@ absoluteSymbolsLinkGraph(const Triple &TT,
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
   auto G = std::make_unique<LinkGraph>(
-      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP), TT,
-      PointerSize, Endianness, /*GetEdgeKindName=*/nullptr);
+      "<Absolute Symbols " + std::to_string(Index) + ">", TT, PointerSize,
+      Endianness, /*GetEdgeKindName=*/nullptr);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,

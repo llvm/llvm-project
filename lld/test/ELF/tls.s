@@ -14,7 +14,7 @@
 // ERR-EMPTY:
 // ERR-NEXT:  error: relocation R_X86_64_TPOFF32 against b cannot be used with -shared
 // ERR-NEXT:  defined in {{.*}}
-// ERR-NEXT:  referenced by {{.*}}:(.text+0xc)
+// ERR-NEXT:  referenced by {{.*}}:(.text+0xC)
 // ERR-EMPTY:
 // ERR-NEXT:  error: relocation R_X86_64_TPOFF32 against c cannot be used with -shared
 // ERR-NEXT:  defined in {{.*}}
@@ -22,7 +22,7 @@
 // ERR-EMPTY:
 // ERR-NEXT:  error: relocation R_X86_64_TPOFF32 against d cannot be used with -shared
 // ERR-NEXT:  defined in {{.*}}
-// ERR-NEXT:  referenced by {{.*}}:(.text+0x1c)
+// ERR-NEXT:  referenced by {{.*}}:(.text+0x1C)
 
 .global _start
 _start:

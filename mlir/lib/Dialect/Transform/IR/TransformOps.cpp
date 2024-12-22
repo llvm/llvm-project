@@ -417,7 +417,7 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
     if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
       // Op is isolated from above. Apply patterns and also perform region
       // simplification.
-      result = applyPatternsGreedily(target, frozenPatterns, config);
+      result = applyPatternsAndFoldGreedily(target, frozenPatterns, config);
     } else {
       // Manually gather list of ops because the other
       // GreedyPatternRewriteDriver overloads only accepts ops that are isolated
@@ -429,7 +429,7 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
         if (target != nestedOp)
           ops.push_back(nestedOp);
       });
-      result = applyOpPatternsGreedily(ops, frozenPatterns, config);
+      result = applyOpPatternsAndFold(ops, frozenPatterns, config);
     }
 
     // A failure typically indicates that the pattern application did not
@@ -2415,62 +2415,32 @@ DiagnosedSilenceableFailure
 transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
                                 transform::TransformResults &results,
                                 transform::TransformState &state) {
-  int64_t numPayloads =
-      llvm::TypeSwitch<Type, int64_t>(getHandle().getType())
-          .Case<TransformHandleTypeInterface>([&](auto x) {
-            return llvm::range_size(state.getPayloadOps(getHandle()));
-          })
-          .Case<TransformValueHandleTypeInterface>([&](auto x) {
-            return llvm::range_size(state.getPayloadValues(getHandle()));
-          })
-          .Case<TransformParamTypeInterface>([&](auto x) {
-            return llvm::range_size(state.getParams(getHandle()));
-          })
-          .Default([](auto x) {
-            llvm_unreachable("unknown transform dialect type interface");
-            return -1;
-          });
-
+  int64_t numPayloadOps = llvm::range_size(state.getPayloadOps(getHandle()));
   auto produceNumOpsError = [&]() {
     return emitSilenceableError()
            << getHandle() << " expected to contain " << this->getNumResults()
-           << " payloads but it contains " << numPayloads << " payloads";
+           << " payload ops but it contains " << numPayloadOps
+           << " payload ops";
   };
 
   // Fail if there are more payload ops than results and no overflow result was
   // specified.
-  if (numPayloads > getNumResults() && !getOverflowResult().has_value())
+  if (numPayloadOps > getNumResults() && !getOverflowResult().has_value())
     return produceNumOpsError();
 
   // Fail if there are more results than payload ops. Unless:
   // - "fail_on_payload_too_small" is set to "false", or
   // - "pass_through_empty_handle" is set to "true" and there are 0 payload ops.
-  if (numPayloads < getNumResults() && getFailOnPayloadTooSmall() &&
-      (numPayloads != 0 || !getPassThroughEmptyHandle()))
+  if (numPayloadOps < getNumResults() && getFailOnPayloadTooSmall() &&
+      (numPayloadOps != 0 || !getPassThroughEmptyHandle()))
     return produceNumOpsError();
 
-  // Distribute payloads.
-  SmallVector<SmallVector<MappedValue, 1>> resultHandles(getNumResults(), {});
+  // Distribute payload ops.
+  SmallVector<SmallVector<Operation *, 1>> resultHandles(getNumResults(), {});
   if (getOverflowResult())
-    resultHandles[*getOverflowResult()].reserve(numPayloads - getNumResults());
-
-  auto container = [&]() {
-    if (isa<TransformHandleTypeInterface>(getHandle().getType())) {
-      return llvm::map_to_vector(
-          state.getPayloadOps(getHandle()),
-          [](Operation *op) -> MappedValue { return op; });
-    }
-    if (isa<TransformValueHandleTypeInterface>(getHandle().getType())) {
-      return llvm::map_to_vector(state.getPayloadValues(getHandle()),
-                                 [](Value v) -> MappedValue { return v; });
-    }
-    assert(isa<TransformParamTypeInterface>(getHandle().getType()) &&
-           "unsupported kind of transform dialect type");
-    return llvm::map_to_vector(state.getParams(getHandle()),
-                               [](Attribute a) -> MappedValue { return a; });
-  }();
-
-  for (auto &&en : llvm::enumerate(container)) {
+    resultHandles[*getOverflowResult()].reserve(numPayloadOps -
+                                                getNumResults());
+  for (auto &&en : llvm::enumerate(state.getPayloadOps(getHandle()))) {
     int64_t resultNum = en.index();
     if (resultNum >= getNumResults())
       resultNum = *getOverflowResult();
@@ -2479,8 +2449,7 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
 
   // Set transform op results.
   for (auto &&it : llvm::enumerate(resultHandles))
-    results.setMappedValues(llvm::cast<OpResult>(getResult(it.index())),
-                            it.value());
+    results.set(llvm::cast<OpResult>(getResult(it.index())), it.value());
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -2497,15 +2466,6 @@ LogicalResult transform::SplitHandleOp::verify() {
   if (getOverflowResult().has_value() &&
       !(*getOverflowResult() < getNumResults()))
     return emitOpError("overflow_result is not a valid result index");
-
-  for (Type resultType : getResultTypes()) {
-    if (implementSameTransformInterface(getHandle().getType(), resultType))
-      continue;
-
-    return emitOpError("expects result types to implement the same transform "
-                       "interface as the operand type");
-  }
-
   return success();
 }
 

@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -std=c23 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c23 -triple=aarch64_be-linux-gnu -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c23 -triple=aarch64_be-linux-gnu -verify=ref,both %s
-
 
 typedef typeof(nullptr) nullptr_t;
 
@@ -26,26 +23,5 @@ char bar() {
   return ((struct S *)buffer)->c;
 }
 
+
 static_assert((nullptr_t){} == 0);
-
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#  define LITTLE_END 1
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#  define LITTLE_END 0
-#else
-#  error "huh?"
-#endif
-
-typedef unsigned char u8x4_t __attribute__((vector_size(4)));
-constexpr u8x4_t arg1 = (u8x4_t)0xCAFEBABE; // okay
-#if LITTLE_END
-static_assert(arg1[0] == 190);
-static_assert(arg1[1] == 186);
-static_assert(arg1[2] == 254);
-static_assert(arg1[3] == 202);
-#else
-static_assert(arg1[0] == 202);
-static_assert(arg1[1] == 254);
-static_assert(arg1[2] == 186);
-static_assert(arg1[3] == 190);
-#endif

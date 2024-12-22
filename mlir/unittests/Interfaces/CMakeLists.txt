@@ -5,7 +5,7 @@ add_mlir_unittest(MLIRInterfacesTests
   InferTypeOpInterfaceTest.cpp
 )
 
-mlir_target_link_libraries(MLIRInterfacesTests
+target_link_libraries(MLIRInterfacesTests
   PRIVATE
   MLIRArithDialect
   MLIRControlFlowInterfaces

@@ -1206,7 +1206,15 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
         while ((ASE = dyn_cast<ArraySubscriptExpr>(Init)))
           Init = ASE->getBase()->IgnoreImplicit();
 
-        InitVal = State->getSVal(Init, stackFrame);
+        SVal LValue = State->getSVal(Init, stackFrame);
+        if (!Field->getType()->isReferenceType()) {
+          if (std::optional<Loc> LValueLoc = LValue.getAs<Loc>()) {
+            InitVal = State->getSVal(*LValueLoc);
+          } else if (auto CV = LValue.getAs<nonloc::CompoundVal>()) {
+            // Initializer list for an array.
+            InitVal = *CV;
+          }
+        }
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
@@ -1647,8 +1655,10 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
   if (getObjectUnderConstruction(State, BTE, LC)) {
+    TempDtorBuilder.markInfeasible(false);
     TempDtorBuilder.generateNode(State, true, Pred);
   } else {
+    TempDtorBuilder.markInfeasible(true);
     TempDtorBuilder.generateNode(State, false, Pred);
   }
 }
@@ -1825,13 +1835,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCComputeConstructClass:
     case Stmt::OpenACCLoopConstructClass:
     case Stmt::OpenACCCombinedConstructClass:
-    case Stmt::OpenACCDataConstructClass:
-    case Stmt::OpenACCEnterDataConstructClass:
-    case Stmt::OpenACCExitDataConstructClass:
-    case Stmt::OpenACCHostDataConstructClass:
-    case Stmt::OpenACCWaitConstructClass:
-    case Stmt::OpenACCInitConstructClass:
-    case Stmt::OpenACCShutdownConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass:
     case Stmt::HLSLOutArgExprClass: {
@@ -2775,6 +2778,7 @@ void ExprEngine::processBranch(const Stmt *Condition,
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
     BranchNodeBuilder NullCondBldr(Pred, Dst, BldCtx, DstT, DstF);
+    NullCondBldr.markInfeasible(false);
     NullCondBldr.generateNode(Pred->getState(), true, Pred);
     return;
   }
@@ -2794,25 +2798,40 @@ void ExprEngine::processBranch(const Stmt *Condition,
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     if (PredN->isSink())
       continue;
 
     ProgramStateRef PrevState = PredN->getState();
 
-    ProgramStateRef StTrue = PrevState, StFalse = PrevState;
+    ProgramStateRef StTrue, StFalse;
     if (const auto KnownCondValueAssumption = assumeCondition(Condition, PredN))
       std::tie(StTrue, StFalse) = *KnownCondValueAssumption;
-
+    else {
+      assert(!isa<ObjCForCollectionStmt>(Condition));
+      builder.generateNode(PrevState, true, PredN);
+      builder.generateNode(PrevState, false, PredN);
+      continue;
+    }
     if (StTrue && StFalse)
       assert(!isa<ObjCForCollectionStmt>(Condition));
 
-    if (StTrue)
-      Builder.generateNode(StTrue, true, PredN);
+    // Process the true branch.
+    if (builder.isFeasible(true)) {
+      if (StTrue)
+        builder.generateNode(StTrue, true, PredN);
+      else
+        builder.markInfeasible(true);
+    }
 
-    if (StFalse)
-      Builder.generateNode(StFalse, false, PredN);
+    // Process the false branch.
+    if (builder.isFeasible(false)) {
+      if (StFalse)
+        builder.generateNode(StFalse, false, PredN);
+      else
+        builder.markInfeasible(false);
+    }
   }
   currBldrCtx = nullptr;
 }
@@ -2834,13 +2853,14 @@ void ExprEngine::processStaticInitializer(const DeclStmt *DS,
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Pred, Dst, BuilderCtx, DstT, DstF);
+  BranchNodeBuilder builder(Pred, Dst, BuilderCtx, DstT, DstF);
 
   if (!initHasRun) {
     state = state->add<InitializedGlobalsSet>(VD);
   }
 
-  Builder.generateNode(state, initHasRun, Pred);
+  builder.generateNode(state, initHasRun, Pred);
+  builder.markInfeasible(!initHasRun);
 
   currBldrCtx = nullptr;
 }

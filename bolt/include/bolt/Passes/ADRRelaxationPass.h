@@ -25,8 +25,7 @@ namespace bolt {
 
 class ADRRelaxationPass : public BinaryFunctionPass {
 public:
-  explicit ADRRelaxationPass(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {}
+  explicit ADRRelaxationPass() : BinaryFunctionPass(false) {}
 
   const char *getName() const override { return "adr-relaxation"; }
 

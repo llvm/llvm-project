@@ -27,6 +27,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsXCore.h"
@@ -282,8 +283,7 @@ LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const
     GA = getGlobalAddressWrapper(GA, GV, DAG);
     // Handle the rest of the offset.
     if (Offset != FoldedOffset) {
-      SDValue Remaining =
-          DAG.getSignedConstant(Offset - FoldedOffset, DL, MVT::i32);
+      SDValue Remaining = DAG.getConstant(Offset - FoldedOffset, DL, MVT::i32);
       GA = DAG.getNode(ISD::ADD, DL, MVT::i32, GA, Remaining);
     }
     return GA;

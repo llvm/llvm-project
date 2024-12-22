@@ -262,31 +262,30 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
 const TargetRegisterClass *
 ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                                const MachineFunction &MF) const {
-  unsigned SuperID = RC->getID();
-  auto I = RC->superclasses().begin();
-  auto E = RC->superclasses().end();
+  const TargetRegisterClass *Super = RC;
+  TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
   do {
-    switch (SuperID) {
+    switch (Super->getID()) {
     case ARM::GPRRegClassID:
     case ARM::SPRRegClassID:
     case ARM::DPRRegClassID:
     case ARM::GPRPairRegClassID:
-      return getRegClass(SuperID);
+      return Super;
     case ARM::QPRRegClassID:
     case ARM::QQPRRegClassID:
     case ARM::QQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasNEON())
-        return getRegClass(SuperID);
+        return Super;
       break;
     case ARM::MQPRRegClassID:
     case ARM::MQQPRRegClassID:
     case ARM::MQQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasMVEIntegerOps())
-        return getRegClass(SuperID);
+        return Super;
       break;
     }
-    SuperID = (I != E) ? *I++ : ~0U;
-  } while (SuperID != ~0U);
+    Super = *I++;
+  } while (Super);
   return RC;
 }
 
@@ -300,8 +299,6 @@ const TargetRegisterClass *
 ARMBaseRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &ARM::CCRRegClass)
     return &ARM::rGPRRegClass;  // Can't copy CCR registers.
-  if (RC == &ARM::cl_FPSCR_NZCVRegClass)
-    return &ARM::rGPRRegClass;
   return RC;
 }
 

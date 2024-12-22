@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: no-threads
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // This test verifies that <stdatomic.h> redirects to <atomic>. As an extension,
 // libc++ enables this redirection even before C++23.
 

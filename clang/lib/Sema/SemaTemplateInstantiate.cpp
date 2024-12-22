@@ -198,7 +198,7 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
     if (Partial->isMemberSpecialization())
       return Response::Done();
   } else {
-    VarTemplateDecl *Tmpl = cast<VarTemplateDecl *>(Specialized);
+    VarTemplateDecl *Tmpl = Specialized.get<VarTemplateDecl *>();
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
           Tmpl, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
@@ -2458,7 +2458,7 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
 
     TransformedDecl = (*Pack)[getSema().ArgumentPackSubstitutionIndex];
   } else {
-    TransformedDecl = cast<Decl *>(*Found);
+    TransformedDecl = Found->get<Decl*>();
   }
 
   // We have either an unexpanded pack or a specific expansion.
@@ -2827,7 +2827,7 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
                                   std::move(*TransRetReq));
   return RebuildExprRequirement(
-      cast<concepts::Requirement::SubstitutionDiagnostic *>(TransExpr),
+      TransExpr.get<concepts::Requirement::SubstitutionDiagnostic *>(),
       Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
 }
 
@@ -4053,7 +4053,7 @@ getPatternForClassTemplateSpecialization(
   llvm::PointerUnion<ClassTemplateDecl *,
                      ClassTemplatePartialSpecializationDecl *>
       Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
-  if (!isa<ClassTemplatePartialSpecializationDecl *>(Specialized)) {
+  if (!Specialized.is<ClassTemplatePartialSpecializationDecl *>()) {
     // Find best matching specialization.
     ClassTemplateDecl *Template = ClassTemplateSpec->getSpecializedTemplate();
 
@@ -4664,14 +4664,14 @@ void LocalInstantiationScope::InstantiatedLocal(const Decl *D, Decl *Inst) {
   } else if (DeclArgumentPack *Pack = Stored.dyn_cast<DeclArgumentPack *>()) {
     Pack->push_back(cast<VarDecl>(Inst));
   } else {
-    assert(cast<Decl *>(Stored) == Inst && "Already instantiated this local");
+    assert(Stored.get<Decl *>() == Inst && "Already instantiated this local");
   }
 }
 
 void LocalInstantiationScope::InstantiatedLocalPackArg(const Decl *D,
                                                        VarDecl *Inst) {
   D = getCanonicalParmVarDecl(D);
-  DeclArgumentPack *Pack = cast<DeclArgumentPack *>(LocalDecls[D]);
+  DeclArgumentPack *Pack = LocalDecls[D].get<DeclArgumentPack *>();
   Pack->push_back(Inst);
 }
 

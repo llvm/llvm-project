@@ -28,18 +28,6 @@
 #include <functional>
 
 using namespace llvm;
-
-inline unsigned typeToAddressSpace(const Type *Ty) {
-  if (auto PType = dyn_cast<TypedPointerType>(Ty))
-    return PType->getAddressSpace();
-  if (auto PType = dyn_cast<PointerType>(Ty))
-    return PType->getAddressSpace();
-  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
-      ExtTy && isTypedPointerWrapper(ExtTy))
-    return ExtTy->getIntParameter(0);
-  report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
-}
-
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
 
@@ -81,7 +69,7 @@ SPIRVType *SPIRVGlobalRegistry::assignTypeToVReg(
 
 void SPIRVGlobalRegistry::assignSPIRVTypeToVReg(SPIRVType *SpirvType,
                                                 Register VReg,
-                                                const MachineFunction &MF) {
+                                                MachineFunction &MF) {
   VRegToTypeMap[&MF][VReg] = SpirvType;
 }
 
@@ -96,6 +84,7 @@ inline Register createTypeVReg(MachineIRBuilder &MIRBuilder) {
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
+
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     return MIRBuilder.buildInstr(SPIRV::OpTypeBool)
         .addDef(createTypeVReg(MIRBuilder));
@@ -126,14 +115,14 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
   Width = adjustOpTypeIntWidth(Width);
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
+  }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    if (ST.canUseExtension(
-            SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
-      MIRBuilder.buildInstr(SPIRV::OpExtension)
-          .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
-      MIRBuilder.buildInstr(SPIRV::OpCapability)
-          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
-    }
     return MIRBuilder.buildInstr(SPIRV::OpTypeInt)
         .addDef(createTypeVReg(MIRBuilder))
         .addImm(Width)
@@ -157,52 +146,25 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
   });
 }
 
-void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
-  // TODO:
-  // - take into account duplicate tracker case which is a known issue,
-  // - review other data structure wrt. possible issues related to removal
-  //   of a machine instruction during instruction selection.
-  const MachineFunction *MF = MI->getParent()->getParent();
-  auto It = LastInsertedTypeMap.find(MF);
-  if (It == LastInsertedTypeMap.end())
-    return;
-  if (It->second == MI)
-    LastInsertedTypeMap.erase(MF);
-}
-
 SPIRVType *SPIRVGlobalRegistry::createOpType(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
   auto oldInsertPoint = MIRBuilder.getInsertPt();
   MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
-  MachineBasicBlock *NewMBB = &*MIRBuilder.getMF().begin();
 
   auto LastInsertedType = LastInsertedTypeMap.find(CurMF);
   if (LastInsertedType != LastInsertedTypeMap.end()) {
-    auto It = LastInsertedType->second->getIterator();
-    // It might happen that this instruction was removed from the first MBB,
-    // hence the Parent's check.
-    MachineBasicBlock::iterator InsertAt;
-    if (It->getParent() != NewMBB)
-      InsertAt = oldInsertPoint->getParent() == NewMBB
-                     ? oldInsertPoint
-                     : getInsertPtValidEnd(NewMBB);
-    else if (It->getNextNode())
-      InsertAt = It->getNextNode()->getIterator();
-    else
-      InsertAt = getInsertPtValidEnd(NewMBB);
-    MIRBuilder.setInsertPt(*NewMBB, InsertAt);
+    MIRBuilder.setInsertPt(*MIRBuilder.getMF().begin(),
+                           LastInsertedType->second->getIterator());
   } else {
-    MIRBuilder.setInsertPt(*NewMBB, NewMBB->begin());
+    MIRBuilder.setInsertPt(*MIRBuilder.getMF().begin(),
+                           MIRBuilder.getMF().begin()->begin());
     auto Result = LastInsertedTypeMap.try_emplace(CurMF, nullptr);
     assert(Result.second);
     LastInsertedType = Result.first;
   }
 
   MachineInstr *Type = Op(MIRBuilder);
-  // We expect all users of this function to insert definitions at the insertion
-  // point set above that is always the first MBB.
-  assert(Type->getParent() == NewMBB);
   LastInsertedType->second = Type;
 
   MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);
@@ -295,27 +257,24 @@ Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
   // machine instruction, a new constant instruction should be created.
   if (!New && (!I.getOperand(0).isReg() || Res != I.getOperand(0).getReg()))
     return Res;
-  MachineIRBuilder MIRBuilder(I);
-  createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    MachineInstrBuilder MIB;
-    // In OpenCL OpConstantNull - Scalar floating point: +0.0 (all bits 0)
-    if (Val.isPosZero() && ZeroAsNull) {
-      MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
-                .addDef(Res)
-                .addUse(getSPIRVTypeID(SpvType));
-    } else {
-      MIB = MIRBuilder.buildInstr(SPIRV::OpConstantF)
-                .addDef(Res)
-                .addUse(getSPIRVTypeID(SpvType));
-      addNumImm(
-          APInt(BitWidth, CI->getValueAPF().bitcastToAPInt().getZExtValue()),
-          MIB);
-    }
-    const auto &ST = CurMF->getSubtarget();
-    constrainSelectedInstRegOperands(
-        *MIB, *ST.getInstrInfo(), *ST.getRegisterInfo(), *ST.getRegBankInfo());
-    return MIB;
-  });
+  MachineInstrBuilder MIB;
+  MachineBasicBlock &BB = *I.getParent();
+  // In OpenCL OpConstantNull - Scalar floating point: +0.0 (all bits 0)
+  if (Val.isPosZero() && ZeroAsNull) {
+    MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+              .addDef(Res)
+              .addUse(getSPIRVTypeID(SpvType));
+  } else {
+    MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantF))
+              .addDef(Res)
+              .addUse(getSPIRVTypeID(SpvType));
+    addNumImm(
+        APInt(BitWidth, CI->getValueAPF().bitcastToAPInt().getZExtValue()),
+        MIB);
+  }
+  const auto &ST = CurMF->getSubtarget();
+  constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
+                                   *ST.getRegisterInfo(), *ST.getRegBankInfo());
   return Res;
 }
 
@@ -334,32 +293,28 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
   // machine instruction, a new constant instruction should be created.
   if (!New && (!I.getOperand(0).isReg() || Res != I.getOperand(0).getReg()))
     return Res;
-
-  MachineIRBuilder MIRBuilder(I);
-  createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    MachineInstrBuilder MIB;
-    if (Val || !ZeroAsNull) {
-      MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
-                .addDef(Res)
-                .addUse(getSPIRVTypeID(SpvType));
-      addNumImm(APInt(BitWidth, Val), MIB);
-    } else {
-      MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
-                .addDef(Res)
-                .addUse(getSPIRVTypeID(SpvType));
-    }
-    const auto &ST = CurMF->getSubtarget();
-    constrainSelectedInstRegOperands(
-        *MIB, *ST.getInstrInfo(), *ST.getRegisterInfo(), *ST.getRegBankInfo());
-    return MIB;
-  });
+  MachineInstrBuilder MIB;
+  MachineBasicBlock &BB = *I.getParent();
+  if (Val || !ZeroAsNull) {
+    MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantI))
+              .addDef(Res)
+              .addUse(getSPIRVTypeID(SpvType));
+    addNumImm(APInt(BitWidth, Val), MIB);
+  } else {
+    MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+              .addDef(Res)
+              .addUse(getSPIRVTypeID(SpvType));
+  }
+  const auto &ST = CurMF->getSubtarget();
+  constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
+                                   *ST.getRegisterInfo(), *ST.getRegBankInfo());
   return Res;
 }
 
 Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
                                                MachineIRBuilder &MIRBuilder,
-                                               SPIRVType *SpvType, bool EmitIR,
-                                               bool ZeroAsNull) {
+                                               SPIRVType *SpvType,
+                                               bool EmitIR) {
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *LLVMIntTy =
@@ -380,24 +335,21 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
       MIRBuilder.buildConstant(Res, *ConstInt);
     } else {
       Register SpvTypeReg = getSPIRVTypeID(SpvType);
-      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        MachineInstrBuilder MIB;
-        if (Val || !ZeroAsNull) {
-          MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
-                    .addDef(Res)
-                    .addUse(SpvTypeReg);
-          addNumImm(APInt(BitWidth, Val), MIB);
-        } else {
-          MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
-                    .addDef(Res)
-                    .addUse(SpvTypeReg);
-        }
-        const auto &Subtarget = CurMF->getSubtarget();
-        constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
-                                         *Subtarget.getRegisterInfo(),
-                                         *Subtarget.getRegBankInfo());
-        return MIB;
-      });
+      MachineInstrBuilder MIB;
+      if (Val) {
+        MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
+                  .addDef(Res)
+                  .addUse(SpvTypeReg);
+        addNumImm(APInt(BitWidth, Val), MIB);
+      } else {
+        MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
+                  .addDef(Res)
+                  .addUse(SpvTypeReg);
+      }
+      const auto &Subtarget = CurMF->getSubtarget();
+      constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
+                                       *Subtarget.getRegisterInfo(),
+                                       *Subtarget.getRegBankInfo());
     }
   }
   return Res;
@@ -421,14 +373,12 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
     MF.getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
     assignSPIRVTypeToVReg(SpvType, Res, MF);
     DT.add(ConstFP, &MF, Res);
-    createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-      MachineInstrBuilder MIB;
-      MIB = MIRBuilder.buildInstr(SPIRV::OpConstantF)
-                .addDef(Res)
-                .addUse(getSPIRVTypeID(SpvType));
-      addNumImm(ConstFP->getValueAPF().bitcastToAPInt(), MIB);
-      return MIB;
-    });
+
+    MachineInstrBuilder MIB;
+    MIB = MIRBuilder.buildInstr(SPIRV::OpConstantF)
+              .addDef(Res)
+              .addUse(getSPIRVTypeID(SpvType));
+    addNumImm(ConstFP->getValueAPF().bitcastToAPInt(), MIB);
   }
 
   return Res;
@@ -477,26 +427,23 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     CurMF->getRegInfo().setRegClass(SpvVecConst, getRegClass(SpvType));
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
-    MachineIRBuilder MIRBuilder(I);
-    createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-      MachineInstrBuilder MIB;
-      if (!IsNull) {
-        MIB = MIRBuilder.buildInstr(SPIRV::OpConstantComposite)
-                  .addDef(SpvVecConst)
-                  .addUse(getSPIRVTypeID(SpvType));
-        for (unsigned i = 0; i < ElemCnt; ++i)
-          MIB.addUse(SpvScalConst);
-      } else {
-        MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
-                  .addDef(SpvVecConst)
-                  .addUse(getSPIRVTypeID(SpvType));
-      }
-      const auto &Subtarget = CurMF->getSubtarget();
-      constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
-                                       *Subtarget.getRegisterInfo(),
-                                       *Subtarget.getRegBankInfo());
-      return MIB;
-    });
+    MachineInstrBuilder MIB;
+    MachineBasicBlock &BB = *I.getParent();
+    if (!IsNull) {
+      MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantComposite))
+                .addDef(SpvVecConst)
+                .addUse(getSPIRVTypeID(SpvType));
+      for (unsigned i = 0; i < ElemCnt; ++i)
+        MIB.addUse(SpvScalConst);
+    } else {
+      MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+                .addDef(SpvVecConst)
+                .addUse(getSPIRVTypeID(SpvType));
+    }
+    const auto &Subtarget = CurMF->getSubtarget();
+    constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
+                                     *Subtarget.getRegisterInfo(),
+                                     *Subtarget.getRegBankInfo());
     return SpvVecConst;
   }
   return Res;
@@ -585,20 +532,17 @@ Register SPIRVGlobalRegistry::getOrCreateIntCompositeOrNull(
     if (EmitIR) {
       MIRBuilder.buildSplatBuildVector(SpvVecConst, SpvScalConst);
     } else {
-      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        if (Val) {
-          auto MIB = MIRBuilder.buildInstr(SPIRV::OpConstantComposite)
-                         .addDef(SpvVecConst)
-                         .addUse(getSPIRVTypeID(SpvType));
-          for (unsigned i = 0; i < ElemCnt; ++i)
-            MIB.addUse(SpvScalConst);
-          return MIB;
-        } else {
-          return MIRBuilder.buildInstr(SPIRV::OpConstantNull)
-              .addDef(SpvVecConst)
-              .addUse(getSPIRVTypeID(SpvType));
-        }
-      });
+      if (Val) {
+        auto MIB = MIRBuilder.buildInstr(SPIRV::OpConstantComposite)
+                       .addDef(SpvVecConst)
+                       .addUse(getSPIRVTypeID(SpvType));
+        for (unsigned i = 0; i < ElemCnt; ++i)
+          MIB.addUse(SpvScalConst);
+      } else {
+        MIRBuilder.buildInstr(SPIRV::OpConstantNull)
+            .addDef(SpvVecConst)
+            .addUse(getSPIRVTypeID(SpvType));
+      }
     }
     return SpvVecConst;
   }
@@ -626,21 +570,19 @@ Register
 SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                              SPIRVType *SpvType) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  unsigned AddressSpace = typeToAddressSpace(LLVMTy);
+  const TypedPointerType *LLVMPtrTy = cast<TypedPointerType>(LLVMTy);
   // Find a constant in DT or build a new one.
-  Constant *CP = ConstantPointerNull::get(
-      PointerType::get(::getPointeeType(LLVMTy), AddressSpace));
+  Constant *CP = ConstantPointerNull::get(PointerType::get(
+      LLVMPtrTy->getElementType(), LLVMPtrTy->getAddressSpace()));
   Register Res = DT.find(CP, CurMF);
   if (!Res.isValid()) {
-    LLT LLTy = LLT::pointer(AddressSpace, PointerSize);
+    LLT LLTy = LLT::pointer(LLVMPtrTy->getAddressSpace(), PointerSize);
     Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(Res, &SPIRV::pIDRegClass);
+    CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
     assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
-    createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-      return MIRBuilder.buildInstr(SPIRV::OpConstantNull)
-          .addDef(Res)
-          .addUse(getSPIRVTypeID(SpvType));
-    });
+    MIRBuilder.buildInstr(SPIRV::OpConstantNull)
+        .addDef(Res)
+        .addUse(getSPIRVTypeID(SpvType));
     DT.add(CP, CurMF, Res);
   }
   return Res;
@@ -660,14 +602,12 @@ Register SPIRVGlobalRegistry::buildConstantSampler(
       ResReg.isValid()
           ? ResReg
           : MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-  auto Res = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
-        .addDef(Sampler)
-        .addUse(getSPIRVTypeID(SampTy))
-        .addImm(AddrMode)
-        .addImm(Param)
-        .addImm(FilerMode);
-  });
+  auto Res = MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
+                 .addDef(Sampler)
+                 .addUse(getSPIRVTypeID(SampTy))
+                 .addImm(AddrMode)
+                 .addImm(Param)
+                 .addImm(FilerMode);
   assert(Res->getOperand(0).isReg());
   return Res->getOperand(0).getReg();
 }
@@ -1038,11 +978,18 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     }
     return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
   }
+  unsigned AddrSpace = 0xFFFF;
+  if (auto PType = dyn_cast<TypedPointerType>(Ty))
+    AddrSpace = PType->getAddressSpace();
+  else if (auto PType = dyn_cast<PointerType>(Ty))
+    AddrSpace = PType->getAddressSpace();
+  else
+    report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 
-  unsigned AddrSpace = typeToAddressSpace(Ty);
   SPIRVType *SpvElementType = nullptr;
-  if (Type *ElemTy = ::getPointeeType(Ty))
-    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
+  if (auto PType = dyn_cast<TypedPointerType>(Ty))
+    SpvElementType = getOrCreateSPIRVType(PType->getElementType(), MIRBuilder,
+                                          AccQual, EmitIR);
   else
     SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
 
@@ -1070,7 +1017,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
 SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
-  if (TypesInProcessing.count(Ty) && !isPointerTyOrWrapper(Ty))
+  if (TypesInProcessing.count(Ty) && !isPointerTy(Ty))
     return nullptr;
   TypesInProcessing.insert(Ty);
   SPIRVType *SpirvType = createSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR);
@@ -1082,11 +1029,7 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   // will be added later. For special types it is already added to DT.
   if (SpirvType->getOpcode() != SPIRV::OpTypeForwardPointer && !Reg.isValid() &&
       !isSpecialOpaqueType(Ty)) {
-    if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
-        ExtTy && isTypedPointerWrapper(ExtTy))
-      DT.add(ExtTy->getTypeParameter(0), ExtTy->getIntParameter(0),
-             &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
-    else if (!isPointerTy(Ty))
+    if (!isPointerTy(Ty))
       DT.add(Ty, &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
     else if (isTypedPointerTy(Ty))
       DT.add(cast<TypedPointerType>(Ty)->getElementType(),
@@ -1122,11 +1065,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg;
-  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
-      ExtTy && isTypedPointerWrapper(ExtTy)) {
-    Reg = DT.find(ExtTy->getTypeParameter(0), ExtTy->getIntParameter(0),
-                  &MIRBuilder.getMF());
-  } else if (!isPointerTy(Ty)) {
+  if (!isPointerTy(Ty)) {
     Ty = adjustIntTypeByWidth(Ty);
     Reg = DT.find(Ty, &MIRBuilder.getMF());
   } else if (isTypedPointerTy(Ty)) {
@@ -1599,17 +1538,14 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
   // create a new type
-  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    auto MIB = BuildMI(MIRBuilder.getMBB(), MIRBuilder.getInsertPt(),
-                       MIRBuilder.getDebugLoc(),
-                       MIRBuilder.getTII().get(SPIRV::OpTypePointer))
-                   .addDef(createTypeVReg(CurMF->getRegInfo()))
-                   .addImm(static_cast<uint32_t>(SC))
-                   .addUse(getSPIRVTypeID(BaseType));
-    DT.add(PointerElementType, AddressSpace, CurMF, getSPIRVTypeID(MIB));
-    finishCreatingSPIRVType(LLVMTy, MIB);
-    return MIB;
-  });
+  auto MIB = BuildMI(MIRBuilder.getMBB(), MIRBuilder.getInsertPt(),
+                     MIRBuilder.getDebugLoc(),
+                     MIRBuilder.getTII().get(SPIRV::OpTypePointer))
+                 .addDef(createTypeVReg(CurMF->getRegInfo()))
+                 .addImm(static_cast<uint32_t>(SC))
+                 .addUse(getSPIRVTypeID(BaseType));
+  DT.add(PointerElementType, AddressSpace, CurMF, getSPIRVTypeID(MIB));
+  return finishCreatingSPIRVType(LLVMTy, MIB);
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(

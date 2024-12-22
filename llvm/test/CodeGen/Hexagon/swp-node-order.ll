@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
+; RUN: llc -march=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; Test that we include all the nodes in the final node ordering

@@ -2111,20 +2111,6 @@ TEST_F(SymbolCollectorTest, Reserved) {
   EXPECT_THAT(Symbols, IsEmpty());
 }
 
-TEST_F(SymbolCollectorTest, ReservedSymbolInIntrinsicHeader) {
-  const char *Header = R"cpp(
-    #pragma once
-    void __foo();
-  )cpp";
-
-  TestHeaderName = "xintrin.h";
-  TestHeaderURI = URI::create(testPath(TestHeaderName)).toString();
-  InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
-  CollectorOpts.FallbackDir = testRoot();
-  runSymbolCollector("#pragma GCC system_header\n" + std::string(Header), "");
-  EXPECT_THAT(Symbols, UnorderedElementsAre(qName("__foo")));
-}
-
 TEST_F(SymbolCollectorTest, Concepts) {
   const char *Header = R"cpp(
     template <class T>

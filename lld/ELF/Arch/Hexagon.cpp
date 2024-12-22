@@ -199,7 +199,7 @@ static uint32_t findMaskR6(Ctx &ctx, uint32_t insn) {
       return i.relocMask;
 
   Err(ctx) << "unrecognized instruction for 6_X relocation: 0x"
-           << utohexstr(insn, true);
+           << utohexstr(insn);
   return 0;
 }
 
@@ -328,7 +328,7 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
   case R_HEX_B22_PCREL:
   case R_HEX_GD_PLT_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
-    checkInt(ctx, loc, val, 24, rel);
+    checkInt(ctx, loc, val, 22, rel);
     or32le(loc, applyMask(0x1ff3ffe, val >> 2));
     break;
   case R_HEX_B22_PCREL_X:

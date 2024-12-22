@@ -747,9 +747,9 @@ class DeclaratorDecl : public ValueDecl {
   /// ignoring outer template declarations.
   SourceLocation InnerLocStart;
 
-  bool hasExtInfo() const { return isa<ExtInfo *>(DeclInfo); }
-  ExtInfo *getExtInfo() { return cast<ExtInfo *>(DeclInfo); }
-  const ExtInfo *getExtInfo() const { return cast<ExtInfo *>(DeclInfo); }
+  bool hasExtInfo() const { return DeclInfo.is<ExtInfo*>(); }
+  ExtInfo *getExtInfo() { return DeclInfo.get<ExtInfo*>(); }
+  const ExtInfo *getExtInfo() const { return DeclInfo.get<ExtInfo*>(); }
 
 protected:
   DeclaratorDecl(Kind DK, DeclContext *DC, SourceLocation L,
@@ -762,8 +762,9 @@ public:
   friend class ASTDeclWriter;
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return hasExtInfo() ? getExtInfo()->TInfo
-                        : cast<TypeSourceInfo *>(DeclInfo);
+    return hasExtInfo()
+      ? getExtInfo()->TInfo
+      : DeclInfo.get<TypeSourceInfo*>();
   }
 
   void setTypeSourceInfo(TypeSourceInfo *TI) {
@@ -3457,17 +3458,18 @@ public:
   using redeclarable_base::isFirstDecl;
 
   bool isModed() const {
-    return isa<ModedTInfo *>(MaybeModedTInfo.getPointer());
+    return MaybeModedTInfo.getPointer().is<ModedTInfo *>();
   }
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return isModed() ? cast<ModedTInfo *>(MaybeModedTInfo.getPointer())->first
-                     : cast<TypeSourceInfo *>(MaybeModedTInfo.getPointer());
+    return isModed() ? MaybeModedTInfo.getPointer().get<ModedTInfo *>()->first
+                     : MaybeModedTInfo.getPointer().get<TypeSourceInfo *>();
   }
 
   QualType getUnderlyingType() const {
-    return isModed() ? cast<ModedTInfo *>(MaybeModedTInfo.getPointer())->second
-                     : cast<TypeSourceInfo *>(MaybeModedTInfo.getPointer())
+    return isModed() ? MaybeModedTInfo.getPointer().get<ModedTInfo *>()->second
+                     : MaybeModedTInfo.getPointer()
+                           .get<TypeSourceInfo *>()
                            ->getType();
   }
 
@@ -3585,10 +3587,10 @@ private:
   /// otherwise, it is a null (TypedefNameDecl) pointer.
   llvm::PointerUnion<TypedefNameDecl *, ExtInfo *> TypedefNameDeclOrQualifier;
 
-  bool hasExtInfo() const { return isa<ExtInfo *>(TypedefNameDeclOrQualifier); }
-  ExtInfo *getExtInfo() { return cast<ExtInfo *>(TypedefNameDeclOrQualifier); }
+  bool hasExtInfo() const { return TypedefNameDeclOrQualifier.is<ExtInfo *>(); }
+  ExtInfo *getExtInfo() { return TypedefNameDeclOrQualifier.get<ExtInfo *>(); }
   const ExtInfo *getExtInfo() const {
-    return cast<ExtInfo *>(TypedefNameDeclOrQualifier);
+    return TypedefNameDeclOrQualifier.get<ExtInfo *>();
   }
 
 protected:
@@ -3791,7 +3793,7 @@ public:
 
   TypedefNameDecl *getTypedefNameForAnonDecl() const {
     return hasExtInfo() ? nullptr
-                        : cast<TypedefNameDecl *>(TypedefNameDeclOrQualifier);
+                        : TypedefNameDeclOrQualifier.get<TypedefNameDecl *>();
   }
 
   void setTypedefNameForAnonDecl(TypedefNameDecl *TDD);
@@ -4009,7 +4011,7 @@ public:
       return QualType();
     if (const Type *T = IntegerType.dyn_cast<const Type*>())
       return QualType(T, 0);
-    return cast<TypeSourceInfo *>(IntegerType)->getType().getUnqualifiedType();
+    return IntegerType.get<TypeSourceInfo*>()->getType().getUnqualifiedType();
   }
 
   /// Set the underlying integer type.

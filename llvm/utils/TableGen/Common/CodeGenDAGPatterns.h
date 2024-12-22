@@ -722,18 +722,6 @@ public:
     return cast<const Record *>(OperatorOrVal);
   }
 
-  using child_iterator = pointee_iterator<decltype(Children)::iterator>;
-  using child_const_iterator =
-      pointee_iterator<decltype(Children)::const_iterator>;
-
-  iterator_range<child_iterator> children() {
-    return make_pointee_range(Children);
-  }
-
-  iterator_range<child_const_iterator> children() const {
-    return make_pointee_range(Children);
-  }
-
   unsigned getNumChildren() const { return Children.size(); }
   const TreePatternNode &getChild(unsigned N) const {
     return *Children[N].get();
@@ -867,8 +855,7 @@ public: // Higher level manipulation routines.
 
   /// canPatternMatch - If it is impossible for this pattern to match on this
   /// target, fill in Reason and return false.  Otherwise, return true.
-  bool canPatternMatch(std::string &Reason,
-                       const CodeGenDAGPatterns &CDP) const;
+  bool canPatternMatch(std::string &Reason, const CodeGenDAGPatterns &CDP);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const TreePatternNode &TPN) {

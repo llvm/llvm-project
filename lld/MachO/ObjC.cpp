@@ -263,7 +263,7 @@ void ObjcCategoryChecker::parseCategory(const ConcatInputSection *catIsec) {
   if (!classReloc)
     return;
 
-  auto *classSym = cast<Symbol *>(classReloc->referent);
+  auto *classSym = classReloc->referent.get<Symbol *>();
   if (auto *d = dyn_cast<Defined>(classSym))
     if (!classMap.count(d))
       parseClass(d);
@@ -603,7 +603,7 @@ void ObjcCategoryMerger::tryEraseDefinedAtIsecOffset(
   if (!reloc)
     return;
 
-  Defined *sym = dyn_cast_or_null<Defined>(cast<Symbol *>(reloc->referent));
+  Defined *sym = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
   if (!sym)
     return;
 
@@ -675,7 +675,7 @@ void ObjcCategoryMerger::parseProtocolListInfo(
   if (!reloc)
     return;
 
-  auto *ptrListSym = dyn_cast_or_null<Defined>(cast<Symbol *>(reloc->referent));
+  auto *ptrListSym = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
   assert(ptrListSym && "Protocol list reloc does not have a valid Defined");
 
   // Theoretically protocol count can be either 32b or 64b, depending on
@@ -707,7 +707,7 @@ void ObjcCategoryMerger::parseProtocolListInfo(
     const Reloc *reloc = ptrListSym->isec()->getRelocAt(off);
     assert(reloc && "No reloc found at protocol list offset");
 
-    auto *listSym = dyn_cast_or_null<Defined>(cast<Symbol *>(reloc->referent));
+    auto *listSym = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
     assert(listSym && "Protocol list reloc does not have a valid Defined");
 
     ptrList.allPtrs.push_back(listSym);
@@ -745,7 +745,7 @@ bool ObjcCategoryMerger::parsePointerListInfo(const ConcatInputSection *isec,
   if (!reloc)
     return true;
 
-  auto *ptrListSym = dyn_cast_or_null<Defined>(cast<Symbol *>(reloc->referent));
+  auto *ptrListSym = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
   assert(ptrListSym && "Reloc does not have a valid Defined");
 
   uint32_t thisStructSize = *reinterpret_cast<const uint32_t *>(

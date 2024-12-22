@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-emit-jump-tables=0 < %s
+; RUN: llc -march=hexagon -hexagon-emit-jump-tables=0 < %s
 ; REQUIRES: asserts
 ; Check for successful compilation.
 

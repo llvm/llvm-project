@@ -29,7 +29,6 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <mutex>
 #include <optional>
@@ -50,13 +49,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
+  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 const llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -66,8 +64,7 @@ const llvm::opt::OptTable::Info InfoTable[] = {
 
 class ScanDepsOptTable : public llvm::opt::GenericOptTable {
 public:
-  ScanDepsOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+  ScanDepsOptTable() : GenericOptTable(InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -427,8 +424,7 @@ public:
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
     TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                            &*DiagOpts, &DiagConsumer,
+        CompilerInstance::createDiagnostics(&*DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
@@ -743,8 +739,7 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
         tooling::JSONCommandLineSyntax::AutoDetect);
 
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions);
+      CompilerInstance::createDiagnostics(new DiagnosticOptions);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
   TheDriver.setCheckInputsExist(false);

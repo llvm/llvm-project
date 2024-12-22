@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements mlir::applyPatternsGreedily.
+// This file implements mlir::applyPatternsAndFoldGreedily.
 //
 //===----------------------------------------------------------------------===//
 
@@ -488,7 +488,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // infinite folding loop, as every constant op would be folded to an
     // Attribute and then immediately be rematerialized as a constant op, which
     // is then put on the worklist.
-    if (config.fold && !op->hasTrait<OpTrait::ConstantLike>()) {
+    if (!op->hasTrait<OpTrait::ConstantLike>()) {
       SmallVector<OpFoldResult> foldResults;
       if (succeeded(op->fold(foldResults))) {
         LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
@@ -852,13 +852,13 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.
       region.walk([&](Operation *op) {
-        if (!config.cseConstants || !insertKnownConstant(op))
+        if (!insertKnownConstant(op))
           addToWorklist(op);
       });
     } else {
       // Add all nested operations to the worklist in preorder.
       region.walk<WalkOrder::PreOrder>([&](Operation *op) {
-        if (!config.cseConstants || !insertKnownConstant(op)) {
+        if (!insertKnownConstant(op)) {
           addToWorklist(op);
           return WalkResult::advance();
         }
@@ -894,9 +894,9 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 }
 
 LogicalResult
-mlir::applyPatternsGreedily(Region &region,
-                            const FrozenRewritePatternSet &patterns,
-                            GreedyRewriteConfig config, bool *changed) {
+mlir::applyPatternsAndFoldGreedily(Region &region,
+                                   const FrozenRewritePatternSet &patterns,
+                                   GreedyRewriteConfig config, bool *changed) {
   // The top-level operation must be known to be isolated from above to
   // prevent performing canonicalizations on operations defined at or above
   // the region containing 'op'.
@@ -1012,7 +1012,7 @@ static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
   return region;
 }
 
-LogicalResult mlir::applyOpPatternsGreedily(
+LogicalResult mlir::applyOpPatternsAndFold(
     ArrayRef<Operation *> ops, const FrozenRewritePatternSet &patterns,
     GreedyRewriteConfig config, bool *changed, bool *allErased) {
   if (ops.empty()) {

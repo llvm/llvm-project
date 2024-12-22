@@ -371,29 +371,11 @@ uint64_t Debugger::GetTerminalWidth() const {
 }
 
 bool Debugger::SetTerminalWidth(uint64_t term_width) {
+  if (auto handler_sp = m_io_handler_stack.Top())
+    handler_sp->TerminalSizeChanged();
+
   const uint32_t idx = ePropertyTerminalWidth;
-  const bool success = SetPropertyAtIndex(idx, term_width);
-
-  if (auto handler_sp = m_io_handler_stack.Top())
-    handler_sp->TerminalSizeChanged();
-
-  return success;
-}
-
-uint64_t Debugger::GetTerminalHeight() const {
-  const uint32_t idx = ePropertyTerminalHeight;
-  return GetPropertyAtIndexAs<uint64_t>(
-      idx, g_debugger_properties[idx].default_uint_value);
-}
-
-bool Debugger::SetTerminalHeight(uint64_t term_height) {
-  const uint32_t idx = ePropertyTerminalHeight;
-  const bool success = SetPropertyAtIndex(idx, term_height);
-
-  if (auto handler_sp = m_io_handler_stack.Top())
-    handler_sp->TerminalSizeChanged();
-
-  return success;
+  return SetPropertyAtIndex(idx, term_width);
 }
 
 bool Debugger::GetUseExternalEditor() const {
@@ -937,11 +919,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
           ePropertyTerminalWidth);
   term_width->SetMinimumValue(10);
-
-  OptionValueUInt64 *term_height =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
-          ePropertyTerminalHeight);
-  term_height->SetMinimumValue(10);
+  term_width->SetMaximumValue(1024);
 
   // Turn off use-color if this is a dumb terminal.
   const char *term = getenv("TERM");

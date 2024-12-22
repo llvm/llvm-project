@@ -364,9 +364,9 @@ def err_target_unsupported_abi_with_fpu : Error<
 
 def err_ppc_impossible_musttail: Error<
   "'musttail' attribute for this call is impossible because %select{"
-  "long calls cannot be tail called on PPC|"
-  "indirect calls cannot be tail called on PPC|"
-  "external calls cannot be tail called on PPC}0"
+  "long calls can not be tail called on PPC|"
+  "indirect calls can not be tail called on PPC|"
+  "external calls can not be tail called on PPC}0"
   >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;

@@ -75,17 +75,6 @@ public:
     return m_Source->FindExternalVisibleDeclsByName(DC, Name);
   }
 
-  bool LoadExternalSpecializations(const clang::Decl *D,
-                                   bool OnlyPartial) override {
-    return m_Source->LoadExternalSpecializations(D, OnlyPartial);
-  }
-
-  bool LoadExternalSpecializations(
-      const clang::Decl *D,
-      llvm::ArrayRef<clang::TemplateArgument> TemplateArgs) override {
-    return m_Source->LoadExternalSpecializations(D, TemplateArgs);
-  }
-
   void completeVisibleDeclsMap(const clang::DeclContext *DC) override {
     m_Source->completeVisibleDeclsMap(DC);
   }
@@ -314,23 +303,6 @@ public:
       if (clang::Decl *Result = Sources[i]->GetExternalDecl(ID))
         return Result;
     return nullptr;
-  }
-
-  bool LoadExternalSpecializations(const clang::Decl *D,
-                                   bool OnlyPartial) override {
-    bool newDeclFound = false;
-    for (size_t i = 0; i < Sources.size(); ++i)
-      newDeclFound |= Sources[i]->LoadExternalSpecializations(D, OnlyPartial);
-    return newDeclFound;
-  }
-
-  bool LoadExternalSpecializations(
-      const clang::Decl *D,
-      llvm::ArrayRef<clang::TemplateArgument> TemplateArgs) override {
-    bool newDeclFound = false;
-    for (size_t i = 0; i < Sources.size(); ++i)
-      newDeclFound |= Sources[i]->LoadExternalSpecializations(D, TemplateArgs);
-    return newDeclFound;
   }
 
   void CompleteRedeclChain(const clang::Decl *D) override {

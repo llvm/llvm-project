@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O3 -hexagon-small-data-threshold=0 < %s
+; RUN: llc -march=hexagon -O3 -hexagon-small-data-threshold=0 < %s
 ; REQUIRES: asserts
 
 target triple = "hexagon"

@@ -34,7 +34,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
     Expanded = Plan.getOrAddLiveIn(E->getValue());
   else {
     Expanded = new VPExpandSCEVRecipe(Expr, SE);
-    Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
+    Plan.getPreheader()->appendRecipe(Expanded->getDefiningRecipe());
   }
   Plan.addSCEVExpansion(Expr, Expanded);
   return Expanded;

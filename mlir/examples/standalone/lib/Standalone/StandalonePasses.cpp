@@ -39,7 +39,7 @@ public:
     RewritePatternSet patterns(&getContext());
     patterns.add<StandaloneSwitchBarFooRewriter>(&getContext());
     FrozenRewritePatternSet patternSet(std::move(patterns));
-    if (failed(applyPatternsGreedily(getOperation(), patternSet)))
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), patternSet)))
       signalPassFailure();
   }
 };

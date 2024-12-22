@@ -1243,7 +1243,8 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
-  const CombinerHelper Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <atomic>
-#include <chrono>
 #include <mutex>
 #include <optional>
 #include <queue>

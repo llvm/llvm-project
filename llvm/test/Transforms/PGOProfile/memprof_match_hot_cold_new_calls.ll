@@ -4,89 +4,21 @@
 ;; Avoid failures on big-endian systems that can't read the profile properly
 ; REQUIRES: x86_64-linux
 
-;; Generate the profile and the IR.
-; RUN: split-file %s %t
+;; TODO: Use text profile inputs once that is available for memprof.
+;; This test uses the same raw profile used for memprof.ll, see instructions
+;; in that file for updating.
 
 ;; Generate indexed profile
-; RUN: llvm-profdata merge %t/memprof_match_hot_cold_new_calls.yaml -o %t.memprofdata
+; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
 
 ;; By default we should not match profile on to manually hinted operator
 ;; new calls, because we don't currently override the manual hints anyway.
-; RUN: opt < %t/memprof_match_hot_cold_new_calls.ll -passes='memprof-use<profile-filename=%t.memprofdata>' -S 2>&1 | FileCheck %s --implicit-check-not !memprof --implicit-check-not !callsite
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S 2>&1 | FileCheck %s --implicit-check-not !memprof --implicit-check-not !callsite
 
 ;; Check that we match profiles onto these manually hinted new calls
 ;; under the -memprof-match-hot-cold-new=true option.
-; RUN: opt < %t/memprof_match_hot_cold_new_calls.ll -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-match-hot-cold-new=true 2>&1 | FileCheck %s --check-prefixes=MEMPROF
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-match-hot-cold-new=true 2>&1 | FileCheck %s --check-prefixes=MEMPROF
 
-;--- memprof_match_hot_cold_new_calls.yaml
----
-HeapProfileRecords:
-  - GUID:            _Z3foov
-    AllocSites:
-      - Callstack:
-          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: main, LineOffset: 6, Column: 13, IsInlineFrame: false }
-        MemInfoBlock:
-          AllocCount:      1
-          TotalSize:       10
-          TotalLifetime:   0
-          TotalLifetimeAccessDensity: 20000
-      - Callstack:
-          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: main, LineOffset: 7, Column: 13, IsInlineFrame: false }
-        MemInfoBlock:
-          AllocCount:      1
-          TotalSize:       10
-          TotalLifetime:   200000
-          TotalLifetimeAccessDensity: 0
-      - Callstack:
-          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: _Z3barv, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: main, LineOffset: 8, Column: 13, IsInlineFrame: false }
-        MemInfoBlock:
-          AllocCount:      1
-          TotalSize:       10
-          TotalLifetime:   200000
-          TotalLifetimeAccessDensity: 0
-      - Callstack:
-          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: _Z3bazv, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: main, LineOffset: 9, Column: 13, IsInlineFrame: false }
-        MemInfoBlock:
-          AllocCount:      1
-          TotalSize:       10
-          TotalLifetime:   200000
-          TotalLifetimeAccessDensity: 0
-      - Callstack:
-          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
-        MemInfoBlock:
-          AllocCount:      1
-          TotalSize:       10
-          TotalLifetime:   200000
-          TotalLifetimeAccessDensity: 0
-      - Callstack:
-          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
-        MemInfoBlock:
-          AllocCount:      1
-          TotalSize:       10
-          TotalLifetime:   0
-          TotalLifetimeAccessDensity: 20000
-    CallSites:       []
-...
-;--- memprof_match_hot_cold_new_calls.ll
 ; ModuleID = 'memprof_match_hot_cold_new_calls.cc'
 source_filename = "memprof_match_hot_cold_new_calls.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -214,11 +214,7 @@
 #define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-#  ifdef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
-#    define TEST_HAS_NO_ALIGNED_ALLOCATION
-#  endif
-#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
 #elif TEST_STD_VER < 17 && (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
@@ -266,9 +262,7 @@
 
 #define TEST_IGNORE_NODISCARD (void)
 
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-// from-chars is a C++17 feature, so it's never available anyways
-#elif !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT
+#if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT
 #  define TEST_HAS_FROM_CHARS_FLOATING_POINT
 #endif
 
@@ -407,19 +401,11 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_UNICODE
 #endif
 
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-#  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
-#    define TEST_HAS_OPEN_WITH_WCHAR
-#  endif
-#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_OPEN_WITH_WCHAR
+#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_OPEN_WITH_WCHAR
 #  define TEST_HAS_OPEN_WITH_WCHAR
 #endif
 
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-#  ifdef _LIBCPP_HAS_NO_INT128
-#    define TEST_HAS_NO_INT128
-#  endif
-#elif (defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_INT128) || defined(_MSVC_STL_VERSION)
+#if (defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_INT128) || defined(_MSVC_STL_VERSION)
 #  define TEST_HAS_NO_INT128
 #endif
 
@@ -439,11 +425,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_FILESYSTEM
 #endif
 
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-#  ifdef _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
-#    define TEST_HAS_NO_C8RTOMB_MBRTOC8
-#  endif
-#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_C8RTOMB_MBRTOC8
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_C8RTOMB_MBRTOC8
 #  define TEST_HAS_NO_C8RTOMB_MBRTOC8
 #endif
 
@@ -517,9 +499,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #endif
 
 // Clang-18 has support for deducing this, but it does not set the FTM.
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-// This is a C++20 featue, so we don't care whether the compiler could support it
-#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 

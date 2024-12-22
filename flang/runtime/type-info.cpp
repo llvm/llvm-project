@@ -36,7 +36,6 @@ RT_API_ATTRS std::size_t Component::GetElementByteSize(
     const Descriptor &instance) const {
   switch (category()) {
   case TypeCategory::Integer:
-  case TypeCategory::Unsigned:
   case TypeCategory::Real:
   case TypeCategory::Logical:
     return kind_;

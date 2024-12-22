@@ -745,7 +745,6 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
     if (Field->hasInClassInitializer()) {
       if (VerifyOnly)
         return;
-
       ExprResult DIE;
       {
         // Enter a default initializer rebuild context, then we can support
@@ -7402,7 +7401,7 @@ PerformConstructorInitialization(Sema &S,
 
 void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                                     Expr *Init) {
-  return sema::checkInitLifetime(*this, Entity, Init);
+  return sema::checkExprLifetime(*this, Entity, Init);
 }
 
 static void DiagnoseNarrowingInInitList(Sema &S,

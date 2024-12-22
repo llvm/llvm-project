@@ -13,6 +13,7 @@
 
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h" // For StaticAssertDecl
@@ -22,6 +23,7 @@
 #include <algorithm>
 #include <random>
 #include <set>
+#include <sstream>
 #include <string>
 
 using clang::ASTContext;

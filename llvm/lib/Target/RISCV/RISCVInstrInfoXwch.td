@@ -25,6 +25,24 @@ class QKStackInst<bits<2> funct2, dag outs, dag ins,
 // Operand definitions.
 //===----------------------------------------------------------------------===//
 
+def uimm4_with_predicate : RISCVUImmLeafOp<4> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isUInt<4>(Imm);
+  }];
+}
+
+def uimm5_with_predicate : RISCVUImmLeafOp<5> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isUInt<5>(Imm);
+  }];
+}
+
 // A 5-bit unsigned immediate where the least significant bit is zero.
 def uimm5_lsb0 : RISCVOp,
                  ImmLeaf<XLenVT, [{return isShiftedUInt<4, 1>(Imm);}]> {
@@ -62,7 +80,7 @@ let Predicates = [HasVendorXwchc], DecoderNamespace = "Xwchc" in {
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def QK_C_LBU : RVInst16CL<0b001, 0b00, (outs GPRC:$rd),
-                          (ins GPRCMem:$rs1, uimm5:$imm),
+                          (ins GPRCMem:$rs1, uimm5_with_predicate:$imm),
                           "qk.c.lbu", "$rd, ${imm}(${rs1})">,
                Sched<[WriteLDB, ReadMemBase]> {
   bits<5> imm;
@@ -73,7 +91,7 @@ def QK_C_LBU : RVInst16CL<0b001, 0b00, (outs GPRC:$rd),
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def QK_C_SB : RVInst16CS<0b101, 0b00, (outs),
                          (ins GPRC:$rs2, GPRCMem:$rs1,
-                              uimm5:$imm),
+                              uimm5_with_predicate:$imm),
                          "qk.c.sb", "$rs2, ${imm}(${rs1})">,
               Sched<[WriteSTB, ReadStoreData, ReadMemBase]> {
   bits<5> imm;
@@ -103,7 +121,7 @@ def QK_C_SH : RVInst16CS<0b101, 0b10, (outs),
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def QK_C_LBUSP : QKStackInst<0b00, (outs GPRC:$rd_rs2),
-                             (ins SPMem:$rs1, uimm4:$imm),
+                             (ins SPMem:$rs1, uimm4_with_predicate:$imm),
                              "qk.c.lbusp", "$rd_rs2, ${imm}(${rs1})">,
                  Sched<[WriteLDB, ReadMemBase]> {
   bits<4> imm;
@@ -112,7 +130,7 @@ def QK_C_LBUSP : QKStackInst<0b00, (outs GPRC:$rd_rs2),
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def QK_C_SBSP : QKStackInst<0b10, (outs),
                             (ins GPRC:$rd_rs2, SPMem:$rs1,
-                                 uimm4:$imm),
+                                 uimm4_with_predicate:$imm),
                             "qk.c.sbsp", "$rd_rs2, ${imm}(${rs1})">,
                 Sched<[WriteSTB, ReadStoreData, ReadMemBase]> {
   bits<4> imm;
@@ -162,18 +180,18 @@ def : InstAlias<"qk.c.shsp $rs2, (${rs1})", (QK_C_SHSP GPRC:$rs2, SPMem:$rs1, 0)
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXwchc] in {
-def : CompressPat<(LBU GPRC:$rd, GPRCMem:$rs1, uimm5:$imm),
-                  (QK_C_LBU GPRC:$rd, GPRCMem:$rs1, uimm5:$imm)>;
-def : CompressPat<(SB GPRC:$rs2, GPRCMem:$rs1, uimm5:$imm),
-                  (QK_C_SB GPRC:$rs2, GPRCMem:$rs1, uimm5:$imm)>;
+def : CompressPat<(LBU GPRC:$rd, GPRCMem:$rs1, uimm5_with_predicate:$imm),
+                  (QK_C_LBU GPRC:$rd, GPRCMem:$rs1, uimm5_with_predicate:$imm)>;
+def : CompressPat<(SB GPRC:$rs2, GPRCMem:$rs1, uimm5_with_predicate:$imm),
+                  (QK_C_SB GPRC:$rs2, GPRCMem:$rs1, uimm5_with_predicate:$imm)>;
 def : CompressPat<(LHU GPRC:$rd, GPRCMem:$rs1, uimm6_lsb0:$imm),
                   (QK_C_LHU GPRC:$rd, GPRCMem:$rs1, uimm6_lsb0:$imm)>;
 def : CompressPat<(SH GPRC:$rs2, GPRCMem:$rs1, uimm6_lsb0:$imm),
                   (QK_C_SH GPRC:$rs2, GPRCMem:$rs1, uimm6_lsb0:$imm)>;
-def : CompressPat<(LBU GPRC:$rd, SPMem:$rs1,   uimm4:$imm),
-                  (QK_C_LBUSP GPRC:$rd, SPMem:$rs1, uimm4:$imm)>;
-def : CompressPat<(SB GPRC:$rs2, SPMem:$rs1,   uimm4:$imm),
-                  (QK_C_SBSP GPRC:$rs2, SPMem:$rs1, uimm4:$imm)>;
+def : CompressPat<(LBU GPRC:$rd, SPMem:$rs1,   uimm4_with_predicate:$imm),
+                  (QK_C_LBUSP GPRC:$rd, SPMem:$rs1, uimm4_with_predicate:$imm)>;
+def : CompressPat<(SB GPRC:$rs2, SPMem:$rs1,   uimm4_with_predicate:$imm),
+                  (QK_C_SBSP GPRC:$rs2, SPMem:$rs1, uimm4_with_predicate:$imm)>;
 def : CompressPat<(LHU GPRC:$rd, SPMem:$rs1,   uimm5_lsb0:$imm),
                   (QK_C_LHUSP GPRC:$rd, SPMem:$rs1, uimm5_lsb0:$imm)>;
 def : CompressPat<(SH GPRC:$rs2, SPMem:$rs1,   uimm5_lsb0:$imm),

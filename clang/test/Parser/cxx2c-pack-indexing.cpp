@@ -12,7 +12,8 @@ struct S {
             // expected-note {{to match this '['}} \
            // expected-warning{{declaration does not declare anything}}
 
-    T...[]; // expected-error{{expected member name or ';' after declaration specifiers}}
+    T...[]; // expected-error{{expected expression}} \
+           // expected-warning{{declaration does not declare anything}}
 
     void f(auto... v) {
         decltype(v...[1]) a = v...[1];
@@ -64,7 +65,7 @@ int main() {
 }
 
 
-namespace GH111460 {
+namespace GH11460 {
 template <typename... T>
 requires( ); // expected-error {{expected expression}}
 struct SS {
@@ -72,13 +73,4 @@ struct SS {
         (*p).~T...[](); // expected-error {{use of undeclared identifier 'p'}}
     }
 };
-}
-
-namespace GH119072 {
-
-template<typename... Ts>
-void foo() {
-  decltype(Ts...[0]::t) value;
-}
-
 }

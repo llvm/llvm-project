@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: enabled:
 ; CHECK: memw({{.*}}) += #1

@@ -10,7 +10,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define dso_local i32 @dupext_crashtest(i32 %e) local_unnamed_addr {
 ; CHECK-LABEL: dupext_crashtest:
 ; CHECK:       // %bb.0: // %for.body.lr.ph
-; CHECK-NEXT:    dup v0.2s, w0
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    dup v0.2s, w8
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d1, [x8]

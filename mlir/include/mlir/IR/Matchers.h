@@ -417,11 +417,6 @@ inline detail::constant_float_predicate_matcher m_OneFloat() {
   }};
 }
 
-/// Matches a constant scalar / vector splat / tensor splat float ones.
-inline detail::constant_float_predicate_matcher m_NaNFloat() {
-  return {[](const APFloat &value) { return value.isNaN(); }};
-}
-
 /// Matches a constant scalar / vector splat / tensor splat float positive
 /// infinity.
 inline detail::constant_float_predicate_matcher m_PosInfFloat() {

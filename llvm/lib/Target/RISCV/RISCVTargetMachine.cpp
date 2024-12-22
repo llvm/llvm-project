@@ -51,6 +51,13 @@ static cl::opt<cl::boolOrDefault>
     EnableGlobalMerge("riscv-enable-global-merge", cl::Hidden,
                       cl::desc("Enable the global merge pass"));
 
+static cl::opt<bool> ForceEnableGlobalMergeExternalGlobals(
+    "riscv-force-enable-global-merge-external-globals", cl::Hidden,
+    cl::init(false),
+    cl::desc(
+        "If the global merge pass is enabled, force enable global merging of "
+        "external globals (overriding any logic that might disable it)"));
+
 static cl::opt<bool>
     EnableMachineCombiner("riscv-enable-machine-combiner",
                           cl::desc("Enable the machine combiner pass"),
@@ -105,17 +112,7 @@ static cl::opt<bool> EnablePostMISchedLoadStoreClustering(
 static cl::opt<bool>
     EnableVLOptimizer("riscv-enable-vl-optimizer",
                       cl::desc("Enable the RISC-V VL Optimizer pass"),
-                      cl::init(true), cl::Hidden);
-
-static cl::opt<bool> DisableVectorMaskMutation(
-    "riscv-disable-vector-mask-mutation",
-    cl::desc("Disable the vector mask scheduling mutation"), cl::init(false),
-    cl::Hidden);
-
-static cl::opt<bool>
-    EnableMachinePipeliner("riscv-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for RISC-V"),
-                           cl::init(false), cl::Hidden);
+                      cl::init(false), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -269,8 +266,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
 MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
-  return RISCVMachineFunctionInfo::create<RISCVMachineFunctionInfo>(
-      Allocator, F, static_cast<const RISCVSubtarget *>(STI));
+  return RISCVMachineFunctionInfo::create<RISCVMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 TargetTransformInfo
@@ -369,12 +366,6 @@ public:
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
       DAG->addMutation(createStoreClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-    }
-
-    const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-    if (!DisableVectorMaskMutation && ST.hasVInstructions()) {
-      DAG = DAG ? DAG : createGenericSchedLive(C);
-      DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
     }
     return DAG;
   }
@@ -492,7 +483,8 @@ bool RISCVPassConfig::addPreISel() {
     // Investigating and addressing both items are TODO.
     addPass(createGlobalMergePass(TM, /* MaxOffset */ 2047,
                                   /* OnlyOptimizeForSize */ false,
-                                  /* MergeExternalByDefault */ true));
+                                  /* MergeExternalByDefault */
+                                  ForceEnableGlobalMergeExternalGlobals));
   }
 
   return false;
@@ -608,9 +600,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupPass());
-
-  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void RISCVPassConfig::addFastRegAlloc() {

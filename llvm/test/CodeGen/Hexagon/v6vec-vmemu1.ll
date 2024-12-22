@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -disable-hexagon-shuffle=1 -O2 -enable-pipeliner=false < %s | FileCheck %s
+; RUN: llc -march=hexagon -disable-hexagon-shuffle=1 -O2 -enable-pipeliner=false < %s | FileCheck %s
 
 ; Generate vmemu (unaligned).
 ; CHECK: vmem

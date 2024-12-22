@@ -34,7 +34,8 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   if (!Func)
     return false;
 
-  if (!Run(Parent, Func))
+  APValue DummyResult;
+  if (!Run(Parent, Func, DummyResult))
     return false;
 
   return Func->isConstexpr();
@@ -212,13 +213,13 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
   return Ctx.getFloatTypeSemantics(T);
 }
 
-bool Context::Run(State &Parent, const Function *Func) {
+bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
 
   {
     InterpState State(Parent, *P, Stk, *this);
     State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
                                     Func->getArgSize());
-    if (Interpret(State)) {
+    if (Interpret(State, Result)) {
       assert(Stk.empty());
       return true;
     }

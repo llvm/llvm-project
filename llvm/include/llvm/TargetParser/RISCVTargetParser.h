@@ -32,21 +32,6 @@ struct RISCVExtensionBitmask {
 };
 } // namespace RISCVExtensionBitmaskTable
 
-struct CPUModel {
-  uint32_t MVendorID;
-  uint64_t MArchID;
-  uint64_t MImpID;
-};
-
-struct CPUInfo {
-  StringLiteral Name;
-  StringLiteral DefaultMarch;
-  bool FastScalarUnalignedAccess;
-  bool FastVectorUnalignedAccess;
-  CPUModel Model;
-  bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
-};
-
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
 
@@ -60,8 +45,6 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 bool hasFastScalarUnalignedAccess(StringRef CPU);
 bool hasFastVectorUnalignedAccess(StringRef CPU);
-bool hasValidCPUModel(StringRef CPU);
-CPUModel getCPUModel(StringRef CPU);
 
 } // namespace RISCV
 

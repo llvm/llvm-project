@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; Used to fail with "Cannot select: 0x17300f0: v2i32 = any_extend"
 
 ; ModuleID = 'bugpoint-reduced-simplified.bc'

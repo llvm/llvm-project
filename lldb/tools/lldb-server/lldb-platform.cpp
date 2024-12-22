@@ -181,7 +181,8 @@ static Status ListenGdbConnectionsIfNeeded(
   if (protocol != Socket::ProtocolTcp)
     return Status();
 
-  gdb_sock = std::make_unique<TCPSocket>(/*should_close=*/true);
+  gdb_sock = std::make_unique<TCPSocket>(
+      /*should_close=*/true, /*child_processes_inherit=*/false);
   Status error = gdb_sock->Listen(gdb_address, backlog);
   if (error.Fail())
     return error;
@@ -473,10 +474,12 @@ int main_platform(int argc, char *argv[]) {
     GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
     Socket *socket;
     if (protocol == Socket::ProtocolTcp)
-      socket = new TCPSocket(sockfd, /*should_close=*/true);
+      socket = new TCPSocket(sockfd, /*should_close=*/true,
+                             /*child_processes_inherit=*/false);
     else {
 #if LLDB_ENABLE_POSIX
-      socket = new DomainSocket(sockfd, /*should_close=*/true);
+      socket = new DomainSocket(sockfd, /*should_close=*/true,
+                                /*child_processes_inherit=*/false);
 #else
       WithColor::error() << "lldb-platform child: Unix domain sockets are not "
                             "supported on this platform.";
@@ -507,7 +510,8 @@ int main_platform(int argc, char *argv[]) {
     return socket_error;
   }
 
-  std::unique_ptr<Socket> platform_sock = Socket::Create(protocol, error);
+  std::unique_ptr<Socket> platform_sock =
+      Socket::Create(protocol, /*child_processes_inherit=*/false, error);
   if (error.Fail()) {
     printf("Failed to create platform socket: %s\n", error.AsCString());
     return socket_error;

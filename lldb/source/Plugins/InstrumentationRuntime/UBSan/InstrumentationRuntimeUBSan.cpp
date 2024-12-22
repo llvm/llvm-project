@@ -130,15 +130,15 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;
+  Status eval_error;
   frame_sp->CalculateExecutionContext(exe_ctx);
   ExpressionResults result = UserExpression::Evaluate(
       exe_ctx, options, ub_sanitizer_retrieve_report_data_command, "",
-      main_value);
+      main_value, eval_error);
   if (result != eExpressionCompleted) {
     StreamString ss;
     ss << "cannot evaluate UndefinedBehaviorSanitizer expression:\n";
-    if (main_value)
-      ss << main_value->GetError().AsCString();
+    ss << eval_error.AsCString();
     Debugger::ReportWarning(ss.GetString().str(),
                             process_sp->GetTarget().GetDebugger().GetID());
     return StructuredData::ObjectSP();

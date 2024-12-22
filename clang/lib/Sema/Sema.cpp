@@ -723,15 +723,6 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   QualType ExprTy = Context.getCanonicalType(E->getType());
   QualType TypeTy = Context.getCanonicalType(Ty);
 
-  // This cast is used in place of a regular LValue to RValue cast for
-  // HLSL Array Parameter Types. It needs to be emitted even if
-  // ExprTy == TypeTy, except if E is an HLSLOutArgExpr
-  // Emitting a cast in that case will prevent HLSLOutArgExpr from
-  // being handled properly in EmitCallArg
-  if (Kind == CK_HLSLArrayRValue && !isa<HLSLOutArgExpr>(E))
-    return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
-                                    CurFPFeatureOverrides());
-
   if (ExprTy == TypeTy)
     return E;
 

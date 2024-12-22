@@ -75,7 +75,6 @@ int getARMSubArchVersionNumber(const llvm::Triple &Triple);
 bool isARMMProfile(const llvm::Triple &Triple);
 bool isARMAProfile(const llvm::Triple &Triple);
 bool isARMBigEndian(const llvm::Triple &Triple, const llvm::opt::ArgList &Args);
-bool isARMEABIBareMetal(const llvm::Triple &Triple);
 
 } // end namespace arm
 } // end namespace tools

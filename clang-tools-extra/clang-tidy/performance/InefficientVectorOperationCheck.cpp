@@ -77,7 +77,7 @@ InefficientVectorOperationCheck::InefficientVectorOperationCheck(
     : ClangTidyCheck(Name, Context),
       VectorLikeClasses(utils::options::parseStringList(
           Options.get("VectorLikeClasses", "::std::vector"))),
-      EnableProto(Options.get("EnableProto", false)) {}
+      EnableProto(Options.getLocalOrGlobal("EnableProto", false)) {}
 
 void InefficientVectorOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

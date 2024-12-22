@@ -313,7 +313,8 @@ namespace {
         Disp = CurDAG->getTargetBlockAddress(AM.BlockAddr, MVT::i32, AM.Disp,
                                              AM.SymbolFlags);
       else
-        Disp = CurDAG->getSignedTargetConstant(AM.Disp, DL, MVT::i32);
+        Disp =
+            CurDAG->getSignedConstant(AM.Disp, DL, MVT::i32, /*isTarget=*/true);
 
       if (AM.Segment.getNode())
         Segment = AM.Segment;
@@ -370,7 +371,7 @@ namespace {
         return false;
 
       // Walk all the users of the immediate.
-      for (const SDNode *User : N->users()) {
+      for (const SDNode *User : N->uses()) {
         if (UseCount >= 2)
           break;
 
@@ -1095,7 +1096,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDNode *MaxLd = nullptr;
       SDValue Ptr = Ld->getBasePtr();
       SDValue Chain = Ld->getChain();
-      for (SDNode *User : Ptr->users()) {
+      for (SDNode *User : Ptr->uses()) {
         auto *UserLd = dyn_cast<LoadSDNode>(User);
         MVT UserVT = User->getSimpleValueType(0);
         if (User != N && UserLd && ISD::isNormalLoad(User) &&
@@ -2423,11 +2424,11 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
         auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
-        int64_t Offset = AddVal->getSExtValue();
-        if (!foldOffsetIntoAddress((uint64_t)Offset * AM.Scale, AM)) {
+        uint64_t Offset = (uint64_t)AddVal->getSExtValue();
+        if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
           SDLoc DL(N);
           SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
-          SDValue ExtVal = CurDAG->getSignedConstant(Offset, DL, VT);
+          SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
           SDValue ExtAdd = CurDAG->getNode(ISD::ADD, DL, VT, ExtSrc, ExtVal);
           insertDAGNode(*CurDAG, N, ExtSrc);
           insertDAGNode(*CurDAG, N, ExtVal);
@@ -3318,25 +3319,24 @@ X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {
 /// other than ZF.
 bool X86DAGToDAGISel::onlyUsesZeroFlag(SDValue Flags) const {
   // Examine each user of the node.
-  for (SDUse &Use : Flags->uses()) {
+  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
+         UI != UE; ++UI) {
     // Only check things that use the flags.
-    if (Use.getResNo() != Flags.getResNo())
+    if (UI.getUse().getResNo() != Flags.getResNo())
       continue;
-    SDNode *User = Use.getUser();
     // Only examine CopyToReg uses that copy to EFLAGS.
-    if (User->getOpcode() != ISD::CopyToReg ||
-        cast<RegisterSDNode>(User->getOperand(1))->getReg() != X86::EFLAGS)
+    if (UI->getOpcode() != ISD::CopyToReg ||
+        cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
       return false;
     // Examine each user of the CopyToReg use.
-    for (SDUse &FlagUse : User->uses()) {
+    for (SDNode::use_iterator FlagUI = UI->use_begin(),
+           FlagUE = UI->use_end(); FlagUI != FlagUE; ++FlagUI) {
       // Only examine the Flag result.
-      if (FlagUse.getResNo() != 1)
-        continue;
+      if (FlagUI.getUse().getResNo() != 1) continue;
       // Anything unusual: assume conservatively.
-      if (!FlagUse.getUser()->isMachineOpcode())
-        return false;
+      if (!FlagUI->isMachineOpcode()) return false;
       // Examine the condition code of the user.
-      X86::CondCode CC = getCondFromNode(FlagUse.getUser());
+      X86::CondCode CC = getCondFromNode(*FlagUI);
 
       switch (CC) {
       // Comparisons which only use the zero flag.
@@ -3355,25 +3355,24 @@ bool X86DAGToDAGISel::onlyUsesZeroFlag(SDValue Flags) const {
 /// flag to be accurate.
 bool X86DAGToDAGISel::hasNoSignFlagUses(SDValue Flags) const {
   // Examine each user of the node.
-  for (SDUse &Use : Flags->uses()) {
+  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
+         UI != UE; ++UI) {
     // Only check things that use the flags.
-    if (Use.getResNo() != Flags.getResNo())
+    if (UI.getUse().getResNo() != Flags.getResNo())
       continue;
-    SDNode *User = Use.getUser();
     // Only examine CopyToReg uses that copy to EFLAGS.
-    if (User->getOpcode() != ISD::CopyToReg ||
-        cast<RegisterSDNode>(User->getOperand(1))->getReg() != X86::EFLAGS)
+    if (UI->getOpcode() != ISD::CopyToReg ||
+        cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
       return false;
     // Examine each user of the CopyToReg use.
-    for (SDUse &FlagUse : User->uses()) {
+    for (SDNode::use_iterator FlagUI = UI->use_begin(),
+           FlagUE = UI->use_end(); FlagUI != FlagUE; ++FlagUI) {
       // Only examine the Flag result.
-      if (FlagUse.getResNo() != 1)
-        continue;
+      if (FlagUI.getUse().getResNo() != 1) continue;
       // Anything unusual: assume conservatively.
-      if (!FlagUse.getUser()->isMachineOpcode())
-        return false;
+      if (!FlagUI->isMachineOpcode()) return false;
       // Examine the condition code of the user.
-      X86::CondCode CC = getCondFromNode(FlagUse.getUser());
+      X86::CondCode CC = getCondFromNode(*FlagUI);
 
       switch (CC) {
       // Comparisons which don't examine the SF flag.
@@ -3412,28 +3411,29 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
 /// CF flag to be accurate.
  bool X86DAGToDAGISel::hasNoCarryFlagUses(SDValue Flags) const {
   // Examine each user of the node.
-  for (SDUse &Use : Flags->uses()) {
+  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
+         UI != UE; ++UI) {
     // Only check things that use the flags.
-    if (Use.getResNo() != Flags.getResNo())
+    if (UI.getUse().getResNo() != Flags.getResNo())
       continue;
 
-    SDNode *User = Use.getUser();
-    unsigned UserOpc = User->getOpcode();
+    unsigned UIOpc = UI->getOpcode();
 
-    if (UserOpc == ISD::CopyToReg) {
+    if (UIOpc == ISD::CopyToReg) {
       // Only examine CopyToReg uses that copy to EFLAGS.
-      if (cast<RegisterSDNode>(User->getOperand(1))->getReg() != X86::EFLAGS)
+      if (cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
         return false;
       // Examine each user of the CopyToReg use.
-      for (SDUse &FlagUse : User->uses()) {
+      for (SDNode::use_iterator FlagUI = UI->use_begin(), FlagUE = UI->use_end();
+           FlagUI != FlagUE; ++FlagUI) {
         // Only examine the Flag result.
-        if (FlagUse.getResNo() != 1)
+        if (FlagUI.getUse().getResNo() != 1)
           continue;
         // Anything unusual: assume conservatively.
-        if (!FlagUse.getUser()->isMachineOpcode())
+        if (!FlagUI->isMachineOpcode())
           return false;
         // Examine the condition code of the user.
-        X86::CondCode CC = getCondFromNode(FlagUse.getUser());
+        X86::CondCode CC = getCondFromNode(*FlagUI);
 
         if (mayUseCarryFlag(CC))
           return false;
@@ -3446,7 +3446,7 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
     // This might be an unselected node. So look for the pre-isel opcodes that
     // use flags.
     unsigned CCOpNo;
-    switch (UserOpc) {
+    switch (UIOpc) {
     default:
       // Something unusual. Be conservative.
       return false;
@@ -3456,7 +3456,7 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
     case X86ISD::BRCOND:      CCOpNo = 2; break;
     }
 
-    X86::CondCode CC = (X86::CondCode)User->getConstantOperandVal(CCOpNo);
+    X86::CondCode CC = (X86::CondCode)UI->getConstantOperandVal(CCOpNo);
     if (mayUseCarryFlag(CC))
       return false;
   }
@@ -3775,7 +3775,8 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       }
 
       if (MemVT != MVT::i64 || isInt<32>(OperandV)) {
-        Operand = CurDAG->getSignedTargetConstant(OperandV, SDLoc(Node), MemVT);
+        Operand = CurDAG->getSignedConstant(OperandV, SDLoc(Node), MemVT,
+                                            /*isTarget=*/true);
         NewOpc = SelectImmOpcode(Opc);
       }
     }
@@ -4829,9 +4830,7 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
 
   // The variable operand must be all zeros in the top bits to allow using the
   // new, negative constant as the mask.
-  // TODO: Handle constant folding?
-  KnownBits Known0 = CurDAG->computeKnownBits(And0);
-  if (Known0.isConstant() || !HighZeros.isSubsetOf(Known0.Zero))
+  if (!CurDAG->MaskedValueIsZero(And0, HighZeros))
     return false;
 
   // Check if the mask is -1. In that case, this is an unnecessary instruction

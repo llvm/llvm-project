@@ -114,7 +114,7 @@ static void createSubtraction(PointerUnion<Symbol *, InputSection *> a,
   auto minuend = b;
   if (Invert)
     std::swap(subtrahend, minuend);
-  assert(isa<Symbol *>(subtrahend));
+  assert(subtrahend.is<Symbol *>());
   Reloc subtrahendReloc(target->subtractorRelocType, /*pcrel=*/false, length,
                         off, /*addend=*/0, subtrahend);
   Reloc minuendReloc(target->unsignedRelocType, /*pcrel=*/false, length, off,

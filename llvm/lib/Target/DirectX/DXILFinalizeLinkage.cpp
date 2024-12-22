@@ -8,6 +8,7 @@
 
 #include "DXILFinalizeLinkage.h"
 #include "DirectX.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
@@ -22,8 +23,6 @@ static bool finalizeLinkage(Module &M) {
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
-    if (EF.isIntrinsic())
-      continue;
     if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
       continue;
     Funcs.insert(&EF);
@@ -48,6 +47,10 @@ PreservedAnalyses DXILFinalizeLinkage::run(Module &M,
 
 bool DXILFinalizeLinkageLegacy::runOnModule(Module &M) {
   return finalizeLinkage(M);
+}
+
+void DXILFinalizeLinkageLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILFinalizeLinkageLegacy::ID = 0;

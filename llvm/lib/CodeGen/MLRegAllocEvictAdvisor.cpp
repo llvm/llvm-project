@@ -63,12 +63,6 @@ static cl::opt<std::string> InteractiveChannelBaseName(
         "outgoing name should be "
         "<regalloc-evict-interactive-channel-base>.out"));
 
-static cl::opt<unsigned>
-    MaxCascade("mlregalloc-max-cascade", cl::Hidden,
-               cl::desc("The maximum number of times a live range can be "
-                        "evicted before preventing it from being evicted"),
-               cl::init(20));
-
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
 #include "RegAllocScore.h"
@@ -560,18 +554,19 @@ private:
   std::unique_ptr<Logger> Log;
 };
 
-#endif // #ifdef LLVM_HAVE_TFLITE
+#endif //#ifdef LLVM_HAVE_TFLITE
 } // namespace
 
 float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
   auto &MRI = MF.getRegInfo();
-  unsigned NumUsedRegs = 0;
+  float Ret = 0.0;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
-    if (!MRI.reg_nodbg_empty(Reg))
-      ++NumUsedRegs;
+    if (MRI.reg_nodbg_empty(Reg))
+      continue;
+    ++Ret;
   }
-  return static_cast<float>(NumUsedRegs);
+  return Ret;
 }
 
 MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
@@ -649,18 +644,8 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
            RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())));
-
-      unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
-      // There is a potential that the model could be adversarial and
-      // continually evict live ranges over and over again, leading to a
-      // large amount of compile time being spent in regalloc. If we hit the
-      // threshold, prevent the range from being evicted. We still let the
-      // range through if it is urgent as we are required to produce an
-      // eviction if the candidate is not spillable.
-      if (IntfCascade >= MaxCascade && !Urgent)
-        return false;
-
       // Only evict older cascades or live ranges without a cascade.
+      unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;

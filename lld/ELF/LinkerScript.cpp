@@ -133,10 +133,6 @@ uint64_t ExprValue::getSectionOffset() const {
   return getValue() - getSecAddr();
 }
 
-// std::unique_ptr<OutputSection> may be incomplete type.
-LinkerScript::LinkerScript(Ctx &ctx) : ctx(ctx) {}
-LinkerScript::~LinkerScript() {}
-
 OutputDesc *LinkerScript::createOutputSection(StringRef name,
                                               StringRef location) {
   OutputDesc *&secRef = nameToOutputSection[CachedHashStringRef(name)];
@@ -145,9 +141,7 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
     // There was a forward reference.
     sec = secRef;
   } else {
-    descPool.emplace_back(
-        std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0));
-    sec = descPool.back().get();
+    sec = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
     if (!secRef)
       secRef = sec;
   }
@@ -156,14 +150,10 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
 }
 
 OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
-  auto &secRef = nameToOutputSection[CachedHashStringRef(name)];
-  if (!secRef) {
-    secRef = descPool
-                 .emplace_back(
-                     std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0))
-                 .get();
-  }
-  return secRef;
+  OutputDesc *&cmdRef = nameToOutputSection[CachedHashStringRef(name)];
+  if (!cmdRef)
+    cmdRef = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
+  return cmdRef;
 }
 
 // Expands the memory region by the specified size.
@@ -402,30 +392,33 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-bool InputSectionDescription::matchesFile(const InputFile &file) const {
+static inline StringRef getFilename(const InputFile *file) {
+  return file ? file->getNameForScript() : StringRef();
+}
+
+bool InputSectionDescription::matchesFile(const InputFile *file) const {
   if (filePat.isTrivialMatchAll())
     return true;
 
-  if (!matchesFileCache || matchesFileCache->first != &file)
-    matchesFileCache.emplace(&file, filePat.match(file.getNameForScript()));
+  if (!matchesFileCache || matchesFileCache->first != file)
+    matchesFileCache.emplace(file, filePat.match(getFilename(file)));
 
   return matchesFileCache->second;
 }
 
-bool SectionPattern::excludesFile(const InputFile &file) const {
+bool SectionPattern::excludesFile(const InputFile *file) const {
   if (excludedFilePat.empty())
     return false;
 
-  if (!excludesFileCache || excludesFileCache->first != &file)
-    excludesFileCache.emplace(&file,
-                              excludedFilePat.match(file.getNameForScript()));
+  if (!excludesFileCache || excludesFileCache->first != file)
+    excludesFileCache.emplace(file, excludedFilePat.match(getFilename(file)));
 
   return excludesFileCache->second;
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
   for (InputSectionDescription *id : keptSections)
-    if (id->matchesFile(*s->file))
+    if (id->matchesFile(s->file))
       for (SectionPattern &p : id->sectionPatterns)
         if (p.sectionPat.match(s->name) &&
             (s->flags & id->withFlags) == id->withFlags &&
@@ -554,7 +547,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         if (!pat.sectionPat.match(sec->name))
           continue;
 
-        if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
+        if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
             sec->parent == &outCmd || !flagsMatch(sec))
           continue;
 
@@ -839,7 +832,7 @@ void LinkerScript::processSymbolAssignments() {
   // sh_shndx should not be SHN_UNDEF or SHN_ABS. Create a dummy aether section
   // that fills the void outside a section. It has an index of one, which is
   // indistinguishable from any other regular section index.
-  aether = std::make_unique<OutputSection>(ctx, "", 0, SHF_ALLOC);
+  aether = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
   aether->sectionIndex = 1;
 
   // `st` captures the local AddressState and makes it accessible deliberately.
@@ -847,7 +840,7 @@ void LinkerScript::processSymbolAssignments() {
   // current state through to a lambda function created by the script parser.
   AddressState st(*this);
   state = &st;
-  st.outSec = aether.get();
+  st.outSec = aether;
 
   for (SectionCommand *cmd : sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
@@ -1443,17 +1436,17 @@ void LinkerScript::adjustSectionsAfterSorting() {
 // We check if the headers fit below the first allocated section. If there isn't
 // enough space for these sections, we'll remove them from the PT_LOAD segment,
 // and we'll also remove the PT_PHDR segment.
-void LinkerScript::allocateHeaders(
-    SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
+void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *sec : ctx.outputSections)
     if (sec->flags & SHF_ALLOC)
       min = std::min<uint64_t>(min, sec->addr);
 
-  auto it = llvm::find_if(phdrs, [](auto &e) { return e->p_type == PT_LOAD; });
+  auto it = llvm::find_if(
+      phdrs, [](const PhdrEntry *e) { return e->p_type == PT_LOAD; });
   if (it == phdrs.end())
     return;
-  PhdrEntry *firstPTLoad = it->get();
+  PhdrEntry *firstPTLoad = *it;
 
   bool hasExplicitHeaders =
       llvm::any_of(phdrsCommands, [](const PhdrsCommand &cmd) {
@@ -1482,7 +1475,8 @@ void LinkerScript::allocateHeaders(
   ctx.out.programHeaders->ptLoad = nullptr;
   firstPTLoad->firstSec = findFirstSection(ctx, firstPTLoad);
 
-  llvm::erase_if(phdrs, [](auto &e) { return e->p_type == PT_PHDR; });
+  llvm::erase_if(phdrs,
+                 [](const PhdrEntry *e) { return e->p_type == PT_PHDR; });
 }
 
 LinkerScript::AddressState::AddressState(const LinkerScript &script) {
@@ -1515,7 +1509,7 @@ LinkerScript::assignAddresses() {
   AddressState st(*this);
   state = &st;
   errorOnMissingSection = true;
-  st.outSec = aether.get();
+  st.outSec = aether;
   recordedErrors.clear();
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
@@ -1645,25 +1639,24 @@ void LinkerScript::erasePotentialSpillSections() {
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-SmallVector<std::unique_ptr<PhdrEntry>, 0> LinkerScript::createPhdrs() {
-  SmallVector<std::unique_ptr<PhdrEntry>, 0> ret;
+SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
+  SmallVector<PhdrEntry *, 0> ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &cmd : phdrsCommands) {
-    auto phdr =
-        std::make_unique<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
+    PhdrEntry *phdr = make<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
-      phdr->add(ctx.out.elfHeader.get());
+      phdr->add(ctx.out.elfHeader);
     if (cmd.hasPhdrs)
-      phdr->add(ctx.out.programHeaders.get());
+      phdr->add(ctx.out.programHeaders);
 
     if (cmd.lmaExpr) {
       phdr->p_paddr = cmd.lmaExpr().getValue();
       phdr->hasLMA = true;
     }
-    ret.push_back(std::move(phdr));
+    ret.push_back(phdr);
   }
 
   // Add output sections to program headers.
@@ -1781,7 +1774,7 @@ static void checkMemoryRegion(Ctx &ctx, const MemoryRegion *region,
   if (osecEnd > regionEnd) {
     ErrAlways(ctx) << "section '" << osec->name << "' will not fit in region '"
                    << region->name << "': overflowed by "
-                   << (osecEnd - regionEnd) << " bytes";
+                   << Twine(osecEnd - regionEnd) << " bytes";
   }
 }
 

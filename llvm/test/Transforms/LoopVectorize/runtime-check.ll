@@ -42,7 +42,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]], !dbg [[DBG9]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]], !dbg [[DBG9]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], !dbg [[DBG9]]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ], !dbg [[DBG9]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG9]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], !dbg [[DBG9]]
@@ -147,7 +147,7 @@ define void @test_runtime_check(ptr %a, float %b, i64 %offset, i64 %offset2, i64
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -238,7 +238,7 @@ define void @test_runtime_check2(ptr %a, float %b, i64 %offset, i64 %offset2, i6
 ; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -4
 ; CHECK-NEXT:    [[LC:%.*]] = load float, ptr [[C_IDX]], align 4
 ; CHECK-NEXT:    [[VC:%.*]] = fadd float [[LC]], 1.000000e+00
-; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]
 ; CHECK-NEXT:    store float [[VC]], ptr [[C_IDX2]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]

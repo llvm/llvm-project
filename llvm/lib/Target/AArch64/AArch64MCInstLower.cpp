@@ -194,16 +194,12 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   } else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     TLSModel::Model Model;
     if (MO.isGlobal()) {
-      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-      if (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()) {
+      const GlobalValue *GV = MO.getGlobal();
+      Model = Printer.TM.getTLSModel(GV);
+      if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
+          Model == TLSModel::LocalDynamic)
         Model = TLSModel::GeneralDynamic;
-      } else {
-        const GlobalValue *GV = MO.getGlobal();
-        Model = Printer.TM.getTLSModel(GV);
-        if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
-            Model == TLSModel::LocalDynamic)
-          Model = TLSModel::GeneralDynamic;
-      }
+
     } else {
       assert(MO.isSymbol() &&
              StringRef(MO.getSymbolName()) == "_TLS_MODULE_BASE_" &&
@@ -222,17 +218,9 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     case TLSModel::LocalDynamic:
       RefFlags |= AArch64MCExpr::VK_DTPREL;
       break;
-    case TLSModel::GeneralDynamic: {
-      // TODO: it's probably better to introduce MO_TLS_AUTH or smth and avoid
-      // running hasELFSignedGOT() every time, but existing flags already
-      // cover all 12 bits of SubReg_TargetFlags field in MachineOperand, and
-      // making the field wider breaks static assertions.
-      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-      RefFlags |= MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
-                      ? AArch64MCExpr::VK_TLSDESC_AUTH
-                      : AArch64MCExpr::VK_TLSDESC;
+    case TLSModel::GeneralDynamic:
+      RefFlags |= AArch64MCExpr::VK_TLSDESC;
       break;
-    }
     }
   } else if (MO.getTargetFlags() & AArch64II::MO_PREL) {
     RefFlags |= AArch64MCExpr::VK_PREL;

@@ -473,12 +473,12 @@ let Class = PackIndexingType in {
   def : Property<"indexExpression", ExprRef> {
     let Read = [{ node->getIndexExpr() }];
   }
-  def : Property<"isFullySubstituted", Bool> {
-    let Read = [{ node->isFullySubstituted() }];
+  def : Property<"expandsToEmptyPack", Bool> {
+    let Read = [{ node->expandsToEmptyPack() }];
   }
 
   def : Creator<[{
-    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted);
+    return ctx.getPackIndexingType(pattern, indexExpression, expandsToEmptyPack);
   }]>;
 }
 

@@ -2205,8 +2205,8 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX10-W32-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB39_2
 ; GFX10-W32-NEXT:  ; %bb.1: ; %else
-; GFX10-W32-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-W32-NEXT:    image_sample v[0:3], v[0:1], s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB39_3
 ; GFX10-W32-NEXT:    s_branch .LBB39_4

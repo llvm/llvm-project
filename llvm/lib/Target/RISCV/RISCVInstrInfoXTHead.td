@@ -769,9 +769,7 @@ defm : LdIdxPat<zextloadi16, TH_LRHU>;
 
 defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
 defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
-}
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : LdIdxPat<load, TH_LRW, i32>;
 defm : StIdxPat<store, TH_SRW, GPR, i32>;
 }

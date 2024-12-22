@@ -131,7 +131,7 @@ public:
   HoistSpillHelper(MachineFunctionPass &pass, MachineFunction &mf,
                    VirtRegMap &vrm)
       : MF(mf), LIS(pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
-        LSS(pass.getAnalysis<LiveStacksWrapperLegacy>().getLS()),
+        LSS(pass.getAnalysis<LiveStacks>()),
         MDT(pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()),
@@ -193,7 +193,7 @@ public:
   InlineSpiller(MachineFunctionPass &Pass, MachineFunction &MF, VirtRegMap &VRM,
                 VirtRegAuxInfo &VRAI)
       : MF(MF), LIS(Pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
-        LSS(Pass.getAnalysis<LiveStacksWrapperLegacy>().getLS()),
+        LSS(Pass.getAnalysis<LiveStacks>()),
         MDT(Pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
         VRM(VRM), MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
         TRI(*MF.getSubtarget().getRegisterInfo()),

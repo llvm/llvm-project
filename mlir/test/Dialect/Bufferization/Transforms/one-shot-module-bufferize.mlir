@@ -679,7 +679,7 @@ func.func @to_memref_op_unsupported(
   // to_memref op.
   // CHECK: %[[alloc:.*]] = memref.alloc
   // CHECK: memref.copy %[[arg0]], %[[alloc]]
-  %0 = bufferization.to_memref %t1 : tensor<?xf32> to memref<?xf32>
+  %0 = bufferization.to_memref %t1 : memref<?xf32>
   // CHECK: "test.foo"(%[[alloc]])
   "test.foo"(%0) : (memref<?xf32>) -> ()
 

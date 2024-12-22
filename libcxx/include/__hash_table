@@ -16,7 +16,6 @@
 #include <__bit/countl.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
-#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__math/rounding_functions.h>
@@ -27,14 +26,15 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
-#include <__new/launder.h>
 #include <__type_traits/can_extract_key.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
@@ -44,7 +44,9 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
+#include <cstring>
 #include <limits>
+#include <new> // __launder
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

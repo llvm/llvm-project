@@ -288,9 +288,8 @@ public:
 
   template <typename INT>
   static ValueWithRealFlags<Real> FromInteger(const INT &n,
-      bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding) {
-    bool isNegative{!isUnsigned && n.IsNegative()};
+    bool isNegative{n.IsNegative()};
     INT absN{n};
     if (isNegative) {
       absN = n.Negate().value; // overflow is safe to ignore

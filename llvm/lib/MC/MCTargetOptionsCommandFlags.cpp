@@ -145,7 +145,7 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
-      cl::desc("Emit GOTPCRELX/REX_GOTPCRELX/CODE_4_GOTPCRELX instead of "
+      cl::desc("Emit GOTPCRELX/REX_GOTPCRELX/REX2_GOTPCRELX instead of "
                "GOTPCREL on x86-64 ELF"),
       cl::init(true));
   MCBINDOPT(X86RelaxRelocations);

@@ -12,7 +12,6 @@
 #include "DWARFBaseDIE.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -98,31 +97,14 @@ public:
   GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const;
 
   bool GetDIENamesAndRanges(
-      const char *&name, const char *&mangled,
-      llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
-      std::optional<int> &decl_line, std::optional<int> &decl_column,
-      std::optional<int> &call_file, std::optional<int> &call_line,
-      std::optional<int> &call_column, DWARFExpressionList *frame_base) const;
-
-  // The following methods use LLVM naming convension in order to be are used by
-  // LLVM libraries.
-  std::optional<uint64_t> getLanguage() const;
-
-  DWARFDIE getParent() const { return GetParent(); }
-
-  DWARFDIE resolveReferencedType(dw_attr_t attr) const;
-
-  DWARFDIE resolveReferencedType(DWARFFormValue v) const;
-
-  DWARFDIE resolveTypeUnitReference() const;
-
-  std::optional<DWARFFormValue> find(const dw_attr_t attr) const;
+      const char *&name, const char *&mangled, DWARFRangeList &ranges,
+      std::optional<int> &decl_file, std::optional<int> &decl_line,
+      std::optional<int> &decl_column, std::optional<int> &call_file,
+      std::optional<int> &call_line, std::optional<int> &call_column,
+      DWARFExpressionList *frame_base) const;
 
   /// The range of all the children of this DIE.
   llvm::iterator_range<child_iterator> children() const;
-
-  child_iterator begin() const;
-  child_iterator end() const;
 };
 
 class DWARFDIE::child_iterator

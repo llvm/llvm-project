@@ -794,7 +794,6 @@ template <typename T> Expr<T> Folder<T>::EOSHIFT(FunctionRef<T> &&funcRef) {
           }
           resultElements.push_back(boundary->At(boundaryAt));
         } else if constexpr (T::category == TypeCategory::Integer ||
-            T::category == TypeCategory::Unsigned ||
             T::category == TypeCategory::Real ||
             T::category == TypeCategory::Complex ||
             T::category == TypeCategory::Logical) {
@@ -1087,7 +1086,6 @@ template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
   static_assert(T::category == TypeCategory::Integer ||
-      T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
   auto &args{funcRef.arguments()};
@@ -1184,10 +1182,6 @@ Expr<T> RewriteSpecificMINorMAX(
 template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     FoldingContext &context, FunctionRef<Type<TypeCategory::Integer, KIND>> &&);
-template <int KIND>
-Expr<Type<TypeCategory::Unsigned, KIND>> FoldIntrinsicFunction(
-    FoldingContext &context,
-    FunctionRef<Type<TypeCategory::Unsigned, KIND>> &&);
 template <int KIND>
 Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     FoldingContext &context, FunctionRef<Type<TypeCategory::Real, KIND>> &&);
@@ -1747,17 +1741,6 @@ Expr<TO> FoldOperation(
                     converted.value.SignedDecimal());
               }
               return ScalarConstantToExpr(std::move(converted.value));
-            } else if constexpr (FromCat == TypeCategory::Unsigned) {
-              auto converted{Scalar<TO>::ConvertUnsigned(*value)};
-              if ((converted.overflow || converted.value.IsNegative()) &&
-                  msvcWorkaround.context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingException)) {
-                ctx.messages().Say(common::UsageWarning::FoldingException,
-                    "conversion of %s_U%d to INTEGER(%d) overflowed; result is %s"_warn_en_US,
-                    value->UnsignedDecimal(), Operand::kind, TO::kind,
-                    converted.value.SignedDecimal());
-              }
-              return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
               auto converted{value->template ToInteger<Scalar<TO>>()};
               if (msvcWorkaround.context.languageFeatures().ShouldWarn(
@@ -1774,20 +1757,9 @@ Expr<TO> FoldOperation(
               }
               return ScalarConstantToExpr(std::move(converted.value));
             }
-          } else if constexpr (TO::category == TypeCategory::Unsigned) {
-            if constexpr (FromCat == TypeCategory::Integer ||
-                FromCat == TypeCategory::Unsigned) {
-              return Expr<TO>{
-                  Constant<TO>{Scalar<TO>::ConvertUnsigned(*value).value}};
-            } else if constexpr (FromCat == TypeCategory::Real) {
-              return Expr<TO>{
-                  Constant<TO>{value->template ToInteger<Scalar<TO>>().value}};
-            }
           } else if constexpr (TO::category == TypeCategory::Real) {
-            if constexpr (FromCat == TypeCategory::Integer ||
-                FromCat == TypeCategory::Unsigned) {
-              auto converted{Scalar<TO>::FromInteger(
-                  *value, FromCat == TypeCategory::Unsigned)};
+            if constexpr (FromCat == TypeCategory::Integer) {
+              auto converted{Scalar<TO>::FromInteger(*value)};
               if (!converted.flags.empty()) {
                 char buffer[64];
                 std::snprintf(buffer, sizeof buffer,
@@ -1897,8 +1869,6 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
             "INTEGER(%d) negation overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{std::move(negated.value)}};
-    } else if constexpr (T::category == TypeCategory::Unsigned) {
-      return Expr<T>{Constant<T>{std::move(value->Negate().value)}};
     } else {
       // REAL & COMPLEX negation: no exceptions possible
       return Expr<T>{Constant<T>{value->Negate()}};
@@ -1941,9 +1911,6 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
             "INTEGER(%d) addition overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{sum.value}};
-    } else if constexpr (T::category == TypeCategory::Unsigned) {
-      return Expr<T>{
-          Constant<T>{folded->first.AddUnsigned(folded->second).value}};
     } else {
       auto sum{folded->first.Add(
           folded->second, context.targetCharacteristics().roundingMode())};
@@ -1972,9 +1939,6 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
             "INTEGER(%d) subtraction overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{difference.value}};
-    } else if constexpr (T::category == TypeCategory::Unsigned) {
-      return Expr<T>{
-          Constant<T>{folded->first.SubtractSigned(folded->second).value}};
     } else {
       auto difference{folded->first.Subtract(
           folded->second, context.targetCharacteristics().roundingMode())};
@@ -2003,9 +1967,6 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
             "INTEGER(%d) multiplication overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{product.lower}};
-    } else if constexpr (T::category == TypeCategory::Unsigned) {
-      return Expr<T>{
-          Constant<T>{folded->first.MultiplyUnsigned(folded->second).lower}};
     } else {
       auto product{folded->first.Multiply(
           folded->second, context.targetCharacteristics().roundingMode())};
@@ -2058,17 +2019,6 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
               common::UsageWarning::FoldingException)) {
         context.messages().Say(common::UsageWarning::FoldingException,
             "INTEGER(%d) division overflowed"_warn_en_US, T::kind);
-      }
-      return Expr<T>{Constant<T>{quotAndRem.quotient}};
-    } else if constexpr (T::category == TypeCategory::Unsigned) {
-      auto quotAndRem{folded->first.DivideUnsigned(folded->second)};
-      if (quotAndRem.divisionByZero) {
-        if (context.languageFeatures().ShouldWarn(
-                common::UsageWarning::FoldingException)) {
-          context.messages().Say(common::UsageWarning::FoldingException,
-              "UNSIGNED(%d) division by zero"_warn_en_US, T::kind);
-        }
-        return Expr<T>{std::move(x)};
       }
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
     } else {
@@ -2169,10 +2119,6 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       if (folded->first.CompareSigned(folded->second) == x.ordering) {
-        return Expr<T>{Constant<T>{folded->first}};
-      }
-    } else if constexpr (T::category == TypeCategory::Unsigned) {
-      if (folded->first.CompareUnsigned(folded->second) == x.ordering) {
         return Expr<T>{Constant<T>{folded->first}};
       }
     } else if constexpr (T::category == TypeCategory::Real) {

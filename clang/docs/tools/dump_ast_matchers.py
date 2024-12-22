@@ -5,7 +5,6 @@
 
 import collections
 import re
-import os
 
 try:
     from urllib.request import urlopen
@@ -19,11 +18,7 @@ except Exception as e:
     CLASS_INDEX_PAGE = None
     print("Unable to get %s: %s" % (CLASS_INDEX_PAGE_URL, e))
 
-CURRENT_DIR = os.path.dirname(__file__)
-MATCHERS_FILE = os.path.join(
-    CURRENT_DIR, "../../include/clang/ASTMatchers/ASTMatchers.h"
-)
-HTML_FILE = os.path.join(CURRENT_DIR, "../LibASTMatchersReference.html")
+MATCHERS_FILE = "../../include/clang/ASTMatchers/ASTMatchers.h"
 
 # Each matcher is documented in one row of the form:
 #   result | name | argA
@@ -595,7 +590,7 @@ node_matcher_table = sort_table("DECL", node_matchers)
 narrowing_matcher_table = sort_table("NARROWING", narrowing_matchers)
 traversal_matcher_table = sort_table("TRAVERSAL", traversal_matchers)
 
-reference = open(HTML_FILE).read()
+reference = open("../LibASTMatchersReference.html").read()
 reference = re.sub(
     r"<!-- START_DECL_MATCHERS.*END_DECL_MATCHERS -->",
     node_matcher_table,

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 ; Check that this doesn't crash. A "splat_vector" was causing trouble,
 ; initially, so check that a vsplat appears in the output.

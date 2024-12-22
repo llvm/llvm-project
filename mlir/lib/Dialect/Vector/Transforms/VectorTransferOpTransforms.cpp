@@ -251,7 +251,7 @@ static SmallVector<int64_t> getReducedShape(ArrayRef<OpFoldResult> mixedSizes) {
       continue;
     }
 
-    auto value = cast<IntegerAttr>(cast<Attribute>(size)).getValue();
+    auto value = cast<IntegerAttr>(size.get<Attribute>()).getValue();
     if (value == 1)
       continue;
     reducedShape.push_back(value.getSExtValue());
@@ -570,8 +570,8 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   collapsedOffset = affine::makeComposedFoldedAffineApply(
       rewriter, loc, collapsedExpr, collapsedVals);
 
-  if (auto value = dyn_cast<Value>(collapsedOffset)) {
-    indicesAfterCollapsing.push_back(value);
+  if (collapsedOffset.is<Value>()) {
+    indicesAfterCollapsing.push_back(collapsedOffset.get<Value>());
   } else {
     indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
         loc, *getConstantIntValue(collapsedOffset)));
@@ -841,8 +841,8 @@ class RewriteScalarExtractElementOfTransferRead
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, loc, sym0 + sym1,
           {newIndices[newIndices.size() - 1], extractOp.getPosition()});
-      if (auto value = dyn_cast<Value>(ofr)) {
-        newIndices[newIndices.size() - 1] = value;
+      if (ofr.is<Value>()) {
+        newIndices[newIndices.size() - 1] = ofr.get<Value>();
       } else {
         newIndices[newIndices.size() - 1] =
             rewriter.create<arith::ConstantIndexOp>(loc,
@@ -879,14 +879,14 @@ class RewriteScalarExtractOfTransferRead
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
                                   xferOp.getIndices().end());
     for (auto [i, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
-      assert(isa<Attribute>(pos) && "Unexpected non-constant index");
-      int64_t offset = cast<IntegerAttr>(cast<Attribute>(pos)).getInt();
+      assert(pos.is<Attribute>() && "Unexpected non-constant index");
+      int64_t offset = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
       int64_t idx = newIndices.size() - extractOp.getNumIndices() + i;
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, extractOp.getLoc(),
           rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
-      if (auto value = dyn_cast<Value>(ofr)) {
-        newIndices[idx] = value;
+      if (ofr.is<Value>()) {
+        newIndices[idx] = ofr.get<Value>();
       } else {
         newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
             extractOp.getLoc(), *getConstantIntValue(ofr));

@@ -72,13 +72,12 @@ enum LipoID {
 };
 
 namespace lipo {
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "LipoOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LipoOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
@@ -90,9 +89,7 @@ static constexpr opt::OptTable::Info LipoInfoTable[] = {
 
 class LipoOptTable : public opt::GenericOptTable {
 public:
-  LipoOptTable()
-      : opt::GenericOptTable(lipo::OptionStrTable, lipo::OptionPrefixesTable,
-                             lipo::LipoInfoTable) {}
+  LipoOptTable() : opt::GenericOptTable(lipo::LipoInfoTable) {}
 };
 
 enum class LipoAction {

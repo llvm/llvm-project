@@ -503,7 +503,14 @@ ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
 }
 
 bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
-  return m_count > 0;
+  switch (m_mode) {
+  case Mode::Always:
+  case Mode::Default:
+    return m_count > 0;
+  case Mode::Never:
+    return false;
+  }
+  return false;
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(

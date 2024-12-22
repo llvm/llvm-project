@@ -1,3 +1,4 @@
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefix=GFX67 --check-prefix=GCN --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=GFX67 --check-prefix=GCN --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=GFX89 --check-prefix=GCN --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=GFX89 --check-prefix=GCN --implicit-check-not=error:

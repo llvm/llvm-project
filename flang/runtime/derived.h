@@ -26,14 +26,6 @@ class Terminator;
 RT_API_ATTRS int Initialize(const Descriptor &, const typeInfo::DerivedType &,
     Terminator &, bool hasStat = false, const Descriptor *errMsg = nullptr);
 
-// Initializes an object clone from the original object.
-// Each allocatable member of the clone is allocated with the same bounds as
-// in the original object, if it is also allocated in it.
-// Returns a STAT= code (0 when all's well).
-RT_API_ATTRS int InitializeClone(const Descriptor &, const Descriptor &,
-    const typeInfo::DerivedType &, Terminator &, bool hasStat = false,
-    const Descriptor *errMsg = nullptr);
-
 // Call FINAL subroutines, if any
 RT_API_ATTRS void Finalize(
     const Descriptor &, const typeInfo::DerivedType &derived, Terminator *);

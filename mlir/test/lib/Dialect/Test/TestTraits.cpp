@@ -38,8 +38,8 @@ struct TestTraitFolder
   StringRef getArgument() const final { return "test-trait-folder"; }
   StringRef getDescription() const final { return "Run trait folding"; }
   void runOnOperation() override {
-    (void)applyPatternsGreedily(getOperation(),
-                                RewritePatternSet(&getContext()));
+    (void)applyPatternsAndFoldGreedily(getOperation(),
+                                       RewritePatternSet(&getContext()));
   }
 };
 } // namespace

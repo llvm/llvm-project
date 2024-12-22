@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=sparc
+; RUN: llc < %s -march=sparc
 
 ; We cannot emit jump tables on Sparc, but we should correctly handle this case.
 

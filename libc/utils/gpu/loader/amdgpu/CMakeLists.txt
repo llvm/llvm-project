@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
-  FrontendOffloading
   )
 
 add_llvm_executable(amdhsa-loader amdhsa-loader.cpp)

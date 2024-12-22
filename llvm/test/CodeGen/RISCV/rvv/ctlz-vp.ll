@@ -1235,13 +1235,13 @@ declare <vscale x 16 x i64> @llvm.vp.ctlz.nxv16i64(<vscale x 16 x i64>, i1 immar
 define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    fsrmi a4, 1
 ; CHECK-NEXT:    li a2, 52
 ; CHECK-NEXT:    srli a3, a1, 3
 ; CHECK-NEXT:    sub a5, a0, a1
+; CHECK-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    sltu a3, a0, a5
 ; CHECK-NEXT:    addi a3, a3, -1
@@ -1270,11 +1270,11 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv16i64:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v24, v0
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    srli a2, a1, 3
 ; CHECK-ZVBB-NEXT:    sub a3, a0, a1
+; CHECK-ZVBB-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-ZVBB-NEXT:    sltu a2, a0, a3
 ; CHECK-ZVBB-NEXT:    addi a2, a2, -1
@@ -2465,12 +2465,12 @@ define <vscale x 8 x i64> @vp_ctlz_zero_undef_nxv8i64_unmasked(<vscale x 8 x i64
 define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    fsrmi a3, 1
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a4, a0, a1
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sltu a2, a0, a4
 ; CHECK-NEXT:    addi a2, a2, -1
@@ -2497,11 +2497,11 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv16i64:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v24, v0
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    srli a2, a1, 3
 ; CHECK-ZVBB-NEXT:    sub a3, a0, a1
+; CHECK-ZVBB-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-ZVBB-NEXT:    sltu a2, a0, a3
 ; CHECK-ZVBB-NEXT:    addi a2, a2, -1
@@ -2654,8 +2654,9 @@ define <vscale x 1 x i9> @vp_ctlo_zero_undef_nxv1i9(<vscale x 1 x i9> %va, <vsca
 ; CHECK-LABEL: vp_ctlo_zero_undef_nxv1i9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 511
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a1
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsll.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -2669,8 +2670,9 @@ define <vscale x 1 x i9> @vp_ctlo_zero_undef_nxv1i9(<vscale x 1 x i9> %va, <vsca
 ; CHECK-ZVBB-LABEL: vp_ctlo_zero_undef_nxv1i9:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    li a1, 511
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vxor.vx v8, v8, a1
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vsll.vi v8, v8, 7, v0.t
 ; CHECK-ZVBB-NEXT:    vclz.v v8, v8, v0.t
 ; CHECK-ZVBB-NEXT:    ret

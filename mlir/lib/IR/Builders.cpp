@@ -553,7 +553,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
       return cleanupFailure();
 
     // Ask the dialect to materialize a constant operation for this value.
-    Attribute attr = cast<Attribute>(foldResult);
+    Attribute attr = foldResult.get<Attribute>();
     auto *constOp = dialect->materializeConstant(cstBuilder, attr, expectedType,
                                                  op->getLoc());
     if (!constOp) {

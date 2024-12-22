@@ -29,12 +29,12 @@ struct __find_first;
 
 template <class _Hp, class _Tp, size_t _Size>
 struct __find_first<__type_list<_Hp, _Tp>, _Size, true> {
-  using type _LIBCPP_NODEBUG = _Hp;
+  typedef _LIBCPP_NODEBUG _Hp type;
 };
 
 template <class _Hp, class _Tp, size_t _Size>
 struct __find_first<__type_list<_Hp, _Tp>, _Size, false> {
-  using type _LIBCPP_NODEBUG = typename __find_first<_Tp, _Size>::type;
+  typedef _LIBCPP_NODEBUG typename __find_first<_Tp, _Size>::type type;
 };
 
 _LIBCPP_END_NAMESPACE_STD

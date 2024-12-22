@@ -1,3 +1,4 @@
+include(CMakeParseArguments)
 include(CompilerRTUtils)
 
 function(get_aix_libatomic_default_link_flags link_flags export_list)

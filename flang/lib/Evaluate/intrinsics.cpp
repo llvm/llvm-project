@@ -60,25 +60,19 @@ class FoldingContext;
 // AnyType + Rank::arrayOrAssumedRank,  or AnyType + Kind::addressable.
 using CategorySet = common::EnumSet<TypeCategory, 8>;
 static constexpr CategorySet IntType{TypeCategory::Integer};
-static constexpr CategorySet UnsignedType{TypeCategory::Unsigned};
 static constexpr CategorySet RealType{TypeCategory::Real};
 static constexpr CategorySet ComplexType{TypeCategory::Complex};
 static constexpr CategorySet CharType{TypeCategory::Character};
 static constexpr CategorySet LogicalType{TypeCategory::Logical};
-static constexpr CategorySet IntOrUnsignedType{IntType | UnsignedType};
 static constexpr CategorySet IntOrRealType{IntType | RealType};
-static constexpr CategorySet IntUnsignedOrRealType{
-    IntType | UnsignedType | RealType};
 static constexpr CategorySet IntOrRealOrCharType{IntType | RealType | CharType};
 static constexpr CategorySet IntOrLogicalType{IntType | LogicalType};
 static constexpr CategorySet FloatingType{RealType | ComplexType};
-static constexpr CategorySet NumericType{
-    IntType | UnsignedType | RealType | ComplexType};
-static constexpr CategorySet RelatableType{
-    IntType | UnsignedType | RealType | CharType};
+static constexpr CategorySet NumericType{IntType | RealType | ComplexType};
+static constexpr CategorySet RelatableType{IntType | RealType | CharType};
 static constexpr CategorySet DerivedType{TypeCategory::Derived};
 static constexpr CategorySet IntrinsicType{
-    IntType | UnsignedType | RealType | ComplexType | CharType | LogicalType};
+    IntType | RealType | ComplexType | CharType | LogicalType};
 static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
@@ -141,11 +135,8 @@ static constexpr TypePattern SubscriptInt{IntType, KindCode::subscript};
 
 // Match any kind of some intrinsic or derived types
 static constexpr TypePattern AnyInt{IntType, KindCode::any};
-static constexpr TypePattern AnyIntOrUnsigned{IntOrUnsignedType, KindCode::any};
 static constexpr TypePattern AnyReal{RealType, KindCode::any};
 static constexpr TypePattern AnyIntOrReal{IntOrRealType, KindCode::any};
-static constexpr TypePattern AnyIntUnsignedOrReal{
-    IntUnsignedOrRealType, KindCode::any};
 static constexpr TypePattern AnyIntOrRealOrChar{
     IntOrRealOrCharType, KindCode::any};
 static constexpr TypePattern AnyIntOrLogical{IntOrLogicalType, KindCode::any};
@@ -167,12 +158,8 @@ static constexpr TypePattern Addressable{AnyType, KindCode::addressable};
 // Can be used to specify a result so long as at least one argument is
 // a "Same".
 static constexpr TypePattern SameInt{IntType, KindCode::same};
-static constexpr TypePattern SameIntOrUnsigned{
-    IntOrUnsignedType, KindCode::same};
 static constexpr TypePattern SameReal{RealType, KindCode::same};
 static constexpr TypePattern SameIntOrReal{IntOrRealType, KindCode::same};
-static constexpr TypePattern SameIntUnsignedOrReal{
-    IntUnsignedOrRealType, KindCode::same};
 static constexpr TypePattern SameComplex{ComplexType, KindCode::same};
 static constexpr TypePattern SameFloating{FloatingType, KindCode::same};
 static constexpr TypePattern SameNumeric{NumericType, KindCode::same};
@@ -187,11 +174,9 @@ static constexpr TypePattern SameType{AnyType, KindCode::same};
 // &/or kinds differ, their values are converted as if they were operands to
 // an intrinsic operation like addition.  This is a nonstandard but nearly
 // universal extension feature.
-static constexpr TypePattern OperandInt{IntType, KindCode::operand};
 static constexpr TypePattern OperandReal{RealType, KindCode::operand};
+static constexpr TypePattern OperandInt{IntType, KindCode::operand};
 static constexpr TypePattern OperandIntOrReal{IntOrRealType, KindCode::operand};
-
-static constexpr TypePattern OperandUnsigned{UnsignedType, KindCode::operand};
 
 // For ASSOCIATED, the first argument is a typeless pointer
 static constexpr TypePattern AnyPointer{AnyType, KindCode::nullPointerType};
@@ -202,8 +187,6 @@ static constexpr TypePattern ResultNumeric{NumericType, KindCode::likeMultiply};
 
 // Result types with known category and KIND=
 static constexpr TypePattern KINDInt{IntType, KindCode::effectiveKind};
-static constexpr TypePattern KINDUnsigned{
-    UnsignedType, KindCode::effectiveKind};
 static constexpr TypePattern KINDReal{RealType, KindCode::effectiveKind};
 static constexpr TypePattern KINDComplex{ComplexType, KindCode::effectiveKind};
 static constexpr TypePattern KINDChar{CharType, KindCode::effectiveKind};
@@ -381,34 +364,33 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"x", SameReal, Rank::scalar}},
         SameReal, Rank::vector, IntrinsicClass::transformationalFunction},
     {"bge",
-        {{"i", AnyIntOrUnsigned, Rank::elementalOrBOZ},
-            {"j", AnyIntOrUnsigned, Rank::elementalOrBOZ}},
+        {{"i", AnyInt, Rank::elementalOrBOZ},
+            {"j", AnyInt, Rank::elementalOrBOZ}},
         DefaultLogical},
     {"bgt",
-        {{"i", AnyIntOrUnsigned, Rank::elementalOrBOZ},
-            {"j", AnyIntOrUnsigned, Rank::elementalOrBOZ}},
+        {{"i", AnyInt, Rank::elementalOrBOZ},
+            {"j", AnyInt, Rank::elementalOrBOZ}},
         DefaultLogical},
     {"bit_size",
-        {{"i", SameIntOrUnsigned, Rank::anyOrAssumedRank, Optionality::required,
+        {{"i", SameInt, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
         SameInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"ble",
-        {{"i", AnyIntOrUnsigned, Rank::elementalOrBOZ},
-            {"j", AnyIntOrUnsigned, Rank::elementalOrBOZ}},
+        {{"i", AnyInt, Rank::elementalOrBOZ},
+            {"j", AnyInt, Rank::elementalOrBOZ}},
         DefaultLogical},
     {"blt",
-        {{"i", AnyIntOrUnsigned, Rank::elementalOrBOZ},
-            {"j", AnyIntOrUnsigned, Rank::elementalOrBOZ}},
+        {{"i", AnyInt, Rank::elementalOrBOZ},
+            {"j", AnyInt, Rank::elementalOrBOZ}},
         DefaultLogical},
-    {"btest", {{"i", AnyIntOrUnsigned, Rank::elementalOrBOZ}, {"pos", AnyInt}},
+    {"btest", {{"i", AnyInt, Rank::elementalOrBOZ}, {"pos", AnyInt}},
         DefaultLogical},
     {"ceiling", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"char", {{"i", AnyInt, Rank::elementalOrBOZ}, DefaultingKIND}, KINDChar},
     {"cmplx", {{"x", AnyComplex}, DefaultingKIND}, KINDComplex},
     {"cmplx",
-        {{"x", AnyIntUnsignedOrReal, Rank::elementalOrBOZ},
-            {"y", AnyIntUnsignedOrReal, Rank::elementalOrBOZ,
-                Optionality::optional},
+        {{"x", AnyIntOrReal, Rank::elementalOrBOZ},
+            {"y", AnyIntOrReal, Rank::elementalOrBOZ, Optionality::optional},
             DefaultingKIND},
         KINDComplex},
     {"command_argument_count", {}, DefaultInt, Rank::scalar,
@@ -425,9 +407,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameType, Rank::conformable, IntrinsicClass::transformationalFunction},
     {"dble", {{"a", AnyNumeric, Rank::elementalOrBOZ}}, DoublePrecision},
     {"digits",
-        {{"x", AnyIntUnsignedOrReal, Rank::anyOrAssumedRank,
-            Optionality::required, common::Intent::In,
-            {ArgFlag::canBeMoldNull}}},
+        {{"x", AnyIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
+            common::Intent::In, {ArgFlag::canBeMoldNull}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"dim", {{"x", OperandIntOrReal}, {"y", OperandIntOrReal}},
         OperandIntOrReal},
@@ -441,22 +422,20 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         ResultNumeric, Rank::scalar, // conjugates vector_a
         IntrinsicClass::transformationalFunction},
     {"dot_product",
-        {{"vector_a", AnyIntUnsignedOrReal, Rank::vector},
+        {{"vector_a", AnyIntOrReal, Rank::vector},
             {"vector_b", AnyNumeric, Rank::vector}},
         ResultNumeric, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"dprod", {{"x", DefaultReal}, {"y", DefaultReal}}, DoublePrecision},
     {"dshiftl",
-        {{"i", SameIntOrUnsigned},
-            {"j", SameIntOrUnsigned, Rank::elementalOrBOZ}, {"shift", AnyInt}},
-        SameIntOrUnsigned},
-    {"dshiftl", {{"i", BOZ}, {"j", SameIntOrUnsigned}, {"shift", AnyInt}},
-        SameIntOrUnsigned},
+        {{"i", SameInt}, {"j", SameInt, Rank::elementalOrBOZ},
+            {"shift", AnyInt}},
+        SameInt},
+    {"dshiftl", {{"i", BOZ}, {"j", SameInt}, {"shift", AnyInt}}, SameInt},
     {"dshiftr",
-        {{"i", SameIntOrUnsigned},
-            {"j", SameIntOrUnsigned, Rank::elementalOrBOZ}, {"shift", AnyInt}},
-        SameIntOrUnsigned},
-    {"dshiftr", {{"i", BOZ}, {"j", SameIntOrUnsigned}, {"shift", AnyInt}},
-        SameIntOrUnsigned},
+        {{"i", SameInt}, {"j", SameInt, Rank::elementalOrBOZ},
+            {"shift", AnyInt}},
+        SameInt},
+    {"dshiftr", {{"i", BOZ}, {"j", SameInt}, {"shift", AnyInt}}, SameInt},
     {"eoshift",
         {{"array", SameType, Rank::array},
             {"shift", AnyInt, Rank::dimRemovedOrScalar},
@@ -544,53 +523,33 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"getpid", {}, DefaultInt},
     {"getuid", {}, DefaultInt},
     {"huge",
-        {{"x", SameIntUnsignedOrReal, Rank::anyOrAssumedRank,
-            Optionality::required, common::Intent::In,
-            {ArgFlag::canBeMoldNull}}},
-        SameIntUnsignedOrReal, Rank::scalar, IntrinsicClass::inquiryFunction},
+        {{"x", SameIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
+            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+        SameIntOrReal, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"hypot", {{"x", OperandReal}, {"y", OperandReal}}, OperandReal},
     {"iachar", {{"c", AnyChar}, DefaultingKIND}, KINDInt},
-    {"iall",
-        {{"array", SameIntOrUnsigned, Rank::array}, RequiredDIM, OptionalMASK},
-        SameIntOrUnsigned, Rank::dimReduced,
-        IntrinsicClass::transformationalFunction},
-    {"iall",
-        {{"array", SameIntOrUnsigned, Rank::array}, MissingDIM, OptionalMASK},
-        SameIntOrUnsigned, Rank::scalar,
-        IntrinsicClass::transformationalFunction},
-    {"iany",
-        {{"array", SameIntOrUnsigned, Rank::array}, RequiredDIM, OptionalMASK},
-        SameIntOrUnsigned, Rank::dimReduced,
-        IntrinsicClass::transformationalFunction},
-    {"iany",
-        {{"array", SameIntOrUnsigned, Rank::array}, MissingDIM, OptionalMASK},
-        SameIntOrUnsigned, Rank::scalar,
-        IntrinsicClass::transformationalFunction},
-    {"iparity",
-        {{"array", SameIntOrUnsigned, Rank::array}, RequiredDIM, OptionalMASK},
-        SameIntOrUnsigned, Rank::dimReduced,
-        IntrinsicClass::transformationalFunction},
-    {"iparity",
-        {{"array", SameIntOrUnsigned, Rank::array}, MissingDIM, OptionalMASK},
-        SameIntOrUnsigned, Rank::scalar,
-        IntrinsicClass::transformationalFunction},
+    {"iall", {{"array", SameInt, Rank::array}, RequiredDIM, OptionalMASK},
+        SameInt, Rank::dimReduced, IntrinsicClass::transformationalFunction},
+    {"iall", {{"array", SameInt, Rank::array}, MissingDIM, OptionalMASK},
+        SameInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"iany", {{"array", SameInt, Rank::array}, RequiredDIM, OptionalMASK},
+        SameInt, Rank::dimReduced, IntrinsicClass::transformationalFunction},
+    {"iany", {{"array", SameInt, Rank::array}, MissingDIM, OptionalMASK},
+        SameInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"iparity", {{"array", SameInt, Rank::array}, RequiredDIM, OptionalMASK},
+        SameInt, Rank::dimReduced, IntrinsicClass::transformationalFunction},
+    {"iparity", {{"array", SameInt, Rank::array}, MissingDIM, OptionalMASK},
+        SameInt, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"iand", {{"i", OperandInt}, {"j", OperandInt, Rank::elementalOrBOZ}},
         OperandInt},
-    {"iand",
-        {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
-        OperandUnsigned},
-    {"iand", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
-    {"ibclr", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}}, SameIntOrUnsigned},
-    {"ibits", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}, {"len", AnyInt}},
-        SameIntOrUnsigned},
-    {"ibset", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}}, SameIntOrUnsigned},
+    {"iand", {{"i", BOZ}, {"j", SameInt}}, SameInt},
+    {"ibclr", {{"i", SameInt}, {"pos", AnyInt}}, SameInt},
+    {"ibits", {{"i", SameInt}, {"pos", AnyInt}, {"len", AnyInt}}, SameInt},
+    {"ibset", {{"i", SameInt}, {"pos", AnyInt}}, SameInt},
     {"ichar", {{"c", AnyChar}, DefaultingKIND}, KINDInt},
     {"ieor", {{"i", OperandInt}, {"j", OperandInt, Rank::elementalOrBOZ}},
         OperandInt},
-    {"ieor",
-        {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
-        OperandUnsigned},
-    {"ieor", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"ieor", {{"i", BOZ}, {"j", SameInt}}, SameInt},
     {"image_index",
         {{"coarray", AnyData, Rank::coarray}, {"sub", AnyInt, Rank::vector}},
         DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
@@ -616,15 +575,12 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"int_ptr_kind", {}, DefaultInt, Rank::scalar},
     {"ior", {{"i", OperandInt}, {"j", OperandInt, Rank::elementalOrBOZ}},
         OperandInt},
-    {"ior",
-        {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
-        OperandUnsigned},
-    {"ior", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
-    {"ishft", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}}, SameIntOrUnsigned},
+    {"ior", {{"i", BOZ}, {"j", SameInt}}, SameInt},
+    {"ishft", {{"i", SameInt}, {"shift", AnyInt}}, SameInt},
     {"ishftc",
-        {{"i", SameIntOrUnsigned}, {"shift", AnyInt},
+        {{"i", SameInt}, {"shift", AnyInt},
             {"size", AnyInt, Rank::elemental, Optionality::optional}},
-        SameIntOrUnsigned},
+        SameInt},
     {"isnan", {{"a", AnyFloating}}, DefaultLogical},
     {"is_contiguous", {{"array", Addressable, Rank::anyOrAssumedRank}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
@@ -660,7 +616,6 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical},
     {"llt", {{"string_a", SameCharNoLen}, {"string_b", SameCharNoLen}},
         DefaultLogical},
-    {"lnblnk", {{"string", AnyChar}}, DefaultInt},
     {"loc", {{"x", Addressable, Rank::anyOrAssumedRank}}, SubscriptInt,
         Rank::scalar},
     {"log", {{"x", SameFloating}}, SameFloating},
@@ -699,10 +654,6 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"a3", OperandIntOrReal, Rank::elemental, Optionality::repeats}},
         OperandIntOrReal},
     {"max",
-        {{"a1", OperandUnsigned}, {"a2", OperandUnsigned},
-            {"a3", OperandUnsigned, Rank::elemental, Optionality::repeats}},
-        OperandUnsigned},
-    {"max",
         {{"a1", SameCharNoLen}, {"a2", SameCharNoLen},
             {"a3", SameCharNoLen, Rank::elemental, Optionality::repeats}},
         SameCharNoLen},
@@ -731,22 +682,16 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"tsource", SameType}, {"fsource", SameType}, {"mask", AnyLogical}},
         SameType},
     {"merge_bits",
-        {{"i", SameIntOrUnsigned},
-            {"j", SameIntOrUnsigned, Rank::elementalOrBOZ},
-            {"mask", SameIntOrUnsigned, Rank::elementalOrBOZ}},
-        SameIntOrUnsigned},
+        {{"i", SameInt}, {"j", SameInt, Rank::elementalOrBOZ},
+            {"mask", SameInt, Rank::elementalOrBOZ}},
+        SameInt},
     {"merge_bits",
-        {{"i", BOZ}, {"j", SameIntOrUnsigned},
-            {"mask", SameIntOrUnsigned, Rank::elementalOrBOZ}},
-        SameIntOrUnsigned},
+        {{"i", BOZ}, {"j", SameInt}, {"mask", SameInt, Rank::elementalOrBOZ}},
+        SameInt},
     {"min",
         {{"a1", OperandIntOrReal}, {"a2", OperandIntOrReal},
             {"a3", OperandIntOrReal, Rank::elemental, Optionality::repeats}},
         OperandIntOrReal},
-    {"min",
-        {{"a1", OperandUnsigned}, {"a2", OperandUnsigned},
-            {"a3", OperandUnsigned, Rank::elemental, Optionality::repeats}},
-        OperandUnsigned},
     {"min",
         {{"a1", SameCharNoLen}, {"a2", SameCharNoLen},
             {"a3", SameCharNoLen, Rank::elemental, Optionality::repeats}},
@@ -774,11 +719,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameRelatable, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"mod", {{"a", OperandIntOrReal}, {"p", OperandIntOrReal}},
         OperandIntOrReal},
-    {"mod", {{"a", OperandUnsigned}, {"p", OperandUnsigned}}, OperandUnsigned},
     {"modulo", {{"a", OperandIntOrReal}, {"p", OperandIntOrReal}},
         OperandIntOrReal},
-    {"modulo", {{"a", OperandUnsigned}, {"p", OperandUnsigned}},
-        OperandUnsigned},
     {"nearest", {{"x", SameReal}, {"s", AnyReal}}, SameReal},
     {"new_line",
         {{"a", SameCharNoLen, Rank::anyOrAssumedRank, Optionality::required,
@@ -789,7 +731,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
     {"norm2", {{"x", SameReal, Rank::array}, MissingDIM}, SameReal,
         Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"not", {{"i", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"not", {{"i", SameInt}}, SameInt},
     // NULL() is a special case handled in Probe() below
     {"num_images", {}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
@@ -905,17 +847,12 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"r", AnyInt, Rank::scalar, Optionality::optional},
             {"radix", AnyInt, Rank::scalar}},
         DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"selected_unsigned_kind", {{"r", AnyInt, Rank::scalar}}, DefaultInt,
-        Rank::scalar, IntrinsicClass::transformationalFunction},
     {"set_exponent", {{"x", SameReal}, {"i", AnyInt}}, SameReal},
     {"shape", {{"source", AnyData, Rank::anyOrAssumedRank}, SizeDefaultKIND},
         KINDInt, Rank::vector, IntrinsicClass::inquiryFunction},
-    {"shifta", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}},
-        SameIntOrUnsigned},
-    {"shiftl", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}},
-        SameIntOrUnsigned},
-    {"shiftr", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}},
-        SameIntOrUnsigned},
+    {"shifta", {{"i", SameInt}, {"shift", AnyInt}}, SameInt},
+    {"shiftl", {{"i", SameInt}, {"shift", AnyInt}}, SameInt},
+    {"shiftr", {{"i", SameInt}, {"shift", AnyInt}}, SameInt},
     {"sign", {{"a", SameInt}, {"b", AnyInt}}, SameInt},
     {"sign", {{"a", SameReal}, {"b", AnyReal}}, SameReal},
     {"sin", {{"x", SameFloating}}, SameFloating},
@@ -947,8 +884,6 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         IntrinsicClass::transformationalFunction},
     {"sum", {{"array", SameNumeric, Rank::array}, MissingDIM, OptionalMASK},
         SameNumeric, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"system", {{"command", DefaultChar, Rank::scalar}}, DefaultInt,
-        Rank::scalar},
     {"tan", {{"x", SameFloating}}, SameFloating},
     {"tand", {{"x", SameFloating}}, SameFloating},
     {"tanh", {{"x", SameFloating}}, SameFloating},
@@ -990,10 +925,6 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"ucobound",
         {{"coarray", AnyData, Rank::coarray}, OptionalDIM, SizeDefaultKIND},
         KINDInt, Rank::scalarIfDim, IntrinsicClass::inquiryFunction},
-    {"uint", {{"a", AnyNumeric, Rank::elementalOrBOZ}, DefaultingKIND},
-        KINDUnsigned},
-    {"umaskl", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
-    {"umaskr", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
     {"unpack",
         {{"vector", SameType, Rank::vector}, {"mask", AnyLogical, Rank::array},
             {"field", SameType, Rank::conformable}},
@@ -1084,7 +1015,6 @@ static const std::pair<const char *, const char *> genericAlias[]{
     {"lshift", "shiftl"},
     {"or", "ior"},
     {"rshift", "shifta"},
-    {"unsigned", "uint"}, // Sun vs gfortran names
     {"xor", "ieor"},
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
 };
@@ -1527,8 +1457,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"mvbits",
-        {{"from", SameIntOrUnsigned}, {"frompos", AnyInt}, {"len", AnyInt},
-            {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
+        {{"from", SameInt}, {"frompos", AnyInt}, {"len", AnyInt},
+            {"to", SameInt, Rank::elemental, Optionality::required,
                 common::Intent::Out},
             {"topos", AnyInt}},
         {}, Rank::elemental, IntrinsicClass::elementalSubroutine}, // elemental
@@ -1537,9 +1467,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"image_distinct", AnyLogical, Rank::scalar}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"random_number",
-        {{"harvest", {RealType | UnsignedType, KindCode::any}, Rank::known,
-            Optionality::required, common::Intent::Out,
-            {ArgFlag::notAssumedSize}}},
+        {{"harvest", AnyReal, Rank::known, Optionality::required,
+            common::Intent::Out, {ArgFlag::notAssumedSize}}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"random_seed",
         {{"size", DefaultInt, Rank::scalar, Optionality::optional,
@@ -2711,7 +2640,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{
-      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}, {"system"s}};
+      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}};
 
   return llvm::is_contained(dualIntrinsic, name);
 }

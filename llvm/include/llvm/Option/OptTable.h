@@ -53,8 +53,10 @@ class OptTable {
 public:
   /// Entry for a single option instance in the option data table.
   struct Info {
-    unsigned PrefixesOffset;
-    unsigned PrefixedNameOffset;
+    /// A null terminated array of prefix strings to apply to name while
+    /// matching.
+    ArrayRef<StringLiteral> Prefixes;
+    StringLiteral PrefixedName;
     const char *HelpText;
     // Help text for specific visibilities. A list of pairs, where each pair
     // is a list of visibilities and a specific help string for those
@@ -78,56 +80,15 @@ public:
     const char *AliasArgs;
     const char *Values;
 
-    bool hasNoPrefix() const { return PrefixesOffset == 0; }
-
-    unsigned getNumPrefixes(ArrayRef<unsigned> PrefixesTable) const {
-      return PrefixesTable[PrefixesOffset];
-    }
-
-    ArrayRef<unsigned>
-    getPrefixOffsets(ArrayRef<unsigned> PrefixesTable) const {
-      return hasNoPrefix() ? ArrayRef<unsigned>()
-                           : PrefixesTable.slice(PrefixesOffset + 1,
-                                                 getNumPrefixes(PrefixesTable));
-    }
-
-    void appendPrefixes(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
-                        SmallVectorImpl<StringRef> &Prefixes) const {
-      for (unsigned PrefixOffset : getPrefixOffsets(PrefixesTable))
-        Prefixes.push_back(&StrTable[PrefixOffset]);
-    }
-
-    StringRef getPrefix(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
-                        unsigned PrefixIndex) const {
-      return &StrTable[getPrefixOffsets(PrefixesTable)[PrefixIndex]];
-    }
-
-    StringRef getPrefixedName(const char *StrTable) const {
-      return &StrTable[PrefixedNameOffset];
-    }
-
-    StringRef getName(const char *StrTable,
-                      ArrayRef<unsigned> PrefixesTable) const {
-      unsigned PrefixLength =
-          hasNoPrefix() ? 0 : getPrefix(StrTable, PrefixesTable, 0).size();
-      return getPrefixedName(StrTable).drop_front(PrefixLength);
+    StringRef getName() const {
+      unsigned PrefixLength = Prefixes.empty() ? 0 : Prefixes[0].size();
+      return PrefixedName.drop_front(PrefixLength);
     }
   };
 
 private:
-  // A unified string table for these options. Individual strings are stored as
-  // null terminated C-strings at offsets within this table.
-  const char *StrTable;
-
-  // A table of different sets of prefixes. Each set starts with the number of
-  // prefixes in that set followed by that many offsets into the string table
-  // for each of the prefix strings. This is essentially a Pascal-string style
-  // encoding.
-  ArrayRef<unsigned> PrefixesTable;
-
   /// The option information table.
   ArrayRef<Info> OptionInfos;
-
   bool IgnoreCase;
   bool GroupedShortOptions = false;
   bool DashDashParsing = false;
@@ -141,12 +102,12 @@ protected:
   /// special option like 'input' or 'unknown', and is not an option group).
   unsigned FirstSearchableIndex = 0;
 
-  /// The union of all option prefixes. If an argument does not begin with
-  /// one of these, it is an input.
-  SmallVector<StringRef> PrefixesUnion;
-
   /// The union of the first element of all option prefixes.
   SmallString<8> PrefixChars;
+
+  /// The union of all option prefixes. If an argument does not begin with
+  /// one of these, it is an input.
+  virtual ArrayRef<StringLiteral> getPrefixesUnion() const = 0;
 
 private:
   const Info &getInfo(OptSpecifier Opt) const {
@@ -161,20 +122,13 @@ private:
 protected:
   /// Initialize OptTable using Tablegen'ed OptionInfos. Child class must
   /// manually call \c buildPrefixChars once they are fully constructed.
-  OptTable(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
-           ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+  OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
 
   /// Build (or rebuild) the PrefixChars member.
   void buildPrefixChars();
 
 public:
   virtual ~OptTable();
-
-  /// Return the string table used for option names.
-  const char *getStrTable() const { return StrTable; }
-
-  /// Return the prefixes table used for option names.
-  ArrayRef<unsigned> getPrefixesTable() const { return PrefixesTable; }
 
   /// Return the total number of option classes.
   unsigned getNumOptions() const { return OptionInfos.size(); }
@@ -187,25 +141,7 @@ public:
 
   /// Lookup the name of the given option.
   StringRef getOptionName(OptSpecifier id) const {
-    return getInfo(id).getName(StrTable, PrefixesTable);
-  }
-
-  /// Lookup the prefix of the given option.
-  StringRef getOptionPrefix(OptSpecifier id) const {
-    const Info &I = getInfo(id);
-    return I.hasNoPrefix() ? StringRef()
-                           : I.getPrefix(StrTable, PrefixesTable, 0);
-  }
-
-  void appendOptionPrefixes(OptSpecifier id,
-                            SmallVectorImpl<StringRef> &Prefixes) const {
-    const Info &I = getInfo(id);
-    I.appendPrefixes(StrTable, PrefixesTable, Prefixes);
-  }
-
-  /// Lookup the prefixed name of the given option.
-  StringRef getOptionPrefixedName(OptSpecifier id) const {
-    return getInfo(id).getPrefixedName(StrTable);
+    return getInfo(id).getName();
   }
 
   /// Get the kind of the given option.
@@ -417,21 +353,27 @@ private:
 
 /// Specialization of OptTable
 class GenericOptTable : public OptTable {
+  SmallVector<StringLiteral> PrefixesUnionBuffer;
+
 protected:
-  GenericOptTable(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
-                  ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+  GenericOptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+  ArrayRef<StringLiteral> getPrefixesUnion() const final {
+    return PrefixesUnionBuffer;
+  }
 };
 
 class PrecomputedOptTable : public OptTable {
+  ArrayRef<StringLiteral> PrefixesUnion;
+
 protected:
-  PrecomputedOptTable(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
-                      ArrayRef<Info> OptionInfos,
-                      ArrayRef<unsigned> PrefixesUnionOffsets,
+  PrecomputedOptTable(ArrayRef<Info> OptionInfos,
+                      ArrayRef<StringLiteral> PrefixesTable,
                       bool IgnoreCase = false)
-      : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase) {
-    for (unsigned PrefixOffset : PrefixesUnionOffsets)
-      PrefixesUnion.push_back(&StrTable[PrefixOffset]);
+      : OptTable(OptionInfos, IgnoreCase), PrefixesUnion(PrefixesTable) {
     buildPrefixChars();
+  }
+  ArrayRef<StringLiteral> getPrefixesUnion() const final {
+    return PrefixesUnion;
   }
 };
 
@@ -440,35 +382,31 @@ protected:
 } // end namespace llvm
 
 #define LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                       \
-    ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \
-    ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES)                                                           \
+    ID_PREFIX, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
   ID_PREFIX##ID
 
-#define LLVM_MAKE_OPT_ID(PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND,      \
-                         GROUP, ALIAS, ALIASARGS, FLAGS, VISIBILITY, PARAM,    \
-                         HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES)      \
-  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, \
-                                  ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,    \
-                                  VISIBILITY, PARAM, HELPTEXT,                 \
-                                  HELPTEXTSFORVARIANTS, METAVAR, VALUE)
+#define LLVM_MAKE_OPT_ID(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS,        \
+                         ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT,        \
+                         HELPTEXTSFORVARIANTS, METAVAR, VALUES)                \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                             \
+      OPT_, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,   \
+      VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUE)
 
 #define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
-    ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \
-    ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES)                                                           \
+    ID_PREFIX, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
   llvm::opt::OptTable::Info {                                                  \
-    PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, HELPTEXT, HELPTEXTSFORVARIANTS,     \
-        METAVAR, ID_PREFIX##ID, llvm::opt::Option::KIND##Class, PARAM, FLAGS,  \
+    PREFIX, PREFIXED_NAME, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,            \
+        ID_PREFIX##ID, llvm::opt::Option::KIND##Class, PARAM, FLAGS,           \
         VISIBILITY, ID_PREFIX##GROUP, ID_PREFIX##ALIAS, ALIASARGS, VALUES      \
   }
 
-#define LLVM_CONSTRUCT_OPT_INFO(                                               \
-    PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS,  \
-    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
+#define LLVM_CONSTRUCT_OPT_INFO(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, \
+                                ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, \
+                                HELPTEXTSFORVARIANTS, METAVAR, VALUES)         \
   LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                      \
-      OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,     \
-      ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,     \
-      METAVAR, VALUES)
+      OPT_, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,   \
+      VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES)
 
 #endif // LLVM_OPTION_OPTTABLE_H

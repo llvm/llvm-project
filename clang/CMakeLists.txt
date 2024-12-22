@@ -362,6 +362,7 @@ if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
+include(CMakeParseArguments)
 include(AddClang)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)

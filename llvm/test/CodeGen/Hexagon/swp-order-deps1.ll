@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
+; RUN: llc -march=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; Check that the dependences are order correctly, and the list can be

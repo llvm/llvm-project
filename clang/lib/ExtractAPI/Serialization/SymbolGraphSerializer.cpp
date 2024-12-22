@@ -1067,8 +1067,9 @@ void SymbolGraphSerializer::serializeWithExtensionGraphs(
 
   for (auto &ExtensionSGF : Serializer.ExtendedModules) {
     if (auto ExtensionOS =
-            CreateOutputStream(API.ProductName + "@" + ExtensionSGF.getKey()))
-      Serializer.serializeGraphToStream(*ExtensionOS, Options, API.ProductName,
+            CreateOutputStream(ExtensionSGF.getKey() + "@" + API.ProductName))
+      Serializer.serializeGraphToStream(*ExtensionOS, Options,
+                                        ExtensionSGF.getKey(),
                                         std::move(ExtensionSGF.getValue()));
   }
 }

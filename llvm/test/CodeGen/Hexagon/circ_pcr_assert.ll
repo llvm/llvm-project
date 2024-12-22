@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; REQUIRES: asserts
 ; The test case validates the fact that if the modifier register value "-268430336"
 ; is passed as target constant, then the compiler must not assert.

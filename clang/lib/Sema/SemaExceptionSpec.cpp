@@ -1205,16 +1205,15 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     if (DTy.isNull() || DTy->isDependentType()) {
       CT = CT_Dependent;
     } else {
-      const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
-      CT = canCalleeThrow(*this, DE, OperatorDelete);
-      if (!OperatorDelete->isDestroyingOperatorDelete()) {
-        if (const auto *RD = DTy->getAsCXXRecordDecl()) {
-          if (const CXXDestructorDecl *DD = RD->getDestructor())
-            CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, DD));
-        }
-        if (CT == CT_Can)
-          return CT;
+      CT = canCalleeThrow(*this, DE, DE->getOperatorDelete());
+      if (const RecordType *RT = DTy->getAs<RecordType>()) {
+        const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+        const CXXDestructorDecl *DD = RD->getDestructor();
+        if (DD)
+          CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, DD));
       }
+      if (CT == CT_Can)
+        return CT;
     }
     return mergeCanThrow(CT, canSubStmtsThrow(*this, DE));
   }
@@ -1396,11 +1395,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
   case Expr::HLSLOutArgExprClass:
-  case Stmt::OpenACCEnterDataConstructClass:
-  case Stmt::OpenACCExitDataConstructClass:
-  case Stmt::OpenACCWaitConstructClass:
-  case Stmt::OpenACCInitConstructClass:
-  case Stmt::OpenACCShutdownConstructClass:
     // These expressions can never throw.
     return CT_Cannot;
 
@@ -1412,8 +1406,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCComputeConstructClass:
   case Stmt::OpenACCLoopConstructClass:
   case Stmt::OpenACCCombinedConstructClass:
-  case Stmt::OpenACCDataConstructClass:
-  case Stmt::OpenACCHostDataConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:

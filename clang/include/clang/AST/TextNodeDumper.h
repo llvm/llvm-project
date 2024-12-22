@@ -411,13 +411,6 @@ public:
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
   void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S);
   void VisitOpenACCCombinedConstruct(const OpenACCCombinedConstruct *S);
-  void VisitOpenACCDataConstruct(const OpenACCDataConstruct *S);
-  void VisitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct *S);
-  void VisitOpenACCExitDataConstruct(const OpenACCExitDataConstruct *S);
-  void VisitOpenACCHostDataConstruct(const OpenACCHostDataConstruct *S);
-  void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S);
-  void VisitOpenACCInitConstruct(const OpenACCInitConstruct *S);
-  void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *S);
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);

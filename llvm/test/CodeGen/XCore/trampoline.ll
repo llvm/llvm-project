@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=xcore | FileCheck %s
+; RUN: llc < %s -march=xcore | FileCheck %s
 
 %struct.FRAME.f = type { i32, ptr }
 

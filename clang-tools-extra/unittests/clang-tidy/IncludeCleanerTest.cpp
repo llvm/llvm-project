@@ -71,12 +71,10 @@ TEST(IncludeCleanerCheckTest, SuppressUnusedIncludes) {
 
   std::vector<ClangTidyError> Errors;
   ClangTidyOptions Opts;
-  Opts.CheckOptions["test-check-0.IgnoreHeaders"] = llvm::StringRef{
-      llvm::formatv("bar.h;{0};{1};vector;<list>;",
-                    llvm::Regex::escape(
-                        appendPathFileSystemIndependent({"foo", "qux.h"})),
-                    llvm::Regex::escape(
-                        appendPathFileSystemIndependent({"baz", "qux"})))};
+  Opts.CheckOptions["IgnoreHeaders"] = llvm::StringRef{llvm::formatv(
+      "bar.h;{0};{1};vector;<list>;",
+      llvm::Regex::escape(appendPathFileSystemIndependent({"foo", "qux.h"})),
+      llvm::Regex::escape(appendPathFileSystemIndependent({"baz", "qux"})))};
   EXPECT_EQ(
       PostCode,
       runCheckOnCode<IncludeCleanerCheck>(
@@ -141,7 +139,7 @@ int BarResult2 = $diag2^bar();)");
   {
     std::vector<ClangTidyError> Errors;
     ClangTidyOptions Opts;
-    Opts.CheckOptions["test-check-0.DeduplicateFindings"] = "false";
+    Opts.CheckOptions.insert({"DeduplicateFindings", "false"});
     runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp", {},
                                         Opts,
                                         {{"baz.h", R"(#pragma once
@@ -172,7 +170,7 @@ std::vector x;
 )";
 
   ClangTidyOptions Opts;
-  Opts.CheckOptions["test-check-0.IgnoreHeaders"] = llvm::StringRef{
+  Opts.CheckOptions["IgnoreHeaders"] = llvm::StringRef{
       "public.h;<vector>;baz.h;" +
       llvm::Regex::escape(appendPathFileSystemIndependent({"foo", "qux.h"}))};
   std::vector<ClangTidyError> Errors;

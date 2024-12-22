@@ -15,7 +15,7 @@
 
 #else // Overlay mode
 
-#include "unistd_overlay.h"
+#include <unistd.h>
 
 #endif // LLVM_LIBC_FULL_BUILD
 

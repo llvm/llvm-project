@@ -1,4 +1,4 @@
-//===-- RISCVVEmitter.cpp - Generate riscv_vector.h for use with clang ----===//
+//===- RISCVVEmitter.cpp - Generate riscv_vector.h for use with clang -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -487,6 +487,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
       }
     }
   }
+
+  OS << "#define __riscv_v_intrinsic_overloading 1\n";
 
   OS << "\n#ifdef __cplusplus\n";
   OS << "}\n";

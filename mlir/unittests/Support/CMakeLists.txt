@@ -4,5 +4,5 @@ add_mlir_unittest(MLIRSupportTests
   StorageUniquerTest.cpp
 )
 
-mlir_target_link_libraries(MLIRSupportTests
+target_link_libraries(MLIRSupportTests
   PRIVATE MLIRSupport)

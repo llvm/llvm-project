@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=51
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=50
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
@@ -221,15 +221,7 @@ use omp_lib
 
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
-  !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
-  do i = 1, N
-     a = 3.14
-  enddo
-
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
-  !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
-  !$omp do ordered(1-1) linear(a)
   do i = 1, N
      a = 3.14
   enddo
@@ -249,7 +241,7 @@ use omp_lib
   enddo
   !$omp end parallel do simd
 
-  !ERROR: TARGET is not a constituent of the PARALLEL DO directive
+  !ERROR: Unmatched directive name modifier TARGET on the IF clause
   !$omp parallel do if(target:a>1.)
   do i = 1, N
   enddo
@@ -384,7 +376,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: The alignment value should be a constant positive integer
+  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
   !$omp simd aligned(cpt:-2)
   do i = 1, N
      a = 3.14
@@ -515,6 +507,7 @@ use omp_lib
   !$omp flush acquire
   !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
+  !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
   !$omp flush seq_cst
   !ERROR: RELAXED clause is not allowed on the FLUSH directive
   !$omp flush relaxed
@@ -540,7 +533,7 @@ use omp_lib
   a = 1.
   !$omp end task
 
-  !ERROR: TASKLOOP is not a constituent of the TASK directive
+  !ERROR: Unmatched directive name modifier TASKLOOP on the IF clause
   !$omp task private(a) if(taskloop:a.eq.1)
   a = 1.
   !$omp end task
@@ -580,7 +573,7 @@ use omp_lib
 
   allocate(allc)
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
-  !ERROR: The alignment value should be a constant positive integer
+  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
   !$omp taskloop simd simdlen(-1) aligned(allc:-2)
   do i = 1, N
      allc = 3.14

@@ -277,7 +277,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   if (MDTWrapper) {
     MDT = &MDTWrapper->getDomTree();
   } else {
-    OwnedMDT = std::make_unique<MachineDominatorTree>(MF);
+    OwnedMDT = std::make_unique<MachineDominatorTree>();
+    OwnedMDT->getBase().recalculate(MF);
     MDT = OwnedMDT.get();
   }
 

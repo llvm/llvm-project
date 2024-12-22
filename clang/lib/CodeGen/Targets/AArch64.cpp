@@ -177,9 +177,6 @@ public:
                             const FunctionDecl *Callee, const CallArgList &Args,
                             QualType ReturnType) const override;
 
-  bool wouldInliningViolateFunctionCallABI(
-      const FunctionDecl *Caller, const FunctionDecl *Callee) const override;
-
 private:
   // Diagnose calls between functions with incompatible Streaming SVE
   // attributes.
@@ -1146,22 +1143,12 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
   }
 }
 
-enum class ArmSMEInlinability : uint8_t {
-  Ok = 0,
-  ErrorCalleeRequiresNewZA = 1 << 0,
-  WarnIncompatibleStreamingModes = 1 << 1,
-  ErrorIncompatibleStreamingModes = 1 << 2,
+void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
+    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
+    const FunctionDecl *Callee) const {
+  if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
+    return;
 
-  IncompatibleStreamingModes =
-      WarnIncompatibleStreamingModes | ErrorIncompatibleStreamingModes,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ErrorIncompatibleStreamingModes),
-};
-
-/// Determines if there are any Arm SME ABI issues with inlining \p Callee into
-/// \p Caller. Returns the issue (if any) in the ArmSMEInlinability bit enum.
-static ArmSMEInlinability GetArmSMEInlinability(const FunctionDecl *Caller,
-                                                const FunctionDecl *Callee) {
   bool CallerIsStreaming =
       IsArmStreamingFunction(Caller, /*IncludeLocallyStreaming=*/true);
   bool CalleeIsStreaming =
@@ -1169,44 +1156,17 @@ static ArmSMEInlinability GetArmSMEInlinability(const FunctionDecl *Caller,
   bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
   bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
 
-  ArmSMEInlinability Inlinability = ArmSMEInlinability::Ok;
-
   if (!CalleeIsStreamingCompatible &&
-      (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible)) {
-    if (CalleeIsStreaming)
-      Inlinability |= ArmSMEInlinability::ErrorIncompatibleStreamingModes;
-    else
-      Inlinability |= ArmSMEInlinability::WarnIncompatibleStreamingModes;
-  }
+      (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
+    CGM.getDiags().Report(
+        CallLoc, CalleeIsStreaming
+                     ? diag::err_function_always_inline_attribute_mismatch
+                     : diag::warn_function_always_inline_attribute_mismatch)
+        << Caller->getDeclName() << Callee->getDeclName() << "streaming";
   if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
     if (NewAttr->isNewZA())
-      Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZA;
-
-  return Inlinability;
-}
-
-void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
-    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
-    const FunctionDecl *Callee) const {
-  if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
-    return;
-
-  ArmSMEInlinability Inlinability = GetArmSMEInlinability(Caller, Callee);
-
-  if ((Inlinability & ArmSMEInlinability::IncompatibleStreamingModes) !=
-      ArmSMEInlinability::Ok)
-    CGM.getDiags().Report(
-        CallLoc,
-        (Inlinability & ArmSMEInlinability::ErrorIncompatibleStreamingModes) ==
-                ArmSMEInlinability::ErrorIncompatibleStreamingModes
-            ? diag::err_function_always_inline_attribute_mismatch
-            : diag::warn_function_always_inline_attribute_mismatch)
-        << Caller->getDeclName() << Callee->getDeclName() << "streaming";
-
-  if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZA) ==
-      ArmSMEInlinability::ErrorCalleeRequiresNewZA)
-    CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
-        << Callee->getDeclName();
+      CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
+          << Callee->getDeclName();
 }
 
 // If the target does not have floating-point registers, but we are using a
@@ -1238,12 +1198,6 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
                                                     QualType ReturnType) const {
   checkFunctionCallABIStreaming(CGM, CallLoc, Caller, Callee);
   checkFunctionCallABISoftFloat(CGM, CallLoc, Caller, Callee, Args, ReturnType);
-}
-
-bool AArch64TargetCodeGenInfo::wouldInliningViolateFunctionCallABI(
-    const FunctionDecl *Caller, const FunctionDecl *Callee) const {
-  return Caller && Callee &&
-         GetArmSMEInlinability(Caller, Callee) != ArmSMEInlinability::Ok;
 }
 
 void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,

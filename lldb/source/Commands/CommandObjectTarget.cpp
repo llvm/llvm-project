@@ -2200,7 +2200,7 @@ protected:
     }
 
     clang::CompilerInstance compiler;
-    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
 
     const char *clang_args[] = {"clang", pcm_path};
     compiler.setInvocation(clang::createInvocation(clang_args));

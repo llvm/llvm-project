@@ -94,14 +94,14 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
     transform::TransformState &state, TransformOpInterface transformOp,
     SmallVector<OpFoldResult> &result, ArrayRef<OpFoldResult> ofrs) {
   for (OpFoldResult ofr : ofrs) {
-    if (auto attr = dyn_cast<Attribute>(ofr)) {
-      if (!isa<IntegerAttr>(attr))
+    if (ofr.is<Attribute>()) {
+      if (!isa<IntegerAttr>(ofr.get<Attribute>()))
         return transformOp.emitDefiniteFailure() << "expected IntegerAttr";
       result.push_back(ofr);
       continue;
     }
 
-    Value transformValue = cast<Value>(ofr);
+    Value transformValue = ofr.get<Value>();
     if (isa<TransformParamTypeInterface>(transformValue.getType())) {
       ArrayRef<Attribute> params = state.getParams(transformValue);
       if (params.size() != 1)
@@ -180,11 +180,12 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     TransformState &state, TransformOpInterface &transformOp,
     ArrayRef<OpFoldResult> mixedResults, SmallVectorImpl<int64_t> &reified) {
   for (OpFoldResult paramOrHandle : mixedResults) {
-    if (auto attr = dyn_cast<Attribute>(paramOrHandle)) {
-      reified.push_back(cast<IntegerAttr>(attr).getInt());
+    if (isa<Attribute>(paramOrHandle)) {
+      reified.push_back(
+          cast<IntegerAttr>(paramOrHandle.get<Attribute>()).getInt());
       continue;
-    } else if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
-      ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
+    } else if (isa<ParamType>(paramOrHandle.get<Value>().getType())) {
+      ArrayRef<Attribute> params = state.getParams(paramOrHandle.get<Value>());
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
       reified.push_back(
@@ -192,7 +193,7 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
       continue;
     }
 
-    Value handle = cast<Value>(paramOrHandle);
+    Value handle = paramOrHandle.get<Value>();
     if (!isa<TransformHandleTypeInterface>(handle.getType()))
       return transformOp.emitSilenceableError() << "unexpected value handle";
     auto payload = state.getPayloadOps(handle);
@@ -226,16 +227,6 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
 void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populateEraseUnnecessaryInputsPatterns(patterns);
-}
-
-void transform::ApplyDecomposeTensorPackUnpackPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  linalg::populateDecomposePackUnpackPatterns(patterns);
-}
-
-void transform::ApplyDecomposeTensorPadPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  linalg::populateDecomposePadPatterns(patterns);
 }
 
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
@@ -1175,9 +1166,7 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  bool lowerPadLikeWithInsertSlice = getLowerPadLikeWithInsertSlice();
-  FailureOr<LowerPackResult> res =
-      lowerPack(rewriter, target, lowerPadLikeWithInsertSlice);
+  FailureOr<LowerPackResult> res = lowerPack(rewriter, target);
   if (failed(res)) {
     return mlir::emitSilenceableFailure(target->getLoc())
            << "cannot lower to pad + expand + transpose";
@@ -1197,9 +1186,7 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  bool lowerUnpadLikeWithExtractSlice = getLowerUnpadLikeWithExtractSlice();
-  FailureOr<LowerUnPackOpResult> res =
-      lowerUnPack(rewriter, target, lowerUnpadLikeWithExtractSlice);
+  FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
   if (failed(res)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()
@@ -2223,7 +2210,7 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     return emitDefaultDefiniteFailure(target);
 
   if (target->getNumResults())
-    rewriter.replaceOp(target, maybeTilingResult->mergeResult.replacements);
+    rewriter.replaceOp(target, maybeTilingResult->replacements);
   else
     rewriter.eraseOp(target);
 
@@ -2630,18 +2617,17 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<scf::SCFTilingResult> result = scf::tileReductionUsingScf(
+  FailureOr<scf::SCFReductionTilingResult> result = scf::tileReductionUsingScf(
       rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getTileSizes())));
 
   if (failed(result))
     return emitDefaultSilenceableFailure(target);
-  rewriter.replaceOp(target, result->mergeResult.replacements);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->tiledOps)
+  for (auto parallelTiledOp : result->parallelTiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeResult.mergeOps)
+  for (auto mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3065,7 +3051,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     if (failed(maybeTilingResult))
       return DiagnosedSilenceableFailure::definiteFailure();
 
-    rewriter.replaceOp(op, maybeTilingResult->mergeResult.replacements);
+    rewriter.replaceOp(op, maybeTilingResult->replacements);
 
     tiled.append(maybeTilingResult->tiledOps);
     for (const auto &en2 : llvm::enumerate(maybeTilingResult->loops))
@@ -3304,7 +3290,7 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
   if (failed(maybeTilingResult))
     return transformOp.emitDefaultSilenceableFailure(tileableOp);
 
-  rewriter.replaceOp(tileableOp, maybeTilingResult->mergeResult.replacements);
+  rewriter.replaceOp(tileableOp, maybeTilingResult->replacements);
 
   tilingResult = *maybeTilingResult;
 
@@ -3500,18 +3486,14 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
   linalg::populateInsertSliceVectorizationPatterns(patterns);
 
-  if (getVectorizePadding()) {
+  if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
-    // This creates an alternative path for lowering tensor.pad - by
-    // decomposing it into e.g. linalg.fill.
-    linalg::populateDecomposePadPatterns(patterns);
-  }
   vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
   GreedyRewriteConfig config;
   config.listener = &listener;
-  if (failed(applyPatternsGreedily(target, std::move(patterns), config)))
+  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns), config)))
     return emitDefaultDefiniteFailure(target);
 
   results.push_back(target);

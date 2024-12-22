@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -mattr="+hvxv60,+hvx-length64b" < %s
+; RUN: llc -march=hexagon -mattr="+hvxv60,+hvx-length64b" < %s
 ; REQUIRES: asserts
 
 target triple = "hexagon"

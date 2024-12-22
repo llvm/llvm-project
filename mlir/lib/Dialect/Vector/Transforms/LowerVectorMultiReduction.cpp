@@ -486,7 +486,7 @@ struct LowerVectorMultiReductionPass
     populateVectorMultiReductionLoweringPatterns(loweringPatterns,
                                                  this->loweringStrategy);
 
-    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 

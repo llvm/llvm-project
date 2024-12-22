@@ -301,8 +301,7 @@ struct Allocator {
 
   ~Allocator() {
     atomic_store_relaxed(&destructing, 1);
-    if (flags()->dump_at_exit)
-      FinishAndWrite();
+    FinishAndWrite();
   }
 
   static void PrintCallback(const uptr Key, LockedMemInfoBlock *const &Value,

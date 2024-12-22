@@ -1,5 +1,4 @@
-;; Tests memprof when contains loop unroll of allocation, where the unrolled
-;; allocations have the same context but different allocation types.
+;; Tests memprof when contains loop unroll.
 
 ;; Avoid failures on big-endian systems that can't read the profile properly
 ; REQUIRES: x86_64-linux
@@ -10,12 +9,8 @@
 ;; $ clang++ -gmlt -fdebug-info-for-profiling -S %S/Inputs/memprof_loop_unroll_b.cc -emit-llvm
 
 ; RUN: llvm-profdata merge %S/Inputs/memprof_loop_unroll.memprofraw --profiled-binary %S/Inputs/memprof_loop_unroll.exe -o %t.memprofdata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S | FileCheck %s
 
-;; Conservatively annotate as not cold. We get two messages as there are two
-;; unrolled copies of the allocation.
-; CHECK: MemProf hinting: Total size for full allocation context hash {{.*}} and indistinguishable alloc type notcold: 4
-; CHECK: MemProf hinting: Total size for full allocation context hash {{.*}} and indistinguishable alloc type notcold: 4
 ; CHECK: call {{.*}} @_Znam{{.*}} #[[ATTR:[0-9]+]]
 ; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="notcold" }
 ; CHECK-NOT: stackIds: ()

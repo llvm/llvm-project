@@ -520,12 +520,6 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   // TODO: Align down to dword alignment and extract bits for extending loads.
   for (auto &Arg : F.args()) {
-    // TODO: Add support for kernarg preload.
-    if (Arg.hasAttribute("amdgpu-hidden-argument")) {
-      LLVM_DEBUG(dbgs() << "Preloading hidden arguments is not supported\n");
-      return false;
-    }
-
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);

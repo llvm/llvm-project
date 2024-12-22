@@ -22,7 +22,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -242,25 +241,26 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
 static std::pair<NonLoc, nonloc::ConcreteInt>
 getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
                      SValBuilder &svalBuilder) {
-  const llvm::APSInt &extentVal = extent.getValue();
   std::optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
   if (SymVal && SymVal->isExpression()) {
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
-      llvm::APSInt constant = APSIntType(extentVal).convert(SIE->getRHS());
+      llvm::APSInt constant =
+          APSIntType(extent.getValue()).convert(SIE->getRHS());
       switch (SIE->getOpcode()) {
       case BO_Mul:
         // The constant should never be 0 here, becasue multiplication by zero
         // is simplified by the engine.
-        if ((extentVal % constant) != 0)
+        if ((extent.getValue() % constant) != 0)
           return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
         else
           return getSimplifiedOffsets(
               nonloc::SymbolVal(SIE->getLHS()),
-              svalBuilder.makeIntVal(extentVal / constant), svalBuilder);
+              svalBuilder.makeIntVal(extent.getValue() / constant),
+              svalBuilder);
       case BO_Add:
         return getSimplifiedOffsets(
             nonloc::SymbolVal(SIE->getLHS()),
-            svalBuilder.makeIntVal(extentVal - constant), svalBuilder);
+            svalBuilder.makeIntVal(extent.getValue() - constant), svalBuilder);
       default:
         break;
       }
@@ -363,7 +363,7 @@ static std::string getRegionName(const SubRegion *Region) {
 
 static std::optional<int64_t> getConcreteValue(NonLoc SV) {
   if (auto ConcreteVal = SV.getAs<nonloc::ConcreteInt>()) {
-    return ConcreteVal->getValue()->tryExtValue();
+    return ConcreteVal->getValue().tryExtValue();
   }
   return std::nullopt;
 }

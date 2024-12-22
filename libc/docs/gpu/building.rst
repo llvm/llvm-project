@@ -63,6 +63,10 @@ targeting the default host environment as well.
 Runtimes cross build
 --------------------
 
+.. note::
+  These instructions need to be updated for new headergen. They may be
+  inaccurate.
+
 For users wanting more direct control over the build process, the build steps
 can be done manually instead. This build closely follows the instructions in the
 :ref:`main documentation<full_cross_build>` but is specialized for the GPU
@@ -78,17 +82,20 @@ compiler. These tools must all be up-to-date with the libc source.
   $> HOST_CXX_COMPILER=<C++ compiler for the host> # For example "clang++"
   $> cmake ../llvm                            \
      -G Ninja                                 \
-     -DLLVM_ENABLE_PROJECTS="clang"           \
+     -DLLVM_ENABLE_PROJECTS="clang;libc"      \
      -DCMAKE_C_COMPILER=$HOST_C_COMPILER      \
      -DCMAKE_CXX_COMPILER=$HOST_CXX_COMPILER  \
      -DLLVM_LIBC_FULL_BUILD=ON                \
+     -DLIBC_HDRGEN_ONLY=ON    \ # Only build the 'libc-hdrgen' tool
      -DCMAKE_BUILD_TYPE=Release # Release suggested to make "clang" fast
   $> ninja # Build the 'clang' compiler
+  $> ninja libc-hdrgen # Build the 'libc-hdrgen' tool
 
-Once this has finished the build directory should contain the ``clang``
-compiler executable. We will use the ``clang`` compiler to build the GPU code.
-We use these tools to bootstrap the build out of the runtimes directory
-targeting a GPU architecture.
+Once this has finished the build directory should contain the ``clang`` compiler
+and the ``libc-hdrgen`` executable. We will use the ``clang`` compiler to build
+the GPU code and the ``libc-hdrgen`` tool to create the necessary headers. We
+use these tools to bootstrap the build out of the runtimes directory targeting a
+GPU architecture.
 
 .. code-block:: sh
 
@@ -98,6 +105,7 @@ targeting a GPU architecture.
   $> TARGET_TRIPLE=<amdgcn-amd-amdhsa or nvptx64-nvidia-cuda>
   $> TARGET_C_COMPILER=</path/to/clang>
   $> TARGET_CXX_COMPILER=</path/to/clang++>
+  $> HDRGEN=</path/to/libc-hdrgen>
   $> cmake ../runtimes \ # Point to the runtimes build
      -G Ninja                                  \
      -DLLVM_ENABLE_RUNTIMES=libc               \
@@ -105,6 +113,7 @@ targeting a GPU architecture.
      -DCMAKE_CXX_COMPILER=$TARGET_CXX_COMPILER \
      -DLLVM_LIBC_FULL_BUILD=ON                 \
      -DLLVM_RUNTIMES_TARGET=$TARGET_TRIPLE     \
+     -DLIBC_HDRGEN_EXE=$HDRGEN                 \
      -DCMAKE_BUILD_TYPE=Release
   $> ninja install
 

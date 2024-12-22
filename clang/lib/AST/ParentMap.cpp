@@ -13,6 +13,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "llvm/ADT/DenseMap.h"
 

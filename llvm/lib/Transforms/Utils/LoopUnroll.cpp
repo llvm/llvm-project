@@ -60,7 +60,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -590,10 +589,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                               : isEpilogProfitable(L);
 
   if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(
-          L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
-          ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-          PreserveLCSSA, ULO.SCEVExpansionBudget, RemainderLoop)) {
+      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
+                                  EpilogProfitability, ULO.UnrollRemainder,
+                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+                                  PreserveLCSSA, RemainderLoop)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {

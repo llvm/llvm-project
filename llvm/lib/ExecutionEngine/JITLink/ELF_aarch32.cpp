@@ -219,13 +219,11 @@ protected:
 
 public:
   ELFLinkGraphBuilder_aarch32(StringRef FileName,
-                              const llvm::object::ELFFile<ELFT> &Obj,
-                              std::shared_ptr<orc::SymbolStringPool> SSP,
-                              Triple TT, SubtargetFeatures Features,
+                              const llvm::object::ELFFile<ELFT> &Obj, Triple TT,
+                              SubtargetFeatures Features,
                               aarch32::ArmConfig ArmCfg)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
-                                  std::move(Features), FileName,
-                                  getELFAArch32EdgeKindName),
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, getELFAArch32EdgeKindName),
         ArmCfg(std::move(ArmCfg)) {}
 };
 
@@ -241,8 +239,8 @@ Error buildTables_ELF_aarch32(LinkGraph &G) {
   return Error::success();
 }
 
-Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch32(
-    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -275,16 +273,16 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch32(
   case Triple::thumb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32LE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<llvm::endianness::little>(
-               (*ELFObj)->getFileName(), ELFFile, std::move(SSP), TT,
-               std::move(*Features), ArmCfg)
+               (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
+               ArmCfg)
         .buildGraph();
   }
   case Triple::armeb:
   case Triple::thumbeb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32BE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<llvm::endianness::big>(
-               (*ELFObj)->getFileName(), ELFFile, std::move(SSP), TT,
-               std::move(*Features), ArmCfg)
+               (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
+               ArmCfg)
         .buildGraph();
   }
   default:

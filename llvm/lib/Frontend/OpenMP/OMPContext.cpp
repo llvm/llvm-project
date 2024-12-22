@@ -36,7 +36,6 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   case Triple::aarch64:
   case Triple::aarch64_be:
   case Triple::aarch64_32:
-  case Triple::loongarch64:
   case Triple::mips:
   case Triple::mipsel:
   case Triple::mips64:

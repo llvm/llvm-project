@@ -108,17 +108,11 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'func.func' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
-! ALL-NEXT:  'gpu.module' Pipeline
-! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
-! ALL-NEXT:   'func.func' Pipeline 
-! ALL-NEXT:   AbstractResultOpt
-! ALL-NEXT:   'gpu.func' Pipeline 
-! ALL-NEXT:   AbstractResultOpt
 ! ALL-NEXT:  'omp.declare_reduction' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'omp.private' Pipeline
@@ -129,7 +123,5 @@ end program
 ! ALL-NEXT: ExternalNameConversion
 ! ALL-NEXT: TargetRewrite
 ! ALL-NEXT: CompilerGeneratedNamesConversion
-! ALL-NEXT:  'func.func' Pipeline
-! ALL-NEXT:   FunctionAttr
 ! ALL-NEXT: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

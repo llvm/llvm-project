@@ -131,7 +131,7 @@ private:
 
   public:
     using iterator_category = std::forward_iterator_tag;
-    using value_type = UseT;
+    using value_type = UseT *;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type *;
     using reference = value_type &;
@@ -723,16 +723,12 @@ public:
       bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
           nullptr) const;
-
-  Value *stripAndAccumulateConstantOffsets(
-      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
-      bool AllowInvariantGroup = false,
-      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
-          nullptr) {
+  Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
+                                           bool AllowNonInbounds,
+                                           bool AllowInvariantGroup = false) {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
-            DL, Offset, AllowNonInbounds, AllowInvariantGroup,
-            ExternalAnalysis));
+            DL, Offset, AllowNonInbounds, AllowInvariantGroup));
   }
 
   /// This is a wrapper around stripAndAccumulateConstantOffsets with the

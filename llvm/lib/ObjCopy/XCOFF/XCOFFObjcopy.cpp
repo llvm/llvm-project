@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
 #include "llvm/ObjCopy/XCOFF/XCOFFObjcopy.h"
+#include "llvm/Support/Errc.h"
 #include "XCOFFObject.h"
 #include "XCOFFReader.h"
 #include "XCOFFWriter.h"
-#include "llvm/ObjCopy/CommonConfig.h"
-#include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
 
 namespace llvm {
 namespace objcopy {

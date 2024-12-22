@@ -1,3 +1,6 @@
+
+include(CMakeParseArguments)
+
 macro(add_polly_library name)
   cmake_parse_arguments(ARG "" "" "" ${ARGN})
   set(srcs ${ARG_UNPARSED_ARGUMENTS})

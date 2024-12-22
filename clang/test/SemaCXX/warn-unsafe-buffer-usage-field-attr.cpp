@@ -96,6 +96,7 @@ void test_attribute_multiple_fields (D d) {
 
    int v = d.buf[0]; //expected-warning{{field 'buf' prone to unsafe buffer manipulation}}
 
+   //expected-warning@+1{{unsafe buffer access}}
    v = d.buf[5]; //expected-warning{{field 'buf' prone to unsafe buffer manipulation}}
 }
 

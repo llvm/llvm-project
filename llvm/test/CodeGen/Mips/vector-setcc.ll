@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel < %s
+; RUN: llc -march=mipsel < %s
 
 @a = common global <4 x i32> zeroinitializer, align 16
 @b = common global <4 x i32> zeroinitializer, align 16

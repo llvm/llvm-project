@@ -229,12 +229,6 @@ bool Expr<Type<TypeCategory::Character, KIND>>::operator==(
   return u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Unsigned, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Unsigned, KIND>> &that) const {
-  return u == that.u;
-}
-
 template <TypeCategory CAT>
 bool Expr<SomeKind<CAT>>::operator==(const Expr<SomeKind<CAT>> &that) const {
   return u == that.u;

@@ -21,7 +21,8 @@ class RedundantAccessSpecifiersCheck : public ClangTidyCheck {
 public:
   RedundantAccessSpecifiersCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        CheckFirstDeclaration(Options.get("CheckFirstDeclaration", false)) {}
+        CheckFirstDeclaration(
+            Options.getLocalOrGlobal("CheckFirstDeclaration", false)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }

@@ -297,6 +297,9 @@ void ConvergingVLIWScheduler::initialize(ScheduleDAGMI *dag) {
     HighPressureSets[i] =
         ((float)MaxPressure[i] > ((float)Limit * RPThreshold));
   }
+
+  assert((!ForceTopDown || !ForceBottomUp) &&
+         "-misched-topdown incompatible with -misched-bottomup");
 }
 
 VLIWResourceModel *ConvergingVLIWScheduler::createVLIWResourceModel(
@@ -951,7 +954,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  if (PreRADirection == MISched::TopDown) {
+  if (ForceTopDown) {
     SU = Top.pickOnlyChoice();
     if (!SU) {
       SchedCandidate TopCand;
@@ -962,7 +965,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
       SU = TopCand.SU;
     }
     IsTopNode = true;
-  } else if (PreRADirection == MISched::BottomUp) {
+  } else if (ForceBottomUp) {
     SU = Bot.pickOnlyChoice();
     if (!SU) {
       SchedCandidate BotCand;

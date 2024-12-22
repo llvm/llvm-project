@@ -1398,35 +1398,35 @@
 
 #CHECK: brc	0, .[[LAB:L.*]]-65536	# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-65536)+2, kind: FK_390_PC16DBL
-#CHECK: jnop	.[[LAB:L.*]]-65536	# encoding: [0xa7,0x04,A,A]
+#CHECK: brc	0, .[[LAB:L.*]]-65536	# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-65536)+2, kind: FK_390_PC16DBL
 	brc	0, -0x10000
 	jnop	-0x10000
 
 #CHECK: brc	0, .[[LAB:L.*]]-2	# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC16DBL
-#CHECK: jnop	.[[LAB:L.*]]-2	# encoding: [0xa7,0x04,A,A]
+#CHECK: brc	0, .[[LAB:L.*]]-2	# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC16DBL
 	brc	0, -2
 	jnop	-2
 
 #CHECK: brc	0, .[[LAB:L.*]]		# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
-#CHECK: jnop	.[[LAB:L.*]]		# encoding: [0xa7,0x04,A,A]
+#CHECK: brc	0, .[[LAB:L.*]]		# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
 	brc	0, 0
 	jnop	0
 
 #CHECK: brc	0, .[[LAB:L.*]]+65534	# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]+65534)+2, kind: FK_390_PC16DBL
-#CHECK: jnop	.[[LAB:L.*]]+65534	# encoding: [0xa7,0x04,A,A]
+#CHECK: brc	0, .[[LAB:L.*]]+65534	# encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]+65534)+2, kind: FK_390_PC16DBL
 	brc	0, 0xfffe
 	jnop	0xfffe
 
 #CHECK: brc	0, foo                  # encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
-#CHECK: jnop	foo                     # encoding: [0xa7,0x04,A,A]
+#CHECK: brc	0, foo                  # encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	0, foo
 	jnop	foo
@@ -1623,7 +1623,7 @@
 
 #CHECK: brc	0, bar+100              # encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
-#CHECK: jnop	bar+100                 # encoding: [0xa7,0x04,A,A]
+#CHECK: brc	0, bar+100              # encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
 	brc	0, bar+100
 	jnop	bar+100
@@ -1735,7 +1735,7 @@
 
 #CHECK: brc	0, bar@PLT              # encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
-#CHECK: jnop	bar@PLT                 # encoding: [0xa7,0x04,A,A]
+#CHECK: brc	0, bar@PLT              # encoding: [0xa7,0x04,A,A]
 #CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
 	brc	0, bar@PLT
 	jnop	bar@PLT
@@ -1847,32 +1847,32 @@
 
 #CHECK: brcl	0, .[[LAB:L.*]]-4294967296 # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-4294967296)+2, kind: FK_390_PC32DBL
-#CHECK: jgnop	.[[LAB:L.*]]-4294967296    # encoding: [0xc0,0x04,A,A,A,A]
+#CHECK: brcl	0, .[[LAB:L.*]]-4294967296 # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-4294967296)+2, kind: FK_390_PC32DBL
 	brcl	0, -0x100000000
 	jgnop	-0x100000000
 #CHECK: brcl	0, .[[LAB:L.*]]-2	# encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC32DBL
-#CHECK: jgnop	.[[LAB:L.*]]-2		# encoding: [0xc0,0x04,A,A,A,A]
+#CHECK: brcl	0, .[[LAB:L.*]]-2	# encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC32DBL
 	brcl	0, -2
 	jgnop	-2
 #CHECK: brcl	0, .[[LAB:L.*]]		# encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC32DBL
-#CHECK: jgnop	.[[LAB:L.*]]		# encoding: [0xc0,0x04,A,A,A,A]
+#CHECK: brcl	0, .[[LAB:L.*]]		# encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC32DBL
 	brcl	0, 0
 	jgnop	0
 #CHECK: brcl	0, .[[LAB:L.*]]+4294967294 # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]+4294967294)+2, kind: FK_390_PC32DBL
-#CHECK: jgnop	.[[LAB:L.*]]+4294967294    # encoding: [0xc0,0x04,A,A,A,A]
+#CHECK: brcl	0, .[[LAB:L.*]]+4294967294 # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]+4294967294)+2, kind: FK_390_PC32DBL
 	brcl	0, 0xfffffffe
 	jgnop	0xfffffffe
 
 #CHECK: brcl	0, foo                  # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
-#CHECK: jgnop	foo                     # encoding: [0xc0,0x04,A,A,A,A]
+#CHECK: brcl	0, foo                  # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 	brcl	0, foo
 	jgnop	foo
@@ -2065,7 +2065,7 @@
 
 #CHECK: brcl	0, bar+100              # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC32DBL
-#CHECK: jgnop	bar+100                 # encoding: [0xc0,0x04,A,A,A,A]
+#CHECK: brcl	0, bar+100              # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC32DBL
 	brcl	0, bar+100
 	jgnop	bar+100
@@ -2177,7 +2177,7 @@
 
 #CHECK: brcl	0, bar@PLT              # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC32DBL
-#CHECK: jgnop	bar@PLT                 # encoding: [0xc0,0x04,A,A,A,A]
+#CHECK: brcl	0, bar@PLT              # encoding: [0xc0,0x04,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC32DBL
 	brcl	0, bar@PLT
 	jgnop	bar@PLT
@@ -13142,7 +13142,7 @@
 #CHECK: nop	0                       # encoding: [0x47,0x00,0x00,0x00]
 #CHECK: nop                             # encoding: [0x47,0x00,0x00,0x00]
 #CHECK: nopr	%r7                     # encoding: [0x07,0x07]
-#CHECK: nopr	                        # encoding: [0x07,0x00]
+#CHECK: nopr	%r0                 # encoding: [0x07,0x00]
 
 	nop	0
 	nop

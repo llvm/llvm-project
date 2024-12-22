@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ;
 ; Either and or zxtb.
 ; CHECK: r0 = and(r1,#255)

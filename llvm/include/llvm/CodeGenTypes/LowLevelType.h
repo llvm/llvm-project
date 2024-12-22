@@ -169,7 +169,8 @@ public:
   /// vector types.
   constexpr bool isScalable() const {
     assert(isVector() && "Expected a vector type");
-    return getFieldValue(VectorScalableFieldInfo);
+    return IsPointer ? getFieldValue(PointerVectorScalableFieldInfo)
+                     : getFieldValue(VectorScalableFieldInfo);
   }
 
   /// Returns true if the LLT is a fixed vector. Returns false otherwise, even
@@ -182,7 +183,9 @@ public:
 
   constexpr ElementCount getElementCount() const {
     assert(IsVector && "cannot get number of elements on scalar/aggregate");
-    return ElementCount::get(getFieldValue(VectorElementsFieldInfo),
+    return ElementCount::get(IsPointer
+                                 ? getFieldValue(PointerVectorElementsFieldInfo)
+                                 : getFieldValue(VectorElementsFieldInfo),
                              isScalable());
   }
 
@@ -262,15 +265,25 @@ public:
   }
 
   constexpr unsigned getScalarSizeInBits() const {
-    if (isPointerOrPointerVector())
-      return getFieldValue(PointerSizeFieldInfo);
-    return getFieldValue(ScalarSizeFieldInfo);
+    if (IsScalar)
+      return getFieldValue(ScalarSizeFieldInfo);
+    if (IsVector) {
+      if (!IsPointer)
+        return getFieldValue(VectorSizeFieldInfo);
+      else
+        return getFieldValue(PointerVectorSizeFieldInfo);
+    }
+    assert(IsPointer && "unexpected LLT");
+    return getFieldValue(PointerSizeFieldInfo);
   }
 
   constexpr unsigned getAddressSpace() const {
-    assert(isPointerOrPointerVector() &&
-           "cannot get address space of non-pointer type");
-    return getFieldValue(PointerAddressSpaceFieldInfo);
+    assert(RawData != 0 && "Invalid Type");
+    assert(IsPointer && "cannot get address space of non-pointer type");
+    if (!IsVector)
+      return getFieldValue(PointerAddressSpaceFieldInfo);
+    else
+      return getFieldValue(PointerVectorAddressSpaceFieldInfo);
   }
 
   /// Returns the vector's element type. Only valid for vector types.
@@ -339,23 +352,44 @@ private:
   ///   valid encodings, SizeInBits/SizeOfElement must be larger than 0.
   /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
   ///   SizeInBits: 32;
-  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 29};
+  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 0};
   /// * Pointer (isPointer == 1 && isVector == 0):
   ///   SizeInBits: 16;
   ///   AddressSpace: 24;
-  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 45};
-  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 21};
+  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 0};
+  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{
+      24, PointerSizeFieldInfo[0] + PointerSizeFieldInfo[1]};
+  static_assert((PointerAddressSpaceFieldInfo[0] +
+                 PointerAddressSpaceFieldInfo[1]) <= 61,
+                "Insufficient bits to encode all data");
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 32;
   ///   Scalable: 1;
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 5};
-  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
+  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 0};
+  static const constexpr BitFieldInfo VectorSizeFieldInfo{
+      32, VectorElementsFieldInfo[0] + VectorElementsFieldInfo[1]};
+  static const constexpr BitFieldInfo VectorScalableFieldInfo{
+      1, VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]};
+  static_assert((VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]) <= 61,
+                "Insufficient bits to encode all data");
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 16;
   ///   AddressSpace: 24;
   ///   Scalable: 1;
+  static const constexpr BitFieldInfo PointerVectorElementsFieldInfo{16, 0};
+  static const constexpr BitFieldInfo PointerVectorSizeFieldInfo{
+      16,
+      PointerVectorElementsFieldInfo[1] + PointerVectorElementsFieldInfo[0]};
+  static const constexpr BitFieldInfo PointerVectorAddressSpaceFieldInfo{
+      24, PointerVectorSizeFieldInfo[1] + PointerVectorSizeFieldInfo[0]};
+  static const constexpr BitFieldInfo PointerVectorScalableFieldInfo{
+      1, PointerVectorAddressSpaceFieldInfo[0] +
+             PointerVectorAddressSpaceFieldInfo[1]};
+  static_assert((PointerVectorAddressSpaceFieldInfo[0] +
+                 PointerVectorAddressSpaceFieldInfo[1]) <= 61,
+                "Insufficient bits to encode all data");
 
   uint64_t IsScalar : 1;
   uint64_t IsPointer : 1;
@@ -388,16 +422,28 @@ private:
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
     this->IsScalar = IsScalar;
-    if (IsPointer) {
+    if (IsScalar)
+      RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo);
+    else if (IsVector) {
+      assert(EC.isVector() && "invalid number of vector elements");
+      if (!IsPointer)
+        RawData =
+            maskAndShift(EC.getKnownMinValue(), VectorElementsFieldInfo) |
+            maskAndShift(SizeInBits, VectorSizeFieldInfo) |
+            maskAndShift(EC.isScalable() ? 1 : 0, VectorScalableFieldInfo);
+      else
+        RawData =
+            maskAndShift(EC.getKnownMinValue(),
+                         PointerVectorElementsFieldInfo) |
+            maskAndShift(SizeInBits, PointerVectorSizeFieldInfo) |
+            maskAndShift(AddressSpace, PointerVectorAddressSpaceFieldInfo) |
+            maskAndShift(EC.isScalable() ? 1 : 0,
+                         PointerVectorScalableFieldInfo);
+    } else if (IsPointer)
       RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
                 maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
-    } else {
-      RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo);
-    }
-    if (IsVector) {
-      RawData |= maskAndShift(EC.getKnownMinValue(), VectorElementsFieldInfo) |
-                 maskAndShift(EC.isScalable() ? 1 : 0, VectorScalableFieldInfo);
-    }
+    else
+      llvm_unreachable("unexpected LLT configuration");
   }
 
 public:

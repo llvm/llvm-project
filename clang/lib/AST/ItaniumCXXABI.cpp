@@ -24,6 +24,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/iterator.h"
 #include <optional>
 
@@ -75,17 +76,17 @@ struct DecompositionDeclName {
 }
 
 namespace llvm {
-template <typename T> static bool isDenseMapKeyEmpty(T V) {
+template<typename T> bool isDenseMapKeyEmpty(T V) {
   return llvm::DenseMapInfo<T>::isEqual(
       V, llvm::DenseMapInfo<T>::getEmptyKey());
 }
-template <typename T> static bool isDenseMapKeyTombstone(T V) {
+template<typename T> bool isDenseMapKeyTombstone(T V) {
   return llvm::DenseMapInfo<T>::isEqual(
       V, llvm::DenseMapInfo<T>::getTombstoneKey());
 }
 
 template <typename T>
-static std::optional<bool> areDenseMapKeysEqualSpecialValues(T LHS, T RHS) {
+std::optional<bool> areDenseMapKeysEqualSpecialValues(T LHS, T RHS) {
   bool LHSEmpty = isDenseMapKeyEmpty(LHS);
   bool RHSEmpty = isDenseMapKeyEmpty(RHS);
   if (LHSEmpty || RHSEmpty)

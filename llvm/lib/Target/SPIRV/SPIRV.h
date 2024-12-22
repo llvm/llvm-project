@@ -37,7 +37,6 @@ void initializeSPIRVModuleAnalysisPass(PassRegistry &);
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVPreLegalizerPass(PassRegistry &);
 void initializeSPIRVPostLegalizerPass(PassRegistry &);
-void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 void initializeSPIRVEmitNonSemanticDIPass(PassRegistry &);
 } // namespace llvm

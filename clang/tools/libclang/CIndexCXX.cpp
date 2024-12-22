@@ -101,11 +101,11 @@ CXCursor clang_getSpecializedCursorTemplate(CXCursor C) {
       llvm::PointerUnion<ClassTemplateDecl *,
                          ClassTemplatePartialSpecializationDecl *> Result
         = ClassSpec->getSpecializedTemplateOrPartial();
-      if (isa<ClassTemplateDecl *>(Result))
-        Template = cast<ClassTemplateDecl *>(Result);
+      if (Result.is<ClassTemplateDecl *>())
+        Template = Result.get<ClassTemplateDecl *>();
       else
-        Template = cast<ClassTemplatePartialSpecializationDecl *>(Result);
-
+        Template = Result.get<ClassTemplatePartialSpecializationDecl *>();
+      
     } else 
       Template = CXXRecord->getInstantiatedFromMemberClass();
   } else if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(D)) {

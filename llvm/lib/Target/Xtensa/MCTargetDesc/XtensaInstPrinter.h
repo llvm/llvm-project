@@ -58,8 +58,6 @@ private:
   void printUimm5_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printShimm1_31_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printImm1_16_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printImm1n_15_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printImm32n_95_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printOffset8m8_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printOffset8m16_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printOffset8m32_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);

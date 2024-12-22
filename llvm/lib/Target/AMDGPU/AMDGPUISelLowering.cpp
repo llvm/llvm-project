@@ -772,7 +772,7 @@ bool AMDGPUTargetLowering::allUsesHaveSourceMods(const SDNode *N,
   assert(!N->use_empty());
 
   // XXX - Should this limit number of uses to check?
-  for (const SDNode *U : N->users()) {
+  for (const SDNode *U : N->uses()) {
     if (!hasSourceMods(U))
       return false;
 
@@ -1072,15 +1072,6 @@ bool AMDGPUTargetLowering::isDesirableToCommuteWithShift(
   assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
           N->getOpcode() == ISD::SRL) &&
          "Expected shift op");
-
-  SDValue ShiftLHS = N->getOperand(0);
-  if (!ShiftLHS->hasOneUse())
-    return false;
-
-  if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
-      !ShiftLHS.getOperand(0)->hasOneUse())
-    return false;
-
   // Always commute pre-type legalization and right shifts.
   // We're looking for shl(or(x,y),z) patterns.
   if (Level < CombineLevel::AfterLegalizeTypes ||
@@ -1088,9 +1079,9 @@ bool AMDGPUTargetLowering::isDesirableToCommuteWithShift(
     return true;
 
   // If only user is a i32 right-shift, then don't destroy a BFE pattern.
-  if (N->getValueType(0) == MVT::i32 && N->hasOneUse() &&
-      (N->user_begin()->getOpcode() == ISD::SRA ||
-       N->user_begin()->getOpcode() == ISD::SRL))
+  if (N->getValueType(0) == MVT::i32 && N->use_size() == 1 &&
+      (N->use_begin()->getOpcode() == ISD::SRA ||
+       N->use_begin()->getOpcode() == ISD::SRL))
     return false;
 
   // Don't destroy or(shl(load_zext(),c), load_zext()) patterns.
@@ -1348,7 +1339,7 @@ SDValue AMDGPUTargetLowering::addTokenForArgument(SDValue Chain,
   ArgChains.push_back(Chain);
 
   // Add a chain value for each stack argument corresponding
-  for (SDNode *U : DAG.getEntryNode().getNode()->users()) {
+  for (SDNode *U : DAG.getEntryNode().getNode()->uses()) {
     if (LoadSDNode *L = dyn_cast<LoadSDNode>(U)) {
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr())) {
         if (FI->getIndex() < 0) {
@@ -2342,7 +2333,7 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   SDValue RHS = Op.getOperand(1);
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
+  SDValue NegOne = DAG.getConstant(-1, DL, VT);
 
   if (VT == MVT::i32) {
     if (SDValue Res = LowerDIVREM24(Op, DAG, true))
@@ -3803,18 +3794,14 @@ static SDValue constantFoldBFE(SelectionDAG &DAG, IntTy Src0, uint32_t Offset,
   if (Width + Offset < 32) {
     uint32_t Shl = static_cast<uint32_t>(Src0) << (32 - Offset - Width);
     IntTy Result = static_cast<IntTy>(Shl) >> (32 - Width);
-    if constexpr (std::is_signed_v<IntTy>) {
-      return DAG.getSignedConstant(Result, DL, MVT::i32);
-    } else {
-      return DAG.getConstant(Result, DL, MVT::i32);
-    }
+    return DAG.getConstant(Result, DL, MVT::i32);
   }
 
   return DAG.getConstant(Src0 >> Offset, DL, MVT::i32);
 }
 
 static bool hasVolatileUser(SDNode *Val) {
-  for (SDNode *U : Val->users()) {
+  for (SDNode *U : Val->uses()) {
     if (MemSDNode *M = dyn_cast<MemSDNode>(U)) {
       if (M->isVolatile())
         return true;
@@ -4338,7 +4325,7 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
     if (!AddOp)
       return SDValue();
 
-    if (V.hasOneUse() || all_of(V->users(), [](const SDNode *U) -> bool {
+    if (V.hasOneUse() || all_of(V->uses(), [](const SDNode *U) -> bool {
           return U->getOpcode() == ISD::MUL;
         }))
       return AddOp;
@@ -4927,7 +4914,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
       SDValue Neg = DAG.getNode(ISD::FNEG, SL, VT, Res);
       DAG.ReplaceAllUsesWith(N0, Neg);
 
-      for (SDNode *U : Neg->users())
+      for (SDNode *U : Neg->uses())
         DCI.AddToWorklist(U);
     }
 
@@ -5555,6 +5542,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
   NODE_NAME_CASE(LDS)
   NODE_NAME_CASE(DUMMY_CHAIN)
+  case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)
   NODE_NAME_CASE(LOAD_D16_LO)
   NODE_NAME_CASE(LOAD_D16_HI_I8)

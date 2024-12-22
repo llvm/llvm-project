@@ -38,6 +38,7 @@ set(LIBS
   ${conversion_libs}
   ${dialect_libs}
   ${extension_libs}
+  ${test_libs}
 
   MLIRAffineAnalysis
   MLIRAnalysis
@@ -55,9 +56,11 @@ set(LIBS
 
 add_mlir_tool(mlir-lsp-server
   mlir-lsp-server.cpp
+
+  DEPENDS
+  ${LIBS}
   )
-mlir_target_link_libraries(mlir-lsp-server PRIVATE ${LIBS})
-target_link_libraries(mlir-lsp-server PRIVATE ${test_libs})
+target_link_libraries(mlir-lsp-server PRIVATE ${LIBS})
 llvm_update_compile_flags(mlir-lsp-server)
 
 mlir_check_all_link_libraries(mlir-lsp-server)

@@ -28,11 +28,11 @@ using __add_pointer_t = __add_pointer(_Tp);
 #else
 template <class _Tp, bool = __libcpp_is_referenceable<_Tp>::value || is_void<_Tp>::value>
 struct __add_pointer_impl {
-  using type _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tp>*;
+  typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tp>* type;
 };
 template <class _Tp>
 struct __add_pointer_impl<_Tp, false> {
-  using type _LIBCPP_NODEBUG = _Tp;
+  typedef _LIBCPP_NODEBUG _Tp type;
 };
 
 template <class _Tp>

@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=SM60
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | FileCheck %s --check-prefix=SM70
-; RUN: %if ptxas-12.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | %ptxas-verify -arch=sm_70 %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=SM60
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | FileCheck %s  --check-prefix=SM70
+; RUN: %if ptxas-12.2 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | %ptxas-verify -arch=sm_70 %}
 
 ; TODO: implement and test thread scope.
 

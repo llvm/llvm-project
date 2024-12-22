@@ -160,7 +160,7 @@ def FeatureSVE : ExtensionWithMArch<"sve", "SVE", "FEAT_SVE",
 
 let ArchExtKindSpelling = "AEK_I8MM" in
 def FeatureMatMulInt8 : ExtensionWithMArch<"i8mm", "MatMulInt8", "FEAT_I8MM",
-  "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
+  "Enable Matrix Multiply Int8 Extension">;
 
 let ArchExtKindSpelling = "AEK_F32MM" in
 def FeatureMatMulFP32 : ExtensionWithMArch<"f32mm", "MatMulFP32", "FEAT_F32MM",
@@ -207,7 +207,7 @@ def FeatureLSE2 : Extension<"lse2", "LSE2", "FEAT_LSE2",
   "Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules">;
 
 def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML", "FEAT_FHM",
-  "Enable FP16 FML instructions", [FeatureFullFP16, FeatureNEON]>;
+  "Enable FP16 FML instructions", [FeatureFullFP16]>;
 
 def FeatureDotProd : ExtensionWithMArch<"dotprod", "DotProd", "FEAT_DotProd",
   "Enable dot product support", [FeatureNEON]>;
@@ -247,8 +247,7 @@ def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV", "FEAT_FlagM2",
 
 def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
-  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int",
-  [FeatureFPARMv8]>;
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int">;
 
 def FeatureSB : ExtensionWithMArch<"sb", "SB", "FEAT_SB",
   "Enable Armv8.5-A Speculation Barrier">;
@@ -280,7 +279,7 @@ def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
 //===----------------------------------------------------------------------===//
 
 def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16", "FEAT_BF16",
-  "Enable BFloat16 Extension", [FeatureNEON]>;
+  "Enable BFloat16 Extension">;
 
 def FeatureAMVS : Extension<"amvs", "AMVS", "FEAT_AMUv1p1",
   "Enable Armv8.6-A Activity Monitors Virtualization support",
@@ -404,7 +403,7 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
   "Enable Realm Management Extension">;
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
-  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16]>;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -874,7 +873,7 @@ def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
 def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
   [HasV8_9aOps, HasV9_3aOps],
   !listconcat(HasV9_3aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
-    FeatureRASv2, FeatureSVE2p1])>;
+    FeatureRASv2])>;
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;

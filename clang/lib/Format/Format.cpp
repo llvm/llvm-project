@@ -2179,8 +2179,7 @@ private:
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
     for (auto *Line : Lines) {
-      if (!Line->Children.empty())
-        removeParens(Line->Children, Result);
+      removeParens(Line->Children, Result);
       if (!Line->Affected)
         continue;
       for (const auto *Token = Line->First; Token && !Token->Finalized;
@@ -2225,8 +2224,7 @@ private:
     const auto &SourceMgr = Env.getSourceManager();
     int OpeningBraceSurplus = 0;
     for (AnnotatedLine *Line : Lines) {
-      if (!Line->Children.empty())
-        insertBraces(Line->Children, Result);
+      insertBraces(Line->Children, Result);
       if (!Line->Affected && OpeningBraceSurplus == 0)
         continue;
       for (FormatToken *Token = Line->First; Token && !Token->Finalized;
@@ -2277,21 +2275,20 @@ private:
   void removeBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
-    const auto *End = Lines.end();
-    for (const auto *I = Lines.begin(); I != End; ++I) {
-      const auto &Line = *I;
-      if (!Line->Children.empty())
-        removeBraces(Line->Children, Result);
+    const auto End = Lines.end();
+    for (auto I = Lines.begin(); I != End; ++I) {
+      const auto Line = *I;
+      removeBraces(Line->Children, Result);
       if (!Line->Affected)
         continue;
-      const auto *NextLine = I + 1 == End ? nullptr : I[1];
-      for (const auto *Token = Line->First; Token && !Token->Finalized;
+      const auto NextLine = I + 1 == End ? nullptr : I[1];
+      for (auto Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
         if (!Token->Optional)
           continue;
         if (!Token->isOneOf(tok::l_brace, tok::r_brace))
           continue;
-        auto *Next = Token->Next;
+        auto Next = Token->Next;
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
           Next = NextLine->First;
@@ -2302,7 +2299,7 @@ private:
         } else {
           Start = Token->WhitespaceRange.getBegin();
         }
-        const auto &Range =
+        const auto Range =
             CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
         cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
       }
@@ -2337,22 +2334,21 @@ private:
       return LBrace && LBrace->is(TT_FunctionLBrace);
     };
     const auto &SourceMgr = Env.getSourceManager();
-    const auto *End = Lines.end();
-    for (const auto *I = Lines.begin(); I != End; ++I) {
-      const auto &Line = *I;
-      if (!Line->Children.empty())
-        removeSemi(Annotator, Line->Children, Result);
+    const auto End = Lines.end();
+    for (auto I = Lines.begin(); I != End; ++I) {
+      const auto Line = *I;
+      removeSemi(Annotator, Line->Children, Result);
       if (!Line->Affected)
         continue;
       Annotator.calculateFormattingInformation(*Line);
-      const auto *NextLine = I + 1 == End ? nullptr : I[1];
-      for (const auto *Token = Line->First; Token && !Token->Finalized;
+      const auto NextLine = I + 1 == End ? nullptr : I[1];
+      for (auto Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
         if (Token->isNot(tok::semi) ||
             (!Token->Optional && !PrecededByFunctionRBrace(*Token))) {
           continue;
         }
-        auto *Next = Token->Next;
+        auto Next = Token->Next;
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
           Next = NextLine->First;
@@ -2363,7 +2359,7 @@ private:
         } else {
           Start = Token->WhitespaceRange.getBegin();
         }
-        const auto &Range =
+        const auto Range =
             CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
         cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
       }
@@ -3950,7 +3946,6 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
     return FormatStyle::LK_Java;
   if (FileName.ends_with_insensitive(".js") ||
       FileName.ends_with_insensitive(".mjs") ||
-      FileName.ends_with_insensitive(".cjs") ||
       FileName.ends_with_insensitive(".ts")) {
     return FormatStyle::LK_JavaScript; // (module) JavaScript or TypeScript.
   }

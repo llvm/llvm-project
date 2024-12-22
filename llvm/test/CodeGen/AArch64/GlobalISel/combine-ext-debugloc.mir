@@ -2,7 +2,7 @@
 
 # Check that when we combine ZEXT/ANYEXT we assign the correct location.
 # CHECK: !8 = !DILocation(line: 23, column: 5, scope: !4)
-# CHECK:  G_AND %16, %15, debug-location !8
+# CHECK:  G_AND %14, %15, debug-location !8
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

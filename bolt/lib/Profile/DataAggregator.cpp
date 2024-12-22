@@ -95,12 +95,6 @@ cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
-cl::opt<std::string>
-    ReadPerfEvents("perf-script-events",
-                   cl::desc("skip perf event collection by supplying a "
-                            "perf-script output in a textual format"),
-                   cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
-
 static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
@@ -173,9 +167,8 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
-  // Don't launch perf for pre-aggregated files or when perf input is specified
-  // by the user.
-  if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
+  // Don't launch perf for pre-aggregated files
+  if (opts::ReadPreAggregated)
     return;
 
   findPerfExecutable();
@@ -471,13 +464,6 @@ void DataAggregator::filterBinaryMMapInfo() {
 
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
-  if (!opts::ReadPerfEvents.empty()) {
-    outs() << "PERF2BOLT: using pre-processed perf events for '" << Name
-           << "' (perf-script-events)\n";
-    ParsingBuf = opts::ReadPerfEvents;
-    return 0;
-  }
-
   std::string Error;
   outs() << "PERF2BOLT: waiting for perf " << Name
          << " collection to finish...\n";
@@ -2070,6 +2056,15 @@ std::error_code DataAggregator::parseMMapEvents() {
     if (FileMMapInfo.first == "(deleted)")
       continue;
 
+    // Consider only the first mapping of the file for any given PID
+    auto Range = GlobalMMapInfo.equal_range(FileMMapInfo.first);
+    bool PIDExists = llvm::any_of(make_range(Range), [&](const auto &MI) {
+      return MI.second.PID == FileMMapInfo.second.PID;
+    });
+
+    if (PIDExists)
+      continue;
+
     GlobalMMapInfo.insert(FileMMapInfo);
   }
 
@@ -2121,22 +2116,12 @@ std::error_code DataAggregator::parseMMapEvents() {
                << " using file offset 0x" << Twine::utohexstr(MMapInfo.Offset)
                << ". Ignoring profile data for this mapping\n";
         continue;
+      } else {
+        MMapInfo.BaseAddress = *BaseAddress;
       }
-      MMapInfo.BaseAddress = *BaseAddress;
     }
 
-    // Try to add MMapInfo to the map and update its size. Large binaries may
-    // span to multiple text segments, so the mapping is inserted only on the
-    // first occurrence.
-    if (!BinaryMMapInfo.insert(std::make_pair(MMapInfo.PID, MMapInfo)).second)
-      assert(MMapInfo.BaseAddress == BinaryMMapInfo[MMapInfo.PID].BaseAddress &&
-             "Base address on multiple segment mappings should match");
-
-    // Update mapping size.
-    const uint64_t EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
-    const uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
-    if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
-      BinaryMMapInfo[MMapInfo.PID].Size = Size;
+    BinaryMMapInfo.insert(std::make_pair(MMapInfo.PID, MMapInfo));
   }
 
   if (BinaryMMapInfo.empty()) {

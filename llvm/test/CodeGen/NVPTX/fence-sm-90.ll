@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck %s
-; RUN: %if ptxas-12.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck %s
+; RUN: %if ptxas-12.2 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
 
 ; CHECK-LABEL: fence_sc_cluster
 define void @fence_sc_cluster() local_unnamed_addr {

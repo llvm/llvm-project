@@ -4,11 +4,8 @@
 
 declare double @g(double, double)
 
-; Though not visible within the IR, this will lower to an FSINCOS node, with
-; store users, that are within a (callseq_start, callseq_end) pair. In this
-; case, the stores cannot be folded into the sincos call.
-define double @negative_sincos_with_stores_within_call_sequence(double %a) {
-; CHECK-LABEL: negative_sincos_with_stores_within_call_sequence:
+define double @f(double %a) {
+; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subl $44, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48

@@ -1327,13 +1327,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                    OPT_no_lto_validate_all_vtables_have_type_infos, false);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
-    ErrAlways(ctx) << "invalid optimization level for LTO: " << ctx.arg.ltoo;
+    ErrAlways(ctx) << "invalid optimization level for LTO: "
+                   << Twine(ctx.arg.ltoo);
   unsigned ltoCgo =
       args::getInteger(args, OPT_lto_CGO, args::getCGOptLevel(ctx.arg.ltoo));
   if (auto level = CodeGenOpt::getLevel(ltoCgo))
     ctx.arg.ltoCgo = *level;
   else
-    ErrAlways(ctx) << "invalid codegen optimization level for LTO: " << ltoCgo;
+    ErrAlways(ctx) << "invalid codegen optimization level for LTO: "
+                   << Twine(ltoCgo);
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   ctx.arg.ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
@@ -1410,9 +1412,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
   ctx.arg.sectionStartMap = getSectionStartMap(ctx, args);
   ctx.arg.shared = args.hasArg(OPT_shared);
-  if (args.hasArg(OPT_randomize_section_padding))
-    ctx.arg.randomizeSectionPadding =
-        args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
@@ -1487,7 +1486,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
-  ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
@@ -2377,9 +2375,8 @@ static void markAddrsig(bool icfSafe, Symbol *s) {
   // We don't need to keep text sections unique under --icf=all even if they
   // are address-significant.
   if (auto *d = dyn_cast_or_null<Defined>(s))
-    if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
-      if (icfSafe || !(sec->flags & SHF_EXECINSTR))
-        sec->keepUnique = true;
+    if (d->section && (icfSafe || !(d->section->flags & SHF_EXECINSTR)))
+      d->section->keepUnique = true;
 }
 
 // Record sections that define symbols mentioned in --keep-unique <symbol>
@@ -2394,8 +2391,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
       Warn(ctx) << "could not find symbol " << name << " to keep unique";
       continue;
     }
-    if (auto *sec = dyn_cast<InputSectionBase>(d->section))
-      sec->keepUnique = true;
+    d->section->keepUnique = true;
   }
 
   // --icf=all --ignore-data-address-equality means that we can ignore
@@ -2456,7 +2452,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     sym = readEntry(s->file, rels.rels);
   else
     sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
+  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym(ctx))
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
@@ -2704,6 +2700,21 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
+static void reportMissingFeature(Ctx &ctx, StringRef config,
+                                 const Twine &report) {
+  if (config == "error")
+    ErrAlways(ctx) << report;
+  else if (config == "warning")
+    Warn(ctx) << report;
+}
+
+static void checkAndReportMissingFeature(Ctx &ctx, StringRef config,
+                                         uint32_t features, uint32_t mask,
+                                         const Twine &report) {
+  if (!(features & mask))
+    reportMissingFeature(ctx, config, report);
+}
+
 // To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
@@ -2736,43 +2747,28 @@ static void readSecurityNotes(Ctx &ctx) {
   bool hasValidPauthAbiCoreInfo = llvm::any_of(
       ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
-  auto report = [&](StringRef config) -> ELFSyncStream {
-    if (config == "error")
-      return {ctx, DiagLevel::Err};
-    else if (config == "warning")
-      return {ctx, DiagLevel::Warn};
-    return {ctx, DiagLevel::None};
-  };
-  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
-    if (cond)
-      return {ctx, DiagLevel::None};
-    return report(config);
-  };
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
-    reportUnless(ctx.arg.zBtiReport,
-                 features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
-        << f
-        << ": -z bti-report: file does not have "
-           "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
+    checkAndReportMissingFeature(
+        ctx, ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
+        toStr(ctx, f) + ": -z bti-report: file does not have "
+                        "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
 
-    reportUnless(ctx.arg.zGcsReport,
-                 features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-        << f
-        << ": -z gcs-report: file does not have "
-           "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
+    checkAndReportMissingFeature(
+        ctx, ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
+        toStr(ctx, f) + ": -z gcs-report: file does not have "
+                        "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
 
-    reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
-        << f
-        << ": -z cet-report: file does not have "
-           "GNU_PROPERTY_X86_FEATURE_1_IBT property";
+    checkAndReportMissingFeature(
+        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
+        toStr(ctx, f) + ": -z cet-report: file does not have "
+                        "GNU_PROPERTY_X86_FEATURE_1_IBT property");
 
-    reportUnless(ctx.arg.zCetReport,
-                 features & GNU_PROPERTY_X86_FEATURE_1_SHSTK)
-        << f
-        << ": -z cet-report: file does not have "
-           "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
+    checkAndReportMissingFeature(
+        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
+        toStr(ctx, f) + ": -z cet-report: file does not have "
+                        "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
@@ -2802,11 +2798,11 @@ static void readSecurityNotes(Ctx &ctx) {
       continue;
 
     if (f->aarch64PauthAbiCoreInfo.empty()) {
-      report(ctx.arg.zPauthReport)
-          << f
-          << ": -z pauth-report: file does not have AArch64 "
-             "PAuth core info while '"
-          << referenceFileName << "' has one";
+      reportMissingFeature(ctx, ctx.arg.zPauthReport,
+                           toStr(ctx, f) +
+                               ": -z pauth-report: file does not have AArch64 "
+                               "PAuth core info while '" +
+                               referenceFileName + "' has one");
       continue;
     }
 
@@ -2977,7 +2973,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  ctx.out.elfHeader = std::make_unique<OutputSection>(ctx, "", 0, SHF_ALLOC);
+  ctx.out.elfHeader = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!ctx.arg.relocatable)
@@ -2991,8 +2987,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (!ctx.arg.relocatable) {
     llvm::TimeTraceScope timeScope("Process symbol versions");
     ctx.symtab->scanVersionScript();
-
-    parseVersionAndComputeIsPreemptible(ctx);
   }
 
   // Skip the normal linked output if some LTO options are specified.

@@ -122,7 +122,7 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
     jitlink::AsyncLookupResult AllResults;
 
     for (const auto &Symbol : Symbols) {
-      std::string SymName = (*Symbol.first).str();
+      std::string SymName = Symbol.first.str();
       LLVM_DEBUG(dbgs() << "BOLT: looking for " << SymName << "\n");
 
       if (auto Address = Linker.lookupSymbol(SymName)) {
@@ -167,9 +167,7 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
   Error notifyResolved(jitlink::LinkGraph &G) override {
     for (auto *Symbol : G.defined_symbols()) {
       SymbolInfo Info{Symbol->getAddress().getValue(), Symbol->getSize()};
-      auto Name =
-          Symbol->hasName() ? (*Symbol->getName()).str() : std::string();
-      Linker.Symtab.insert({std::move(Name), Info});
+      Linker.Symtab.insert({Symbol->getName().str(), Info});
     }
 
     return Error::success();
@@ -191,7 +189,7 @@ JITLinkLinker::~JITLinkLinker() { cantFail(MM->deallocate(std::move(Allocs))); }
 
 void JITLinkLinker::loadObject(MemoryBufferRef Obj,
                                SectionsMapper MapSections) {
-  auto LG = jitlink::createLinkGraphFromObject(Obj, BC.getSymbolStringPool());
+  auto LG = jitlink::createLinkGraphFromObject(Obj);
   if (auto E = LG.takeError()) {
     errs() << "BOLT-ERROR: JITLink failed: " << E << '\n';
     exit(1);

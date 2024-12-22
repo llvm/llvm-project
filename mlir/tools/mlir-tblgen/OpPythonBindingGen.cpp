@@ -628,7 +628,7 @@ static void populateBuilderArgs(const Operator &op,
       name = formatv("_gen_arg_{0}", i);
     name = sanitizeName(name);
     builderArgs.push_back(name);
-    if (!isa<NamedAttribute *>(op.getArg(i)))
+    if (!op.getArg(i).is<NamedAttribute *>())
       operandNames.push_back(name);
   }
 }

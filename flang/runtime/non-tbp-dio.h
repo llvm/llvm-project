@@ -22,8 +22,7 @@
 #ifndef FORTRAN_RUNTIME_NON_TBP_DIO_H_
 #define FORTRAN_RUNTIME_NON_TBP_DIO_H_
 
-#include "flang/Common/Fortran-consts.h"
-#include "flang/Common/api-attrs.h"
+#include "flang/Common/Fortran.h"
 #include <cstddef>
 
 namespace Fortran::runtime::typeInfo {

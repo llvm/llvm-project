@@ -1475,19 +1475,19 @@ transform::detail::checkApplyToOne(Operation *transformOp,
     if (ptr.isNull())
       continue;
     if (llvm::isa<TransformHandleTypeInterface>(res.getType()) &&
-        !isa<Operation *>(ptr)) {
+        !ptr.is<Operation *>()) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Operation * for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformParamTypeInterface>(res.getType()) &&
-        !isa<Attribute>(ptr)) {
+        !ptr.is<Attribute>()) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Attribute for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformValueHandleTypeInterface>(res.getType()) &&
-        !isa<Value>(ptr)) {
+        !ptr.is<Value>()) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce a Value for result #"
                         << res.getResultNumber();
@@ -1499,7 +1499,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
   return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return cast<T>(value); }));
+      range, [](transform::MappedValue value) { return value.get<T>(); }));
 }
 
 void transform::detail::setApplyToOneResults(

@@ -16,6 +16,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/CommentDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -29,7 +30,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -8264,14 +8264,11 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewDC)) {
-      // Fields are not shadowed by variables in C++ static methods.
+    // Fields are not shadowed by variables in C++ static methods.
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewDC))
       if (MD->isStatic())
         return;
 
-      if (!MD->getParent()->isLambda() && MD->isExplicitObjectMemberFunction())
-        return;
-    }
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.
     if (isa<CXXConstructorDecl>(NewDC))
@@ -8353,15 +8350,9 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     return;
 
   // Only warn about certain kinds of shadowing for class members.
-  if (NewDC) {
+  if (NewDC && NewDC->isRecord()) {
     // In particular, don't warn about shadowing non-class members.
-    if (NewDC->isRecord() && !OldDC->isRecord())
-      return;
-
-    // Skip shadowing check if we're in a class scope, dealing with an enum
-    // constant in a different context.
-    DeclContext *ReDC = NewDC->getRedeclContext();
-    if (ReDC->isRecord() && isa<EnumConstantDecl>(D) && !OldDC->Equals(ReDC))
+    if (!OldDC->isRecord())
       return;
 
     // TODO: should we warn about static data members shadowing
@@ -8371,6 +8362,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     // This is hard to do perfectly because we might friend the
     // shadowing context, but that's just a false negative.
   }
+
 
   DeclarationName Name = R.getLookupName();
 
@@ -8759,19 +8751,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
            diag::err_typecheck_wasm_table_must_have_zero_length);
       NewVD->setInvalidDecl();
       return;
-    }
-  }
-
-  // zero sized static arrays are not allowed in HIP device functions
-  if (getLangOpts().HIP && LangOpts.CUDAIsDevice) {
-    if (FunctionDecl *FD = getCurFunctionDecl();
-        FD &&
-        (FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAGlobalAttr>())) {
-      if (const ConstantArrayType *ArrayT =
-              getASTContext().getAsConstantArrayType(T);
-          ArrayT && ArrayT->isZeroSize()) {
-        Diag(NewVD->getLocation(), diag::err_typecheck_zero_array_size) << 2;
-      }
     }
   }
 
@@ -11073,9 +11052,9 @@ bool Sema::shouldLinkDependentDeclWithPrevious(Decl *D, Decl *PrevDecl) {
 static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
   const auto *TA = FD->getAttr<TargetAttr>();
   const auto *TVA = FD->getAttr<TargetVersionAttr>();
-
-  assert((TA || TVA) && "Expecting target or target_version attribute");
-
+  assert(
+      (TA || TVA) &&
+      "MultiVersion candidate requires a target or target_version attribute");
   const TargetInfo &TargetInfo = S.Context.getTargetInfo();
   enum ErrType { Feature = 0, Architecture = 1 };
 
@@ -11372,6 +11351,10 @@ static bool CheckMultiVersionFirstFunction(Sema &S, FunctionDecl *FD) {
   // otherwise it is treated as a normal function.
   if (TA && !TA->isDefaultVersion())
     return false;
+  // The target_version attribute only causes Multiversioning if this
+  // declaration is NOT the default version.
+  if (TVA && TVA->isDefaultVersion())
+    return false;
 
   if ((TA || TVA) && CheckMultiVersionValue(S, FD)) {
     FD->setInvalidDecl();
@@ -11418,22 +11401,24 @@ static bool CheckDeclarationCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
                                                   LookupResult &Previous) {
   assert(!OldFD->isMultiVersion() && "Unexpected MultiVersion");
 
-  const auto *NewTA = NewFD->getAttr<TargetAttr>();
-  const auto *OldTA = OldFD->getAttr<TargetAttr>();
-  const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
-  const auto *OldTVA = OldFD->getAttr<TargetVersionAttr>();
-
-  assert((NewTA || NewTVA) && "Excpecting target or target_version attribute");
-
   // The definitions should be allowed in any order. If we have discovered
   // a new target version and the preceeding was the default, then add the
   // corresponding attribute to it.
   patchDefaultTargetVersion(NewFD, OldFD);
 
+  const auto *NewTA = NewFD->getAttr<TargetAttr>();
+  const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
+  const auto *OldTA = OldFD->getAttr<TargetAttr>();
+
   // If the old decl is NOT MultiVersioned yet, and we don't cause that
   // to change, this is a simple redeclaration.
   if (NewTA && !NewTA->isDefaultVersion() &&
       (!OldTA || OldTA->getFeaturesStr() == NewTA->getFeaturesStr()))
+    return false;
+
+  // The target_version attribute only causes Multiversioning if this
+  // declaration is NOT the default version.
+  if (NewTVA && NewTVA->isDefaultVersion())
     return false;
 
   // Otherwise, this decl causes MultiVersioning.
@@ -11450,8 +11435,7 @@ static bool CheckDeclarationCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
   }
 
   // If this is 'default', permit the forward declaration.
-  if ((NewTA && NewTA->isDefaultVersion() && !OldTA) ||
-      (NewTVA && NewTVA->isDefaultVersion() && !OldTVA)) {
+  if (NewTA && NewTA->isDefaultVersion() && !OldTA) {
     Redeclaration = true;
     OldDecl = OldFD;
     OldFD->setIsMultiVersion();
@@ -11459,7 +11443,7 @@ static bool CheckDeclarationCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
     return false;
   }
 
-  if ((OldTA || OldTVA) && CheckMultiVersionValue(S, OldFD)) {
+  if (CheckMultiVersionValue(S, OldFD)) {
     S.Diag(NewFD->getLocation(), diag::note_multiversioning_caused_here);
     NewFD->setInvalidDecl();
     return true;
@@ -11756,7 +11740,9 @@ static bool CheckMultiVersionAdditionalDecl(
   // Else, this is simply a non-redecl case.  Checking the 'value' is only
   // necessary in the Target case, since The CPUSpecific/Dispatch cases are
   // handled in the attribute adding step.
-  if ((NewTA || NewTVA) && CheckMultiVersionValue(S, NewFD)) {
+  if ((NewMVKind == MultiVersionKind::TargetVersion ||
+       NewMVKind == MultiVersionKind::Target) &&
+      CheckMultiVersionValue(S, NewFD)) {
     NewFD->setInvalidDecl();
     return true;
   }
@@ -11792,12 +11778,6 @@ static bool CheckMultiVersionAdditionalDecl(
 static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
                                       bool &Redeclaration, NamedDecl *&OldDecl,
                                       LookupResult &Previous) {
-  const TargetInfo &TI = S.getASTContext().getTargetInfo();
-
-  // Check if FMV is disabled.
-  if (TI.getTriple().isAArch64() && !TI.hasFeature("fmv"))
-    return false;
-
   const auto *NewTA = NewFD->getAttr<TargetAttr>();
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   const auto *NewCPUDisp = NewFD->getAttr<CPUDispatchAttr>();
@@ -11820,12 +11800,14 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     return false;
   }
 
+  const llvm::Triple &T = S.getASTContext().getTargetInfo().getTriple();
+
   // Target attribute on AArch64 is not used for multiversioning
-  if (NewTA && TI.getTriple().isAArch64())
+  if (NewTA && T.isAArch64())
     return false;
 
   // Target attribute on RISCV is not used for multiversioning
-  if (NewTA && TI.getTriple().isRISCV())
+  if (NewTA && T.isRISCV())
     return false;
 
   if (!OldDecl || !OldDecl->getAsFunction() ||
@@ -11926,7 +11908,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   NamedDecl *OldDecl = nullptr;
   bool MayNeedOverloadableChecks = false;
 
-  inferLifetimeCaptureByAttribute(NewFD);
   // Merge or overload the declaration with an existing declaration of
   // the same name, if appropriate.
   if (!Previous.empty()) {
@@ -14709,8 +14690,6 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
-  CheckInvalidBuiltinCountedByRef(VD->getInit(), InitializerKind);
-
   checkAttributesAfterMerging(*this, *VD);
 
   if (VD->isStaticLocal())
@@ -15516,25 +15495,10 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   LSI->CallOperator = CallOperator;
   LSI->Lambda = LambdaClass;
   LSI->ReturnType = CallOperator->getReturnType();
-  // When this function is called in situation where the context of the call
-  // operator is not entered, we set AfterParameterList to false, so that
+  // This function in calls in situation where the context of the call operator
+  // is not entered, so we set AfterParameterList to false, so that
   // `tryCaptureVariable` finds explicit captures in the appropriate context.
-  // There is also at least a situation as in FinishTemplateArgumentDeduction(),
-  // where we would set the CurContext to the lambda operator before
-  // substituting into it. In this case the flag needs to be true such that
-  // tryCaptureVariable can correctly handle potential captures thereof.
-  LSI->AfterParameterList = CurContext == CallOperator;
-
-  // GLTemplateParameterList is necessary for getCurGenericLambda() which is
-  // used at the point of dealing with potential captures.
-  //
-  // We don't use LambdaClass->isGenericLambda() because this value doesn't
-  // flip for instantiated generic lambdas, where no FunctionTemplateDecls are
-  // associated. (Technically, we could recover that list from their
-  // instantiation patterns, but for now, the GLTemplateParameterList seems
-  // unnecessary in these cases.)
-  if (FunctionTemplateDecl *FTD = CallOperator->getDescribedFunctionTemplate())
-    LSI->GLTemplateParameterList = FTD->getTemplateParameters();
+  LSI->AfterParameterList = false;
   const LambdaCaptureDefault LCD = LambdaClass->getLambdaCaptureDefault();
 
   if (LCD == LCD_None)
@@ -16747,7 +16711,6 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
 
   LazyProcessLifetimeCaptureByParams(FD);
   inferLifetimeBoundAttribute(FD);
-  inferLifetimeCaptureByAttribute(FD);
   AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(FD);
 
   // If C++ exceptions are enabled but we are told extern "C" functions cannot
@@ -17303,7 +17266,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         if (TypeSourceInfo *TI = EnumUnderlying.dyn_cast<TypeSourceInfo *>())
           ED->setIntegerTypeSourceInfo(TI);
         else
-          ED->setIntegerType(QualType(cast<const Type *>(EnumUnderlying), 0));
+          ED->setIntegerType(QualType(EnumUnderlying.get<const Type *>(), 0));
         QualType EnumTy = ED->getIntegerType();
         ED->setPromotionType(Context.isPromotableIntegerType(EnumTy)
                                  ? Context.getPromotedIntegerType(EnumTy)
@@ -17936,7 +17899,7 @@ CreateNewDecl:
       if (TypeSourceInfo *TI = EnumUnderlying.dyn_cast<TypeSourceInfo*>())
         ED->setIntegerTypeSourceInfo(TI);
       else
-        ED->setIntegerType(QualType(cast<const Type *>(EnumUnderlying), 0));
+        ED->setIntegerType(QualType(EnumUnderlying.get<const Type *>(), 0));
       QualType EnumTy = ED->getIntegerType();
       ED->setPromotionType(Context.isPromotableIntegerType(EnumTy)
                                ? Context.getPromotedIntegerType(EnumTy)
@@ -19952,7 +19915,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
       continue;
     }
 
-    ECDVector *Vec = cast<ECDVector *>(Entry);
+    ECDVector *Vec = Entry.get<ECDVector*>();
     // Make sure constants are not added more than once.
     if (*Vec->begin() == ECD)
       continue;

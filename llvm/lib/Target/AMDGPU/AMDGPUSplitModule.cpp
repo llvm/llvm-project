@@ -149,8 +149,7 @@ static constexpr unsigned InvalidPID = -1;
 /// \param Dem denominator
 /// \returns a printable object to print (Num/Dem) using "%0.2f".
 static auto formatRatioOf(CostType Num, CostType Dem) {
-  CostType DemOr1 = Dem ? Dem : 1;
-  return format("%0.2f", (static_cast<double>(Num) / DemOr1) * 100);
+  return format("%0.2f", (static_cast<double>(Num) / Dem) * 100);
 }
 
 /// Checks whether a given function is non-copyable.
@@ -158,12 +157,13 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
 /// Non-copyable functions cannot be cloned into multiple partitions, and only
 /// one copy of the function can be present across all partitions.
 ///
-/// Kernel functions and external functions fall into this category. If we were
-/// to clone them, we would end up with multiple symbol definitions and a very
-/// unhappy linker.
+/// External functions fall into this category. If we were to clone them, we
+/// would end up with multiple symbol definitions and a very unhappy linker.
 static bool isNonCopyable(const Function &F) {
-  return F.hasExternalLinkage() || !F.isDefinitionExact() ||
-         AMDGPU::isEntryFunctionCC(F.getCallingConv());
+  assert(AMDGPU::isEntryFunctionCC(F.getCallingConv())
+             ? F.hasExternalLinkage()
+             : true && "Kernel w/o external linkage?");
+  return F.hasExternalLinkage() || !F.isDefinitionExact();
 }
 
 /// If \p GV has local linkage, make it external + hidden.
@@ -1100,10 +1100,10 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       if (Entry.CostExcludingGraphEntryPoints > LargeClusterThreshold) {
         // Check if the amount of code in common makes it worth it.
         assert(SimilarDepsCost && Entry.CostExcludingGraphEntryPoints);
-        const double Ratio = static_cast<double>(SimilarDepsCost) /
-                             Entry.CostExcludingGraphEntryPoints;
+        const double Ratio =
+            SimilarDepsCost / Entry.CostExcludingGraphEntryPoints;
         assert(Ratio >= 0.0 && Ratio <= 1.0);
-        if (Ratio > LargeFnOverlapForMerge) {
+        if (LargeFnOverlapForMerge > Ratio) {
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.

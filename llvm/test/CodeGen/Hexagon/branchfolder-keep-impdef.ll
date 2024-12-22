@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 ;
 ; Check that the testcase compiles successfully. Expect that if-conversion
 ; took place.

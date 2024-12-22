@@ -30,7 +30,6 @@ class GenericDomTreeUpdater {
 public:
   enum class UpdateStrategy : unsigned char { Eager = 0, Lazy = 1 };
   using BasicBlockT = typename DomTreeT::NodeType;
-  using UpdateT = typename DomTreeT::UpdateType;
 
   explicit GenericDomTreeUpdater(UpdateStrategy Strategy_)
       : Strategy(Strategy_) {}
@@ -147,12 +146,7 @@ public:
   /// 2. It is illegal to submit any update that has already been submitted,
   /// i.e., you are supposed not to insert an existent edge or delete a
   /// nonexistent edge.
-  void applyUpdates(ArrayRef<UpdateT> Updates);
-
-  /// Apply updates that the critical edge (FromBB, ToBB) has been
-  /// split with NewBB.
-  void splitCriticalEdge(BasicBlockT *FromBB, BasicBlockT *ToBB,
-                         BasicBlockT *NewBB);
+  void applyUpdates(ArrayRef<typename DomTreeT::UpdateType> Updates);
 
   /// Submit updates to all available trees. It will also
   /// 1. discard duplicated updates,
@@ -175,7 +169,7 @@ public:
   /// 3. It is only legal to submit updates to an edge in the order CFG changes
   /// are made. The order you submit updates on different edges is not
   /// restricted.
-  void applyUpdatesPermissive(ArrayRef<UpdateT> Updates);
+  void applyUpdatesPermissive(ArrayRef<typename DomTreeT::UpdateType> Updates);
 
   ///@}
 
@@ -211,25 +205,7 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 
 protected:
-  /// Helper structure used to hold all the basic blocks
-  /// involved in the split of a critical edge.
-  struct CriticalEdge {
-    BasicBlockT *FromBB;
-    BasicBlockT *ToBB;
-    BasicBlockT *NewBB;
-  };
-
-  struct DomTreeUpdate {
-    bool IsCriticalEdgeSplit = false;
-    union {
-      UpdateT Update;
-      CriticalEdge EdgeSplit;
-    };
-    DomTreeUpdate(UpdateT Update) : Update(Update) {}
-    DomTreeUpdate(CriticalEdge E) : IsCriticalEdgeSplit(true), EdgeSplit(E) {}
-  };
-
-  SmallVector<DomTreeUpdate, 16> PendUpdates;
+  SmallVector<typename DomTreeT::UpdateType, 16> PendUpdates;
   size_t PendDTUpdateIndex = 0;
   size_t PendPDTUpdateIndex = 0;
   DomTreeT *DT = nullptr;
@@ -240,21 +216,21 @@ protected:
   bool IsRecalculatingPostDomTree = false;
 
   /// Returns true if the update is self dominance.
-  bool isSelfDominance(UpdateT Update) const {
+  bool isSelfDominance(typename DomTreeT::UpdateType Update) const {
     // Won't affect DomTree and PostDomTree.
     return Update.getFrom() == Update.getTo();
   }
 
   /// Helper function to apply all pending DomTree updates.
-  void applyDomTreeUpdates() { applyUpdatesImpl<true>(); }
+  void applyDomTreeUpdates();
 
   /// Helper function to apply all pending PostDomTree updates.
-  void applyPostDomTreeUpdates() { applyUpdatesImpl<false>(); }
+  void applyPostDomTreeUpdates();
 
   /// Returns true if the update appears in the LLVM IR.
   /// It is used to check whether an update is valid in
   /// insertEdge/deleteEdge or is unnecessary in the batch update.
-  bool isUpdateValid(UpdateT Update) const;
+  bool isUpdateValid(typename DomTreeT::UpdateType Update) const;
 
   /// Erase Basic Block node before it is unlinked from Function
   /// in the DomTree and PostDomTree.
@@ -267,11 +243,6 @@ protected:
   /// Drop all updates applied by all available trees and delete BasicBlocks if
   /// all available trees are up-to-date.
   void dropOutOfDateUpdates();
-
-private:
-  void splitDTCriticalEdges(ArrayRef<CriticalEdge> Updates);
-  void splitPDTCriticalEdges(ArrayRef<CriticalEdge> Updates);
-  template <bool IsForward> void applyUpdatesImpl();
 };
 
 } // namespace llvm

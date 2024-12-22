@@ -36,7 +36,7 @@ struct CommutativityUtils
     RewritePatternSet patterns(context);
     populateCommutativityUtilsPatterns(patterns);
 
-    (void)applyPatternsGreedily(func, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
 };
 } // namespace

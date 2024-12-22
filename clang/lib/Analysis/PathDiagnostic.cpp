@@ -484,10 +484,10 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
   // source code, so find an enclosing statement and use its location.
   if (!L.isValid()) {
     AnalysisDeclContext *ADC;
-    if (auto *LC = dyn_cast<const LocationContext *>(LAC))
-      ADC = LC->getAnalysisDeclContext();
+    if (LAC.is<const LocationContext*>())
+      ADC = LAC.get<const LocationContext*>()->getAnalysisDeclContext();
     else
-      ADC = cast<AnalysisDeclContext *>(LAC);
+      ADC = LAC.get<AnalysisDeclContext*>();
 
     ParentMap &PM = ADC->getParentMap();
 

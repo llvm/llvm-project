@@ -75,7 +75,7 @@ getDepthAndIndex(UnexpandedParameterPack UPP) {
   if (const auto *TTP = UPP.first.dyn_cast<const TemplateTypeParmType *>())
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
 
-  return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
+  return getDepthAndIndex(UPP.first.get<NamedDecl *>());
 }
 
 class TypoCorrectionConsumer : public VisibleDeclConsumer {

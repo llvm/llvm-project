@@ -65,11 +65,6 @@ using namespace ento;
 // MemRegion Construction.
 //===----------------------------------------------------------------------===//
 
-[[maybe_unused]] static bool isAReferenceTypedValueRegion(const MemRegion *R) {
-  const auto *TyReg = llvm::dyn_cast<TypedValueRegion>(R);
-  return TyReg && TyReg->getValueType()->isReferenceType();
-}
-
 template <typename RegionTy, typename SuperTy, typename Arg1Ty>
 RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
                                          const SuperTy *superRegion) {
@@ -81,7 +76,6 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
   if (!R) {
     R = new (A) RegionTy(arg1, superRegion);
     Regions.InsertNode(R, InsertPos);
-    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -98,7 +92,6 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, superRegion);
     Regions.InsertNode(R, InsertPos);
-    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -117,7 +110,6 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, arg3, superRegion);
     Regions.InsertNode(R, InsertPos);
-    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -743,7 +735,7 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     // Index is a ConcreteInt.
     if (auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>()) {
       llvm::SmallString<2> Idx;
-      CI->getValue()->toString(Idx);
+      CI->getValue().toString(Idx);
       ArrayIndices = (llvm::Twine("[") + Idx.str() + "]" + ArrayIndices).str();
     }
     // Index is symbolic, but may have a descriptive name.
@@ -1068,10 +1060,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     llvm::PointerUnion<const StackFrameContext *, const VarRegion *> V =
       getStackOrCaptureRegionForDeclContext(LC, DC, D);
 
-    if (const auto *VR = dyn_cast_if_present<const VarRegion *>(V))
-      return VR;
+    if (V.is<const VarRegion*>())
+      return V.get<const VarRegion*>();
 
-    const auto *STC = cast<const StackFrameContext *>(V);
+    const auto *STC = V.get<const StackFrameContext *>();
 
     if (!STC) {
       // FIXME: Assign a more sensible memory space to static locals
@@ -1458,7 +1450,9 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
     SVal index = ER->getIndex();
     if (auto CI = index.getAs<nonloc::ConcreteInt>()) {
       // Update the offset.
-      if (int64_t i = CI->getValue()->getSExtValue(); i != 0) {
+      int64_t i = CI->getValue().getSExtValue();
+
+      if (i != 0) {
         QualType elemType = ER->getElementType();
 
         // If we are pointing to an incomplete type, go no further.
@@ -1630,7 +1624,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
         if (SymbolicOffsetBase)
           continue;
 
-        int64_t i = CI->getValue()->getSExtValue();
+        int64_t i = CI->getValue().getSExtValue();
         // This type size is in bits.
         Offset += i * R->getContext().getTypeSize(EleTy);
       } else {

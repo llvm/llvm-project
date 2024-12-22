@@ -459,8 +459,7 @@ public:
   /// Starting from `value`, follow the use-def chain in reverse, always
   /// selecting the aliasing OpOperands. Find and return Values for which
   /// `condition` evaluates to true. OpOperands of such matching Values are not
-  /// traversed any further, the visited aliasing opOperands will be preserved
-  /// through `visitedOpOperands`.
+  /// traversed any further.
   ///
   /// When reaching the end of a chain, also return the last Value of that
   /// chain if `config.alwaysIncludeLeaves` is set.
@@ -485,8 +484,7 @@ public:
   /// `config`.
   SetVector<Value> findValueInReverseUseDefChain(
       Value value, llvm::function_ref<bool(Value)> condition,
-      TraversalConfig config = TraversalConfig(),
-      llvm::DenseSet<OpOperand *> *visitedOpOperands = nullptr) const;
+      TraversalConfig config = TraversalConfig()) const;
 
   /// Find the values that may define the contents of the given value at
   /// runtime. A block argument is always a definition. An OpResult is a

@@ -15,6 +15,8 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/COFF_x86_64.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <cstring>
 
 using namespace llvm;
@@ -40,8 +42,7 @@ static StringRef getMachineName(uint16_t Machine) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
-                              std::shared_ptr<orc::SymbolStringPool> SSP) {
+createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer) {
   StringRef Data = ObjectBuffer.getBuffer();
 
   // Check magic
@@ -109,7 +110,7 @@ createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
 
   switch (Machine) {
   case COFF::IMAGE_FILE_MACHINE_AMD64:
-    return createLinkGraphFromCOFFObject_x86_64(ObjectBuffer, std::move(SSP));
+    return createLinkGraphFromCOFFObject_x86_64(ObjectBuffer);
   default:
     return make_error<JITLinkError>(
         "Unsupported target machine architecture in COFF object " +

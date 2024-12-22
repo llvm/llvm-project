@@ -2166,39 +2166,9 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCLoopConstruct = 321,
 
-  /** OpenACC Combined Constructs.
-   */
   CXCursor_OpenACCCombinedConstruct = 322,
 
-  /** OpenACC data Construct.
-   */
-  CXCursor_OpenACCDataConstruct = 323,
-
-  /** OpenACC enter data Construct.
-   */
-  CXCursor_OpenACCEnterDataConstruct = 324,
-
-  /** OpenACC exit data Construct.
-   */
-  CXCursor_OpenACCExitDataConstruct = 325,
-
-  /** OpenACC host_data Construct.
-   */
-  CXCursor_OpenACCHostDataConstruct = 326,
-
-  /** OpenACC wait Construct.
-   */
-  CXCursor_OpenACCWaitConstruct = 327,
-
-  /** OpenACC init Construct.
-   */
-  CXCursor_OpenACCInitConstruct = 328,
-
-  /** OpenACC shutdown Construct.
-   */
-  CXCursor_OpenACCShutdownConstruct = 329,
-
-  CXCursor_LastStmt = CXCursor_OpenACCShutdownConstruct,
+  CXCursor_LastStmt = CXCursor_OpenACCCombinedConstruct,
 
   /**
    * Cursor that represents the translation unit itself.

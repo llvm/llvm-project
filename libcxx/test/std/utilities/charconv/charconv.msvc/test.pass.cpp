@@ -11,9 +11,6 @@
 // TODO Investigate why this fails
 // UNSUPPORTED: windows
 
-// This test times out under msan
-// UNSUPPORTED: msan
-
 // to_chars requires functions in the dylib that have not been introduced in older
 // versions of the dylib on macOS.
 // XFAIL: availability-fp_to_chars-missing

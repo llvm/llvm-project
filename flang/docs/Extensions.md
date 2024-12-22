@@ -391,9 +391,6 @@ end
   has the SAVE attribute and was initialized.
 * `PRINT namelistname` is accepted and interpreted as
   `WRITE(*,NML=namelistname)`, a near-universal extension.
-* A character length specifier in a component or entity declaration
-  is accepted before an array specification (`ch*3(2)`) as well
-  as afterwards.
 
 ### Extensions supported when enabled by options
 
@@ -420,7 +417,6 @@ end
   [-fimplicit-none-type-never]
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
-* `UNSIGNED` type (-funsigned)
 
 ### Extensions and legacy features deliberately not supported
 

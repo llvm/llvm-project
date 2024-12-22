@@ -13,7 +13,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/StmtVisitor.h"
 #include <optional>
 
 namespace clang {
@@ -34,7 +33,7 @@ bool tryToFindPtrOrigin(
       E = tempExpr->getSubExpr();
       continue;
     }
-    if (auto *tempExpr = dyn_cast<CXXConstructExpr>(E)) {
+    if (auto *tempExpr = dyn_cast<CXXTemporaryObjectExpr>(E)) {
       if (auto *C = tempExpr->getConstructor()) {
         if (auto *Class = C->getParent(); Class && isSafePtr(Class))
           return callback(E, true);
@@ -159,9 +158,6 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
         E = ThisArg;
       }
     }
-  } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
-    if (OCE->getOperator() == OO_Star && OCE->getNumArgs() == 1)
-      E = OCE->getArg(0);
   }
   auto *ME = dyn_cast<MemberExpr>(E);
   if (!ME)
@@ -171,44 +167,6 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
     return false;
   auto T = D->getType();
   return isOwnerPtrType(T) && T.isConstQualified();
-}
-
-class EnsureFunctionVisitor
-    : public ConstStmtVisitor<EnsureFunctionVisitor, bool> {
-public:
-  bool VisitStmt(const Stmt *S) {
-    for (const Stmt *Child : S->children()) {
-      if (Child && !Visit(Child))
-        return false;
-    }
-    return true;
-  }
-
-  bool VisitReturnStmt(const ReturnStmt *RS) {
-    if (auto *RV = RS->getRetValue()) {
-      RV = RV->IgnoreParenCasts();
-      if (isa<CXXNullPtrLiteralExpr>(RV))
-        return true;
-      return isConstOwnerPtrMemberExpr(RV);
-    }
-    return false;
-  }
-};
-
-bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
-  auto *MCE = dyn_cast<CXXMemberCallExpr>(E);
-  if (!MCE)
-    return false;
-  auto *Callee = MCE->getDirectCallee();
-  if (!Callee)
-    return false;
-  auto *Body = Callee->getBody();
-  if (!Body)
-    return false;
-  auto [CacheIt, IsNew] = Cache.insert(std::make_pair(Callee, false));
-  if (IsNew)
-    CacheIt->second = EnsureFunctionVisitor().Visit(Body);
-  return CacheIt->second;
 }
 
 } // namespace clang

@@ -49,11 +49,6 @@ for header in public_headers:
 // TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
 // UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
-// TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
-// UNSUPPORTED: LIBCXX-AIX-FIXME
-
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
@@ -87,9 +82,6 @@ print(
 
 // TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
 // UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
-
-// TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
-// UNSUPPORTED: LIBCXX-AIX-FIXME
 
 @import std;
 

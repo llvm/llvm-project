@@ -746,6 +746,11 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   Location loc = padOp->getLoc();
   AffineExpr dim0, dim1;
   bindDims(b.getContext(), dim0, dim1);
+  // Add two integers.
+  auto addMap = AffineMap::get(2, 0, {dim0 + dim1});
+  auto add = [&](OpFoldResult v1, OpFoldResult v2) {
+    return affine::makeComposedFoldedAffineApply(b, loc, addMap, {v1, v2});
+  };
   // Subtract two integers.
   auto subMap = AffineMap::get(2, 0, {dim0 - dim1});
   auto sub = [&](OpFoldResult v1, OpFoldResult v2) {
@@ -820,20 +825,16 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     // The original read could also have stopped in the high padding zone.
     // In that case, set the end positition of the read should be the end of
     // the source tensor. (Similar to newOffset.)
-    // srcSize - newOffset represents how much length we have available
-    // and length - newLow represents how much length we want at most.
-    // Note that there are many ways to order this indexing math to compute
-    // newLength, but we want to make sure that the final affine.min ops in the
-    // sequence are bounding the index to as small a value as possible. If
-    // ValueBoundsOpInterface is used, this calculation will get upper bounds
-    // from the affine.min ops, so we want to use the smallest known value to
-    // set the bound at the end of the computation sequence. In this case, the
-    // index will be upper bounded by length - newLow.
-    OpFoldResult newLength = min(sub(srcSize, newOffset), sub(length, newLow));
-    // Optimization: If low = 0, then newLow = 0. then newLength >= 0 assuming
-    // length >= 0.
-    if (hasLowPad)
-      newLength = max(newLength, zero);
+    //
+    // endLoc = min(max(offset - low + length, 0), srcSize)
+    //
+    // The new ExtractSliceOp length is `endLoc - newOffset`.
+    //
+    // Optimization: If low = 0, then the formula can be simplified.
+    OpFoldResult endLoc =
+        hasLowPad ? min(max(add(sub(offset, low), length), zero), srcSize)
+                  : min(add(offset, length), srcSize);
+    OpFoldResult newLength = sub(endLoc, newOffset);
     newLengths.push_back(newLength);
 
     // Check if newLength is zero. In that case, no SubTensorOp should be

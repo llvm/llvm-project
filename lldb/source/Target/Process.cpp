@@ -2517,8 +2517,7 @@ bool Process::GetWatchpointReportedAfter() {
   llvm::Triple triple = arch.GetTriple();
 
   if (triple.isMIPS() || triple.isPPC64() || triple.isRISCV() ||
-      triple.isAArch64() || triple.isArmMClass() || triple.isARM() ||
-      triple.isLoongArch())
+      triple.isAArch64() || triple.isArmMClass() || triple.isARM())
     reported_after = false;
 
   return reported_after;
@@ -6079,10 +6078,6 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
     return false;
 
   return platform_sp->GetProcessInfo(GetID(), info);
-}
-
-lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
-  return lldb_private::UUID();
 }
 
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {

@@ -13,7 +13,6 @@ define <vscale x 4 x i32> @extract_nxv8i32_nxv4i32_0(<vscale x 8 x i32> %vec) {
 define <vscale x 4 x i32> @extract_nxv8i32_nxv4i32_4(<vscale x 8 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv8i32_nxv4i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %c = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> %vec, i64 4)
@@ -31,7 +30,6 @@ define <vscale x 2 x i32> @extract_nxv8i32_nxv2i32_0(<vscale x 8 x i32> %vec) {
 define <vscale x 2 x i32> @extract_nxv8i32_nxv2i32_2(<vscale x 8 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv8i32_nxv2i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, i64 2)
@@ -41,7 +39,6 @@ define <vscale x 2 x i32> @extract_nxv8i32_nxv2i32_2(<vscale x 8 x i32> %vec) {
 define <vscale x 2 x i32> @extract_nxv8i32_nxv2i32_4(<vscale x 8 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv8i32_nxv2i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, i64 4)
@@ -51,7 +48,6 @@ define <vscale x 2 x i32> @extract_nxv8i32_nxv2i32_4(<vscale x 8 x i32> %vec) {
 define <vscale x 2 x i32> @extract_nxv8i32_nxv2i32_6(<vscale x 8 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv8i32_nxv2i32_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, i64 6)
@@ -69,7 +65,6 @@ define <vscale x 8 x i32> @extract_nxv16i32_nxv8i32_0(<vscale x 16 x i32> %vec) 
 define <vscale x 8 x i32> @extract_nxv16i32_nxv8i32_8(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv8i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %c = call <vscale x 8 x i32> @llvm.vector.extract.nxv8i32.nxv16i32(<vscale x 16 x i32> %vec, i64 8)
@@ -87,7 +82,6 @@ define <vscale x 4 x i32> @extract_nxv16i32_nxv4i32_0(<vscale x 16 x i32> %vec) 
 define <vscale x 4 x i32> @extract_nxv16i32_nxv4i32_4(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv4i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %c = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, i64 4)
@@ -97,7 +91,6 @@ define <vscale x 4 x i32> @extract_nxv16i32_nxv4i32_4(<vscale x 16 x i32> %vec) 
 define <vscale x 4 x i32> @extract_nxv16i32_nxv4i32_8(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv4i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %c = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, i64 8)
@@ -107,7 +100,6 @@ define <vscale x 4 x i32> @extract_nxv16i32_nxv4i32_8(<vscale x 16 x i32> %vec) 
 define <vscale x 4 x i32> @extract_nxv16i32_nxv4i32_12(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv4i32_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
   %c = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, i64 12)
@@ -125,7 +117,6 @@ define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_0(<vscale x 16 x i32> %vec) 
 define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_2(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv2i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 2)
@@ -135,7 +126,6 @@ define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_2(<vscale x 16 x i32> %vec) 
 define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_4(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv2i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 4)
@@ -145,7 +135,6 @@ define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_4(<vscale x 16 x i32> %vec) 
 define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_6(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv2i32_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 6)
@@ -155,7 +144,6 @@ define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_6(<vscale x 16 x i32> %vec) 
 define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_8(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv2i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v12
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 8)
@@ -165,7 +153,6 @@ define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_8(<vscale x 16 x i32> %vec) 
 define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_10(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv2i32_10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 10)
@@ -175,7 +162,6 @@ define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_10(<vscale x 16 x i32> %vec)
 define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_12(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv2i32_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v14
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 12)
@@ -185,7 +171,6 @@ define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_12(<vscale x 16 x i32> %vec)
 define <vscale x 2 x i32> @extract_nxv16i32_nxv2i32_14(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv2i32_14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v15
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 14)
@@ -239,7 +224,6 @@ define <vscale x 1 x i32> @extract_nxv16i32_nxv1i32_15(<vscale x 16 x i32> %vec)
 define <vscale x 1 x i32> @extract_nxv16i32_nxv1i32_2(<vscale x 16 x i32> %vec) {
 ; CHECK-LABEL: extract_nxv16i32_nxv1i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %c = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv16i32(<vscale x 16 x i32> %vec, i64 2)
@@ -303,7 +287,6 @@ define <vscale x 2 x i8> @extract_nxv32i8_nxv2i8_6(<vscale x 32 x i8> %vec) {
 define <vscale x 2 x i8> @extract_nxv32i8_nxv2i8_8(<vscale x 32 x i8> %vec) {
 ; CHECK-LABEL: extract_nxv32i8_nxv2i8_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i8> @llvm.vector.extract.nxv2i8.nxv32i8(<vscale x 32 x i8> %vec, i64 8)
@@ -374,7 +357,6 @@ define <vscale x 2 x half> @extract_nxv2f16_nxv16f16_2(<vscale x 16 x half> %vec
 define <vscale x 2 x half> @extract_nxv2f16_nxv16f16_4(<vscale x 16 x half> %vec) {
 ; CHECK-LABEL: extract_nxv2f16_nxv16f16_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x half> @llvm.vector.extract.nxv2f16.nxv16f16(<vscale x 16 x half> %vec, i64 4)
@@ -522,7 +504,6 @@ define <vscale x 2 x bfloat> @extract_nxv2bf16_nxv16bf16_2(<vscale x 16 x bfloat
 define <vscale x 2 x bfloat> @extract_nxv2bf16_nxv16bf16_4(<vscale x 16 x bfloat> %vec) {
 ; CHECK-LABEL: extract_nxv2bf16_nxv16bf16_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.nxv16bf16(<vscale x 16 x bfloat> %vec, i64 4)

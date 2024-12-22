@@ -104,6 +104,8 @@ public:
     InstIterator tmp = *this; --*this; return tmp;
   }
 
+  inline bool atEnd() const { return BB == BBs->end(); }
+
 private:
   inline void advanceToNextBB() {
     // The only way that the II could be broken is if it is now pointing to

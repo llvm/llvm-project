@@ -247,16 +247,14 @@ class TargetRegisterClass;
       DOUBLE_SELECT_I64,
 
       // Load/Store Left/Right nodes.
-      FIRST_MEMORY_OPCODE,
-      LWL = FIRST_MEMORY_OPCODE,
+      LWL = ISD::FIRST_TARGET_MEMORY_OPCODE,
       LWR,
       SWL,
       SWR,
       LDL,
       LDR,
       SDL,
-      SDR,
-      LAST_MEMORY_OPCODE = SDR,
+      SDR
     };
 
   } // ene namespace MipsISD
@@ -625,7 +623,7 @@ class TargetRegisterClass;
     SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
 
-    bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
+    bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
 
     // Inline asm support
     ConstraintType getConstraintType(StringRef Constraint) const override;

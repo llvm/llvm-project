@@ -1096,55 +1096,43 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
-    // The Vector -> LLVM lowering models N-D vectors as nested aggregates of
-    // 1-d vectors. This nesting is modeled using arrays. We do this conversion
-    // from a N-d vector extract to a nested aggregate vector extract in two
-    // steps:
-    //  - Extract a member from the nested aggregate. The result can be
-    //    a lower rank nested aggregate or a vector (1-D). This is done using
-    //    `llvm.extractvalue`.
-    //  - Extract a scalar out of the vector if needed. This is done using
-    //   `llvm.extractelement`.
-
-    // Determine if we need to extract a member out of the aggregate. We
-    // always need to extract a member if the input rank >= 2.
-    bool extractsAggregate = extractOp.getSourceVectorType().getRank() >= 2;
-    // Determine if we need to extract a scalar as the result. We extract
-    // a scalar if the extract is full rank, i.e., the number of indices is
-    // equal to source vector rank.
-    bool extractsScalar = static_cast<int64_t>(positionVec.size()) ==
-                          extractOp.getSourceVectorType().getRank();
-
-    // Since the LLVM type converter converts 0-d vectors to 1-d vectors, we
-    // need to add a position for this change.
-    if (extractOp.getSourceVectorType().getRank() == 0) {
-      Type idxType = typeConverter->convertType(rewriter.getIndexType());
-      positionVec.push_back(rewriter.getZeroAttr(idxType));
+    // Extract entire vector. Should be handled by folder, but just to be safe.
+    ArrayRef<OpFoldResult> position(positionVec);
+    if (position.empty()) {
+      rewriter.replaceOp(extractOp, adaptor.getVector());
+      return success();
     }
 
-    Value extracted = adaptor.getVector();
-    if (extractsAggregate) {
-      ArrayRef<OpFoldResult> position(positionVec);
-      if (extractsScalar) {
-        // If we are extracting a scalar from the extracted member, we drop
-        // the last index, which will be used to extract the scalar out of the
-        // vector.
-        position = position.drop_back();
-      }
-      // llvm.extractvalue does not support dynamic dimensions.
-      if (!llvm::all_of(position, llvm::IsaPred<Attribute>)) {
+    // One-shot extraction of vector from array (only requires extractvalue).
+    // Except for extracting 1-element vectors.
+    if (isa<VectorType>(resultType) &&
+        position.size() !=
+            static_cast<size_t>(extractOp.getSourceVectorType().getRank())) {
+      if (extractOp.hasDynamicPosition())
         return failure();
-      }
-      extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, extracted, getAsIntegers(position));
+
+      Value extracted = rewriter.create<LLVM::ExtractValueOp>(
+          loc, adaptor.getVector(), getAsIntegers(position));
+      rewriter.replaceOp(extractOp, extracted);
+      return success();
     }
 
-    if (extractsScalar) {
-      extracted = rewriter.create<LLVM::ExtractElementOp>(
-          loc, extracted, getAsLLVMValue(rewriter, loc, positionVec.back()));
+    // Potential extraction of 1-D vector from array.
+    Value extracted = adaptor.getVector();
+    if (position.size() > 1) {
+      if (extractOp.hasDynamicPosition())
+        return failure();
+
+      SmallVector<int64_t> nMinusOnePosition =
+          getAsIntegers(position.drop_back());
+      extracted = rewriter.create<LLVM::ExtractValueOp>(loc, extracted,
+                                                        nMinusOnePosition);
     }
 
-    rewriter.replaceOp(extractOp, extracted);
+    Value lastPosition = getAsLLVMValue(rewriter, loc, position.back());
+    // Remaining extraction of element from 1-D LLVM vector.
+    rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(extractOp, extracted,
+                                                        lastPosition);
     return success();
   }
 };
@@ -1475,17 +1463,16 @@ public:
 
 /// Conversion pattern for a `vector.create_mask` (1-D scalable vectors only).
 /// Non-scalable versions of this operation are handled in Vector Transforms.
-class VectorCreateMaskOpConversion
-    : public OpConversionPattern<vector::CreateMaskOp> {
+class VectorCreateMaskOpRewritePattern
+    : public OpRewritePattern<vector::CreateMaskOp> {
 public:
-  explicit VectorCreateMaskOpConversion(MLIRContext *context,
-                                        bool enableIndexOpt)
-      : OpConversionPattern<vector::CreateMaskOp>(context),
+  explicit VectorCreateMaskOpRewritePattern(MLIRContext *context,
+                                            bool enableIndexOpt)
+      : OpRewritePattern<vector::CreateMaskOp>(context),
         force32BitVectorIndices(enableIndexOpt) {}
 
-  LogicalResult
-  matchAndRewrite(vector::CreateMaskOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::CreateMaskOp op,
+                                PatternRewriter &rewriter) const override {
     auto dstType = op.getType();
     if (dstType.getRank() != 1 || !cast<VectorType>(dstType).isScalable())
       return failure();
@@ -1496,7 +1483,7 @@ public:
         loc, LLVM::getVectorType(idxType, dstType.getShape()[0],
                                  /*isScalable=*/true));
     auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
-                                                 adaptor.getOperands()[0]);
+                                                 op.getOperand(0));
     Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
     Value comp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                 indices, bounds);
@@ -1897,19 +1884,16 @@ struct VectorScalableStepOpLowering
 
 } // namespace
 
-void mlir::vector::populateVectorRankReducingFMAPattern(
-    RewritePatternSet &patterns) {
-  patterns.add<VectorFMAOpNDRewritePattern>(patterns.getContext());
-}
-
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices) {
-  // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
+  patterns.add<VectorFMAOpNDRewritePattern>(ctx);
+  populateVectorInsertExtractStridedSliceTransforms(patterns);
+  populateVectorStepLoweringPatterns(patterns);
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
-  patterns.add<VectorCreateMaskOpConversion>(ctx, force32BitVectorIndices);
+  patterns.add<VectorCreateMaskOpRewritePattern>(ctx, force32BitVectorIndices);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractElementOpConversion, VectorExtractOpConversion,
                VectorFMAOp1DConversion, VectorInsertElementOpConversion,
@@ -1926,6 +1910,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
                VectorScalableStepOpLowering>(converter);
+  // Transfer ops with rank > 1 are handled by VectorToSCF.
+  populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
 }
 
 void mlir::populateVectorToLLVMMatrixConversionPatterns(

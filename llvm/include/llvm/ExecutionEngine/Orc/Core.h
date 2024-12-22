@@ -51,26 +51,6 @@ enum class SymbolState : uint8_t;
 using ResourceTrackerSP = IntrusiveRefCntPtr<ResourceTracker>;
 using JITDylibSP = IntrusiveRefCntPtr<JITDylib>;
 
-/// A definition of a Symbol within a JITDylib.
-class SymbolInstance {
-public:
-  using LookupAsyncOnCompleteFn =
-      unique_function<void(Expected<ExecutorSymbolDef>)>;
-
-  SymbolInstance(JITDylibSP JD, SymbolStringPtr Name)
-      : JD(std::move(JD)), Name(std::move(Name)) {}
-
-  const JITDylib &getJITDylib() const { return *JD; }
-  const SymbolStringPtr &getName() const { return Name; }
-
-  Expected<ExecutorSymbolDef> lookup() const;
-  void lookupAsync(LookupAsyncOnCompleteFn OnComplete) const;
-
-private:
-  JITDylibSP JD;
-  SymbolStringPtr Name;
-};
-
 using ResourceKey = uintptr_t;
 
 /// API to remove / transfer ownership of JIT resources.
@@ -125,14 +105,7 @@ private:
 class ResourceManager {
 public:
   virtual ~ResourceManager();
-
-  /// This function will be called *outside* the session lock. ResourceManagers
-  /// should perform book-keeping under the session lock, and any expensive
-  /// cleanup outside the session lock.
   virtual Error handleRemoveResources(JITDylib &JD, ResourceKey K) = 0;
-
-  /// This function will be called *inside* the session lock. ResourceManagers
-  /// DO NOT need to re-lock the session.
   virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
                                        ResourceKey SrcK) = 0;
 };
@@ -199,11 +172,6 @@ public:
   using const_iterator = UnderlyingVector::const_iterator;
 
   SymbolLookupSet() = default;
-
-  SymbolLookupSet(std::initializer_list<value_type> Elems) {
-    for (auto &E : Elems)
-      Symbols.push_back(std::move(E));
-  }
 
   explicit SymbolLookupSet(
       SymbolStringPtr Name,
@@ -581,9 +549,6 @@ public:
   ///        this asserts that all symbols being tracked have been either
   ///        emitted or notified of an error.
   ~MaterializationResponsibility();
-
-  /// Return the ResourceTracker associated with this instance.
-  const ResourceTrackerSP &getResourceTracker() const { return RT; }
 
   /// Runs the given callback under the session lock, passing in the associated
   /// ResourceKey. This is the safe way to associate resources with trackers.
@@ -1782,10 +1747,6 @@ private:
   DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
       JITDispatchHandlers;
 };
-
-inline Expected<ExecutorSymbolDef> SymbolInstance::lookup() const {
-  return JD->getExecutionSession().lookup({JD.get()}, Name);
-}
 
 template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
   return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {

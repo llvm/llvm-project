@@ -143,9 +143,7 @@ Tristate IsDefinedAssignment(
     return Tristate::Yes;
   } else if (lhsCat != TypeCategory::Derived) {
     return ToTristate(lhsCat != rhsCat &&
-        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat) ||
-            lhsCat == TypeCategory::Unsigned ||
-            rhsCat == TypeCategory::Unsigned));
+        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat)));
   } else if (MightBeSameDerivedType(lhsType, rhsType)) {
     return Tristate::Maybe; // TYPE(t) = TYPE(t) can be defined or intrinsic
   } else {
@@ -161,9 +159,7 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
   } else {
     auto cat0{type0.category()};
     auto cat1{type1.category()};
-    if (cat0 == TypeCategory::Unsigned || cat1 == TypeCategory::Unsigned) {
-      return cat0 == cat1;
-    } else if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
+    if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
       // numeric types: EQ/NE always ok, others ok for non-complex
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||

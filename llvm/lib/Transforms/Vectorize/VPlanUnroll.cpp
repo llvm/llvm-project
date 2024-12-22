@@ -168,7 +168,7 @@ void UnrollState::unrollWidenInductionByUF(
   auto *ConstStep = ScalarStep->isLiveIn()
                         ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
                         : nullptr;
-  if (!ConstStep || ConstStep->getValue() != 1) {
+  if (!ConstStep || ConstStep->getZExtValue() != 1) {
     if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
       ScalarStep =
           Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
@@ -411,6 +411,8 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   }
 
   UnrollState Unroller(Plan, UF, Ctx);
+
+  Unroller.unrollBlock(Plan.getPreheader());
 
   // Iterate over all blocks in the plan starting from Entry, and unroll
   // recipes inside them. This includes the vector preheader and middle blocks,

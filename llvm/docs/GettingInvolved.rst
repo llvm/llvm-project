@@ -311,6 +311,11 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
     - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
     - English, German, Spanish, French
+  * - Anastasia Stulova
+    - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers.
+    - Monthly, 1st Tuesday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 30 mins slot.
+    - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
+    - English, Russian, German (not fluently)
   * - Alexey Bader
     - SYCL compiler, offload tools, OpenCL and SPIR-V, how to contribute.
     - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.

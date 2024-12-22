@@ -91,13 +91,6 @@ public:
 
   /// An optional listener that should be notified about IR modifications.
   RewriterBase::Listener *listener = nullptr;
-
-  /// Whether this should fold while greedily rewriting.
-  bool fold = true;
-
-  /// If set to "true", constants are CSE'd (even across multiple regions that
-  /// are in a parent-ancestor relationship).
-  bool cseConstants = true;
 };
 
 //===----------------------------------------------------------------------===//
@@ -111,8 +104,8 @@ public:
 /// The greedy rewrite may prematurely stop after a maximum number of
 /// iterations, which can be configured in the configuration parameter.
 ///
-/// Also performs simple dead-code elimination before attempting to match any of
-/// the provided patterns.
+/// Also performs folding and simple dead-code elimination before attempting to
+/// match any of the provided patterns.
 ///
 /// A region scope can be set in the configuration parameter. By default, the
 /// scope is set to the specified region. Only in-scope ops are added to the
@@ -124,20 +117,10 @@ public:
 ///
 /// Note: This method does not apply patterns to the region's parent operation.
 LogicalResult
-applyPatternsGreedily(Region &region, const FrozenRewritePatternSet &patterns,
-                      GreedyRewriteConfig config = GreedyRewriteConfig(),
-                      bool *changed = nullptr);
-/// Same as `applyPatternsAndGreedily` above with folding.
-/// FIXME: Remove this once transition to above is complieted.
-LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
-inline LogicalResult
 applyPatternsAndFoldGreedily(Region &region,
                              const FrozenRewritePatternSet &patterns,
                              GreedyRewriteConfig config = GreedyRewriteConfig(),
-                             bool *changed = nullptr) {
-  config.fold = true;
-  return applyPatternsGreedily(region, patterns, config, changed);
-}
+                             bool *changed = nullptr);
 
 /// Rewrite ops nested under the given operation, which must be isolated from
 /// above, by repeatedly applying the highest benefit patterns in a greedy
@@ -146,8 +129,8 @@ applyPatternsAndFoldGreedily(Region &region,
 /// The greedy rewrite may prematurely stop after a maximum number of
 /// iterations, which can be configured in the configuration parameter.
 ///
-/// Also performs simple dead-code elimination before attempting to match any of
-/// the provided patterns.
+/// Also performs folding and simple dead-code elimination before attempting to
+/// match any of the provided patterns.
 ///
 /// This overload runs a separate greedy rewrite for each region of the
 /// specified op. A region scope can be set in the configuration parameter. By
@@ -164,31 +147,22 @@ applyPatternsAndFoldGreedily(Region &region,
 ///
 /// Note: This method does not apply patterns to the given operation itself.
 inline LogicalResult
-applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
-                      GreedyRewriteConfig config = GreedyRewriteConfig(),
-                      bool *changed = nullptr) {
+applyPatternsAndFoldGreedily(Operation *op,
+                             const FrozenRewritePatternSet &patterns,
+                             GreedyRewriteConfig config = GreedyRewriteConfig(),
+                             bool *changed = nullptr) {
   bool anyRegionChanged = false;
   bool failed = false;
   for (Region &region : op->getRegions()) {
     bool regionChanged;
-    failed |= applyPatternsGreedily(region, patterns, config, &regionChanged)
-                  .failed();
+    failed |=
+        applyPatternsAndFoldGreedily(region, patterns, config, &regionChanged)
+            .failed();
     anyRegionChanged |= regionChanged;
   }
   if (changed)
     *changed = anyRegionChanged;
   return failure(failed);
-}
-/// Same as `applyPatternsGreedily` above with folding.
-/// FIXME: Remove this once transition to above is complieted.
-LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
-inline LogicalResult
-applyPatternsAndFoldGreedily(Operation *op,
-                             const FrozenRewritePatternSet &patterns,
-                             GreedyRewriteConfig config = GreedyRewriteConfig(),
-                             bool *changed = nullptr) {
-  config.fold = true;
-  return applyPatternsGreedily(op, patterns, config, changed);
 }
 
 /// Rewrite the specified ops by repeatedly applying the highest benefit
@@ -197,8 +171,8 @@ applyPatternsAndFoldGreedily(Operation *op,
 /// The greedy rewrite may prematurely stop after a maximum number of
 /// iterations, which can be configured in the configuration parameter.
 ///
-/// Also performs simple dead-code elimination before attempting to match any of
-/// the provided patterns.
+/// Also performs folding and simple dead-code elimination before attempting to
+/// match any of the provided patterns.
 ///
 /// Newly created ops and other pre-existing ops that use results of rewritten
 /// ops or supply operands to such ops are also processed, unless such ops are
@@ -206,36 +180,24 @@ applyPatternsAndFoldGreedily(Operation *op,
 /// regardless of `strictMode`).
 ///
 /// In addition to strictness, a region scope can be specified. Only ops within
-/// the scope are simplified. This is similar to `applyPatternsGreedily`,
+/// the scope are simplified. This is similar to `applyPatternsAndFoldGreedily`,
 /// where only ops within the given region/op are simplified by default. If no
 /// scope is specified, it is assumed to be the first common enclosing region of
 /// the given ops.
 ///
 /// Note that ops in `ops` could be erased as result of folding, becoming dead,
 /// or via pattern rewrites. If more far reaching simplification is desired,
-/// `applyPatternsGreedily` should be used.
+/// `applyPatternsAndFoldGreedily` should be used.
 ///
 /// Returns "success" if the iterative process converged (i.e., fixpoint was
 /// reached) and no more patterns can be matched. `changed` is set to "true" if
 /// the IR was modified at all. `allOpsErased` is set to "true" if all ops in
 /// `ops` were erased.
 LogicalResult
-applyOpPatternsGreedily(ArrayRef<Operation *> ops,
-                        const FrozenRewritePatternSet &patterns,
-                        GreedyRewriteConfig config = GreedyRewriteConfig(),
-                        bool *changed = nullptr, bool *allErased = nullptr);
-/// Same as `applyOpPatternsGreedily` with folding.
-/// FIXME: Remove this once transition to above is complieted.
-LLVM_DEPRECATED("Use applyOpPatternsGreedily() instead",
-                "applyOpPatternsGreedily")
-inline LogicalResult
 applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                        const FrozenRewritePatternSet &patterns,
                        GreedyRewriteConfig config = GreedyRewriteConfig(),
-                       bool *changed = nullptr, bool *allErased = nullptr) {
-  config.fold = true;
-  return applyOpPatternsGreedily(ops, patterns, config, changed, allErased);
-}
+                       bool *changed = nullptr, bool *allErased = nullptr);
 
 } // namespace mlir
 

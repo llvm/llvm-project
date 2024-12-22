@@ -36,6 +36,4 @@ target_link_libraries(FlangRuntimeTests
   FortranRuntime
 )
 
-target_compile_definitions(FlangRuntimeTests PRIVATE NOT_EXE="$<TARGET_FILE:not>")
-
 add_subdirectory(CUDA)

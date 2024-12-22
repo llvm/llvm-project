@@ -14,6 +14,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -37,6 +38,7 @@ public:
   bool runOnModule(Module &M) override;
   DXILFlattenArraysLegacy() : ModulePass(ID) {}
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
   static char ID; // Pass identification.
 };
 
@@ -162,18 +164,11 @@ bool DXILFlattenArraysVisitor::visitLoadInst(LoadInst &LI) {
     Value *CurrOpperand = LI.getOperand(I);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
-      GetElementPtrInst *OldGEP =
-          cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(&LI);
-
-      IRBuilder<> Builder(&LI);
-      LoadInst *NewLoad =
-          Builder.CreateLoad(LI.getType(), OldGEP, LI.getName());
-      NewLoad->setAlignment(LI.getAlign());
-      LI.replaceAllUsesWith(NewLoad);
-      LI.eraseFromParent();
-      visitGetElementPtrInst(*OldGEP);
-      return true;
+      convertUsersOfConstantsToInstructions(CE,
+                                            /*RestrictToFunc=*/nullptr,
+                                            /*RemoveDeadConstants=*/false,
+                                            /*IncludeSelf=*/true);
+      return false;
     }
   }
   return false;
@@ -185,17 +180,11 @@ bool DXILFlattenArraysVisitor::visitStoreInst(StoreInst &SI) {
     Value *CurrOpperand = SI.getOperand(I);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
-      GetElementPtrInst *OldGEP =
-          cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(&SI);
-
-      IRBuilder<> Builder(&SI);
-      StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), OldGEP);
-      NewStore->setAlignment(SI.getAlign());
-      SI.replaceAllUsesWith(NewStore);
-      SI.eraseFromParent();
-      visitGetElementPtrInst(*OldGEP);
-      return true;
+      convertUsersOfConstantsToInstructions(CE,
+                                            /*RestrictToFunc=*/nullptr,
+                                            /*RemoveDeadConstants=*/false,
+                                            /*IncludeSelf=*/true);
+      return false;
     }
   }
   return false;
@@ -328,15 +317,8 @@ bool DXILFlattenArraysVisitor::visit(Function &F) {
 static void collectElements(Constant *Init,
                             SmallVectorImpl<Constant *> &Elements) {
   // Base case: If Init is not an array, add it directly to the vector.
-  auto *ArrayTy = dyn_cast<ArrayType>(Init->getType());
-  if (!ArrayTy) {
+  if (!isa<ArrayType>(Init->getType())) {
     Elements.push_back(Init);
-    return;
-  }
-  unsigned ArrSize = ArrayTy->getNumElements();
-  if (isa<ConstantAggregateZero>(Init)) {
-    for (unsigned I = 0; I < ArrSize; ++I)
-      Elements.push_back(Constant::getNullValue(ArrayTy->getElementType()));
     return;
   }
 
@@ -420,7 +402,7 @@ static bool flattenArrays(Module &M) {
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
   flattenGlobalArrays(M, GlobalMap);
   for (auto &F : make_early_inc_range(M.functions())) {
-    if (F.isDeclaration())
+    if (F.isIntrinsic())
       continue;
     MadeChange |= Impl.visit(F);
   }
@@ -437,11 +419,16 @@ PreservedAnalyses DXILFlattenArrays::run(Module &M, ModuleAnalysisManager &) {
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
+  PA.preserve<DXILResourceAnalysis>();
   return PA;
 }
 
 bool DXILFlattenArraysLegacy::runOnModule(Module &M) {
   return flattenArrays(M);
+}
+
+void DXILFlattenArraysLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILFlattenArraysLegacy::ID = 0;

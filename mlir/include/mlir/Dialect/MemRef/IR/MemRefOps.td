@@ -1529,8 +1529,7 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
   }];
 
   let arguments = (ins AnyRankedOrUnrankedMemRef:$source,
-                       Arg<MemRefRankOf<[AnySignlessInteger, Index], [1]>,
-                       "dynamically-sized shape", [MemRead]>:$shape);
+                       MemRefRankOf<[AnySignlessInteger, Index], [1]>:$shape);
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
   let builders = [OpBuilder<

@@ -283,8 +283,11 @@ public:
   }
 
 #ifndef NDEBUG
-  void dumpOS(raw_ostream &OS);
-  LLVM_DUMP_METHOD void dump();
+  void dumpOS(raw_ostream &OS) { LLVMTy->print(OS); }
+  LLVM_DUMP_METHOD void dump() {
+    dumpOS(dbgs());
+    dbgs() << "\n";
+  }
 #endif // NDEBUG
 };
 

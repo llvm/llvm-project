@@ -10,6 +10,7 @@
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
+#include "Opcode.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -158,7 +159,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   if (const auto *E = D.dyn_cast<const Expr *>()) {
     QT = E->getType();
   } else {
-    const ValueDecl *VD = cast<ValueDecl>(cast<const Decl *>(D));
+    const ValueDecl *VD = cast<ValueDecl>(D.get<const Decl *>());
     IsWeak = VD->isWeak();
     QT = VD->getType();
     if (const auto *RT = QT->getAs<ReferenceType>())

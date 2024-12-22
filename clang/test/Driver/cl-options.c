@@ -680,7 +680,6 @@
 // RUN:     -fcoverage-mapping \
 // RUN:     -fno-coverage-mapping \
 // RUN:     -fdiagnostics-color \
-// RUN:     -fdiagnostics-color=auto \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
 // RUN:     -fdebug-compilation-dir=. \
@@ -714,7 +713,6 @@
 // RUN:     -fbracket-depth=123 \
 // RUN:     -fprofile-generate \
 // RUN:     -fprofile-generate=dir \
-// RUN:     -fprofile-sample-use=%S/Inputs/file.prof \
 // RUN:     -fno-profile-generate \
 // RUN:     -fno-profile-instr-generate \
 // RUN:     -fno-profile-instr-use \

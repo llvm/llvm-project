@@ -39,7 +39,7 @@ enum {
 
 /// \returns the IsVRegClass for the register class.
 static inline bool isVRegClass(uint64_t TSFlags) {
-  return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
+  return TSFlags & IsVRegClassShiftMask >> IsVRegClassShift;
 }
 
 /// \returns the LMUL for the register class.

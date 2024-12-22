@@ -48,7 +48,7 @@ static GeneratedWord GetNextValue() {
 }
 
 template <typename REAL, int PREC>
-inline void GenerateReal(const Descriptor &harvest) {
+inline void Generate(const Descriptor &harvest) {
   static constexpr std::size_t minBits{
       std::max<std::size_t>(PREC, 8 * sizeof(GeneratedWord))};
   using Int = common::HostUnsignedIntType<minBits>;
@@ -78,29 +78,6 @@ inline void GenerateReal(const Descriptor &harvest) {
           break;
         }
       }
-      harvest.IncrementSubscripts(at);
-    }
-  }
-}
-
-template <typename UINT>
-inline void GenerateUnsigned(const Descriptor &harvest) {
-  static constexpr std::size_t words{
-      (8 * sizeof(UINT) + rangeBits - 1) / rangeBits};
-  std::size_t elements{harvest.Elements()};
-  SubscriptValue at[maxRank];
-  harvest.GetLowerBounds(at);
-  {
-    CriticalSection critical{lock};
-    for (std::size_t j{0}; j < elements; ++j) {
-      UINT next{static_cast<UINT>(GetNextValue())};
-      if constexpr (words > 1) {
-        for (std::size_t k{1}; k < words; ++k) {
-          next <<= rangeBits;
-          next |= GetNextValue();
-        }
-      }
-      *harvest.Element<UINT>(at) = next;
       harvest.IncrementSubscripts(at);
     }
   }

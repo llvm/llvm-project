@@ -323,7 +323,7 @@ void WinCOFFWriter::defineSection(const MCAssembler &Asm,
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
 
-  if (UseOffsetLabels) {
+  if (UseOffsetLabels && !MCSec.empty()) {
     const uint32_t Interval = 1 << OffsetLabelIntervalBits;
     uint32_t N = 1;
     for (uint32_t Off = Interval, E = Asm.getSectionAddressSize(MCSec); Off < E;

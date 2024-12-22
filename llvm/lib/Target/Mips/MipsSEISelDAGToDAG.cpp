@@ -614,9 +614,11 @@ bool MipsSEDAGToDAGISel::selectVSplatMaskL(SDValue N, SDValue &Imm) const {
 
   if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
       ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
-    // Check if we have a leading one, then check if the whole value is a
-    // shifted mask.
-    if (ImmValue.isNegative() && ImmValue.isShiftedMask()) {
+    // Extract the run of set bits starting with bit zero from the bitwise
+    // inverse of ImmValue, and test that the inverse of this is the same
+    // as the original value.
+    if (ImmValue == ~(~ImmValue & ~(~ImmValue + 1))) {
+
       Imm = CurDAG->getTargetConstant(ImmValue.popcount() - 1, SDLoc(N), EltTy);
       return true;
     }
@@ -645,7 +647,9 @@ bool MipsSEDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
 
   if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
       ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
-    if (ImmValue.isMask()) {
+    // Extract the run of set bits starting with bit zero, and test that the
+    // result is the same as the original value
+    if (ImmValue == (ImmValue & ~(ImmValue + 1))) {
       Imm = CurDAG->getTargetConstant(ImmValue.popcount() - 1, SDLoc(N), EltTy);
       return true;
     }

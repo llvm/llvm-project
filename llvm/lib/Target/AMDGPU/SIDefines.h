@@ -1048,18 +1048,6 @@ enum Offset_COV5 : unsigned {
 
 } // namespace ImplicitArg
 
-namespace MFMAScaleFormats {
-// Enum value used in cbsz/blgp for F8F6F4 MFMA operations to select the matrix
-// format.
-enum MFMAScaleFormats {
-  FP8_E4M3 = 0,
-  FP8_E5M2 = 1,
-  FP6_E2M3 = 2,
-  FP6_E3M2 = 3,
-  FP4_E2M1 = 4
-};
-} // namespace MFMAScaleFormats
-
 namespace VirtRegFlag {
 // Virtual register flags used for various target specific handlings during
 // codegen.

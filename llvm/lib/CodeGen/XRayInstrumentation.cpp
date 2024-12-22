@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -176,7 +175,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
       MachineDominatorTree ComputedMDT;
       if (!MDT) {
-        ComputedMDT.recalculate(MF);
+        ComputedMDT.getBase().recalculate(MF);
         MDT = &ComputedMDT;
       }
 
@@ -185,7 +184,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
       MachineLoopInfo ComputedMLI;
       if (!MLI) {
-        ComputedMLI.analyze(*MDT);
+        ComputedMLI.analyze(MDT->getBase());
         MLI = &ComputedMLI;
       }
 
@@ -212,12 +211,8 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   auto &FirstMI = *FirstMBB.begin();
 
   if (!MF.getSubtarget().isXRaySupported()) {
-
-    const Function &Fn = FirstMBB.getParent()->getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "An attempt to perform XRay instrumentation for an"
-            " unsupported target."));
-
+    FirstMI.emitError("An attempt to perform XRay instrumentation for an"
+                      " unsupported target.");
     return false;
   }
 
@@ -238,13 +233,10 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     case Triple::ArchType::mips:
     case Triple::ArchType::mipsel:
     case Triple::ArchType::mips64:
-    case Triple::ArchType::mips64el:
-    case Triple::ArchType::riscv32:
-    case Triple::ArchType::riscv64: {
+    case Triple::ArchType::mips64el: {
       // For the architectures which don't have a single return instruction
       InstrumentationOptions op;
-      // RISC-V supports patching tail calls.
-      op.HandleTailcall = MF.getTarget().getTargetTriple().isRISCV();
+      op.HandleTailcall = false;
       op.HandleAllReturns = true;
       prependRetWithPatchableExit(MF, TII, op);
       break;

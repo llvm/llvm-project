@@ -13,7 +13,7 @@
 
 #include "environment.h"
 #include "io-error.h"
-#include "flang/Common/Fortran-consts.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Runtime/freestanding-tools.h"

@@ -7,9 +7,10 @@
 # to receive an approval from a "code owner" in particular -- any LLVM project
 # member can approve pull requests.
 #
-# This is independent of LLVM's own "maintainer" concept.
-# See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
-# Maintainers.* files in the the respective subproject directories.
+# Note that GitHub's concept of "code owner" is independent from LLVM's own
+# "code owner" concept, they merely happen to share terminology. See
+# https://llvm.org/docs/DeveloperPolicy.html#code-owners, as well as the
+# CODE_OWNERS.txt files in the respective subproject directories.
 
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
@@ -129,7 +130,7 @@
 /mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci @yota9
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith

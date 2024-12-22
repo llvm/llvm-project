@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -47,6 +48,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -57,6 +59,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -1498,7 +1501,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // All operations default to "legal", except:
   // - indexed loads and stores (pre-/post-incremented),
   // - ANY_EXTEND_VECTOR_INREG, ATOMIC_CMP_SWAP_WITH_SUCCESS, CONCAT_VECTORS,
-  //   ConstantFP, FCEIL, FCOPYSIGN, FEXP, FEXP2, FFLOOR, FGETSIGN,
+  //   ConstantFP, DEBUGTRAP, FCEIL, FCOPYSIGN, FEXP, FEXP2, FFLOOR, FGETSIGN,
   //   FLOG, FLOG2, FLOG10, FMAXNUM, FMINNUM, FNEARBYINT, FRINT, FROUND, TRAP,
   //   FTRUNC, PREFETCH, SIGN_EXTEND_VECTOR_INREG, ZERO_EXTEND_VECTOR_INREG,
   // which default to "expand" for at least one type.
@@ -1507,7 +1510,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ConstantFP,           MVT::f32,   Legal);
   setOperationAction(ISD::ConstantFP,           MVT::f64,   Legal);
   setOperationAction(ISD::TRAP,                 MVT::Other, Legal);
-  setOperationAction(ISD::DEBUGTRAP,            MVT::Other, Legal);
   setOperationAction(ISD::ConstantPool,         MVT::i32,   Custom);
   setOperationAction(ISD::JumpTable,            MVT::i32,   Custom);
   setOperationAction(ISD::BUILD_PAIR,           MVT::i64,   Expand);
@@ -2558,10 +2560,10 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
   if (ElemTy == MVT::i8) {
     // First try generating a constant.
     if (AllConst) {
-      uint32_t V = (Consts[0]->getZExtValue() & 0xFF) |
-                   (Consts[1]->getZExtValue() & 0xFF) << 8 |
-                   (Consts[2]->getZExtValue() & 0xFF) << 16 |
-                   Consts[3]->getZExtValue() << 24;
+      int32_t V = (Consts[0]->getZExtValue() & 0xFF) |
+                  (Consts[1]->getZExtValue() & 0xFF) << 8 |
+                  (Consts[2]->getZExtValue() & 0xFF) << 16 |
+                  Consts[3]->getZExtValue() << 24;
       return DAG.getBitcast(MVT::v4i8, DAG.getConstant(V, dl, MVT::i32));
     }
 
@@ -3793,8 +3795,6 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
 bool HexagonTargetLowering::allowsMemoryAccess(
     LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
     Align Alignment, MachineMemOperand::Flags Flags, unsigned *Fast) const {
-  if (!VT.isSimple())
-    return false;
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMemoryAccess(SVT, Flags, Fast);
@@ -3805,8 +3805,6 @@ bool HexagonTargetLowering::allowsMemoryAccess(
 bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
-  if (!VT.isSimple())
-    return false;
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMisalignedMemoryAccesses(SVT, Flags, Fast);

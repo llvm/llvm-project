@@ -94,9 +94,8 @@ public:
     PreprocessorOptions &PPOpts = CI->getPreprocessorOpts();
     PPOpts.RemappedFilesKeepOriginalName = true;
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
-                                            new DiagnosticConsumer));
+    IntrusiveRefCntPtr<DiagnosticsEngine>
+      Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions, new DiagnosticConsumer));
 
     FileManager *FileMgr = new FileManager(FSOpts, VFS);
 

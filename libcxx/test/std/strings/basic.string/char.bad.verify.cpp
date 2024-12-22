@@ -9,8 +9,6 @@
 // <string>
 //   ... manipulating sequences of any non-array trivial standard-layout types.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <string>
 #include "test_traits.h"
 

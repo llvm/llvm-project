@@ -1,7 +1,5 @@
 // RUN: %clang %s -target arm64-apple-darwin -emit-llvm -S -fsanitize-coverage=trace-pc-guard -mllvm -sanitizer-coverage-gated-trace-callbacks=1 -o - | FileCheck %s --check-prefixes=CHECK,GATED
 // RUN: %clang %s -target arm64-apple-darwin -emit-llvm -S -fsanitize-coverage=trace-pc-guard -mllvm -sanitizer-coverage-gated-trace-callbacks=0 -o - | FileCheck %s --check-prefixes=CHECK,PLAIN
-// RUN: %clang %s -target arm64-apple-darwin -emit-llvm -S -fsanitize-coverage=trace-pc-guard,trace-cmp -mllvm -sanitizer-coverage-gated-trace-callbacks=1 -o - | FileCheck %s --check-prefixes=CHECK,GATED,GATEDCMP
-// RUN: %clang %s -target arm64-apple-darwin -emit-llvm -S -fsanitize-coverage=trace-pc-guard,trace-cmp -mllvm -sanitizer-coverage-gated-trace-callbacks=0 -o - | FileCheck %s --check-prefixes=CHECK,PLAIN,PLAINCMP
 // RUN: not %clang %s -target arm64-apple-darwin -emit-llvm -S -fsanitize-coverage=trace-pc -mllvm -sanitizer-coverage-gated-trace-callbacks=1 -o /dev/null 2>&1 | FileCheck %s --check-prefixes=INCOMPATIBLE
 // RUN: not %clang %s -target arm64-apple-darwin -emit-llvm -S -fsanitize-coverage=inline-8bit-counters -mllvm -sanitizer-coverage-gated-trace-callbacks=1 -o /dev/null 2>&1 | FileCheck %s --check-prefixes=INCOMPATIBLE
 // RUN: not %clang %s -target arm64-apple-darwin -emit-llvm -S -fsanitize-coverage=inline-bool-flag -mllvm -sanitizer-coverage-gated-trace-callbacks=1 -o /dev/null 2>&1 | FileCheck %s --check-prefixes=INCOMPATIBLE
@@ -11,7 +9,7 @@
 // PLAIN-NOT: section "__DATA,__sancov_gate"
 
 // Produce an error for all incompatible sanitizer coverage modes.
-// INCOMPATIBLE: error: 'sanitizer-coverage-gated-trace-callbacks' is only supported with trace-pc-guard or trace-cmp
+// INCOMPATIBLE: error: 'sanitizer-coverage-gated-trace-callbacks' is only supported with trace-pc-guard
 
 int x[10];
 
@@ -25,11 +23,6 @@ void foo(int n, int m) {
   // GATED-NEXT: br i1 [[CMP]], label %[[L_TRUE:.*]], label %[[L_FALSE:.*]], !prof [[WEIGHTS:!.+]]
   // GATED: [[L_TRUE]]:
   // GATED-NEXT:   call void @__sanitizer_cov_trace_pc_guard
-  // COM: Check the trace-cmp instrumentation of the if (n) branch
-  // GATEDCMP: [[OPERAND:%.*]] = load i32, {{.*}}
-  // GATEDCMP-NEXT: br i1 [[CMP]], label %[[L_TRUE_1:.*]], label %[[L_FALSE_1:.*]]
-  // GATEDCMP: [[L_TRUE_1]]:
-  // GATEDCMP-NEXT:   call void @__sanitizer_cov_trace_const_cmp4(i32 0, i32 [[OPERAND]])
   // GATED:   br i1 [[CMP]], label %[[L_TRUE_2:.*]], label %[[L_FALSE_2:.*]]
   // GATED: [[L_TRUE_2]]:
   // GATED-NEXT:   call void @__sanitizer_cov_trace_pc_guard
@@ -40,8 +33,6 @@ void foo(int n, int m) {
   // PLAIN-NOT: __sancov_should_track
   // But we should still be emitting the calls to the callback.
   // PLAIN: call void @__sanitizer_cov_trace_pc_guard
-  // PLAINCMP: [[OPERAND:%.*]] = load i32, {{.*}}
-  // PLAINCMP-NEXT: call void @__sanitizer_cov_trace_const_cmp4(i32 0, i32 [[OPERAND]])
   if (n) {
     x[n] = 42;
     if (m) {

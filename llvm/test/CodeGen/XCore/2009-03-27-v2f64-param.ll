@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=xcore
+; RUN: llc < %s -march=xcore
 ; PR3898
 
 define i32 @vector_param(<2 x double> %x) nounwind {

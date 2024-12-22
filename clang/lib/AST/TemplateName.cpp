@@ -25,6 +25,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -151,13 +152,13 @@ TemplateName::NameKind TemplateName::getKind() const {
     return Template;
   }
 
-  if (isa<DependentTemplateName *>(Storage))
+  if (Storage.is<DependentTemplateName *>())
     return DependentTemplate;
-  if (isa<QualifiedTemplateName *>(Storage))
+  if (Storage.is<QualifiedTemplateName *>())
     return QualifiedTemplate;
 
-  UncommonTemplateNameStorage *uncommon =
-      cast<UncommonTemplateNameStorage *>(Storage);
+  UncommonTemplateNameStorage *uncommon
+    = Storage.get<UncommonTemplateNameStorage*>();
   if (uncommon->getAsOverloadedStorage())
     return OverloadedTemplate;
   if (uncommon->getAsAssumedTemplateName())

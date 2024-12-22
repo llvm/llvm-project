@@ -8,13 +8,13 @@
 
 #include "mlir-c/Dialect/Linalg.h"
 
-#include "mlir/Bindings/Python/Nanobind.h"
+#include <pybind11/pybind11.h>
 
 // -----------------------------------------------------------------------------
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-NB_MODULE(_mlirLinalgPasses, m) {
+PYBIND11_MODULE(_mlirLinalgPasses, m) {
   m.doc() = "MLIR Linalg Dialect Passes";
 
   // Register all Linalg passes on load.

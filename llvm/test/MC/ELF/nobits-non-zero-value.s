@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -filetype=obj -triple=x86_64 %s -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+# RUN: not llvm-mc -filetype=obj -triple=x86_64 %s -o /dev/null 2>&1 | FileCheck %s
 
 ## -filetype=asm does not check the error.
 # RUN: llvm-mc -triple=x86_64 %s
@@ -20,7 +20,3 @@
 
 # CHECK: <unknown>:0: error: SHT_NOBITS section '.bss' cannot have non-zero initializers
   .long 1
-
-.section .bss1,"aw",%nobits
-# CHECK: <unknown>:0: error: SHT_NOBITS section '.bss1' cannot have fixups
-.quad foo

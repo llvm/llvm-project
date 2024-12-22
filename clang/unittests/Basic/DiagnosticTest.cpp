@@ -12,7 +12,6 @@
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -21,7 +20,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <memory>
 #include <optional>
 #include <vector>
 
@@ -198,17 +196,7 @@ protected:
     return CaptureConsumer.StoredDiags;
   }
 
-  SourceLocation locForFile(llvm::StringRef FileName) {
-    auto Buf = MemoryBuffer::getMemBuffer("", FileName);
-    SourceManager &SM = Diags.getSourceManager();
-    FileID FooID = SM.createFileID(std::move(Buf));
-    return SM.getLocForStartOfFile(FooID);
-  }
-
 private:
-  FileManager FM{{}, FS};
-  SourceManager SM{Diags, FM};
-
   class CaptureDiagnosticConsumer : public DiagnosticConsumer {
   public:
     std::vector<StoredDiagnostic> StoredDiags;
@@ -267,9 +255,9 @@ TEST_F(SuppressionMappingTest, SuppressesGroup) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 
-  SourceLocation FooLoc = locForFile("foo.cpp");
-  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function, FooLoc));
-  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_deprecated, FooLoc));
+  EXPECT_TRUE(
+      Diags.isSuppressedViaMapping(diag::warn_unused_function, "foo.cpp"));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_deprecated, "foo.cpp"));
 }
 
 TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
@@ -283,10 +271,10 @@ TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 
-  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                           locForFile("bar.cpp")));
-  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                            locForFile("foo.cpp")));
+  EXPECT_TRUE(
+      Diags.isSuppressedViaMapping(diag::warn_unused_function, "bar.cpp"));
+  EXPECT_FALSE(
+      Diags.isSuppressedViaMapping(diag::warn_unused_function, "foo.cpp"));
 }
 
 TEST_F(SuppressionMappingTest, LongestMatchWins) {
@@ -301,12 +289,12 @@ TEST_F(SuppressionMappingTest, LongestMatchWins) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 
-  EXPECT_TRUE(Diags.isSuppressedViaMapping(
-      diag::warn_unused_function, locForFile("clang/lib/Basic/foo.h")));
-  EXPECT_FALSE(Diags.isSuppressedViaMapping(
-      diag::warn_unused_function, locForFile("clang/lib/Sema/bar.h")));
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                           locForFile("clang/lib/Sema/foo.h")));
+                                           "clang/lib/Basic/foo.h"));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                            "clang/lib/Sema/bar.h"));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           "clang/lib/Sema/foo.h"));
 }
 
 TEST_F(SuppressionMappingTest, IsIgnored) {
@@ -320,7 +308,9 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   ASSERT_THAT(diags(), IsEmpty());
 
-  SourceManager &SM = Diags.getSourceManager();
+  FileManager FM({}, FS);
+  SourceManager SM(Diags, FM);
+
   auto ClangID =
       SM.createFileID(llvm::MemoryBuffer::getMemBuffer("", "clang/foo.h"));
   auto NonClangID =

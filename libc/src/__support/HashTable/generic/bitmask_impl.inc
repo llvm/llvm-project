@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/endian_internal.h"
 #include "src/__support/macros/config.h"
@@ -45,11 +44,13 @@ struct Group {
 
   // Load a group of control words from an arbitary address.
   LIBC_INLINE static Group load(const void *addr) {
-    char bytes[sizeof(bitmask_t)];
-
+    union {
+      bitmask_t value;
+      char bytes[sizeof(bitmask_t)];
+    } data;
     for (size_t i = 0; i < sizeof(bitmask_t); ++i)
-      bytes[i] = static_cast<const char *>(addr)[i];
-    return Group{cpp::bit_cast<bitmask_t>(bytes)};
+      data.bytes[i] = static_cast<const char *>(addr)[i];
+    return {data.value};
   }
 
   // Load a group of control words from an aligned address.

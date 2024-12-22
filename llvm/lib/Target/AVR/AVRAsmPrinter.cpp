@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AVRMCExpr.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"

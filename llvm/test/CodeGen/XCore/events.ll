@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=xcore | FileCheck %s
+; RUN: llc < %s -march=xcore | FileCheck %s
 
 declare void @llvm.xcore.setv.p1(ptr addrspace(1) %r, ptr %p)
 declare ptr @llvm.xcore.waitevent()

@@ -211,9 +211,9 @@ void ExplodedNode::NodeGroup::replaceNode(ExplodedNode *node) {
   assert(!getFlag());
 
   GroupStorage &Storage = reinterpret_cast<GroupStorage&>(P);
-  assert(isa<ExplodedNode *>(Storage));
+  assert(Storage.is<ExplodedNode *>());
   Storage = node;
-  assert(isa<ExplodedNode *>(Storage));
+  assert(Storage.is<ExplodedNode *>());
 }
 
 void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
@@ -222,7 +222,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
   GroupStorage &Storage = reinterpret_cast<GroupStorage&>(P);
   if (Storage.isNull()) {
     Storage = N;
-    assert(isa<ExplodedNode *>(Storage));
+    assert(Storage.is<ExplodedNode *>());
     return;
   }
 
@@ -230,7 +230,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
 
   if (!V) {
     // Switch from single-node to multi-node representation.
-    auto *Old = cast<ExplodedNode *>(Storage);
+    ExplodedNode *Old = Storage.get<ExplodedNode *>();
 
     BumpVectorContext &Ctx = G.getNodeAllocator();
     V = new (G.getAllocator()) ExplodedNodeVector(Ctx, 4);
@@ -238,7 +238,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
 
     Storage = V;
     assert(!getFlag());
-    assert(isa<ExplodedNodeVector *>(Storage));
+    assert(Storage.is<ExplodedNodeVector *>());
   }
 
   V->push_back(N, G.getNodeAllocator());
@@ -349,8 +349,6 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
 
 const Stmt *ExplodedNode::getNextStmtForDiagnostics() const {
   for (const ExplodedNode *N = getFirstSucc(); N; N = N->getFirstSucc()) {
-    if (N->getLocation().isPurgeKind())
-      continue;
     if (const Stmt *S = N->getStmtForDiagnostics()) {
       // Check if the statement is '?' or '&&'/'||'.  These are "merges",
       // not actual statement points.

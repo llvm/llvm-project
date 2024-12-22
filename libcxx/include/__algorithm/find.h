@@ -24,6 +24,7 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
 #include <__utility/move.h>
 #include <limits>

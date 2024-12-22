@@ -115,9 +115,20 @@ public:
   void addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
                                 uint64_t SrcStreamSize);
 
-  /// Add the entire MemProfData \p Incoming to the writer context.
-  bool addMemProfData(memprof::IndexedMemProfData Incoming,
-                      function_ref<void(Error)> Warn);
+  /// Add a memprof record for a function identified by its \p Id.
+  void addMemProfRecord(const GlobalValue::GUID Id,
+                        const memprof::IndexedMemProfRecord &Record);
+
+  /// Add a memprof frame identified by the hash of the contents of the frame in
+  /// \p FrameId.
+  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
+                       function_ref<void(Error)> Warn);
+
+  /// Add a call stack identified by the hash of the contents of the call stack
+  /// in \p CallStack.
+  bool addMemProfCallStack(const memprof::CallStackId CSId,
+                           const llvm::SmallVector<memprof::FrameId> &CallStack,
+                           function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
@@ -175,9 +186,7 @@ public:
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::FunctionEntryInstrumentation) ||
-        testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::LoopEntriesInstrumentation)) {
+                         InstrProfKind::FunctionEntryInstrumentation)) {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
@@ -214,21 +223,6 @@ private:
   /// Add \p Trace using reservoir sampling.
   void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
-  /// Add a memprof record for a function identified by its \p Id.
-  void addMemProfRecord(const GlobalValue::GUID Id,
-                        const memprof::IndexedMemProfRecord &Record);
-
-  /// Add a memprof frame identified by the hash of the contents of the frame in
-  /// \p FrameId.
-  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
-                       function_ref<void(Error)> Warn);
-
-  /// Add a call stack identified by the hash of the contents of the call stack
-  /// in \p CallStack.
-  bool addMemProfCallStack(const memprof::CallStackId CSId,
-                           const llvm::SmallVector<memprof::FrameId> &CallStack,
-                           function_ref<void(Error)> Warn);
-
   Error writeImpl(ProfOStream &OS);
 
   // Writes known header fields and reserves space for fields whose value are
@@ -236,9 +230,6 @@ private:
   // back patching.
   uint64_t writeHeader(const IndexedInstrProf::Header &header,
                        const bool WritePrevVersion, ProfOStream &OS);
-
-  // Writes binary IDs.
-  Error writeBinaryIds(ProfOStream &OS);
 
   // Writes compressed vtable names to profiles.
   Error writeVTableNames(ProfOStream &OS);

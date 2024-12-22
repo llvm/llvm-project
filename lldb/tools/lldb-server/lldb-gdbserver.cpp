@@ -210,8 +210,9 @@ void ConnectToRemote(MainLoop &mainloop,
                                     error.AsCString());
       exit(-1);
     }
-    connection_up = std::unique_ptr<Connection>(new ConnectionFileDescriptor(
-        new TCPSocket(sockfd, /*should_close=*/true)));
+    connection_up =
+        std::unique_ptr<Connection>(new ConnectionFileDescriptor(new TCPSocket(
+            sockfd, /*should_close=*/true, /*child_processes_inherit=*/false)));
 #else
     url = llvm::formatv("fd://{0}", connection_fd).str();
 
@@ -291,13 +292,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
+  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "LLGSOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LLGSOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -307,8 +307,7 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class LLGSOptTable : public opt::GenericOptTable {
 public:
-  LLGSOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLGSOptTable() : opt::GenericOptTable(InfoTable) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =

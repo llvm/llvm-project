@@ -917,7 +917,7 @@ class MIMG_Atomic_gfx90a<mimgopc op, string asm, RegisterClass data_rc,
 class MIMG_Atomic_gfx10<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
-  : MIMG_gfx10<op.GFX10M, (outs DataRC:$vdst),
+  : MIMG_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst),
                !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -930,7 +930,7 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
 class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
-  : MIMG_nsa_gfx10<op.GFX10M, (outs DataRC:$vdst), num_addrs,
+  : MIMG_nsa_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -945,7 +945,7 @@ class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
 class MIMG_Atomic_gfx11<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
-  : MIMG_gfx11<op.GFX11, (outs DataRC:$vdst),
+  : MIMG_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst),
                !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -958,7 +958,7 @@ class MIMG_Atomic_gfx11<mimgopc op, string opcode,
 class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
-  : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdst), num_addrs,
+  : MIMG_nsa_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -972,7 +972,7 @@ class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
 
 class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
                           int num_addrs, bit enableDisasm = 0>
-  : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdst), num_addrs,
+  : VIMAGE_gfx12<!cast<int>(op.GFX12), (outs DataRC:$vdst), num_addrs,
                   !if(enableDisasm, "GFX12", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -1792,11 +1792,6 @@ defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>
 defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
 } // End OtherPredicates = [HasImageInsts, HasGFX10_AEncoding]
-
-let SubtargetPredicate = isGFX12Plus in {
-  def : AMDGPUMnemonicAlias<"bvh_intersect_ray", "image_bvh_intersect_ray">;
-  def : AMDGPUMnemonicAlias<"bvh64_intersect_ray", "image_bvh64_intersect_ray">;
-}
 
 } // End let OtherPredicates = [HasImageInsts]
 

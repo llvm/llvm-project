@@ -1229,9 +1229,6 @@ bool ConsumedAnalyzer::splitState(const CFGBlock *CurrBlock,
 
   if (const auto *IfNode =
           dyn_cast_or_null<IfStmt>(CurrBlock->getTerminator().getStmt())) {
-    if (IfNode->isConsteval())
-      return false;
-
     const Expr *Cond = IfNode->getCond();
 
     PInfo = Visitor.getInfo(Cond);

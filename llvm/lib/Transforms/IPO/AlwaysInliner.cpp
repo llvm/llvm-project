@@ -32,9 +32,9 @@ namespace {
 
 bool AlwaysInlineImpl(
     Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
-    FunctionAnalysisManager *FAM,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-    function_ref<AAResults &(Function &)> GetAAR) {
+    function_ref<AAResults &(Function &)> GetAAR,
+    function_ref<BlockFrequencyInfo &(Function &)> GetBFI) {
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedComdatFunctions;
@@ -61,7 +61,10 @@ bool AlwaysInlineImpl(
       DebugLoc DLoc = CB->getDebugLoc();
       BasicBlock *Block = CB->getParent();
 
-      InlineFunctionInfo IFI(GetAssumptionCache, &PSI, nullptr, nullptr);
+      InlineFunctionInfo IFI(GetAssumptionCache, &PSI,
+                             GetBFI ? &GetBFI(*Caller) : nullptr,
+                             GetBFI ? &GetBFI(F) : nullptr);
+
       InlineResult Res = InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
                                         &GetAAR(F), InsertLifetime);
       if (!Res.isSuccess()) {
@@ -80,8 +83,6 @@ bool AlwaysInlineImpl(
           /*ForProfileContext=*/false, DEBUG_TYPE);
 
       Changed = true;
-      if (FAM)
-        FAM->invalidate(*Caller, PreservedAnalyses::none());
     }
 
     F.removeDeadConstantUsers();
@@ -91,8 +92,6 @@ bool AlwaysInlineImpl(
       if (F.hasComdat()) {
         InlinedComdatFunctions.push_back(&F);
       } else {
-        if (FAM)
-          FAM->clear(F, F.getName());
         M.getFunctionList().erase(F);
         Changed = true;
       }
@@ -105,8 +104,6 @@ bool AlwaysInlineImpl(
     filterDeadComdatFunctions(InlinedComdatFunctions);
     // The remaining functions are actually dead.
     for (Function *F : InlinedComdatFunctions) {
-      if (FAM)
-        FAM->clear(*F, F->getName());
       M.getFunctionList().erase(F);
       Changed = true;
     }
@@ -137,8 +134,8 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
       return getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     };
 
-    return AlwaysInlineImpl(M, InsertLifetime, PSI, /*FAM=*/nullptr,
-                            GetAssumptionCache, GetAAR);
+    return AlwaysInlineImpl(M, InsertLifetime, PSI, GetAssumptionCache, GetAAR,
+                            /*GetBFI*/ nullptr);
   }
 
   static char ID; // Pass identification, replacement for typeid
@@ -172,18 +169,16 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
+  auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
   auto GetAAR = [&](Function &F) -> AAResults & {
     return FAM.getResult<AAManager>(F);
   };
   auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
 
-  bool Changed = AlwaysInlineImpl(M, InsertLifetime, PSI, &FAM,
-                                  GetAssumptionCache, GetAAR);
-  if (!Changed)
-    return PreservedAnalyses::all();
+  bool Changed = AlwaysInlineImpl(M, InsertLifetime, PSI, GetAssumptionCache,
+                                  GetAAR, GetBFI);
 
-  PreservedAnalyses PA;
-  // We have already invalidated all analyses on modified functions.
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  return PA;
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

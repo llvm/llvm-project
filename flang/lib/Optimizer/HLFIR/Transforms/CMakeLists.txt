@@ -24,7 +24,6 @@ add_flang_library(HLFIRTransforms
   FIRDialectSupport
   FIRSupport
   FIRTransforms
-  FlangOpenMPTransforms
   HLFIRDialect
   MLIRIR
   ${dialect_libs}

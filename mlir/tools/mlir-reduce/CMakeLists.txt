@@ -10,6 +10,7 @@ endif()
 set(LIBS
   ${conversion_libs}
   ${dialect_libs}
+  ${test_libs}
   MLIRDialect
   MLIRIR
   MLIRPass
@@ -18,10 +19,12 @@ set(LIBS
 
 add_mlir_tool(mlir-reduce
   mlir-reduce.cpp
+
+  DEPENDS
+  ${LIBS}
   )
 
-mlir_target_link_libraries(mlir-reduce PRIVATE ${LIBS})
-target_link_libraries(mlir-reduce PRIVATE ${test_libs})
+target_link_libraries(mlir-reduce PRIVATE ${LIBS})
 llvm_update_compile_flags(mlir-reduce)
 
 mlir_check_all_link_libraries(mlir-reduce)

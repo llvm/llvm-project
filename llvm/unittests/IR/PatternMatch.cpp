@@ -2381,7 +2381,7 @@ TYPED_TEST(MutableConstTest, ICmp) {
 
   ValueType MatchL;
   ValueType MatchR;
-  CmpPredicate MatchPred;
+  ICmpInst::Predicate MatchPred;
 
   EXPECT_TRUE(m_ICmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
@@ -2473,7 +2473,7 @@ TYPED_TEST(MutableConstTest, FCmp) {
 
   ValueType MatchL;
   ValueType MatchR;
-  CmpPredicate MatchPred;
+  FCmpInst::Predicate MatchPred;
 
   EXPECT_TRUE(m_FCmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));

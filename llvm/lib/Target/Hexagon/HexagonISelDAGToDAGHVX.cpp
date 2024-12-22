@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonISelDAGToDAG.h"
 #include "HexagonISelLowering.h"
+#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -1756,7 +1760,7 @@ void HvxSelector::select(SDNode *ISelN) {
     // Don't want to select N0 if it's shared with another node, except if
     // it's shared with other ISELs.
     auto IsISelN = [](SDNode *T) { return T->getOpcode() == HexagonISD::ISEL; };
-    if (llvm::all_of(N0->users(), IsISelN))
+    if (llvm::all_of(N0->uses(), IsISelN))
       SubNodes.insert(N0);
   }
   if (SubNodes.empty()) {
@@ -1775,7 +1779,7 @@ void HvxSelector::select(SDNode *ISelN) {
       return true;
     if (T->use_empty() || NonDom.count(T))
       return false;
-    for (SDNode *U : T->users()) {
+    for (SDNode *U : T->uses()) {
       // If T is reachable from a known non-dominated node, then T itself
       // is non-dominated.
       if (!Rec(U, Rec)) {
@@ -1814,7 +1818,7 @@ void HvxSelector::select(SDNode *ISelN) {
 
   for (unsigned I = 0; I != TmpQ.size(); ++I) {
     SDNode *S = TmpQ[I];
-    for (SDNode *U : S->users()) {
+    for (SDNode *U : S->uses()) {
       if (U == ISelN)
         continue;
       auto F = OpCount.find(U);

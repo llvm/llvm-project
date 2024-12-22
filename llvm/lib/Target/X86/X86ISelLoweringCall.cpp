@@ -262,15 +262,20 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
 /// function arguments in the caller parameter area. For X86, aggregates
 /// that contain SSE vectors are placed at 16-byte boundaries while the rest
 /// are at 4-byte boundaries.
-Align X86TargetLowering::getByValTypeAlignment(Type *Ty,
-                                               const DataLayout &DL) const {
-  if (Subtarget.is64Bit())
-    return std::max(DL.getABITypeAlign(Ty), Align::Constant<8>());
+uint64_t X86TargetLowering::getByValTypeAlignment(Type *Ty,
+                                                  const DataLayout &DL) const {
+  if (Subtarget.is64Bit()) {
+    // Max of 8 and alignment of type.
+    Align TyAlign = DL.getABITypeAlign(Ty);
+    if (TyAlign > 8)
+      return TyAlign.value();
+    return 8;
+  }
 
   Align Alignment(4);
   if (Subtarget.hasSSE1())
     getMaxByValAlign(Ty, Alignment);
-  return Alignment;
+  return Alignment.value();
 }
 
 /// It returns EVT::Other if the type should be determined using generic
@@ -944,7 +949,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->user_begin();
+  SDNode *Copy = *N->use_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -955,7 +960,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   bool HasRet = false;
-  for (const SDNode *U : Copy->users()) {
+  for (const SDNode *U : Copy->uses()) {
     if (U->getOpcode() != X86ISD::RET_GLUE)
       return false;
     // If we are returning more than one value, we can definitely
@@ -2423,7 +2428,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(DAG.getSignedTargetConstant(FPDiff, dl, MVT::i32));
+    Ops.push_back(
+        DAG.getSignedConstant(FPDiff, dl, MVT::i32, /*isTarget=*/true));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.

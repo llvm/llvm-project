@@ -685,8 +685,7 @@ TEST_F(BackgroundIndexTest, Reindex) {
 class BackgroundIndexRebuilderTest : public testing::Test {
 protected:
   BackgroundIndexRebuilderTest()
-      : Source(IndexContents::All, /*SupportContainedRefs=*/true),
-        Target(std::make_unique<MemIndex>()),
+      : Source(IndexContents::All), Target(std::make_unique<MemIndex>()),
         Rebuilder(&Target, &Source, /*Threads=*/10) {
     // Prepare FileSymbols with TestSymbol in it, for checkRebuild.
     TestSymbol.ID = SymbolID("foo");

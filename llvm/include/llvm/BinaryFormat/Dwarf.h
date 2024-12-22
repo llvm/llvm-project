@@ -353,8 +353,6 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Move;
   case DW_LNAME_Hylo:
     return DW_LANG_Hylo;
-  case DW_LNAME_Metal:
-    return DW_LANG_Metal;
   }
   return {};
 }
@@ -481,8 +479,6 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_Move, 0}};
   case DW_LANG_Hylo:
     return {{DW_LNAME_Hylo, 0}};
-  case DW_LANG_Metal:
-    return {{DW_LNAME_Metal, 0}};
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_CPP_for_OpenCL:
   case DW_LANG_lo_user:
@@ -566,7 +562,6 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_Ruby:
   case DW_LANG_Move:
   case DW_LANG_Hylo:
-  case DW_LANG_Metal:
     result = false;
     break;
   }
@@ -646,7 +641,6 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Ruby:
   case DW_LANG_Move:
   case DW_LANG_Hylo:
-  case DW_LANG_Metal:
     result = false;
     break;
   }
@@ -724,7 +718,6 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Ruby:
   case DW_LANG_Move:
   case DW_LANG_Hylo:
-  case DW_LANG_Metal:
     return false;
   }
   llvm_unreachable("Unknown language kind.");

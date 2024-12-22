@@ -8,14 +8,9 @@
 
 # RUN: not lld-link -entry:main -nodefaultlib %t1.obj %t2.obj -out:%t.exe -opt:ref   2>&1 | FileCheck %s
 # RUN: not lld-link -entry:main -nodefaultlib %t1.obj %t2.obj -out:%t.exe -opt:noref 2>&1 | FileCheck %s
-# RUN: not lld-link -entry:main -nodefaultlib %t1.obj %t2.obj -out:%t.exe -demangle:no   2>&1 \
-# RUN:     | FileCheck --check-prefix=NODEMANGLE %s
 
-# CHECK: error: relocation against symbol in discarded section: int __cdecl assoc_global(void)
+# CHECK: error: relocation against symbol in discarded section: assoc_global
 # CHECK: >>> referenced by {{.*}}reloc-discarded{{.*}}.obj:(main)
-
-# NODEMANGLE: error: relocation against symbol in discarded section: ?assoc_global@@YAHXZ
-# NODEMANGLE: >>> referenced by {{.*}}reloc-discarded{{.*}}.obj:(main)
 
 	.section	.bss,"bw",discard,main_global
 	.globl	main_global
@@ -25,12 +20,12 @@ main_global:
 
 	.section	.CRT$XCU,"dr",associative,main_global
 	.p2align	3
-"?assoc_global@@YAHXZ":
+assoc_global:
 	.quad	main_global
 
 	.text
 	.globl main
 main:
-	movq "?assoc_global@@YAHXZ"(%rip), %rax
+	movq assoc_global(%rip), %rax
 	movl (%rax), %eax
 	retq

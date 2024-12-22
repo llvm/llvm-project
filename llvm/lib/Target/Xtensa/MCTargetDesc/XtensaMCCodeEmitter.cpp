@@ -103,14 +103,6 @@ private:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
-  uint32_t getImm1n_15OpValue(const MCInst &MI, unsigned OpNo,
-                              SmallVectorImpl<MCFixup> &Fixups,
-                              const MCSubtargetInfo &STI) const;
-
-  uint32_t getImm32n_95OpValue(const MCInst &MI, unsigned OpNo,
-                               SmallVectorImpl<MCFixup> &Fixups,
-                               const MCSubtargetInfo &STI) const;
-
   uint32_t getShimm1_31OpValue(const MCInst &MI, unsigned OpNo,
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
@@ -196,11 +188,6 @@ uint32_t XtensaMCCodeEmitter::getBranchTargetEncoding(
     Fixups.push_back(MCFixup::create(
         0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_12), MI.getLoc()));
     return 0;
-  case Xtensa::BEQZ_N:
-  case Xtensa::BNEZ_N:
-    Fixups.push_back(MCFixup::create(
-        0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_6), MI.getLoc()));
-    return 0;
   default:
     Fixups.push_back(MCFixup::create(
         0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_8), MI.getLoc()));
@@ -268,24 +255,14 @@ XtensaMCCodeEmitter::getMemRegEncoding(const MCInst &MI, unsigned OpNo,
     break;
   case Xtensa::S32I:
   case Xtensa::L32I:
-  case Xtensa::S32I_N:
-  case Xtensa::L32I_N:
     if (Res & 0x3) {
       report_fatal_error("Unexpected operand value!");
     }
     Res >>= 2;
     break;
   }
-
-  switch (MI.getOpcode()) {
-  case Xtensa::S32I_N:
-  case Xtensa::L32I_N:
-    assert((isUInt<4>(Res)) && "Unexpected operand value!");
-    break;
-  default:
-    assert((isUInt<8>(Res)) && "Unexpected operand value!");
-    break;
-  }
+  
+  assert((isUInt<8>(Res)) && "Unexpected operand value!");
 
   uint32_t OffBits = Res << 4;
   uint32_t RegBits = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
@@ -375,34 +352,6 @@ XtensaMCCodeEmitter::getImm1_16OpValue(const MCInst &MI, unsigned OpNo,
   assert(((Res >= 1) && (Res <= 16)) && "Unexpected operand value!");
 
   return (Res - 1);
-}
-
-uint32_t
-XtensaMCCodeEmitter::getImm1n_15OpValue(const MCInst &MI, unsigned OpNo,
-                                        SmallVectorImpl<MCFixup> &Fixups,
-                                        const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-  int32_t Res = static_cast<int32_t>(MO.getImm());
-
-  assert(((Res >= -1) && (Res <= 15) && (Res != 0)) &&
-         "Unexpected operand value!");
-
-  if (Res < 0)
-    Res = 0;
-
-  return Res;
-}
-
-uint32_t
-XtensaMCCodeEmitter::getImm32n_95OpValue(const MCInst &MI, unsigned OpNo,
-                                         SmallVectorImpl<MCFixup> &Fixups,
-                                         const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-  int32_t Res = static_cast<int32_t>(MO.getImm());
-
-  assert(((Res >= -32) && (Res <= 95)) && "Unexpected operand value!");
-
-  return Res;
 }
 
 uint32_t

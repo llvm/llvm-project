@@ -14,7 +14,6 @@
 
 #include "enum-set.h"
 #include "idioms.h"
-#include "flang/Common/Fortran-consts.h"
 #include <cinttypes>
 #include <optional>
 #include <string>
@@ -22,9 +21,12 @@
 namespace Fortran::common {
 class LanguageFeatureControl;
 
+// Fortran has five kinds of intrinsic data types, plus the derived types.
+ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
+ENUM_CLASS(VectorElementCategory, Integer, Unsigned, Real)
+
 constexpr bool IsNumericTypeCategory(TypeCategory category) {
-  return category == TypeCategory::Integer ||
-      category == TypeCategory::Unsigned || category == TypeCategory::Real ||
+  return category == TypeCategory::Integer || category == TypeCategory::Real ||
       category == TypeCategory::Complex;
 }
 
@@ -45,6 +47,9 @@ const char *AsFortran(RelationalOperator);
 
 ENUM_CLASS(Intent, Default, In, Out, InOut)
 
+ENUM_CLASS(IoStmtKind, None, Backspace, Close, Endfile, Flush, Inquire, Open,
+    Print, Read, Rewind, Wait, Write)
+
 // Union of specifiers for all I/O statements.
 ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Delim, Direct, Encoding, End, Eor, Err, Exist, File, Fmt, Form, Formatted,
@@ -56,10 +61,28 @@ ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Dispose, // nonstandard
 )
 
+// Defined I/O variants
+ENUM_CLASS(
+    DefinedIo, ReadFormatted, ReadUnformatted, WriteFormatted, WriteUnformatted)
 const char *AsFortran(DefinedIo);
+
+// Floating-point rounding modes; these are packed into a byte to save
+// room in the runtime's format processing context structure.  These
+// enumerators are defined with the corresponding values returned from
+// llvm.get.rounding.
+enum class RoundingMode : std::uint8_t {
+  ToZero, // ROUND=ZERO, RZ - truncation
+  TiesToEven, // ROUND=NEAREST, RN - default IEEE rounding
+  Up, // ROUND=UP, RU
+  Down, // ROUND=DOWN, RD
+  TiesAwayFromZero, // ROUND=COMPATIBLE, RC - ties round away from zero
+};
 
 // Fortran label. Must be in [1..99999].
 using Label = std::uint64_t;
+
+// Fortran arrays may have up to 15 dimensions (See Fortran 2018 section 5.4.6).
+static constexpr int maxRank{15};
 
 // CUDA subprogram attribute combinations
 ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)

@@ -258,7 +258,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     else if ((ParamAlign = FuncInfo.getParamAlign(ParamIdx)))
       MemAlign = *ParamAlign;
     else
-      MemAlign = getTLI()->getByValTypeAlignment(ElementTy, DL);
+      MemAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
   } else if (OpIdx >= AttributeList::FirstArgIndex) {
     if (auto ParamAlign =
             FuncInfo.getParamStackAlign(OpIdx - AttributeList::FirstArgIndex))

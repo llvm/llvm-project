@@ -156,40 +156,6 @@ def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
   ];
 }
 
-def Mesh_NeighborsLinearIndicesOp : Mesh_Op<"neighbors_linear_indices", [
-  Pure,
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-  DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
-]> {
-  let summary =
-      "For given mesh index get the linear indices of the direct neighbor processes along the given split.";
-  let description = [{
-    Example:
-    ```
-    mesh.mesh @mesh0(shape = 10x20x30)
-    %c1 = arith.constant 1 : index
-    %c2 = arith.constant 2 : index
-    %c3 = arith.constant 3 : index
-    %idx = mesh.neighbors_linear_indices on @mesh[%c1, %c2, %c3] split_axes = [1] : index
-    ```
-    The above returns two indices, `633` and `693`, which correspond to the
-    index of the previous process `(1, 1, 3)`, and the next process 
-    `(1, 3, 3) along the split axis `1`.
-
-    A negative value is returned if there is no neighbor in the respective
-    direction along the given `split_axes`.
-  }];
-  let arguments = (ins FlatSymbolRefAttr:$mesh,
-                       Variadic<Index>:$device,
-                       Mesh_MeshAxesAttr:$split_axes);
-  let results = (outs Index:$neighbor_down, Index:$neighbor_up);
-  let assemblyFormat =  [{
-      `on` $mesh `[` $device `]`
-      `split_axes` `=` $split_axes
-      attr-dict `:` type(results)
-  }];
-}
-
 //===----------------------------------------------------------------------===//
 // Sharding operations.
 //===----------------------------------------------------------------------===//
@@ -1092,12 +1058,12 @@ def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
 }
 
 def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
-  Pure,
   DestinationStyleOpInterface,
   TypesMatchWith<
     "result has same type as destination",
     "result", "destination", "$_self">,
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+  AttrSizedOperandSegments
 ]> {
   let summary = "Update halo data.";
   let description = [{
@@ -1106,7 +1072,7 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
     on the remote devices. Changes might be caused by mutating operations
     and/or if the new halo regions are larger than the existing ones.
 
-    Destination is supposed to be initialized with the local data (not halos).
+    Source and destination might have different halo sizes.
 
     Assumes all devices hold tensors with same-sized halo data as specified
     by `source_halo_sizes/static_source_halo_sizes` and
@@ -1118,21 +1084,25 @@ def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
 
   }];
   let arguments = (ins
+    AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$source,
     AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$destination,
     FlatSymbolRefAttr:$mesh,
     Mesh_MeshAxesArrayAttr:$split_axes,
-    Variadic<I64>:$halo_sizes,
-    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_halo_sizes
+    Variadic<I64>:$source_halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_source_halo_sizes,
+    Variadic<I64>:$destination_halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_destination_halo_sizes
   );
   let results = (outs
     AnyTypeOf<[AnyNon0RankedMemRef, AnyNon0RankedTensor]>:$result
   );
   let assemblyFormat = [{
-    $destination
+    $source `into` $destination
     `on` $mesh
     `split_axes` `=` $split_axes
-    (`halo_sizes` `=` custom<DynamicIndexList>($halo_sizes, $static_halo_sizes)^)?
-    attr-dict `:` type($result)
+    (`source_halo_sizes` `=` custom<DynamicIndexList>($source_halo_sizes, $static_source_halo_sizes)^)?
+    (`destination_halo_sizes` `=` custom<DynamicIndexList>($destination_halo_sizes, $static_destination_halo_sizes)^)?
+    attr-dict `:` type($source) `->` type($result)
   }];
   let extraClassDeclaration = [{
     MutableOperandRange getDpsInitsMutable() { return getDestinationMutable(); }

@@ -1309,7 +1309,7 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
   return ::mlir::failure();
 )decl";
 
@@ -2008,34 +2008,17 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
        << "() != " << propElement.getVar()->prop.getDefaultValue();
 }
 
-/// Elide the variadic segment size attributes if necessary.
-/// This pushes elided attribute names in `elidedStorage`.
-static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
-                                      MethodBody &body,
-                                      const char *elidedStorage) {
-  if (!fmt.allOperands &&
-      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  " << elidedStorage << ".push_back(\"operandSegmentSizes\");\n";
-  if (!fmt.allResultTypes &&
-      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
-}
-
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
-
-  genVariadicSegmentElision(fmt, op, body, "elidedProps");
-
   for (const NamedProperty *namedProperty : fmt.usedProperties)
     body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
     body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
 
-  // Add code to check attributes for equality with their default values.
-  // Default-valued attributes will not be printed when their value matches the
-  // default.
+  // Add code to check attributes for equality with the default value
+  // for attributes with the elidePrintingDefaultValue bit set.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
@@ -2074,17 +2057,19 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
-
-  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
-
+  // Elide the variadic segment size attributes if necessary.
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
   for (const StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
     body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
-
-  // Add code to check attributes for equality with their default values.
-  // Default-valued attributes will not be printed when their value matches the
-  // default.
+  // Add code to check attributes for equality with the default value
+  // for attributes with the elidePrintingDefaultValue bit set.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {

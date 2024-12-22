@@ -5,9 +5,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
-; XFAIL: expensive_checks
-
 ; Running with -verify-machineinstrs would lead to "Reading virtual register without a def"
 ; error, because OpConstantFunctionPointerINTEL forward-refers to a function definition.
 

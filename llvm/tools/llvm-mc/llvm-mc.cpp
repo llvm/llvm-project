@@ -94,12 +94,6 @@ static cl::opt<bool>
                 cl::desc("Prefer hex format for immediate values"),
                 cl::cat(MCCategory));
 
-static cl::opt<bool>
-    HexBytes("hex",
-             cl::desc("Take raw hexadecimal bytes as input for disassembly. "
-                      "Whitespace is ignored"),
-             cl::cat(MCCategory));
-
 static cl::list<std::string>
     DefineSymbol("defsym",
                  cl::desc("Defines a symbol to be an integer constant"),
@@ -569,7 +563,7 @@ int main(int argc, char **argv) {
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
-      Str->switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+      Str->initSections(true, *STI);
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }
@@ -598,7 +592,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions, HexBytes);
+                                    SrcMgr, Ctx, MCOptions);
 
   // Keep output if no errors.
   if (Res == 0) {

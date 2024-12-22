@@ -50,7 +50,6 @@ cc_library(
         "//llvm:DebugInfoDWARF",
         "//llvm:IRPrinter",
         "//llvm:Option",
-        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",

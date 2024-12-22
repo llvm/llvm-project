@@ -840,12 +840,12 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512VL-NEXT:    subq $576, %rsp # imm = 0x240
 ; AVX512VL-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vpmovb2m %zmm0, %k1
-; AVX512VL-NEXT:    kshiftrq $48, %k1, %k3
 ; AVX512VL-NEXT:    kshiftrq $32, %k1, %k4
-; AVX512VL-NEXT:    kshiftrq $16, %k1, %k2
+; AVX512VL-NEXT:    kshiftrd $16, %k4, %k3
+; AVX512VL-NEXT:    kshiftrd $16, %k1, %k2
 ; AVX512VL-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovdqa64 %zmm0, (%rsp)
-; AVX512VL-NEXT:    kshiftrq $8, %k1, %k0
+; AVX512VL-NEXT:    kshiftrw $8, %k1, %k0
 ; AVX512VL-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512VL-NEXT:    kshiftrw $4, %k0, %k5
 ; AVX512VL-NEXT:    kxorw %k5, %k0, %k0
@@ -859,7 +859,7 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512VL-NEXT:    vmovdqa64 %zmm0, (%rsp,%rax,4)
 ; AVX512VL-NEXT:    vpcompressd %zmm3, %zmm0 {%k4} {z}
 ; AVX512VL-NEXT:    vmovdqa64 %zmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    kshiftrq $40, %k1, %k0
+; AVX512VL-NEXT:    kshiftrw $8, %k4, %k0
 ; AVX512VL-NEXT:    kxorw %k0, %k4, %k0
 ; AVX512VL-NEXT:    kshiftrw $4, %k0, %k4
 ; AVX512VL-NEXT:    kxorw %k4, %k0, %k0

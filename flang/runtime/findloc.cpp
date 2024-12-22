@@ -23,13 +23,7 @@ struct Equality {
   using Type2 = CppTypeFor<CAT2, KIND2>;
   RT_API_ATTRS bool operator()(const Descriptor &array,
       const SubscriptValue at[], const Descriptor &target) const {
-    if constexpr (KIND1 >= KIND2) {
-      return *array.Element<Type1>(at) ==
-          static_cast<Type1>(*target.OffsetElement<Type2>());
-    } else {
-      return static_cast<Type2>(*array.Element<Type1>(at)) ==
-          *target.OffsetElement<Type2>();
-    }
+    return *array.Element<Type1>(at) == *target.OffsetElement<Type2>();
   }
 };
 
@@ -159,7 +153,6 @@ struct NumericFindlocHelper {
         Terminator &terminator) const {
       switch (targetCat) {
       case TypeCategory::Integer:
-      case TypeCategory::Unsigned:
         ApplyIntegerKind<
             HELPER<CAT, KIND, TypeCategory::Integer>::template Functor, void>(
             targetKind, terminator, result, x, target, kind, dim, mask, back,
@@ -230,7 +223,6 @@ void RTDEF(Findloc)(Descriptor &result, const Descriptor &x,
   RUNTIME_CHECK(terminator, xType.has_value() && targetType.has_value());
   switch (xType->first) {
   case TypeCategory::Integer:
-  case TypeCategory::Unsigned:
     ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Integer,
                          TotalNumericFindlocHelper>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
@@ -321,7 +313,6 @@ void RTDEF(FindlocDim)(Descriptor &result, const Descriptor &x,
   RUNTIME_CHECK(terminator, xType.has_value() && targetType.has_value());
   switch (xType->first) {
   case TypeCategory::Integer:
-  case TypeCategory::Unsigned:
     ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Integer,
                          PartialNumericFindlocHelper>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,

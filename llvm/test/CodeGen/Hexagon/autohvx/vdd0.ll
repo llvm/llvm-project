@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: f0:
 ; CHECK: v1:0.w = vsub(v1:0.w,v1:0.w)

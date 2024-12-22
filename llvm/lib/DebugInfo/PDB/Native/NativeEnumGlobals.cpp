@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeEnumGlobals.h"
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"

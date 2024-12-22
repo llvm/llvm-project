@@ -18,7 +18,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
@@ -411,7 +410,9 @@ protected:
     return 1;
   }
 
-  static const llvm::APSInt *getPointer(APSIntPtr Value) { return Value.get(); }
+  static const llvm::APSInt *getPointer(const llvm::APSInt &Value) {
+    return &Value;
+  }
   static const SymExpr *getPointer(const SymExpr *Value) { return Value; }
 
   static void dumpToStreamImpl(raw_ostream &os, const SymExpr *Value);
@@ -467,11 +468,11 @@ public:
 };
 
 /// Represents a symbolic expression like 'x' + 3.
-using SymIntExpr = BinarySymExprImpl<const SymExpr *, APSIntPtr,
+using SymIntExpr = BinarySymExprImpl<const SymExpr *, const llvm::APSInt &,
                                      SymExpr::Kind::SymIntExprKind>;
 
 /// Represents a symbolic expression like 3 - 'x'.
-using IntSymExpr = BinarySymExprImpl<APSIntPtr, const SymExpr *,
+using IntSymExpr = BinarySymExprImpl<const llvm::APSInt &, const SymExpr *,
                                      SymExpr::Kind::IntSymExprKind>;
 
 /// Represents a symbolic expression like 'x' + 'y'.
@@ -536,14 +537,15 @@ public:
                                   QualType From, QualType To);
 
   const SymIntExpr *getSymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                  APSIntPtr rhs, QualType t);
+                                  const llvm::APSInt& rhs, QualType t);
 
   const SymIntExpr *getSymIntExpr(const SymExpr &lhs, BinaryOperator::Opcode op,
-                                  APSIntPtr rhs, QualType t) {
+                                  const llvm::APSInt& rhs, QualType t) {
     return getSymIntExpr(&lhs, op, rhs, t);
   }
 
-  const IntSymExpr *getIntSymExpr(APSIntPtr lhs, BinaryOperator::Opcode op,
+  const IntSymExpr *getIntSymExpr(const llvm::APSInt& lhs,
+                                  BinaryOperator::Opcode op,
                                   const SymExpr *rhs, QualType t);
 
   const SymSymExpr *getSymSymExpr(const SymExpr *lhs, BinaryOperator::Opcode op,

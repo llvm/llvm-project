@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O2 < %s
+; RUN: llc -march=hexagon -O2 < %s
 ; REQUIRES: asserts
 ; Check for successful compilation.
 

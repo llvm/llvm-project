@@ -206,9 +206,10 @@ public:
     if (!callback)
       return false;
     assert(!name.empty());
-    m_instances.emplace_back(name, description, callback,
-                             std::forward<Args>(args)...);
-    return true;
+    Instance instance =
+        Instance(name, description, callback, std::forward<Args>(args)...);
+    m_instances.push_back(instance);
+    return false;
   }
 
   bool UnregisterPlugin(typename Instance::CallbackType callback) {

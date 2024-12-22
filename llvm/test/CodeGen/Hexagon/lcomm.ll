@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK-NOT: .lcomm  g0,4,4,4
 
 target triple = "hexagon"

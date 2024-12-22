@@ -1,4 +1,4 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-expand-math),convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-expand-math,convert-arith-to-llvm),convert-vector-to-scf,convert-scf-to-cf,convert-cf-to-llvm,convert-vector-to-llvm,func.func(convert-math-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%mlir_c_runner_utils  \
@@ -18,7 +18,7 @@ func.func @func_exp2f(%a : f64) {
 func.func @exp2f() {
   // CHECK: 2
   %a = arith.constant 1.0 : f64
-  call @func_exp2f(%a) : (f64) -> ()
+  call @func_exp2f(%a) : (f64) -> ()  
 
   // CHECK-NEXT: 4
   %b = arith.constant 2.0 : f64
@@ -240,18 +240,13 @@ func.func @powf() {
   // CHECK-NEXT: -nan
   %k = arith.constant 1.0 : f64
   %k_p = arith.constant 0xfff0000001000000 : f64
-  call @func_powff64(%k, %k_p) : (f64, f64) -> ()
+  call @func_powff64(%k, %k_p) : (f64, f64) -> ()  
 
   // CHECK-NEXT: -nan
   %l = arith.constant 1.0 : f32
   %l_p = arith.constant 0xffffffff : f32
-  call @func_powff32(%l, %l_p) : (f32, f32) -> ()
-
-  // CHECK-NEXT: 1
-  %zero = arith.constant 0.0 : f32
-  call @func_powff32(%zero, %zero) : (f32, f32) -> ()
-
-  return
+  call @func_powff32(%l, %l_p) : (f32, f32) -> ()  
+  return  
 }
 
 // -------------------------------------------------------------------------- //

@@ -60,7 +60,7 @@ STATISTIC(NumIdCopies,   "Number of identity moves eliminated after rewriting");
 char VirtRegMapWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS(VirtRegMapWrapperLegacy, "virtregmap", "Virtual Register Map",
-                false, true)
+                false, false)
 
 void VirtRegMap::init(MachineFunction &mf) {
   MRI = &mf.getRegInfo();
@@ -88,9 +88,7 @@ void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
   assert(!Virt2PhysMap[virtReg] &&
          "attempt to assign physical register to already mapped "
          "virtual register");
-  assert((!getRegInfo().isReserved(physReg) ||
-          MF->getProperties().hasProperty(
-              MachineFunctionProperties::Property::FailedRegAlloc)) &&
+  assert(!getRegInfo().isReserved(physReg) &&
          "Attempt to map virtReg to a reserved physReg");
   Virt2PhysMap[virtReg] = physReg;
 }
@@ -253,9 +251,9 @@ INITIALIZE_PASS_BEGIN(VirtRegRewriter, "virtregrewriter",
                       "Virtual Register Rewriter", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
-INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
                     "Virtual Register Rewriter", false, false)
@@ -266,14 +264,14 @@ void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
-  AU.addRequired<LiveDebugVariablesWrapperLegacy>();
-  AU.addRequired<LiveStacksWrapperLegacy>();
-  AU.addPreserved<LiveStacksWrapperLegacy>();
+  AU.addRequired<LiveDebugVariables>();
+  AU.addRequired<LiveStacks>();
+  AU.addPreserved<LiveStacks>();
   AU.addRequired<VirtRegMapWrapperLegacy>();
   AU.addRequired<LiveRegMatrixWrapperLegacy>();
 
   if (!ClearVirtRegs)
-    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
+    AU.addPreserved<LiveDebugVariables>();
 
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -287,7 +285,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
-  DebugVars = &getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
+  DebugVars = &getAnalysis<LiveDebugVariables>();
   LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
                     << "********** Function: " << MF->getName() << '\n');
   LLVM_DEBUG(VRM->dump());
@@ -617,10 +615,7 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert((!MRI->isReserved(PhysReg) ||
-                MF->getProperties().hasProperty(
-                    MachineFunctionProperties::Property::FailedRegAlloc)) &&
-               "Reserved register assignment");
+        assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();

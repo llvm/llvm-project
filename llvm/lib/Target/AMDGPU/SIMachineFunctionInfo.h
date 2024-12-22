@@ -289,7 +289,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   unsigned PSInputAddr = 0;
   unsigned PSInputEnable = 0;
-  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
@@ -334,8 +333,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
     YamlIO.mapOptional("psInputAddr", MFI.PSInputAddr, 0u);
     YamlIO.mapOptional("psInputEnable", MFI.PSInputEnable, 0u);
-    YamlIO.mapOptional("maxMemoryClusterDWords", MFI.MaxMemoryClusterDWords,
-                       DefaultMemoryClusterDWordsLimit);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
@@ -489,10 +486,6 @@ private:
 
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
-
-  // Maximum number of dwords that can be clusterred during instruction
-  // scheduler stage.
-  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
   mutable std::optional<bool> UsesAGPRs;
 
@@ -1115,8 +1108,6 @@ public:
       Occupancy = Limit;
     limitOccupancy(MF);
   }
-
-  unsigned getMaxMemoryClusterDWords() const { return MaxMemoryClusterDWords; }
 
   bool mayNeedAGPRs() const {
     return MayNeedAGPRs;

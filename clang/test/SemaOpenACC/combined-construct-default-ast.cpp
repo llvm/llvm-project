@@ -1,3 +1,4 @@
+
 // RUN: %clang_cc1 %s -fopenacc -ast-dump | FileCheck %s
 
 // Test this with PCH.

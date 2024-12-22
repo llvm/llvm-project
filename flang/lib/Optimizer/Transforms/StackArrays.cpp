@@ -793,8 +793,8 @@ void StackArraysPass::runOnOperation() {
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
-  if (mlir::failed(mlir::applyOpPatternsGreedily(
-          opsToConvert, std::move(patterns), config))) {
+  if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,
+                                                std::move(patterns), config))) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }

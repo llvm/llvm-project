@@ -1010,7 +1010,7 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   BitVector GPRsToZero(TRI.getNumRegs());
   BitVector FPRsToZero(TRI.getNumRegs());
-  bool HasSVE = STI.isSVEorStreamingSVEAvailable();
+  bool HasSVE = STI.hasSVE();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       // For GPRs, we only care to clear out the 64-bit register.
@@ -3167,24 +3167,11 @@ static void computeCalleeSaveRegisterPairs(
             (RPI.isScalable() && RPI.Offset >= -256 && RPI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
 
-    auto isFrameRecord = [&] {
-      if (RPI.isPaired())
-        return IsWindows ? RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR
-                         : RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP;
-      // Otherwise, look for the frame record as two unpaired registers. This is
-      // needed for -aarch64-stack-hazard-size=<val>, which disables register
-      // pairing (as the padding may be too large for the LDP/STP offset). Note:
-      // On Windows, this check works out as current reg == FP, next reg == LR,
-      // and on other platforms current reg == FP, previous reg == LR. This
-      // works out as the correct pre-increment or post-increment offsets
-      // respectively.
-      return i > 0 && RPI.Reg1 == AArch64::FP &&
-             CSI[i - 1].getReg() == AArch64::LR;
-    };
-
     // Save the offset to frame record so that the FP register can point to the
     // innermost frame record (spilled FP and LR registers).
-    if (NeedsFrameRecord && isFrameRecord())
+    if (NeedsFrameRecord &&
+        ((!IsWindows && RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP) ||
+         (IsWindows && RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR)))
       AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
@@ -4368,37 +4355,26 @@ void TagStoreEdit::emitLoop(MachineBasicBlock::iterator InsertI) {
 
   int64_t ExtraBaseRegUpdate =
       FrameRegUpdate ? (*FrameRegUpdate - FrameRegOffset.getFixed() - Size) : 0;
-  LLVM_DEBUG(dbgs() << "TagStoreEdit::emitLoop: LoopSize=" << LoopSize
-                    << ", Size=" << Size
-                    << ", ExtraBaseRegUpdate=" << ExtraBaseRegUpdate
-                    << ", FrameRegUpdate=" << FrameRegUpdate
-                    << ", FrameRegOffset.getFixed()="
-                    << FrameRegOffset.getFixed() << "\n");
   if (LoopSize < Size) {
     assert(FrameRegUpdate);
     assert(Size - LoopSize == 16);
     // Tag 16 more bytes at BaseReg and update BaseReg.
-    int64_t STGOffset = ExtraBaseRegUpdate + 16;
-    assert(STGOffset % 16 == 0 && STGOffset >= -4096 && STGOffset <= 4080 &&
-           "STG immediate out of range");
     BuildMI(*MBB, InsertI, DL,
             TII->get(ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex))
         .addDef(BaseReg)
         .addReg(BaseReg)
         .addReg(BaseReg)
-        .addImm(STGOffset / 16)
+        .addImm(1 + ExtraBaseRegUpdate / 16)
         .setMemRefs(CombinedMemRefs)
         .setMIFlags(FrameRegUpdateFlags);
   } else if (ExtraBaseRegUpdate) {
     // Update BaseReg.
-    int64_t AddSubOffset = std::abs(ExtraBaseRegUpdate);
-    assert(AddSubOffset <= 4095 && "ADD/SUB immediate out of range");
     BuildMI(
         *MBB, InsertI, DL,
         TII->get(ExtraBaseRegUpdate > 0 ? AArch64::ADDXri : AArch64::SUBXri))
         .addDef(BaseReg)
         .addReg(BaseReg)
-        .addImm(AddSubOffset)
+        .addImm(std::abs(ExtraBaseRegUpdate))
         .addImm(0)
         .setMIFlags(FrameRegUpdateFlags);
   }
@@ -4417,20 +4393,10 @@ bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
     int64_t Offset = MI.getOperand(2).getImm() << Shift;
     if (MI.getOpcode() == AArch64::SUBXri)
       Offset = -Offset;
-    int64_t PostOffset = Offset - Size;
-    // TagStoreEdit::emitLoop might emit either an ADD/SUB after the loop, or
-    // an STGPostIndex which does the last 16 bytes of tag write. Which one is
-    // chosen depends on the alignment of the loop size, but the difference
-    // between the valid ranges for the two instructions is small, so we
-    // conservatively assume that it could be either case here.
-    //
-    // Max offset of STGPostIndex, minus the 16 byte tag write folded into that
-    // instruction.
-    const int64_t kMaxOffset = 4080 - 16;
-    // Max offset of SUBXri.
-    const int64_t kMinOffset = -4095;
-    if (PostOffset <= kMaxOffset && PostOffset >= kMinOffset &&
-        PostOffset % 16 == 0) {
+    int64_t AbsPostOffset = std::abs(Offset - Size);
+    const int64_t kMaxOffset =
+        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
+    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
       *TotalOffset = Offset;
       return true;
     }
@@ -4606,7 +4572,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
       break;
 
     // Reject anything that may alias the collected instructions.
-    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() || MI.isCall())
+    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects())
       break;
   }
 

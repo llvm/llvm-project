@@ -225,11 +225,7 @@ class StructType : public Type {
     SCDB_IsLiteral = 4,
     SCDB_IsSized = 8,
     SCDB_ContainsScalableVector = 16,
-    SCDB_NotContainsScalableVector = 32,
-    SCDB_ContainsNonGlobalTargetExtType = 64,
-    SCDB_NotContainsNonGlobalTargetExtType = 128,
-    SCDB_ContainsNonLocalTargetExtType = 64,
-    SCDB_NotContainsNonLocalTargetExtType = 128,
+    SCDB_NotContainsScalableVector = 32
   };
 
   /// For a named struct that actually has a name, this is a pointer to the
@@ -297,18 +293,6 @@ public:
   /// Returns true if this struct contains a scalable vector.
   bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::isScalableTy;
-
-  /// Return true if this type is or contains a target extension type that
-  /// disallows being used as a global.
-  bool
-  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
-  using Type::containsNonGlobalTargetExtType;
-
-  /// Return true if this type is or contains a target extension type that
-  /// disallows being used as a local.
-  bool
-  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
-  using Type::containsNonLocalTargetExtType;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
@@ -806,9 +790,6 @@ public:
     HasZeroInit = 1U << 0,
     /// This type may be used as the value type of a global variable.
     CanBeGlobal = 1U << 1,
-    /// This type may be allocated on the stack, either as the allocated type
-    /// of an alloca instruction or as a byval function parameter.
-    CanBeLocal = 1U << 2,
   };
 
   /// Returns true if the target extension type contains the given property.

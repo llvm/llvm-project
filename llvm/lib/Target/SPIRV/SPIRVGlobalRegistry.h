@@ -330,7 +330,7 @@ public:
   // In cases where the SPIR-V type is already known, this function can be
   // used to map it to the given VReg via an ASSIGN_TYPE instruction.
   void assignSPIRVTypeToVReg(SPIRVType *Type, Register VReg,
-                             const MachineFunction &MF);
+                             MachineFunction &MF);
 
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given LLVM IR type.
@@ -444,10 +444,6 @@ public:
   bool isBitcastCompatible(const SPIRVType *Type1,
                            const SPIRVType *Type2) const;
 
-  // Informs about removal of the machine instruction and invalidates data
-  // structures referring this instruction.
-  void invalidateMachineInstr(MachineInstr *MI);
-
 private:
   SPIRVType *getOpTypeBool(MachineIRBuilder &MIRBuilder);
 
@@ -513,8 +509,7 @@ private:
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                            SPIRVType *SpvType, bool EmitIR = true,
-                            bool ZeroAsNull = true);
+                            SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);

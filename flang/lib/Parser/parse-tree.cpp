@@ -253,32 +253,21 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
-OmpDependenceType::Value OmpDoacross::GetDepType() const {
+OmpDependenceType::Type OmpDoacross::GetDepType() const {
   return common::visit( //
       common::visitors{
           [](const OmpDoacross::Sink &) {
-            return OmpDependenceType::Value::Sink;
+            return OmpDependenceType::Type::Sink;
           },
           [](const OmpDoacross::Source &) {
-            return OmpDependenceType::Value::Source;
+            return OmpDependenceType::Type::Source;
           },
       },
       u);
 }
 
-OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
-  using Modifier = OmpDependClause::TaskDep::Modifier;
-  auto &modifiers{std::get<std::optional<std::list<Modifier>>>(t)};
-  if (modifiers) {
-    for (auto &m : *modifiers) {
-      if (auto *dep{std::get_if<OmpTaskDependenceType>(&m.u)}) {
-        return dep->v;
-      }
-    }
-    llvm_unreachable("expecting OmpTaskDependenceType in TaskDep");
-  } else {
-    llvm_unreachable("expecting modifiers on OmpDependClause::TaskDep");
-  }
+OmpTaskDependenceType::Type OmpDependClause::TaskDep::GetTaskDepType() const {
+  return std::get<parser::OmpTaskDependenceType>(t).v;
 }
 
 } // namespace Fortran::parser

@@ -102,7 +102,6 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   case P::TracksLiveness: return "TracksLiveness";
   case P::TiedOpsRewritten: return "TiedOpsRewritten";
   case P::FailsVerification: return "FailsVerification";
-  case P::FailedRegAlloc: return "FailedRegAlloc";
   case P::TracksDebugUserValues: return "TracksDebugUserValues";
   }
   // clang-format on

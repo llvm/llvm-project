@@ -16,7 +16,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   ChainedComparisonCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
-  CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
@@ -27,8 +26,11 @@ add_clang_library(clangTidyBugproneModule STATIC
   ForwardingReferenceOverloadCheck.cpp
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
-  IncDecInConditionsCheck.cpp
   IncorrectEnableIfCheck.cpp
+  ReturnConstRefFromParameterCheck.cpp
+  SuspiciousStringviewDataUsageCheck.cpp
+  SwitchMissingDefaultCaseCheck.cpp
+  IncDecInConditionsCheck.cpp
   IncorrectRoundingsCheck.cpp
   InfiniteLoopCheck.cpp
   IntegerDivisionCheck.cpp
@@ -43,8 +45,8 @@ add_clang_library(clangTidyBugproneModule STATIC
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
   NoEscapeCheck.cpp
-  NonZeroEnumToBoolConversionCheck.cpp
   NondeterministicPointerIterationOrderCheck.cpp
+  NonZeroEnumToBoolConversionCheck.cpp
   NotNullTerminatedResultCheck.cpp
   OptionalValueConversionCheck.cpp
   ParentVirtualCallCheck.cpp
@@ -52,7 +54,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   PosixReturnCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
-  ReturnConstRefFromParameterCheck.cpp
   SharedPtrArrayMismatchCheck.cpp
   SignalHandlerCheck.cpp
   SignedCharMisuseCheck.cpp
@@ -73,9 +74,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SuspiciousReallocUsageCheck.cpp
   SuspiciousSemicolonCheck.cpp
   SuspiciousStringCompareCheck.cpp
-  SuspiciousStringviewDataUsageCheck.cpp
   SwappedArgumentsCheck.cpp
-  SwitchMissingDefaultCaseCheck.cpp
   TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
@@ -86,6 +85,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   UnhandledExceptionAtNewCheck.cpp
   UnhandledSelfAssignmentCheck.cpp
   UniquePtrArrayMismatchCheck.cpp
+  CrtpConstructorAccessibilityCheck.cpp
   UnsafeFunctionsCheck.cpp
   UnusedLocalNonTrivialVariableCheck.cpp
   UnusedRaiiCheck.cpp

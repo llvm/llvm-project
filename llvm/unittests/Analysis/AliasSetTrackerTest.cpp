@@ -62,7 +62,7 @@ TEST(AliasSetTracker, AliasUnknownInst) {
   TargetLibraryInfoImpl TLII(Trip);
   TargetLibraryInfo TLI(TLII);
   AAResults AA(TLI);
-  TypeBasedAAResult TBAAR(false);
+  TypeBasedAAResult TBAAR;
   AA.addAAResult(TBAAR);
 
   // Initialize the alias set tracker for the @test function.

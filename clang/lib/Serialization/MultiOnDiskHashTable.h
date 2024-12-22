@@ -93,7 +93,7 @@ private:
     using result_type = OnDiskTable *;
 
     result_type operator()(void *P) const {
-      return llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(P));
+      return Table::getFromOpaqueValue(P).template get<OnDiskTable *>();
     }
   };
 
@@ -130,7 +130,7 @@ private:
     Files.insert(PendingOverrides.begin(), PendingOverrides.end());
     // Explicitly capture Files to work around an MSVC 2015 rejects-valid bug.
     auto ShouldRemove = [&Files](void *T) -> bool {
-      auto *ODT = llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(T));
+      auto *ODT = Table::getFromOpaqueValue(T).template get<OnDiskTable *>();
       bool Remove = Files.count(ODT->File);
       if (Remove)
         delete ODT;

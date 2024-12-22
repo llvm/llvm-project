@@ -8,6 +8,10 @@
 
 #include <cstdint>
 #include <optional>
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -17,11 +21,10 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
-namespace nb = nanobind;
+namespace py = pybind11;
 
 namespace mlir {
 namespace python {
@@ -50,10 +53,10 @@ namespace {
 
 /// Takes in an optional ist of operands and converts them into a SmallVector
 /// of MlirVlaues. Returns an empty SmallVector if the list is empty.
-llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
+llvm::SmallVector<MlirValue> wrapOperands(std::optional<py::list> operandList) {
   llvm::SmallVector<MlirValue> mlirOperands;
 
-  if (!operandList || operandList->size() == 0) {
+  if (!operandList || operandList->empty()) {
     return mlirOperands;
   }
 
@@ -65,42 +68,40 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
 
     PyValue *val;
     try {
-      val = nb::cast<PyValue *>(it.value());
+      val = py::cast<PyValue *>(it.value());
       if (!val)
-        throw nb::cast_error();
+        throw py::cast_error();
       mlirOperands.push_back(val->get());
       continue;
-    } catch (nb::cast_error &err) {
+    } catch (py::cast_error &err) {
       // Intentionally unhandled to try sequence below first.
       (void)err;
     }
 
     try {
-      auto vals = nb::cast<nb::sequence>(it.value());
-      for (nb::handle v : vals) {
+      auto vals = py::cast<py::sequence>(it.value());
+      for (py::object v : vals) {
         try {
-          val = nb::cast<PyValue *>(v);
+          val = py::cast<PyValue *>(v);
           if (!val)
-            throw nb::cast_error();
+            throw py::cast_error();
           mlirOperands.push_back(val->get());
-        } catch (nb::cast_error &err) {
-          throw nb::value_error(
+        } catch (py::cast_error &err) {
+          throw py::value_error(
               (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
                " must be a Value or Sequence of Values (" + err.what() + ")")
-                  .str()
-                  .c_str());
+                  .str());
         }
       }
       continue;
-    } catch (nb::cast_error &err) {
-      throw nb::value_error((llvm::Twine("Operand ") + llvm::Twine(it.index()) +
+    } catch (py::cast_error &err) {
+      throw py::value_error((llvm::Twine("Operand ") + llvm::Twine(it.index()) +
                              " must be a Value or Sequence of Values (" +
                              err.what() + ")")
-                                .str()
-                                .c_str());
+                                .str());
     }
 
-    throw nb::cast_error();
+    throw py::cast_error();
   }
 
   return mlirOperands;
@@ -143,24 +144,24 @@ wrapRegions(std::optional<std::vector<PyRegion>> regions) {
 template <typename ConcreteIface>
 class PyConcreteOpInterface {
 protected:
-  using ClassTy = nb::class_<ConcreteIface>;
+  using ClassTy = py::class_<ConcreteIface>;
   using GetTypeIDFunctionTy = MlirTypeID (*)();
 
 public:
   /// Constructs an interface instance from an object that is either an
   /// operation or a subclass of OpView. In the latter case, only the static
   /// methods of the interface are accessible to the caller.
-  PyConcreteOpInterface(nb::object object, DefaultingPyMlirContext context)
+  PyConcreteOpInterface(py::object object, DefaultingPyMlirContext context)
       : obj(std::move(object)) {
     try {
-      operation = &nb::cast<PyOperation &>(obj);
-    } catch (nb::cast_error &) {
+      operation = &py::cast<PyOperation &>(obj);
+    } catch (py::cast_error &) {
       // Do nothing.
     }
 
     try {
-      operation = &nb::cast<PyOpView &>(obj).getOperation();
-    } catch (nb::cast_error &) {
+      operation = &py::cast<PyOpView &>(obj).getOperation();
+    } catch (py::cast_error &) {
       // Do nothing.
     }
 
@@ -168,7 +169,7 @@ public:
       if (!mlirOperationImplementsInterface(*operation,
                                             ConcreteIface::getInterfaceID())) {
         std::string msg = "the operation does not implement ";
-        throw nb::value_error((msg + ConcreteIface::pyClassName).c_str());
+        throw py::value_error(msg + ConcreteIface::pyClassName);
       }
 
       MlirIdentifier identifier = mlirOperationGetName(*operation);
@@ -176,9 +177,9 @@ public:
       opName = std::string(stringRef.data, stringRef.length);
     } else {
       try {
-        opName = nb::cast<std::string>(obj.attr("OPERATION_NAME"));
-      } catch (nb::cast_error &) {
-        throw nb::type_error(
+        opName = obj.attr("OPERATION_NAME").template cast<std::string>();
+      } catch (py::cast_error &) {
+        throw py::type_error(
             "Op interface does not refer to an operation or OpView class");
       }
 
@@ -186,19 +187,22 @@ public:
               mlirStringRefCreate(opName.data(), opName.length()),
               context.resolve().get(), ConcreteIface::getInterfaceID())) {
         std::string msg = "the operation does not implement ";
-        throw nb::value_error((msg + ConcreteIface::pyClassName).c_str());
+        throw py::value_error(msg + ConcreteIface::pyClassName);
       }
     }
   }
 
   /// Creates the Python bindings for this class in the given module.
-  static void bind(nb::module_ &m) {
-    nb::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
-    cls.def(nb::init<nb::object, DefaultingPyMlirContext>(), nb::arg("object"),
-            nb::arg("context").none() = nb::none(), constructorDoc)
-        .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
-                     operationDoc)
-        .def_prop_ro("opview", &PyConcreteOpInterface::getOpView, opviewDoc);
+  static void bind(py::module &m) {
+    py::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName,
+                                  py::module_local());
+    cls.def(py::init<py::object, DefaultingPyMlirContext>(), py::arg("object"),
+            py::arg("context") = py::none(), constructorDoc)
+        .def_property_readonly("operation",
+                               &PyConcreteOpInterface::getOperationObject,
+                               operationDoc)
+        .def_property_readonly("opview", &PyConcreteOpInterface::getOpView,
+                               opviewDoc);
     ConcreteIface::bindDerived(cls);
   }
 
@@ -212,9 +216,9 @@ public:
   /// Returns the operation instance from which this object was constructed.
   /// Throws a type error if this object was constructed from a subclass of
   /// OpView.
-  nb::object getOperationObject() {
+  py::object getOperationObject() {
     if (operation == nullptr) {
-      throw nb::type_error("Cannot get an operation from a static interface");
+      throw py::type_error("Cannot get an operation from a static interface");
     }
 
     return operation->getRef().releaseObject();
@@ -223,9 +227,9 @@ public:
   /// Returns the opview of the operation instance from which this object was
   /// constructed. Throws a type error if this object was constructed form a
   /// subclass of OpView.
-  nb::object getOpView() {
+  py::object getOpView() {
     if (operation == nullptr) {
-      throw nb::type_error("Cannot get an opview from a static interface");
+      throw py::type_error("Cannot get an opview from a static interface");
     }
 
     return operation->createOpView();
@@ -238,7 +242,7 @@ public:
 private:
   PyOperation *operation = nullptr;
   std::string opName;
-  nb::object obj;
+  py::object obj;
 };
 
 /// Python wrapper for InferTypeOpInterface. This interface has only static
@@ -272,7 +276,7 @@ public:
   /// Given the arguments required to build an operation, attempts to infer its
   /// return types. Throws value_error on failure.
   std::vector<PyType>
-  inferReturnTypes(std::optional<nb::list> operandList,
+  inferReturnTypes(std::optional<py::list> operandList,
                    std::optional<PyAttribute> attributes, void *properties,
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
@@ -295,7 +299,7 @@ public:
         mlirRegions.data(), &appendResultsCallback, &data);
 
     if (mlirLogicalResultIsFailure(result)) {
-      throw nb::value_error("Failed to infer result types");
+      throw py::value_error("Failed to infer result types");
     }
 
     return inferredTypes;
@@ -303,12 +307,11 @@ public:
 
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypes", &PyInferTypeOpInterface::inferReturnTypes,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypesDoc);
+            py::arg("operands") = py::none(),
+            py::arg("attributes") = py::none(),
+            py::arg("properties") = py::none(), py::arg("regions") = py::none(),
+            py::arg("context") = py::none(), py::arg("loc") = py::none(),
+            inferReturnTypesDoc);
   }
 };
 
@@ -316,9 +319,9 @@ public:
 class PyShapedTypeComponents {
 public:
   PyShapedTypeComponents(MlirType elementType) : elementType(elementType) {}
-  PyShapedTypeComponents(nb::list shape, MlirType elementType)
+  PyShapedTypeComponents(py::list shape, MlirType elementType)
       : shape(std::move(shape)), elementType(elementType), ranked(true) {}
-  PyShapedTypeComponents(nb::list shape, MlirType elementType,
+  PyShapedTypeComponents(py::list shape, MlirType elementType,
                          MlirAttribute attribute)
       : shape(std::move(shape)), elementType(elementType), attribute(attribute),
         ranked(true) {}
@@ -327,9 +330,10 @@ public:
       : shape(other.shape), elementType(other.elementType),
         attribute(other.attribute), ranked(other.ranked) {}
 
-  static void bind(nb::module_ &m) {
-    nb::class_<PyShapedTypeComponents>(m, "ShapedTypeComponents")
-        .def_prop_ro(
+  static void bind(py::module &m) {
+    py::class_<PyShapedTypeComponents>(m, "ShapedTypeComponents",
+                                       py::module_local())
+        .def_property_readonly(
             "element_type",
             [](PyShapedTypeComponents &self) { return self.elementType; },
             "Returns the element type of the shaped type components.")
@@ -338,57 +342,57 @@ public:
             [](PyType &elementType) {
               return PyShapedTypeComponents(elementType);
             },
-            nb::arg("element_type"),
+            py::arg("element_type"),
             "Create an shaped type components object with only the element "
             "type.")
         .def_static(
             "get",
-            [](nb::list shape, PyType &elementType) {
+            [](py::list shape, PyType &elementType) {
               return PyShapedTypeComponents(std::move(shape), elementType);
             },
-            nb::arg("shape"), nb::arg("element_type"),
+            py::arg("shape"), py::arg("element_type"),
             "Create a ranked shaped type components object.")
         .def_static(
             "get",
-            [](nb::list shape, PyType &elementType, PyAttribute &attribute) {
+            [](py::list shape, PyType &elementType, PyAttribute &attribute) {
               return PyShapedTypeComponents(std::move(shape), elementType,
                                             attribute);
             },
-            nb::arg("shape"), nb::arg("element_type"), nb::arg("attribute"),
+            py::arg("shape"), py::arg("element_type"), py::arg("attribute"),
             "Create a ranked shaped type components object with attribute.")
-        .def_prop_ro(
+        .def_property_readonly(
             "has_rank",
             [](PyShapedTypeComponents &self) -> bool { return self.ranked; },
             "Returns whether the given shaped type component is ranked.")
-        .def_prop_ro(
+        .def_property_readonly(
             "rank",
-            [](PyShapedTypeComponents &self) -> nb::object {
+            [](PyShapedTypeComponents &self) -> py::object {
               if (!self.ranked) {
-                return nb::none();
+                return py::none();
               }
-              return nb::int_(self.shape.size());
+              return py::int_(self.shape.size());
             },
             "Returns the rank of the given ranked shaped type components. If "
             "the shaped type components does not have a rank, None is "
             "returned.")
-        .def_prop_ro(
+        .def_property_readonly(
             "shape",
-            [](PyShapedTypeComponents &self) -> nb::object {
+            [](PyShapedTypeComponents &self) -> py::object {
               if (!self.ranked) {
-                return nb::none();
+                return py::none();
               }
-              return nb::list(self.shape);
+              return py::list(self.shape);
             },
             "Returns the shape of the ranked shaped type components as a list "
             "of integers. Returns none if the shaped type component does not "
             "have a rank.");
   }
 
-  nb::object getCapsule();
-  static PyShapedTypeComponents createFromCapsule(nb::object capsule);
+  pybind11::object getCapsule();
+  static PyShapedTypeComponents createFromCapsule(pybind11::object capsule);
 
 private:
-  nb::list shape;
+  py::list shape;
   MlirType elementType;
   MlirAttribute attribute;
   bool ranked{false};
@@ -420,7 +424,7 @@ public:
     if (!hasRank) {
       data->inferredShapedTypeComponents.emplace_back(elementType);
     } else {
-      nb::list shapeList;
+      py::list shapeList;
       for (intptr_t i = 0; i < rank; ++i) {
         shapeList.append(shape[i]);
       }
@@ -432,7 +436,7 @@ public:
   /// Given the arguments required to build an operation, attempts to infer the
   /// shaped type components. Throws value_error on failure.
   std::vector<PyShapedTypeComponents> inferReturnTypeComponents(
-      std::optional<nb::list> operandList,
+      std::optional<py::list> operandList,
       std::optional<PyAttribute> attributes, void *properties,
       std::optional<std::vector<PyRegion>> regions,
       DefaultingPyMlirContext context, DefaultingPyLocation location) {
@@ -454,7 +458,7 @@ public:
         mlirRegions.data(), &appendResultsCallback, &data);
 
     if (mlirLogicalResultIsFailure(result)) {
-      throw nb::value_error("Failed to infer result shape type components");
+      throw py::value_error("Failed to infer result shape type components");
     }
 
     return inferredShapedTypeComponents;
@@ -463,16 +467,14 @@ public:
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypeComponents",
             &PyInferShapedTypeOpInterface::inferReturnTypeComponents,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypeComponentsDoc);
+            py::arg("operands") = py::none(),
+            py::arg("attributes") = py::none(), py::arg("regions") = py::none(),
+            py::arg("properties") = py::none(), py::arg("context") = py::none(),
+            py::arg("loc") = py::none(), inferReturnTypeComponentsDoc);
   }
 };
 
-void populateIRInterfaces(nb::module_ &m) {
+void populateIRInterfaces(py::module &m) {
   PyInferTypeOpInterface::bind(m);
   PyShapedTypeComponents::bind(m);
   PyInferShapedTypeOpInterface::bind(m);

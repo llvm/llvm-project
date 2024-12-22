@@ -1629,20 +1629,15 @@ def produce_version_header():
 
 */
 
-#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/version>
-#else
-#  include <__config>
+#include <__config>
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
 // clang-format off
 
 {cxx_macros}
-
-#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 // clang-format on
 
@@ -2235,8 +2230,8 @@ class FeatureTestMacros:
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_VERSIONH
-#define _LIBCPP_VERSIONH
+#ifndef _LIBCPP_VERSION
+#define _LIBCPP_VERSION
 
 #include <__config>
 
@@ -2246,7 +2241,7 @@ class FeatureTestMacros:
 
 {feature_test_macros}
 
-#endif // _LIBCPP_VERSIONH
+#endif // _LIBCPP_VERSION
 """
         return template.format(
             feature_test_macros=generate_version_header_implementation(

@@ -14,10 +14,10 @@
 namespace lldb_private {
 class UDPSocket : public Socket {
 public:
-  explicit UDPSocket(bool should_close);
+  UDPSocket(bool should_close, bool child_processes_inherit);
 
   static llvm::Expected<std::unique_ptr<UDPSocket>>
-  CreateConnected(llvm::StringRef name);
+  Connect(llvm::StringRef name, bool child_processes_inherit);
 
   std::string GetRemoteConnectionURI() const override;
 

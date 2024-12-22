@@ -243,7 +243,6 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(equalsBoundNode);
   REGISTER_MATCHER(equalsIntegralValue);
   REGISTER_MATCHER(explicitCastExpr);
-  REGISTER_MATCHER(exportDecl);
   REGISTER_MATCHER(expr);
   REGISTER_MATCHER(exprWithCleanups);
   REGISTER_MATCHER(fieldDecl);

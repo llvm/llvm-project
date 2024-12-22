@@ -266,14 +266,6 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeatureStorePairSuppress,
                                  FeaturePredictableSelectIsExpensive]>;
 
-def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
-                                 "Fujitsu FUJITSU-MONAKA processors", [
-                                 FeaturePredictableSelectIsExpensive,
-                                 FeatureEnableSelectOptimize,
-                                 FeaturePostRAScheduler,
-                                 FeatureArithmeticBccFusion,
-                                 ]>;
-
 def TuneCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
                                   "Nvidia Carmel processors">;
 
@@ -851,12 +843,6 @@ def ProcessorFeatures {
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum,
                                      FeatureAES, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
-  list<SubtargetFeature> MONAKA = [HasV9_3aOps, FeaturePerfMon, FeatureCCIDX,
-                                   FeatureFPAC, FeatureFP16FML, FeatureRandGen,
-                                   FeatureSSBS, FeatureLS64, FeatureCLRBHB,
-                                   FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
-                                   FeatureSVE2SHA3, FeatureSVE2BitPerm, FeatureETE,
-                                   FeatureMEC, FeatureFP8DOT2];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
                                      FeatureFullFP16, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM,
                                      FeatureFPARMv8];
@@ -1127,15 +1113,15 @@ def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-r82ae", CortexA55Model, ProcessorFeatures.R82AE,
                      [TuneR82AE]>;
-def : ProcessorModel<"cortex-x1", NeoverseV1Model, ProcessorFeatures.X1,
+def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,
                      [TuneX1]>;
-def : ProcessorModel<"cortex-x1c", NeoverseV1Model, ProcessorFeatures.X1C,
+def : ProcessorModel<"cortex-x1c", CortexA57Model, ProcessorFeatures.X1C,
                      [TuneX1]>;
-def : ProcessorModel<"cortex-x2", NeoverseV2Model, ProcessorFeatures.X2,
+def : ProcessorModel<"cortex-x2", NeoverseN2Model, ProcessorFeatures.X2,
                      [TuneX2]>;
-def : ProcessorModel<"cortex-x3", NeoverseV2Model, ProcessorFeatures.X3,
+def : ProcessorModel<"cortex-x3", NeoverseN2Model, ProcessorFeatures.X3,
                      [TuneX3]>;
-def : ProcessorModel<"cortex-x4", NeoverseV2Model, ProcessorFeatures.X4,
+def : ProcessorModel<"cortex-x4", NeoverseN2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
                      [TuneX925]>;
@@ -1238,10 +1224,6 @@ def : ProcessorAlias<"apple-latest", "apple-m4">;
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
                      [TuneA64FX]>;
-
-// Fujitsu FUJITSU-MONAKA
-def : ProcessorModel<"fujitsu-monaka", A64FXModel, ProcessorFeatures.MONAKA,
-                     [TuneMONAKA]>;
 
 // Nvidia Carmel
 def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,

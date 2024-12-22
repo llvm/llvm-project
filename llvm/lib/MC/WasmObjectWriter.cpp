@@ -734,9 +734,12 @@ static void addData(SmallVectorImpl<char> &DataBytes,
       DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
                        Fill->getValue());
     } else if (auto *LEB = dyn_cast<MCLEBFragment>(&Frag)) {
-      llvm::append_range(DataBytes, LEB->getContents());
+      const SmallVectorImpl<char> &Contents = LEB->getContents();
+      llvm::append_range(DataBytes, Contents);
     } else {
-      llvm::append_range(DataBytes, cast<MCDataFragment>(Frag).getContents());
+      const auto &DataFrag = cast<MCDataFragment>(Frag);
+      const SmallVectorImpl<char> &Contents = DataFrag.getContents();
+      llvm::append_range(DataBytes, Contents);
     }
   }
 
@@ -1323,22 +1326,6 @@ static bool isInSymtab(const MCSymbolWasm &Sym) {
   return true;
 }
 
-static bool isSectionReferenced(MCAssembler &Asm, MCSectionWasm &Section) {
-  StringRef SectionName = Section.getName();
-
-  for (const MCSymbol &S : Asm.symbols()) {
-    const auto &WS = static_cast<const MCSymbolWasm &>(S);
-    if (WS.isData() && WS.isInSection()) {
-      auto &RefSection = static_cast<MCSectionWasm &>(WS.getSection());
-      if (RefSection.getName() == SectionName) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 void WasmObjectWriter::prepareImports(
     SmallVectorImpl<wasm::WasmImport> &Imports, MCAssembler &Asm) {
   // For now, always emit the memory import, since loads and stores are not
@@ -1495,10 +1482,8 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     LLVM_DEBUG(dbgs() << "Processing Section " << SectionName << "  group "
                       << Section.getGroup() << "\n";);
 
-    // .init_array sections are handled specially elsewhere, include them in
-    // data segments if and only if referenced by a symbol.
-    if (SectionName.starts_with(".init_array") &&
-        !isSectionReferenced(Asm, Section))
+    // .init_array sections are handled specially elsewhere.
+    if (SectionName.starts_with(".init_array"))
       continue;
 
     // Code is handled separately
@@ -1868,47 +1853,49 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     if (EmptyFrag.getKind() != MCFragment::FT_Data)
       report_fatal_error(".init_array section should be aligned");
 
-    const MCFragment *nextFrag = EmptyFrag.getNext();
-    while (nextFrag != nullptr) {
-      const MCFragment &AlignFrag = *nextFrag;
-      if (AlignFrag.getKind() != MCFragment::FT_Align)
-        report_fatal_error(".init_array section should be aligned");
-      if (cast<MCAlignFragment>(AlignFrag).getAlignment() !=
-          Align(is64Bit() ? 8 : 4))
+    const MCFragment &AlignFrag = *EmptyFrag.getNext();
+    if (AlignFrag.getKind() != MCFragment::FT_Align)
+      report_fatal_error(".init_array section should be aligned");
+    if (cast<MCAlignFragment>(AlignFrag).getAlignment() !=
+        Align(is64Bit() ? 8 : 4))
+      report_fatal_error(".init_array section should be aligned for pointers");
+
+    const MCFragment &Frag = *AlignFrag.getNext();
+    if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
+      report_fatal_error("only data supported in .init_array section");
+
+    uint16_t Priority = UINT16_MAX;
+    unsigned PrefixLength = strlen(".init_array");
+    if (WS.getName().size() > PrefixLength) {
+      if (WS.getName()[PrefixLength] != '.')
         report_fatal_error(
-            ".init_array section should be aligned for pointers");
-
-      const MCFragment &Frag = *AlignFrag.getNext();
-      nextFrag = Frag.getNext();
-      if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
-        report_fatal_error("only data supported in .init_array section");
-
-      uint16_t Priority = UINT16_MAX;
-      unsigned PrefixLength = strlen(".init_array");
-      if (WS.getName().size() > PrefixLength) {
-        if (WS.getName()[PrefixLength] != '.')
-          report_fatal_error(
-              ".init_array section priority should start with '.'");
-        if (WS.getName().substr(PrefixLength + 1).getAsInteger(10, Priority))
-          report_fatal_error("invalid .init_array section priority");
-      }
-      const auto &DataFrag = cast<MCDataFragment>(Frag);
-      assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
-      for (const MCFixup &Fixup : DataFrag.getFixups()) {
-        assert(Fixup.getKind() ==
-               MCFixup::getKindForSize(is64Bit() ? 8 : 4, false));
-        const MCExpr *Expr = Fixup.getValue();
-        auto *SymRef = dyn_cast<MCSymbolRefExpr>(Expr);
-        if (!SymRef)
-          report_fatal_error(
-              "fixups in .init_array should be symbol references");
-        const auto &TargetSym = cast<const MCSymbolWasm>(SymRef->getSymbol());
-        if (TargetSym.getIndex() == InvalidIndex)
-          report_fatal_error("symbols in .init_array should exist in symtab");
-        if (!TargetSym.isFunction())
-          report_fatal_error("symbols in .init_array should be for functions");
-        InitFuncs.push_back(std::make_pair(Priority, TargetSym.getIndex()));
-      }
+            ".init_array section priority should start with '.'");
+      if (WS.getName().substr(PrefixLength + 1).getAsInteger(10, Priority))
+        report_fatal_error("invalid .init_array section priority");
+    }
+    const auto &DataFrag = cast<MCDataFragment>(Frag);
+    const SmallVectorImpl<char> &Contents = DataFrag.getContents();
+    for (const uint8_t *
+             P = (const uint8_t *)Contents.data(),
+            *End = (const uint8_t *)Contents.data() + Contents.size();
+         P != End; ++P) {
+      if (*P != 0)
+        report_fatal_error("non-symbolic data in .init_array section");
+    }
+    for (const MCFixup &Fixup : DataFrag.getFixups()) {
+      assert(Fixup.getKind() ==
+             MCFixup::getKindForSize(is64Bit() ? 8 : 4, false));
+      const MCExpr *Expr = Fixup.getValue();
+      auto *SymRef = dyn_cast<MCSymbolRefExpr>(Expr);
+      if (!SymRef)
+        report_fatal_error("fixups in .init_array should be symbol references");
+      const auto &TargetSym = cast<const MCSymbolWasm>(SymRef->getSymbol());
+      if (TargetSym.getIndex() == InvalidIndex)
+        report_fatal_error("symbols in .init_array should exist in symtab");
+      if (!TargetSym.isFunction())
+        report_fatal_error("symbols in .init_array should be for functions");
+      InitFuncs.push_back(
+          std::make_pair(Priority, TargetSym.getIndex()));
     }
   }
 

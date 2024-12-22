@@ -1,8 +1,7 @@
 ; RUN: llc -O3 -mtriple arm64-linux -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-ASM
-; This test checks that nomerge correctly prevents the traps from being merged
-; in the compiled code.
-; Prior to ae6dc64ec670891cb15049277e43133d4df7fb4b, this test showed that
-; nomerge did not work correctly.
+; What this test does is check that even with nomerge, the functions still get merged in
+; compiled code as the ubsantrap call gets lowered to a single instruction: brk.
+
 
 @B = dso_local global [10 x i8] zeroinitializer, align 1
 @B2 = dso_local global [10 x i8] zeroinitializer, align 1

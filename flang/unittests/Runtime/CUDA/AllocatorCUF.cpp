@@ -66,7 +66,7 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
   Descriptor *desc = nullptr;
-  desc = RTNAME(CUFAllocDescriptor)(a->SizeInBytes());
+  desc = RTNAME(CUFAllocDesciptor)(a->SizeInBytes());
   EXPECT_TRUE(desc != nullptr);
-  RTNAME(CUFFreeDescriptor)(desc);
+  RTNAME(CUFFreeDesciptor)(desc);
 }

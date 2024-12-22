@@ -14,4 +14,3 @@
 // CHECK-METHOD-NEXT: LifetimeBoundAttr
 
 // CHECK-METHOD-THIS: CXXMethodDecl {{.+}} annotateThis 'int *() {{\[\[}}clang::lifetimebound{{\]\]}}'
-// CHECK-METHOD-THIS: CXXMethodDecl {{.+}} annotateThis2 'int *() {{\[\[}}clang::lifetimebound{{\]\]}}'

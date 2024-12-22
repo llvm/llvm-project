@@ -747,12 +747,6 @@ backend:RISC-V:
   - llvm/**/*riscv*
   - llvm/**/*RISCV*
 
-backend:Xtensa:
-  - clang/**/*xtensa*
-  - clang/**/*Xtensa*
-  - llvm/**/*xtensa*
-  - llvm/**/*Xtensa*
-
 lld:coff:
   - lld/**/COFF/**
   - lld/Common/**

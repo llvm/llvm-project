@@ -368,36 +368,3 @@ void test_use_matrix_2() {
 
   selector<2> r5 = use_matrix_3(m1);
 }
-
-// CHECK-LABEL: define void @_Z22test_pseudo_destructorv()
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %a = alloca [25 x double], align 8
-// CHECK-NEXT:   %b = alloca [12 x float], align 4
-// CHECK-NEXT:   %0 = load <25 x double>, ptr %a, align 8
-// CHECK-NEXT:   call void @_Z17pseudo_destructorIu11matrix_typeILm5ELm5EdEEvT_(<25 x double> %0)
-// CHECK-NEXT:   %1 = load <12 x float>, ptr %b, align 4
-// CHECK-NEXT:   call void @_Z17pseudo_destructorIu11matrix_typeILm3ELm4EfEEvT_(<12 x float> %1)
-// CHECK-NEXT:   ret void
-
-// CHECK-LABEL: define linkonce_odr void @_Z17pseudo_destructorIu11matrix_typeILm5ELm5EdEEvT_(<25 x double> %t)
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %t.addr = alloca [25 x double], align 8
-// CHECK-NEXT:   store <25 x double> %t, ptr %t.addr, align 8
-// CHECK-NEXT:   ret void
-
-// CHECK-LABEL: define linkonce_odr void @_Z17pseudo_destructorIu11matrix_typeILm3ELm4EfEEvT_(<12 x float> %t)
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %t.addr = alloca [12 x float], align 4
-// CHECK-NEXT:   store <12 x float> %t, ptr %t.addr, align 4
-// CHECK-NEXT:   ret void
-template <typename T>
-void pseudo_destructor(T t) {
-  t.~T();
-}
-
-void test_pseudo_destructor() {
-  dx5x5_t a;
-  fx3x4_t b;
-  pseudo_destructor(a);
-  pseudo_destructor(b);
-}
