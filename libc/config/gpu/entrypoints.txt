@@ -271,9 +271,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.locale.newlocale
     libc.src.locale.setlocale
     libc.src.locale.uselocale
-
-    # gpu/rpc.h entrypoints
-    libc.src.gpu.rpc_host_call
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

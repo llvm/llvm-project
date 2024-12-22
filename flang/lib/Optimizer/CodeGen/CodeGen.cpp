@@ -1210,12 +1210,12 @@ genCUFAllocDescriptor(mlir::Location loc,
       llvmPointerType, {llvmIntPtrType, llvmPointerType, llvmInt32Type});
 
   auto llvmFunc = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-      RTNAME_STRING(CUFAllocDesciptor));
+      RTNAME_STRING(CUFAllocDescriptor));
   auto funcFunc =
-      mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDesciptor));
+      mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDescriptor));
   if (!llvmFunc && !funcFunc)
     mlir::OpBuilder::atBlockEnd(mod.getBody())
-        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDesciptor),
+        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDescriptor),
                                         fctTy);
 
   mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
@@ -1224,7 +1224,7 @@ genCUFAllocDescriptor(mlir::Location loc,
       genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
   llvm::SmallVector args = {sizeInBytes, sourceFile, sourceLine};
   return rewriter
-      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDesciptor),
+      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDescriptor),
                                   args)
       .getResult();
 }
@@ -1725,13 +1725,17 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 };
 
 static bool isDeviceAllocation(mlir::Value val) {
+  if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
+    return isDeviceAllocation(loadOp.getMemref());
   if (auto convertOp =
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
     val = convertOp.getValue();
   if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
     if (callOp.getCallee() &&
-        callOp.getCallee().value().getRootReference().getValue().starts_with(
-            RTNAME_STRING(CUFMemAlloc)))
+        (callOp.getCallee().value().getRootReference().getValue().starts_with(
+             RTNAME_STRING(CUFMemAlloc)) ||
+         callOp.getCallee().value().getRootReference().getValue().starts_with(
+             RTNAME_STRING(CUFAllocDescriptor))))
       return true;
   return false;
 }
@@ -2045,7 +2049,8 @@ private:
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
     mlir::Value result =
-        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest);
+        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest,
+                                     isDeviceAllocation(rebox.getBox()));
     rewriter.replaceOp(rebox, result);
     return mlir::success();
   }
@@ -2990,10 +2995,12 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAlignment(*global.getAlignment());
 
     auto module = global->getParentOfType<mlir::ModuleOp>();
+    auto gpuMod = global->getParentOfType<mlir::gpu::GPUModuleOp>();
     // Add comdat if necessary
     if (fir::getTargetTriple(module).supportsCOMDAT() &&
         (linkage == mlir::LLVM::Linkage::Linkonce ||
-         linkage == mlir::LLVM::Linkage::LinkonceODR)) {
+         linkage == mlir::LLVM::Linkage::LinkonceODR) &&
+        !gpuMod) {
       addComdat(g, rewriter, module);
     }
 
@@ -3120,7 +3127,7 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
               inputBoxStorage.getDefiningOp())) {
         if (callOp.getCallee() &&
             (*callOp.getCallee())
-                .starts_with(RTNAME_STRING(CUFAllocDesciptor))) {
+                .starts_with(RTNAME_STRING(CUFAllocDescriptor))) {
           // CUDA Fortran local descriptor are allocated in managed memory. So
           // new storage must be allocated the same way.
           auto mod = load->getParentOfType<mlir::ModuleOp>();
@@ -3287,10 +3294,40 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
   }
 };
 
+/// Helper function for converting select ops. This function converts the
+/// signature of the given block. If the new block signature is different from
+/// `expectedTypes`, returns "failure".
+static llvm::FailureOr<mlir::Block *>
+getConvertedBlock(mlir::ConversionPatternRewriter &rewriter,
+                  const mlir::TypeConverter *converter,
+                  mlir::Operation *branchOp, mlir::Block *block,
+                  mlir::TypeRange expectedTypes) {
+  assert(converter && "expected non-null type converter");
+  assert(!block->isEntryBlock() && "entry blocks have no predecessors");
+
+  // There is nothing to do if the types already match.
+  if (block->getArgumentTypes() == expectedTypes)
+    return block;
+
+  // Compute the new block argument types and convert the block.
+  std::optional<mlir::TypeConverter::SignatureConversion> conversion =
+      converter->convertBlockSignature(block);
+  if (!conversion)
+    return rewriter.notifyMatchFailure(branchOp,
+                                       "could not compute block signature");
+  if (expectedTypes != conversion->getConvertedTypes())
+    return rewriter.notifyMatchFailure(
+        branchOp,
+        "mismatch between adaptor operand types and computed block signature");
+  return rewriter.applySignatureConversion(block, *conversion, converter);
+}
+
 template <typename OP>
-static void selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering,
-                                  OP select, typename OP::Adaptor adaptor,
-                                  mlir::ConversionPatternRewriter &rewriter) {
+static llvm::LogicalResult
+selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering, OP select,
+                      typename OP::Adaptor adaptor,
+                      mlir::ConversionPatternRewriter &rewriter,
+                      const mlir::TypeConverter *converter) {
   unsigned conds = select.getNumConditions();
   auto cases = select.getCases().getValue();
   mlir::Value selector = adaptor.getSelector();
@@ -3308,15 +3345,24 @@ static void selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering,
     auto destOps = select.getSuccessorOperands(adaptor.getOperands(), t);
     const mlir::Attribute &attr = cases[t];
     if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr)) {
-      destinations.push_back(dest);
       destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
+      auto convertedBlock =
+          getConvertedBlock(rewriter, converter, select, dest,
+                            mlir::TypeRange(destinationsOperands.back()));
+      if (mlir::failed(convertedBlock))
+        return mlir::failure();
+      destinations.push_back(*convertedBlock);
       caseValues.push_back(intAttr.getInt());
       continue;
     }
     assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
     assert((t + 1 == conds) && "unit must be last");
-    defaultDestination = dest;
     defaultOperands = destOps ? *destOps : mlir::ValueRange{};
+    auto convertedBlock = getConvertedBlock(rewriter, converter, select, dest,
+                                            mlir::TypeRange(defaultOperands));
+    if (mlir::failed(convertedBlock))
+      return mlir::failure();
+    defaultDestination = *convertedBlock;
   }
 
   // LLVM::SwitchOp takes a i32 type for the selector.
@@ -3332,6 +3378,7 @@ static void selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering,
       /*caseDestinations=*/destinations,
       /*caseOperands=*/destinationsOperands,
       /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
+  return mlir::success();
 }
 
 /// conversion of fir::SelectOp to an if-then-else ladder
@@ -3341,8 +3388,8 @@ struct SelectOpConversion : public fir::FIROpConversion<fir::SelectOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::SelectOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    selectMatchAndRewrite<fir::SelectOp>(lowerTy(), op, adaptor, rewriter);
-    return mlir::success();
+    return selectMatchAndRewrite<fir::SelectOp>(lowerTy(), op, adaptor,
+                                                rewriter, getTypeConverter());
   }
 };
 
@@ -3353,8 +3400,8 @@ struct SelectRankOpConversion : public fir::FIROpConversion<fir::SelectRankOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::SelectRankOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    selectMatchAndRewrite<fir::SelectRankOp>(lowerTy(), op, adaptor, rewriter);
-    return mlir::success();
+    return selectMatchAndRewrite<fir::SelectRankOp>(
+        lowerTy(), op, adaptor, rewriter, getTypeConverter());
   }
 };
 

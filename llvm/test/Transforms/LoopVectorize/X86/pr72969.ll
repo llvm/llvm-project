@@ -42,7 +42,6 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[TMP6:%.*]] = add i64 [[UMAX]], -9
 ; VEC-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[P1]]
 ; VEC-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
-; VEC-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP8]], 65535
 ; VEC-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP8]] to i16
 ; VEC-NEXT:    [[TMP11:%.*]] = add i16 2, [[TMP10]]
 ; VEC-NEXT:    [[TMP12:%.*]] = icmp ult i16 [[TMP11]], 2

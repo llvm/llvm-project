@@ -1,7 +1,3 @@
-# FIXME: Currently disabled as it fails on some Linux hosts
-# UNSUPPORTED: true
-
-
 ## Test that reconstructs a dSYM file from YAML and generates a gsym from it. The gsym has callsite info and merged functions.
 
 # RUN: split-file %s %t
