@@ -2235,9 +2235,10 @@ class getSrcModSDWA <ValueType VT> {
 #ifdef LLPC_BUILD_NPI
 // Return type of SSrc operand in VOPM.
 class getVOPMSSrcForVT<ValueType VT>{
-  RegisterOperand ret = !cond(!eq(VT, f32)  : SSrc_f32,
-                              !eq(VT, f16)  : SSrc_f16,
-                              !eq(VT, bf16) : SSrc_bf16);
+  RegisterOperand ret = !cond(!eq(VT, f32)  : SCSrc_f32,
+                              !eq(VT, f16)  : SCSrc_f16,
+                              !eq(VT, bf16) : SCSrc_bf16,
+                              !eq(VT, i16)  : SCSrc_b16);
 }
 
 // Return type of GVGPR operand.

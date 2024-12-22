@@ -129,7 +129,7 @@
 /mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci @yota9
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith

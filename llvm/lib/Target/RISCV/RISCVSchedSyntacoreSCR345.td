@@ -179,27 +179,27 @@ multiclass SCR_Other {
 }
 
 // Unsupported scheduling classes for SCR3-5.
-multiclass SCR_Unsupported {
-  defm : UnsupportedSchedSFB;
-  defm : UnsupportedSchedV;
-  defm : UnsupportedSchedXsfvcp;
-  defm : UnsupportedSchedZabha;
-  defm : UnsupportedSchedZba;
-  defm : UnsupportedSchedZbb;
-  defm : UnsupportedSchedZbc;
-  defm : UnsupportedSchedZbs;
-  defm : UnsupportedSchedZbkb;
-  defm : UnsupportedSchedZbkx;
-  defm : UnsupportedSchedZfa;
-  defm : UnsupportedSchedZfh;
-  defm : UnsupportedSchedZvk;
-}
+multiclass SCR_Unsupported :
+  UnsupportedSchedSFB,
+  UnsupportedSchedV,
+  UnsupportedSchedXsfvcp,
+  UnsupportedSchedZabha,
+  UnsupportedSchedZba,
+  UnsupportedSchedZbb,
+  UnsupportedSchedZbc,
+  UnsupportedSchedZbs,
+  UnsupportedSchedZbkb,
+  UnsupportedSchedZbkx,
+  UnsupportedSchedZfa,
+  UnsupportedSchedZvk;
 
-multiclass SCR3_Unsupported {
-  defm : SCR_Unsupported;
-  defm : UnsupportedSchedD;
-  defm : UnsupportedSchedF;
-}
+multiclass SCR3_Unsupported :
+  SCR_Unsupported,
+  UnsupportedSchedF;
+
+multiclass SCR4_SCR5_Unsupported :
+  SCR_Unsupported,
+  UnsupportedSchedZfhmin;
 
 // Bypasses (none)
 multiclass SCR_NoReadAdvances {
@@ -231,8 +231,7 @@ multiclass SCR_NoReadAdvances {
 }
 
 // Floating-point bypasses (none)
-multiclass SCR4_SCR5_NoReadAdvances {
-  defm : SCR_NoReadAdvances;
+multiclass SCR4_SCR5_NoReadAdvances : SCR_NoReadAdvances {
   def : ReadAdvance<ReadFStoreData, 0>;
   def : ReadAdvance<ReadFMemBase, 0>;
   def : ReadAdvance<ReadFAdd32, 0>;
@@ -353,7 +352,7 @@ let SchedModel = SyntacoreSCR4RV32Model in {
   defm : SCR_FDU<SCR4RV32_FDU>;
   defm : SCR_Other;
 
-  defm : SCR_Unsupported;
+  defm : SCR4_SCR5_Unsupported;
   defm : SCR4_SCR5_NoReadAdvances;
 }
 
@@ -383,7 +382,7 @@ let SchedModel = SyntacoreSCR4RV64Model in {
   defm : SCR_FDU<SCR4RV64_FDU>;
   defm : SCR_Other;
 
-  defm : SCR_Unsupported;
+  defm : SCR4_SCR5_Unsupported;
   defm : SCR4_SCR5_NoReadAdvances;
 }
 
@@ -416,7 +415,7 @@ let SchedModel = SyntacoreSCR5RV32Model in {
   defm : SCR_FDU<SCR5RV32_FDU>;
   defm : SCR_Other;
 
-  defm : SCR_Unsupported;
+  defm : SCR4_SCR5_Unsupported;
   defm : SCR4_SCR5_NoReadAdvances;
 }
 
@@ -446,6 +445,6 @@ let SchedModel = SyntacoreSCR5RV64Model in {
   defm : SCR_FDU<SCR5RV64_FDU>;
   defm : SCR_Other;
 
-  defm : SCR_Unsupported;
+  defm : SCR4_SCR5_Unsupported;
   defm : SCR4_SCR5_NoReadAdvances;
 }

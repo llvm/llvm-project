@@ -1119,7 +1119,7 @@ class MIMG_Atomic_gfx90a<mimgopc op, string asm, RegisterClass data_rc,
 class MIMG_Atomic_gfx10<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
-  : MIMG_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst),
+  : MIMG_gfx10<op.GFX10M, (outs DataRC:$vdst),
                !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -1132,7 +1132,7 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
 class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
-  : MIMG_nsa_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst), num_addrs,
+  : MIMG_nsa_gfx10<op.GFX10M, (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -1147,7 +1147,7 @@ class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
 class MIMG_Atomic_gfx11<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
-  : MIMG_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst),
+  : MIMG_gfx11<op.GFX11, (outs DataRC:$vdst),
                !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -1160,7 +1160,7 @@ class MIMG_Atomic_gfx11<mimgopc op, string opcode,
 class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
-  : MIMG_nsa_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst), num_addrs,
+  : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -1179,7 +1179,7 @@ class VIMAGE_Atomic<int op, string opcode, RegisterClass DataRC, dag RsrcIns,
 #else /* LLPC_BUILD_NPI */
 class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
                           int num_addrs, bit enableDisasm = 0>
-  : VIMAGE_gfx12<!cast<int>(op.GFX12), (outs DataRC:$vdst), num_addrs,
+  : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdst), num_addrs,
                   !if(enableDisasm, "GFX12", "")> {
 #endif /* LLPC_BUILD_NPI */
   let Constraints = "$vdst = $vdata";

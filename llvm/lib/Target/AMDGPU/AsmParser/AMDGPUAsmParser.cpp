@@ -503,14 +503,31 @@ public:
     return isRegOrInline(RCID, type) && !hasModifiers();
   }
 
+#if LLPC_BUILD_NPI
+  bool isSCSrc_b16() const {
+#else /* LLPC_BUILD_NPI */
   bool isSCSrcB16() const {
+#endif /* LLPC_BUILD_NPI */
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::i16);
   }
 
+#if LLPC_BUILD_NPI
+  bool isSCSrc_bf16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::bf16);
+#else /* LLPC_BUILD_NPI */
   bool isSCSrcV2B16() const {
     return isSCSrcB16();
+#endif /* LLPC_BUILD_NPI */
   }
 
+#if LLPC_BUILD_NPI
+  bool isSCSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
+  }
+
+  bool isSCSrcV2B16() const { return isSCSrc_b16(); }
+
+#endif /* LLPC_BUILD_NPI */
   bool isSCSrc_b32() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::i32);
   }
@@ -529,7 +546,11 @@ public:
     return isSCSrcF16();
   }
 
+#if LLPC_BUILD_NPI
+  bool isSCSrc_f32() const {
+#else /* LLPC_BUILD_NPI */
   bool isSCSrcF32() const {
+#endif /* LLPC_BUILD_NPI */
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f32);
   }
 
@@ -541,7 +562,11 @@ public:
     return isSCSrc_b32() || isLiteralImm(MVT::i32) || isExpr();
   }
 
+#if LLPC_BUILD_NPI
+  bool isSSrc_b16() const { return isSCSrc_b16() || isLiteralImm(MVT::i16); }
+#else /* LLPC_BUILD_NPI */
   bool isSSrc_b16() const { return isSCSrcB16() || isLiteralImm(MVT::i16); }
+#endif /* LLPC_BUILD_NPI */
 
   bool isSSrcV2B16() const {
     llvm_unreachable("cannot happen");
@@ -567,9 +592,17 @@ public:
 
   bool isSSrcF64() const { return isSCSrc_b64() || isLiteralImm(MVT::f64); }
 
+#if LLPC_BUILD_NPI
+  bool isSSrc_bf16() const { return isSCSrc_b16() || isLiteralImm(MVT::bf16); }
+#else /* LLPC_BUILD_NPI */
   bool isSSrc_bf16() const { return isSCSrcB16() || isLiteralImm(MVT::bf16); }
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  bool isSSrc_f16() const { return isSCSrc_b16() || isLiteralImm(MVT::f16); }
+#else /* LLPC_BUILD_NPI */
   bool isSSrc_f16() const { return isSCSrcB16() || isLiteralImm(MVT::f16); }
+#endif /* LLPC_BUILD_NPI */
 
   bool isSSrcV2F16() const {
     llvm_unreachable("cannot happen");
@@ -583,7 +616,11 @@ public:
 
   bool isSCSrcV2FP32() const {
     llvm_unreachable("cannot happen");
+#if LLPC_BUILD_NPI
+    return isSCSrc_f32();
+#else /* LLPC_BUILD_NPI */
     return isSCSrcF32();
+#endif /* LLPC_BUILD_NPI */
   }
 
   bool isSSrcV2INT32() const {

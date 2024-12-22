@@ -1219,15 +1219,18 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   auto WaveSize = B.buildConstant(LLT::scalar(32), ST.getWavefrontSizeLog2());
   auto ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize);
 
-  auto SPCopy = B.buildCopy(PtrTy, SPReg);
+  auto OldSP = B.buildCopy(PtrTy, SPReg);
   if (Alignment > TFI.getStackAlign()) {
-    auto PtrAdd = B.buildPtrAdd(PtrTy, SPCopy, ScaledSize);
-    B.buildMaskLowPtrBits(Dst, PtrAdd,
+    auto StackAlignMask = (Alignment.value() << ST.getWavefrontSizeLog2()) - 1;
+    auto Tmp1 = B.buildPtrAdd(PtrTy, OldSP,
+                              B.buildConstant(LLT::scalar(32), StackAlignMask));
+    B.buildMaskLowPtrBits(Dst, Tmp1,
                           Log2(Alignment) + ST.getWavefrontSizeLog2());
   } else {
-    B.buildPtrAdd(Dst, SPCopy, ScaledSize);
+    B.buildCopy(Dst, OldSP);
   }
-
+  auto PtrAdd = B.buildPtrAdd(PtrTy, Dst, ScaledSize);
+  B.buildCopy(SPReg, PtrAdd);
   MI.eraseFromParent();
   return true;
 }

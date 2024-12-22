@@ -167,6 +167,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   if (!S.empty())
     S.consumeInteger(0, HighBitsOf32BitAddress);
 
+  MaxMemoryClusterDWords = F.getFnAttributeAsParsedInteger(
+      "amdgpu-max-memory-cluster-dwords", DefaultMemoryClusterDWordsLimit);
+
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
   // VGPR available at all times. For now, reserve highest available VGPR. After
   // RA, shift it to the lowest available unused VGPR if the one exist.
@@ -698,11 +701,14 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     const llvm::MachineFunction &MF)
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
-      GDSSize(MFI.getGDSSize()),
 #if LLPC_BUILD_NPI
+      GDSSize(MFI.getGDSSize()),
       LaneSharedVGPRSize(MFI.getLaneSharedVGPRSize()),
-#endif /* LLPC_BUILD_NPI */
       DynLDSAlign(MFI.getDynLDSAlign()), IsEntryFunction(MFI.isEntryFunction()),
+#else /* LLPC_BUILD_NPI */
+      GDSSize(MFI.getGDSSize()), DynLDSAlign(MFI.getDynLDSAlign()),
+      IsEntryFunction(MFI.isEntryFunction()),
+#endif /* LLPC_BUILD_NPI */
       NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
@@ -715,12 +721,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       BytesInStackArgArea(MFI.getBytesInStackArgArea()),
       ReturnsVoid(MFI.returnsVoid()),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
-#if LLPC_BUILD_NPI
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
-#else /* LLPC_BUILD_NPI */
-      PSInputAddr(MFI.getPSInputAddr()),
-      PSInputEnable(MFI.getPSInputEnable()),
-#endif /* LLPC_BUILD_NPI */
+      MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
@@ -758,6 +760,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   DynLDSAlign = YamlMFI.DynLDSAlign;
   PSInputAddr = YamlMFI.PSInputAddr;
   PSInputEnable = YamlMFI.PSInputEnable;
+  MaxMemoryClusterDWords = YamlMFI.MaxMemoryClusterDWords;
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
   IsEntryFunction = YamlMFI.IsEntryFunction;

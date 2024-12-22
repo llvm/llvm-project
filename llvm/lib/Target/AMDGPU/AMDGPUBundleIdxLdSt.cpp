@@ -76,6 +76,8 @@ INITIALIZE_PASS(AMDGPUBundleIdxLdSt, DEBUG_TYPE,
                 "Bundle indexed load/store with uses", false, false)
 
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
+  if (MI->isMetaInstruction())
+    return false;
   MachineRegisterInfo *MRI = &MI->getParent()->getParent()->getRegInfo();
   MachineBasicBlock *MBB = MI->getParent();
   SmallVector<BundleItem, 4> Worklist;
@@ -161,6 +163,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     if (!UseReg.isVirtual())
       continue;
     MachineInstr *UseMI = MRI->getVRegDef(UseReg);
+    if (!UseMI)
+      continue;
     if (UseMI->getOpcode() != AMDGPU::V_LOAD_IDX)
       continue;
     // TODO-GFX13 handle load_idx in different block.

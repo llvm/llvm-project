@@ -174,7 +174,7 @@ using namespace InstructionSet;
 namespace SPIRV {
 /// Parses the name part of the demangled builtin call.
 std::string lookupBuiltinNameHelper(StringRef DemangledCall,
-                                    std::string *Postfix) {
+                                    FPDecorationId *DecorationId) {
   const static std::string PassPrefix = "(anonymous namespace)::";
   std::string BuiltinName;
   // Itanium Demangler result may have "(anonymous namespace)::" prefix
@@ -232,12 +232,16 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
       "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
       "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
       "Convert|"
-      "UConvert|SConvert|FConvert|SatConvert).*)_R(.*)");
+      "UConvert|SConvert|FConvert|SatConvert).*)_R[^_]*_?(\\w+)?.*");
   std::smatch Match;
-  if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 3) {
-    BuiltinName = Match[1].str();
-    if (Postfix)
-      *Postfix = Match[3].str();
+  if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 1) {
+    std::ssub_match SubMatch;
+    if (DecorationId && Match.size() > 3) {
+      SubMatch = Match[3];
+      *DecorationId = demangledPostfixToDecorationId(SubMatch.str());
+    }
+    SubMatch = Match[1];
+    BuiltinName = SubMatch.str();
   }
 
   return BuiltinName;
