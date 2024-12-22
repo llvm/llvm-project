@@ -2086,30 +2086,6 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
 }
 
-SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
-  // Handle bitcasting from v2i8 without hitting the default promotion
-  // strategy which goes through stack memory.
-  EVT FromVT = Op->getOperand(0)->getValueType(0);
-  if (FromVT != MVT::v2i8) {
-    return Op;
-  }
-
-  // Pack vector elements into i16 and bitcast to final type
-  SDLoc DL(Op);
-  SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                             Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
-  SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                             Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
-  SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
-  SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
-  SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
-  SDValue AsInt = DAG.getNode(
-      ISD::OR, DL, MVT::i16,
-      {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
-  EVT ToVT = Op->getValueType(0);
-  return MaybeBitcast(DAG, DL, ToVT, AsInt);
-}
-
 // We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
 // would get lowered as two constant loads and vector-packing move.
 // Instead we want just a constant move:
@@ -2619,7 +2595,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::BITCAST:
-    return LowerBITCAST(Op, DAG);
+    return SDValue();
   case ISD::EXTRACT_SUBVECTOR:
     return Op;
   case ISD::EXTRACT_VECTOR_ELT:

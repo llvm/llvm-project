@@ -910,6 +910,39 @@ SDValue DAGTypeLegalizer::CreateStackStoreLoad(SDValue Op,
   return DAG.getLoad(DestVT, dl, Store, StackPtr, MachinePointerInfo(), Align);
 }
 
+static SDValue MaybeBitcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
+                            SDValue Value) {
+  if (Value->getValueType(0) == VT)
+    return Value;
+  return DAG.getNode(ISD::BITCAST, DL, VT, Value);
+}
+
+SDValue DAGTypeLegalizer::LowerBitcast(SDNode *Node) const {
+  assert(Node->getOpcode() == ISD::BITCAST ||
+         Node->getOpcode() == ISD::FP_ROUND && "Unexpected opcode!");
+  // Handle bitcasting from v2i8 without hitting the default promotion
+  // strategy which goes through stack memory.
+  EVT FromVT = Node->getOperand(0)->getValueType(0);
+  if (FromVT != MVT::v2i8) {
+    return SDValue();
+  }
+
+  // Pack vector elements into i16 and bitcast to final type
+  SDLoc DL(Node);
+  SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                             Node->getOperand(0), DAG.getIntPtrConstant(0, DL));
+  SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                             Node->getOperand(0), DAG.getIntPtrConstant(1, DL));
+  SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
+  SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
+  SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
+  SDValue AsInt = DAG.getNode(
+      ISD::OR, DL, MVT::i16,
+      {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
+  EVT ToVT = Node->getValueType(0);
+  return MaybeBitcast(DAG, DL, ToVT, AsInt);
+}
+
 /// Replace the node's results with custom code provided by the target and
 /// return "true", or do nothing and return "false".
 /// The last parameter is FALSE if we are dealing with a node with legal
