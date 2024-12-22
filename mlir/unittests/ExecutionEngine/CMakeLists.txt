@@ -5,14 +5,12 @@ add_mlir_unittest(MLIRExecutionEngineTests
 )
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
-mlir_target_link_libraries(MLIRExecutionEngineTests
+target_link_libraries(MLIRExecutionEngineTests
   PRIVATE
   MLIRArithToLLVM
+  MLIRExecutionEngine
   MLIRMemRefToLLVM
   MLIRReconcileUnrealizedCasts
   ${dialect_libs}
-)
-target_link_libraries(MLIRExecutionEngineTests
-  PRIVATE
-  MLIRExecutionEngine
+
 )

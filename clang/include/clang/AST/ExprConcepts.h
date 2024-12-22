@@ -261,13 +261,13 @@ public:
     assert(Status == SS_SubstitutionFailure &&
            "Attempted to get substitution diagnostic when there has been no "
            "substitution failure.");
-    return cast<SubstitutionDiagnostic *>(Value);
+    return Value.get<SubstitutionDiagnostic *>();
   }
 
   TypeSourceInfo *getType() const {
     assert(!isSubstitutionFailure() &&
            "Attempted to get type when there has been a substitution failure.");
-    return cast<TypeSourceInfo *>(Value);
+    return Value.get<TypeSourceInfo *>();
   }
 
   static bool classof(const Requirement *R) {
@@ -329,24 +329,24 @@ public:
 
       bool isSubstitutionFailure() const {
         return !isEmpty() &&
-               isa<SubstitutionDiagnostic *>(TypeConstraintInfo.getPointer());
+            TypeConstraintInfo.getPointer().is<SubstitutionDiagnostic *>();
       }
 
       bool isTypeConstraint() const {
         return !isEmpty() &&
-               isa<TemplateParameterList *>(TypeConstraintInfo.getPointer());
+            TypeConstraintInfo.getPointer().is<TemplateParameterList *>();
       }
 
       SubstitutionDiagnostic *getSubstitutionDiagnostic() const {
         assert(isSubstitutionFailure());
-        return cast<SubstitutionDiagnostic *>(TypeConstraintInfo.getPointer());
+        return TypeConstraintInfo.getPointer().get<SubstitutionDiagnostic *>();
       }
 
       const TypeConstraint *getTypeConstraint() const;
 
       TemplateParameterList *getTypeConstraintTemplateParameterList() const {
         assert(isTypeConstraint());
-        return cast<TemplateParameterList *>(TypeConstraintInfo.getPointer());
+        return TypeConstraintInfo.getPointer().get<TemplateParameterList *>();
       }
   };
 private:
@@ -409,14 +409,14 @@ public:
     assert(isExprSubstitutionFailure() &&
            "Attempted to get expression substitution diagnostic when there has "
            "been no expression substitution failure");
-    return cast<SubstitutionDiagnostic *>(Value);
+    return Value.get<SubstitutionDiagnostic *>();
   }
 
   Expr *getExpr() const {
     assert(!isExprSubstitutionFailure() &&
            "ExprRequirement has no expression because there has been a "
            "substitution failure.");
-    return cast<Expr *>(Value);
+    return Value.get<Expr *>();
   }
 
   static bool classof(const Requirement *R) {

@@ -252,7 +252,7 @@ def OP_BFMLALT_LN
 
 def OP_VCVT_F32_BF16
     : Op<(bitcast "R",
-          (call "vshll_n", (bitcast "uint16x4_t", $p0),
+          (call "vshll_n", (bitcast "int16x4_t", $p0),
                            (literal "int32_t", "16")))>;
 def OP_VCVT_F32_BF16_LO
     : Op<(call "vcvt_f32_bf16", (call "vget_low", $p0))>;
@@ -275,8 +275,8 @@ def OP_VCVT_BF16_F32_HI_A32
                            (call "vget_low", $p0))>;
 
 def OP_CVT_F32_BF16
-    : Op<(bitcast "R", (op "<<", (cast "uint32_t", (bitcast "uint16_t", $p0)),
-                                 (literal "uint32_t", "16")))>;
+    : Op<(bitcast "R", (op "<<", (cast "int32_t", (bitcast "int16_t", $p0)),
+                                 (literal "int32_t", "16")))>;
 
 //===----------------------------------------------------------------------===//
 // Auxiliary Instructions

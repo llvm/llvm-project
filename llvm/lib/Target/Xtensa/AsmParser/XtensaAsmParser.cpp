@@ -193,11 +193,6 @@ public:
 
   bool isImm1_16() const { return isImm(1, 16); }
 
-  // Check that value is either equals (-1) or from [1,15] range.
-  bool isImm1n_15() const { return isImm(1, 15) || isImm(-1, -1); }
-
-  bool isImm32n_95() const { return isImm(-32, 95); }
-
   bool isB4const() const {
     if (Kind != Immediate)
       return false;
@@ -485,12 +480,6 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [1, 16]");
-  case Match_InvalidImm1n_15:
-    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
-                 "expected immediate in range [-1, 15] except 0");
-  case Match_InvalidImm32n_95:
-    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
-                 "expected immediate in range [-32, 95]");
   case Match_InvalidShimm1_31:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [1, 31]");

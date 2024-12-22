@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Make sure that this doesn't crash.
 ; CHECK: vadd

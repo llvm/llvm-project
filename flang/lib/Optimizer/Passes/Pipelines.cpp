@@ -13,24 +13,17 @@
 
 namespace fir {
 
-template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
-  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
+                                          PassConstructor ctor) {
+  addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
                      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
-template <typename F>
-void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
-  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
-  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
-  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
-}
-
-template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled,
+    PassConstructor ctor) {
   if (!disabled)
-    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
+    addNestedPassToAllTopLevelOperations(pm, ctor);
 }
 
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
@@ -41,11 +34,12 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
 
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config) {
-  fir::CFGConversionOptions options;
-  if (!config.NSWOnLoopVarInc)
-    options.setNSW = false;
-  addNestedPassToAllTopLevelOperationsConditionally(
-      pm, disableCfgConversion, [&]() { return createCFGConversion(options); });
+  if (config.NSWOnLoopVarInc)
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
+  else
+    addNestedPassToAllTopLevelOperationsConditionally(pm, disableCfgConversion,
+                                                      fir::createCFGConversion);
 }
 
 void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
@@ -166,8 +160,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
-  addNestedPassToAllTopLevelOperations<PassConstructor>(
-      pm, fir::createCharacterConversion);
+  addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel.isOptimizingForSpeed()) {
@@ -201,8 +194,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
-  addNestedPassToAllTopLevelOperations<PassConstructor>(
-      pm, fir::createStackReclaim);
+  addNestedPassToAllTopLevelOperations(pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
   pm.addPass(mlir::createConvertSCFToCFPass());
@@ -220,27 +212,24 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 /// \param pm - MLIR pass manager that will hold the pipeline definition
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
-void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
+void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   llvm::OptimizationLevel optLevel) {
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    addNestedPassToAllTopLevelOperations<PassConstructor>(
-        pm, hlfir::createSimplifyHLFIRIntrinsics);
+    addNestedPassToAllTopLevelOperations(pm,
+                                         hlfir::createSimplifyHLFIRIntrinsics);
   }
-  addNestedPassToAllTopLevelOperations<PassConstructor>(
-      pm, hlfir::createInlineElementals);
+  addNestedPassToAllTopLevelOperations(pm, hlfir::createInlineElementals);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
-    addNestedPassToAllTopLevelOperations<PassConstructor>(
-        pm, hlfir::createOptimizedBufferization);
+    addNestedPassToAllTopLevelOperations(pm,
+                                         hlfir::createOptimizedBufferization);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
   pm.addPass(hlfir::createBufferizeHLFIR());
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
-  if (enableOpenMP)
-    pm.addPass(flangomp::createLowerWorkshare());
 }
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
@@ -256,7 +245,6 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
-  pm.addPass(flangomp::createGenericLoopConversionPass());
   if (isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
 }
@@ -273,10 +261,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
   fir::addBoxedProcedurePass(pm);
-  addNestedPassToAllTopLevelOperations<PassConstructor>(
-      pm, fir::createAbstractResultOpt);
-  addPassToGPUModuleOperations<PassConstructor>(pm,
-                                                fir::createAbstractResultOpt);
+  addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
@@ -290,17 +275,22 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   // Add function attributes
   mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
 
-  if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
-    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
-  else if (config.FramePointerKind == llvm::FramePointerKind::All)
-    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
-  else
-    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
+  if (config.FramePointerKind != llvm::FramePointerKind::None ||
+      config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
+      config.NoSignedZerosFPMath || config.UnsafeFPMath) {
+    if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
+      framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
+    else if (config.FramePointerKind == llvm::FramePointerKind::All)
+      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
+    else
+      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-  pm.addPass(fir::createFunctionAttr(
-      {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
-       config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
-       config.UnsafeFPMath}));
+    pm.addPass(fir::createFunctionAttr(
+        {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
+         config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
+         config.UnsafeFPMath}));
+  }
 
   fir::addFIRToLLVMPass(pm, config);
 }
@@ -313,7 +303,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
                                   MLIRToLLVMPassPipelineConfig &config,
                                   llvm::StringRef inputFilename) {
-  fir::createHLFIRToFIRPassPipeline(pm, config.EnableOpenMP, config.OptLevel);
+  fir::createHLFIRToFIRPassPipeline(pm, config.OptLevel);
 
   // Add default optimizer pass pipeline.
   fir::createDefaultFIROptimizerPassPipeline(pm, config);

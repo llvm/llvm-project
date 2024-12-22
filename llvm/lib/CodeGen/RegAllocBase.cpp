@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -124,10 +123,21 @@ void RegAllocBase::allocatePhysRegs() {
       }
 
       const TargetRegisterClass *RC = MRI->getRegClass(VirtReg->reg());
-      AvailablePhysReg = getErrorAssignment(*RC, MI);
+      ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
+      if (AllocOrder.empty())
+        report_fatal_error("no registers from class available to allocate");
+      else if (MI && MI->isInlineAsm()) {
+        MI->emitError("inline assembly requires more registers than available");
+      } else if (MI) {
+        LLVMContext &Context =
+            MI->getParent()->getParent()->getFunction().getContext();
+        Context.emitError("ran out of registers during register allocation");
+      } else {
+        report_fatal_error("ran out of registers during register allocation");
+      }
 
       // Keep going after reporting the error.
-      VRM->assignVirt2Phys(VirtReg->reg(), AvailablePhysReg);
+      VRM->assignVirt2Phys(VirtReg->reg(), AllocOrder.front());
     } else if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
 
@@ -176,49 +186,4 @@ void RegAllocBase::enqueue(const LiveInterval *LI) {
     LLVM_DEBUG(dbgs() << "Not enqueueing " << printReg(Reg, TRI)
                       << " in skipped register class\n");
   }
-}
-
-MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
-                                           const MachineInstr *CtxMI) {
-  MachineFunction &MF = VRM->getMachineFunction();
-
-  // Avoid printing the error for every single instance of the register. It
-  // would be better if this were per register class.
-  bool EmitError = !MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedRegAlloc);
-  if (EmitError)
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedRegAlloc);
-
-  const Function &Fn = MF.getFunction();
-  LLVMContext &Context = Fn.getContext();
-
-  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(&RC);
-  if (AllocOrder.empty()) {
-    // If the allocation order is empty, it likely means all registers in the
-    // class are reserved. We still to need to pick something, so look at the
-    // underlying class.
-    ArrayRef<MCPhysReg> RawRegs = RC.getRegisters();
-
-    if (EmitError) {
-      Context.diagnose(DiagnosticInfoRegAllocFailure(
-          "no registers from class available to allocate", Fn,
-          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation()));
-    }
-
-    assert(!RawRegs.empty() && "register classes cannot have no registers");
-    return RawRegs.front();
-  }
-
-  if (EmitError) {
-    if (CtxMI && CtxMI->isInlineAsm()) {
-      CtxMI->emitInlineAsmError(
-          "inline assembly requires more registers than available");
-    } else {
-      Context.diagnose(DiagnosticInfoRegAllocFailure(
-          "ran out of registers during register allocation", Fn,
-          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation()));
-    }
-  }
-
-  return AllocOrder.front();
 }

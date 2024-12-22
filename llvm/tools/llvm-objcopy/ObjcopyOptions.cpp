@@ -39,13 +39,12 @@ enum ObjcopyID {
 };
 
 namespace objcopy_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "ObjcopyOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "ObjcopyOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -57,12 +56,8 @@ static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
 
 class ObjcopyOptTable : public opt::GenericOptTable {
 public:
-  ObjcopyOptTable()
-      : opt::GenericOptTable(objcopy_opt::OptionStrTable,
-                             objcopy_opt::OptionPrefixesTable,
-                             objcopy_opt::ObjcopyInfoTable) {
+  ObjcopyOptTable() : opt::GenericOptTable(objcopy_opt::ObjcopyInfoTable) {
     setGroupedShortOptions(true);
-    setDashDashParsing(true);
   }
 };
 
@@ -75,13 +70,13 @@ enum InstallNameToolID {
 };
 
 namespace install_name_tool {
-#define OPTTABLE_STR_TABLE_CODE
-#include "InstallNameToolOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "InstallNameToolOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -94,9 +89,7 @@ static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 class InstallNameToolOptTable : public opt::GenericOptTable {
 public:
   InstallNameToolOptTable()
-      : GenericOptTable(install_name_tool::OptionStrTable,
-                        install_name_tool::OptionPrefixesTable,
-                        install_name_tool::InstallNameToolInfoTable) {}
+      : GenericOptTable(install_name_tool::InstallNameToolInfoTable) {}
 };
 
 enum BitcodeStripID {
@@ -108,13 +101,13 @@ enum BitcodeStripID {
 };
 
 namespace bitcode_strip {
-#define OPTTABLE_STR_TABLE_CODE
-#include "BitcodeStripOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "BitcodeStripOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -127,9 +120,7 @@ static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 class BitcodeStripOptTable : public opt::GenericOptTable {
 public:
   BitcodeStripOptTable()
-      : opt::GenericOptTable(bitcode_strip::OptionStrTable,
-                             bitcode_strip::OptionPrefixesTable,
-                             bitcode_strip::BitcodeStripInfoTable) {}
+      : opt::GenericOptTable(bitcode_strip::BitcodeStripInfoTable) {}
 };
 
 enum StripID {
@@ -140,13 +131,12 @@ enum StripID {
 };
 
 namespace strip {
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "StripOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "StripOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info StripInfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(STRIP_, __VA_ARGS__),
@@ -157,9 +147,7 @@ static constexpr opt::OptTable::Info StripInfoTable[] = {
 
 class StripOptTable : public opt::GenericOptTable {
 public:
-  StripOptTable()
-      : GenericOptTable(strip::OptionStrTable, strip::OptionPrefixesTable,
-                        strip::StripInfoTable) {
+  StripOptTable() : GenericOptTable(strip::StripInfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -662,10 +650,16 @@ parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
+objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ObjcopyOptTable T;
+
+  const char *const *DashDash =
+      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
+  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
+  if (DashDash != RawArgsArr.end())
+    DashDash = std::next(DashDash);
 
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -677,7 +671,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
         "argument to '%s' is missing (expected %d value(s))",
         InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
 
-  if (InputArgs.size() == 0) {
+  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
   }
@@ -701,6 +695,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
+  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");

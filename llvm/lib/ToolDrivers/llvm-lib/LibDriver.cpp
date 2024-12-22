@@ -37,10 +37,6 @@ using namespace llvm::object;
 
 namespace {
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 enum {
   OPT_INVALID = 0,
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -48,9 +44,12 @@ enum {
 #undef OPTION
 };
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -61,9 +60,7 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class LibOptTable : public opt::GenericOptTable {
 public:
-  LibOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                             true) {}
+  LibOptTable() : opt::GenericOptTable(InfoTable, true) {}
 };
 } // namespace
 
@@ -516,14 +513,8 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   std::reverse(Members.begin(), Members.end());
 
   bool Thin = Args.hasArg(OPT_llvmlibthin);
-
-  auto Symtab = Args.hasFlag(OPT_llvmlibindex, OPT_llvmlibindex_no,
-                             /*default=*/true)
-                    ? SymtabWritingMode::NormalSymtab
-                    : SymtabWritingMode::NoSymtab;
-
   if (Error E = writeArchive(
-          OutputPath, Members, Symtab,
+          OutputPath, Members, SymtabWritingMode::NormalSymtab,
           Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
           /*Deterministic=*/true, Thin, nullptr, COFF::isArm64EC(LibMachine))) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {

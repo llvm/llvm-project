@@ -3235,7 +3235,6 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::VP_SETCC:
   case ISD::STRICT_FSETCC:
-  case ISD::STRICT_FSETCCS:
   case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
   case ISD::BITCAST:           Res = SplitVecOp_BITCAST(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = SplitVecOp_EXTRACT_SUBVECTOR(N); break;
@@ -4237,8 +4236,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
-  unsigned Opc = N->getOpcode();
-  bool isStrict = Opc == ISD::STRICT_FSETCC || Opc == ISD::STRICT_FSETCCS;
+  bool isStrict = N->getOpcode() == ISD::STRICT_FSETCC;
   assert(N->getValueType(0).isVector() &&
          N->getOperand(isStrict ? 1 : 0).getValueType().isVector() &&
          "Operand types must be vectors");
@@ -4254,19 +4252,21 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   EVT PartResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt);
   EVT WideResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt*2);
 
-  if (Opc == ISD::SETCC) {
+  if (N->getOpcode() == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
     HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
-  } else if (isStrict) {
-    LoRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
+  } else if (N->getOpcode() == ISD::STRICT_FSETCC) {
+    LoRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
+                        DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Lo0, Lo1, N->getOperand(3));
-    HiRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
+    HiRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
+                        DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Hi0, Hi1, N->getOperand(3));
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                    LoRes.getValue(1), HiRes.getValue(1));
     ReplaceValueWith(SDValue(N, 1), NewChain);
   } else {
-    assert(Opc == ISD::VP_SETCC && "Expected VP_SETCC opcode");
+    assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
     SDValue MaskLo, MaskHi, EVLLo, EVLHi;
     std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
     std::tie(EVLLo, EVLHi) =
@@ -6421,14 +6421,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N) {
   SDValue InOp2 = GetWidenedVector(N->getOperand(1));
 
   // Adjust mask based on new input vector length.
-  SmallVector<int, 16> NewMask(WidenNumElts, -1);
+  SmallVector<int, 16> NewMask;
   for (unsigned i = 0; i != NumElts; ++i) {
     int Idx = N->getMaskElt(i);
     if (Idx < (int)NumElts)
-      NewMask[i] = Idx;
+      NewMask.push_back(Idx);
     else
-      NewMask[i] = Idx - NumElts + WidenNumElts;
+      NewMask.push_back(Idx - NumElts + WidenNumElts);
   }
+  for (unsigned i = NumElts; i != WidenNumElts; ++i)
+    NewMask.push_back(-1);
   return DAG.getVectorShuffle(WidenVT, dl, InOp1, InOp2, NewMask);
 }
 
@@ -6476,8 +6478,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_REVERSE(SDNode *N) {
 
   // Use VECTOR_SHUFFLE to combine new vector from 'ReverseVal' for
   // fixed-vectors.
-  SmallVector<int, 16> Mask(WidenNumElts, -1);
-  std::iota(Mask.begin(), Mask.begin() + VTNumElts, IdxVal);
+  SmallVector<int, 16> Mask;
+  for (unsigned i = 0; i != VTNumElts; ++i) {
+    Mask.push_back(IdxVal + i);
+  }
+  for (unsigned i = VTNumElts; i != WidenNumElts; ++i)
+    Mask.push_back(-1);
 
   return DAG.getVectorShuffle(WidenVT, dl, ReverseVal, DAG.getUNDEF(WidenVT),
                               Mask);

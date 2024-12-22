@@ -30,25 +30,7 @@ using U2 = decltype(&main);
 #endif
 } // namespace cwg2811
 
-namespace cwg2813 { // cwg2813: 20
-#if __cplusplus >= 202302L
-struct X {
-  X() = default;
-
-  X(const X&) = delete;
-  X& operator=(const X&) = delete;
-
-  void f(this X self) { }
-};
-
-void f() {
-  X{}.f();
-}
-#endif
-} // namespace cwg2813
-
-namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
-
+namespace cwg2819 { // cwg2819: 19
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
   constexpr int* q = static_cast<int*>(p);

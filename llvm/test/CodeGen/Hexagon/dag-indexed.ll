@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; REQUIRES: asserts
 
 ; Test that the DAG combiner doesn't assert because it attempts to replace

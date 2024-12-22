@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=hexagon -O3 -verify-machineinstrs < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check for sane output. This testcase used to crash.

@@ -31,11 +31,6 @@ hfinkel@anl.gov (email), [hfinkel](https://github.com/hfinkel) (GitHub)
 Johannes Doerfert \
 jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
 
-#### ConstraintElimination
-
-Florian Hahn \
-flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
-
 #### InferAddressSpaces
 
 Matt Arsenault \
@@ -46,12 +41,10 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
-#### InstCombine, InstSimplify, ValueTracking, ConstantFold
+#### InstCombine, ConstantFold
 
-Nikita Popov \
-llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse) \
-Yingwei Zheng \
-dtcxzyw2333@gmail.com (email), [dtcxzyw](https://github.com/dtcxzyw) (GitHub)
+David Majnemer \
+david.majnemer@gmail.com (email), [majnemer](https://github.com/majnemer) (GitHub)
 
 #### InstrProfiling and related parts of ProfileData
 
@@ -97,10 +90,15 @@ chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.co
 
 ### Instrumentation and sanitizers
 
-#### Sanitizers not covered by someone else
+#### AddressSanitizer, ThreadSanitizer
 
-Vitaly Buka \
-vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
+Kostya Serebryany \
+kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
+
+#### MemorySanitizer
+
+Evgeniy Stepanov \
+eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
 
 #### NumericalStabilitySanitizer
 
@@ -118,15 +116,18 @@ david.trevelyan@gmail.com (email), [davidtrevelyan](https://github.com/davidtrev
 
 #### Parts of code generator not covered by someone else
 
-Matt Arsenault \
-Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
+Evan Cheng \
+evan.cheng@apple.com (email)
 
 #### SelectionDAG
 
-Simon Pilgrim \
-llvm-dev@redking.me.uk (email), [RKSimon](https://github.com/RKSimon) (GitHub) \
-Craig Topper \
-craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
+Justin Bogner \
+mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+
+#### FastISel
+
+Chad Rosier \
+mcrosier@codeaurora.org (email)
 
 #### Instruction scheduling
 
@@ -145,8 +146,8 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 
 #### MC layer
 
-Fangrui Song \
-i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
+James Grosbach \
+grosbach@apple.com (email)
 
 #### Windows codegen
 
@@ -172,16 +173,8 @@ marksl@synopsys.com (email), [markschimmel](https://github.com/markschimmel) (Gi
 
 #### ARM backend
 
-David Green \
-david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
-Oliver Stannard (Especially assembly/dissassembly) \
-oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
-Nashe Mncube \
-nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub) \
-Peter Smith (Anything ABI) \
-peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
-Ties Stuij (GlobalISel and early arch support) \
-ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
+Renato Golin \
+rengolin@systemcall.eu (email), [rengolin](https://github.com/rengolin) (GitHub)
 
 #### AVR backend
 
@@ -190,10 +183,8 @@ Ben Shi \
 
 #### BPF backend
 
-Yonghong Song \
-yhs@fb.com (email), [yonghong-song](https://github.com/yonghong-song) (GitHub) \
-Eduard Zingerman \
-eddyz87@gmail.com (email), [eddyz87](https://github.com/eddyz87) (GitHub)
+Alexei Starovoitov \
+alexei.starovoitov@gmail.com (email), [4ast](https://github.com/4ast) (GitHub)
 
 #### CSKY backend
 
@@ -208,7 +199,7 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
+sundeepk@quicinc.com (email)
 
 #### Lanai backend
 
@@ -253,8 +244,8 @@ asb@igalia.com (email), [asb](https://github.com/asb) (GitHub)
 
 #### Sparc backend
 
-Koakuma \
-koachan@protonmail.com (email), [koachan](https://github.com/koachan) (GitHub)
+Venkatraman Govindaraju \
+venkatra@cs.wisc.edu (email), [vegovin](https://github.com/vegovin) (GitHub)
 
 #### SPIRV backend
 
@@ -297,10 +288,8 @@ andrei.safronov@espressif.com (email), [andreisfr](https://github.com/andreisfr)
 
 #### ADT, Support
 
-David Blaikie \
-dblaikie@gmail.com (email), [dwblaikie](https://github.com/dwblaike) (GitHub) \
-Jakub Kuderski \
-jakub@nod-labs.com (email), [kuhar](https://github.com/kuhar) (GitHub)
+Chandler Carruth \
+chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
 #### Bitcode
 
@@ -322,10 +311,15 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 Benjamin Kramer \
 benny.kra@gmail.com (email), [d0k](https://github.com/d0k) (GitHub)
 
-#### IR Linker and LTO
+#### IR Linker
 
 Teresa Johnson \
 tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) (GitHub)
+
+#### LTO
+
+Peter Collingbourne \
+peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 
 #### MCJIT, Orc, RuntimeDyld, PerfJITEvents
 
@@ -341,8 +335,8 @@ jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
 #### TableGen
 
-Rahul Joshi \
-rjoshi@nvidia.com (email), [jurahul](https://github.com/jurahul) (GitHub)
+Paul C. Anagnostopoulos \
+paul@windfall.com (email)
 
 #### TextAPI
 
@@ -356,12 +350,10 @@ cyndyishida@gmail.com (email), [cyndyishida](https://github.com/cyndyishida) (Gi
 Andrea Di Biagio \
 andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https://github.com/adibiagio) (GitHub)
 
-#### Binary Utilities
+#### llvm-objcopy and ObjCopy library
 
-James Henderson \
-james.henderson@sony.com (email), [jh7370](https://github.com/jh7370) (GitHub) \
-Fangrui Song \
-i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
+Jake Ehrlich \
+jakehehrlich@google.com (email), [jakehehrlich](https://github.com/jakehehrlich) (GitHub)
 
 #### Gold plugin
 
@@ -385,7 +377,12 @@ tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 #### MinGW support
 
 Martin Storsjö \
-martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
+martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
+
+#### Windows support in object tools
+
+Michael Spencer \
+bigcheesegs@gmail.com (email), [Bigcheese](https://github.com/Bigcheese) (GitHub)
 
 #### Sony PlayStation support
 
@@ -402,6 +399,11 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 Anton Korobeynikov \
 anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
+#### ARM EABI
+
+Anton Korobeynikov \
+anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
+
 #### LLVM Buildbot
 
 Galina Kistanova \
@@ -412,30 +414,39 @@ gkistanova@gmail.com (email), [gkistanova](https://github.com/gkistanova) (GitHu
 Some subprojects maintain their own list of per-component maintainers.
 Others only have a lead maintainer listed here.
 
-[Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.txt)
+[Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/CODE_OWNERS.TXT)
 
-[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
+[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/CodeOwners.rst)
 
-[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.txt)
+[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/CODE_OWNERS.TXT)
 
-[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
+[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/CODE_OWNERS.TXT)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/CODE_OWNERS.TXT)
 
-[libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
+[LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/CODE_OWNERS.TXT)
 
-[LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/CodeOwners.rst)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
+#### libc++
 
-[LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
-
-[Polly maintainers](https://github.com/llvm/llvm-project/blob/main/polly/Maintainers.md)
+Louis Dionne \
+ldionne.2@gmail.com (email), [ldionne](https://github.com/ldionne) (GitHub)
 
 #### libclc
 
 Tom Stellard \
 tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
+
+#### OpenMP (runtime library)
+
+Andrey Churbanov \
+andrey.churbanov@intel.com (email), [AndreyChurbanov](https://github.com/AndreyChurbanov) (GitHub)
+
+#### Polly
+
+Tobias Grosser \
+tobias@grosser.es (email), [tobiasgrosser](https://github.com/tobiasgrosser) (GitHub)
 
 ## Inactive Maintainers
 
@@ -450,23 +461,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 ### Inactive or former component maintainers
 
-Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
-Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
-Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support \
-Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
-Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
-Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
-Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
-Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
-James Grosbach (grosbach@apple.com) -- MC layer \
-Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
-David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
-Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
-Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
-Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
-Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
-Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
-Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
+Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management
 
 ### Former maintainers of removed components
 

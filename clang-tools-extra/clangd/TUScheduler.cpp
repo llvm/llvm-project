@@ -411,9 +411,6 @@ public:
     if (Throttler)
       Throttler->release(ID);
   }
-  PreambleThrottlerRequest(const PreambleThrottlerRequest &) = delete;
-  PreambleThrottlerRequest &
-  operator=(const PreambleThrottlerRequest &) = delete;
 
 private:
   PreambleThrottler::RequestID ID;
@@ -624,8 +621,7 @@ public:
          AsyncTaskRunner *Tasks, Semaphore &Barrier,
          const TUScheduler::Options &Opts, ParsingCallbacks &Callbacks);
   ~ASTWorker();
-  ASTWorker(const ASTWorker &other) = delete;
-  ASTWorker &operator=(const ASTWorker &other) = delete;
+
   void update(ParseInputs Inputs, WantDiagnostics, bool ContentChanged);
   void
   runWithAST(llvm::StringRef Name,

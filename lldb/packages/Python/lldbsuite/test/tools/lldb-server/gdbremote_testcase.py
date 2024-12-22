@@ -185,7 +185,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             ]
 
     def get_next_port(self):
-        return 12000 + random.randint(0, 7999)
+        return 12000 + random.randint(0, 3999)
 
     def reset_test_sequence(self):
         self.test_sequence = GdbRemoteTestSequence(self.logger)
@@ -388,8 +388,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         # We're using a random port algorithm to try not to collide with other ports,
         # and retry a max # times.
         attempts = 0
-        MAX_ATTEMPTS = 10
-        attempt_wait = 3
+        MAX_ATTEMPTS = 20
 
         while attempts < MAX_ATTEMPTS:
             server = self.launch_debug_monitor(attach_pid=attach_pid)
@@ -425,8 +424,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
             # And wait a random length of time before next attempt, to avoid
             # collisions.
-            time.sleep(attempt_wait)
-            attempt_wait *= 1.2
+            time.sleep(random.randint(1, 5))
 
             # Now grab a new port number.
             self.port = self.get_next_port()

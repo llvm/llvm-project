@@ -50,7 +50,7 @@ def testAffineDelinearizeInfer():
     # CHECK: %[[C1:.*]] = arith.constant 1 : index
     c1 = arith.ConstantOp(T.index(), 1)
     # CHECK: %{{.*}}:2 = affine.delinearize_index %[[C1:.*]] into (2, 3) : index, index
-    two_indices = affine.AffineDelinearizeIndexOp([T.index()] * 2, c1, [], [2, 3])
+    two_indices = affine.AffineDelinearizeIndexOp(c1, [], [2, 3])
 
 
 # CHECK-LABEL: TEST: testAffineLoadOp
@@ -157,7 +157,7 @@ def testAffineForOpErrors():
         )
 
     try:
-        two_indices = affine.AffineDelinearizeIndexOp([T.index()] * 2, c1, [], [1, 1])
+        two_indices = affine.AffineDelinearizeIndexOp(c1, [], [1, 1])
         affine.AffineForOp(
             two_indices,
             c2,

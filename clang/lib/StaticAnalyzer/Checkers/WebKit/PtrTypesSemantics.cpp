@@ -125,8 +125,9 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
   assert(F);
   const std::string &FunctionName = safeGetName(F);
 
-  return isRefType(FunctionName) || FunctionName == "adoptRef" ||
-         FunctionName == "UniqueRef" || FunctionName == "makeUniqueRef" ||
+  return isRefType(FunctionName) || FunctionName == "makeRef" ||
+         FunctionName == "makeRefPtr" || FunctionName == "UniqueRef" ||
+         FunctionName == "makeUniqueRef" ||
          FunctionName == "makeUniqueRefWithoutFastMallocCheck"
 
          || FunctionName == "String" || FunctionName == "AtomString" ||

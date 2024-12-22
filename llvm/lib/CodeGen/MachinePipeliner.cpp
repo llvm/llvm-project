@@ -1216,6 +1216,7 @@ struct FuncUnitSorter {
 /// Calculate the maximum register pressure of the scheduled instructions stream
 class HighRegisterPressureDetector {
   MachineBasicBlock *OrigMBB;
+  const MachineFunction &MF;
   const MachineRegisterInfo &MRI;
   const TargetRegisterInfo *TRI;
 
@@ -1282,9 +1283,9 @@ private:
     }
   }
 
-  // Return true if Reg is reserved one, for example, stack pointer
-  bool isReservedRegister(Register Reg) const {
-    return Reg.isPhysical() && MRI.isReserved(Reg.asMCReg());
+  // Return true if Reg is fixed one, for example, stack pointer
+  bool isFixedRegister(Register Reg) const {
+    return Reg.isPhysical() && TRI->isFixedRegister(MF, Reg.asMCReg());
   }
 
   bool isDefinedInThisLoop(Register Reg) const {
@@ -1310,7 +1311,7 @@ private:
         // because it's used only at the first iteration.
         if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
           continue;
-        if (isReservedRegister(Reg))
+        if (isFixedRegister(Reg))
           continue;
         if (isDefinedInThisLoop(Reg))
           continue;
@@ -1325,7 +1326,48 @@ private:
   // Calculate the upper limit of each pressure set
   void computePressureSetLimit(const RegisterClassInfo &RCI) {
     for (unsigned PSet = 0; PSet < PSetNum; PSet++)
-      PressureSetLimit[PSet] = RCI.getRegPressureSetLimit(PSet);
+      PressureSetLimit[PSet] = TRI->getRegPressureSetLimit(MF, PSet);
+
+    // We assume fixed registers, such as stack pointer, are already in use.
+    // Therefore subtracting the weight of the fixed registers from the limit of
+    // each pressure set in advance.
+    SmallDenseSet<Register, 8> FixedRegs;
+    for (const TargetRegisterClass *TRC : TRI->regclasses()) {
+      for (const MCPhysReg Reg : *TRC)
+        if (isFixedRegister(Reg))
+          FixedRegs.insert(Reg);
+    }
+
+    LLVM_DEBUG({
+      for (auto Reg : FixedRegs) {
+        dbgs() << printReg(Reg, TRI, 0, &MRI) << ": [";
+        for (MCRegUnit Unit : TRI->regunits(Reg)) {
+          const int *Sets = TRI->getRegUnitPressureSets(Unit);
+          for (; *Sets != -1; Sets++) {
+            dbgs() << TRI->getRegPressureSetName(*Sets) << ", ";
+          }
+        }
+        dbgs() << "]\n";
+      }
+    });
+
+    for (auto Reg : FixedRegs) {
+      LLVM_DEBUG(dbgs() << "fixed register: " << printReg(Reg, TRI, 0, &MRI)
+                        << "\n");
+      for (MCRegUnit Unit : TRI->regunits(Reg)) {
+        auto PSetIter = MRI.getPressureSets(Unit);
+        unsigned Weight = PSetIter.getWeight();
+        for (; PSetIter.isValid(); ++PSetIter) {
+          unsigned &Limit = PressureSetLimit[*PSetIter];
+          assert(
+              Limit >= Weight &&
+              "register pressure limit must be greater than or equal weight");
+          Limit -= Weight;
+          LLVM_DEBUG(dbgs() << "PSet=" << *PSetIter << " Limit=" << Limit
+                            << " (decreased by " << Weight << ")\n");
+        }
+      }
+    }
   }
 
   // There are two patterns of last-use.
@@ -1422,7 +1464,7 @@ private:
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
                                                    Register Reg) {
-      if (!Reg.isValid() || isReservedRegister(Reg))
+      if (!Reg.isValid() || isFixedRegister(Reg))
         return;
 
       bool Inserted = RegSet.insert(Reg).second;
@@ -1436,7 +1478,7 @@ private:
 
     const auto EraseReg = [this, &CurSetPressure](RegSetTy &RegSet,
                                                   Register Reg) {
-      if (!Reg.isValid() || isReservedRegister(Reg))
+      if (!Reg.isValid() || isFixedRegister(Reg))
         return;
 
       // live-in register
@@ -1488,7 +1530,7 @@ private:
 public:
   HighRegisterPressureDetector(MachineBasicBlock *OrigMBB,
                                const MachineFunction &MF)
-      : OrigMBB(OrigMBB), MRI(MF.getRegInfo()),
+      : OrigMBB(OrigMBB), MF(MF), MRI(MF.getRegInfo()),
         TRI(MF.getSubtarget().getRegisterInfo()),
         PSetNum(TRI->getNumRegPressureSets()), InitSetPressure(PSetNum, 0),
         PressureSetLimit(PSetNum, 0) {}
@@ -3294,15 +3336,15 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
       bool InCircuit = llvm::any_of(
           Circuits, [SU](const NodeSet &Circuit) { return Circuit.count(SU); });
       if (InCircuit)
-        LLVM_DEBUG(dbgs() << "In a circuit, predecessor ");
+        LLVM_DEBUG(dbgs() << "In a circuit, predecessor ";);
       else {
         Valid = false;
         NumNodeOrderIssues++;
-        LLVM_DEBUG(dbgs() << "Predecessor ");
+        LLVM_DEBUG(dbgs() << "Predecessor ";);
       }
       LLVM_DEBUG(dbgs() << Pred->NodeNum << " and successor " << Succ->NodeNum
                         << " are scheduled before node " << SU->NodeNum
-                        << "\n");
+                        << "\n";);
     }
   }
 
@@ -3531,7 +3573,7 @@ bool ResourceManager::canReserveResources(SUnit &SU, int Cycle) {
   bool Result = !isOverbooked();
   unreserveResources(SCDesc, Cycle);
 
-  LLVM_DEBUG(if (SwpDebugResource) dbgs() << "return " << Result << "\n\n");
+  LLVM_DEBUG(if (SwpDebugResource) dbgs() << "return " << Result << "\n\n";);
   return Result;
 }
 

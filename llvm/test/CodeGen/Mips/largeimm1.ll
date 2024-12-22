@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
 
 define void @f() nounwind {
 entry:

@@ -838,25 +838,6 @@ void ProcessLinearIndexOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
-// mesh.neighbors_linear_indices op
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-NeighborsLinearIndicesOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  auto mesh = ::getMeshAndVerify(getOperation(), getMeshAttr(), symbolTable);
-  if (failed(mesh)) {
-    return failure();
-  }
-  return success();
-}
-
-void NeighborsLinearIndicesOp::getAsmResultNames(
-    function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getNeighborDown(), "down_linear_idx");
-  setNameFn(getNeighborUp(), "up_linear_idx");
-}
-
-//===----------------------------------------------------------------------===//
 // collective communication ops
 //===----------------------------------------------------------------------===//
 

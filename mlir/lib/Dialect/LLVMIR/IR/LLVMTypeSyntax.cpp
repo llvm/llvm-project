@@ -53,14 +53,14 @@ static StringRef getTypeKeyword(Type type) {
 
 /// Prints a structure type. Keeps track of known struct names to handle self-
 /// or mutually-referring structs without falling into infinite recursion.
-void LLVMStructType::print(AsmPrinter &printer) const {
+static void printStructType(AsmPrinter &printer, LLVMStructType type) {
   FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint;
 
   printer << "<";
-  if (isIdentified()) {
-    cyclicPrint = printer.tryStartCyclicPrint(*this);
+  if (type.isIdentified()) {
+    cyclicPrint = printer.tryStartCyclicPrint(type);
 
-    printer << '"' << getName() << '"';
+    printer << '"' << type.getName() << '"';
     // If we are printing a reference to one of the enclosing structs, just
     // print the name and stop to avoid infinitely long output.
     if (failed(cyclicPrint)) {
@@ -70,17 +70,17 @@ void LLVMStructType::print(AsmPrinter &printer) const {
     printer << ", ";
   }
 
-  if (isIdentified() && isOpaque()) {
+  if (type.isIdentified() && type.isOpaque()) {
     printer << "opaque>";
     return;
   }
 
-  if (isPacked())
+  if (type.isPacked())
     printer << "packed ";
 
   // Put the current type on stack to avoid infinite recursion.
   printer << '(';
-  llvm::interleaveComma(getBody(), printer.getStream(),
+  llvm::interleaveComma(type.getBody(), printer.getStream(),
                         [&](Type subtype) { dispatchPrint(printer, subtype); });
   printer << ')';
   printer << '>';
@@ -105,8 +105,11 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
 
   llvm::TypeSwitch<Type>(type)
       .Case<LLVMPointerType, LLVMArrayType, LLVMFixedVectorType,
-            LLVMScalableVectorType, LLVMFunctionType, LLVMTargetExtType,
-            LLVMStructType>([&](auto type) { type.print(printer); });
+            LLVMScalableVectorType, LLVMFunctionType, LLVMTargetExtType>(
+          [&](auto type) { type.print(printer); })
+      .Case([&](LLVMStructType structType) {
+        printStructType(printer, structType);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -179,7 +182,7 @@ static LLVMStructType trySetStructBody(LLVMStructType type,
 ///                 `(` llvm-type-list `)` `>`
 ///               | `struct<` string-literal `>`
 ///               | `struct<` string-literal `, opaque>`
-Type LLVMStructType::parse(AsmParser &parser) {
+static LLVMStructType parseStructType(AsmParser &parser) {
   Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
 
   if (failed(parser.parseLess()))
@@ -313,7 +316,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
       .Case("ptr", [&] { return LLVMPointerType::parse(parser); })
       .Case("vec", [&] { return parseVectorType(parser); })
       .Case("array", [&] { return LLVMArrayType::parse(parser); })
-      .Case("struct", [&] { return LLVMStructType::parse(parser); })
+      .Case("struct", [&] { return parseStructType(parser); })
       .Case("target", [&] { return LLVMTargetExtType::parse(parser); })
       .Case("x86_amx", [&] { return LLVMX86AMXType::get(ctx); })
       .Default([&] {

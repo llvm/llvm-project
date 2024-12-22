@@ -183,7 +183,6 @@ struct UnrelocatedFpoData {
 enum : uint32_t { kSymbolStreamMagicSize = 4 };
 
 class DebugSHandler {
-  COFFLinkerContext &ctx;
   PDBLinker &linker;
 
   /// The object file whose .debug$S sections we're processing.
@@ -230,8 +229,8 @@ class DebugSHandler {
                               const DebugSubsectionRecord &ss);
 
 public:
-  DebugSHandler(COFFLinkerContext &ctx, PDBLinker &linker, ObjFile &file)
-      : ctx(ctx), linker(linker), file(file) {}
+  DebugSHandler(PDBLinker &linker, ObjFile &file)
+      : linker(linker), file(file) {}
 
   void handleDebugS(SectionChunk *debugChunk);
 
@@ -385,11 +384,10 @@ void PDBLinker::translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
         }
       }
       if (newType == TypeIndex(SimpleTypeKind::NotTranslated)) {
-        Warn(ctx) << formatv(
-            "procedure symbol record for `{0}` in {1} refers to PDB "
-            "item index {2:X} which is not a valid function ID record",
-            getSymbolName(CVSymbol(recordData)), source->file->getName(),
-            ti->getIndex());
+        warn(formatv("procedure symbol record for `{0}` in {1} refers to PDB "
+                     "item index {2:X} which is not a valid function ID record",
+                     getSymbolName(CVSymbol(recordData)),
+                     source->file->getName(), ti->getIndex()));
       }
       *ti = newType;
     }
@@ -422,12 +420,11 @@ static void scopeStackOpen(SmallVectorImpl<uint32_t> &stack,
 }
 
 // To close a scope, update the record that opened the scope.
-static void scopeStackClose(COFFLinkerContext &ctx,
-                            SmallVectorImpl<uint32_t> &stack,
+static void scopeStackClose(SmallVectorImpl<uint32_t> &stack,
                             std::vector<uint8_t> &storage,
                             uint32_t storageBaseOffset, ObjFile *file) {
   if (stack.empty()) {
-    Warn(ctx) << "symbol scopes are not balanced in " << file->getName();
+    warn("symbol scopes are not balanced in " + file->getName());
     return;
   }
 
@@ -572,8 +569,7 @@ void PDBLinker::writeSymbolRecord(SectionChunk *debugChunk,
   // Re-map all the type index references.
   TpiSource *source = debugChunk->file->debugTypesObj;
   if (!source->remapTypesInSymbolRecord(recordBytes)) {
-    Log(ctx) << "ignoring unknown symbol record with kind 0x"
-             << utohexstr(sym.kind());
+    log("ignoring unknown symbol record with kind 0x" + utohexstr(sym.kind()));
     replaceWithSkipRecord(recordBytes);
   }
 
@@ -597,7 +593,7 @@ void PDBLinker::analyzeSymbolSubsection(
   cantFail(symData.readBytes(0, symData.getLength(), symsBuffer));
 
   if (symsBuffer.empty())
-    Warn(ctx) << "empty symbols subsection in " << file->getName();
+    warn("empty symbols subsection in " + file->getName());
 
   Error ec = forEachCodeViewRecord<CVSymbol>(
       symsBuffer, [&](CVSymbol sym) -> llvm::Error {
@@ -638,7 +634,7 @@ void PDBLinker::analyzeSymbolSubsection(
   // any partial records, undo that. For globals, we just keep what we have and
   // continue.
   if (ec) {
-    Warn(ctx) << "corrupt symbol records in " << file->getName();
+    warn("corrupt symbol records in " + file->getName());
     moduleSymOffset = moduleSymStart;
     consumeError(std::move(ec));
   }
@@ -681,7 +677,7 @@ Error PDBLinker::writeAllModuleSymbolRecords(ObjFile *file,
             if (symbolOpensScope(sym.kind()))
               scopeStackOpen(scopes, storage);
             else if (symbolEndsScope(sym.kind()))
-              scopeStackClose(ctx, scopes, storage, moduleSymStart, file);
+              scopeStackClose(scopes, storage, moduleSymStart, file);
 
             // Copy, relocate, and rewrite each module symbol.
             if (symbolGoesInModuleStream(sym, scopes.size())) {
@@ -743,12 +739,12 @@ static pdb::SectionContrib createSectionContrib(COFFLinkerContext &ctx,
 }
 
 static uint32_t
-translateStringTableIndex(COFFLinkerContext &ctx, uint32_t objIndex,
+translateStringTableIndex(uint32_t objIndex,
                           const DebugStringTableSubsectionRef &objStrTable,
                           DebugStringTableSubsection &pdbStrTable) {
   auto expectedString = objStrTable.getString(objIndex);
   if (!expectedString) {
-    Warn(ctx) << "Invalid string table reference";
+    warn("Invalid string table reference");
     consumeError(expectedString.takeError());
     return 0;
   }
@@ -823,9 +819,8 @@ void DebugSHandler::handleDebugS(SectionChunk *debugChunk) {
       break;
 
     default:
-      Warn(ctx) << "ignoring unknown debug$S subsection kind 0x"
-                << utohexstr(uint32_t(ss.kind())) << " in file "
-                << toString(&file);
+      warn("ignoring unknown debug$S subsection kind 0x" +
+           utohexstr(uint32_t(ss.kind())) + " in file " + toString(&file));
       break;
     }
   }
@@ -938,9 +933,8 @@ void DebugSHandler::finish() {
             "string table subsection");
 
     if (!stringTableFixups.empty())
-      Warn(ctx)
-          << "No StringTable subsection was encountered, but there are string "
-             "table references";
+      warn("No StringTable subsection was encountered, but there are string "
+           "table references");
     return;
   }
 
@@ -972,8 +966,8 @@ void DebugSHandler::finish() {
     exitOnErr(fds.initialize(reader));
     for (codeview::FrameData fd : fds) {
       fd.RvaStart += rvaStart;
-      fd.FrameFunc = translateStringTableIndex(ctx, fd.FrameFunc, cvStrTab,
-                                               linker.pdbStrTab);
+      fd.FrameFunc =
+          translateStringTableIndex(fd.FrameFunc, cvStrTab, linker.pdbStrTab);
       dbiBuilder.addNewFpoData(fd);
     }
   }
@@ -981,8 +975,8 @@ void DebugSHandler::finish() {
   // Translate the fixups and pass them off to the module builder so they will
   // be applied during writing.
   for (StringTableFixup &ref : stringTableFixups) {
-    ref.StrTabOffset = translateStringTableIndex(ctx, ref.StrTabOffset,
-                                                 cvStrTab, linker.pdbStrTab);
+    ref.StrTabOffset =
+        translateStringTableIndex(ref.StrTabOffset, cvStrTab, linker.pdbStrTab);
   }
   file.moduleDBI->setStringTableFixups(std::move(stringTableFixups));
 
@@ -1012,10 +1006,11 @@ static void warnUnusable(InputFile *f, Error e, bool shouldWarn) {
     consumeError(std::move(e));
     return;
   }
-  auto diag = Warn(f->symtab.ctx);
-  diag << "Cannot use debug info for '" << f << "' [LNK4099]";
+  auto msg = "Cannot use debug info for '" + toString(f) + "' [LNK4099]";
   if (e)
-    diag << "\n>>> failed to load reference " << std::move(e);
+    warn(msg + "\n>>> failed to load reference " + toString(std::move(e)));
+  else
+    warn(msg);
 }
 
 // Allocate memory for a .debug$S / .debug$F section and relocate it.
@@ -1037,7 +1032,7 @@ void PDBLinker::addDebugSymbols(TpiSource *source) {
   ScopedTimer t(ctx.symbolMergingTimer);
   ExitOnError exitOnErr;
   pdb::DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
-  DebugSHandler dsh(ctx, *this, *source->file);
+  DebugSHandler dsh(*this, *source->file);
   // Now do all live .debug$S and .debug$F sections.
   for (SectionChunk *debugChunk : source->file->getDebugChunks()) {
     if (!debugChunk->live || debugChunk->getSize() == 0)
@@ -1322,7 +1317,7 @@ void PDBLinker::printStats() {
     printLargeInputTypeRecs("IPI", tMerger.ipiCounts, tMerger.getIDTable());
   }
 
-  Msg(ctx) << buffer;
+  message(buffer);
 }
 
 void PDBLinker::addNatvisFiles() {
@@ -1331,7 +1326,7 @@ void PDBLinker::addNatvisFiles() {
     ErrorOr<std::unique_ptr<MemoryBuffer>> dataOrErr =
         MemoryBuffer::getFile(file);
     if (!dataOrErr) {
-      Warn(ctx) << "Cannot open input file: " << file;
+      warn("Cannot open input file: " + file);
       continue;
     }
     std::unique_ptr<MemoryBuffer> data = std::move(*dataOrErr);
@@ -1353,7 +1348,7 @@ void PDBLinker::addNamedStreams() {
     ErrorOr<std::unique_ptr<MemoryBuffer>> dataOrErr =
         MemoryBuffer::getFile(file);
     if (!dataOrErr) {
-      Warn(ctx) << "Cannot open input file: " << file;
+      warn("Cannot open input file: " + file);
       continue;
     }
     std::unique_ptr<MemoryBuffer> data = std::move(*dataOrErr);
@@ -1730,13 +1725,14 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
   if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
-    e = handleErrors(std::move(e), [&](const llvm::msf::MSFError &me) {
-      Err(ctx) << me.message();
-      if (me.isPageOverflow())
-        Err(ctx) << "try setting a larger /pdbpagesize";
-    });
+    e = handleErrors(std::move(e),
+        [](const llvm::msf::MSFError &me) {
+          error(me.message());
+          if (me.isPageOverflow())
+            error("try setting a larger /pdbpagesize");
+        });
     checkError(std::move(e));
-    Err(ctx) << "failed to write PDB file " << Twine(ctx.config.pdbPath);
+    error("failed to write PDB file " + Twine(ctx.config.pdbPath));
   }
 }
 

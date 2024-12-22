@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
 ; CHECK: mem{{.*}} = {{.*}}.new
 
 target triple = "hexagon-unknown-linux-gnu"

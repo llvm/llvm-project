@@ -646,9 +646,9 @@ void exportReplacements(const llvm::StringRef MainFilePath,
   YAML << TUD;
 }
 
-ChecksAndOptions
+NamesAndOptions
 getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
-  ChecksAndOptions Result;
+  NamesAndOptions Result;
   ClangTidyOptions Opts;
   Opts.Checks = "*";
   clang::tidy::ClangTidyContext Context(
@@ -661,7 +661,7 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
   }
 
   for (const auto &Factory : Factories)
-    Result.Checks.insert(Factory.getKey());
+    Result.Names.insert(Factory.getKey());
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
   SmallString<64> Buffer(AnalyzerCheckNamePrefix);
@@ -670,7 +670,7 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
            AllowEnablingAnalyzerAlphaCheckers)) {
     Buffer.truncate(DefSize);
     Buffer.append(AnalyzerCheck);
-    Result.Checks.insert(Buffer);
+    Result.Names.insert(Buffer);
   }
   for (std::string OptionName : {
 #define GET_CHECKER_OPTIONS

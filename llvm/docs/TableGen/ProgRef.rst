@@ -223,13 +223,12 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !div         !empty       !eq          !exists      !filter
                : !find        !foldl       !foreach     !ge          !getdagarg
                : !getdagname  !getdagop    !gt          !head        !if
-               : !initialized !interleave  !isa         !le          !listconcat
-               : !listflatten !listremove  !listsplat   !logtwo      !lt
-               : !mul         !ne          !not         !or          !range
-               : !repr        !setdagarg   !setdagname  !setdagop    !shl
-               : !size        !sra         !srl         !strconcat   !sub
-               : !subst       !substr      !tail        !tolower     !toupper
-               : !xor
+               : !interleave  !isa         !le          !listconcat  !listflatten
+               : !listremove  !listsplat   !logtwo      !lt          !mul
+               : !ne          !not         !or          !range       !repr
+               : !setdagarg   !setdagname  !setdagop    !shl         !size
+               : !sra         !srl         !strconcat   !sub         !subst
+               : !substr      !tail        !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -556,7 +555,7 @@ previous case, if the *right-hand-side* operand is an undefined name or a
 global name, it is treated as a verbatim string of characters. The
 left-hand-side operand is treated normally.
 
-Values can have a trailing paste operator, in which case the left-hand-side
+Values can have a trailing paste operator, in which case the left-hand-side 
 operand is concatenated to an empty string.
 
 `Appendix B: Paste Operator Examples`_ presents examples of the behavior of
@@ -1815,10 +1814,6 @@ and non-0 as true.
   This operator evaluates the *test*, which must produce a ``bit`` or
   ``int``. If the result is not 0, the *then* expression is produced; otherwise
   the *else* expression is produced.
-
-``!initialized(``\ *a*\ ``)``
-  This operator produces 1 if *a* is not the uninitialized value (``?``) and 0
-  otherwise.
 
 ``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
     This operator concatenates the items in the *list*, interleaving the

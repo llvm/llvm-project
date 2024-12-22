@@ -1885,7 +1885,7 @@ static bool foldICmpWithDominatingICmp(CmpInst *Cmp,
     return false;
 
   Value *CmpOp0 = Cmp->getOperand(0), *CmpOp1 = Cmp->getOperand(1);
-  CmpPredicate DomPred;
+  ICmpInst::Predicate DomPred;
   if (!match(DomCond, m_ICmp(DomPred, m_Specific(CmpOp0), m_Specific(CmpOp1))))
     return false;
   if (DomPred != ICmpInst::ICMP_SGT && DomPred != ICmpInst::ICMP_SLT)
@@ -2155,7 +2155,7 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
 static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
                                const TargetTransformInfo &TTI,
                                const DataLayout &DL) {
-  CmpPredicate Pred;
+  ICmpInst::Predicate Pred;
   if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(), m_One())))
     return false;
   if (!ICmpInst::isEquality(Pred))
@@ -7138,7 +7138,6 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   SmallVector<Instruction *, 8> WorkList;
   SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 8> AndsToMaybeRemove;
-  SmallVector<Instruction *, 8> DropFlags;
   for (auto *U : Load->users())
     WorkList.push_back(cast<Instruction>(U));
 
@@ -7186,7 +7185,6 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
         return false;
       uint64_t ShiftAmt = ShlC->getLimitedValue(BitWidth - 1);
       DemandBits.setLowBits(BitWidth - ShiftAmt);
-      DropFlags.push_back(I);
       break;
     }
 
@@ -7194,7 +7192,6 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
       EVT TruncVT = TLI->getValueType(*DL, I->getType());
       unsigned TruncBitWidth = TruncVT.getSizeInBits();
       DemandBits.setLowBits(TruncBitWidth);
-      DropFlags.push_back(I);
       break;
     }
 
@@ -7251,10 +7248,6 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
       And->eraseFromParent();
       ++NumAndUses;
     }
-
-  // NSW flags may not longer hold.
-  for (auto *Inst : DropFlags)
-    Inst->setHasNoSignedWrap(false);
 
   ++NumAndsAdded;
   return true;

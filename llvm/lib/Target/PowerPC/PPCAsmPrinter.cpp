@@ -71,7 +71,6 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cassert>
@@ -3046,30 +3045,6 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
 
 bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   const bool Result = PPCAsmPrinter::doInitialization(M);
-
-  // Emit the .machine directive on AIX.
-  const Triple &Target = TM.getTargetTriple();
-  XCOFF::CFileCpuId TargetCpuId = XCOFF::TCPU_INVALID;
-  // Walk through the "target-cpu" attribute of functions and use the newest
-  // level as the CPU of the module.
-  for (auto &F : M) {
-    XCOFF::CFileCpuId FunCpuId =
-        XCOFF::getCpuID(TM.getSubtargetImpl(F)->getCPU());
-    if (FunCpuId > TargetCpuId)
-      TargetCpuId = FunCpuId;
-  }
-  // If there is no "target-cpu" attribute within the functions, take the
-  // "-mcpu" value. If both are omitted, use getNormalizedPPCTargetCPU() to
-  // determine the default CPU.
-  if (!TargetCpuId) {
-    StringRef TargetCPU = TM.getTargetCPU();
-    TargetCpuId = XCOFF::getCpuID(
-        TargetCPU.empty() ? PPC::getNormalizedPPCTargetCPU(Target) : TargetCPU);
-  }
-
-  PPCTargetStreamer *TS =
-      static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitMachine(XCOFF::getTCPUString(TargetCpuId));
 
   auto setCsectAlignment = [this](const GlobalObject *GO) {
     // Declarations have 0 alignment which is set by default.

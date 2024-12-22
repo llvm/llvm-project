@@ -734,6 +734,6 @@ void ThisAlign::this_align_lambda_2() {
   p();
 }
 
-// CHECK: attributes [[NR_NUW]] = { nomerge noreturn nounwind }
+// CHECK: attributes [[NR_NUW]] = { noreturn nounwind }
 
 // CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1000226989}

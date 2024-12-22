@@ -43,7 +43,7 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   // If the integer range can be narrowed to a constant, update the constant
   // value of the SSA value.
   std::optional<APInt> constant = getValue().getValue().getConstantValue();
-  auto value = cast<Value>(anchor);
+  auto value = anchor.get<Value>();
   auto *cv = solver->getOrCreateState<Lattice<ConstantValue>>(value);
   if (!constant)
     return solver->propagateIfChanged(
@@ -155,8 +155,9 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
                                   Type boundType, bool getUpper) {
     unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
     if (loopBound.has_value()) {
-      if (auto attr = dyn_cast<Attribute>(*loopBound)) {
-        if (auto bound = dyn_cast_or_null<IntegerAttr>(attr))
+      if (loopBound->is<Attribute>()) {
+        if (auto bound =
+                dyn_cast_or_null<IntegerAttr>(loopBound->get<Attribute>()))
           return bound.getValue();
       } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =

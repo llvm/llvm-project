@@ -92,11 +92,6 @@ def sew : RISCVOp {
   let OperandType = "OPERAND_SEW";
 }
 
-// SEW for mask only instructions like vmand and vmsbf. Should always be 0.
-def sew_mask : RISCVOp {
-  let OperandType = "OPERAND_SEW_MASK";
-}
-
 def vec_rm : RISCVOp {
   let OperandType = "OPERAND_VEC_RM";
 }
@@ -107,17 +102,10 @@ def vec_rm : RISCVOp {
 // !X0 |  X0 |       VLMAX | Set vl to VLMAX
 //  X0 |  X0 | Value in vl | Keep current vl, just change vtype.
 def VLOp : ComplexPattern<XLenVT, 1, "selectVLOp">;
-// FIXME: This is labelled as handling 's32', however the ComplexPattern it
-// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
-// parameter appears to be ignored so this pattern works for both, however we
-// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
-// here.
-def GIVLOp : GIComplexOperandMatcher<s32, "renderVLOp">,
-             GIComplexPatternEquiv<VLOp>;
 
 def DecImm : SDNodeXForm<imm, [{
-  return CurDAG->getSignedTargetConstant(N->getSExtValue() - 1, SDLoc(N),
-                                         N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() - 1, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 defvar TAIL_AGNOSTIC = 1;
@@ -427,13 +415,13 @@ class MTypeInfo<ValueType Mas, LMULInfo M, string Bx> {
 
 defset list<MTypeInfo> AllMasks = {
   // vbool<n>_t, <n> = SEW/LMUL, we assume SEW=8 and corresponding LMUL.
-  def : MTypeInfo<vbool64_t, V_MF8, "B64">;
-  def : MTypeInfo<vbool32_t, V_MF4, "B32">;
-  def : MTypeInfo<vbool16_t, V_MF2, "B16">;
+  def : MTypeInfo<vbool64_t, V_MF8, "B1">;
+  def : MTypeInfo<vbool32_t, V_MF4, "B2">;
+  def : MTypeInfo<vbool16_t, V_MF2, "B4">;
   def : MTypeInfo<vbool8_t, V_M1, "B8">;
-  def : MTypeInfo<vbool4_t, V_M2, "B4">;
-  def : MTypeInfo<vbool2_t, V_M4, "B2">;
-  def : MTypeInfo<vbool1_t, V_M8, "B1">;
+  def : MTypeInfo<vbool4_t, V_M2, "B16">;
+  def : MTypeInfo<vbool2_t, V_M4, "B32">;
+  def : MTypeInfo<vbool1_t, V_M8, "B64">;
 }
 
 class VTypeInfoToWide<VTypeInfo vti, VTypeInfo wti> {
@@ -786,10 +774,9 @@ class GetVTypePredicates<VTypeInfo vti> {
 }
 
 class VPseudoUSLoadNoMask<VReg RetClass,
-                          int EEW,
-                          DAGOperand sewop = sew> :
+                          int EEW> :
       Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest, GPRMem:$rs1, AVL:$vl, sewop:$sew,
+             (ins RetClass:$dest, GPRMem:$rs1, AVL:$vl, sew:$sew,
                   vec_policy:$policy), []>,
       RISCVVPseudo,
       RISCVVLE</*Masked*/0, /*Strided*/0, /*FF*/0, !logtwo(EEW), VLMul> {
@@ -935,10 +922,9 @@ class VPseudoILoadMask<VReg RetClass,
 }
 
 class VPseudoUSStoreNoMask<VReg StClass,
-                           int EEW,
-                           DAGOperand sewop = sew> :
+                           int EEW> :
       Pseudo<(outs),
-             (ins StClass:$rd, GPRMem:$rs1, AVL:$vl, sewop:$sew), []>,
+             (ins StClass:$rd, GPRMem:$rs1, AVL:$vl, sew:$sew), []>,
       RISCVVPseudo,
       RISCVVSE</*Masked*/0, /*Strided*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
@@ -1022,7 +1008,7 @@ class VPseudoNullaryMask<VReg RegClass> :
 // Nullary for pseudo instructions. They are expanded in
 // RISCVExpandPseudoInsts pass.
 class VPseudoNullaryPseudoM<string BaseInst> :
-      Pseudo<(outs VR:$rd), (ins AVL:$vl, sew_mask:$sew), []>,
+      Pseudo<(outs VR:$rd), (ins AVL:$vl, sew:$sew), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1059,7 +1045,7 @@ class VPseudoUnaryNoMaskNoPolicy<DAGOperand RetClass,
                                  string Constraint = "",
                                  bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
-             (ins OpClass:$rs2, AVL:$vl, sew_mask:$sew), []>,
+             (ins OpClass:$rs2, AVL:$vl, sew:$sew), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1094,11 +1080,10 @@ class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
 class VPseudoUnaryMask<VReg RetClass,
                        VReg OpClass,
                        string Constraint = "",
-                       bits<2> TargetConstraintType = 1,
-                       DAGOperand sewop = sew> :
+                       bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
-                  VMaskOp:$vm, AVL:$vl, sewop:$sew, vec_policy:$policy), []>,
+                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1153,7 +1138,7 @@ class VPseudoUnaryMask_NoExcept<VReg RetClass,
 
 class VPseudoUnaryNoMaskGPROut :
       Pseudo<(outs GPR:$rd),
-             (ins VR:$rs2, AVL:$vl, sew_mask:$sew), []>,
+             (ins VR:$rs2, AVL:$vl, sew:$sew), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1164,7 +1149,7 @@ class VPseudoUnaryNoMaskGPROut :
 
 class VPseudoUnaryMaskGPROut :
       Pseudo<(outs GPR:$rd),
-             (ins VR:$rs1, VMaskOp:$vm, AVL:$vl, sew_mask:$sew), []>,
+             (ins VR:$rs1, VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1192,10 +1177,9 @@ class VPseudoBinaryNoMask<VReg RetClass,
                           VReg Op1Class,
                           DAGOperand Op2Class,
                           string Constraint,
-                          bits<2> TargetConstraintType = 1,
-                          DAGOperand sewop = sew> :
+                          bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
-             (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, sewop:$sew), []>,
+             (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, sew:$sew), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1868,7 +1852,7 @@ multiclass VPseudoLoadMask {
     defvar mx = mti.LMul.MX;
     defvar WriteVLDM_MX = !cast<SchedWrite>("WriteVLDM_" # mx);
     let VLMul = mti.LMul.value in {
-      def "_V_" # mti.BX : VPseudoUSLoadNoMask<VR, EEW=1, sewop=sew_mask>,
+      def "_V_" # mti.BX : VPseudoUSLoadNoMask<VR, EEW=1>,
         Sched<[WriteVLDM_MX, ReadVLDX]>;
     }
   }
@@ -1943,7 +1927,7 @@ multiclass VPseudoStoreMask {
     defvar mx = mti.LMul.MX;
     defvar WriteVSTM_MX = !cast<SchedWrite>("WriteVSTM_" # mx);
     let VLMul = mti.LMul.value in {
-      def "_V_" # mti.BX : VPseudoUSStoreNoMask<VR, EEW=1, sewop=sew_mask>,
+      def "_V_" # mti.BX : VPseudoUSStoreNoMask<VR, EEW=1>,
         Sched<[WriteVSTM_MX, ReadVSTX]>;
     }
   }
@@ -2027,8 +2011,7 @@ multiclass VPseudoVSFS_M {
                            SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                       forcePassthruRead=true>;
       let ForceTailAgnostic = true in
-      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint,
-                                                      sewop = sew_mask>,
+      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint>,
                                      SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                                 forcePassthruRead=true>;
     }
@@ -2283,10 +2266,11 @@ multiclass VPseudoBinaryV_VI_RM<Operand ImmType, LMULInfo m, string Constraint =
 }
 
 multiclass VPseudoVALU_MM<bit Commutable = 0> {
-  foreach mti = AllMasks in {
-    let VLMul = mti.LMul.value, isCommutable = Commutable in {
-      def "_MM_" # mti.BX : VPseudoBinaryNoMask<VR, VR, VR, "", sewop = sew_mask>,
-        SchedBinary<"WriteVMALUV", "ReadVMALUV", "ReadVMALUV", mti.LMul.MX>;
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    let VLMul = m.value, isCommutable = Commutable in {
+      def "_MM_" # mx : VPseudoBinaryNoMask<VR, VR, VR, "">,
+                        SchedBinary<"WriteVMALUV", "ReadVMALUV", "ReadVMALUV", mx>;
     }
   }
 }
@@ -4959,7 +4943,7 @@ multiclass VPatBinaryV_VI_RM<string intrinsic, string instruction,
 multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
   foreach mti = AllMasks in
     let Predicates = [HasVInstructions] in
-    def : VPatBinaryM<intrinsic, instruction # "_MM_" # mti.BX,
+    def : VPatBinaryM<intrinsic, instruction # "_MM_" # mti.LMul.MX,
                       mti.Mask, mti.Mask, mti.Mask,
                       mti.Log2SEW, VR, VR>;
 }

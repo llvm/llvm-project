@@ -40,7 +40,6 @@ entry:
 ; CHECK:               .file   "1.c"
 ; CHECK-NEXT:          .csect ..text..[PR],5
 ; CHECK-NEXT:          .rename ..text..[PR],""
-; CHECK-NEXT:          .machine "COM"
 ; CHECK-NEXT:          .csect .foo[PR],5
 ; CHECK-NEXT:          .globl  foo[DS]                         # -- Begin function foo
 ; CHECK-NEXT:          .globl  .foo[PR]

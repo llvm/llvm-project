@@ -20,13 +20,13 @@
 define void @RWBufferLoad() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
-      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_24(
+      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_24(
           i32 16, i32 7, i32 1, i32 0, i1 false)
 
 ; Make sure we use the same variable with multiple loads.
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer1 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
-      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_24(
+      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_24(
           i32 16, i32 7, i32 1, i32 0, i1 false)
   ret void
 }
@@ -38,7 +38,7 @@ define void @UseDifferentGlobalVar() #0 {
 ; different types.
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeFloat]] [[FloatBufferVar]]
   %buffer0 = call target("spirv.Image", float, 5, 2, 0, 0, 2, 3)
-      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_3(
+      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_3(
           i32 16, i32 7, i32 1, i32 0, i1 false)
   ret void
 }
@@ -50,7 +50,7 @@ define void @ReuseGlobalVarFromFirstFunction() #0 {
 ; same in case one function calls the other.
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer1 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
-      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_24(
+      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_24(
           i32 16, i32 7, i32 1, i32 0, i1 false)
   ret void
 }

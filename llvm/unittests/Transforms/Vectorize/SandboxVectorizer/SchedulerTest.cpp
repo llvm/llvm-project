@@ -70,7 +70,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto *SN0 = DAG.getNode(S0);
   auto *SN1 = DAG.getNode(S1);

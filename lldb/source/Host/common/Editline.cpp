@@ -924,105 +924,16 @@ unsigned char Editline::BufferEndCommand(int ch) {
 
 /// Prints completions and their descriptions to the given file. Only the
 /// completions in the interval [start, end) are printed.
-static size_t
+static void
 PrintCompletion(FILE *output_file,
                 llvm::ArrayRef<CompletionResult::Completion> results,
-                size_t max_completion_length, size_t max_length,
-                std::optional<size_t> max_height = std::nullopt) {
-  constexpr size_t ellipsis_length = 3;
-  constexpr size_t padding_length = 8;
-  constexpr size_t separator_length = 4;
-
-  const size_t description_col =
-      std::min(max_completion_length + padding_length, max_length);
-
-  size_t lines_printed = 0;
-  size_t results_printed = 0;
+                size_t max_len) {
   for (const CompletionResult::Completion &c : results) {
-    if (max_height && lines_printed >= *max_height)
-      break;
-
-    results_printed++;
-
-    if (c.GetCompletion().empty())
-      continue;
-
-    // Print the leading padding.
-    fprintf(output_file, "        ");
-
-    // Print the completion with trailing padding to the description column if
-    // that fits on the screen. Otherwise print whatever fits on the screen
-    // followed by ellipsis.
-    const size_t completion_length = c.GetCompletion().size();
-    if (padding_length + completion_length < max_length) {
-      fprintf(output_file, "%-*s",
-              static_cast<int>(description_col - padding_length),
-              c.GetCompletion().c_str());
-    } else {
-      // If the completion doesn't fit on the screen, print ellipsis and don't
-      // bother with the description.
-      fprintf(output_file, "%.*s...\n",
-              static_cast<int>(max_length - padding_length - ellipsis_length),
-              c.GetCompletion().c_str());
-      lines_printed++;
-      continue;
-    }
-
-    // If we don't have a description, or we don't have enough space left to
-    // print the separator followed by the ellipsis, we're done.
-    if (c.GetDescription().empty() ||
-        description_col + separator_length + ellipsis_length >= max_length) {
-      fprintf(output_file, "\n");
-      lines_printed++;
-      continue;
-    }
-
-    // Print the separator.
-    fprintf(output_file, " -- ");
-
-    // Descriptions can contain newlines. We want to print them below each
-    // other, aligned after the separator. For example, foo has a
-    // two-line description:
-    //
-    // foo   -- Something that fits on the line.
-    //          More information below.
-    //
-    // However, as soon as a line exceed the available screen width and
-    // print ellipsis, we don't print the next line. For example, foo has a
-    // three-line description:
-    //
-    // foo   -- Something that fits on the line.
-    //          Something much longer  that doesn't fit...
-    //
-    // Because we had to print ellipsis on line two, we don't print the
-    // third line.
-    bool first = true;
-    for (llvm::StringRef line : llvm::split(c.GetDescription(), '\n')) {
-      if (line.empty())
-        break;
-      if (max_height && lines_printed >= *max_height)
-        break;
-      if (!first)
-        fprintf(output_file, "%*s",
-                static_cast<int>(description_col + separator_length), "");
-
-      first = false;
-      const size_t position = description_col + separator_length;
-      const size_t description_length = line.size();
-      if (position + description_length < max_length) {
-        fprintf(output_file, "%.*s\n", static_cast<int>(description_length),
-                line.data());
-        lines_printed++;
-      } else {
-        fprintf(output_file, "%.*s...\n",
-                static_cast<int>(max_length - position - ellipsis_length),
-                line.data());
-        lines_printed++;
-        continue;
-      }
-    }
+    fprintf(output_file, "\t%-*s", (int)max_len, c.GetCompletion().c_str());
+    if (!c.GetDescription().empty())
+      fprintf(output_file, " -- %s", c.GetDescription().c_str());
+    fprintf(output_file, "\n");
   }
-  return results_printed;
 }
 
 void Editline::DisplayCompletions(
@@ -1031,11 +942,7 @@ void Editline::DisplayCompletions(
 
   fprintf(editline.m_output_file,
           "\n" ANSI_CLEAR_BELOW "Available completions:\n");
-
-  /// Account for the current line, the line showing "Available completions"
-  /// before and the line saying "More" after.
-  const size_t page_size = editline.GetTerminalHeight() - 3;
-
+  const size_t page_size = 40;
   bool all = false;
 
   auto longest =
@@ -1045,12 +952,20 @@ void Editline::DisplayCompletions(
 
   const size_t max_len = longest->GetCompletion().size();
 
+  if (results.size() < page_size) {
+    PrintCompletion(editline.m_output_file, results, max_len);
+    return;
+  }
+
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
-    cur_pos +=
-        PrintCompletion(editline.m_output_file, results.slice(cur_pos), max_len,
-                        editline.GetTerminalWidth(),
-                        all ? std::nullopt : std::optional<size_t>(page_size));
+    size_t remaining = results.size() - cur_pos;
+    size_t next_size = all ? remaining : std::min(page_size, remaining);
+
+    PrintCompletion(editline.m_output_file, results.slice(cur_pos, next_size),
+                    max_len);
+
+    cur_pos += next_size;
 
     if (cur_pos >= results.size())
       break;
@@ -1534,13 +1449,6 @@ void Editline::ApplyTerminalSizeChange() {
   } else {
     m_terminal_width = INT_MAX;
     m_current_line_rows = 1;
-  }
-
-  int rows;
-  if (el_get(m_editline, EL_GETTC, "li", &rows, nullptr) == 0) {
-    m_terminal_height = rows;
-  } else {
-    m_terminal_height = INT_MAX;
   }
 }
 

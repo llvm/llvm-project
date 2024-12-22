@@ -86,8 +86,7 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  bool callsInitClone = false;
-  lower::SymMap &symTable;
+  lower::SymMap *symTable;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
@@ -123,7 +122,8 @@ public:
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
-                       bool useDelayedPrivatization, lower::SymMap &symTable);
+                       bool useDelayedPrivatization = false,
+                       lower::SymMap *symTable = nullptr);
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for

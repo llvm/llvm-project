@@ -186,7 +186,8 @@
 [0x5f,0x34,0x20,0x59]
 [0xff,0x37,0x22,0x59]
 
-# CHECK:      	ldtxr	x9, [sp]
+# CHECK:      	.text
+# CHECK-NEXT: 	ldtxr	x9, [sp]
 # CHECK-NEXT: 	ldtxr	x9, [sp]
 # CHECK-NEXT: 	ldtxr	x10, [x11]
 # CHECK-NEXT: 	ldtxr	x10, [x11]

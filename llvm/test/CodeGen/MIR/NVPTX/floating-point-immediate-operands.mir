@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=nvptx -mcpu=sm_20 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -march=nvptx -mcpu=sm_20 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses floating point constant operands
 # correctly.
 

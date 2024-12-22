@@ -273,11 +273,12 @@ end subroutine test6
 ! CHECK:           fir.store %[[VAL_49]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>>>
 ! CHECK:           %[[VAL_50:.*]] = arith.constant false
 ! CHECK:           %[[VAL_51:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
+! CHECK:           %[[VAL_52:.*]] = arith.constant 80 : i32
 ! CHECK:           %[[VAL_53:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 ! CHECK:           %[[VAL_54:.*]] = arith.constant {{[0-9]*}} : i32
 ! CHECK:           %[[VAL_55:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_56:.*]] = fir.convert %[[VAL_53]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_57:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_51]], %[[VAL_55]], %[[VAL_50]], %[[VAL_56]], %[[VAL_54]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> none
+! CHECK:           %[[VAL_57:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_51]], %[[VAL_55]], %[[VAL_50]], %[[VAL_52]], %[[VAL_56]], %[[VAL_54]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
 ! CHECK:           %[[VAL_58:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>)
 ! CHECK:           %[[VAL_59:.*]] = fir.embox %[[VAL_58]]#0 : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> !fir.box<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
 ! CHECK:           %[[VAL_60:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>

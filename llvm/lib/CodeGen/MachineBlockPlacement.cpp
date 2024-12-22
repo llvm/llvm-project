@@ -3558,16 +3558,14 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(), MLI,
                             /*AfterPlacement=*/true)) {
+      // Redo the layout if tail merging creates/removes/moves blocks.
+      BlockToChain.clear();
+      ComputedEdges.clear();
       // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->recalculate(MF);
-      if (!UseExtTspForSize) {
-        // Redo the layout if tail merging creates/removes/moves blocks.
-        BlockToChain.clear();
-        ComputedEdges.clear();
-        ChainAllocator.DestroyAll();
-        buildCFGChains();
-      }
+      ChainAllocator.DestroyAll();
+      buildCFGChains();
     }
   }
 

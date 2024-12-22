@@ -429,7 +429,7 @@ bool WebAssemblyTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
   // Assume target opcodes can't be scalarized.
   // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
+  if (Opc >= ISD::BUILTIN_OP_END)
     return false;
 
   // If the vector op is not supported, try to convert to scalar.
@@ -768,7 +768,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                                     MF.getContext(), Subtarget)
                               : WebAssembly::getOrCreateFunctionTableSymbol(
                                     MF.getContext(), Subtarget);
-    if (Subtarget->hasCallIndirectOverlong()) {
+    if (Subtarget->hasReferenceTypes()) {
       MIB.addSym(Table);
     } else {
       // For the MVP there is at most one table whose number is 0, but we can't
@@ -871,11 +871,14 @@ const char *
 WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
   case WebAssemblyISD::FIRST_NUMBER:
+  case WebAssemblyISD::FIRST_MEM_OPCODE:
     break;
 #define HANDLE_NODETYPE(NODE)                                                  \
   case WebAssemblyISD::NODE:                                                   \
     return "WebAssemblyISD::" #NODE;
+#define HANDLE_MEM_NODETYPE(NODE) HANDLE_NODETYPE(NODE)
 #include "WebAssemblyISD.def"
+#undef HANDLE_MEM_NODETYPE
 #undef HANDLE_NODETYPE
   }
   return nullptr;
@@ -2085,17 +2088,6 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
       }
     }
     return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
-  }
-
-  case Intrinsic::thread_pointer: {
-    MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *TlsBase = MF.createExternalSymbolName("__tls_base");
-    return SDValue(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
-        0);
   }
   }
 }

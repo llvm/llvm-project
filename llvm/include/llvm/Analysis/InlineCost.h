@@ -318,7 +318,6 @@ std::optional<int> getInliningCostEstimate(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
-    function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
     ProfileSummaryInfo *PSI = nullptr,
     OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -328,7 +327,6 @@ std::optional<InlineCostFeatures> getInliningCostFeatures(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
-    function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
     ProfileSummaryInfo *PSI = nullptr,
     OptimizationRemarkEmitter *ORE = nullptr);
 

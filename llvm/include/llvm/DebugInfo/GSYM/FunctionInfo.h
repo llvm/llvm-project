@@ -10,7 +10,6 @@
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
@@ -64,9 +63,7 @@ class GsymReader;
 ///   enum InfoType {
 ///     EndOfList = 0u,
 ///     LineTableInfo = 1u,
-///     InlineInfo = 2u,
-///     MergedFunctionsInfo = 3u,
-///     CallSiteInfo = 4u
+///     InlineInfo = 2u
 ///   };
 ///
 /// This stream of tuples is terminated by a "InfoType" whose value is
@@ -76,7 +73,7 @@ class GsymReader;
 /// clients to still parse the format and skip over any data that they don't
 /// understand or want to parse.
 ///
-/// So the function information encoding essentially looks like:
+/// So the function information encoding essientially looks like:
 ///
 /// struct {
 ///   uint32_t Size;
@@ -95,7 +92,6 @@ struct FunctionInfo {
   std::optional<LineTable> OptLineTable;
   std::optional<InlineInfo> Inline;
   std::optional<MergedFunctionsInfo> MergedFunctions;
-  std::optional<CallSiteInfoCollection> CallSites;
   /// If we encode a FunctionInfo during segmenting so we know its size, we can
   /// cache that encoding here so we don't need to re-encode it when saving the
   /// GSYM file.
@@ -111,7 +107,7 @@ struct FunctionInfo {
   /// debug info, we might end up with multiple FunctionInfo objects for the
   /// same range and we need to be able to tell which one is the better object
   /// to use.
-  bool hasRichInfo() const { return OptLineTable || Inline || CallSites; }
+  bool hasRichInfo() const { return OptLineTable || Inline; }
 
   /// Query if a FunctionInfo object is valid.
   ///

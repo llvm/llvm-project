@@ -277,14 +277,6 @@ CowCompilerInvocation::getMutPreprocessorOutputOpts() {
 
 using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "clang/Driver/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-static llvm::StringRef lookupStrInTable(unsigned Offset) {
-  return &OptionStrTable[Offset];
-}
-
 #define SIMPLE_ENUM_VALUE_TABLE
 #include "clang/Driver/Options.inc"
 #undef SIMPLE_ENUM_VALUE_TABLE
@@ -311,11 +303,6 @@ static std::optional<bool> normalizeSimpleNegativeFlag(OptSpecifier Opt,
 /// denormalizeSimpleFlags never looks at it. Avoid bloating compile-time with
 /// unnecessary template instantiations and just ignore it with a variadic
 /// argument.
-static void denormalizeSimpleFlag(ArgumentConsumer Consumer,
-                                  unsigned SpellingOffset, Option::OptionClass,
-                                  unsigned, /*T*/...) {
-  Consumer(lookupStrInTable(SpellingOffset));
-}
 static void denormalizeSimpleFlag(ArgumentConsumer Consumer,
                                   const Twine &Spelling, Option::OptionClass,
                                   unsigned, /*T*/...) {
@@ -356,10 +343,10 @@ static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
 }
 
 static auto makeBooleanOptionDenormalizer(bool Value) {
-  return [Value](ArgumentConsumer Consumer, unsigned SpellingOffset,
+  return [Value](ArgumentConsumer Consumer, const Twine &Spelling,
                  Option::OptionClass, unsigned, bool KeyPath) {
     if (KeyPath == Value)
-      Consumer(lookupStrInTable(SpellingOffset));
+      Consumer(Spelling);
   };
 }
 
@@ -382,14 +369,6 @@ static void denormalizeStringImpl(ArgumentConsumer Consumer,
     llvm_unreachable("Cannot denormalize an option with option class "
                      "incompatible with string denormalization.");
   }
-}
-
-template <typename T>
-static void
-denormalizeString(ArgumentConsumer Consumer, unsigned SpellingOffset,
-                  Option::OptionClass OptClass, unsigned TableIndex, T Value) {
-  denormalizeStringImpl(Consumer, lookupStrInTable(SpellingOffset), OptClass,
-                        TableIndex, Twine(Value));
 }
 
 template <typename T>
@@ -438,14 +417,14 @@ static std::optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
 }
 
 static void denormalizeSimpleEnumImpl(ArgumentConsumer Consumer,
-                                      unsigned SpellingOffset,
+                                      const Twine &Spelling,
                                       Option::OptionClass OptClass,
                                       unsigned TableIndex, unsigned Value) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
   if (auto MaybeEnumVal = findValueTableByValue(Table, Value)) {
-    denormalizeString(Consumer, lookupStrInTable(SpellingOffset), OptClass,
-                      TableIndex, MaybeEnumVal->Name);
+    denormalizeString(Consumer, Spelling, OptClass, TableIndex,
+                      MaybeEnumVal->Name);
   } else {
     llvm_unreachable("The simple enum value was not correctly defined in "
                      "the tablegen option description");
@@ -454,11 +433,11 @@ static void denormalizeSimpleEnumImpl(ArgumentConsumer Consumer,
 
 template <typename T>
 static void denormalizeSimpleEnum(ArgumentConsumer Consumer,
-                                  unsigned SpellingOffset,
+                                  const Twine &Spelling,
                                   Option::OptionClass OptClass,
                                   unsigned TableIndex, T Value) {
-  return denormalizeSimpleEnumImpl(Consumer, SpellingOffset, OptClass,
-                                   TableIndex, static_cast<unsigned>(Value));
+  return denormalizeSimpleEnumImpl(Consumer, Spelling, OptClass, TableIndex,
+                                   static_cast<unsigned>(Value));
 }
 
 static std::optional<std::string> normalizeString(OptSpecifier Opt,
@@ -494,7 +473,7 @@ normalizeStringVector(OptSpecifier Opt, int, const ArgList &Args,
 }
 
 static void denormalizeStringVector(ArgumentConsumer Consumer,
-                                    unsigned SpellingOffset,
+                                    const Twine &Spelling,
                                     Option::OptionClass OptClass,
                                     unsigned TableIndex,
                                     const std::vector<std::string> &Values) {
@@ -508,16 +487,15 @@ static void denormalizeStringVector(ArgumentConsumer Consumer,
         CommaJoinedValue.append(Value);
       }
     }
-    denormalizeString(Consumer, SpellingOffset,
-                      Option::OptionClass::JoinedClass, TableIndex,
-                      CommaJoinedValue);
+    denormalizeString(Consumer, Spelling, Option::OptionClass::JoinedClass,
+                      TableIndex, CommaJoinedValue);
     break;
   }
   case Option::JoinedClass:
   case Option::SeparateClass:
   case Option::JoinedOrSeparateClass:
     for (const std::string &Value : Values)
-      denormalizeString(Consumer, SpellingOffset, OptClass, TableIndex, Value);
+      denormalizeString(Consumer, Spelling, OptClass, TableIndex, Value);
     break;
   default:
     llvm_unreachable("Cannot denormalize an option with option class "
@@ -554,11 +532,10 @@ static T extractMaskValue(T KeyPath) {
 }
 
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
-    ARGS, DIAGS, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS,         \
-    ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,        \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX)                                                               \
+    ARGS, DIAGS, PREFIX_TYPE, SPELLING, ID, KIND, GROUP, ALIAS, ALIASARGS,     \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
+    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
+    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
   if ((VISIBILITY) & options::CC1Option) {                                     \
     KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
@@ -572,8 +549,8 @@ static T extractMaskValue(T KeyPath) {
 // Capture the extracted value as a lambda argument to avoid potential issues
 // with lifetime extension of the reference.
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
-    CONSUMER, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS, \
-    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
+    CONSUMER, PREFIX_TYPE, SPELLING, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, \
+    VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES,        \
     SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
     IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
   if ((VISIBILITY) & options::CC1Option) {                                     \
@@ -582,8 +559,8 @@ static T extractMaskValue(T KeyPath) {
           (Extracted !=                                                        \
            static_cast<decltype(KEYPATH)>((IMPLIED_CHECK) ? (IMPLIED_VALUE)    \
                                                           : (DEFAULT_VALUE)))) \
-        DENORMALIZER(CONSUMER, SPELLING_OFFSET, Option::KIND##Class,           \
-                     TABLE_INDEX, Extracted);                                  \
+        DENORMALIZER(CONSUMER, SPELLING, Option::KIND##Class, TABLE_INDEX,     \
+                     Extracted);                                               \
     }(EXTRACTOR(KEYPATH));                                                     \
   }
 
@@ -1534,7 +1511,6 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
   Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
   Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
   Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
-  Opts.AArch64JumpTableHardening = LangOpts.AArch64JumpTableHardening;
 }
 
 static void parsePointerAuthOptions(PointerAuthOptions &Opts,
@@ -1542,8 +1518,7 @@ static void parsePointerAuthOptions(PointerAuthOptions &Opts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
   if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthReturns &&
-      !LangOpts.PointerAuthAuthTraps && !LangOpts.PointerAuthIndirectGotos &&
-      !LangOpts.AArch64JumpTableHardening)
+      !LangOpts.PointerAuthAuthTraps && !LangOpts.PointerAuthIndirectGotos)
     return;
 
   CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple);
@@ -1791,10 +1766,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.SanitizeTrap))
     GenerateArg(Consumer, OPT_fsanitize_trap_EQ, Sanitizer);
-
-  for (StringRef Sanitizer :
-       serializeSanitizerKinds(Opts.SanitizeMergeHandlers))
-    GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2273,9 +2244,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   parseSanitizerKinds("-fsanitize-trap=",
                       Args.getAllArgValues(OPT_fsanitize_trap_EQ), Diags,
                       Opts.SanitizeTrap);
-  parseSanitizerKinds("-fsanitize-merge=",
-                      Args.getAllArgValues(OPT_fsanitize_merge_handlers_EQ),
-                      Diags, Opts.SanitizeMergeHandlers);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
@@ -3484,10 +3452,6 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_init_fini);
   if (Opts.PointerAuthInitFiniAddressDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_init_fini_address_discrimination);
-  if (Opts.PointerAuthELFGOT)
-    GenerateArg(Consumer, OPT_fptrauth_elf_got);
-  if (Opts.AArch64JumpTableHardening)
-    GenerateArg(Consumer, OPT_faarch64_jump_table_hardening);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3508,9 +3472,6 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
   Opts.PointerAuthInitFiniAddressDiscrimination =
       Args.hasArg(OPT_fptrauth_init_fini_address_discrimination);
-  Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
-  Opts.AArch64JumpTableHardening =
-      Args.hasArg(OPT_faarch64_jump_table_hardening);
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -4264,7 +4225,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       if (TT.getArch() == llvm::Triple::UnknownArch ||
           !(TT.getArch() == llvm::Triple::aarch64 || TT.isPPC() ||
             TT.getArch() == llvm::Triple::systemz ||
-            TT.getArch() == llvm::Triple::loongarch64 ||
             TT.getArch() == llvm::Triple::nvptx ||
             TT.getArch() == llvm::Triple::nvptx64 ||
             TT.getArch() == llvm::Triple::amdgcn ||

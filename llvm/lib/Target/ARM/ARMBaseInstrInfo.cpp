@@ -1330,7 +1330,6 @@ Register ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case ARM::tSTRspi:
   case ARM::VSTRD:
   case ARM::VSTRS:
-  case ARM::VSTRH:
   case ARM::VSTR_P0_off:
   case ARM::VSTR_FPSCR_NZCVQC_off:
   case ARM::MVE_VSTRWU32:
@@ -1589,7 +1588,6 @@ Register ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case ARM::tLDRspi:
   case ARM::VLDRD:
   case ARM::VLDRS:
-  case ARM::VLDRH:
   case ARM::VLDR_P0_off:
   case ARM::VLDR_FPSCR_NZCVQC_off:
   case ARM::MVE_VLDRWU32:
@@ -6938,6 +6936,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   RegClassInfo.runOnMachineFunction(*MF);
   RPTracker.init(MF, &RegClassInfo, nullptr, EndLoop->getParent(),
                  EndLoop->getParent()->end(), false, false);
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
 
   bumpCrossIterationPressure(RPTracker, CrossIterationNeeds);
 
@@ -6979,16 +6978,10 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   }
 
   auto &P = RPTracker.getPressure().MaxSetPressure;
-  for (unsigned I = 0, E = P.size(); I < E; ++I) {
-    // Exclude some Neon register classes.
-    if (I == ARM::DQuad_with_ssub_0 || I == ARM::DTripleSpc_with_ssub_0 ||
-        I == ARM::DTriple_with_qsub_0_in_QPR)
-      continue;
-
-    if (P[I] > RegClassInfo.getRegPressureSetLimit(I)) {
+  for (unsigned I = 0, E = P.size(); I < E; ++I)
+    if (P[I] > TRI->getRegPressureSetLimit(*MF, I)) {
       return true;
     }
-  }
   return false;
 }
 

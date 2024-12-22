@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -disable-hsdr < %s | FileCheck %s
+; RUN: llc -march=hexagon -disable-hsdr < %s | FileCheck %s
 
 declare void @bar(i64)
 

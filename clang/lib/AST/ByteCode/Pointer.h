@@ -107,7 +107,6 @@ public:
       : Offset(Offset), StorageKind(Storage::Fn) {
     PointeeStorage.Fn = FunctionPointer(F);
   }
-  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
 
   void operator=(const Pointer &P);
@@ -706,6 +705,8 @@ private:
   friend class InterpState;
   friend struct InitMap;
   friend class DynamicAllocator;
+
+  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {

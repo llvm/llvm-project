@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Check that this compiles successfully. Used to crash with "cannot select
 ; v8i8 = vsplat ..."

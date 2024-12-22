@@ -120,8 +120,7 @@ public:
               toTargetAddressSpace(A) == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
             isTargetAddressSpace(B) &&
             toTargetAddressSpace(B) >= llvm::AMDGPUAS::FLAT_ADDRESS &&
-            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS &&
-            toTargetAddressSpace(B) != llvm::AMDGPUAS::REGION_ADDRESS);
+            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS);
   }
 
   uint64_t getMaxPointerWidth() const override {

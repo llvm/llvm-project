@@ -4885,7 +4885,8 @@ entry:
 define i32 @extract_hi_hi(<8 x i16> %a) {
 ; CHECK-SD-LABEL: extract_hi_hi:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-SD-NEXT:    uaddlv s0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret

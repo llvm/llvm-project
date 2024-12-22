@@ -263,17 +263,17 @@ void testVariable() {
 
 struct TestCtorInitializer {
   ClassWithDestructor c;
-  TestCtorInitializer(AddressVector<ClassWithDestructor> &refParam)
-    : c(ClassWithDestructor(refParam)) {}
+  TestCtorInitializer(AddressVector<ClassWithDestructor> &v)
+    : c(ClassWithDestructor(v)) {}
+  // no-elide-warning@-1 {{Address of stack memory associated with temporary \
+object of type 'ClassWithDestructor' is still referred \
+to by the caller variable 'v' upon returning to the caller}}
 };
 
 void testCtorInitializer() {
   AddressVector<ClassWithDestructor> v;
   {
     TestCtorInitializer t(v);
-    // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'ClassWithDestructor' is still referred \
-to by the caller variable 'v' upon returning to the caller}}
     // Check if the last destructor is an automatic destructor.
     // A temporary destructor would have fired by now.
 #if ELIDE

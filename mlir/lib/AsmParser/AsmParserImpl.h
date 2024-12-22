@@ -287,13 +287,34 @@ public:
                          APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
-    std::optional<APFloat> apResult;
-    if (failed(parser.parseFloatFromLiteral(apResult, curTok, isNegative,
-                                            semantics)))
-      return failure();
-    parser.consumeToken();
-    result = *apResult;
-    return success();
+    SMLoc loc = curTok.getLoc();
+
+    // Check for a floating point value.
+    if (curTok.is(Token::floatliteral)) {
+      auto val = curTok.getFloatingPointValue();
+      if (!val)
+        return emitError(loc, "floating point value too large");
+      parser.consumeToken(Token::floatliteral);
+      result = APFloat(isNegative ? -*val : *val);
+      bool losesInfo;
+      result.convert(semantics, APFloat::rmNearestTiesToEven, &losesInfo);
+      return success();
+    }
+
+    // Check for a hexadecimal float value.
+    if (curTok.is(Token::integer)) {
+      std::optional<APFloat> apResult;
+      if (failed(parser.parseFloatFromIntegerLiteral(
+              apResult, curTok, isNegative, semantics,
+              APFloat::semanticsSizeInBits(semantics))))
+        return failure();
+
+      result = *apResult;
+      parser.consumeToken(Token::integer);
+      return success();
+    }
+
+    return emitError(loc, "expected floating point literal");
   }
 
   /// Parse a floating point value from the stream.

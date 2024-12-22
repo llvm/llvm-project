@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
 #define MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
 
-#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
+#include "mlir/Dialect/GPU/Transforms/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; REQUIRES: asserts
 
 ; This test used to crash in register scavenger due to incorrectly set

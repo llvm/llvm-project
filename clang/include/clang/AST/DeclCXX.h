@@ -890,13 +890,6 @@ public:
             needsOverloadResolutionForDestructor()) &&
            "destructor should not be deleted");
     data().DefaultedDestructorIsDeleted = true;
-    // C++23 [dcl.constexpr]p3.2:
-    //   if the function is a constructor or destructor, its class does not have
-    //   any virtual base classes.
-    // C++20 [dcl.constexpr]p5:
-    //   The definition of a constexpr destructor whose function-body is
-    //   not = delete shall additionally satisfy...
-    data().DefaultedDestructorIsConstexpr = data().NumVBases == 0;
   }
 
   /// Determine whether this class should get an implicit move
@@ -2388,19 +2381,19 @@ public:
 
   /// Determine whether this initializer is initializing a base class.
   bool isBaseInitializer() const {
-    return isa<TypeSourceInfo *>(Initializee) && !IsDelegating;
+    return Initializee.is<TypeSourceInfo*>() && !IsDelegating;
   }
 
   /// Determine whether this initializer is initializing a non-static
   /// data member.
-  bool isMemberInitializer() const { return isa<FieldDecl *>(Initializee); }
+  bool isMemberInitializer() const { return Initializee.is<FieldDecl*>(); }
 
   bool isAnyMemberInitializer() const {
     return isMemberInitializer() || isIndirectMemberInitializer();
   }
 
   bool isIndirectMemberInitializer() const {
-    return isa<IndirectFieldDecl *>(Initializee);
+    return Initializee.is<IndirectFieldDecl*>();
   }
 
   /// Determine whether this initializer is an implicit initializer
@@ -2416,7 +2409,7 @@ public:
   /// Determine whether this initializer is creating a delegating
   /// constructor.
   bool isDelegatingInitializer() const {
-    return isa<TypeSourceInfo *>(Initializee) && IsDelegating;
+    return Initializee.is<TypeSourceInfo*>() && IsDelegating;
   }
 
   /// Determine whether this initializer is a pack expansion.
@@ -2457,21 +2450,21 @@ public:
   /// non-static data member being initialized. Otherwise, returns null.
   FieldDecl *getMember() const {
     if (isMemberInitializer())
-      return cast<FieldDecl *>(Initializee);
+      return Initializee.get<FieldDecl*>();
     return nullptr;
   }
 
   FieldDecl *getAnyMember() const {
     if (isMemberInitializer())
-      return cast<FieldDecl *>(Initializee);
+      return Initializee.get<FieldDecl*>();
     if (isIndirectMemberInitializer())
-      return cast<IndirectFieldDecl *>(Initializee)->getAnonField();
+      return Initializee.get<IndirectFieldDecl*>()->getAnonField();
     return nullptr;
   }
 
   IndirectFieldDecl *getIndirectMember() const {
     if (isIndirectMemberInitializer())
-      return cast<IndirectFieldDecl *>(Initializee);
+      return Initializee.get<IndirectFieldDecl*>();
     return nullptr;
   }
 

@@ -135,7 +135,7 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
     llvm_unreachable("Unexpected memory type in indexed load");
   }
 
-  SDValue IncV = CurDAG->getSignedTargetConstant(Inc, dl, MVT::i32);
+  SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
   MachineMemOperand *MemOp = LD->getMemOperand();
 
   auto getExt64 = [this,ExtType] (MachineSDNode *N, const SDLoc &dl)
@@ -213,8 +213,7 @@ MachineSDNode *HexagonDAGToDAGISel::LoadInstrForLoadIntrinsic(SDNode *IntN) {
     EVT RTys[] = { ValTy, MVT::i32, MVT::Other };
     // Operands: { Base, Increment, Modifier, Chain }
     auto Inc = cast<ConstantSDNode>(IntN->getOperand(5));
-    SDValue I =
-        CurDAG->getSignedTargetConstant(Inc->getSExtValue(), dl, MVT::i32);
+    SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), dl, MVT::i32);
     MachineSDNode *Res = CurDAG->getMachineNode(FLC->second, dl, RTys,
           { IntN->getOperand(2), I, IntN->getOperand(4),
             IntN->getOperand(0) });
@@ -532,7 +531,7 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
                                            dl, MVT::i32, Value);
   }
 
-  SDValue IncV = CurDAG->getSignedTargetConstant(Inc, dl, MVT::i32);
+  SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
   MachineMemOperand *MemOp = ST->getMemOperand();
 
   //                  Next address   Chain
@@ -890,7 +889,7 @@ void HexagonDAGToDAGISel::SelectV2Q(SDNode *N) {
   MVT OpTy = N->getOperand(0).getValueType().getSimpleVT(); (void)OpTy;
   assert(HST->getVectorLength() * 8 == OpTy.getSizeInBits());
 
-  SDValue C = CurDAG->getSignedTargetConstant(-1, dl, MVT::i32);
+  SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
   SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);
   SDNode *T = CurDAG->getMachineNode(Hexagon::V6_vandvrt, dl, ResTy,
                                      N->getOperand(0), SDValue(R,0));
@@ -903,7 +902,7 @@ void HexagonDAGToDAGISel::SelectQ2V(SDNode *N) {
   // The result of V2Q should be a single vector.
   assert(HST->getVectorLength() * 8 == ResTy.getSizeInBits());
 
-  SDValue C = CurDAG->getSignedTargetConstant(-1, dl, MVT::i32);
+  SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
   SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);
   SDNode *T = CurDAG->getMachineNode(Hexagon::V6_vandqrt, dl, ResTy,
                                      N->getOperand(0), SDValue(R,0));
@@ -1097,7 +1096,7 @@ static bool isMemOPCandidate(SDNode *I, SDNode *U) {
   SDValue S1 = U->getOperand(1);
   SDValue SY = (S0.getNode() == I) ? S1 : S0;
 
-  SDNode *UUse = *U->user_begin();
+  SDNode *UUse = *U->use_begin();
   if (UUse->getNumValues() != 1)
     return false;
 
@@ -1302,8 +1301,8 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
     EVT OpVT = OpI1.getValueType();
     if (!OpVT.isSimple() || OpVT.getSimpleVT() != MVT::i1)
       continue;
-    for (SDUse &Use : N->uses()) {
-      SDNode *U = Use.getUser();
+    for (auto I = N->use_begin(), E = N->use_end(); I != E; ++I) {
+      SDNode *U = *I;
       if (U->getNumValues() != 1)
         continue;
       EVT UVT = U->getValueType(0);
@@ -1316,7 +1315,7 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
         continue;
 
       // Potentially simplifiable operation.
-      unsigned I1N = Use.getOperandNo();
+      unsigned I1N = I.getOperandNo();
       SmallVector<SDValue,2> Ops(U->getNumOperands());
       for (unsigned i = 0, n = U->getNumOperands(); i != n; ++i)
         Ops[i] = U->getOperand(i);
@@ -1492,7 +1491,7 @@ inline bool HexagonDAGToDAGISel::SelectAnyInt(SDValue &N, SDValue &R) {
   EVT T = N.getValueType();
   if (!T.isInteger() || T.getSizeInBits() != 32 || !isa<ConstantSDNode>(N))
     return false;
-  uint32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
+  int32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
   R = CurDAG->getTargetConstant(V, SDLoc(N), N.getValueType());
   return true;
 }
@@ -1503,7 +1502,7 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
   case ISD::Constant: {
     if (N.getValueType() != MVT::i32)
       return false;
-    uint32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
+    int32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
     if (!isAligned(Alignment, V))
       return false;
     R = CurDAG->getTargetConstant(V, SDLoc(N), N.getValueType());
@@ -2431,7 +2430,7 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
       Worklist.push_back(N->getOperand(1).getNode());
 
       // Not a root if it has only one use and same opcode as its parent
-      if (N->hasOneUse() && Opcode == N->user_begin()->getOpcode())
+      if (N->hasOneUse() && Opcode == N->use_begin()->getOpcode())
         continue;
 
       // This root node has already been processed

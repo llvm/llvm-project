@@ -47,7 +47,6 @@
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
@@ -1153,21 +1152,6 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
               expr_result.GetError().GetCString());
 
   return expr_result;
-}
-
-SBStructuredData SBFrame::GetLanguageSpecificData() const {
-  LLDB_INSTRUMENT_VA(this);
-
-  SBStructuredData sb_data;
-  std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  if (!frame)
-    return sb_data;
-
-  StructuredData::ObjectSP data(frame->GetLanguageSpecificData());
-  sb_data.m_impl_up->SetObjectSP(data);
-  return sb_data;
 }
 
 bool SBFrame::IsInlined() {

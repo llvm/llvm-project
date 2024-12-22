@@ -10,7 +10,6 @@
 #include "../terminator.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/descriptor.h"
 
 #include "cuda_runtime.h"
 
@@ -18,12 +17,12 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-Descriptor *RTDEF(CUFAllocDescriptor)(
+Descriptor *RTDEF(CUFAllocDesciptor)(
     std::size_t sizeInBytes, const char *sourceFile, int sourceLine) {
   return reinterpret_cast<Descriptor *>(CUFAllocManaged(sizeInBytes));
 }
 
-void RTDEF(CUFFreeDescriptor)(
+void RTDEF(CUFFreeDesciptor)(
     Descriptor *desc, const char *sourceFile, int sourceLine) {
   CUFFreeManaged(reinterpret_cast<void *>(desc));
 }

@@ -1092,13 +1092,6 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
             $Field_dependentName[[waldo]];
           }
         };
-    )cpp",
-      // Pointer-to-member with nested-name-specifiers
-      R"cpp(
-      struct $Class_def[[Outer]] {
-        struct $Class_def[[Inner]] {};
-      };
-      using $Typedef_decl[[Alias]] = void ($Class[[Outer]]::$Class[[Inner]]:: *)();
     )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.

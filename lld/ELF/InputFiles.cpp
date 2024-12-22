@@ -133,7 +133,8 @@ static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
     // Object compatible with all conventions.
     return;
   default:
-    ErrAlways(ctx) << f << ": unknown Tag_ABI_VFP_args value: " << vfpArgs;
+    ErrAlways(ctx) << f
+                   << ": unknown Tag_ABI_VFP_args value: " << Twine(vfpArgs);
     return;
   }
   // Follow ld.bfd and error if there is a mix of calling conventions.
@@ -283,7 +284,7 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
   StringRef target =
       !ctx.arg.bfdname.empty() ? ctx.arg.bfdname : ctx.arg.emulation;
   if (!target.empty()) {
-    Err(ctx) << file << " is incompatible with " << target;
+    ErrAlways(ctx) << file << " is incompatible with " << target;
     return false;
   }
 
@@ -294,10 +295,10 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
     existing = ctx.sharedFiles[0];
   else if (!ctx.bitcodeFiles.empty())
     existing = ctx.bitcodeFiles[0];
-  auto diag = Err(ctx);
-  diag << file << " is incompatible";
+  std::string with;
   if (existing)
-    diag << " with " << existing;
+    with = " with " + toStr(ctx, existing);
+  ErrAlways(ctx) << file << " is incompatible" << with;
   return false;
 }
 
@@ -367,6 +368,49 @@ void elf::parseFiles(Ctx &ctx,
 }
 
 // Concatenates arguments to construct a string representing an error location.
+static std::string createFileLineMsg(StringRef path, unsigned line) {
+  std::string filename = std::string(path::filename(path));
+  std::string lineno = ":" + std::to_string(line);
+  if (filename == path)
+    return filename + lineno;
+  return filename + lineno + " (" + path.str() + lineno + ")";
+}
+
+template <class ELFT>
+static std::string getSrcMsgAux(ObjFile<ELFT> &file, const Symbol &sym,
+                                const InputSectionBase &sec, uint64_t offset) {
+  // In DWARF, functions and variables are stored to different places.
+  // First, look up a function for a given offset.
+  if (std::optional<DILineInfo> info = file.getDILineInfo(&sec, offset))
+    return createFileLineMsg(info->FileName, info->Line);
+
+  // If it failed, look up again as a variable.
+  if (std::optional<std::pair<std::string, unsigned>> fileLine =
+          file.getVariableLoc(sym.getName()))
+    return createFileLineMsg(fileLine->first, fileLine->second);
+
+  // File.sourceFile contains STT_FILE symbol, and that is a last resort.
+  return std::string(file.sourceFile);
+}
+
+std::string InputFile::getSrcMsg(const Symbol &sym, const InputSectionBase &sec,
+                                 uint64_t offset) {
+  if (kind() != ObjKind)
+    return "";
+  switch (ekind) {
+  default:
+    llvm_unreachable("Invalid kind");
+  case ELF32LEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF32LE>>(*this), sym, sec, offset);
+  case ELF32BEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF32BE>>(*this), sym, sec, offset);
+  case ELF64LEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF64LE>>(*this), sym, sec, offset);
+  case ELF64BEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF64BE>>(*this), sym, sec, offset);
+  }
+}
+
 StringRef InputFile::getNameForScript() const {
   if (archiveName.empty())
     return getName();
@@ -437,40 +481,49 @@ static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
     prev->nextInSectionGroup = head;
 }
 
-template <class ELFT> void ObjFile<ELFT>::initDwarf() {
-  dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
-      std::make_unique<LLDDwarfObj<ELFT>>(this), "",
-      [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
-      [&](Error warning) {
-        Warn(ctx) << getName() << ": " << std::move(warning);
-      }));
+template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
+  llvm::call_once(initDwarf, [this]() {
+    dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
+        std::make_unique<LLDDwarfObj<ELFT>>(this), "",
+        [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
+        [&](Error warning) {
+          Warn(ctx) << getName() << ": " << std::move(warning);
+        }));
+  });
+
+  return dwarf.get();
 }
 
-DWARFCache *ELFFileBase::getDwarf() {
-  assert(fileKind == ObjKind);
-  llvm::call_once(initDwarf, [this]() {
-    switch (ekind) {
-    default:
-      llvm_unreachable("");
-    case ELF32LEKind:
-      return cast<ObjFile<ELF32LE>>(this)->initDwarf();
-    case ELF32BEKind:
-      return cast<ObjFile<ELF32BE>>(this)->initDwarf();
-    case ELF64LEKind:
-      return cast<ObjFile<ELF64LE>>(this)->initDwarf();
-    case ELF64BEKind:
-      return cast<ObjFile<ELF64BE>>(this)->initDwarf();
+// Returns the pair of file name and line number describing location of data
+// object (variable, array, etc) definition.
+template <class ELFT>
+std::optional<std::pair<std::string, unsigned>>
+ObjFile<ELFT>::getVariableLoc(StringRef name) {
+  return getDwarf()->getVariableLoc(name);
+}
+
+// Returns source line information for a given offset
+// using DWARF debug info.
+template <class ELFT>
+std::optional<DILineInfo>
+ObjFile<ELFT>::getDILineInfo(const InputSectionBase *s, uint64_t offset) {
+  // Detect SectionIndex for specified section.
+  uint64_t sectionIndex = object::SectionedAddress::UndefSection;
+  ArrayRef<InputSectionBase *> sections = s->file->getSections();
+  for (uint64_t curIndex = 0; curIndex < sections.size(); ++curIndex) {
+    if (s == sections[curIndex]) {
+      sectionIndex = curIndex;
+      break;
     }
-  });
-  return dwarf.get();
+  }
+
+  return getDwarf()->getDILineInfo(offset, sectionIndex);
 }
 
 ELFFileBase::ELFFileBase(Ctx &ctx, Kind k, ELFKind ekind, MemoryBufferRef mb)
     : InputFile(ctx, k, mb) {
   this->ekind = ekind;
 }
-
-ELFFileBase::~ELFFileBase() {}
 
 template <typename Elf_Shdr>
 static const Elf_Shdr *findSection(ArrayRef<Elf_Shdr> sections, uint32_t type) {
@@ -528,7 +581,7 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
     Fatal(ctx) << this << ": invalid sh_info in symbol table";
 
   elfSyms = reinterpret_cast<const void *>(eSyms.data());
-  numSymbols = eSyms.size();
+  numELFSyms = uint32_t(eSyms.size());
   stringTable = CHECK2(obj.getStringTableForSymtab(*symtabSec, sections), this);
 }
 
@@ -556,45 +609,12 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   sections.resize(size);
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
-    if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
-      continue;
-    if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
-      StringRef signature = getShtGroupSignature(objSections, sec);
-      ArrayRef<Elf_Word> entries =
-          CHECK2(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
-      if (entries.empty())
-        Fatal(ctx) << this << ": empty SHT_GROUP";
-
-      Elf_Word flag = entries[0];
-      if (flag && flag != GRP_COMDAT)
-        Fatal(ctx) << this << ": unsupported SHT_GROUP format";
-
-      bool keepGroup = !flag || ignoreComdats ||
-                       ctx.symtab->comdatGroups
-                           .try_emplace(CachedHashStringRef(signature), this)
-                           .second;
-      if (keepGroup) {
-        if (!ctx.arg.resolveGroups)
-          sections[i] = createInputSection(
-              i, sec, check(obj.getSectionName(sec, shstrtab)));
-      } else {
-        // Otherwise, discard group members.
-        for (uint32_t secIndex : entries.slice(1)) {
-          if (secIndex >= size)
-            Fatal(ctx) << this
-                       << ": invalid section index in group: " << secIndex;
-          sections[secIndex] = &InputSection::discarded;
-        }
-      }
-      continue;
-    }
-
     if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !ctx.arg.relocatable) {
       StringRef name = check(obj.getSectionName(sec, shstrtab));
       ArrayRef<char> data = CHECK2(
           this->getObj().template getSectionContentsAsArray<char>(sec), this);
       if (!data.empty() && data.back() != '\0') {
-        Err(ctx)
+        ErrAlways(ctx)
             << this
             << ": corrupted dependent libraries section (unterminated string): "
             << name;
@@ -605,48 +625,75 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           d += s.size() + 1;
         }
       }
-      sections[i] = &InputSection::discarded;
+      this->sections[i] = &InputSection::discarded;
       continue;
     }
 
-    switch (ctx.arg.emachine) {
-    case EM_ARM:
-      if (sec.sh_type == SHT_ARM_ATTRIBUTES) {
-        ARMAttributeParser attributes;
-        ArrayRef<uint8_t> contents =
-            check(this->getObj().getSectionContents(sec));
-        StringRef name = check(obj.getSectionName(sec, shstrtab));
-        sections[i] = &InputSection::discarded;
-        if (Error e = attributes.parse(contents, ekind == ELF32LEKind
-                                                     ? llvm::endianness::little
-                                                     : llvm::endianness::big)) {
-          InputSection isec(*this, sec, name);
-          Warn(ctx) << &isec << ": " << std::move(e);
-        } else {
-          updateSupportedARMFeatures(ctx, attributes);
-          updateARMVFPArgs(ctx, attributes, this);
+    if (sec.sh_type == SHT_ARM_ATTRIBUTES && ctx.arg.emachine == EM_ARM) {
+      ARMAttributeParser attributes;
+      ArrayRef<uint8_t> contents =
+          check(this->getObj().getSectionContents(sec));
+      StringRef name = check(obj.getSectionName(sec, shstrtab));
+      this->sections[i] = &InputSection::discarded;
+      if (Error e = attributes.parse(contents, ekind == ELF32LEKind
+                                                   ? llvm::endianness::little
+                                                   : llvm::endianness::big)) {
+        InputSection isec(*this, sec, name);
+        Warn(ctx) << &isec << ": " << std::move(e);
+      } else {
+        updateSupportedARMFeatures(ctx, attributes);
+        updateARMVFPArgs(ctx, attributes, this);
 
-          // FIXME: Retain the first attribute section we see. The eglibc ARM
-          // dynamic loaders require the presence of an attribute section for
-          // dlopen to work. In a full implementation we would merge all
-          // attribute sections.
-          if (ctx.in.attributes == nullptr) {
-            ctx.in.attributes =
-                std::make_unique<InputSection>(*this, sec, name);
-            sections[i] = ctx.in.attributes.get();
-          }
+        // FIXME: Retain the first attribute section we see. The eglibc ARM
+        // dynamic loaders require the presence of an attribute section for
+        // dlopen to work. In a full implementation we would merge all attribute
+        // sections.
+        if (ctx.in.attributes == nullptr) {
+          ctx.in.attributes = std::make_unique<InputSection>(*this, sec, name);
+          this->sections[i] = ctx.in.attributes.get();
         }
       }
-      break;
-    case EM_AARCH64:
-      // Producing a static binary with MTE globals is not currently supported,
-      // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
-      // medatada, and we don't want them to end up in the output file for
-      // static executables.
-      if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
-          !canHaveMemtagGlobals(ctx))
-        sections[i] = &InputSection::discarded;
-      break;
+    }
+
+    // Producing a static binary with MTE globals is not currently supported,
+    // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
+    // medatada, and we don't want them to end up in the output file for static
+    // executables.
+    if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
+        !canHaveMemtagGlobals(ctx)) {
+      this->sections[i] = &InputSection::discarded;
+      continue;
+    }
+
+    if (sec.sh_type != SHT_GROUP)
+      continue;
+    StringRef signature = getShtGroupSignature(objSections, sec);
+    ArrayRef<Elf_Word> entries =
+        CHECK2(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
+    if (entries.empty())
+      Fatal(ctx) << this << ": empty SHT_GROUP";
+
+    Elf_Word flag = entries[0];
+    if (flag && flag != GRP_COMDAT)
+      Fatal(ctx) << this << ": unsupported SHT_GROUP format";
+
+    bool keepGroup = (flag & GRP_COMDAT) == 0 || ignoreComdats ||
+                     ctx.symtab->comdatGroups
+                         .try_emplace(CachedHashStringRef(signature), this)
+                         .second;
+    if (keepGroup) {
+      if (!ctx.arg.resolveGroups)
+        this->sections[i] = createInputSection(
+            i, sec, check(obj.getSectionName(sec, shstrtab)));
+      continue;
+    }
+
+    // Otherwise, discard group members.
+    for (uint32_t secIndex : entries.slice(1)) {
+      if (secIndex >= size)
+        Fatal(ctx) << this
+                   << ": invalid section index in group: " << Twine(secIndex);
+      this->sections[secIndex] = &InputSection::discarded;
     }
   }
 
@@ -701,8 +748,8 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
     return false;
   if (sec.sh_size % entSize)
     Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
-               << uint64_t(sec.sh_size)
-               << ") must be a multiple of sh_entsize (" << entSize << ")";
+               << Twine(sec.sh_size) << ") must be a multiple of sh_entsize ("
+               << Twine(entSize) << ")";
 
   if (sec.sh_flags & SHF_WRITE)
     Fatal(ctx) << this << ":(" << name
@@ -763,7 +810,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           Warn(ctx) << this
                     << ": --icf=safe conservatively ignores "
                        "SHT_LLVM_ADDRSIG [index "
-                    << i
+                    << Twine(i)
                     << "] with sh_link=0 "
                        "(likely created using objcopy or ld -r)";
       }
@@ -856,9 +903,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // simply handle such sections as non-mergeable ones. Degrading like this
       // is acceptable because section merging is optional.
       if (auto *ms = dyn_cast<MergeInputSection>(s)) {
-        s = makeThreadLocal<InputSection>(ms->file, ms->name, ms->type,
-                                          ms->flags, ms->addralign, ms->entsize,
-                                          ms->contentMaybeDecompress());
+        s = makeThreadLocal<InputSection>(
+            ms->file, ms->flags, ms->type, ms->addralign,
+            ms->contentMaybeDecompress(), ms->name);
         sections[info] = s;
       }
 
@@ -892,8 +939,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
     if (!linkSec)
-      Fatal(ctx) << this
-                 << ": invalid sh_link index: " << uint32_t(sec.sh_link);
+      Fatal(ctx) << this << ": invalid sh_link index: " << Twine(sec.sh_link);
 
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
@@ -1089,8 +1135,10 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
 template <class ELFT>
 void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
-  if (!symbols)
+  if (numSymbols == 0) {
+    numSymbols = eSyms.size();
     symbols = std::make_unique<Symbol *[]>(numSymbols);
+  }
 
   // Some entries have been filled by LazyObjFile.
   auto *symtab = ctx.symtab.get();
@@ -1119,7 +1167,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
         Fatal(ctx) << this << ": common symbol '" << sym->getName()
-                   << "' has invalid alignment: " << value;
+                   << "' has invalid alignment: " << Twine(value);
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
                                      type, value, size});
@@ -1166,7 +1214,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
       ErrAlways(ctx) << this << ": non-local symbol (" << i
                      << ") found at index < .symtab's sh_info (" << end << ")";
@@ -1217,19 +1265,16 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
 
     // Handle non-COMMON defined symbol below. !sym.file allows a symbol
     // assignment to redefine a symbol without an error.
-    if (!sym.isDefined() || secIdx == SHN_UNDEF)
+    if (!sym.file || !sym.isDefined() || secIdx == SHN_UNDEF ||
+        secIdx == SHN_COMMON)
       continue;
-    if (LLVM_UNLIKELY(secIdx >= SHN_LORESERVE)) {
-      if (secIdx == SHN_COMMON)
-        continue;
-      if (secIdx == SHN_XINDEX)
-        secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
-      else
-        secIdx = 0;
-    }
 
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
     InputSectionBase *sec = sections[secIdx];
     if (sec == &InputSection::discarded) {
       if (sym.traced) {
@@ -1429,7 +1474,6 @@ template <class ELFT> void SharedFile::parse() {
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
   const Elf_Shdr *verneedSec = nullptr;
-  symbols = std::make_unique<Symbol *[]>(numSymbols);
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &sec : sections) {
@@ -1452,7 +1496,7 @@ template <class ELFT> void SharedFile::parse() {
     }
   }
 
-  if (versymSec && numSymbols == 0) {
+  if (versymSec && numELFSyms == 0) {
     ErrAlways(ctx) << "SHT_GNU_versym should be associated with symbol table";
     return;
   }
@@ -1495,7 +1539,7 @@ template <class ELFT> void SharedFile::parse() {
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
   // VER_NDX_GLOBAL.
-  size_t size = numSymbols - firstGlobal;
+  size_t size = numELFSyms - firstGlobal;
   std::vector<uint16_t> versyms(size, VER_NDX_GLOBAL);
   if (versymSec) {
     ArrayRef<Elf_Versym> versym =
@@ -1533,8 +1577,8 @@ template <class ELFT> void SharedFile::parse() {
       // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
       if (ver != VER_NDX_LOCAL && ver != VER_NDX_GLOBAL) {
         if (idx >= verneeds.size()) {
-          ErrAlways(ctx) << "corrupt input file: version need index " << idx
-                         << " for symbol " << name
+          ErrAlways(ctx) << "corrupt input file: version need index "
+                         << Twine(idx) << " for symbol " << name
                          << " is out of bounds\n>>> defined in " << this;
           continue;
         }
@@ -1558,8 +1602,8 @@ template <class ELFT> void SharedFile::parse() {
       // VER_NDX_LOCAL. Workaround this bug.
       if (ctx.arg.emachine == EM_MIPS && name == "_gp_disp")
         continue;
-      ErrAlways(ctx) << "corrupt input file: version definition index " << idx
-                     << " for symbol " << name
+      ErrAlways(ctx) << "corrupt input file: version definition index "
+                     << Twine(idx) << " for symbol " << name
                      << " is out of bounds\n>>> defined in " << this;
       continue;
     }
@@ -1709,6 +1753,7 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 }
 
 static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
+                                const std::vector<bool> &keptComdats,
                                 const lto::InputFile::Symbol &objSym,
                                 BitcodeFile &f) {
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
@@ -1725,7 +1770,8 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
     sym = ctx.symtab->insert(objSym.getName());
   }
 
-  if (objSym.isUndefined()) {
+  int c = objSym.getComdatIndex();
+  if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
     Undefined newSym(&f, StringRef(), binding, visibility, type);
     sym->resolve(ctx, newSym);
     sym->referenced = true;
@@ -1739,11 +1785,8 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   } else {
     Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
                    nullptr);
-    // The definition can be omitted if all bitcode definitions satisfy
-    // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
-    // The latter condition is tested in Symbol::includeInDynsym.
-    sym->ltoCanOmit = objSym.canBeOmittedFromSymbolTable() &&
-                      (!sym->isDefined() || sym->ltoCanOmit);
+    if (objSym.canBeOmittedFromSymbolTable())
+      newSym.exportDynamic = false;
     sym->resolve(ctx, newSym);
   }
 }
@@ -1764,10 +1807,10 @@ void BitcodeFile::parse() {
   // ObjFile<ELFT>::initializeSymbols.
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
 
   for (auto l : obj->getDependentLibraries())
     addDependentLibrary(ctx, l, this);
@@ -1806,9 +1849,8 @@ void BitcodeFile::postParse() {
 
 void BinaryFile::parse() {
   ArrayRef<uint8_t> data = arrayRefFromStringRef(mb.getBuffer());
-  auto *section =
-      make<InputSection>(this, ".data", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
-                         /*addralign=*/8, /*entsize=*/0, data);
+  auto *section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                                     8, data, ".data");
   sections.push_back(section);
 
   // For each input file foo that is embedded to a result as a binary

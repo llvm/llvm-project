@@ -209,7 +209,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   std::error_code ec;
   raw_fd_ostream os(ctx.config.mapFile, ec, sys::fs::OF_None);
   if (ec)
-    Fatal(ctx) << "cannot open " << ctx.config.mapFile << ": " << ec.message();
+    fatal("cannot open " + ctx.config.mapFile + ": " + ec.message());
 
   ScopedTimer t1(ctx.totalMapTimer);
 

@@ -13,8 +13,6 @@
 #ifndef PROPERTIES
 #define PROPERTIES
 
-include "mlir/IR/Constraints.td"
-
 // Base class for defining properties.
 class Property<string storageTypeParam = "", string desc = ""> {
   // User-readable one line summary used in error reporting messages. If empty,
@@ -64,13 +62,6 @@ class Property<string storageTypeParam = "", string desc = ""> {
   code convertFromAttribute = [{
     return convertFromAttribute($_storage, $_attr, $_diag);
   }];
-
-  // The verification predicate for this property. Defaults to the true predicate,
-  // since properties are always their expected type.
-  // Within the predicate, `$_self` is an instance of the **interface**
-  // type of the property. Setting this field to ? will also result in a
-  // true predicate but is not recommended, as it breaks composability.
-  Pred predicate = TruePred;
 
   // The call expression to hash the property.
   //
@@ -159,8 +150,8 @@ class Property<string storageTypeParam = "", string desc = ""> {
       return ::mlir::failure();
   }];
 
-  // Base definition for the property. Used to look through `OptionalProperty`
-  // for some format generation, as with the `baseAttr` field on attributes.
+  // Base definition for the property. (Will be) used for `OptionalProperty` and
+  // such cases, analogously to `baseAttr`.
   Property baseProperty = ?;
 
   // Default value for the property within its storage. This should be an expression
@@ -233,7 +224,8 @@ def I64Property : IntProperty<"int64_t">;
 
 class EnumProperty<string storageTypeParam, string desc = "", string default = ""> :
     Property<storageTypeParam, desc> {
-  // TODO:  implement predicate for enum validity.
+  // TODO: take advantage of EnumAttrInfo and the like to make this share nice
+  // parsing code with EnumAttr.
   let writeToMlirBytecode = [{
     $_writer.writeVarInt(static_cast<uint64_t>($_storage));
   }];
@@ -339,59 +331,6 @@ def UnitProperty : Property<"bool", "unit property"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Property field overwrites
-
-/// Class for giving a property a default value.
-/// This doesn't change anything about the property other than giving it a default
-/// which can be used by ODS to elide printing.
-class DefaultValuedProperty<Property p, string default = "", string storageDefault = ""> : Property<p.storageType, p.summary> {
-  let defaultValue = default;
-  let storageTypeValueOverride = storageDefault;
-  let baseProperty = p;
-  // Keep up to date with `Property` above.
-  let summary = p.summary;
-  let description = p.description;
-  let storageType = p.storageType;
-  let interfaceType = p.interfaceType;
-  let convertFromStorage = p.convertFromStorage;
-  let assignToStorage = p.assignToStorage;
-  let convertToAttribute = p.convertToAttribute;
-  let convertFromAttribute = p.convertFromAttribute;
-  let predicate = p.predicate;
-  let hashProperty = p.hashProperty;
-  let parser = p.parser;
-  let optionalParser = p.optionalParser;
-  let printer = p.printer;
-  let readFromMlirBytecode = p.readFromMlirBytecode;
-  let writeToMlirBytecode = p.writeToMlirBytecode;
-}
-
-/// Apply the predicate `pred` to the property `p`, ANDing it with any
-/// predicates it may already have. If `newSummary` is provided, replace the
-/// summary of `p` with `newSummary`.
-class ConfinedProperty<Property p, Pred pred, string newSummary = "">
-    : Property<p.storageType, !if(!empty(newSummary), p.summary, newSummary)> {
-  let predicate = !if(!ne(p.predicate, TruePred), And<[p.predicate, pred]>, pred);
-  let baseProperty = p;
-  // Keep up to date with `Property` above.
-  let description = p.description;
-  let storageType = p.storageType;
-  let interfaceType = p.interfaceType;
-  let convertFromStorage = p.convertFromStorage;
-  let assignToStorage = p.assignToStorage;
-  let convertToAttribute = p.convertToAttribute;
-  let convertFromAttribute = p.convertFromAttribute;
-  let hashProperty = p.hashProperty;
-  let parser = p.parser;
-  let optionalParser = p.optionalParser;
-  let printer = p.printer;
-  let readFromMlirBytecode = p.readFromMlirBytecode;
-  let writeToMlirBytecode = p.writeToMlirBytecode;
-  let defaultValue = p.defaultValue;
-  let storageTypeValueOverride = p.storageTypeValueOverride;
-}
-
-//===----------------------------------------------------------------------===//
 // Primitive property combinators
 
 /// Create a variable named `name` of `prop`'s storage type that is initialized
@@ -403,35 +342,14 @@ class _makePropStorage<Property prop, string name> {
         true : "") # ";";
 }
 
-/// Construct a `Pred`icate `ret` that wraps the predicate of the underlying
-/// property `childProp` with:
-///
-///   [](childProp.storageType& s) {
-///     return [](childProp.interfaceType i) {
-///       return leafSubst(childProp.predicate, "$_self" to "i");
-///     }(childProp.convertFromStorage(s))
-///   }
-///
-/// and then appends `prefix` and `suffix`.
-class _makeStorageWrapperPred<Property wrappedProp> {
-  Pred ret =
-    Concat<
-      "[](" # "const " # wrappedProp.storageType
-        # "& baseStore) -> bool { return []("
-        # wrappedProp.interfaceType # " baseIface) -> bool { return (",
-      SubstLeaves<"$_self", "baseIface", wrappedProp.predicate>,
-      "); }(" # !subst("$_storage", "baseStore", wrappedProp.convertFromStorage)
-        # "); }">;
-}
-
 /// The generic class for arrays of some other property, which is stored as a
 /// `SmallVector` of that property. This uses an `ArrayAttr` as its attribute form
 /// though subclasses can override this, as is the case with IntArrayAttr below.
 /// Those wishing to use a non-default number of SmallVector elements should
 /// subclass `ArrayProperty`.
-class ArrayProperty<Property elem = Property<>, string newSummary = ""> :
-  Property<"::llvm::SmallVector<" # elem.storageType # ">",
-    !if(!empty(newSummary), "array of " # elem.summary, newSummary)> {
+class ArrayProperty<Property elem = Property<>, string desc = ""> :
+  Property<"::llvm::SmallVector<" # elem.storageType # ">", desc> {
+  let summary = "array of " # elem.summary;
   let interfaceType = "::llvm::ArrayRef<" # elem.storageType # ">";
   let convertFromStorage = "::llvm::ArrayRef<" # elem.storageType # ">{$_storage}";
   let assignToStorage = "$_storage.assign($_value.begin(), $_value.end())";
@@ -463,10 +381,6 @@ class ArrayProperty<Property elem = Property<>, string newSummary = ""> :
     }
     return ::mlir::ArrayAttr::get($_ctxt, elems);
   }];
-
-  let predicate = !if(!eq(elem.predicate, TruePred),
-    TruePred,
-    Concat<"::llvm::all_of($_self, ", _makeStorageWrapperPred<elem>.ret, ")">);
 
   defvar theParserBegin = [{
     auto& storage = $_storage;
@@ -549,8 +463,8 @@ class ArrayProperty<Property elem = Property<>, string newSummary = ""> :
     }]);
 }
 
-class IntArrayProperty<Property elem, string newSummary=""> :
-    ArrayProperty<elem, newSummary> {
+class IntArrayProperty<string storageTypeParam = "", string desc = ""> :
+    ArrayProperty<IntProperty<storageTypeParam, desc>> {
   // Bring back the trivial conversions we don't get in the general case.
   let convertFromAttribute = [{
     return convertFromAttribute($_storage, $_attr, $_diag);
@@ -558,6 +472,30 @@ class IntArrayProperty<Property elem, string newSummary=""> :
   let convertToAttribute = [{
     return convertToAttribute($_ctxt, $_storage);
   }];
+}
+
+/// Class for giving a property a default value.
+/// This doesn't change anything about the property other than giving it a default
+/// which can be used by ODS to elide printing.
+class DefaultValuedProperty<Property p, string default = "", string storageDefault = ""> : Property<p.storageType, p.summary> {
+  let defaultValue = default;
+  let storageTypeValueOverride = storageDefault;
+  let baseProperty = p;
+  // Keep up to date with `Property` above.
+  let summary = p.summary;
+  let description = p.description;
+  let storageType = p.storageType;
+  let interfaceType = p.interfaceType;
+  let convertFromStorage = p.convertFromStorage;
+  let assignToStorage = p.assignToStorage;
+  let convertToAttribute = p.convertToAttribute;
+  let convertFromAttribute = p.convertFromAttribute;
+  let hashProperty = p.hashProperty;
+  let parser = p.parser;
+  let optionalParser = p.optionalParser;
+  let printer = p.printer;
+  let readFromMlirBytecode = p.readFromMlirBytecode;
+  let writeToMlirBytecode = p.writeToMlirBytecode;
 }
 
 /// An optional property, stored as an std::optional<p.storageType>
@@ -636,11 +574,6 @@ class OptionalProperty<Property p, bit canDelegateParsing = 1>
     }();
     return ::mlir::ArrayAttr::get($_ctxt, {attr});
   }];
-
-  let predicate = !if(!ne(p.predicate, TruePred),
-    Or<[CPred<"!$_self.has_value()">,
-        SubstLeaves<"$_self", "(*($_self))", p.predicate>]>,
-    TruePred);
 
   defvar delegatedParserBegin = [{
     if (::mlir::succeeded($_parser.parseOptionalKeyword("none"))) {

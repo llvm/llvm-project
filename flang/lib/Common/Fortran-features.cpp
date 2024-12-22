@@ -43,7 +43,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::BadBranchTarget);
   warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
-  warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
   warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
@@ -83,7 +82,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
   warnUsage_.set(UsageWarning::UndefinedFunctionResult);
   warnUsage_.set(UsageWarning::UselessIomsg);
-  warnUsage_.set(UsageWarning::UnsignedLiteralTruncation);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
 }

@@ -30,14 +30,15 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_cmp_lg_u32 s9, 0
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB0_3
 ; MUBUF-NEXT:  ; %bb.2: ; %bb.1
-; MUBUF-NEXT:    s_mov_b32 s6, s32
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
-; MUBUF-NEXT:    v_mov_b32_e32 v2, 1
+; MUBUF-NEXT:    s_add_i32 s6, s32, 0x1000
 ; MUBUF-NEXT:    s_lshl_b32 s7, s10, 2
-; MUBUF-NEXT:    s_add_i32 s32, s6, 0x1000
-; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s6
-; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s6 offset:4
+; MUBUF-NEXT:    s_mov_b32 s32, s6
+; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
+; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
+; MUBUF-NEXT:    v_mov_b32_e32 v3, 1
 ; MUBUF-NEXT:    s_add_i32 s6, s6, s7
+; MUBUF-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
+; MUBUF-NEXT:    buffer_store_dword v3, v2, s[0:3], 0 offen offset:4
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
 ; MUBUF-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
@@ -65,11 +66,11 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s5, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB0_3
 ; FLATSCR-NEXT:  ; %bb.2: ; %bb.1
-; FLATSCR-NEXT:    s_mov_b32 s2, s32
+; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
 ; FLATSCR-NEXT:    s_lshl_b32 s3, s6, 2
-; FLATSCR-NEXT:    s_add_i32 s32, s2, 0x1000
+; FLATSCR-NEXT:    s_mov_b32 s32, s2
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s2
 ; FLATSCR-NEXT:    s_add_i32 s2, s2, s3
 ; FLATSCR-NEXT:    scratch_load_dword v2, off, s2
@@ -130,10 +131,10 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_cmp_lg_u32 s4, 0
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB1_2
 ; MUBUF-NEXT:  ; %bb.1: ; %bb.0
-; MUBUF-NEXT:    s_add_i32 s4, s32, 0xfff
+; MUBUF-NEXT:    s_add_i32 s4, s32, 0x1000
 ; MUBUF-NEXT:    s_and_b32 s4, s4, 0xfffff000
 ; MUBUF-NEXT:    s_lshl_b32 s5, s5, 2
-; MUBUF-NEXT:    s_add_i32 s32, s4, 0x1000
+; MUBUF-NEXT:    s_mov_b32 s32, s4
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, s4
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 1
@@ -164,12 +165,12 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s0, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
-; FLATSCR-NEXT:    s_add_i32 s0, s32, 0xfff
+; FLATSCR-NEXT:    s_add_i32 s0, s32, 0x1000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    s_and_b32 s0, s0, 0xfffff000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
 ; FLATSCR-NEXT:    s_lshl_b32 s1, s1, 2
-; FLATSCR-NEXT:    s_add_i32 s32, s0, 0x1000
+; FLATSCR-NEXT:    s_mov_b32 s32, s0
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
 ; FLATSCR-NEXT:    s_add_i32 s0, s0, s1
 ; FLATSCR-NEXT:    scratch_load_dword v2, off, s0
@@ -229,15 +230,16 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; MUBUF-NEXT:    s_and_b64 exec, exec, vcc
 ; MUBUF-NEXT:    s_cbranch_execz .LBB2_3
 ; MUBUF-NEXT:  ; %bb.2: ; %bb.1
-; MUBUF-NEXT:    s_mov_b32 s6, s32
+; MUBUF-NEXT:    s_add_i32 s6, s32, 0x1000
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0
-; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s6
+; MUBUF-NEXT:    v_mov_b32_e32 v3, s6
+; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 1
-; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s6 offset:4
+; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:4
 ; MUBUF-NEXT:    v_lshl_add_u32 v2, v4, 2, s6
 ; MUBUF-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; MUBUF-NEXT:    v_and_b32_e32 v3, 0x3ff, v31
-; MUBUF-NEXT:    s_add_i32 s32, s6, 0x1000
+; MUBUF-NEXT:    s_mov_b32 s32, s6
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_u32_e32 v2, v2, v3
 ; MUBUF-NEXT:    global_store_dword v[0:1], v2, off
@@ -264,14 +266,14 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; FLATSCR-NEXT:    s_and_b64 exec, exec, vcc
 ; FLATSCR-NEXT:    s_cbranch_execz .LBB2_3
 ; FLATSCR-NEXT:  ; %bb.2: ; %bb.1
-; FLATSCR-NEXT:    s_mov_b32 s2, s32
+; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, 1
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[2:3], s2
 ; FLATSCR-NEXT:    v_lshl_add_u32 v2, v4, 2, s2
 ; FLATSCR-NEXT:    scratch_load_dword v2, v2, off
 ; FLATSCR-NEXT:    v_and_b32_e32 v3, 0x3ff, v31
-; FLATSCR-NEXT:    s_add_i32 s32, s2, 0x1000
+; FLATSCR-NEXT:    s_mov_b32 s32, s2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_u32_e32 v2, v2, v3
 ; FLATSCR-NEXT:    global_store_dword v[0:1], v2, off
@@ -322,7 +324,7 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; MUBUF-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; MUBUF-NEXT:    s_cbranch_execz .LBB3_2
 ; MUBUF-NEXT:  ; %bb.1: ; %bb.0
-; MUBUF-NEXT:    s_add_i32 s6, s32, 0xfff
+; MUBUF-NEXT:    s_add_i32 s6, s32, 0x1000
 ; MUBUF-NEXT:    s_and_b32 s6, s6, 0xfffff000
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, s6
@@ -332,7 +334,7 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; MUBUF-NEXT:    v_lshl_add_u32 v2, v3, 2, s6
 ; MUBUF-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; MUBUF-NEXT:    v_and_b32_e32 v3, 0x3ff, v31
-; MUBUF-NEXT:    s_add_i32 s32, s6, 0x1000
+; MUBUF-NEXT:    s_mov_b32 s32, s6
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_u32_e32 v2, v2, v3
 ; MUBUF-NEXT:    global_store_dword v[0:1], v2, off
@@ -356,7 +358,7 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; FLATSCR-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; FLATSCR-NEXT:    s_cbranch_execz .LBB3_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
-; FLATSCR-NEXT:    s_add_i32 s2, s32, 0xfff
+; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
 ; FLATSCR-NEXT:    s_and_b32 s2, s2, 0xfffff000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v4, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v5, 1
@@ -364,7 +366,7 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; FLATSCR-NEXT:    v_lshl_add_u32 v2, v3, 2, s2
 ; FLATSCR-NEXT:    scratch_load_dword v2, v2, off
 ; FLATSCR-NEXT:    v_and_b32_e32 v3, 0x3ff, v31
-; FLATSCR-NEXT:    s_add_i32 s32, s2, 0x1000
+; FLATSCR-NEXT:    s_mov_b32 s32, s2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_u32_e32 v2, v2, v3
 ; FLATSCR-NEXT:    global_store_dword v[0:1], v2, off

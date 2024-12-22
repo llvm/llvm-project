@@ -16,7 +16,6 @@
 
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include <optional>
@@ -155,7 +154,7 @@ public:
         return nullptr;
 
       // This is the only solution, store it
-      return BVF.getValue(Value).get();
+      return &BVF.getValue(Value);
     }
 
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
@@ -168,16 +167,16 @@ public:
       const llvm::APSInt *Value;
       if (!(Value = getSymVal(State, CastSym)))
         return nullptr;
-      return BVF.Convert(SC->getType(), *Value).get();
+      return &BVF.Convert(SC->getType(), *Value);
     }
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       const llvm::APSInt *LHS, *RHS;
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
         LHS = getSymVal(State, SIE->getLHS());
-        RHS = SIE->getRHS().get();
+        RHS = &SIE->getRHS();
       } else if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
-        LHS = ISE->getLHS().get();
+        LHS = &ISE->getLHS();
         RHS = getSymVal(State, ISE->getRHS());
       } else if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
         // Early termination to avoid expensive call
@@ -196,9 +195,7 @@ public:
       std::tie(ConvertedRHS, RTy) = SMTConv::fixAPSInt(Ctx, *RHS);
       SMTConv::doIntTypeConversion<llvm::APSInt, &SMTConv::castAPSInt>(
           Solver, Ctx, ConvertedLHS, LTy, ConvertedRHS, RTy);
-      std::optional<APSIntPtr> Res =
-          BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
-      return Res ? Res.value().get() : nullptr;
+      return BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
     }
 
     llvm_unreachable("Unsupported expression to get symbol value!");

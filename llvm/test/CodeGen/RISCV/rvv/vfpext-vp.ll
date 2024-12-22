@@ -96,11 +96,11 @@ declare <vscale x 32 x float> @llvm.vp.fpext.nxv32f32.nxv32f16(<vscale x 32 x ha
 define <vscale x 32 x float> @vfpext_nxv32f16_nxv32f32(<vscale x 32 x half> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfpext_nxv32f16_nxv32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
 ; CHECK-NEXT:    sltu a3, a0, a2

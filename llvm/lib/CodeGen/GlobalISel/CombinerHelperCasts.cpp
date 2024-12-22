@@ -26,7 +26,7 @@
 using namespace llvm;
 
 bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) const {
+                                      BuildFnTy &MatchInfo) {
   GSext *Sext = cast<GSext>(getDefIgnoringCopies(MO.getReg(), MRI));
   GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Sext->getSrcReg(), MRI));
 
@@ -59,7 +59,7 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) const {
+                                      BuildFnTy &MatchInfo) {
   GZext *Zext = cast<GZext>(getDefIgnoringCopies(MO.getReg(), MRI));
   GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Zext->getSrcReg(), MRI));
 
@@ -94,7 +94,7 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
-                                     BuildFnTy &MatchInfo) const {
+                                     BuildFnTy &MatchInfo) {
   GZext *Zext = cast<GZext>(MRI.getVRegDef(MO.getReg()));
 
   Register Dst = Zext->getReg(0);
@@ -116,7 +116,7 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
 
 bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
                                         const MachineInstr &ExtMI,
-                                        BuildFnTy &MatchInfo) const {
+                                        BuildFnTy &MatchInfo) {
   const GTrunc *Trunc = cast<GTrunc>(&Root);
   const GExtOp *Ext = cast<GExtOp>(&ExtMI);
 
@@ -164,14 +164,15 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
 
 bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
   const TargetLowering &TLI = getTargetLowering();
+  const DataLayout &DL = getDataLayout();
   LLVMContext &Ctx = getContext();
 
   switch (Opcode) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_ZEXT:
-    return TLI.isZExtFree(FromTy, ToTy, Ctx);
+    return TLI.isZExtFree(FromTy, ToTy, DL, Ctx);
   case TargetOpcode::G_TRUNC:
-    return TLI.isTruncateFree(FromTy, ToTy, Ctx);
+    return TLI.isTruncateFree(FromTy, ToTy, DL, Ctx);
   default:
     return false;
   }
@@ -179,7 +180,7 @@ bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
 
 bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
                                        const MachineInstr &SelectMI,
-                                       BuildFnTy &MatchInfo) const {
+                                       BuildFnTy &MatchInfo) {
   const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
   const GSelect *Select = cast<GSelect>(&SelectMI);
 
@@ -211,7 +212,7 @@ bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
 
 bool CombinerHelper::matchExtOfExt(const MachineInstr &FirstMI,
                                    const MachineInstr &SecondMI,
-                                   BuildFnTy &MatchInfo) const {
+                                   BuildFnTy &MatchInfo) {
   const GExtOp *First = cast<GExtOp>(&FirstMI);
   const GExtOp *Second = cast<GExtOp>(&SecondMI);
 
@@ -275,7 +276,7 @@ bool CombinerHelper::matchExtOfExt(const MachineInstr &FirstMI,
 
 bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
                                             const MachineInstr &BVMI,
-                                            BuildFnTy &MatchInfo) const {
+                                            BuildFnTy &MatchInfo) {
   const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
   const GBuildVector *BV = cast<GBuildVector>(&BVMI);
 
@@ -315,7 +316,7 @@ bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
 
 bool CombinerHelper::matchNarrowBinop(const MachineInstr &TruncMI,
                                       const MachineInstr &BinopMI,
-                                      BuildFnTy &MatchInfo) const {
+                                      BuildFnTy &MatchInfo) {
   const GTrunc *Trunc = cast<GTrunc>(&TruncMI);
   const GBinOp *BinOp = cast<GBinOp>(&BinopMI);
 
@@ -339,7 +340,7 @@ bool CombinerHelper::matchNarrowBinop(const MachineInstr &TruncMI,
 }
 
 bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
-                                        APInt &MatchInfo) const {
+                                        APInt &MatchInfo) {
   const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
 
   APInt Input = getIConstantFromReg(Cast->getSrcReg(), MRI);

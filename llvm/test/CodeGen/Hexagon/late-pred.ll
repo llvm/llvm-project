@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; This generates A4_addp_c, which cannot be used as a dot-new predicate
 ; producer (resulting in a crash).

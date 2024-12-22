@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=xcore
+; RUN: llc < %s -march=xcore
 %struct.st = type <{ i8, i32, i8, i32, i8, i32 }>
 
 @x = external global %struct.st, align 4

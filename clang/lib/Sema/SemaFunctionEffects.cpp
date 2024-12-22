@@ -516,7 +516,7 @@ class Analyzer {
     CompleteFunctionAnalysis *completedAnalysisForDecl(const Decl *D) const {
       if (FuncAnalysisPtr AP = lookup(D);
           isa_and_nonnull<CompleteFunctionAnalysis *>(AP))
-        return cast<CompleteFunctionAnalysis *>(AP);
+        return AP.get<CompleteFunctionAnalysis *>();
       return nullptr;
     }
 
@@ -528,10 +528,12 @@ class Analyzer {
         OS << item.first << " " << CI.getNameForDiagnostic(SemaRef) << " : ";
         if (AP.isNull()) {
           OS << "null\n";
-        } else if (auto *CFA = dyn_cast<CompleteFunctionAnalysis *>(AP)) {
+        } else if (isa<CompleteFunctionAnalysis *>(AP)) {
+          auto *CFA = AP.get<CompleteFunctionAnalysis *>();
           OS << CFA << " ";
           CFA->dump(OS);
-        } else if (auto *PFA = dyn_cast<PendingFunctionAnalysis *>(AP)) {
+        } else if (isa<PendingFunctionAnalysis *>(AP)) {
+          auto *PFA = AP.get<PendingFunctionAnalysis *>();
           OS << PFA << " ";
           PFA->dump(SemaRef, OS);
         } else
@@ -625,7 +627,7 @@ private:
           IsNoexcept = isNoexcept(FD);
         } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
           if (auto *TSI = BD->getSignatureAsWritten()) {
-            auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
+            auto *FPT = TSI->getType()->getAs<FunctionProtoType>();
             IsNoexcept = FPT->isNothrow() || BD->hasAttr<NoThrowAttr>();
           }
         }
@@ -805,8 +807,7 @@ private:
 
     auto MaybeAddTemplateNote = [&](const Decl *D) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-        while (FD != nullptr && FD->isTemplateInstantiation() &&
-               FD->getPointOfInstantiation().isValid()) {
+        while (FD != nullptr && FD->isTemplateInstantiation()) {
           S.Diag(FD->getPointOfInstantiation(),
                  diag::note_func_effect_from_template);
           FD = FD->getTemplateInstantiationPattern();
@@ -1374,10 +1375,10 @@ private:
 Analyzer::AnalysisMap::~AnalysisMap() {
   for (const auto &Item : *this) {
     FuncAnalysisPtr AP = Item.second;
-    if (auto *PFA = dyn_cast<PendingFunctionAnalysis *>(AP))
-      delete PFA;
+    if (isa<PendingFunctionAnalysis *>(AP))
+      delete AP.get<PendingFunctionAnalysis *>();
     else
-      delete cast<CompleteFunctionAnalysis *>(AP);
+      delete AP.get<CompleteFunctionAnalysis *>();
   }
 }
 

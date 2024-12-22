@@ -58,11 +58,11 @@ define i16 @extract_last_i16(<8 x i16> %data, <8 x i16> %mask, i16 %passthru) {
 ; NEON-FIXED-NEXT:    cmtst v1.8h, v1.8h, v1.8h
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI1_0
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI1_0]
+; NEON-FIXED-NEXT:    ldr d2, [x8, :lo12:.LCPI1_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
-; NEON-FIXED-NEXT:    xtn v2.8b, v1.8h
-; NEON-FIXED-NEXT:    umaxv h1, v1.8h
-; NEON-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
+; NEON-FIXED-NEXT:    xtn v1.8b, v1.8h
+; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; NEON-FIXED-NEXT:    umaxv b1, v1.8b
 ; NEON-FIXED-NEXT:    umaxv b2, v2.8b
 ; NEON-FIXED-NEXT:    fmov w8, s2
 ; NEON-FIXED-NEXT:    bfi x9, x8, #1, #3
@@ -78,12 +78,12 @@ define i16 @extract_last_i16(<8 x i16> %data, <8 x i16> %mask, i16 %passthru) {
 ; SVE-FIXED-NEXT:    sub sp, sp, #16
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    cmtst v1.8h, v1.8h, v1.8h
-; SVE-FIXED-NEXT:    index z3.b, #0, #1
+; SVE-FIXED-NEXT:    index z2.b, #0, #1
 ; SVE-FIXED-NEXT:    mov x9, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
-; SVE-FIXED-NEXT:    xtn v2.8b, v1.8h
-; SVE-FIXED-NEXT:    umaxv h1, v1.8h
-; SVE-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
+; SVE-FIXED-NEXT:    xtn v1.8b, v1.8h
+; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; SVE-FIXED-NEXT:    umaxv b1, v1.8b
 ; SVE-FIXED-NEXT:    umaxv b2, v2.8b
 ; SVE-FIXED-NEXT:    fmov w8, s2
 ; SVE-FIXED-NEXT:    bfi x9, x8, #1, #3
@@ -106,11 +106,11 @@ define i32 @extract_last_i32(<4 x i32> %data, <4 x i32> %mask, i32 %passthru) {
 ; NEON-FIXED-NEXT:    cmtst v1.4s, v1.4s, v1.4s
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI2_0
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI2_0]
+; NEON-FIXED-NEXT:    ldr d2, [x8, :lo12:.LCPI2_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
-; NEON-FIXED-NEXT:    xtn v2.4h, v1.4s
-; NEON-FIXED-NEXT:    umaxv s1, v1.4s
-; NEON-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
+; NEON-FIXED-NEXT:    xtn v1.4h, v1.4s
+; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; NEON-FIXED-NEXT:    umaxv h1, v1.4h
 ; NEON-FIXED-NEXT:    umaxv h2, v2.4h
 ; NEON-FIXED-NEXT:    fmov w8, s2
 ; NEON-FIXED-NEXT:    bfi x9, x8, #2, #2
@@ -126,12 +126,12 @@ define i32 @extract_last_i32(<4 x i32> %data, <4 x i32> %mask, i32 %passthru) {
 ; SVE-FIXED-NEXT:    sub sp, sp, #16
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    cmtst v1.4s, v1.4s, v1.4s
-; SVE-FIXED-NEXT:    index z3.h, #0, #1
+; SVE-FIXED-NEXT:    index z2.h, #0, #1
 ; SVE-FIXED-NEXT:    mov x9, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
-; SVE-FIXED-NEXT:    xtn v2.4h, v1.4s
-; SVE-FIXED-NEXT:    umaxv s1, v1.4s
-; SVE-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
+; SVE-FIXED-NEXT:    xtn v1.4h, v1.4s
+; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; SVE-FIXED-NEXT:    umaxv h1, v1.4h
 ; SVE-FIXED-NEXT:    umaxv h2, v2.4h
 ; SVE-FIXED-NEXT:    fmov w8, s2
 ; SVE-FIXED-NEXT:    bfi x9, x8, #2, #2
@@ -154,11 +154,11 @@ define i64 @extract_last_i64(<2 x i64> %data, <2 x i64> %mask, i64 %passthru) {
 ; NEON-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI3_0
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI3_0]
+; NEON-FIXED-NEXT:    ldr d2, [x8, :lo12:.LCPI3_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
-; NEON-FIXED-NEXT:    xtn v2.2s, v1.2d
-; NEON-FIXED-NEXT:    umaxv s1, v1.4s
-; NEON-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
+; NEON-FIXED-NEXT:    xtn v1.2s, v1.2d
+; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; NEON-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; NEON-FIXED-NEXT:    umaxp v2.2s, v2.2s, v2.2s
 ; NEON-FIXED-NEXT:    fmov w8, s2
 ; NEON-FIXED-NEXT:    bfi x9, x8, #3, #1
@@ -174,12 +174,12 @@ define i64 @extract_last_i64(<2 x i64> %data, <2 x i64> %mask, i64 %passthru) {
 ; SVE-FIXED-NEXT:    sub sp, sp, #16
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
-; SVE-FIXED-NEXT:    index z3.s, #0, #1
+; SVE-FIXED-NEXT:    index z2.s, #0, #1
 ; SVE-FIXED-NEXT:    mov x9, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
-; SVE-FIXED-NEXT:    xtn v2.2s, v1.2d
-; SVE-FIXED-NEXT:    umaxv s1, v1.4s
-; SVE-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
+; SVE-FIXED-NEXT:    xtn v1.2s, v1.2d
+; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; SVE-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; SVE-FIXED-NEXT:    umaxp v2.2s, v2.2s, v2.2s
 ; SVE-FIXED-NEXT:    fmov w8, s2
 ; SVE-FIXED-NEXT:    bfi x9, x8, #3, #1
@@ -202,11 +202,11 @@ define float @extract_last_float(<4 x float> %data, <4 x i32> %mask, float %pass
 ; NEON-FIXED-NEXT:    cmtst v1.4s, v1.4s, v1.4s
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI4_0
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI4_0]
+; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI4_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
-; NEON-FIXED-NEXT:    xtn v3.4h, v1.4s
-; NEON-FIXED-NEXT:    umaxv s1, v1.4s
-; NEON-FIXED-NEXT:    and v3.8b, v3.8b, v4.8b
+; NEON-FIXED-NEXT:    xtn v1.4h, v1.4s
+; NEON-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
+; NEON-FIXED-NEXT:    umaxv h1, v1.4h
 ; NEON-FIXED-NEXT:    umaxv h3, v3.4h
 ; NEON-FIXED-NEXT:    fmov w8, s3
 ; NEON-FIXED-NEXT:    bfi x9, x8, #2, #2
@@ -222,12 +222,12 @@ define float @extract_last_float(<4 x float> %data, <4 x i32> %mask, float %pass
 ; SVE-FIXED-NEXT:    sub sp, sp, #16
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    cmtst v1.4s, v1.4s, v1.4s
-; SVE-FIXED-NEXT:    index z4.h, #0, #1
+; SVE-FIXED-NEXT:    index z3.h, #0, #1
 ; SVE-FIXED-NEXT:    mov x9, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
-; SVE-FIXED-NEXT:    xtn v3.4h, v1.4s
-; SVE-FIXED-NEXT:    umaxv s1, v1.4s
-; SVE-FIXED-NEXT:    and v3.8b, v3.8b, v4.8b
+; SVE-FIXED-NEXT:    xtn v1.4h, v1.4s
+; SVE-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
+; SVE-FIXED-NEXT:    umaxv h1, v1.4h
 ; SVE-FIXED-NEXT:    umaxv h3, v3.4h
 ; SVE-FIXED-NEXT:    fmov w8, s3
 ; SVE-FIXED-NEXT:    bfi x9, x8, #2, #2
@@ -250,11 +250,11 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 ; NEON-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI5_0
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI5_0]
+; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI5_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
-; NEON-FIXED-NEXT:    xtn v3.2s, v1.2d
-; NEON-FIXED-NEXT:    umaxv s1, v1.4s
-; NEON-FIXED-NEXT:    and v3.8b, v3.8b, v4.8b
+; NEON-FIXED-NEXT:    xtn v1.2s, v1.2d
+; NEON-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
+; NEON-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; NEON-FIXED-NEXT:    umaxp v3.2s, v3.2s, v3.2s
 ; NEON-FIXED-NEXT:    fmov w8, s3
 ; NEON-FIXED-NEXT:    bfi x9, x8, #3, #1
@@ -270,12 +270,12 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 ; SVE-FIXED-NEXT:    sub sp, sp, #16
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
-; SVE-FIXED-NEXT:    index z4.s, #0, #1
+; SVE-FIXED-NEXT:    index z3.s, #0, #1
 ; SVE-FIXED-NEXT:    mov x9, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
-; SVE-FIXED-NEXT:    xtn v3.2s, v1.2d
-; SVE-FIXED-NEXT:    umaxv s1, v1.4s
-; SVE-FIXED-NEXT:    and v3.8b, v3.8b, v4.8b
+; SVE-FIXED-NEXT:    xtn v1.2s, v1.2d
+; SVE-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
+; SVE-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; SVE-FIXED-NEXT:    umaxp v3.2s, v3.2s, v3.2s
 ; SVE-FIXED-NEXT:    fmov w8, s3
 ; SVE-FIXED-NEXT:    bfi x9, x8, #3, #1

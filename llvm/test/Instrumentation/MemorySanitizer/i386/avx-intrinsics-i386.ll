@@ -940,8 +940,15 @@ define <4 x double> @test_x86_avx_round_pd_256(<4 x double> %a0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
+; CHECK-NEXT:    call void @__msan_warning_noreturn()
+; CHECK-NEXT:    unreachable
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> [[A0:%.*]], i32 7)
-; CHECK-NEXT:    store <4 x i64> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %a0, i32 7) ; <<4 x double>> [#uses=1]
@@ -955,8 +962,15 @@ define <8 x float> @test_x86_avx_round_ps_256(<8 x float> %a0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
+; CHECK-NEXT:    call void @__msan_warning_noreturn()
+; CHECK-NEXT:    unreachable
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> [[A0:%.*]], i32 7)
-; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %a0, i32 7) ; <<8 x float>> [#uses=1]

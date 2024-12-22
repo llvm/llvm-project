@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; REQUIRES: asserts
 
 ; Test that the accessSize is set on a post-increment store. If not, an assert

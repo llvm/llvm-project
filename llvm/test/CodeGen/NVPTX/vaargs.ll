@@ -16,7 +16,7 @@ entry:
 
 ; Test va_start
 ; CHECK:         .param .align 8 .b8 foo_vararg[]
-; CHECK:         mov.b[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], foo_vararg;
+; CHECK:         mov.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], foo_vararg;
 ; CHECK-NEXT:    st.u[[BITS]] [%SP], [[VA_PTR]];
 
   call void @llvm.va_start(ptr %al)

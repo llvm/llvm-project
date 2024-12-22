@@ -20,7 +20,7 @@ def OpWithAttr : NS_Op<"op_with_attr">{
 // Test required and optional properties
 // ---
 
-def DefaultI64Array : IntArrayProperty<I64Property> {
+def DefaultI64Array : IntArrayProperty<"int64_t"> {
   let defaultValue = "::llvm::ArrayRef<int64_t>{}";
   let storageTypeValueOverride = "::llvm::SmallVector<int64_t>{}";
 }

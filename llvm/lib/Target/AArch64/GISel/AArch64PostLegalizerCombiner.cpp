@@ -440,7 +440,8 @@ void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
-  const CombinerHelper Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 

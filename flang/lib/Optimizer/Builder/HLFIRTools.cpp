@@ -20,7 +20,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <mlir/Dialect/OpenMP/OpenMPDialect.h>
 #include <optional>
 
 // Return explicit extents. If the base is a fir.box, this won't read it to
@@ -535,8 +534,6 @@ static mlir::Value tryRetrievingShapeOrShift(hlfir::Entity entity) {
   if (mlir::isa<hlfir::ExprType>(entity.getType())) {
     if (auto elemental = entity.getDefiningOp<hlfir::ElementalOp>())
       return elemental.getShape();
-    if (auto evalInMem = entity.getDefiningOp<hlfir::EvaluateInMemoryOp>())
-      return evalInMem.getShape();
     return mlir::Value{};
   }
   if (auto varIface = entity.getIfVariableInterface())
@@ -643,11 +640,6 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
     } else if (auto elemental = expr.getDefiningOp<hlfir::ElementalOp>()) {
       result.append(elemental.getTypeparams().begin(),
                     elemental.getTypeparams().end());
-      return;
-    } else if (auto evalInMem =
-                   expr.getDefiningOp<hlfir::EvaluateInMemoryOp>()) {
-      result.append(evalInMem.getTypeparams().begin(),
-                    evalInMem.getTypeparams().end());
       return;
     } else if (auto apply = expr.getDefiningOp<hlfir::ApplyOp>()) {
       result.append(apply.getTypeparams().begin(), apply.getTypeparams().end());
@@ -863,101 +855,27 @@ mlir::Value hlfir::inlineElementalOp(
 
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
                                    fir::FirOpBuilder &builder,
-                                   mlir::ValueRange extents, bool isUnordered,
-                                   bool emitWorkshareLoop) {
-  emitWorkshareLoop = emitWorkshareLoop && isUnordered;
+                                   mlir::ValueRange extents, bool isUnordered) {
   hlfir::LoopNest loopNest;
   assert(!extents.empty() && "must have at least one extent");
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  auto insPt = builder.saveInsertionPoint();
   loopNest.oneBasedIndices.assign(extents.size(), mlir::Value{});
   // Build loop nest from column to row.
   auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
   mlir::Type indexType = builder.getIndexType();
-  if (emitWorkshareLoop) {
-    auto wslw = builder.create<mlir::omp::WorkshareLoopWrapperOp>(loc);
-    loopNest.outerOp = wslw;
-    builder.createBlock(&wslw.getRegion());
-    mlir::omp::LoopNestOperands lnops;
-    lnops.loopInclusive = builder.getUnitAttr();
-    for (auto extent : llvm::reverse(extents)) {
-      lnops.loopLowerBounds.push_back(one);
-      lnops.loopUpperBounds.push_back(extent);
-      lnops.loopSteps.push_back(one);
-    }
-    auto lnOp = builder.create<mlir::omp::LoopNestOp>(loc, lnops);
-    mlir::Block *block = builder.createBlock(&lnOp.getRegion());
-    for (auto extent : llvm::reverse(extents))
-      block->addArgument(extent.getType(), extent.getLoc());
-    loopNest.body = block;
-    builder.create<mlir::omp::YieldOp>(loc);
-    for (unsigned dim = 0; dim < extents.size(); dim++)
-      loopNest.oneBasedIndices[extents.size() - dim - 1] =
-          lnOp.getRegion().front().getArgument(dim);
-  } else {
-    unsigned dim = extents.size() - 1;
-    for (auto extent : llvm::reverse(extents)) {
-      auto ub = builder.createConvert(loc, indexType, extent);
-      auto doLoop =
-          builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
-      loopNest.body = doLoop.getBody();
-      builder.setInsertionPointToStart(loopNest.body);
-      // Reverse the indices so they are in column-major order.
-      loopNest.oneBasedIndices[dim--] = doLoop.getInductionVar();
-      if (!loopNest.outerOp)
-        loopNest.outerOp = doLoop;
-    }
-  }
-  return loopNest;
-}
-
-llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
-    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
-    bool isUnordered) {
-  assert(!extents.empty() && "must have at least one extent");
-  // Build loop nest from column to row.
-  auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
-  mlir::Type indexType = builder.getIndexType();
   unsigned dim = extents.size() - 1;
-  fir::DoLoopOp outerLoop = nullptr;
-  fir::DoLoopOp parentLoop = nullptr;
-  llvm::SmallVector<mlir::Value> oneBasedIndices;
-  oneBasedIndices.resize(dim + 1);
   for (auto extent : llvm::reverse(extents)) {
     auto ub = builder.createConvert(loc, indexType, extent);
-
-    // The outermost loop takes reductionInits as the initial
-    // values of its iter-args.
-    // A child loop takes its iter-args from the region iter-args
-    // of its parent loop.
-    fir::DoLoopOp doLoop;
-    if (!parentLoop) {
-      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
-                                             /*finalCountValue=*/false,
-                                             reductionInits);
-    } else {
-      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
-                                             /*finalCountValue=*/false,
-                                             parentLoop.getRegionIterArgs());
-      // Return the results of the child loop from its parent loop.
-      builder.create<fir::ResultOp>(loc, doLoop.getResults());
-    }
-
-    builder.setInsertionPointToStart(doLoop.getBody());
+    loopNest.innerLoop =
+        builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
+    builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
     // Reverse the indices so they are in column-major order.
-    oneBasedIndices[dim--] = doLoop.getInductionVar();
-    if (!outerLoop)
-      outerLoop = doLoop;
-    parentLoop = doLoop;
+    loopNest.oneBasedIndices[dim--] = loopNest.innerLoop.getInductionVar();
+    if (!loopNest.outerLoop)
+      loopNest.outerLoop = loopNest.innerLoop;
   }
-
-  llvm::SmallVector<mlir::Value> reductionValues;
-  reductionValues =
-      genBody(loc, builder, oneBasedIndices, parentLoop.getRegionIterArgs());
-  builder.setInsertionPointToEnd(parentLoop.getBody());
-  builder.create<fir::ResultOp>(loc, reductionValues);
-  builder.setInsertionPointAfter(outerLoop);
-  return outerLoop->getResults();
+  builder.restoreInsertionPoint(insPt);
+  return loopNest;
 }
 
 static fir::ExtendedValue translateVariableToExtendedValue(
@@ -1369,44 +1287,4 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
     bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
   };
   return {hlfir::Entity{convertedRhs}, cleanup};
-}
-
-std::pair<hlfir::Entity, bool> hlfir::computeEvaluateOpInNewTemp(
-    mlir::Location loc, fir::FirOpBuilder &builder,
-    hlfir::EvaluateInMemoryOp evalInMem, mlir::Value shape,
-    mlir::ValueRange typeParams) {
-  llvm::StringRef tmpName{".tmp.expr_result"};
-  llvm::SmallVector<mlir::Value> extents =
-      hlfir::getIndexExtents(loc, builder, shape);
-  mlir::Type baseType =
-      hlfir::getFortranElementOrSequenceType(evalInMem.getType());
-  bool heapAllocated = fir::hasDynamicSize(baseType);
-  // Note: temporaries are stack allocated here when possible (do not require
-  // stack save/restore) because flang has always stack allocated function
-  // results.
-  mlir::Value temp = heapAllocated
-                         ? builder.createHeapTemporary(loc, baseType, tmpName,
-                                                       extents, typeParams)
-                         : builder.createTemporary(loc, baseType, tmpName,
-                                                   extents, typeParams);
-  mlir::Value innerMemory = evalInMem.getMemory();
-  temp = builder.createConvert(loc, innerMemory.getType(), temp);
-  auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, temp, tmpName, shape, typeParams,
-      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-  computeEvaluateOpIn(loc, builder, evalInMem, declareOp.getOriginalBase());
-  return {hlfir::Entity{declareOp.getBase()}, /*heapAllocated=*/heapAllocated};
-}
-
-void hlfir::computeEvaluateOpIn(mlir::Location loc, fir::FirOpBuilder &builder,
-                                hlfir::EvaluateInMemoryOp evalInMem,
-                                mlir::Value storage) {
-  mlir::Value innerMemory = evalInMem.getMemory();
-  mlir::Value storageCast =
-      builder.createConvert(loc, innerMemory.getType(), storage);
-  mlir::IRMapping mapper;
-  mapper.map(innerMemory, storageCast);
-  for (auto &op : evalInMem.getBody().front().without_terminator())
-    builder.clone(op, mapper);
-  return;
 }

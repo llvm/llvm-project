@@ -149,6 +149,7 @@ cxx_sources = [
   "ios.cpp",
   "ios.instantiations.cpp",
   "iostream.cpp",
+  "legacy_pointer_safety.cpp",
   "locale.cpp",
   "memory.cpp",
   "memory_resource.cpp",

@@ -1,7 +1,7 @@
 add_mlir_unittest(MLIRDialectTests
   BroadcastShapeTest.cpp
 )
-mlir_target_link_libraries(MLIRDialectTests
+target_link_libraries(MLIRDialectTests
   PRIVATE
   MLIRIR
   MLIRDialect)

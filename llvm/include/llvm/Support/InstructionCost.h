@@ -198,8 +198,10 @@ public:
     return Value < RHS.Value;
   }
 
+  // Implement in terms of operator< to ensure that the two comparisons stay in
+  // sync
   bool operator==(const InstructionCost &RHS) const {
-    return State == RHS.State && Value == RHS.Value;
+    return !(*this < RHS) && !(RHS < *this);
   }
 
   bool operator!=(const InstructionCost &RHS) const { return !(*this == RHS); }

@@ -272,10 +272,6 @@ struct CounterMappingRegion {
 
   RegionKind Kind;
 
-  bool isBranch() const {
-    return (Kind == BranchRegion || Kind == MCDCBranchRegion);
-  }
-
   CounterMappingRegion(Counter Count, unsigned FileID, unsigned ExpandedFileID,
                        unsigned LineStart, unsigned ColumnStart,
                        unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
@@ -465,7 +461,7 @@ public:
         Folded(std::move(Folded)), PosToID(std::move(PosToID)),
         CondLoc(std::move(CondLoc)){};
 
-  const CounterMappingRegion &getDecisionRegion() const { return Region; }
+  CounterMappingRegion getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }
@@ -720,7 +716,8 @@ struct FunctionRecord {
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
                   uint64_t FalseCount, bool HasSingleByteCoverage) {
-    if (Region.isBranch()) {
+    if (Region.Kind == CounterMappingRegion::BranchRegion ||
+        Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
       CountedBranchRegions.emplace_back(Region, Count, FalseCount,
                                         HasSingleByteCoverage);
       // If either counter is hard-coded to zero, then this region represents a

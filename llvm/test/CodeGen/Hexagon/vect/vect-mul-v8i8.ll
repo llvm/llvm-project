@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ; CHECK: vmpybu
 ; CHECK: vmpybu
 

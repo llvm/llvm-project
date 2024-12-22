@@ -80,12 +80,6 @@ public:
     llvm_unreachable("target does not support ICF safe thunks");
   }
 
-  // Given a thunk for which `initICFSafeThunkBody` was called, return the
-  // branchTarget it was initialized with.
-  virtual InputSection *getThunkBranchTarget(InputSection *thunk) const {
-    llvm_unreachable("target does not support ICF safe thunks");
-  }
-
   virtual uint32_t getICFSafeThunkSize() const {
     llvm_unreachable("target does not support ICF safe thunks");
   }

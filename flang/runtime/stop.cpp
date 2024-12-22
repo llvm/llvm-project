@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/stop.h"
-#include "config.h"
 #include "environment.h"
 #include "file.h"
 #include "io-error.h"
@@ -16,10 +15,6 @@
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
-
-#ifdef HAVE_BACKTRACE
-#include BACKTRACE_HEADER
-#endif
 
 extern "C" {
 
@@ -157,36 +152,10 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
   std::exit(status);
 }
 
-static void PrintBacktrace() {
-#ifdef HAVE_BACKTRACE
-  // TODO: Need to parse DWARF information to print function line numbers
-  constexpr int MAX_CALL_STACK{999};
-  void *buffer[MAX_CALL_STACK];
-  int nptrs{backtrace(buffer, MAX_CALL_STACK)};
-
-  if (char **symbols{backtrace_symbols(buffer, nptrs)}) {
-    for (int i = 0; i < nptrs; i++) {
-      Fortran::runtime::Terminator{}.PrintCrashArgs("#%d %s\n", i, symbols[i]);
-    }
-    free(symbols);
-  }
-
-#else
-
-  // TODO: Need to implement the version for other platforms.
-  Fortran::runtime::Terminator{}.PrintCrashArgs("backtrace is not supported.");
-
-#endif
-}
-
 [[noreturn]] void RTNAME(Abort)() {
-#ifdef HAVE_BACKTRACE
-  PrintBacktrace();
-#endif
+  // TODO: Add backtrace call, unless with `-fno-backtrace`.
   std::abort();
 }
-
-void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
 [[noreturn]] void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {

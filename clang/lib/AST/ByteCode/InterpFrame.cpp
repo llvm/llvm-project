@@ -234,12 +234,7 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
   if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getSource(RetPC);
 
-  // Similarly, if the resulting source location is invalid anyway,
-  // point to the caller instead.
-  SourceInfo Result = S.getSource(Func, PC);
-  if (Result.getLoc().isInvalid() && Caller)
-    return Caller->getSource(RetPC);
-  return Result;
+  return S.getSource(Func, PC);
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Check that extract-element is handled.
 
 ; CHECK-LABEL: ext_00:

@@ -34,8 +34,11 @@
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1500,8 +1503,7 @@ DeclContext *DeclContext::getPrimaryContext() {
 }
 
 template <typename T>
-static void collectAllContextsImpl(T *Self,
-                                   SmallVectorImpl<DeclContext *> &Contexts) {
+void collectAllContextsImpl(T *Self, SmallVectorImpl<DeclContext *> &Contexts) {
   for (T *D = Self->getMostRecentDecl(); D; D = D->getPreviousDecl())
     Contexts.push_back(D);
 

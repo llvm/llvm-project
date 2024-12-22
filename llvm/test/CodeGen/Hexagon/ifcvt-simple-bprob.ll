@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 
 ; Check that branch probabilities are set correctly after performing the
 ; simple variant of if-conversion. The converted block has a branch that

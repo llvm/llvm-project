@@ -30,7 +30,6 @@ public:
     unsigned Offset;
     const Descriptor *Desc;
     bool isBitField() const { return Decl->isBitField(); }
-    bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
   };
 
   /// Describes a base class.

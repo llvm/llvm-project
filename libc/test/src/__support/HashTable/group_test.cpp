@@ -8,7 +8,6 @@
 
 #include "src/__support/HashTable/bitmask.h"
 
-#include "src/__support/CPP/bit.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/rand.h"
 #include "test/UnitTest/Test.h"
@@ -29,12 +28,13 @@ TEST(LlvmLibcHashTableBitMaskTest, Match) {
   size_t appearance[4][sizeof(Group)];
   ByteArray array{};
 
-  int data[sizeof(uintptr_t) / sizeof(int)];
+  union {
+    uintptr_t random;
+    int data[sizeof(uintptr_t) / sizeof(int)];
+  };
 
   for (int &i : data)
     i = rand();
-
-  uintptr_t random = cpp::bit_cast<uintptr_t>(data);
 
   for (size_t i = 0; i < sizeof(Group); ++i) {
     size_t choice = random % 4;
@@ -62,12 +62,13 @@ TEST(LlvmLibcHashTableBitMaskTest, MaskAvailable) {
   for (size_t i = 0; i < sizeof(Group); ++i) {
     ByteArray array{};
 
-    int data[sizeof(uintptr_t) / sizeof(int)];
+    union {
+      uintptr_t random;
+      int data[sizeof(uintptr_t) / sizeof(int)];
+    };
 
     for (int &j : data)
       j = rand();
-
-    uintptr_t random = cpp::bit_cast<uintptr_t>(data);
 
     ASSERT_FALSE(Group::load(array.data).mask_available().any_bit_set());
 

@@ -393,7 +393,7 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[PTR_DECL]]#1 : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[CAT:.*]] = arith.constant 2 : i32
+! CHECK: %[[CAT:.*]] = arith.constant 1 : i32
 ! CHECK: %[[KIND:.*]] = arith.constant 4 : i32
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32

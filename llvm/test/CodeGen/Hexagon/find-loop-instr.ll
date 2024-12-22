@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; REQUIRES: asserts
 
 ; This code causes multiple endloop instructions to be generated for the

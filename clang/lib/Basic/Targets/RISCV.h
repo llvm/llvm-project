@@ -122,17 +122,14 @@ public:
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool supportsTargetAttributeTune() const override { return true; }
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
   }
 
   bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
-  bool supportsCpuIs() const override { return getTriple().isOSLinux(); }
   bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
   bool validateCpuSupports(StringRef Feature) const override;
-  bool validateCpuIs(StringRef CPUName) const override;
   bool isValidFeatureName(StringRef Name) const override;
 
   bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,

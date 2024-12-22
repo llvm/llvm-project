@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; Thie tests checks a compiler assert. So the test just needs to compile
 ; for it to pass
 

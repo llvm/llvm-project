@@ -786,7 +786,7 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
     }
     DTUpdates.push_back({DomTreeT::Insert, BB, SplitBB});
     if (MDT)
-      MDT->applyUpdates(DTUpdates);
+      MDT->getBase().applyUpdates(DTUpdates);
     if (PDT)
       PDT->applyUpdates(DTUpdates);
 

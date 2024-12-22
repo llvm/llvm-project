@@ -45,13 +45,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "TapiOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "TapiOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -61,8 +60,7 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class TAPIOptTable : public opt::GenericOptTable {
 public:
-  TAPIOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+  TAPIOptTable() : opt::GenericOptTable(InfoTable) {
     setGroupedShortOptions(true);
   }
 };

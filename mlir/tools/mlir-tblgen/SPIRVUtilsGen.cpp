@@ -33,9 +33,7 @@
 #include <optional>
 
 using llvm::ArrayRef;
-using llvm::cast;
 using llvm::formatv;
-using llvm::isa;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using llvm::Record;
@@ -609,11 +607,11 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
   bool areOperandsAheadOfAttrs = true;
   // Find the first attribute.
   const Argument *it = llvm::find_if(op.getArgs(), [](const Argument &arg) {
-    return isa<NamedAttribute *>(arg);
+    return arg.is<NamedAttribute *>();
   });
   // Check whether all following arguments are attributes.
   for (const Argument *ie = op.arg_end(); it != ie; ++it) {
-    if (!isa<NamedAttribute *>(*it)) {
+    if (!it->is<NamedAttribute *>()) {
       areOperandsAheadOfAttrs = false;
       break;
     }
@@ -644,7 +642,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
     os << tabs << "{\n";
-    if (isa<NamedTypeConstraint *>(argument)) {
+    if (argument.is<NamedTypeConstraint *>()) {
       os << tabs
          << formatv("  for (auto arg : {0}.getODSOperands({1})) {{\n", opVar,
                     operandNum);
@@ -659,7 +657,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << "    }\n";
       operandNum++;
     } else {
-      NamedAttribute *attr = cast<NamedAttribute *>(argument);
+      NamedAttribute *attr = argument.get<NamedAttribute *>();
       auto newtabs = tabs.str() + "  ";
       emitAttributeSerialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -964,7 +962,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << tabs << "}\n";
     } else {
       os << tabs << formatv("if ({0} < {1}.size()) {{\n", wordIndex, words);
-      auto *attr = cast<NamedAttribute *>(argument);
+      auto *attr = argument.get<NamedAttribute *>();
       auto newtabs = tabs.str() + "  ";
       emitAttributeDeserialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),

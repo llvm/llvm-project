@@ -878,7 +878,7 @@ public:
   /// object. This is not a strong guarantee.
   bool isMostDerived(const ASTContext &Context) const;
 
-  bool isTypeOperand() const { return isa<TypeSourceInfo *>(Operand); }
+  bool isTypeOperand() const { return Operand.is<TypeSourceInfo *>(); }
 
   /// Retrieves the type operand of this typeid() expression after
   /// various required adjustments (removing reference types, cv-qualifiers).
@@ -887,11 +887,11 @@ public:
   /// Retrieve source information for the type operand.
   TypeSourceInfo *getTypeOperandSourceInfo() const {
     assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
-    return cast<TypeSourceInfo *>(Operand);
+    return Operand.get<TypeSourceInfo *>();
   }
   Expr *getExprOperand() const {
     assert(!isTypeOperand() && "Cannot call getExprOperand for typeid(type)");
-    return static_cast<Expr *>(cast<Stmt *>(Operand));
+    return static_cast<Expr*>(Operand.get<Stmt *>());
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
@@ -1093,7 +1093,7 @@ public:
       Operand = (TypeSourceInfo*)nullptr;
   }
 
-  bool isTypeOperand() const { return isa<TypeSourceInfo *>(Operand); }
+  bool isTypeOperand() const { return Operand.is<TypeSourceInfo *>(); }
 
   /// Retrieves the type operand of this __uuidof() expression after
   /// various required adjustments (removing reference types, cv-qualifiers).
@@ -1102,11 +1102,11 @@ public:
   /// Retrieve source information for the type operand.
   TypeSourceInfo *getTypeOperandSourceInfo() const {
     assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
-    return cast<TypeSourceInfo *>(Operand);
+    return Operand.get<TypeSourceInfo *>();
   }
   Expr *getExprOperand() const {
     assert(!isTypeOperand() && "Cannot call getExprOperand for __uuidof(type)");
-    return static_cast<Expr *>(cast<Stmt *>(Operand));
+    return static_cast<Expr*>(Operand.get<Stmt *>());
   }
 
   MSGuidDecl *getGuidDecl() const { return Guid; }
@@ -4390,17 +4390,17 @@ class PackIndexingExpr final
   unsigned TransformedExpressions : 31;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned FullySubstituted : 1;
+  unsigned ExpandedToEmptyPack : 1;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
                    ArrayRef<Expr *> SubstitutedExprs = {},
-                   bool FullySubstituted = false)
+                   bool ExpandedToEmptyPack = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
         TransformedExpressions(SubstitutedExprs.size()),
-        FullySubstituted(FullySubstituted) {
+        ExpandedToEmptyPack(ExpandedToEmptyPack) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4424,16 +4424,12 @@ public:
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
                                   ArrayRef<Expr *> SubstitutedExprs = {},
-                                  bool FullySubstituted = false);
+                                  bool ExpandedToEmptyPack = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
 
-  bool isFullySubstituted() const { return FullySubstituted; }
-
   /// Determine if the expression was expanded to empty.
-  bool expandsToEmptyPack() const {
-    return isFullySubstituted() && TransformedExpressions == 0;
-  }
+  bool expandsToEmptyPack() const { return ExpandedToEmptyPack; }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
@@ -4750,24 +4746,24 @@ public:
   /// be materialized into a glvalue.
   Expr *getSubExpr() const {
     return cast<Expr>(
-        isa<Stmt *>(State)
-            ? cast<Stmt *>(State)
-            : cast<LifetimeExtendedTemporaryDecl *>(State)->getTemporaryExpr());
+        State.is<Stmt *>()
+            ? State.get<Stmt *>()
+            : State.get<LifetimeExtendedTemporaryDecl *>()->getTemporaryExpr());
   }
 
   /// Retrieve the storage duration for the materialized temporary.
   StorageDuration getStorageDuration() const {
-    return isa<Stmt *>(State) ? SD_FullExpression
-                              : cast<LifetimeExtendedTemporaryDecl *>(State)
+    return State.is<Stmt *>() ? SD_FullExpression
+                              : State.get<LifetimeExtendedTemporaryDecl *>()
                                     ->getStorageDuration();
   }
 
   /// Get the storage for the constant value of a materialized temporary
   /// of static storage duration.
   APValue *getOrCreateValue(bool MayCreate) const {
-    assert(isa<LifetimeExtendedTemporaryDecl *>(State) &&
+    assert(State.is<LifetimeExtendedTemporaryDecl *>() &&
            "the temporary has not been lifetime extended");
-    return cast<LifetimeExtendedTemporaryDecl *>(State)->getOrCreateValue(
+    return State.get<LifetimeExtendedTemporaryDecl *>()->getOrCreateValue(
         MayCreate);
   }
 
@@ -4782,8 +4778,8 @@ public:
   /// Get the declaration which triggered the lifetime-extension of this
   /// temporary, if any.
   ValueDecl *getExtendingDecl() {
-    return isa<Stmt *>(State) ? nullptr
-                              : cast<LifetimeExtendedTemporaryDecl *>(State)
+    return State.is<Stmt *>() ? nullptr
+                              : State.get<LifetimeExtendedTemporaryDecl *>()
                                     ->getExtendingDecl();
   }
   const ValueDecl *getExtendingDecl() const {
@@ -4793,8 +4789,8 @@ public:
   void setExtendingDecl(ValueDecl *ExtendedBy, unsigned ManglingNumber);
 
   unsigned getManglingNumber() const {
-    return isa<Stmt *>(State) ? 0
-                              : cast<LifetimeExtendedTemporaryDecl *>(State)
+    return State.is<Stmt *>() ? 0
+                              : State.get<LifetimeExtendedTemporaryDecl *>()
                                     ->getManglingNumber();
   }
 
@@ -4820,17 +4816,17 @@ public:
 
   // Iterators
   child_range children() {
-    return isa<Stmt *>(State)
+    return State.is<Stmt *>()
                ? child_range(State.getAddrOfPtr1(), State.getAddrOfPtr1() + 1)
-               : cast<LifetimeExtendedTemporaryDecl *>(State)->childrenExpr();
+               : State.get<LifetimeExtendedTemporaryDecl *>()->childrenExpr();
   }
 
   const_child_range children() const {
-    return isa<Stmt *>(State)
+    return State.is<Stmt *>()
                ? const_child_range(State.getAddrOfPtr1(),
                                    State.getAddrOfPtr1() + 1)
                : const_cast<const LifetimeExtendedTemporaryDecl *>(
-                     cast<LifetimeExtendedTemporaryDecl *>(State))
+                     State.get<LifetimeExtendedTemporaryDecl *>())
                      ->childrenExpr();
   }
 };

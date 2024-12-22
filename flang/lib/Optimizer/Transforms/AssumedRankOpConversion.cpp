@@ -154,7 +154,7 @@ public:
     mlir::GreedyRewriteConfig config;
     config.enableRegionSimplification =
         mlir::GreedySimplifyRegionLevel::Disabled;
-    (void)applyPatternsGreedily(mod, std::move(patterns), config);
+    (void)applyPatternsAndFoldGreedily(mod, std::move(patterns), config);
   }
 };
 } // namespace

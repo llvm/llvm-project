@@ -41,7 +41,7 @@ INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperLegacy, "liveregmatrix",
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(LiveRegMatrixWrapperLegacy, "liveregmatrix",
-                    "Live Register Matrix", false, true)
+                    "Live Register Matrix", false, false)
 
 void LiveRegMatrixWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

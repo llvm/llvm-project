@@ -1,10 +1,10 @@
-; RUN: llc %s -o - -stop-before=finalize-isel \
+; RUN: llc %s -o - -stop-before=finalize-isel -march=x86-64 \
 ; RUN: | FileCheck %s --check-prefixes=INSTRREFON
-; RUN: llc %s -o - -stop-before=finalize-isel \
+; RUN: llc %s -o - -stop-before=finalize-isel -march=x86-64 \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=INSTRREFON
 
-; RUN: llc %s -o - -stop-before=finalize-isel \
+; RUN: llc %s -o - -stop-before=finalize-isel -march=x86-64 \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=INSTRREFOFF \
 ; RUN:    --implicit-check-not=DBG_INSTR_REF

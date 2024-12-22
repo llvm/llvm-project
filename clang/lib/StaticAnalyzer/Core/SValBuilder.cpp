@@ -76,13 +76,17 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
 
 nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
                                           BinaryOperator::Opcode op,
-                                          APSIntPtr rhs, QualType type) {
+                                          const llvm::APSInt &rhs,
+                                          QualType type) {
+  // The Environment ensures we always get a persistent APSInt in
+  // BasicValueFactory, so we don't need to get the APSInt from
+  // BasicValueFactory again.
   assert(lhs);
   assert(!Loc::isLocType(type));
   return nonloc::SymbolVal(SymMgr.getSymIntExpr(lhs, op, rhs, type));
 }
 
-nonloc::SymbolVal SValBuilder::makeNonLoc(APSIntPtr lhs,
+nonloc::SymbolVal SValBuilder::makeNonLoc(const llvm::APSInt &lhs,
                                           BinaryOperator::Opcode op,
                                           const SymExpr *rhs, QualType type) {
   assert(rhs);
@@ -667,7 +671,7 @@ public:
   SVal VisitConcreteInt(loc::ConcreteInt V) {
     // Pointer to bool.
     if (CastTy->isBooleanType())
-      return VB.makeTruthVal(V.getValue()->getBoolValue(), CastTy);
+      return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
 
     // Pointer to integer.
     if (CastTy->isIntegralOrEnumerationType()) {
@@ -871,7 +875,7 @@ public:
 
     // Integer to bool.
     if (CastTy->isBooleanType())
-      return VB.makeTruthVal(V.getValue()->getBoolValue(), CastTy);
+      return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
 
     // Integer to pointer.
     if (CastTy->isIntegralOrEnumerationType())

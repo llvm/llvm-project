@@ -81,7 +81,7 @@ define i8 @convert_to_bitmask2(<2 x i64> %vec) {
 ; CHECK-NEXT:    ldr q1, [x8, lCPI3_0@PAGEOFF]
 ; CHECK-NEXT:    bic.16b v0, v1, v0
 ; CHECK-NEXT:    addp.2d d0, v0
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and w0, w8, #0x3
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh7

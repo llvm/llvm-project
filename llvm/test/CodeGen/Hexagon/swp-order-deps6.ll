@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; REQUIRES: asserts
 
 %s.0 = type { i64 }

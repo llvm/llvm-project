@@ -934,11 +934,11 @@ class QualType {
                        Qualifiers::FastWidth> Value;
 
   const ExtQuals *getExtQualsUnsafe() const {
-    return cast<const ExtQuals *>(Value.getPointer());
+    return Value.getPointer().get<const ExtQuals*>();
   }
 
   const Type *getTypePtrUnsafe() const {
-    return cast<const Type *>(Value.getPointer());
+    return Value.getPointer().get<const Type*>();
   }
 
   const ExtQualsTypeCommonBase *getCommonPtr() const {
@@ -1064,7 +1064,7 @@ public:
   /// "non-fast" qualifiers, e.g., those that are stored in an ExtQualType
   /// instance.
   bool hasLocalNonFastQualifiers() const {
-    return isa<const ExtQuals *>(Value.getPointer());
+    return Value.getPointer().is<const ExtQuals*>();
   }
 
   /// Retrieve the set of qualifiers local to this particular QualType
@@ -3754,8 +3754,6 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == ArrayParameter;
   }
-
-  QualType getConstantArrayType(const ASTContext &Ctx) const;
 };
 
 /// Represents a C array with an unspecified size.  For example 'int A[]' has
@@ -5924,12 +5922,12 @@ class PackIndexingType final
   unsigned Size : 31;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned FullySubstituted : 1;
+  unsigned ExpandsToEmptyPack : 1;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
   PackIndexingType(const ASTContext &Context, QualType Canonical,
-                   QualType Pattern, Expr *IndexExpr, bool FullySubstituted,
+                   QualType Pattern, Expr *IndexExpr, bool ExpandsToEmptyPack,
                    ArrayRef<QualType> Expansions = {});
 
 public:
@@ -5953,9 +5951,7 @@ public:
 
   bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
 
-  bool isFullySubstituted() const { return FullySubstituted; }
-
-  bool expandsToEmptyPack() const { return isFullySubstituted() && Size == 0; }
+  bool expandsToEmptyPack() const { return ExpandsToEmptyPack; }
 
   ArrayRef<QualType> getExpansions() const {
     return {getExpansionsPtr(), Size};
@@ -5969,10 +5965,10 @@ public:
     if (hasSelectedType())
       getSelectedType().Profile(ID);
     else
-      Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted());
+      Profile(ID, Context, getPattern(), getIndexExpr(), expandsToEmptyPack());
   }
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Pattern, Expr *E, bool FullySubstituted);
+                      QualType Pattern, Expr *E, bool ExpandsToEmptyPack);
 
 private:
   const QualType *getExpansionsPtr() const {
@@ -6553,7 +6549,7 @@ public:
 
 /// Represents a C++11 auto or C++14 decltype(auto) type, possibly constrained
 /// by a type-constraint.
-class AutoType : public DeducedType {
+class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   ConceptDecl *TypeConstraintConcept;

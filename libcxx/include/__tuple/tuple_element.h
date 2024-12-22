@@ -25,17 +25,17 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element;
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const _Tp> {
-  using type _LIBCPP_NODEBUG = const typename tuple_element<_Ip, _Tp>::type;
+  typedef _LIBCPP_NODEBUG const typename tuple_element<_Ip, _Tp>::type type;
 };
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, volatile _Tp> {
-  using type _LIBCPP_NODEBUG = volatile typename tuple_element<_Ip, _Tp>::type;
+  typedef _LIBCPP_NODEBUG volatile typename tuple_element<_Ip, _Tp>::type type;
 };
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp> {
-  using type _LIBCPP_NODEBUG = const volatile typename tuple_element<_Ip, _Tp>::type;
+  typedef _LIBCPP_NODEBUG const volatile typename tuple_element<_Ip, _Tp>::type type;
 };
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -43,7 +43,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp> {
 template <size_t _Ip, class... _Types>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, __tuple_types<_Types...> > {
   static_assert(_Ip < sizeof...(_Types), "tuple_element index out of range");
-  using type _LIBCPP_NODEBUG = __type_pack_element<_Ip, _Types...>;
+  typedef _LIBCPP_NODEBUG __type_pack_element<_Ip, _Types...> type;
 };
 
 #  if _LIBCPP_STD_VER >= 14

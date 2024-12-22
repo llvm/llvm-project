@@ -1567,7 +1567,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
     return false;
 
   auto *L = LI.getLoopFor(Inst->getParent());
-  const SCEV *LengthVal = SE.getSCEVAtScope(MemIntr->getLength(), L);
+  auto *LengthVal = SE.getSCEVAtScope(MemIntr->getLength(), L);
   assert(LengthVal);
 
   // Check if the length val is actually affine or if we overapproximate it
@@ -1586,7 +1586,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
   auto *DestPtrVal = MemIntr->getDest();
   assert(DestPtrVal);
 
-  const SCEV *DestAccFunc = SE.getSCEVAtScope(DestPtrVal, L);
+  auto *DestAccFunc = SE.getSCEVAtScope(DestPtrVal, L);
   assert(DestAccFunc);
   // Ignore accesses to "NULL".
   // TODO: We could use this to optimize the region further, e.g., intersect
@@ -1616,7 +1616,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
   auto *SrcPtrVal = MemTrans->getSource();
   assert(SrcPtrVal);
 
-  const SCEV *SrcAccFunc = SE.getSCEVAtScope(SrcPtrVal, L);
+  auto *SrcAccFunc = SE.getSCEVAtScope(SrcPtrVal, L);
   assert(SrcAccFunc);
   // Ignore accesses to "NULL".
   // TODO: See above TODO
@@ -1643,7 +1643,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   if (CI->doesNotAccessMemory() || isIgnoredIntrinsic(CI) || isDebugCall(CI))
     return true;
 
-  const SCEV *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
+  auto *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
   auto *CalledFunction = CI->getCalledFunction();
   MemoryEffects ME = AA.getMemoryEffects(CalledFunction);
   if (ME.doesNotAccessMemory())
@@ -1658,7 +1658,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
       if (!Arg->getType()->isPointerTy())
         continue;
 
-      const SCEV *ArgSCEV = SE.getSCEVAtScope(Arg, L);
+      auto *ArgSCEV = SE.getSCEVAtScope(Arg, L);
       if (ArgSCEV->isZero())
         continue;
 
@@ -2169,7 +2169,7 @@ static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
 
   // Only one factor needs to be divisible.
   if (auto *MulExpr = dyn_cast<SCEVMulExpr>(Expr)) {
-    for (const SCEV *FactorExpr : MulExpr->operands())
+    for (auto *FactorExpr : MulExpr->operands())
       if (isDivisible(FactorExpr, Size, SE))
         return true;
     return false;
@@ -2178,15 +2178,15 @@ static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
   // For other n-ary expressions (Add, AddRec, Max,...) all operands need
   // to be divisible.
   if (auto *NAryExpr = dyn_cast<SCEVNAryExpr>(Expr)) {
-    for (const SCEV *OpExpr : NAryExpr->operands())
+    for (auto *OpExpr : NAryExpr->operands())
       if (!isDivisible(OpExpr, Size, SE))
         return false;
     return true;
   }
 
-  const SCEV *SizeSCEV = SE.getConstant(Expr->getType(), Size);
-  const SCEV *UDivSCEV = SE.getUDivExpr(Expr, SizeSCEV);
-  const SCEV *MulSCEV = SE.getMulExpr(UDivSCEV, SizeSCEV);
+  auto *SizeSCEV = SE.getConstant(Expr->getType(), Size);
+  auto *UDivSCEV = SE.getUDivExpr(Expr, SizeSCEV);
+  auto *MulSCEV = SE.getMulExpr(UDivSCEV, SizeSCEV);
   return MulSCEV == Expr;
 }
 
@@ -3672,7 +3672,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   }
 
   // Create memory accesses for global reads since all arrays are now known.
-  const SCEV *AF = SE.getConstant(IntegerType::getInt64Ty(SE.getContext()), 0);
+  auto *AF = SE.getConstant(IntegerType::getInt64Ty(SE.getContext()), 0);
   for (auto GlobalReadPair : GlobalReads) {
     ScopStmt *GlobalReadStmt = GlobalReadPair.first;
     Instruction *GlobalRead = GlobalReadPair.second;

@@ -12,10 +12,16 @@
 
 #include "AVRInstrInfo.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "AVR.h"

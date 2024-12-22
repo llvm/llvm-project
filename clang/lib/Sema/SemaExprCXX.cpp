@@ -3747,8 +3747,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     } else if (!Pointee->isDependentType()) {
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
-      if (Pointee->isEnumeralType() ||
-          !RequireCompleteType(StartLoc, Pointee,
+      if (!RequireCompleteType(StartLoc, Pointee,
                                LangOpts.CPlusPlus26
                                    ? diag::err_delete_incomplete
                                    : diag::warn_delete_incomplete,
@@ -4432,21 +4431,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_HLSL_Array_RValue:
-    if (ToType->isArrayParameterType()) {
-      FromType = Context.getArrayParameterType(FromType);
-      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                               /*BasePath=*/nullptr, CCK)
-                 .get();
-    } else { // FromType must be ArrayParameterType
-      assert(FromType->isArrayParameterType() &&
-             "FromType must be ArrayParameterType in ICK_HLSL_Array_RValue \
-              if it is not ToType");
-      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
-      FromType = APT->getConstantArrayType(Context);
-      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                               /*BasePath=*/nullptr, CCK)
-                 .get();
-    }
+    FromType = Context.getArrayParameterType(FromType);
+    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                             /*BasePath=*/nullptr, CCK)
+               .get();
     break;
 
   case ICK_Function_To_Pointer:
@@ -5732,7 +5720,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
            "typed resource element compatible types are an HLSL-only feature");
-    if (T->isIncompleteType())
+    if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
+                                 diag::err_incomplete_type))
       return false;
 
     return Self.HLSL().IsTypedResourceElementCompatible(T);
@@ -8201,7 +8190,7 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
     return ExprError();
 
   if (!ObjectType->isDependentType() && !ObjectType->isScalarType() &&
-      !ObjectType->isVectorType() && !ObjectType->isMatrixType()) {
+      !ObjectType->isVectorType()) {
     if (getLangOpts().MSVCCompat && ObjectType->isVoidType())
       Diag(OpLoc, diag::ext_pseudo_dtor_on_void) << Base->getSourceRange();
     else {

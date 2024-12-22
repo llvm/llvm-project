@@ -1934,8 +1934,7 @@ private:
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false,
-                           bool *HasTrailingComma = nullptr);
+                           bool EarlyTypoCorrection = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -3706,14 +3705,10 @@ private:
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
     SourceLocation DirLoc;
-    SourceLocation LParenLoc;
-    SourceLocation RParenLoc;
     SourceLocation EndLoc;
-    SourceLocation MiscLoc;
-    SmallVector<Expr *> Exprs;
     SmallVector<OpenACCClause *> Clauses;
-    // TODO OpenACC: As we implement support for the Atomic, Routine, and Cache
-    // constructs, we likely want to put that information in here as well.
+    // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
+    // Wait constructs, we likely want to put that information in here as well.
   };
 
   struct OpenACCWaitParseInfo {
@@ -3721,13 +3716,6 @@ private:
     Expr *DevNumExpr = nullptr;
     SourceLocation QueuesLoc;
     SmallVector<Expr *> QueueIdExprs;
-
-    SmallVector<Expr *> getAllExprs() {
-      SmallVector<Expr *> Out;
-      Out.push_back(DevNumExpr);
-      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
-      return Out;
-    }
   };
 
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores

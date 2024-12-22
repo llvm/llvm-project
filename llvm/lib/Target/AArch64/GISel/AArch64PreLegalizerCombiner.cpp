@@ -605,8 +605,7 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
 }
 
 bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
-                        const CombinerHelper &Helper,
-                        GISelChangeObserver &Observer) {
+                        CombinerHelper &Helper, GISelChangeObserver &Observer) {
   // Try simplify G_UADDO with 8 or 16 bit operands to wide G_ADD and TBNZ if
   // result is only used in the no-overflow case. It is restricted to cases
   // where we know that the high-bits of the operands are 0. If there's an
@@ -721,7 +720,8 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
 
 class AArch64PreLegalizerCombinerImpl : public Combiner {
 protected:
-  const CombinerHelper Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 

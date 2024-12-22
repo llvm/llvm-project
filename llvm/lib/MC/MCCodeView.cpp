@@ -25,9 +25,11 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-void CodeViewContext::finish() {
-  if (StrTabFragment)
-    StrTabFragment->setContents(StrTab);
+CodeViewContext::~CodeViewContext() {
+  // If someone inserted strings into the string table but never actually
+  // emitted them somewhere, clean up the fragment.
+  if (!InsertedStrTabFragment && StrTabFragment)
+    StrTabFragment->destroy();
 }
 
 /// This is a valid number for use with .cv_loc if we've already seen a .cv_file
@@ -131,15 +133,25 @@ void CodeViewContext::recordCVLoc(MCContext &Ctx, const MCSymbol *Label,
       Label, FunctionId, FileNo, Line, Column, PrologueEnd, IsStmt});
 }
 
+MCDataFragment *CodeViewContext::getStringTableFragment() {
+  if (!StrTabFragment) {
+    StrTabFragment = MCCtx->allocFragment<MCDataFragment>();
+    // Start a new string table out with a null byte.
+    StrTabFragment->getContents().push_back('\0');
+  }
+  return StrTabFragment;
+}
+
 std::pair<StringRef, unsigned> CodeViewContext::addToStringTable(StringRef S) {
+  SmallVectorImpl<char> &Contents = getStringTableFragment()->getContents();
   auto Insertion =
-      StringTable.insert(std::make_pair(S, unsigned(StrTab.size())));
+      StringTable.insert(std::make_pair(S, unsigned(Contents.size())));
   // Return the string from the table, since it is stable.
   std::pair<StringRef, unsigned> Ret =
       std::make_pair(Insertion.first->first(), Insertion.first->second);
   if (Insertion.second) {
     // The string map key is always null terminated.
-    StrTab.append(Ret.first.begin(), Ret.first.end() + 1);
+    Contents.append(Ret.first.begin(), Ret.first.end() + 1);
   }
   return Ret;
 }
@@ -165,9 +177,9 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
   // Put the string table data fragment here, if we haven't already put it
   // somewhere else. If somebody wants two string tables in their .s file, one
   // will just be empty.
-  if (!StrTabFragment) {
-    StrTabFragment = Ctx.allocFragment<MCDataFragment>();
-    OS.insert(StrTabFragment);
+  if (!InsertedStrTabFragment) {
+    OS.insert(getStringTableFragment());
+    InsertedStrTabFragment = true;
   }
 
   OS.emitValueToAlignment(Align(4), 0);
@@ -362,9 +374,11 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
           return Loc.getFileNum() != CurFileNum;
         });
     unsigned EntryCount = FileSegEnd - I;
-    OS.AddComment("Segment for file '" +
-                  Twine(StrTab[Files[CurFileNum - 1].StringTableOffset]) +
-                  "' begins");
+    OS.AddComment(
+        "Segment for file '" +
+        Twine(getStringTableFragment()
+                  ->getContents()[Files[CurFileNum - 1].StringTableOffset]) +
+        "' begins");
     OS.emitCVFileChecksumOffsetDirective(CurFileNum);
     OS.emitInt32(EntryCount);
     uint32_t SegmentSize = 12;

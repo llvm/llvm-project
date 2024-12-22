@@ -58,7 +58,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
   spirv.func @memory_accesses(%arg0 : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, StorageBuffer>, %arg1 : i32, %arg2 : i32) "None" {
     // CHECK: loc({{".*debug.mlir"}}:61:10)
-    %2 = spirv.AccessChain %arg0[%arg1, %arg2] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, StorageBuffer>, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
+    %2 = spirv.AccessChain %arg0[%arg1, %arg2] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, StorageBuffer>, i32, i32
     // CHECK: loc({{".*debug.mlir"}}:63:10)
     %3 = spirv.Load "StorageBuffer" %2 : f32
     // CHECK: loc({{.*debug.mlir"}}:65:5)

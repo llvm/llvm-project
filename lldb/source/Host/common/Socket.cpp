@@ -180,9 +180,12 @@ bool Socket::FindProtocolByScheme(const char *scheme,
   return false;
 }
 
-Socket::Socket(SocketProtocol protocol, bool should_close)
+Socket::Socket(SocketProtocol protocol, bool should_close,
+               bool child_processes_inherit)
     : IOObject(eFDTypeSocket), m_protocol(protocol),
-      m_socket(kInvalidSocketValue), m_should_close_fd(should_close) {}
+      m_socket(kInvalidSocketValue),
+      m_child_processes_inherit(child_processes_inherit),
+      m_should_close_fd(should_close) {}
 
 Socket::~Socket() { Close(); }
 
@@ -211,21 +214,24 @@ void Socket::Terminate() {
 }
 
 std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
+                                       bool child_processes_inherit,
                                        Status &error) {
   error.Clear();
 
-  const bool should_close = true;
   std::unique_ptr<Socket> socket_up;
   switch (protocol) {
   case ProtocolTcp:
-    socket_up = std::make_unique<TCPSocket>(should_close);
+    socket_up =
+        std::make_unique<TCPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUdp:
-    socket_up = std::make_unique<UDPSocket>(should_close);
+    socket_up =
+        std::make_unique<UDPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUnixDomain:
 #if LLDB_ENABLE_POSIX
-    socket_up = std::make_unique<DomainSocket>(should_close);
+    socket_up =
+        std::make_unique<DomainSocket>(true, child_processes_inherit);
 #else
     error = Status::FromErrorString(
         "Unix domain sockets are not supported on this platform.");
@@ -233,7 +239,8 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     break;
   case ProtocolUnixAbstract:
 #ifdef __linux__
-    socket_up = std::make_unique<AbstractSocket>();
+    socket_up =
+        std::make_unique<AbstractSocket>(child_processes_inherit);
 #else
     error = Status::FromErrorString(
         "Abstract domain sockets are not supported on this platform.");
@@ -248,12 +255,14 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
 }
 
 llvm::Expected<std::unique_ptr<Socket>>
-Socket::TcpConnect(llvm::StringRef host_and_port) {
+Socket::TcpConnect(llvm::StringRef host_and_port,
+                   bool child_processes_inherit) {
   Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
   Status error;
-  std::unique_ptr<Socket> connect_socket = Create(ProtocolTcp, error);
+  std::unique_ptr<Socket> connect_socket(
+      Create(ProtocolTcp, child_processes_inherit, error));
   if (error.Fail())
     return error.ToError();
 
@@ -265,12 +274,13 @@ Socket::TcpConnect(llvm::StringRef host_and_port) {
 }
 
 llvm::Expected<std::unique_ptr<TCPSocket>>
-Socket::TcpListen(llvm::StringRef host_and_port, int backlog) {
+Socket::TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
+                  int backlog) {
   Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
   std::unique_ptr<TCPSocket> listen_socket(
-      new TCPSocket(/*should_close=*/true));
+      new TCPSocket(true, child_processes_inherit));
 
   Status error = listen_socket->Listen(host_and_port, backlog);
   if (error.Fail())
@@ -280,8 +290,9 @@ Socket::TcpListen(llvm::StringRef host_and_port, int backlog) {
 }
 
 llvm::Expected<std::unique_ptr<UDPSocket>>
-Socket::UdpConnect(llvm::StringRef host_and_port) {
-  return UDPSocket::CreateConnected(host_and_port);
+Socket::UdpConnect(llvm::StringRef host_and_port,
+                   bool child_processes_inherit) {
+  return UDPSocket::Connect(host_and_port, child_processes_inherit);
 }
 
 llvm::Expected<Socket::HostAndPort> Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
@@ -434,11 +445,13 @@ int Socket::CloseSocket(NativeSocket sockfd) {
 }
 
 NativeSocket Socket::CreateSocket(const int domain, const int type,
-                                  const int protocol, Status &error) {
+                                  const int protocol,
+                                  bool child_processes_inherit, Status &error) {
   error.Clear();
   auto socket_type = type;
 #ifdef SOCK_CLOEXEC
-  socket_type |= SOCK_CLOEXEC;
+  if (!child_processes_inherit)
+    socket_type |= SOCK_CLOEXEC;
 #endif
   auto sock = ::socket(domain, socket_type, protocol);
   if (sock == kInvalidSocketValue)
@@ -447,8 +460,7 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
   return sock;
 }
 
-Status Socket::Accept(const Timeout<std::micro> &timeout, Socket *&socket) {
-  socket = nullptr;
+Status Socket::Accept(Socket *&socket) {
   MainLoop accept_loop;
   llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
       Accept(accept_loop,
@@ -458,19 +470,12 @@ Status Socket::Accept(const Timeout<std::micro> &timeout, Socket *&socket) {
              });
   if (!expected_handles)
     return Status::FromError(expected_handles.takeError());
-  if (timeout) {
-    accept_loop.AddCallback(
-        [](MainLoopBase &loop) { loop.RequestTermination(); }, *timeout);
-  }
-  if (Status status = accept_loop.Run(); status.Fail())
-    return status;
-  if (socket)
-    return Status();
-  return Status(std::make_error_code(std::errc::timed_out));
+  return accept_loop.Run();
 }
 
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
-                                  socklen_t *addrlen, Status &error) {
+                                  socklen_t *addrlen,
+                                  bool child_processes_inherit, Status &error) {
   error.Clear();
 #if defined(ANDROID_USE_ACCEPT_WORKAROUND)
   // Hack:
@@ -480,7 +485,7 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   // available in older kernels. Using an older libc would fix this issue, but
   // introduce other ones, as the old libraries were quite buggy.
   int fd = syscall(__NR_accept, sockfd, addr, addrlen);
-  if (fd >= 0) {
+  if (fd >= 0 && !child_processes_inherit) {
     int flags = ::fcntl(fd, F_GETFD);
     if (flags != -1 && ::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) != -1)
       return fd;
@@ -489,7 +494,10 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   }
   return fd;
 #elif defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
-  int flags = SOCK_CLOEXEC;
+  int flags = 0;
+  if (!child_processes_inherit) {
+    flags |= SOCK_CLOEXEC;
+  }
   NativeSocket fd = llvm::sys::RetryAfterSignal(
       static_cast<NativeSocket>(-1), ::accept4, sockfd, addr, addrlen, flags);
 #else

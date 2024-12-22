@@ -1206,7 +1206,7 @@ class ElementRegion : public TypedValueRegion {
       : TypedValueRegion(sReg, ElementRegionKind), ElementType(elementType),
         Index(Idx) {
     assert((!isa<nonloc::ConcreteInt>(Idx) ||
-            Idx.castAs<nonloc::ConcreteInt>().getValue()->isSigned()) &&
+            Idx.castAs<nonloc::ConcreteInt>().getValue().isSigned()) &&
            "The index must be signed");
     assert(!elementType.isNull() && !elementType->isVoidType() &&
            "Invalid region type!");

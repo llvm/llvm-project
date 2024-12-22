@@ -62,7 +62,6 @@ static_library("AST") {
     "AttrDocTable.cpp",
     "AttrImpl.cpp",
     "Availability.cpp",
-    "ByteCode/BitcastBuffer.cpp",
     "ByteCode/ByteCodeEmitter.cpp",
     "ByteCode/Compiler.cpp",
     "ByteCode/Context.cpp",

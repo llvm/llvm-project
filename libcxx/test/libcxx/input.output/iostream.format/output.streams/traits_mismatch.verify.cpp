@@ -15,8 +15,6 @@
 
 // UNSUPPORTED: no-wide-characters
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <ostream>
 #include <string>
 

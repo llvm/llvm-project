@@ -17,35 +17,35 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test(ptr %B) {
 ; SSE-LABEL: 'test'
 ; SSE:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i16, ptr %inB, align 2
-; SSE:  Cost of 3000000 for VF 2: {{.*}}ir<%valB.loaded> = load
-; SSE:  Cost of 3000000 for VF 4: {{.*}}ir<%valB.loaded> = load
-; SSE:  Cost of 3000000 for VF 8: {{.*}}ir<%valB.loaded> = load
-; SSE:  Cost of 3000000 for VF 16: {{.*}}ir<%valB.loaded> = load
+; SSE:  LV: Found an estimated cost of 3000000 for VF 2 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; SSE:  LV: Found an estimated cost of 3000000 for VF 4 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; SSE:  LV: Found an estimated cost of 3000000 for VF 8 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; SSE:  LV: Found an estimated cost of 3000000 for VF 16 For instruction: %valB.loaded = load i16, ptr %inB, align 2
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i16, ptr %inB, align 2
-; AVX1:  Cost of 3000000 for VF 2: {{.*}}ir<%valB.loaded> = load
-; AVX1:  Cost of 3000000 for VF 4: {{.*}}ir<%valB.loaded> = load
-; AVX1:  Cost of 3000000 for VF 8: {{.*}}ir<%valB.loaded> = load
-; AVX1:  Cost of 3000000 for VF 16: {{.*}}ir<%valB.loaded> = load
-; AVX1:  Cost of 3000000 for VF 32: {{.*}}ir<%valB.loaded> = load
+; AVX1:  LV: Found an estimated cost of 3000000 for VF 2 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX1:  LV: Found an estimated cost of 3000000 for VF 4 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX1:  LV: Found an estimated cost of 3000000 for VF 8 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX1:  LV: Found an estimated cost of 3000000 for VF 16 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX1:  LV: Found an estimated cost of 3000000 for VF 32 For instruction: %valB.loaded = load i16, ptr %inB, align 2
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i16, ptr %inB, align 2
-; AVX2:  Cost of 3000000 for VF 2: {{.*}}ir<%valB.loaded> = load
-; AVX2:  Cost of 3000000 for VF 4: {{.*}}ir<%valB.loaded> = load
-; AVX2:  Cost of 3000000 for VF 8: {{.*}}ir<%valB.loaded> = load
-; AVX2:  Cost of 3000000 for VF 16: {{.*}}ir<%valB.loaded> = load
-; AVX2:  Cost of 3000000 for VF 32: {{.*}}ir<%valB.loaded> = load
+; AVX2:  LV: Found an estimated cost of 3000000 for VF 2 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX2:  LV: Found an estimated cost of 3000000 for VF 4 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX2:  LV: Found an estimated cost of 3000000 for VF 8 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX2:  LV: Found an estimated cost of 3000000 for VF 16 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX2:  LV: Found an estimated cost of 3000000 for VF 32 For instruction: %valB.loaded = load i16, ptr %inB, align 2
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i16, ptr %inB, align 2
-; AVX512:  Cost of 2 for VF 2: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 2 for VF 4: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 1 for VF 8: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 1 for VF 16: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 1 for VF 32: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 2 for VF 64: {{.*}}ir<%valB.loaded> = load
+; AVX512:  LV: Found an estimated cost of 2 for VF 2 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX512:  LV: Found an estimated cost of 2 for VF 4 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX512:  LV: Found an estimated cost of 1 for VF 8 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX512:  LV: Found an estimated cost of 1 for VF 16 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX512:  LV: Found an estimated cost of 1 for VF 32 For instruction: %valB.loaded = load i16, ptr %inB, align 2
+; AVX512:  LV: Found an estimated cost of 2 for VF 64 For instruction: %valB.loaded = load i16, ptr %inB, align 2
 ;
 entry:
   br label %for.body

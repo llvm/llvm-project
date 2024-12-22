@@ -16,7 +16,6 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
 
@@ -62,8 +61,8 @@ public:
   /// Returns the ROCM toolkit path.
   StringRef getToolkitPath() const;
 
-  /// Returns the LLVM bitcode libraries to be linked.
-  ArrayRef<Attribute> getLibrariesToLink() const;
+  /// Returns the bitcode files to be loaded.
+  ArrayRef<std::string> getFileList() const;
 
   /// Appends standard ROCm device libraries to `fileList`.
   LogicalResult appendStandardLibs(AMDGCNLibraries libs);
@@ -108,7 +107,7 @@ protected:
   std::string toolkitPath;
 
   /// List of LLVM bitcode files to link to.
-  SmallVector<Attribute> librariesToLink;
+  SmallVector<std::string> fileList;
 
   /// AMD GCN libraries to use when linking, the default is using none.
   AMDGCNLibraries deviceLibs = AMDGCNLibraries::None;

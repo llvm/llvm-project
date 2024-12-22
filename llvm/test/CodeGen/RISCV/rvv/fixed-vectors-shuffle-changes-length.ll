@@ -97,31 +97,33 @@ define <4 x i32> @v4i32_v8i32(<8 x i32>) {
 define <4 x i32> @v4i32_v16i32(<16 x i32>) {
 ; RV32-LABEL: v4i32_v16i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 1
+; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v16, v8, 8
+; RV32-NEXT:    vmv4r.v v20, v8
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v14, 6
+; RV32-NEXT:    vmv.v.i v8, 1
+; RV32-NEXT:    vmv2r.v v22, v12
+; RV32-NEXT:    vmv.v.i v10, 6
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vmv.v.i v0, 10
 ; RV32-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
-; RV32-NEXT:    vslideup.vi v14, v12, 1
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vnsrl.wx v12, v8, a0
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v8, 8
+; RV32-NEXT:    vslideup.vi v10, v8, 1
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32-NEXT:    vrgatherei16.vv v12, v8, v14, v0.t
-; RV32-NEXT:    vmv1r.v v8, v12
+; RV32-NEXT:    vnsrl.wx v8, v20, a0
+; RV32-NEXT:    vrgatherei16.vv v8, v16, v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v4i32_v16i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 32
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vmv.v.i v0, 10
-; RV64-NEXT:    vnsrl.wx v12, v8, a0
 ; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 8
+; RV64-NEXT:    vslidedown.vi v16, v8, 8
+; RV64-NEXT:    vmv4r.v v20, v8
+; RV64-NEXT:    li a0, 32
+; RV64-NEXT:    vmv2r.v v22, v12
+; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; RV64-NEXT:    vmv.v.i v0, 10
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vnsrl.wx v8, v20, a0
 ; RV64-NEXT:    li a0, 3
 ; RV64-NEXT:    slli a0, a0, 33
 ; RV64-NEXT:    addi a0, a0, 1
@@ -129,8 +131,7 @@ define <4 x i32> @v4i32_v16i32(<16 x i32>) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a0
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV64-NEXT:    vrgatherei16.vv v12, v8, v10, v0.t
-; RV64-NEXT:    vmv1r.v v8, v12
+; RV64-NEXT:    vrgatherei16.vv v8, v16, v10, v0.t
 ; RV64-NEXT:    ret
   %2 = shufflevector <16 x i32> %0, <16 x i32> poison, <4 x i32> <i32 1, i32 9, i32 5, i32 14>
   ret <4 x i32> %2

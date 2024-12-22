@@ -21,11 +21,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Block::Block(Function &function, user_id_t function_uid)
-    : Block(function_uid, function) {}
-
-Block::Block(lldb::user_id_t uid, SymbolContextScope &parent_scope)
-    : UserID(uid), m_parent_scope(parent_scope), m_parsed_block_info(false),
+Block::Block(lldb::user_id_t uid)
+    : UserID(uid), m_parent_scope(nullptr), m_children(), m_ranges(),
+      m_inlineInfoSP(), m_variable_list_sp(), m_parsed_block_info(false),
       m_parsed_block_variables(false), m_parsed_child_blocks(false) {}
 
 Block::~Block() = default;
@@ -136,20 +134,27 @@ Block *Block::FindInnermostBlockByOffset(const lldb::addr_t offset) {
 }
 
 void Block::CalculateSymbolContext(SymbolContext *sc) {
-  m_parent_scope.CalculateSymbolContext(sc);
+  if (m_parent_scope)
+    m_parent_scope->CalculateSymbolContext(sc);
   sc->block = this;
 }
 
 lldb::ModuleSP Block::CalculateSymbolContextModule() {
-  return m_parent_scope.CalculateSymbolContextModule();
+  if (m_parent_scope)
+    return m_parent_scope->CalculateSymbolContextModule();
+  return lldb::ModuleSP();
 }
 
 CompileUnit *Block::CalculateSymbolContextCompileUnit() {
-  return m_parent_scope.CalculateSymbolContextCompileUnit();
+  if (m_parent_scope)
+    return m_parent_scope->CalculateSymbolContextCompileUnit();
+  return nullptr;
 }
 
 Function *Block::CalculateSymbolContextFunction() {
-  return m_parent_scope.CalculateSymbolContextFunction();
+  if (m_parent_scope)
+    return m_parent_scope->CalculateSymbolContextFunction();
+  return nullptr;
 }
 
 Block *Block::CalculateSymbolContextBlock() { return this; }
@@ -195,7 +200,9 @@ bool Block::Contains(const Range &range) const {
 }
 
 Block *Block::GetParent() const {
-  return m_parent_scope.CalculateSymbolContextBlock();
+  if (m_parent_scope)
+    return m_parent_scope->CalculateSymbolContextBlock();
+  return nullptr;
 }
 
 Block *Block::GetContainingInlinedBlock() {
@@ -245,20 +252,19 @@ bool Block::GetRangeContainingAddress(const Address &addr,
   Function *function = CalculateSymbolContextFunction();
   if (function) {
     const AddressRange &func_range = function->GetAddressRange();
-    if (addr.GetModule() == func_range.GetBaseAddress().GetModule()) {
-      const addr_t file_addr = addr.GetFileAddress();
-      const addr_t func_file_addr =
-          func_range.GetBaseAddress().GetFileAddress();
-      if (file_addr >= func_file_addr &&
-          file_addr < func_file_addr + func_range.GetByteSize()) {
-        addr_t offset = file_addr - func_file_addr;
+    if (addr.GetSection() == func_range.GetBaseAddress().GetSection()) {
+      const addr_t addr_offset = addr.GetOffset();
+      const addr_t func_offset = func_range.GetBaseAddress().GetOffset();
+      if (addr_offset >= func_offset &&
+          addr_offset < func_offset + func_range.GetByteSize()) {
+        addr_t offset = addr_offset - func_offset;
 
         const Range *range_ptr = m_ranges.FindEntryThatContains(offset);
 
         if (range_ptr) {
-          range.GetBaseAddress() =
-              Address(func_file_addr + range_ptr->GetRangeBase(),
-                      addr.GetModule()->GetSectionList());
+          range.GetBaseAddress() = func_range.GetBaseAddress();
+          range.GetBaseAddress().SetOffset(func_offset +
+                                           range_ptr->GetRangeBase());
           range.SetByteSize(range_ptr->GetByteSize());
           return true;
         }
@@ -347,8 +353,8 @@ void Block::AddRange(const Range &range) {
   if (parent_block && !parent_block->Contains(range)) {
     Log *log = GetLog(LLDBLog::Symbols);
     if (log) {
-      ModuleSP module_sp(m_parent_scope.CalculateSymbolContextModule());
-      Function *function = m_parent_scope.CalculateSymbolContextFunction();
+      ModuleSP module_sp(m_parent_scope->CalculateSymbolContextModule());
+      Function *function = m_parent_scope->CalculateSymbolContextFunction();
       const addr_t function_file_addr =
           function->GetAddressRange().GetBaseAddress().GetFileAddress();
       const addr_t block_start_addr = function_file_addr + range.GetRangeBase();
@@ -392,9 +398,11 @@ size_t Block::MemorySize() const {
   return mem_size;
 }
 
-BlockSP Block::CreateChild(user_id_t uid) {
-  m_children.push_back(std::shared_ptr<Block>(new Block(uid, *this)));
-  return m_children.back();
+void Block::AddChild(const BlockSP &child_block_sp) {
+  if (child_block_sp) {
+    child_block_sp->SetParentScope(this);
+    m_children.push_back(child_block_sp);
+  }
 }
 
 void Block::SetInlinedFunctionInfo(const char *name, const char *mangled,
@@ -511,11 +519,13 @@ void Block::SetDidParseVariables(bool b, bool set_children) {
 }
 
 Block *Block::GetSibling() const {
-  if (Block *parent_block = GetParent())
-    return parent_block->GetSiblingForChild(this);
+  if (m_parent_scope) {
+    Block *parent_block = GetParent();
+    if (parent_block)
+      return parent_block->GetSiblingForChild(this);
+  }
   return nullptr;
 }
-
 // A parent of child blocks can be asked to find a sibling block given
 // one of its child blocks
 Block *Block::GetSiblingForChild(const Block *child_block) const {

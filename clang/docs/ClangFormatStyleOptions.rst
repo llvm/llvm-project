@@ -3759,9 +3759,9 @@ the configuration (without a prefix: ``Auto``).
   lists.
 
   Important differences:
-  * No spaces inside the braced list.
-  * No line break before the closing brace.
-  * Indentation with the continuation indent, not with the block indent.
+  - No spaces inside the braced list.
+  - No line break before the closing brace.
+  - Indentation with the continuation indent, not with the block indent.
 
   Fundamentally, C++11 braced lists are formatted exactly like function
   calls would be formatted in their place. If the braced list follows a name
@@ -4104,10 +4104,10 @@ the configuration (without a prefix: ``Auto``).
   When guessing whether a #include is the "main" include (to assign
   category 0, see above), use this regex of allowed suffixes to the header
   stem. A partial match is done, so that:
-  * ``""`` means "arbitrary suffix"
-  * ``"$"`` means "no suffix"
+  - "" means "arbitrary suffix"
+  - "$" means "no suffix"
 
-  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
+  For example, if configured to "(_test)?$", then a header a.h would be seen
   as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
@@ -5313,21 +5313,21 @@ the configuration (without a prefix: ``Auto``).
 
 **QualifierOrder** (``List of Strings``) :versionbadge:`clang-format 14` :ref:`¶ <QualifierOrder>`
   The order in which the qualifiers appear.
-  The order is an array that can contain any of the following:
+  Order is an array that can contain any of the following:
 
-    * ``const``
-    * ``inline``
-    * ``static``
-    * ``friend``
-    * ``constexpr``
-    * ``volatile``
-    * ``restrict``
-    * ``type``
+    * const
+    * inline
+    * static
+    * friend
+    * constexpr
+    * volatile
+    * restrict
+    * type
 
 
   .. note::
 
-   It must contain ``type``.
+   It **must** contain ``type``.
 
   Items to the left of ``type`` will be placed to the left of the type and
   aligned in the order supplied. Items to the right of ``type`` will be
@@ -6645,11 +6645,12 @@ the configuration (without a prefix: ``Auto``).
 .. _StatementMacros:
 
 **StatementMacros** (``List of Strings``) :versionbadge:`clang-format 8` :ref:`¶ <StatementMacros>`
-  A vector of macros that should be interpreted as complete statements.
+  A vector of macros that should be interpreted as complete
+  statements.
 
-  Typical macros are expressions and require a semicolon to be added.
-  Sometimes this is not the case, and this allows to make clang-format aware
-  of such cases.
+  Typical macros are expressions, and require a semi-colon to be
+  added; sometimes this is not the case, and this allows to make
+  clang-format aware of such cases.
 
   For example: Q_UNUSED
 

@@ -20,7 +20,7 @@ using namespace llvm::PatternMatch;
 
 bool llvm::isCheckForZeroAndMulWithOverflow(Value *Op0, Value *Op1, bool IsAnd,
                                             Use *&Y) {
-  CmpPredicate Pred;
+  ICmpInst::Predicate Pred;
   Value *X, *NotOp1;
   int XIdx;
   IntrinsicInst *II;

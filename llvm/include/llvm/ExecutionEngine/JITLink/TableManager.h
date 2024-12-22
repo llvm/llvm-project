@@ -69,7 +69,7 @@ public:
 
 private:
   TableManagerImplT &impl() { return static_cast<TableManagerImplT &>(*this); }
-  DenseMap<orc::SymbolStringPtr, Symbol *> Entries;
+  DenseMap<StringRef, Symbol *> Entries;
 };
 
 } // namespace jitlink

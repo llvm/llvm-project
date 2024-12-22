@@ -500,8 +500,7 @@ public:
   // the last section take precedence in such cases.
   void processSections(DiagnosticsEngine &Diags);
 
-  bool isDiagSuppressed(diag::kind DiagId, SourceLocation DiagLoc,
-                        const SourceManager &SM) const;
+  bool isDiagSuppressed(diag::kind DiagId, StringRef FilePath) const;
 
 private:
   // Find the longest glob pattern that matches FilePath amongst
@@ -574,14 +573,13 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
   WarningSuppressionList->processSections(*this);
   DiagSuppressionMapping =
       [WarningSuppressionList(std::move(WarningSuppressionList))](
-          diag::kind DiagId, SourceLocation DiagLoc, const SourceManager &SM) {
-        return WarningSuppressionList->isDiagSuppressed(DiagId, DiagLoc, SM);
+          diag::kind DiagId, StringRef Path) {
+        return WarningSuppressionList->isDiagSuppressed(DiagId, Path);
       };
 }
 
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
-                                               SourceLocation DiagLoc,
-                                               const SourceManager &SM) const {
+                                               StringRef FilePath) const {
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
     return false;
@@ -591,13 +589,7 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
     return false;
   const llvm::StringMap<llvm::SpecialCaseList::Matcher> &CategoriesToMatchers =
       SrcEntriesIt->getValue();
-  // We also use presumed locations here to improve reproducibility for
-  // preprocessed inputs.
-  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid())
-    return globsMatches(
-        CategoriesToMatchers,
-        llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
-  return false;
+  return globsMatches(CategoriesToMatchers, FilePath);
 }
 
 bool WarningsSpecialCaseList::globsMatches(
@@ -622,10 +614,8 @@ bool WarningsSpecialCaseList::globsMatches(
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
-                                               SourceLocation DiagLoc) const {
-  if (!hasSourceManager() || !DiagSuppressionMapping)
-    return false;
-  return DiagSuppressionMapping(DiagId, DiagLoc, getSourceManager());
+                                               StringRef FilePath) const {
+  return DiagSuppressionMapping && DiagSuppressionMapping(DiagId, FilePath);
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {

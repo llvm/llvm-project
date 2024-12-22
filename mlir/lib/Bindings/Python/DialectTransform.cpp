@@ -6,20 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <string>
-
 #include "mlir-c/Dialect/Transform.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <string>
 
-namespace nb = nanobind;
+namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
-using namespace mlir::python::nanobind_adaptors;
+using namespace mlir::python::adaptors;
 
-void populateDialectTransformSubmodule(const nb::module_ &m) {
+void populateDialectTransformSubmodule(const pybind11::module &m) {
   //===-------------------------------------------------------------------===//
   // AnyOpType
   //===-------------------------------------------------------------------===//
@@ -29,11 +31,11 @@ void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformAnyOpTypeGetTypeID);
   anyOpType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](py::object cls, MlirContext ctx) {
         return cls(mlirTransformAnyOpTypeGet(ctx));
       },
-      "Get an instance of AnyOpType in the given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      "Get an instance of AnyOpType in the given context.", py::arg("cls"),
+      py::arg("context") = py::none());
 
   //===-------------------------------------------------------------------===//
   // AnyParamType
@@ -44,11 +46,11 @@ void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformAnyParamTypeGetTypeID);
   anyParamType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](py::object cls, MlirContext ctx) {
         return cls(mlirTransformAnyParamTypeGet(ctx));
       },
-      "Get an instance of AnyParamType in the given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      "Get an instance of AnyParamType in the given context.", py::arg("cls"),
+      py::arg("context") = py::none());
 
   //===-------------------------------------------------------------------===//
   // AnyValueType
@@ -59,11 +61,11 @@ void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformAnyValueTypeGetTypeID);
   anyValueType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](py::object cls, MlirContext ctx) {
         return cls(mlirTransformAnyValueTypeGet(ctx));
       },
-      "Get an instance of AnyValueType in the given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      "Get an instance of AnyValueType in the given context.", py::arg("cls"),
+      py::arg("context") = py::none());
 
   //===-------------------------------------------------------------------===//
   // OperationType
@@ -74,21 +76,21 @@ void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformOperationTypeGetTypeID);
   operationType.def_classmethod(
       "get",
-      [](nb::object cls, const std::string &operationName, MlirContext ctx) {
+      [](py::object cls, const std::string &operationName, MlirContext ctx) {
         MlirStringRef cOperationName =
             mlirStringRefCreate(operationName.data(), operationName.size());
         return cls(mlirTransformOperationTypeGet(ctx, cOperationName));
       },
       "Get an instance of OperationType for the given kind in the given "
       "context",
-      nb::arg("cls"), nb::arg("operation_name"),
-      nb::arg("context").none() = nb::none());
+      py::arg("cls"), py::arg("operation_name"),
+      py::arg("context") = py::none());
   operationType.def_property_readonly(
       "operation_name",
       [](MlirType type) {
         MlirStringRef operationName =
             mlirTransformOperationTypeGetOperationName(type);
-        return nb::str(operationName.data, operationName.length);
+        return py::str(operationName.data, operationName.length);
       },
       "Get the name of the payload operation accepted by the handle.");
 
@@ -101,11 +103,11 @@ void populateDialectTransformSubmodule(const nb::module_ &m) {
                          mlirTransformParamTypeGetTypeID);
   paramType.def_classmethod(
       "get",
-      [](nb::object cls, MlirType type, MlirContext ctx) {
+      [](py::object cls, MlirType type, MlirContext ctx) {
         return cls(mlirTransformParamTypeGet(ctx, type));
       },
       "Get an instance of ParamType for the given type in the given context.",
-      nb::arg("cls"), nb::arg("type"), nb::arg("context").none() = nb::none());
+      py::arg("cls"), py::arg("type"), py::arg("context") = py::none());
   paramType.def_property_readonly(
       "type",
       [](MlirType type) {
@@ -115,7 +117,7 @@ void populateDialectTransformSubmodule(const nb::module_ &m) {
       "Get the type this ParamType is associated with.");
 }
 
-NB_MODULE(_mlirDialectsTransform, m) {
+PYBIND11_MODULE(_mlirDialectsTransform, m) {
   m.doc() = "MLIR Transform dialect.";
   populateDialectTransformSubmodule(m);
 }

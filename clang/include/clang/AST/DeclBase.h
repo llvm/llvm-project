@@ -271,12 +271,16 @@ private:
   ///                // LexicalDC == global namespace
   llvm::PointerUnion<DeclContext*, MultipleDC*> DeclCtx;
 
-  bool isInSemaDC() const { return isa<DeclContext *>(DeclCtx); }
-  bool isOutOfSemaDC() const { return isa<MultipleDC *>(DeclCtx); }
+  bool isInSemaDC() const { return DeclCtx.is<DeclContext*>(); }
+  bool isOutOfSemaDC() const { return DeclCtx.is<MultipleDC*>(); }
 
-  MultipleDC *getMultipleDC() const { return cast<MultipleDC *>(DeclCtx); }
+  MultipleDC *getMultipleDC() const {
+    return DeclCtx.get<MultipleDC*>();
+  }
 
-  DeclContext *getSemanticDC() const { return cast<DeclContext *>(DeclCtx); }
+  DeclContext *getSemanticDC() const {
+    return DeclCtx.get<DeclContext*>();
+  }
 
   /// Loc - The location of this decl.
   SourceLocation Loc;
@@ -1336,7 +1340,7 @@ public:
       assert(Ptr && "dereferencing end() iterator");
       if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
         return CurNode->D;
-      return cast<NamedDecl *>(Ptr);
+      return Ptr.get<NamedDecl*>();
     }
     void operator->() const { } // Unsupported.
     bool operator==(const iterator &X) const { return Ptr == X.Ptr; }

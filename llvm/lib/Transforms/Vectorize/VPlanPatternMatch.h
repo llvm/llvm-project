@@ -78,8 +78,6 @@ template <unsigned BitWidth = 0> struct specific_intval {
     if (!VPV->isLiveIn())
       return false;
     Value *V = VPV->getLiveInIRValue();
-    if (!V)
-      return false;
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI && V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
@@ -138,8 +136,7 @@ struct MatchRecipeAndOpcode<Opcode, RecipeTy> {
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
                   std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
-                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value)
+                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -385,17 +382,6 @@ inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
                                                            const Op1_t &Op1) {
   return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
 }
-
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-using VPDerivedIV_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0, false, VPDerivedIVRecipe>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPDerivedIV_match<Op0_t, Op1_t, Op2_t>
-m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
-}
-
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

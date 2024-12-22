@@ -1,7 +1,7 @@
-; RUN: llc < %s -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
-target triple = "nvptx64-unknown-nvcl"
+target triple = "nvptx-unknown-nvcl"
 
 declare i32 @llvm.nvvm.suld.1d.i32.trap(i64, i32)
 

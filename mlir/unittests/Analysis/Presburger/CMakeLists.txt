@@ -17,7 +17,7 @@ add_mlir_unittest(MLIRPresburgerTests
   UtilsTest.cpp
 )
 
-mlir_target_link_libraries(MLIRPresburgerTests
+target_link_libraries(MLIRPresburgerTests
   PRIVATE MLIRPresburger
   MLIRAffineAnalysis
   MLIRParser

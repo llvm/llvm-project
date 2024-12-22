@@ -398,11 +398,6 @@ public:
     AnalysisResultLists.clear();
   }
 
-  /// Returns true if the specified analysis pass is registered.
-  template <typename PassT> bool isPassRegistered() const {
-    return AnalysisPasses.count(PassT::ID());
-  }
-
   /// Get the result of an analysis pass for a given IR unit.
   ///
   /// Runs the analysis if a cached result is not available.
@@ -463,9 +458,10 @@ public:
   /// and this function returns true.
   ///
   /// (Note: Although the return value of this function indicates whether or not
-  /// an analysis was previously registered, you should just register all the
-  /// analyses you might want and let this class run them lazily.  This idiom
-  /// lets us minimize the number of times we have to look up analyses in our
+  /// an analysis was previously registered, there intentionally isn't a way to
+  /// query this directly.  Instead, you should just register all the analyses
+  /// you might want and let this class run them lazily.  This idiom lets us
+  /// minimize the number of times we have to look up analyses in our
   /// hashtable.)
   template <typename PassBuilderT>
   bool registerPass(PassBuilderT &&PassBuilder) {

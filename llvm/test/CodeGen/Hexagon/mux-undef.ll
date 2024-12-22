@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 ;
 ; Make sure this test compiles successfully.
 ; CHECK: call foo

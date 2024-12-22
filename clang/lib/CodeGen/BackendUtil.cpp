@@ -77,7 +77,6 @@
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
-#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -736,16 +735,8 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
-    if (LangOpts.Sanitize.has(SanitizerKind::Type)) {
-      MPM.addPass(ModuleTypeSanitizerPass());
-      MPM.addPass(createModuleToFunctionPassAdaptor(TypeSanitizerPass()));
-    }
-
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
-
-    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
-      MPM.addPass(RealtimeSanitizerPass());
 
     auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
@@ -798,12 +789,13 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 
   if (LowerAllowCheckPass::IsRequested()) {
-    // We want to call it after inline, which is about OptimizerEarlyEPCallback.
-    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
-                                           OptimizationLevel Level,
-                                           ThinOrFullLTOPhase Phase) {
-      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass()));
-    });
+    // We can optimize after inliner, and PGO profile matching. The hook below
+    // is called at the end `buildFunctionSimplificationPipeline`, which called
+    // from `buildInlinerPipeline`, which called after profile matching.
+    PB.registerScalarOptimizerLateEPCallback(
+        [](FunctionPassManager &FPM, OptimizationLevel Level) {
+          FPM.addPass(LowerAllowCheckPass());
+        });
   }
 }
 
@@ -1028,24 +1020,15 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // of the pipeline.
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
       PB.registerScalarOptimizerLateEPCallback(
-          [this](FunctionPassManager &FPM, OptimizationLevel Level) {
-            BoundsCheckingPass::ReportingMode Mode;
-            bool Merge = CodeGenOpts.SanitizeMergeHandlers.has(
-                SanitizerKind::LocalBounds);
+          [](FunctionPassManager &FPM, OptimizationLevel Level) {
+            FPM.addPass(BoundsCheckingPass());
+          });
 
-            if (CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
-              Mode = BoundsCheckingPass::ReportingMode::Trap;
-            } else if (CodeGenOpts.SanitizeMinimalRuntime) {
-              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
-                         ? BoundsCheckingPass::ReportingMode::MinRuntime
-                         : BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
-            } else {
-              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
-                         ? BoundsCheckingPass::ReportingMode::FullRuntime
-                         : BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
-            }
-            BoundsCheckingPass::BoundsCheckingOptions Options(Mode, Merge);
-            FPM.addPass(BoundsCheckingPass(Options));
+    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
+      PB.registerScalarOptimizerLateEPCallback(
+          [](FunctionPassManager &FPM, OptimizationLevel Level) {
+            RealtimeSanitizerOptions Opts;
+            FPM.addPass(RealtimeSanitizerPass(Opts));
           });
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already

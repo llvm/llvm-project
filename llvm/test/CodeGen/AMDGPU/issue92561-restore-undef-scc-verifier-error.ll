@@ -63,16 +63,17 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    image_sample_c_lz v0, [v1, v1, v0, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v3, [v1, v1, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v2, [v1, v2, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    v_mov_b32_e32 v4, v1
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-NEXT:    v_add_f32_e32 v0, v9, v0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; SDAG-NEXT:    v_add_f32_e32 v0, v2, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; SDAG-NEXT:    v_add_f32_e32 v0, v3, v0
+; SDAG-NEXT:    v_dual_add_f32 v0, v3, v0 :: v_dual_mov_b32 v3, v1
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-NEXT:    v_mul_f32_e32 v0, 0x3e800000, v0
-; SDAG-NEXT:    image_store v[0:2], [v1, v1], s[0:7] dim:SQ_RSRC_IMG_2D unorm
+; SDAG-NEXT:    image_store v[0:2], v[3:4], s[0:7] dim:SQ_RSRC_IMG_2D unorm
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: issue92561:
@@ -130,6 +131,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    image_sample_c_lz v0, [v2, v2, v0, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    image_sample_c_lz v3, [v2, v3, v2, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    image_sample_c_lz v4, [v2, v2, v2, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    s_mov_b32 s21, s20
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GISEL-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
@@ -137,9 +139,10 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    v_dual_add_f32 v0, v3, v0 :: v_dual_mov_b32 v3, v2
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_add_f32_e32 v0, v4, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    v_mul_f32_e32 v1, 0x3e800000, v0
-; GISEL-NEXT:    image_store v[1:3], [v2, v2], s[4:11] dim:SQ_RSRC_IMG_2D unorm
+; GISEL-NEXT:    image_store v[1:3], v[4:5], s[4:11] dim:SQ_RSRC_IMG_2D unorm
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %descriptor = load <8 x i32>, ptr addrspace(1) %arg, align 32

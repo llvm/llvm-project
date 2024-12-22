@@ -223,7 +223,7 @@ void DbgAssignIntrinsic::setAddress(Value *V) {
 void DbgAssignIntrinsic::setKillAddress() {
   if (isKillAddress())
     return;
-  setAddress(PoisonValue::get(getAddress()->getType()));
+  setAddress(UndefValue::get(getAddress()->getType()));
 }
 
 bool DbgAssignIntrinsic::isKillAddress() const {

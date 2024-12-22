@@ -70,6 +70,7 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
+  typedef llvm::ImmutableSet<llvm::APSInt*>                IntSetTy;
   typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
 
 private:
@@ -486,7 +487,6 @@ private:
   friend void ProgramStateRetain(const ProgramState *state);
   friend void ProgramStateRelease(const ProgramState *state);
 
-  SVal desugarReference(SVal Val) const;
   SVal wrapSymbolicRegion(SVal Base) const;
 };
 

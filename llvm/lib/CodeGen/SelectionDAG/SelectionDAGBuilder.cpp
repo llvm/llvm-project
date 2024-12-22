@@ -319,14 +319,13 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
 static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
                                               const Twine &ErrMsg) {
   const Instruction *I = dyn_cast_or_null<Instruction>(V);
-  if (!I)
+  if (!V)
     return Ctx.emitError(ErrMsg);
 
+  const char *AsmError = ", possible invalid constraint for vector type";
   if (const CallInst *CI = dyn_cast<CallInst>(I))
-    if (CI->isInlineAsm()) {
-      return Ctx.diagnose(DiagnosticInfoInlineAsm(
-          *CI, ErrMsg + ", possible invalid constraint for vector type"));
-    }
+    if (CI->isInlineAsm())
+      return Ctx.emitError(I, ErrMsg + AsmError);
 
   return Ctx.emitError(I, ErrMsg);
 }
@@ -1897,18 +1896,6 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
     }
 
-    if (VT.isRISCVVectorTuple()) {
-      assert(C->isNullValue() && "Can only zero this target type!");
-      return NodeMap[V] = DAG.getNode(
-                 ISD::BITCAST, getCurSDLoc(), VT,
-                 DAG.getNode(
-                     ISD::SPLAT_VECTOR, getCurSDLoc(),
-                     EVT::getVectorVT(*DAG.getContext(), MVT::i8,
-                                      VT.getSizeInBits().getKnownMinValue() / 8,
-                                      true),
-                     DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
-    }
-
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
@@ -2195,13 +2182,19 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
 
   if (!FuncInfo.CanLowerReturn) {
     Register DemoteReg = FuncInfo.DemoteRegister;
+    const Function *F = I.getParent()->getParent();
 
     // Emit a store of the return value through the virtual register.
     // Leave Outs empty so that LowerReturn won't try to load return
     // registers the usual way.
-    MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
+    SmallVector<EVT, 1> PtrValueVTs;
+    ComputeValueVTs(TLI, DL,
+                    PointerType::get(F->getContext(),
+                                     DAG.getDataLayout().getAllocaAddrSpace()),
+                    PtrValueVTs);
+
     SDValue RetPtr =
-        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
+        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVTs[0]);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
@@ -7539,9 +7532,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
 
   case Intrinsic::expect:
-  case Intrinsic::expect_with_probability:
-    // Just replace __builtin_expect(exp, c) and
-    // __builtin_expect_with_probability(exp, c, p) with EXP.
+    // Just replace __builtin_expect(exp, c) with EXP.
     setValue(&I, getValue(I.getArgOperand(0)));
     return;
 
@@ -10504,7 +10495,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 void SelectionDAGBuilder::emitInlineAsmError(const CallBase &Call,
                                              const Twine &Message) {
   LLVMContext &Ctx = *DAG.getContext();
-  Ctx.diagnose(DiagnosticInfoInlineAsm(Call, Message));
+  Ctx.emitError(&Call, Message);
 
   // Make sure we leave the DAG in a valid state
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -10979,6 +10970,7 @@ std::pair<SDValue, SDValue>
 TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   // Handle the incoming return values from the call.
   CLI.Ins.clear();
+  Type *OrigRetTy = CLI.RetTy;
   SmallVector<EVT, 4> RetTys;
   SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
@@ -11191,7 +11183,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         if (auto MA = Args[i].Alignment)
           MemAlign = *MA;
         else
-          MemAlign = getByValTypeAlignment(Args[i].IndirectType, DL);
+          MemAlign = Align(getByValTypeAlignment(Args[i].IndirectType, DL));
       } else if (auto MA = Args[i].Alignment) {
         MemAlign = *MA;
       } else {
@@ -11303,7 +11295,13 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   if (!CanLowerReturn) {
     // The instruction result is the result of loading from the
     // hidden sret parameter.
-    MVT PtrVT = getPointerTy(DL, DL.getAllocaAddrSpace());
+    SmallVector<EVT, 1> PVTs;
+    Type *PtrRetTy =
+        PointerType::get(OrigRetTy->getContext(), DL.getAllocaAddrSpace());
+
+    ComputeValueVTs(*this, DL, PtrRetTy, PVTs);
+    assert(PVTs.size() == 1 && "Pointers should fit in one register");
+    EVT PtrVT = PVTs[0];
 
     unsigned NumValues = RetTys.size();
     ReturnValues.resize(NumValues);
@@ -11623,12 +11621,18 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   if (!FuncInfo->CanLowerReturn) {
     // Put in an sret pointer parameter before all the other parameters.
-    MVT ValueVT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
+    SmallVector<EVT, 1> ValueVTs;
+    ComputeValueVTs(*TLI, DAG.getDataLayout(),
+                    PointerType::get(F.getContext(),
+                                     DAG.getDataLayout().getAllocaAddrSpace()),
+                    ValueVTs);
 
+    // NOTE: Assuming that a pointer will never break down to more than one VT
+    // or one register.
     ISD::ArgFlagsTy Flags;
     Flags.setSRet();
-    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVT);
-    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, true,
+    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVTs[0]);
+    ISD::InputArg RetArg(Flags, RegisterVT, ValueVTs[0], true,
                          ISD::InputArg::NoArgIndex, 0);
     Ins.push_back(RetArg);
   }
@@ -11736,7 +11740,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if ((ParamAlign = Arg.getParamAlign()))
           MemAlign = *ParamAlign;
         else
-          MemAlign = TLI->getByValTypeAlignment(ArgMemTy, DL);
+          MemAlign = Align(TLI->getByValTypeAlignment(ArgMemTy, DL));
         if (Flags.isByRef())
           Flags.setByRefSize(MemSize);
         else
@@ -11811,7 +11815,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   if (!FuncInfo->CanLowerReturn) {
     // Create a virtual register for the sret pointer, and put in a copy
     // from the sret argument into it.
-    MVT VT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
+    SmallVector<EVT, 1> ValueVTs;
+    ComputeValueVTs(*TLI, DAG.getDataLayout(),
+                    PointerType::get(F.getContext(),
+                                     DAG.getDataLayout().getAllocaAddrSpace()),
+                    ValueVTs);
+    MVT VT = ValueVTs[0].getSimpleVT();
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
     std::optional<ISD::NodeType> AssertOp;
     SDValue ArgValue =

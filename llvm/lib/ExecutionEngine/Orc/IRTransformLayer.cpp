@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace orc {

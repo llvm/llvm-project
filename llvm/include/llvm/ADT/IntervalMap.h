@@ -222,7 +222,7 @@ using IdxPair = std::pair<unsigned,unsigned>;
 template <typename T1, typename T2, unsigned N>
 class NodeBase {
 public:
-  static constexpr unsigned Capacity = N;
+  enum { Capacity = N };
 
   T1 first[N];
   T2 second[N];

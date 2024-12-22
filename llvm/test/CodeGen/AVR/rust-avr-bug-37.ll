@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=avr | FileCheck %s
+; RUN: llc < %s -march=avr | FileCheck %s
 
 %"fmt::Formatter" = type { i32, { ptr, ptr } }
 

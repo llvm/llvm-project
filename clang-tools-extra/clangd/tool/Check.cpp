@@ -163,7 +163,7 @@ public:
   unsigned ErrCount = 0;
 
   Checker(llvm::StringRef File, const ClangdLSPServer::Options &Opts)
-      : File(File), Opts(Opts), Index(/*SupportContainedRefs=*/true) {}
+      : File(File), Opts(Opts) {}
 
   // Read compilation database and choose a compile command for the file.
   bool buildCommand(const ThreadsafeFS &TFS) {

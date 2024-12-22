@@ -52,26 +52,6 @@ bool arm::isARMAProfile(const llvm::Triple &Triple) {
   return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::A;
 }
 
-/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
-bool arm::isARMEABIBareMetal(const llvm::Triple &Triple) {
-  auto arch = Triple.getArch();
-  if (arch != llvm::Triple::arm && arch != llvm::Triple::thumb &&
-      arch != llvm::Triple::armeb && arch != llvm::Triple::thumbeb)
-    return false;
-
-  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
-    return false;
-
-  if (Triple.getOS() != llvm::Triple::UnknownOS)
-    return false;
-
-  if (Triple.getEnvironment() != llvm::Triple::EABI &&
-      Triple.getEnvironment() != llvm::Triple::EABIHF)
-    return false;
-
-  return true;
-}
-
 // Get Arch/CPU from args.
 void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
                                 llvm::StringRef &CPU, bool FromAs) {

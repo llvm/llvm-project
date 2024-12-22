@@ -113,7 +113,7 @@ struct LinalgInlineScalarOperandsPass
     MLIRContext &ctx = getContext();
     RewritePatternSet patterns(&ctx);
     populateInlineConstantOperandsPatterns(patterns);
-    (void)applyPatternsGreedily(op, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 } // namespace

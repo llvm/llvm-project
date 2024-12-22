@@ -64,14 +64,7 @@
 ; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
 
 ;; Check that the total sizes are reported if requested.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES
-
-;; Check that we hint additional allocations with a threshold < 100%
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60
-
-;; Make sure that the -memprof-cloning-cold-threshold flag is enough to cause
-;; the size metadata to be generated for the LTO link.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
 
 ;; Make sure we emit a random hotness seed if requested.
 ; RUN: llvm-profdata merge -memprof-random-hotness %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
@@ -355,14 +348,8 @@ for.end:                                          ; preds = %for.cond
 
 ;; For non-context sensitive allocations that get attributes we emit a message
 ;; with the full allocation context hash, type, and size in bytes.
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 8525406123785421946 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 11714230664165068698 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 5725971306423925017 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 16342802530253093571 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 18254812774972004394 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 1093248920606587996 and dominant alloc type cold: 10
-; TOTALSIZESSINGLE: Total size for full allocation context hash 6792096022461663180 and single alloc type notcold: 10
-; TOTALSIZESSINGLE: Total size for full allocation context hash 15737101490731057601 and single alloc type cold: 10
+; TOTALSIZES: Total size for full allocation context hash 6792096022461663180 and single alloc type notcold: 10
+; TOTALSIZES: Total size for full allocation context hash 15737101490731057601 and single alloc type cold: 10
 ;; For context sensitive allocations the full context hash and size in bytes
 ;; are in separate metadata nodes included on the MIB metadata.
 ; TOTALSIZES: !"cold", ![[CONTEXT1:[0-9]+]]}

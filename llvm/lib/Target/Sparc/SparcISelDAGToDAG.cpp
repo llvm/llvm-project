@@ -13,7 +13,10 @@
 #include "SparcTargetMachine.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "sparc-isel"
@@ -106,8 +109,8 @@ bool SparcDAGToDAGISel::SelectADDRri(SDValue Addr,
         } else {
           Base = Addr.getOperand(0);
         }
-        Offset = CurDAG->getSignedTargetConstant(CN->getSExtValue(),
-                                                 SDLoc(Addr), MVT::i32);
+        Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr),
+                                           MVT::i32);
         return true;
       }
     }

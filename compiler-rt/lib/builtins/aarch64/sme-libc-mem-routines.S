@@ -6,6 +6,8 @@
 
 #include "../assembly.h"
 
+#define L(l) .L ## l
+
 //
 //  __arm_sc_memcpy / __arm_sc_memmove
 //
@@ -50,17 +52,17 @@
    The loop tail is handled by always copying 64 bytes from the end.
 */
 
-DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sc_memcpy)
         add     srcend1, src, count
         add     dstend1, dstin, count
         cmp     count, 128
-        b.hi    7f  // copy_long
+        b.hi    L(copy_long)
         cmp     count, 32
-        b.hi    4f  // copy32_128
+        b.hi    L(copy32_128)
 
         /* Small copies: 0..32 bytes.  */
         cmp     count, 16
-        b.lo    0f  // copy16
+        b.lo    L(copy16)
         ldp     A_l, A_h, [src]
         ldp     D_l, D_h, [srcend1, -16]
         stp     A_l, A_h, [dstin]
@@ -68,8 +70,8 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         ret
 
         /* Copy 8-15 bytes.  */
-0:  // copy16
-        tbz     count, 3, 1f  // copy8
+L(copy16):
+        tbz     count, 3, L(copy8)
         ldr     A_l, [src]
         ldr     A_h, [srcend1, -8]
         str     A_l, [dstin]
@@ -78,8 +80,8 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 
         .p2align 3
         /* Copy 4-7 bytes.  */
-1:  // copy8
-        tbz     count, 2, 2f  // copy4
+L(copy8):
+        tbz     count, 2, L(copy4)
         ldr     A_lw, [src]
         ldr     B_lw, [srcend1, -4]
         str     A_lw, [dstin]
@@ -87,8 +89,8 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         ret
 
         /* Copy 0..3 bytes using a branchless sequence.  */
-2:  // copy4
-        cbz     count, 3f // copy0
+L(copy4):
+        cbz     count, L(copy0)
         lsr     tmp1, count, 1
         ldrb    A_lw, [src]
         ldrb    C_lw, [srcend1, -1]
@@ -96,18 +98,18 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         strb    A_lw, [dstin]
         strb    B_lw, [dstin, tmp1]
         strb    C_lw, [dstend1, -1]
-3:  // copy0
+L(copy0):
         ret
 
         .p2align 4
         /* Medium copies: 33..128 bytes.  */
-4:  // copy32_128
+L(copy32_128):
         ldp     A_l, A_h, [src]
         ldp     B_l, B_h, [src, 16]
         ldp     C_l, C_h, [srcend1, -32]
         ldp     D_l, D_h, [srcend1, -16]
         cmp     count, 64
-        b.hi    5f  // copy128
+        b.hi    L(copy128)
         stp     A_l, A_h, [dstin]
         stp     B_l, B_h, [dstin, 16]
         stp     C_l, C_h, [dstend1, -32]
@@ -116,16 +118,16 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 
         .p2align 4
         /* Copy 65..128 bytes.  */
-5:  // copy128
+L(copy128):
         ldp     E_l, E_h, [src, 32]
         ldp     F_l, F_h, [src, 48]
         cmp     count, 96
-        b.ls    6f  // copy96
+        b.ls    L(copy96)
         ldp     G_l, G_h, [srcend1, -64]
         ldp     H_l, H_h, [srcend1, -48]
         stp     G_l, G_h, [dstend1, -64]
         stp     H_l, H_h, [dstend1, -48]
-6:  // copy96
+L(copy96):
         stp     A_l, A_h, [dstin]
         stp     B_l, B_h, [dstin, 16]
         stp     E_l, E_h, [dstin, 32]
@@ -136,12 +138,12 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 
         .p2align 4
         /* Copy more than 128 bytes.  */
-7:  // copy_long
+L(copy_long):
         /* Use backwards copy if there is an overlap.  */
         sub     tmp1, dstin, src
-        cbz     tmp1, 3b  // copy0
+        cbz     tmp1, L(copy0)
         cmp     tmp1, count
-        b.lo    10f //copy_long_backwards
+        b.lo    L(copy_long_backwards)
 
         /* Copy 16 bytes and then align dst to 16-byte alignment.  */
 
@@ -156,8 +158,8 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         ldp     C_l, C_h, [src, 48]
         ldp     D_l, D_h, [src, 64]!
         subs    count, count, 128 + 16  /* Test and readjust count.  */
-        b.ls    9f  // copy64_from_end
-8:  // loop64
+        b.ls    L(copy64_from_end)
+L(loop64):
         stp     A_l, A_h, [dst, 16]
         ldp     A_l, A_h, [src, 16]
         stp     B_l, B_h, [dst, 32]
@@ -167,10 +169,10 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         stp     D_l, D_h, [dst, 64]!
         ldp     D_l, D_h, [src, 64]!
         subs    count, count, 64
-        b.hi    8b  // loop64
+        b.hi    L(loop64)
 
         /* Write the last iteration and copy 64 bytes from the end.  */
-9:  // copy64_from_end
+L(copy64_from_end):
         ldp     E_l, E_h, [srcend1, -64]
         stp     A_l, A_h, [dst, 16]
         ldp     A_l, A_h, [srcend1, -48]
@@ -189,7 +191,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 
         /* Large backwards copy for overlapping copies.
            Copy 16 bytes and then align dst to 16-byte alignment.  */
-10: // copy_long_backwards
+L(copy_long_backwards):
         ldp     D_l, D_h, [srcend1, -16]
         and     tmp1, dstend1, 15
         sub     srcend1, srcend1, tmp1
@@ -201,9 +203,9 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         ldp     D_l, D_h, [srcend1, -64]!
         sub     dstend1, dstend1, tmp1
         subs    count, count, 128
-        b.ls    12f // copy64_from_start
+        b.ls    L(copy64_from_start)
 
-11: // loop64_backwards
+L(loop64_backwards):
         stp     A_l, A_h, [dstend1, -16]
         ldp     A_l, A_h, [srcend1, -16]
         stp     B_l, B_h, [dstend1, -32]
@@ -213,10 +215,10 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         stp     D_l, D_h, [dstend1, -64]!
         ldp     D_l, D_h, [srcend1, -64]!
         subs    count, count, 64
-        b.hi    11b // loop64_backwards
+        b.hi    L(loop64_backwards)
 
         /* Write the last iteration and copy 64 bytes from the start.  */
-12: // copy64_from_start
+L(copy64_from_start):
         ldp     G_l, G_h, [src, 48]
         stp     A_l, A_h, [dstend1, -16]
         ldp     A_l, A_h, [src, 32]
@@ -230,7 +232,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memcpy)
         stp     B_l, B_h, [dstin, 16]
         stp     C_l, C_h, [dstin]
         ret
-END_COMPILERRT_FUNCTION(__arm_sc_memcpy)
+END_COMPILERRT_OUTLINE_FUNCTION(__arm_sc_memcpy)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 
@@ -248,7 +250,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 #define dstend2  x4
 #define zva_val  x5
 
-DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sc_memset)
 #ifdef __ARM_FEATURE_SVE
         mov     z0.b, valw
 #else
@@ -261,9 +263,9 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
         add     dstend2, dstin, count
 
         cmp     count, 96
-        b.hi    7f  // set_long
+        b.hi    L(set_long)
         cmp     count, 16
-        b.hs    4f  // set_medium
+        b.hs    L(set_medium)
         mov     val, v0.D[0]
 
         /* Set 0..15 bytes.  */
@@ -283,38 +285,38 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
 3:      ret
 
         /* Set 17..96 bytes.  */
-4:  // set_medium
+L(set_medium):
         str     q0, [dstin]
-        tbnz    count, 6, 6f  // set96
+        tbnz    count, 6, L(set96)
         str     q0, [dstend2, -16]
-        tbz     count, 5, 5f
+        tbz     count, 5, 1f
         str     q0, [dstin, 16]
         str     q0, [dstend2, -32]
-5:      ret
+1:      ret
 
         .p2align 4
         /* Set 64..96 bytes.  Write 64 bytes from the start and
            32 bytes from the end.  */
-6:  // set96
+L(set96):
         str     q0, [dstin, 16]
         stp     q0, q0, [dstin, 32]
         stp     q0, q0, [dstend2, -32]
         ret
 
         .p2align 4
-7:  // set_long
+L(set_long):
         and     valw, valw, 255
         bic     dst, dstin, 15
         str     q0, [dstin]
         cmp     count, 160
         ccmp    valw, 0, 0, hs
-        b.ne    9f  // no_zva
+        b.ne    L(no_zva)
 
 #ifndef SKIP_ZVA_CHECK
         mrs     zva_val, dczid_el0
         and     zva_val, zva_val, 31
         cmp     zva_val, 4              /* ZVA size is 64 bytes.  */
-        b.ne    9f  // no_zva
+        b.ne    L(no_zva)
 #endif
         str     q0, [dst, 16]
         stp     q0, q0, [dst, 32]
@@ -323,27 +325,27 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
         sub     count, count, 128       /* Adjust count and bias for loop.  */
 
         .p2align 4
-8:  // zva_loop
+L(zva_loop):
         add     dst, dst, 64
         dc      zva, dst
         subs    count, count, 64
-        b.hi    8b  // zva_loop
+        b.hi    L(zva_loop)
         stp     q0, q0, [dstend2, -64]
         stp     q0, q0, [dstend2, -32]
         ret
 
-9:  // no_zva
+L(no_zva):
         sub     count, dstend2, dst      /* Count is 16 too large.  */
         sub     dst, dst, 16            /* Dst is biased by -32.  */
         sub     count, count, 64 + 16   /* Adjust count and bias for loop.  */
-10: // no_zva_loop
+L(no_zva_loop):
         stp     q0, q0, [dst, 32]
         stp     q0, q0, [dst, 64]!
         subs    count, count, 64
-        b.hi    10b  // no_zva_loop
+        b.hi    L(no_zva_loop)
         stp     q0, q0, [dstend2, -64]
         stp     q0, q0, [dstend2, -32]
         ret
-END_COMPILERRT_FUNCTION(__arm_sc_memset)
+END_COMPILERRT_OUTLINE_FUNCTION(__arm_sc_memset)
 
 #endif // __aarch64__

@@ -136,7 +136,7 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:    store i1 [[TMP40]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE32]]
 ; CHECK:       pred.store.continue32:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]

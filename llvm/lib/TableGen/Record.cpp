@@ -917,13 +917,6 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
       return NewInit;
     break;
 
-  case INITIALIZED:
-    if (isa<UnsetInit>(LHS))
-      return IntInit::get(RK, 0);
-    if (LHS->isConcrete())
-      return IntInit::get(RK, 1);
-    break;
-
   case NOT:
     if (const auto *LHSi = dyn_cast_or_null<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK))))
@@ -1058,9 +1051,6 @@ std::string UnOpInit::getAsString() const {
     break;
   case TOUPPER:
     Result = "!toupper";
-    break;
-  case INITIALIZED:
-    Result = "!initialized";
     break;
   }
   return Result + "(" + LHS->getAsString() + ")";

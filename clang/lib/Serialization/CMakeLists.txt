@@ -23,7 +23,6 @@ add_clang_library(clangSerialization
   ModuleManager.cpp
   PCHContainerOperations.cpp
   ObjectFilePCHContainerReader.cpp
-  TemplateArgumentHasher.cpp
 
   ADDITIONAL_HEADERS
   ASTCommon.h

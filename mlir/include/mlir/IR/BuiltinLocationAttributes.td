@@ -60,98 +60,46 @@ def CallSiteLoc : Builtin_LocationAttr<"CallSiteLoc"> {
 }
 
 //===----------------------------------------------------------------------===//
-// FileLineColRange
+// FileLineColLoc
 //===----------------------------------------------------------------------===//
 
-def FileLineColRange : Builtin_LocationAttr<"FileLineColRange"> {
-  let summary = "A file:line:column source location range";
+def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
+  let summary = "A file:line:column source location";
   let description = [{
     Syntax:
 
     ```
     filelinecol-location ::= string-literal `:` integer-literal `:`
                              integer-literal
-                             (`to` (integer-literal ?) `:` integer-literal ?)
     ```
 
-    An instance of this location represents a tuple of file, start and end line
-    number, and start and end column number. It allows for the following
-    configurations:
-
-    *   A single file line location: `file:line`;
-    *   A single file line col location: `file:line:column`;
-    *   A single line range: `file:line:column to :column`;
-    *   A single file range: `file:line:column to line:column`;
+    An instance of this location represents a tuple of file, line number, and
+    column number. This is similar to the type of location that you get from
+    most source languages.
 
     Example:
 
     ```mlir
-    loc("mysource.cc":10:8 to 12:18)
+    loc("mysource.cc":10:8)
     ```
   }];
-
-  let parameters = (ins "StringAttr":$filename,
-    "unsigned":$start_line, "unsigned":$start_column,
-    "unsigned":$end_line, "unsigned":$end_column);
+  let parameters = (ins "StringAttr":$filename, "unsigned":$line,
+                        "unsigned":$column);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "StringAttr":$filename), [{
-      return $_get(filename.getContext(), filename, ArrayRef<unsigned>{});
-    }]>,
-    AttrBuilderWithInferredContext<(ins "StringAttr":$filename,
-                                        "unsigned":$line), [{
-      return $_get(filename.getContext(), filename,
-                   ArrayRef<unsigned>{line});
-    }]>,
     AttrBuilderWithInferredContext<(ins "StringAttr":$filename,
                                         "unsigned":$line,
                                         "unsigned":$column), [{
-      return $_get(filename.getContext(), filename,
-                   ArrayRef<unsigned>{line, column});
+      return $_get(filename.getContext(), filename, line, column);
     }]>,
-    AttrBuilder<(ins "::llvm::StringRef":$filename,
-                     "unsigned":$start_line,
-                     "unsigned":$start_column), [{
+    AttrBuilder<(ins "StringRef":$filename, "unsigned":$line,
+                     "unsigned":$column), [{
       return $_get($_ctxt,
-        StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
-        ArrayRef<unsigned>{start_line, start_column});
-    }]>,
-    AttrBuilderWithInferredContext<(ins "::mlir::StringAttr":$filename,
-                                        "unsigned":$line,
-                                        "unsigned":$start_column,
-                                        "unsigned":$end_column), [{
-      return $_get(filename.getContext(), filename,
-                   ArrayRef<unsigned>{line, start_column, end_column});
-    }]>,
-    AttrBuilderWithInferredContext<(ins "::mlir::StringAttr":$filename,
-                                        "unsigned":$start_line,
-                                        "unsigned":$start_column,
-                                        "unsigned":$end_line,
-                                        "unsigned":$end_column), [{
-      return $_get(filename.getContext(), filename,
-        ArrayRef<unsigned>{start_line, start_column, end_column, end_line});
-    }]>,
-    AttrBuilder<(ins "::llvm::StringRef":$filename,
-                     "unsigned":$start_line,
-                     "unsigned":$start_column,
-                     "unsigned":$end_line,
-                     "unsigned":$end_column), [{
-      return $_get($_ctxt,
-        StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
-        ArrayRef<unsigned>{start_line, start_column, end_column, end_line});
-    }]>,
+                   StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
+                   line, column);
+    }]>
   ];
-
-  let extraClassDeclaration = [{
-    ::mlir::StringAttr getFilename() const;
-    unsigned getStartLine() const;
-    unsigned getStartColumn() const;
-    unsigned getEndColumn() const;
-    unsigned getEndLine() const;
-  }];
   let skipDefaultBuilders = 1;
-  let genAccessors = 0;
-  let genStorageClass = 0;
-  let attrName = "builtin.file_line_range";
+  let attrName = "builtin.file_line_loc";
 }
 
 //===----------------------------------------------------------------------===//

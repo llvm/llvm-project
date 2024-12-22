@@ -19,7 +19,6 @@
 #include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, expected_exception)                       \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                         \
   EXPECT_EQ(expected, f(&x, &y));                                              \
   EXPECT_FP_EXCEPTION(expected_exception);                                     \
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)

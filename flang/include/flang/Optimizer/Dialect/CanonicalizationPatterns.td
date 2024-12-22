@@ -29,9 +29,7 @@ def IndexTypePred : Constraint<CPred<
 def MonotonicTypePred
     : Constraint<CPred<"((mlir::isa<mlir::IntegerType>($0.getType()) && "
                        "  mlir::isa<mlir::IntegerType>($1.getType()) && "
-                       "  mlir::isa<mlir::IntegerType>($2.getType()) && "
-                       "  $0.getType().isUnsignedInteger() == $1.getType().isUnsignedInteger() && "
-                       "  $1.getType().isUnsignedInteger() == $2.getType().isUnsignedInteger()) || "
+                       "  mlir::isa<mlir::IntegerType>($2.getType())) || "
                        " (mlir::isa<mlir::FloatType>($0.getType()) && "
                        "  mlir::isa<mlir::FloatType>($1.getType()) && "
                        "  mlir::isa<mlir::FloatType>($2.getType()))) && "

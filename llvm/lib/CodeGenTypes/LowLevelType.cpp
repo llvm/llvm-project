@@ -60,3 +60,8 @@ const constexpr LLT::BitFieldInfo LLT::PointerSizeFieldInfo;
 const constexpr LLT::BitFieldInfo LLT::PointerAddressSpaceFieldInfo;
 const constexpr LLT::BitFieldInfo LLT::VectorElementsFieldInfo;
 const constexpr LLT::BitFieldInfo LLT::VectorScalableFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::VectorSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorElementsFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorScalableFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorAddressSpaceFieldInfo;

@@ -111,16 +111,9 @@ static cl::opt<int> MaxLdStGlue("ldstmemcpy-glue-max",
        cl::desc("Number limit for gluing ld/st of memcpy."),
        cl::Hidden, cl::init(0));
 
-static cl::opt<unsigned>
-    MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
-             cl::desc("DAG combiner limit number of steps when searching DAG "
-                      "for predecessor nodes"));
-
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
 }
-
-unsigned SelectionDAG::getHasPredecessorMaxSteps() { return MaxSteps; }
 
 //===----------------------------------------------------------------------===//
 //                              ConstantFPSDNode Class
@@ -1467,7 +1460,7 @@ SelectionDAG::getStrictFPExtendOrRound(SDValue Op, SDValue Chain,
       VT.bitsGT(Op.getValueType())
           ? getNode(ISD::STRICT_FP_EXTEND, DL, {VT, MVT::Other}, {Chain, Op})
           : getNode(ISD::STRICT_FP_ROUND, DL, {VT, MVT::Other},
-                    {Chain, Op, getIntPtrConstant(0, DL, /*isTarget=*/true)});
+                    {Chain, Op, getIntPtrConstant(0, DL)});
 
   return std::pair<SDValue, SDValue>(Res, SDValue(Res.getNode(), 1));
 }
@@ -1644,7 +1637,14 @@ SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                                   bool isT, bool isO) {
-  return getConstant(APInt(VT.getScalarSizeInBits(), Val, /*isSigned=*/false),
+  EVT EltVT = VT.getScalarType();
+  assert((EltVT.getSizeInBits() >= 64 ||
+          (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
+         "getConstant with a uint64_t value that doesn't fit in the type!");
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return getConstant(APInt(EltVT.getSizeInBits(), Val, /*isSigned=*/false,
+                           /*implicitTrunc=*/true),
                      DL, VT, isT, isO);
 }
 
@@ -2481,51 +2481,6 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
   return Subvectors[0];
 }
 
-/// Given a store node \p StoreNode, return true if it is safe to fold that node
-/// into \p FPNode, which expands to a library call with output pointers.
-static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
-                                                  SDNode *FPNode) {
-  SmallVector<const SDNode *, 8> Worklist;
-  SmallVector<const SDNode *, 8> DeferredNodes;
-  SmallPtrSet<const SDNode *, 16> Visited;
-
-  // Skip FPNode use by StoreNode (that's the use we want to fold into FPNode).
-  for (SDValue Op : StoreNode->ops())
-    if (Op.getNode() != FPNode)
-      Worklist.push_back(Op.getNode());
-
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  while (!Worklist.empty()) {
-    const SDNode *Node = Worklist.pop_back_val();
-    auto [_, Inserted] = Visited.insert(Node);
-    if (!Inserted)
-      continue;
-
-    if (MaxSteps > 0 && Visited.size() >= MaxSteps)
-      return false;
-
-    // Reached the FPNode (would result in a cycle).
-    // OR Reached CALLSEQ_START (would result in nested call sequences).
-    if (Node == FPNode || Node->getOpcode() == ISD::CALLSEQ_START)
-      return false;
-
-    if (Node->getOpcode() == ISD::CALLSEQ_END) {
-      // Defer looking into call sequences (so we can check we're outside one).
-      // We still need to look through these for the predecessor check.
-      DeferredNodes.push_back(Node);
-      continue;
-    }
-
-    for (SDValue Op : Node->ops())
-      Worklist.push_back(Op.getNode());
-  }
-
-  // True if we're outside a call sequence and don't have the FPNode as a
-  // predecessor. No cycles or nested call sequences possible.
-  return !SDNode::hasPredecessorHelper(FPNode, Visited, DeferredNodes,
-                                       MaxSteps);
-}
-
 bool SelectionDAG::expandMultipleResultFPLibCall(
     RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
     std::optional<unsigned> CallRetResNo) {
@@ -2554,35 +2509,26 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
-  SDValue StoresInChain;
+  // FIXME: This should allow stores with the same chains (not just the entry
+  // chain), but there's a risk the store is within a (CALLSEQ_START,
+  // CALLSEQ_END) pair, which after this expansion will lead to nested call
+  // sequences.
+  SDValue InChain = getEntryNode();
   SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
-  for (SDNode *User : Node->users()) {
+  for (SDNode *User : Node->uses()) {
     if (!ISD::isNormalStore(User))
       continue;
     auto *ST = cast<StoreSDNode>(User);
     SDValue StoreValue = ST->getValue();
     unsigned ResNo = StoreValue.getResNo();
-    // Ensure the store corresponds to an output pointer.
-    if (CallRetResNo == ResNo)
-      continue;
-    // Ensure the store to the default address space and not atomic or volatile.
-    if (!ST->isSimple() || ST->getAddressSpace() != 0)
-      continue;
-    // Ensure all store chains are the same (so they don't alias).
-    if (StoresInChain && ST->getChain() != StoresInChain)
-      continue;
-    // Ensure the store is properly aligned.
     Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
-    if (ST->getAlign() <
-        getDataLayout().getABITypeAlign(StoreType->getScalarType()))
-      continue;
-    // Avoid:
-    //  1. Creating cyclic dependencies.
-    //  2. Expanding the node to a call within a call sequence.
-    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node))
+    if (CallRetResNo == ResNo || !ST->isSimple() ||
+        ST->getAddressSpace() != 0 ||
+        ST->getAlign() <
+            getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
+        ST->getChain() != InChain)
       continue;
     ResultStores[ResNo] = ST;
-    StoresInChain = ST->getChain();
   }
 
   TargetLowering::ArgListTy Args;
@@ -2624,7 +2570,6 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   Type *RetType = CallRetResNo.has_value()
                       ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
                       : Type::getVoidTy(Ctx);
-  SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
   SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
                                      TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
@@ -6885,7 +6830,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
             ScalarOps.push_back(getUNDEF(OpVT));
             continue;
           }
-          const APInt &Val = cast<ConstantSDNode>(Op)->getAPIntValue();
+          APInt Val = cast<ConstantSDNode>(Op)->getAPIntValue();
           ScalarOps.push_back(SignExtendInReg(Val, OpVT));
         }
         return getBuildVector(VT, DL, ScalarOps);
@@ -7410,10 +7355,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return N1;
     break;
   case ISD::FP_ROUND:
-    assert(VT.isFloatingPoint() && N1.getValueType().isFloatingPoint() &&
-           VT.bitsLE(N1.getValueType()) && N2C &&
-           (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
-           N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
+    assert(VT.isFloatingPoint() &&
+           N1.getValueType().isFloatingPoint() &&
+           VT.bitsLE(N1.getValueType()) &&
+           N2C && (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
+           "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
   case ISD::AssertSext:
@@ -7933,7 +7879,7 @@ SDValue SelectionDAG::getStackArgumentTokenFactor(SDValue Chain) {
   ArgChains.push_back(Chain);
 
   // Add a chain value for each stack argument.
-  for (SDNode *U : getEntryNode().getNode()->users())
+  for (SDNode *U : getEntryNode().getNode()->uses())
     if (LoadSDNode *L = dyn_cast<LoadSDNode>(U))
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr()))
         if (FI->getIndex() < 0)
@@ -9040,12 +8986,12 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                           SDVTList VTList,
                                           ArrayRef<SDValue> Ops, EVT MemVT,
                                           MachineMemOperand *MMO) {
-  assert(
-      (Opcode == ISD::INTRINSIC_VOID || Opcode == ISD::INTRINSIC_W_CHAIN ||
-       Opcode == ISD::PREFETCH ||
-       (Opcode <= (unsigned)std::numeric_limits<int>::max() &&
-        Opcode >= ISD::BUILTIN_OP_END && TSI->isTargetMemoryOpcode(Opcode))) &&
-      "Opcode is not a memory-accessing opcode!");
+  assert((Opcode == ISD::INTRINSIC_VOID ||
+          Opcode == ISD::INTRINSIC_W_CHAIN ||
+          Opcode == ISD::PREFETCH ||
+          (Opcode <= (unsigned)std::numeric_limits<int>::max() &&
+           (int)Opcode >= ISD::FIRST_TARGET_MEMORY_OPCODE)) &&
+         "Opcode is not a memory-accessing opcode!");
 
   // Memoize the node unless it returns a glue result.
   MemIntrinsicSDNode *N;
@@ -10596,7 +10542,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     assert(VTList.VTs[0].isFloatingPoint() &&
            Ops[1].getValueType().isFloatingPoint() &&
            VTList.VTs[0].bitsLT(Ops[1].getValueType()) &&
-           Ops[2].getOpcode() == ISD::TargetConstant &&
+           isa<ConstantSDNode>(Ops[2]) &&
            (Ops[2]->getAsZExtVal() == 0 || Ops[2]->getAsZExtVal() == 1) &&
            "Invalid STRICT_FP_ROUND!");
     break;
@@ -10685,10 +10631,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT) {
-  if (!VT.isExtended())
-    return makeVTList(SDNode::getValueTypeList(VT.getSimpleVT()), 1);
-
-  return makeVTList(&(*EVTs.insert(VT).first), 1);
+  return makeVTList(SDNode::getValueTypeList(VT), 1);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2) {
@@ -11611,7 +11554,7 @@ class RAUWUpdateListener : public SelectionDAG::DAGUpdateListener {
 
   void NodeDeleted(SDNode *N, SDNode *E) override {
     // Increment the iterator as needed.
-    while (UI != UE && N == UI->getUser())
+    while (UI != UE && N == *UI)
       ++UI;
   }
 
@@ -11650,7 +11593,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
   SDNode::use_iterator UI = From->use_begin(), UE = From->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = UI->getUser();
+    SDNode *User = *UI;
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
@@ -11660,12 +11603,12 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
     // To help reduce the number of CSE recomputations, process all
     // the uses of this user that we can find this way.
     do {
-      SDUse &Use = *UI;
+      SDUse &Use = UI.getUse();
       ++UI;
       Use.set(To);
       if (To->isDivergent() != From->isDivergent())
         updateDivergence(User);
-    } while (UI != UE && UI->getUser() == User);
+    } while (UI != UE && *UI == User);
     // Now that we have modified User, add it back to the CSE maps.  If it
     // already exists there, recursively merge the results together.
     AddModifiedNodeToCSEMaps(User);
@@ -11708,7 +11651,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
   SDNode::use_iterator UI = From->use_begin(), UE = From->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = UI->getUser();
+    SDNode *User = *UI;
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
@@ -11718,12 +11661,12 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
     // To help reduce the number of CSE recomputations, process all
     // the uses of this user that we can find this way.
     do {
-      SDUse &Use = *UI;
+      SDUse &Use = UI.getUse();
       ++UI;
       Use.setNode(To);
       if (To->isDivergent() != From->isDivergent())
         updateDivergence(User);
-    } while (UI != UE && UI->getUser() == User);
+    } while (UI != UE && *UI == User);
 
     // Now that we have modified User, add it back to the CSE maps.  If it
     // already exists there, recursively merge the results together.
@@ -11756,7 +11699,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
   SDNode::use_iterator UI = From->use_begin(), UE = From->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = UI->getUser();
+    SDNode *User = *UI;
 
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
@@ -11767,12 +11710,12 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
     // user that we can find this way.
     bool To_IsDivergent = false;
     do {
-      SDUse &Use = *UI;
+      SDUse &Use = UI.getUse();
       const SDValue &ToOp = To[Use.getResNo()];
       ++UI;
       Use.set(ToOp);
       To_IsDivergent |= ToOp->isDivergent();
-    } while (UI != UE && UI->getUser() == User);
+    } while (UI != UE && *UI == User);
 
     if (To_IsDivergent != From->isDivergent())
       updateDivergence(User);
@@ -11810,7 +11753,7 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
                        UE = From.getNode()->use_end();
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
-    SDNode *User = UI->getUser();
+    SDNode *User = *UI;
     bool UserRemovedFromCSEMaps = false;
 
     // A user can appear in a use list multiple times, and when this
@@ -11818,7 +11761,7 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
     // To help reduce the number of CSE recomputations, process all
     // the uses of this user that we can find this way.
     do {
-      SDUse &Use = *UI;
+      SDUse &Use = UI.getUse();
 
       // Skip uses of different values from the same node.
       if (Use.getResNo() != From.getResNo()) {
@@ -11837,7 +11780,7 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
       Use.set(To);
       if (To->isDivergent() != From->isDivergent())
         updateDivergence(User);
-    } while (UI != UE && UI->getUser() == User);
+    } while (UI != UE && *UI == User);
     // We are iterating over all uses of the From node, so if a use
     // doesn't use the specific value, no changes are made.
     if (!UserRemovedFromCSEMaps)
@@ -11872,7 +11815,7 @@ bool operator<(const UseMemo &L, const UseMemo &R) {
 /// pointed to by a UseMemo is deleted, set the User to nullptr to indicate that
 /// the node already has been taken care of recursively.
 class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
-  SmallVectorImpl<UseMemo> &Uses;
+  SmallVector<UseMemo, 4> &Uses;
 
   void NodeDeleted(SDNode *N, SDNode *E) override {
     for (UseMemo &Memo : Uses)
@@ -11881,7 +11824,7 @@ class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
   }
 
 public:
-  RAUOVWUpdateListener(SelectionDAG &d, SmallVectorImpl<UseMemo> &uses)
+  RAUOVWUpdateListener(SelectionDAG &d, SmallVector<UseMemo, 4> &uses)
       : SelectionDAG::DAGUpdateListener(d), Uses(uses) {}
 };
 
@@ -11926,7 +11869,7 @@ void SelectionDAG::updateDivergence(SDNode *N) {
     bool IsDivergent = calculateDivergence(N);
     if (N->SDNodeBits.IsDivergent != IsDivergent) {
       N->SDNodeBits.IsDivergent = IsDivergent;
-      llvm::append_range(Worklist, N->users());
+      llvm::append_range(Worklist, N->uses());
     }
   } while (!Worklist.empty());
 }
@@ -11942,7 +11885,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   }
   for (size_t I = 0; I != Order.size(); ++I) {
     SDNode *N = Order[I];
-    for (auto *U : N->users()) {
+    for (auto *U : N->uses()) {
       unsigned &UnsortedOps = Degree[U];
       if (0 == --UnsortedOps)
         Order.push_back(U);
@@ -11982,9 +11925,11 @@ void SelectionDAG::ReplaceAllUsesOfValuesWith(const SDValue *From,
   for (unsigned i = 0; i != Num; ++i) {
     unsigned FromResNo = From[i].getResNo();
     SDNode *FromNode = From[i].getNode();
-    for (SDUse &Use : FromNode->uses()) {
+    for (SDNode::use_iterator UI = FromNode->use_begin(),
+         E = FromNode->use_end(); UI != E; ++UI) {
+      SDUse &Use = UI.getUse();
       if (Use.getResNo() == FromResNo) {
-        UseMemo Memo = {Use.getUser(), i, &Use};
+        UseMemo Memo = { *UI, i, &Use };
         Uses.push_back(Memo);
       }
     }
@@ -12069,7 +12014,7 @@ unsigned SelectionDAG::AssignTopologicalOrder() {
     checkForCycles(N, this);
     // N is in sorted position, so all its uses have one less operand
     // that needs to be sorted.
-    for (SDNode *P : N->users()) {
+    for (SDNode *P : N->uses()) {
       unsigned Degree = P->getNodeId();
       assert(Degree != 0 && "Invalid node degree");
       --Degree;
@@ -12446,11 +12391,17 @@ namespace {
 
 /// getValueTypeList - Return a pointer to the specified value type.
 ///
-const EVT *SDNode::getValueTypeList(MVT VT) {
+const EVT *SDNode::getValueTypeList(EVT VT) {
+  static std::set<EVT, EVT::compareRawBits> EVTs;
   static EVTArray SimpleVTArray;
+  static sys::SmartMutex<true> VTMutex;
 
-  assert(VT < MVT::VALUETYPE_SIZE && "Value type out of range!");
-  return &SimpleVTArray.VTs[VT.SimpleTy];
+  if (VT.isExtended()) {
+    sys::SmartScopedLock<true> Lock(VTMutex);
+    return &(*EVTs.insert(VT).first);
+  }
+  assert(VT.getSimpleVT() < MVT::VALUETYPE_SIZE && "Value type out of range!");
+  return &SimpleVTArray.VTs[VT.getSimpleVT().SimpleTy];
 }
 
 /// hasNUsesOfValue - Return true if there are exactly NUSES uses of the
@@ -12460,8 +12411,8 @@ bool SDNode::hasNUsesOfValue(unsigned NUses, unsigned Value) const {
   assert(Value < getNumValues() && "Bad value!");
 
   // TODO: Only iterate over uses of a given value of the node
-  for (SDUse &U : uses()) {
-    if (U.getResNo() == Value) {
+  for (SDNode::use_iterator UI = use_begin(), E = use_end(); UI != E; ++UI) {
+    if (UI.getUse().getResNo() == Value) {
       if (NUses == 0)
         return false;
       --NUses;
@@ -12477,8 +12428,8 @@ bool SDNode::hasNUsesOfValue(unsigned NUses, unsigned Value) const {
 bool SDNode::hasAnyUseOfValue(unsigned Value) const {
   assert(Value < getNumValues() && "Bad value!");
 
-  for (SDUse &U : uses())
-    if (U.getResNo() == Value)
+  for (SDNode::use_iterator UI = use_begin(), E = use_end(); UI != E; ++UI)
+    if (UI.getUse().getResNo() == Value)
       return true;
 
   return false;
@@ -12487,7 +12438,7 @@ bool SDNode::hasAnyUseOfValue(unsigned Value) const {
 /// isOnlyUserOf - Return true if this node is the only use of N.
 bool SDNode::isOnlyUserOf(const SDNode *N) const {
   bool Seen = false;
-  for (const SDNode *User : N->users()) {
+  for (const SDNode *User : N->uses()) {
     if (User == this)
       Seen = true;
     else
@@ -12500,7 +12451,7 @@ bool SDNode::isOnlyUserOf(const SDNode *N) const {
 /// Return true if the only users of N are contained in Nodes.
 bool SDNode::areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N) {
   bool Seen = false;
-  for (const SDNode *User : N->users()) {
+  for (const SDNode *User : N->uses()) {
     if (llvm::is_contained(Nodes, User))
       Seen = true;
     else

@@ -144,9 +144,9 @@ static_assert(sizeof(AliasResult) == 4,
 /// << operator for AliasResult.
 raw_ostream &operator<<(raw_ostream &OS, AliasResult AR);
 
-/// Virtual base class for providers of capture analysis.
-struct CaptureAnalysis {
-  virtual ~CaptureAnalysis() = 0;
+/// Virtual base class for providers of capture information.
+struct CaptureInfo {
+  virtual ~CaptureInfo() = 0;
 
   /// Check whether Object is not captured before instruction I. If OrAt is
   /// true, captures by instruction I itself are also considered.
@@ -156,10 +156,10 @@ struct CaptureAnalysis {
                                    bool OrAt) = 0;
 };
 
-/// Context-free CaptureAnalysis provider, which computes and caches whether an
+/// Context-free CaptureInfo provider, which computes and caches whether an
 /// object is captured in the function at all, but does not distinguish whether
 /// it was captured before or after the context instruction.
-class SimpleCaptureAnalysis final : public CaptureAnalysis {
+class SimpleCaptureInfo final : public CaptureInfo {
   SmallDenseMap<const Value *, bool, 8> IsCapturedCache;
 
 public:
@@ -167,10 +167,10 @@ public:
                            bool OrAt) override;
 };
 
-/// Context-sensitive CaptureAnalysis provider, which computes and caches the
+/// Context-sensitive CaptureInfo provider, which computes and caches the
 /// earliest common dominator closure of all captures. It provides a good
 /// approximation to a precise "captures before" analysis.
-class EarliestEscapeAnalysis final : public CaptureAnalysis {
+class EarliestEscapeInfo final : public CaptureInfo {
   DominatorTree &DT;
   const LoopInfo *LI;
 
@@ -185,7 +185,7 @@ class EarliestEscapeAnalysis final : public CaptureAnalysis {
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
 public:
-  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr)
+  EarliestEscapeInfo(DominatorTree &DT, const LoopInfo *LI = nullptr)
       : DT(DT), LI(LI) {}
 
   bool isNotCapturedBefore(const Value *Object, const Instruction *I,
@@ -265,7 +265,7 @@ public:
   using AliasCacheT = SmallDenseMap<LocPair, CacheEntry, 8>;
   AliasCacheT AliasCache;
 
-  CaptureAnalysis *CA;
+  CaptureInfo *CI;
 
   /// Query depth used to distinguish recursive queries.
   unsigned Depth = 0;
@@ -298,15 +298,15 @@ public:
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
 
-  AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
+  AAQueryInfo(AAResults &AAR, CaptureInfo *CI) : AAR(AAR), CI(CI) {}
 };
 
-/// AAQueryInfo that uses SimpleCaptureAnalysis.
+/// AAQueryInfo that uses SimpleCaptureInfo.
 class SimpleAAQueryInfo : public AAQueryInfo {
-  SimpleCaptureAnalysis CA;
+  SimpleCaptureInfo CI;
 
 public:
-  SimpleAAQueryInfo(AAResults &AAR) : AAQueryInfo(AAR, &CA) {}
+  SimpleAAQueryInfo(AAResults &AAR) : AAQueryInfo(AAR, &CI) {}
 };
 
 class BatchAAResults;
@@ -630,12 +630,11 @@ private:
 class BatchAAResults {
   AAResults &AA;
   AAQueryInfo AAQI;
-  SimpleCaptureAnalysis SimpleCA;
+  SimpleCaptureInfo SimpleCI;
 
 public:
-  BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(AAR, &SimpleCA) {}
-  BatchAAResults(AAResults &AAR, CaptureAnalysis *CA)
-      : AA(AAR), AAQI(AAR, CA) {}
+  BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(AAR, &SimpleCI) {}
+  BatchAAResults(AAResults &AAR, CaptureInfo *CI) : AA(AAR), AAQI(AAR, CI) {}
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
     return AA.alias(LocA, LocB, AAQI);
@@ -874,13 +873,6 @@ bool isIdentifiedObject(const Value *V);
 /// arguments other than itself, which is not necessarily true for
 /// IdentifiedObjects.
 bool isIdentifiedFunctionLocal(const Value *V);
-
-/// Return true if we know V to the base address of the corresponding memory
-/// object.  This implies that any address less than V must be out of bounds
-/// for the underlying object.  Note that just being isIdentifiedObject() is
-/// not enough - For example, a negative offset from a noalias argument or call
-/// can be inbounds w.r.t the actual underlying object.
-bool isBaseOfObject(const Value *V);
 
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.

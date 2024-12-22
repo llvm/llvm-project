@@ -301,7 +301,7 @@ struct LinalgBlockPackMatmul
     };
 
     linalg::populateBlockPackMatmulPatterns(patterns, controlFn);
-    if (failed(applyPatternsGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
       return signalPassFailure();
   }
 };

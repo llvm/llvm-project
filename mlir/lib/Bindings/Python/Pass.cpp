@@ -9,12 +9,11 @@
 #include "Pass.h"
 
 #include "IRModule.h"
+#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Pass.h"
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 
-namespace nb = nanobind;
-using namespace nb::literals;
+namespace py = pybind11;
+using namespace py::literals;
 using namespace mlir;
 using namespace mlir::python;
 
@@ -35,15 +34,16 @@ public:
   MlirPassManager get() { return passManager; }
 
   void release() { passManager.ptr = nullptr; }
-  nb::object getCapsule() {
-    return nb::steal<nb::object>(mlirPythonPassManagerToCapsule(get()));
+  pybind11::object getCapsule() {
+    return py::reinterpret_steal<py::object>(
+        mlirPythonPassManagerToCapsule(get()));
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static pybind11::object createFromCapsule(pybind11::object capsule) {
     MlirPassManager rawPm = mlirPythonCapsuleToPassManager(capsule.ptr());
     if (mlirPassManagerIsNull(rawPm))
-      throw nb::python_error();
-    return nb::cast(PyPassManager(rawPm), nb::rv_policy::move);
+      throw py::error_already_set();
+    return py::cast(PyPassManager(rawPm), py::return_value_policy::move);
   }
 
 private:
@@ -53,23 +53,22 @@ private:
 } // namespace
 
 /// Create the `mlir.passmanager` here.
-void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
+void mlir::python::populatePassManagerSubmodule(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
-  nb::class_<PyPassManager>(m, "PassManager")
-      .def(
-          "__init__",
-          [](PyPassManager &self, const std::string &anchorOp,
-             DefaultingPyMlirContext context) {
-            MlirPassManager passManager = mlirPassManagerCreateOnOperation(
-                context->get(),
-                mlirStringRefCreate(anchorOp.data(), anchorOp.size()));
-            new (&self) PyPassManager(passManager);
-          },
-          "anchor_op"_a = nb::str("any"), "context"_a.none() = nb::none(),
-          "Create a new PassManager for the current (or provided) Context.")
-      .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyPassManager::getCapsule)
+  py::class_<PyPassManager>(m, "PassManager", py::module_local())
+      .def(py::init<>([](const std::string &anchorOp,
+                         DefaultingPyMlirContext context) {
+             MlirPassManager passManager = mlirPassManagerCreateOnOperation(
+                 context->get(),
+                 mlirStringRefCreate(anchorOp.data(), anchorOp.size()));
+             return new PyPassManager(passManager);
+           }),
+           "anchor_op"_a = py::str("any"), "context"_a = py::none(),
+           "Create a new PassManager for the current (or provided) Context.")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyPassManager::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyPassManager::createFromCapsule)
       .def("_testing_release", &PyPassManager::release,
            "Releases (leaks) the backing pass manager (testing)")
@@ -77,34 +76,14 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           "enable_ir_printing",
           [](PyPassManager &passManager, bool printBeforeAll,
              bool printAfterAll, bool printModuleScope, bool printAfterChange,
-             bool printAfterFailure, std::optional<int64_t> largeElementsLimit,
-             bool enableDebugInfo, bool printGenericOpForm,
-             std::optional<std::string> optionalTreePrintingPath) {
-            MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
-            if (largeElementsLimit)
-              mlirOpPrintingFlagsElideLargeElementsAttrs(flags,
-                                                         *largeElementsLimit);
-            if (enableDebugInfo)
-              mlirOpPrintingFlagsEnableDebugInfo(flags, /*enable=*/true,
-                                                 /*prettyForm=*/false);
-            if (printGenericOpForm)
-              mlirOpPrintingFlagsPrintGenericOpForm(flags);
-            std::string treePrintingPath = "";
-            if (optionalTreePrintingPath.has_value())
-              treePrintingPath = optionalTreePrintingPath.value();
+             bool printAfterFailure) {
             mlirPassManagerEnableIRPrinting(
                 passManager.get(), printBeforeAll, printAfterAll,
-                printModuleScope, printAfterChange, printAfterFailure, flags,
-                mlirStringRefCreate(treePrintingPath.data(),
-                                    treePrintingPath.size()));
-            mlirOpPrintingFlagsDestroy(flags);
+                printModuleScope, printAfterChange, printAfterFailure);
           },
           "print_before_all"_a = false, "print_after_all"_a = true,
           "print_module_scope"_a = false, "print_after_change"_a = false,
           "print_after_failure"_a = false,
-          "large_elements_limit"_a.none() = nb::none(),
-          "enable_debug_info"_a = false, "print_generic_op_form"_a = false,
-          "tree_printing_dir_path"_a.none() = nb::none(),
           "Enable IR printing, default as mlir-print-ir-after-all.")
       .def(
           "enable_verifier",
@@ -122,10 +101,10 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
             if (mlirLogicalResultIsFailure(status))
-              throw nb::value_error(errorMsg.join().c_str());
+              throw py::value_error(std::string(errorMsg.join()));
             return new PyPassManager(passManager);
           },
-          "pipeline"_a, "context"_a.none() = nb::none(),
+          "pipeline"_a, "context"_a = py::none(),
           "Parse a textual pass-pipeline and return a top-level PassManager "
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
@@ -138,7 +117,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
             if (mlirLogicalResultIsFailure(status))
-              throw nb::value_error(errorMsg.join().c_str());
+              throw py::value_error(std::string(errorMsg.join()));
           },
           "pipeline"_a,
           "Add textual pipeline elements to the pass manager. Throws a "

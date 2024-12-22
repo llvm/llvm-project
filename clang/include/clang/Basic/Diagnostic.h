@@ -560,8 +560,7 @@ private:
   ArgToStringFnTy ArgToStringFn;
 
   /// Whether the diagnostic should be suppressed in FilePath.
-  llvm::unique_function<bool(diag::kind, SourceLocation /*DiagLoc*/,
-                             const SourceManager &) const>
+  llvm::unique_function<bool(diag::kind, StringRef /*FilePath*/) const>
       DiagSuppressionMapping;
 
 public:
@@ -973,7 +972,7 @@ public:
   /// These take presumed locations into account, and can still be overriden by
   /// clang-diagnostics pragmas.
   void setDiagSuppressionMapping(llvm::MemoryBuffer &Input);
-  bool isSuppressedViaMapping(diag::kind DiagId, SourceLocation DiagLoc) const;
+  bool isSuppressedViaMapping(diag::kind DiagId, StringRef FilePath) const;
 
   /// Issue the message to the client.
   ///

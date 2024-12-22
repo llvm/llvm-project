@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
+#include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -19,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 

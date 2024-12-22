@@ -556,31 +556,6 @@ public:
   /// Construct a data layout on demand and return it
   mlir::DataLayout &getDataLayout();
 
-  /// Convert operands &/or result from/to unsigned so that the operation
-  /// only receives/produces signless operands.
-  template <typename OpTy>
-  mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
-                             mlir::Value left, mlir::Value right) {
-    if (!resultType.isIntOrFloat())
-      return create<OpTy>(loc, resultType, left, right);
-    mlir::Type signlessType = mlir::IntegerType::get(
-        getContext(), resultType.getIntOrFloatBitWidth(),
-        mlir::IntegerType::SignednessSemantics::Signless);
-    mlir::Type opResType = resultType;
-    if (left.getType().isUnsignedInteger()) {
-      left = createConvert(loc, signlessType, left);
-      opResType = signlessType;
-    }
-    if (right.getType().isUnsignedInteger()) {
-      right = createConvert(loc, signlessType, right);
-      opResType = signlessType;
-    }
-    mlir::Value result = create<OpTy>(loc, opResType, left, right);
-    if (resultType.isUnsignedInteger())
-      result = createConvert(loc, resultType, result);
-    return result;
-  }
-
 private:
   /// Set attributes (e.g. FastMathAttr) to \p op operation
   /// based on the current attributes setting.

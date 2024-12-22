@@ -9,20 +9,17 @@ add_mlir_tool(mlir-translate
   mlir-translate.cpp
   )
 llvm_update_compile_flags(mlir-translate)
-mlir_target_link_libraries(mlir-translate
+target_link_libraries(mlir-translate
   PRIVATE
   ${dialect_libs}
+  ${translation_libs}
+  ${test_libs}
   MLIRIR
   MLIRParser
   MLIRPass
   MLIRSPIRVDialect
   MLIRTranslateLib
   MLIRSupport
-  )
-target_link_libraries(mlir-translate
-  PRIVATE
-  ${translation_libs}
-  ${test_libs}
   )
 
 mlir_check_link_libraries(mlir-translate)

@@ -30,17 +30,12 @@ class BottomUpVec final : public FunctionPass {
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
   Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
-  /// Erases all dead instructions from the dead instruction candidates
-  /// collected during vectorization.
   void tryEraseDeadInstrs();
-  /// Packs all elements of \p ToPack into a vector and returns that vector.
   Value *createPack(ArrayRef<Value *> ToPack);
-  /// Recursively try to vectorize \p Bndl and its operands.
   Value *vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth);
-  /// Entry point for vectorization starting from \p Seeds.
   bool tryVectorize(ArrayRef<Value *> Seeds);
 
-  /// The PM containing the pipeline of region passes.
+  // The PM containing the pipeline of region passes.
   RegionPassManager RPM;
 
 public:

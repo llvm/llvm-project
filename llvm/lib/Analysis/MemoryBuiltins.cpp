@@ -564,10 +564,8 @@ Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
 static APInt getSizeWithOverflow(const SizeOffsetAPInt &Data) {
   APInt Size = Data.Size;
   APInt Offset = Data.Offset;
-
   if (Offset.isNegative() || Size.ult(Offset))
-    return APInt::getZero(Size.getBitWidth());
-
+    return APInt(Size.getBitWidth(), 0);
   return Size - Offset;
 }
 
@@ -670,73 +668,10 @@ STATISTIC(ObjectVisitorArgument,
 STATISTIC(ObjectVisitorLoad,
           "Number of load instructions with unsolved size and offset");
 
-static std::optional<APInt>
-combinePossibleConstantValues(std::optional<APInt> LHS,
-                              std::optional<APInt> RHS,
-                              ObjectSizeOpts::Mode EvalMode) {
-  if (!LHS || !RHS)
-    return std::nullopt;
-  if (EvalMode == ObjectSizeOpts::Mode::Max)
-    return LHS->sge(*RHS) ? *LHS : *RHS;
-  else
-    return LHS->sle(*RHS) ? *LHS : *RHS;
-}
-
-static std::optional<APInt> aggregatePossibleConstantValuesImpl(
-    const Value *V, ObjectSizeOpts::Mode EvalMode, unsigned recursionDepth) {
-  constexpr unsigned maxRecursionDepth = 4;
-  if (recursionDepth == maxRecursionDepth)
-    return std::nullopt;
-
-  if (const auto *CI = dyn_cast<ConstantInt>(V)) {
-    return CI->getValue();
-  } else if (const auto *SI = dyn_cast<SelectInst>(V)) {
-    return combinePossibleConstantValues(
-        aggregatePossibleConstantValuesImpl(SI->getTrueValue(), EvalMode,
-                                            recursionDepth + 1),
-        aggregatePossibleConstantValuesImpl(SI->getFalseValue(), EvalMode,
-                                            recursionDepth + 1),
-        EvalMode);
-  } else if (const auto *PN = dyn_cast<PHINode>(V)) {
-    unsigned Count = PN->getNumIncomingValues();
-    if (Count == 0)
-      return std::nullopt;
-    auto Acc = aggregatePossibleConstantValuesImpl(
-        PN->getIncomingValue(0), EvalMode, recursionDepth + 1);
-    for (unsigned I = 1; Acc && I < Count; ++I) {
-      auto Tmp = aggregatePossibleConstantValuesImpl(
-          PN->getIncomingValue(I), EvalMode, recursionDepth + 1);
-      Acc = combinePossibleConstantValues(Acc, Tmp, EvalMode);
-    }
-    return Acc;
-  }
-
-  return std::nullopt;
-}
-
-static std::optional<APInt>
-aggregatePossibleConstantValues(const Value *V, ObjectSizeOpts::Mode EvalMode) {
-  if (auto *CI = dyn_cast<ConstantInt>(V))
-    return CI->getValue();
-
-  if (EvalMode != ObjectSizeOpts::Mode::Min &&
-      EvalMode != ObjectSizeOpts::Mode::Max)
-    return std::nullopt;
-
-  // Not using computeConstantRange here because we cannot guarantee it's not
-  // doing optimization based on UB which we want to avoid when expanding
-  // __builtin_object_size.
-  return aggregatePossibleConstantValuesImpl(V, EvalMode, 0u);
-}
-
-/// Align \p Size according to \p Alignment. If \p Size is greater than
-/// getSignedMaxValue(), set it as unknown as we can only represent signed value
-/// in OffsetSpan.
 APInt ObjectSizeOffsetVisitor::align(APInt Size, MaybeAlign Alignment) {
   if (Options.RoundToAlign && Alignment)
-    Size = APInt(IntTyBits, alignTo(Size.getZExtValue(), *Alignment));
-
-  return Size.isNegative() ? APInt() : Size;
+    return APInt(IntTyBits, alignTo(Size.getZExtValue(), *Alignment));
+  return Size;
 }
 
 ObjectSizeOffsetVisitor::ObjectSizeOffsetVisitor(const DataLayout &DL,
@@ -776,36 +711,11 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   V = V->stripAndAccumulateConstantOffsets(
       DL, Offset, /* AllowNonInbounds */ true, /* AllowInvariantGroup */ true);
 
-  // Give it another try with approximated analysis. We don't start with this
-  // one because stripAndAccumulateConstantOffsets behaves differently wrt.
-  // overflows if we provide an external Analysis.
-  if ((Options.EvalMode == ObjectSizeOpts::Mode::Min ||
-       Options.EvalMode == ObjectSizeOpts::Mode::Max) &&
-      isa<GEPOperator>(V)) {
-    // External Analysis used to compute the Min/Max value of individual Offsets
-    // within a GEP.
-    ObjectSizeOpts::Mode EvalMode =
-        Options.EvalMode == ObjectSizeOpts::Mode::Min
-            ? ObjectSizeOpts::Mode::Max
-            : ObjectSizeOpts::Mode::Min;
-    auto OffsetRangeAnalysis = [EvalMode](Value &VOffset, APInt &Offset) {
-      if (auto PossibleOffset =
-              aggregatePossibleConstantValues(&VOffset, EvalMode)) {
-        Offset = *PossibleOffset;
-        return true;
-      }
-      return false;
-    };
-
-    V = V->stripAndAccumulateConstantOffsets(
-        DL, Offset, /* AllowNonInbounds */ true, /* AllowInvariantGroup */ true,
-        /*ExternalAnalysis=*/OffsetRangeAnalysis);
-  }
-
   // Later we use the index type size and zero but it will match the type of the
   // value that is passed to computeImpl.
   IntTyBits = DL.getIndexTypeSizeInBits(V->getType());
   Zero = APInt::getZero(IntTyBits);
+
   OffsetSpan ORT = computeValue(V);
 
   bool IndexTypeSizeChanged = InitialIntTyBits != IntTyBits;
@@ -823,33 +733,8 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
       ORT.After = APInt();
   }
   // If the computed bound is "unknown" we cannot add the stripped offset.
-  if (ORT.knownBefore()) {
-    bool Overflow;
-    ORT.Before = ORT.Before.sadd_ov(Offset, Overflow);
-    if (Overflow)
-      ORT.Before = APInt();
-  }
-  if (ORT.knownAfter()) {
-    bool Overflow;
-    ORT.After = ORT.After.ssub_ov(Offset, Overflow);
-    if (Overflow)
-      ORT.After = APInt();
-  }
-
-  // We end up pointing on a location that's outside of the original object.
-  if (ORT.knownBefore() && ORT.Before.isNegative()) {
-    // This means that we *may* be accessing memory before the allocation.
-    // Conservatively return an unknown size.
-    //
-    // TODO: working with ranges instead of value would make it possible to take
-    // a better decision.
-    if (Options.EvalMode == ObjectSizeOpts::Mode::Min ||
-        Options.EvalMode == ObjectSizeOpts::Mode::Max) {
-      return ObjectSizeOffsetVisitor::unknown();
-    }
-    // Otherwise it's fine, caller can handle negative offset.
-  }
-  return ORT;
+  return {(ORT.knownBefore() ? ORT.Before + Offset : ORT.Before),
+          (ORT.knownAfter() ? ORT.After - Offset : ORT.After)};
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::computeValue(Value *V) {
@@ -895,20 +780,17 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   if (!isUIntN(IntTyBits, ElemSize.getKnownMinValue()))
     return ObjectSizeOffsetVisitor::unknown();
   APInt Size(IntTyBits, ElemSize.getKnownMinValue());
-
   if (!I.isArrayAllocation())
     return OffsetSpan(Zero, align(Size, I.getAlign()));
 
   Value *ArraySize = I.getArraySize();
-  if (auto PossibleSize =
-          aggregatePossibleConstantValues(ArraySize, Options.EvalMode)) {
-    APInt NumElems = *PossibleSize;
+  if (const ConstantInt *C = dyn_cast<ConstantInt>(ArraySize)) {
+    APInt NumElems = C->getValue();
     if (!CheckedZextOrTrunc(NumElems))
       return ObjectSizeOffsetVisitor::unknown();
 
     bool Overflow;
     Size = Size.umul_ov(NumElems, Overflow);
-
     return Overflow ? ObjectSizeOffsetVisitor::unknown()
                     : OffsetSpan(Zero, align(Size, I.getAlign()));
   }
@@ -928,23 +810,8 @@ OffsetSpan ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
-  auto Mapper = [this](const Value *V) -> const Value * {
-    if (!V->getType()->isIntegerTy())
-      return V;
-
-    if (auto PossibleBound =
-            aggregatePossibleConstantValues(V, Options.EvalMode))
-      return ConstantInt::get(V->getType(), *PossibleBound);
-
-    return V;
-  };
-
-  if (std::optional<APInt> Size = getAllocSize(&CB, TLI, Mapper)) {
-    // Very large unsigned value cannot be represented as OffsetSpan.
-    if (Size->isNegative())
-      return ObjectSizeOffsetVisitor::unknown();
+  if (std::optional<APInt> Size = getAllocSize(&CB, TLI))
     return OffsetSpan(Zero, *Size);
-  }
   return ObjectSizeOffsetVisitor::unknown();
 }
 
@@ -1077,11 +944,7 @@ OffsetSpan ObjectSizeOffsetVisitor::findLoadOffsetRange(
       if (!C)
         return Unknown();
 
-      APInt CSize = C->getValue();
-      if (CSize.isNegative())
-        return Unknown();
-
-      return Known({APInt(CSize.getBitWidth(), 0), CSize});
+      return Known({APInt(C->getValue().getBitWidth(), 0), C->getValue()});
     }
 
     return Unknown();

@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 set(LIBS
   ${dialect_libs}
+  ${test_libs}
 
   MLIRAffineAnalysis
   MLIRAnalysis
@@ -23,9 +24,11 @@ include_directories(../../../clang/include)
 add_mlir_tool(mlir-rewrite
   mlir-rewrite.cpp
 
+  DEPENDS
+  ${LIBS}
   SUPPORT_PLUGINS
   )
-mlir_target_link_libraries(mlir-rewrite PRIVATE ${LIBS})
+target_link_libraries(mlir-rewrite PRIVATE ${LIBS})
 llvm_update_compile_flags(mlir-rewrite)
 
 mlir_check_all_link_libraries(mlir-rewrite)

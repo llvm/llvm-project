@@ -998,7 +998,7 @@ llvm.func @vector_splat_nonzero() -> vector<4xf32> {
 
 // CHECK-LABEL: @vector_splat_nonzero_scalable
 llvm.func @vector_splat_nonzero_scalable() -> vector<[4]xf32> {
-  // CHECK: ret <vscale x 4 x float> splat (float 1.000000e+00)
+  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
   %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
   llvm.return %0 : vector<[4]xf32>
 }
@@ -2325,16 +2325,6 @@ llvm.func @vararg_function(%arg0: i32, ...) -> i32 {
   // CHECK: ret i32 %[[RET]]
   llvm.return %ret : i32
 }
-
-// -----
-
-// CHECK: declare void @range_arg_function(i64 range(i64 0, 4097))
-llvm.func @range_arg_function(%arg0: i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
-
-// -----
-
-// CHECK: declare range(i64 0, 4097) i64 @range_res_function()
-llvm.func @range_res_function() -> (i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
 
 // -----
 

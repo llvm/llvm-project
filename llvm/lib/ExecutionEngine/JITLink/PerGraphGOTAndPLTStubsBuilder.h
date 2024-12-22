@@ -114,8 +114,8 @@ protected:
 private:
   BuilderImplT &impl() { return static_cast<BuilderImplT &>(*this); }
 
-  DenseMap<orc::SymbolStringPtr, Symbol *> GOTEntries;
-  DenseMap<orc::SymbolStringPtr, Symbol *> PLTStubs;
+  DenseMap<StringRef, Symbol *> GOTEntries;
+  DenseMap<StringRef, Symbol *> PLTStubs;
 };
 
 } // end namespace jitlink

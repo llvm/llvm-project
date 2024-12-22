@@ -1761,13 +1761,13 @@ g:
 ; CHECK-LABEL: define void @test39(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test39(ptr %p, i1 %arg) {
+define void @test39(ptr %p) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
-  br i1 %arg, label %loop, label %exit
+  br i1 undef, label %loop, label %exit
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
@@ -1779,14 +1779,14 @@ exit:                                             ; preds = %loop
 ; CHECK-LABEL: define void @test39b(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test39b(ptr %p, i1 %arg) {
+define void @test39b(ptr %p) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
   store i8 0, ptr %0
-  br i1 %arg, label %loop, label %exit
+  br i1 undef, label %loop, label %exit
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
@@ -1798,14 +1798,14 @@ exit:                                             ; preds = %loop
 ; CHECK-LABEL: define void @test39c(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test39c(ptr %p, i1 %arg) {
+define void @test39c(ptr %p) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
   call void @use_pointer(ptr %0)
-  br i1 %arg, label %loop, label %exit
+  br i1 undef, label %loop, label %exit
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
@@ -1818,14 +1818,14 @@ exit:                                             ; preds = %loop
 ; CHECK-LABEL: define void @test40(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test40(ptr %p, i1 %arg) {
+define void @test40(ptr %p) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
   call void @use_pointer(ptr %0)
-  br i1 %arg, label %exit, label %loop
+  br i1 undef, label %exit, label %loop
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0

@@ -88,18 +88,12 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
       indexingMaps.push_back(op.getMatchingIndexingMap(&opOperand));
     }
   }
-  if (indexingMaps.empty()) {
-    // If there are no indexing maps, the operand can only be dropped
-    // if neither op has loops.
-    return producer.getNumLoops() == 0 && consumer.getNumLoops() == 0;
-  }
 
   // The concatanation of the remained indexing maps must be invertible, so
   // the bounds of the op can be still computed after dropping the selected
   // operand. inversePermutation returns an empty AffineMap in case the
   // concatanated indexing maps are not invertible.
-  return inversePermutation(concatAffineMaps(
-             indexingMaps, producer.getContext())) != AffineMap();
+  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
 }
 
 /// Returns a set of indices of the producer's results which would
@@ -1707,7 +1701,7 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
     if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr))
       return cast<IntegerAttr>(attr).getInt() == value;
     llvm::APInt actual;
-    return matchPattern(cast<Value>(ofr), m_ConstantInt(&actual)) &&
+    return matchPattern(ofr.get<Value>(), m_ConstantInt(&actual)) &&
            actual.getSExtValue() == value;
   };
   if (!llvm::all_of(loopRanges, [&](Range range) {
@@ -2001,8 +1995,7 @@ public:
             genericOp.getMatchingIndexingMap(&outputOperand));
 
       // Check if the operation shapes to loops map is computable.
-      if (!inversePermutation(
-              concatAffineMaps(fusedIndexMaps, rewriter.getContext()))) {
+      if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {
         return rewriter.notifyMatchFailure(
             genericOp, "fused op loop bound computation failed");
       }
@@ -2206,7 +2199,7 @@ struct LinalgElementwiseOpFusionPass
     // Use TopDownTraversal for compile time reasons
     GreedyRewriteConfig grc;
     grc.useTopDownTraversal = true;
-    (void)applyPatternsGreedily(op, std::move(patterns), grc);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns), grc);
   }
 };
 

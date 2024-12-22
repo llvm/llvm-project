@@ -7,6 +7,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/FormatString.h"
 #include "clang/Basic/Builtins.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include <optional>
 
 using namespace clang;

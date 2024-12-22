@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+neon  -mcpu=cortex-a55 %s -o - 2>&1 \
 # RUN:   -misched-dump-reserved-cycles=true \
 # RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler \
-# RUN:   -misched-prera-direction=bottomup -sched-print-cycles=true \
+# RUN:   -misched-bottomup=true -sched-print-cycles=true \
 # RUN:   -misched-detail-resource-booking=true \
 # RUN:   -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-header-width=21 \
 # RUN: | FileCheck  %s

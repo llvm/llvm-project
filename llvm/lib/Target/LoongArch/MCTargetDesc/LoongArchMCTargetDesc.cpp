@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchMCTargetDesc.h"
+#include "LoongArchBaseInfo.h"
 #include "LoongArchELFStreamer.h"
 #include "LoongArchInstPrinter.h"
 #include "LoongArchMCAsmInfo.h"

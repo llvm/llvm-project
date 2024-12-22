@@ -354,9 +354,6 @@ class ASTIdentifierLookupTrait;
 /// The on-disk hash table(s) used for DeclContext name lookup.
 struct DeclContextLookupTable;
 
-/// The on-disk hash table(s) used for specialization decls.
-struct LazySpecializationInfoLookupTable;
-
 } // namespace reader
 
 } // namespace serialization
@@ -537,14 +534,17 @@ private:
   /// namespace as if it is not delayed.
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
 
-  /// Mapping from main decl ID to the related decls IDs.
+  /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
   ///
-  /// These related decls have to be loaded right after the main decl.
-  /// It is required to have canonical declaration for related decls from the
-  /// same module as the enclosing main decl. Without this, due to lazy
-  /// deserialization, canonical declarations for the main decl and related can
-  /// be selected from different modules.
-  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> RelatedDeclsMap;
+  /// These lambdas have to be loaded right after the function they belong to.
+  /// It is required to have canonical declaration for lambda class from the
+  /// same module as enclosing function. This is required to correctly resolve
+  /// captured variables in the lambda. Without this, due to lazy
+  /// deserialization, canonical declarations for the function and lambdas can
+  /// be selected from different modules and DeclRefExprs may refer to the AST
+  /// nodes that don't exist in the function.
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>>
+      FunctionToLambdasMap;
 
   struct PendingUpdateRecord {
     Decl *D;
@@ -632,39 +632,19 @@ private:
   llvm::DenseMap<const DeclContext *,
                  serialization::reader::DeclContextLookupTable> Lookups;
 
-  using SpecLookupTableTy =
-      llvm::DenseMap<const Decl *,
-                     serialization::reader::LazySpecializationInfoLookupTable>;
-  /// Map from decls to specialized decls.
-  SpecLookupTableTy SpecializationsLookups;
-  /// Split partial specialization from specialization to speed up lookups.
-  SpecLookupTableTy PartialSpecializationsLookups;
-
-  bool LoadExternalSpecializationsImpl(SpecLookupTableTy &SpecLookups,
-                                       const Decl *D);
-  bool LoadExternalSpecializationsImpl(SpecLookupTableTy &SpecLookups,
-                                       const Decl *D,
-                                       ArrayRef<TemplateArgument> TemplateArgs);
-
   // Updates for visible decls can occur for other contexts than just the
   // TU, and when we read those update records, the actual context may not
   // be available yet, so have this pending map using the ID as a key. It
-  // will be realized when the data is actually loaded.
-  struct UpdateData {
+  // will be realized when the context is actually loaded.
+  struct PendingVisibleUpdate {
     ModuleFile *Mod;
     const unsigned char *Data;
   };
-  using DeclContextVisibleUpdates = SmallVector<UpdateData, 1>;
+  using DeclContextVisibleUpdates = SmallVector<PendingVisibleUpdate, 1>;
 
   /// Updates to the visible declarations of declaration contexts that
   /// haven't been loaded yet.
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> PendingVisibleUpdates;
-
-  using SpecializationsUpdate = SmallVector<UpdateData, 1>;
-  using SpecializationsUpdateMap =
-      llvm::DenseMap<GlobalDeclID, SpecializationsUpdate>;
-  SpecializationsUpdateMap PendingSpecializationsUpdates;
-  SpecializationsUpdateMap PendingPartialSpecializationsUpdates;
 
   /// The set of C++ or Objective-C classes that have forward
   /// declarations that have not yet been linked to their definitions.
@@ -697,11 +677,6 @@ private:
   bool ReadVisibleDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, GlobalDeclID ID);
-
-  bool ReadSpecializations(ModuleFile &M, llvm::BitstreamCursor &Cursor,
-                           uint64_t Offset, Decl *D, bool IsPartial);
-  void AddSpecializations(const Decl *D, const unsigned char *Data,
-                          ModuleFile &M, bool IsPartial);
 
   /// A vector containing identifiers that have already been
   /// loaded.
@@ -1444,14 +1419,6 @@ public:
   const serialization::reader::DeclContextLookupTable *
   getLoadedLookupTables(DeclContext *Primary) const;
 
-  /// Get the loaded specializations lookup tables for \p D,
-  /// if any.
-  serialization::reader::LazySpecializationInfoLookupTable *
-  getLoadedSpecializationsLookupTables(const Decl *D, bool IsPartial);
-
-  /// If we have any unloaded specialization for \p D
-  bool haveUnloadedSpecializations(const Decl *D) const;
-
 private:
   struct ImportedModule {
     ModuleFile *Mod;
@@ -2109,12 +2076,6 @@ public:
                                       unsigned BlockID,
                                       uint64_t *StartOfBlockOffset = nullptr);
 
-  bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
-
-  bool
-  LoadExternalSpecializations(const Decl *D,
-                              ArrayRef<TemplateArgument> TemplateArgs) override;
-
   /// Finds all the visible declarations with a given name.
   /// The current implementation of this method just loads the entire
   /// lookup table as unmaterialized references.
@@ -2428,8 +2389,11 @@ public:
 
   // Read a string
   static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
-  static StringRef ReadStringBlob(const RecordDataImpl &Record, unsigned &Idx,
-                                  StringRef &Blob);
+
+  // Skip a string
+  static void SkipString(const RecordData &Record, unsigned &Idx) {
+    Idx += Record[Idx] + 1;
+  }
 
   // Read a path
   std::string ReadPath(ModuleFile &F, const RecordData &Record, unsigned &Idx);
@@ -2437,8 +2401,11 @@ public:
   // Read a path
   std::string ReadPath(StringRef BaseDirectory, const RecordData &Record,
                        unsigned &Idx);
-  std::string ReadPathBlob(StringRef BaseDirectory, const RecordData &Record,
-                           unsigned &Idx, StringRef &Blob);
+
+  // Skip a path
+  static void SkipPath(const RecordData &Record, unsigned &Idx) {
+    SkipString(Record, Idx);
+  }
 
   /// Read a version tuple.
   static VersionTuple ReadVersionTuple(const RecordData &Record, unsigned &Idx);

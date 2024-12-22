@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-hwloop-preheader < %s
+; RUN: llc -march=hexagon -hexagon-hwloop-preheader < %s
 ; REQUIRES: asserts
 
 ; Checks that a subreg in a Phi is propagated correctly when a

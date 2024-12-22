@@ -8,33 +8,33 @@
 
 #include "mlir-c/Dialect/NVGPU.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include <pybind11/pybind11.h>
 
-namespace nb = nanobind;
+namespace py = pybind11;
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::python;
-using namespace mlir::python::nanobind_adaptors;
+using namespace mlir::python::adaptors;
 
-static void populateDialectNVGPUSubmodule(const nb::module_ &m) {
+static void populateDialectNVGPUSubmodule(const pybind11::module &m) {
   auto nvgpuTensorMapDescriptorType = mlir_type_subclass(
       m, "TensorMapDescriptorType", mlirTypeIsANVGPUTensorMapDescriptorType);
 
   nvgpuTensorMapDescriptorType.def_classmethod(
       "get",
-      [](nb::object cls, MlirType tensorMemrefType, int swizzle, int l2promo,
+      [](py::object cls, MlirType tensorMemrefType, int swizzle, int l2promo,
          int oobFill, int interleave, MlirContext ctx) {
         return cls(mlirNVGPUTensorMapDescriptorTypeGet(
             ctx, tensorMemrefType, swizzle, l2promo, oobFill, interleave));
       },
       "Gets an instance of TensorMapDescriptorType in the same context",
-      nb::arg("cls"), nb::arg("tensor_type"), nb::arg("swizzle"),
-      nb::arg("l2promo"), nb::arg("oob_fill"), nb::arg("interleave"),
-      nb::arg("ctx").none() = nb::none());
+      py::arg("cls"), py::arg("tensor_type"), py::arg("swizzle"),
+      py::arg("l2promo"), py::arg("oob_fill"), py::arg("interleave"),
+      py::arg("ctx") = py::none());
 }
 
-NB_MODULE(_mlirDialectsNVGPU, m) {
+PYBIND11_MODULE(_mlirDialectsNVGPU, m) {
   m.doc() = "MLIR NVGPU dialect.";
 
   populateDialectNVGPUSubmodule(m);

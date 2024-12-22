@@ -776,15 +776,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             return InsertNewInstWith(Shl, I->getIterator());
           }
         }
-
-        const APInt *Factor;
-        if (match(I->getOperand(0),
-                  m_OneUse(m_Mul(m_Value(X), m_APInt(Factor)))) &&
-            Factor->countr_zero() >= ShiftAmt) {
-          BinaryOperator *Mul = BinaryOperator::CreateMul(
-              X, ConstantInt::get(X->getType(), Factor->lshr(ShiftAmt)));
-          return InsertNewInstWith(Mul, I->getIterator());
-        }
       }
 
       // Unsigned shift right.
@@ -1006,7 +997,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             uint64_t MaskedGEPIndex = HighBitsGEPIndex | MaskedLowBitsGEPIndex;
 
             if (MaskedGEPIndex != GEPIndex) {
-              auto *GEP = cast<GEPOperator>(II->getArgOperand(0));
+              auto *GEP = cast<GetElementPtrInst>(II->getArgOperand(0));
               Builder.SetInsertPoint(I);
               Type *GEPIndexType =
                   DL.getIndexType(GEP->getPointerOperand()->getType());

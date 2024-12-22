@@ -68,12 +68,6 @@ test_addi_pcrel_lo12:
 # jitlink-check: decode_operand(test_external_jump, 0) = \
 # jitlink-check:   (stub_addr(elf_reloc.o, external_func) - \
 # jitlink-check:      test_external_jump)[27:0]
-# jitlink-check: decode_operand(test_external_call36, 1)[19:0] = \
-# jitlink-check:   (stub_addr(elf_reloc.o, external_func) - \
-# jitlink-check:      test_external_call36 + (1<<17))[37:18]
-# jitlink-check: decode_operand(test_external_call36 + 4, 2)[17:0] = \
-# jitlink-check:   (stub_addr(elf_reloc.o, external_func) - \
-# jitlink-check:      test_external_call36)[17:0]
     .globl test_external_call
     .p2align  2
 test_external_call:
@@ -85,13 +79,6 @@ test_external_call:
 test_external_jump:
     b external_func
     .size test_external_jump, .-test_external_jump
-
-    .globl test_external_call36
-    .p2align  2
-test_external_call36:
-    pcaddu18i $ra, %call36(external_func)
-    jirl $ra, $ra, 0
-    .size test_external_call36, .-test_external_call36
 
 ## Check R_LARCH_GOT_PC_HI20 / R_LARCH_GOT_PC_LO12 handling with a reference to
 ## an external symbol. Validate both the reference to the GOT entry, and also
@@ -116,19 +103,6 @@ test_gotoffset12_external:
     ld.d $a0, $a0, %got_pc_lo12(external_data)
     .size test_gotoffset12_external, .-test_gotoffset12_external
 
-
-## Check R_LARCH_CALL36 relocation of a local function call.
-
-# jitlink-check: decode_operand(local_func_call36, 1)[19:0] = \
-# jitlink-check:   ((local_func - local_func_call36) + (1<<17))[37:18]
-# jitlink-check: decode_operand(local_func_call36 + 4, 2)[17:0] = \
-# jitlink-check:   (local_func - local_func_call36)[17:0]
-    .globl local_func_call36
-    .p2align 2
-local_func_call36:
-    pcaddu18i $ra, %call36(local_func)
-    jirl $ra, $ra, 0
-    .size local_func_call36, .-local_func_call36
 
     .globl named_data
     .p2align 4

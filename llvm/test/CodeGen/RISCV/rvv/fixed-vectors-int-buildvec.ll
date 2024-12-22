@@ -910,9 +910,8 @@ define <4 x i8> @buildvec_not_vid_v4i8_2() {
 define <16 x i8> @buildvec_not_vid_v16i8() {
 ; CHECK-LABEL: buildvec_not_vid_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 7, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 3
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 3
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 7, e8, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 6
@@ -3297,11 +3296,11 @@ define <4 x i16> @buildvec_v4i16_pack(i16 %e1, i16 %e2, i16 %e3, i16 %e4) {
 ; RVA22U64-LABEL: buildvec_v4i16_pack:
 ; RVA22U64:       # %bb.0:
 ; RVA22U64-NEXT:    slli a3, a3, 48
-; RVA22U64-NEXT:    slli a2, a2, 48
+; RVA22U64-NEXT:    zext.h a2, a2
 ; RVA22U64-NEXT:    zext.h a0, a0
-; RVA22U64-NEXT:    slli a1, a1, 48
-; RVA22U64-NEXT:    srli a2, a2, 16
-; RVA22U64-NEXT:    srli a1, a1, 32
+; RVA22U64-NEXT:    zext.h a1, a1
+; RVA22U64-NEXT:    slli a2, a2, 32
+; RVA22U64-NEXT:    slli a1, a1, 16
 ; RVA22U64-NEXT:    or a2, a2, a3
 ; RVA22U64-NEXT:    or a0, a0, a1
 ; RVA22U64-NEXT:    or a0, a0, a2

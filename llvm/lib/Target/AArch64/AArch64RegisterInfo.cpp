@@ -423,6 +423,57 @@ AArch64RegisterInfo::explainReservedReg(const MachineFunction &MF,
   return {};
 }
 
+static const MCPhysReg ReservedHi[] = {
+    AArch64::B0_HI,  AArch64::B1_HI,  AArch64::B2_HI,  AArch64::B3_HI,
+    AArch64::B4_HI,  AArch64::B5_HI,  AArch64::B6_HI,  AArch64::B7_HI,
+    AArch64::B8_HI,  AArch64::B9_HI,  AArch64::B10_HI, AArch64::B11_HI,
+    AArch64::B12_HI, AArch64::B13_HI, AArch64::B14_HI, AArch64::B15_HI,
+    AArch64::B16_HI, AArch64::B17_HI, AArch64::B18_HI, AArch64::B19_HI,
+    AArch64::B20_HI, AArch64::B21_HI, AArch64::B22_HI, AArch64::B23_HI,
+    AArch64::B24_HI, AArch64::B25_HI, AArch64::B26_HI, AArch64::B27_HI,
+    AArch64::B28_HI, AArch64::B29_HI, AArch64::B30_HI, AArch64::B31_HI,
+    AArch64::H0_HI,  AArch64::H1_HI,  AArch64::H2_HI,  AArch64::H3_HI,
+    AArch64::H4_HI,  AArch64::H5_HI,  AArch64::H6_HI,  AArch64::H7_HI,
+    AArch64::H8_HI,  AArch64::H9_HI,  AArch64::H10_HI, AArch64::H11_HI,
+    AArch64::H12_HI, AArch64::H13_HI, AArch64::H14_HI, AArch64::H15_HI,
+    AArch64::H16_HI, AArch64::H17_HI, AArch64::H18_HI, AArch64::H19_HI,
+    AArch64::H20_HI, AArch64::H21_HI, AArch64::H22_HI, AArch64::H23_HI,
+    AArch64::H24_HI, AArch64::H25_HI, AArch64::H26_HI, AArch64::H27_HI,
+    AArch64::H28_HI, AArch64::H29_HI, AArch64::H30_HI, AArch64::H31_HI,
+    AArch64::S0_HI,  AArch64::S1_HI,  AArch64::S2_HI,  AArch64::S3_HI,
+    AArch64::S4_HI,  AArch64::S5_HI,  AArch64::S6_HI,  AArch64::S7_HI,
+    AArch64::S8_HI,  AArch64::S9_HI,  AArch64::S10_HI, AArch64::S11_HI,
+    AArch64::S12_HI, AArch64::S13_HI, AArch64::S14_HI, AArch64::S15_HI,
+    AArch64::S16_HI, AArch64::S17_HI, AArch64::S18_HI, AArch64::S19_HI,
+    AArch64::S20_HI, AArch64::S21_HI, AArch64::S22_HI, AArch64::S23_HI,
+    AArch64::S24_HI, AArch64::S25_HI, AArch64::S26_HI, AArch64::S27_HI,
+    AArch64::S28_HI, AArch64::S29_HI, AArch64::S30_HI, AArch64::S31_HI,
+    AArch64::D0_HI,  AArch64::D1_HI,  AArch64::D2_HI,  AArch64::D3_HI,
+    AArch64::D4_HI,  AArch64::D5_HI,  AArch64::D6_HI,  AArch64::D7_HI,
+    AArch64::D8_HI,  AArch64::D9_HI,  AArch64::D10_HI, AArch64::D11_HI,
+    AArch64::D12_HI, AArch64::D13_HI, AArch64::D14_HI, AArch64::D15_HI,
+    AArch64::D16_HI, AArch64::D17_HI, AArch64::D18_HI, AArch64::D19_HI,
+    AArch64::D20_HI, AArch64::D21_HI, AArch64::D22_HI, AArch64::D23_HI,
+    AArch64::D24_HI, AArch64::D25_HI, AArch64::D26_HI, AArch64::D27_HI,
+    AArch64::D28_HI, AArch64::D29_HI, AArch64::D30_HI, AArch64::D31_HI,
+    AArch64::Q0_HI,  AArch64::Q1_HI,  AArch64::Q2_HI,  AArch64::Q3_HI,
+    AArch64::Q4_HI,  AArch64::Q5_HI,  AArch64::Q6_HI,  AArch64::Q7_HI,
+    AArch64::Q8_HI,  AArch64::Q9_HI,  AArch64::Q10_HI, AArch64::Q11_HI,
+    AArch64::Q12_HI, AArch64::Q13_HI, AArch64::Q14_HI, AArch64::Q15_HI,
+    AArch64::Q16_HI, AArch64::Q17_HI, AArch64::Q18_HI, AArch64::Q19_HI,
+    AArch64::Q20_HI, AArch64::Q21_HI, AArch64::Q22_HI, AArch64::Q23_HI,
+    AArch64::Q24_HI, AArch64::Q25_HI, AArch64::Q26_HI, AArch64::Q27_HI,
+    AArch64::Q28_HI, AArch64::Q29_HI, AArch64::Q30_HI, AArch64::Q31_HI,
+    AArch64::W0_HI,  AArch64::W1_HI,  AArch64::W2_HI,  AArch64::W3_HI,
+    AArch64::W4_HI,  AArch64::W5_HI,  AArch64::W6_HI,  AArch64::W7_HI,
+    AArch64::W8_HI,  AArch64::W9_HI,  AArch64::W10_HI, AArch64::W11_HI,
+    AArch64::W12_HI, AArch64::W13_HI, AArch64::W14_HI, AArch64::W15_HI,
+    AArch64::W16_HI, AArch64::W17_HI, AArch64::W18_HI, AArch64::W19_HI,
+    AArch64::W20_HI, AArch64::W21_HI, AArch64::W22_HI, AArch64::W23_HI,
+    AArch64::W24_HI, AArch64::W25_HI, AArch64::W26_HI, AArch64::W27_HI,
+    AArch64::W28_HI, AArch64::W29_HI, AArch64::W30_HI, AArch64::WSP_HI,
+    AArch64::WZR_HI};
+
 BitVector
 AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   const AArch64FrameLowering *TFI = getFrameLowering(MF);
@@ -489,37 +540,17 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
     markSuperRegs(Reserved, AArch64::W28);
   }
 
-  assert(checkAllSuperRegsMarked(Reserved));
+  for (Register R : ReservedHi)
+    Reserved.set(R);
 
-  // Add _HI registers after checkAllSuperRegsMarked as this check otherwise
-  // becomes considerably more expensive.
-  Reserved.set(AArch64::WSP_HI);
-  Reserved.set(AArch64::WZR_HI);
-  static_assert(AArch64::W30_HI - AArch64::W0_HI == 30,
-                "Unexpected order of registers");
-  Reserved.set(AArch64::W0_HI, AArch64::W30_HI);
-  static_assert(AArch64::B31_HI - AArch64::B0_HI == 31,
-                "Unexpected order of registers");
-  Reserved.set(AArch64::B0_HI, AArch64::B31_HI);
-  static_assert(AArch64::H31_HI - AArch64::H0_HI == 31,
-                "Unexpected order of registers");
-  Reserved.set(AArch64::H0_HI, AArch64::H31_HI);
-  static_assert(AArch64::S31_HI - AArch64::S0_HI == 31,
-                "Unexpected order of registers");
-  Reserved.set(AArch64::S0_HI, AArch64::S31_HI);
-  static_assert(AArch64::D31_HI - AArch64::D0_HI == 31,
-                "Unexpected order of registers");
-  Reserved.set(AArch64::D0_HI, AArch64::D31_HI);
-  static_assert(AArch64::Q31_HI - AArch64::Q0_HI == 31,
-                "Unexpected order of registers");
-  Reserved.set(AArch64::Q0_HI, AArch64::Q31_HI);
-
+  assert(checkAllSuperRegsMarked(Reserved, ReservedHi));
   return Reserved;
 }
 
 BitVector
 AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  BitVector Reserved(getNumRegs());
+  BitVector Reserved = getStrictlyReservedRegs(MF);
+
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
     if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReservedForRA(i))
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
@@ -536,12 +567,7 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, AArch64::LR);
   }
 
-  assert(checkAllSuperRegsMarked(Reserved));
-
-  // Handle strictlyReservedRegs separately to avoid re-evaluating the assert,
-  // which becomes considerably expensive when considering the _HI registers.
-  Reserved |= getStrictlyReservedRegs(MF);
-
+  assert(checkAllSuperRegsMarked(Reserved, ReservedHi));
   return Reserved;
 }
 
@@ -1079,88 +1105,6 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case AArch64::FPR128_0to7RegClassID:
     return 8;
   }
-}
-
-// FORM_TRANSPOSED_REG_TUPLE nodes are created to improve register allocation
-// where a consecutive multi-vector tuple is constructed from the same indices
-// of multiple strided loads. This may still result in unnecessary copies
-// between the loads and the tuple. Here we try to return a hint to assign the
-// contiguous ZPRMulReg starting at the same register as the first operand of
-// the pseudo, which should be a subregister of the first strided load.
-//
-// For example, if the first strided load has been assigned $z16_z20_z24_z28
-// and the operands of the pseudo are each accessing subregister zsub2, we
-// should look through through Order to find a contiguous register which
-// begins with $z24 (i.e. $z24_z25_z26_z27).
-//
-bool AArch64RegisterInfo::getRegAllocationHints(
-    Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
-    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  // The SVE calling convention preserves registers Z8-Z23. As a result, there
-  // are no ZPR2Strided or ZPR4Strided registers that do not overlap with the
-  // callee-saved registers and so by default these will be pushed to the back
-  // of the allocation order for the ZPRStridedOrContiguous classes.
-  // If any of the instructions which define VirtReg are used by the
-  // FORM_TRANSPOSED_REG_TUPLE pseudo, we want to favour reducing copy
-  // instructions over reducing the number of clobbered callee-save registers,
-  // so we add the strided registers as a hint.
-  unsigned RegID = MRI.getRegClass(VirtReg)->getID();
-  // Look through uses of the register for FORM_TRANSPOSED_REG_TUPLE.
-  if ((RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
-       RegID == AArch64::ZPR4StridedOrContiguousRegClassID) &&
-      any_of(MRI.use_nodbg_instructions(VirtReg), [](const MachineInstr &Use) {
-        return Use.getOpcode() ==
-                   AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
-               Use.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
-      })) {
-    const TargetRegisterClass *StridedRC =
-        RegID == AArch64::ZPR2StridedOrContiguousRegClassID
-            ? &AArch64::ZPR2StridedRegClass
-            : &AArch64::ZPR4StridedRegClass;
-
-    for (MCPhysReg Reg : Order)
-      if (StridedRC->contains(Reg))
-        Hints.push_back(Reg);
-
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
-  }
-
-  for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
-    if (MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
-        MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
-      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                       MF, VRM);
-
-    unsigned FirstOpSubReg = MI.getOperand(1).getSubReg();
-    switch (FirstOpSubReg) {
-    case AArch64::zsub0:
-    case AArch64::zsub1:
-    case AArch64::zsub2:
-    case AArch64::zsub3:
-      break;
-    default:
-      continue;
-    }
-
-    // Look up the physical register mapped to the first operand of the pseudo.
-    Register FirstOpVirtReg = MI.getOperand(1).getReg();
-    if (!VRM->hasPhys(FirstOpVirtReg))
-      continue;
-
-    MCRegister TupleStartReg =
-        getSubReg(VRM->getPhys(FirstOpVirtReg), FirstOpSubReg);
-    for (unsigned I = 0; I < Order.size(); ++I)
-      if (MCRegister R = getSubReg(Order[I], AArch64::zsub0))
-        if (R == TupleStartReg)
-          Hints.push_back(Order[I]);
-  }
-
-  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                   VRM);
 }
 
 unsigned AArch64RegisterInfo::getLocalAddressRegister(

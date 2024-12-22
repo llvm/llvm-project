@@ -9,7 +9,7 @@
 #include "TestDialect.h"
 #include "TestOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/Func/Transforms/DecomposeCallGraphTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -142,10 +142,7 @@ struct TestDecomposeCallGraphTypes
     typeConverter.addArgumentMaterialization(buildMakeTupleOp);
     typeConverter.addTargetMaterialization(buildDecomposeTuple);
 
-    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
-        patterns, typeConverter);
-    populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    populateCallOpTypeConversionPattern(patterns, typeConverter);
+    populateDecomposeCallGraphTypesPatterns(context, typeConverter, patterns);
 
     if (failed(applyPartialConversion(module, target, std::move(patterns))))
       return signalPassFailure();

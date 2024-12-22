@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-hwloop-preheader < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-hwloop-preheader < %s | FileCheck %s
 
 ; check for lack of assertion failures.
 

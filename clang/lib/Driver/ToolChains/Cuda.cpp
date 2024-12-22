@@ -856,9 +856,8 @@ void CudaToolChain::addClangTargetOptions(
           DeviceOffloadingKind == Action::OFK_Cuda) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  CC1Args.append({"-fcuda-is-device", "-mllvm",
-                  "-enable-memcpyopt-without-libcalls",
-                  "-fno-threadsafe-statics"});
+  CC1Args.append(
+      {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
 
   // Unsized function arguments used for variadics were introduced in CUDA-9.0
   // We still do not support generating code that actually uses variadic

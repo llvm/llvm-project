@@ -55,8 +55,7 @@ template <class _Tp>
 constexpr _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
   static_assert(!is_signed<_Tp>::value, "");
 
-  // Using Binary GCD algorithm https://en.wikipedia.org/wiki/Binary_GCD_algorithm, based on an implementation
-  // from https://lemire.me/blog/2024/04/13/greatest-common-divisor-the-extended-euclidean-algorithm-and-speed/
+  // From: https://lemire.me/blog/2013/12/26/fastest-way-to-compute-the-greatest-common-divisor
   //
   // If power of two divides both numbers, we can push it out.
   // - gcd( 2^x * a, 2^x * b) = 2^x * gcd(a, b)
@@ -77,17 +76,21 @@ constexpr _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
   if (__a == 0)
     return __b;
 
-  _Tp __c     = __a | __b;
-  int __shift = std::__countr_zero(__c);
-  __a >>= std::__countr_zero(__a);
+  int __az    = std::__countr_zero(__a);
+  int __bz    = std::__countr_zero(__b);
+  int __shift = std::min(__az, __bz);
+  __a >>= __az;
+  __b >>= __bz;
   do {
-    _Tp __t = __b >> std::__countr_zero(__b);
-    if (__a > __t) {
-      __b = __a - __t;
-      __a = __t;
+    _Tp __diff = __a - __b;
+    if (__a > __b) {
+      __a = __b;
+      __b = __diff;
     } else {
-      __b = __t - __a;
+      __b = __b - __a;
     }
+    if (__diff != 0)
+      __b >>= std::__countr_zero(__diff);
   } while (__b != 0);
   return __a << __shift;
 }

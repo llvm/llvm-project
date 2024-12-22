@@ -34,11 +34,6 @@ void templ() {
 
 #pragma acc parallel async
   for(;;){}
-
-
-  T t;
-#pragma acc exit data delete(t)
-  ;
 }
 
 struct S {

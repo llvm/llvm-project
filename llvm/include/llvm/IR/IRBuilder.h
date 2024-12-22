@@ -2125,21 +2125,20 @@ public:
     return CreateCast(Instruction::SIToFP, V, DestTy, Name);
   }
 
-  Value *CreateFPTrunc(Value *V, Type *DestTy, const Twine &Name = "",
-                       MDNode *FPMathTag = nullptr) {
+  Value *CreateFPTrunc(Value *V, Type *DestTy,
+                       const Twine &Name = "") {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(
-          Intrinsic::experimental_constrained_fptrunc, V, DestTy, nullptr, Name,
-          FPMathTag);
-    return CreateCast(Instruction::FPTrunc, V, DestTy, Name, FPMathTag);
+          Intrinsic::experimental_constrained_fptrunc, V, DestTy, nullptr,
+          Name);
+    return CreateCast(Instruction::FPTrunc, V, DestTy, Name);
   }
 
-  Value *CreateFPExt(Value *V, Type *DestTy, const Twine &Name = "",
-                     MDNode *FPMathTag = nullptr) {
+  Value *CreateFPExt(Value *V, Type *DestTy, const Twine &Name = "") {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_fpext,
-                                     V, DestTy, nullptr, Name, FPMathTag);
-    return CreateCast(Instruction::FPExt, V, DestTy, Name, FPMathTag);
+                                     V, DestTy, nullptr, Name);
+    return CreateCast(Instruction::FPExt, V, DestTy, Name);
   }
 
   Value *CreatePtrToInt(Value *V, Type *DestTy,
@@ -2187,15 +2186,12 @@ public:
   }
 
   Value *CreateCast(Instruction::CastOps Op, Value *V, Type *DestTy,
-                    const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+                    const Twine &Name = "") {
     if (V->getType() == DestTy)
       return V;
     if (Value *Folded = Folder.FoldCast(Op, V, DestTy))
       return Folded;
-    Instruction *Cast = CastInst::Create(Op, V, DestTy);
-    if (isa<FPMathOperator>(Cast))
-      setFPAttrs(Cast, FPMathTag, FMF);
-    return Insert(Cast, Name);
+    return Insert(CastInst::Create(Op, V, DestTy), Name);
   }
 
   Value *CreatePointerCast(Value *V, Type *DestTy,
@@ -2245,13 +2241,12 @@ public:
     return CreateBitCast(V, DestTy, Name);
   }
 
-  Value *CreateFPCast(Value *V, Type *DestTy, const Twine &Name = "",
-                      MDNode *FPMathTag = nullptr) {
+  Value *CreateFPCast(Value *V, Type *DestTy, const Twine &Name = "") {
     Instruction::CastOps CastOp =
         V->getType()->getScalarSizeInBits() > DestTy->getScalarSizeInBits()
             ? Instruction::FPTrunc
             : Instruction::FPExt;
-    return CreateCast(CastOp, V, DestTy, Name, FPMathTag);
+    return CreateCast(CastOp, V, DestTy, Name);
   }
 
   CallInst *CreateConstrainedFPCast(

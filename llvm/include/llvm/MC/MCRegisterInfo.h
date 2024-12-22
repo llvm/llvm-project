@@ -404,11 +404,6 @@ public:
   /// be modelled, such as the top 16-bits of a 32-bit GPR.
   bool isArtificial(MCRegister RegNo) const { return get(RegNo).IsArtificial; }
 
-  /// Returns true when the given register unit is considered artificial.
-  /// Register units are considered artificial when at least one of the
-  /// root registers is artificial.
-  bool isArtificialRegUnit(MCRegUnit Unit) const;
-
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
   unsigned getNumRegs() const {

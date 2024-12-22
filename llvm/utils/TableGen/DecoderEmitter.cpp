@@ -1893,7 +1893,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
   bool HasCompleteDecoder =
       HasCompleteDecoderBit ? HasCompleteDecoderBit->getValue() : true;
 
-  return OperandInfo(std::move(Decoder), HasCompleteDecoder);
+  return OperandInfo(Decoder, HasCompleteDecoder);
 }
 
 static void parseVarLenInstOperand(const Record &Def,
@@ -2024,7 +2024,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
         EncodingDef.getValueAsBit("hasCompleteDecoder");
     InsnOperands.push_back(
         OperandInfo(std::string(InstDecoder), HasCompleteInstDecoder));
-    Operands[Opc] = std::move(InsnOperands);
+    Operands[Opc] = InsnOperands;
     return Bits.getNumBits();
   }
 
@@ -2059,7 +2059,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
           MyName = Op.Name;
 
         TiedNames[MyName] = TiedName;
-        TiedNames[TiedName] = std::move(MyName);
+        TiedNames[TiedName] = MyName;
       }
     }
   }
@@ -2112,7 +2112,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
 
           addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName,
                               SubOpInfo);
-          InsnOperands.push_back(std::move(SubOpInfo));
+          InsnOperands.push_back(SubOpInfo);
         }
         continue;
       }
@@ -2143,7 +2143,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
       // instruction! (This is a longstanding bug, which will be addressed in an
       // upcoming change.)
       if (OpInfo.numFields() > 0)
-        InsnOperands.push_back(std::move(OpInfo));
+        InsnOperands.push_back(OpInfo);
     }
   }
   Operands[Opc] = InsnOperands;

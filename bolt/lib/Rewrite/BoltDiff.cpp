@@ -28,9 +28,7 @@ using namespace bolt;
 namespace opts {
 extern cl::OptionCategory BoltDiffCategory;
 extern cl::opt<bool> NeverPrint;
-extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
-               llvm::bolt::DeprecatedICFNumericOptionParser>
-    ICF;
+extern cl::opt<bool> ICF;
 
 static cl::opt<bool> IgnoreLTOSuffix(
     "ignore-lto-suffix",
@@ -699,7 +697,7 @@ void RewriteInstance::compare(RewriteInstance &RI2) {
   }
 
   // Pre-pass ICF
-  if (opts::ICF != IdenticalCodeFolding::ICFLevel::None) {
+  if (opts::ICF) {
     IdenticalCodeFolding ICF(opts::NeverPrint);
     outs() << "BOLT-DIFF: Starting ICF pass for binary 1";
     BC->logBOLTErrorsAndQuitOnFatal(ICF.runOnFunctions(*BC));

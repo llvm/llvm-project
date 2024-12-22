@@ -1,4 +1,4 @@
-; REQUIRES: target={{x86_64-.*-linux.*}}
+; REQUIRES: x86_64-linux
 ; RUN: llc -O0 -filetype=obj < %s |   \
 ; RUN: llvm-dwarfdump --debug-info - | FileCheck %s
 

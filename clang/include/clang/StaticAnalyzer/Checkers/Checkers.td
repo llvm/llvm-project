@@ -275,6 +275,10 @@ def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
   Documentation<HasDocumentation>;
 
+def IdenticalExprChecker : Checker<"IdenticalExpr">,
+  HelpText<"Warn about unintended use of identical expressions in operators">,
+  Documentation<HasDocumentation>;
+
 def FixedAddressChecker : Checker<"FixedAddr">,
   HelpText<"Check for assignment of a fixed address to a pointer">,
   Documentation<HasDocumentation>;
@@ -453,12 +457,6 @@ def CStringModeling : Checker<"CStringModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
-def CStringNotNullTerm : Checker<"NotNullTerminated">,
-  HelpText<"Check for arguments passed to C string functions which are not "
-           "null-terminated strings">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
 def CStringNullArg : Checker<"NullArg">,
   HelpText<"Check for null pointers being passed as arguments to C string "
            "functions">,
@@ -482,6 +480,11 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
+def CStringNotNullTerm : Checker<"NotNullTerminated">,
+  HelpText<"Check for arguments which are not null-terminating strings">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
@@ -595,13 +598,13 @@ def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   Documentation<HasDocumentation>;
 
-def ChrootChecker : Checker<"Chroot">,
-  HelpText<"Check improper use of chroot">,
-  Documentation<HasDocumentation>;
-
 } // end "unix"
 
 let ParentPackage = UnixAlpha in {
+
+def ChrootChecker : Checker<"Chroot">,
+  HelpText<"Check improper use of chroot">,
+  Documentation<HasDocumentation>;
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
@@ -1748,10 +1751,6 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 } // end webkit
 
 let ParentPackage = WebKitAlpha in {
-
-def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
-  HelpText<"Check for memory unsafe casts from base type to derived type.">,
-  Documentation<HasDocumentation>;
 
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,

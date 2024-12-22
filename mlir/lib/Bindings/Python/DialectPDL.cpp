@@ -8,16 +8,19 @@
 
 #include "mlir-c/Dialect/PDL.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 
-namespace nb = nanobind;
+namespace py = pybind11;
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::python;
-using namespace mlir::python::nanobind_adaptors;
+using namespace mlir::python::adaptors;
 
-void populateDialectPDLSubmodule(const nanobind::module_ &m) {
+void populateDialectPDLSubmodule(const pybind11::module &m) {
   //===-------------------------------------------------------------------===//
   // PDLType
   //===-------------------------------------------------------------------===//
@@ -32,11 +35,11 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
       mlir_type_subclass(m, "AttributeType", mlirTypeIsAPDLAttributeType);
   attributeType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](py::object cls, MlirContext ctx) {
         return cls(mlirPDLAttributeTypeGet(ctx));
       },
-      "Get an instance of AttributeType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      "Get an instance of AttributeType in given context.", py::arg("cls"),
+      py::arg("context") = py::none());
 
   //===-------------------------------------------------------------------===//
   // OperationType
@@ -46,11 +49,11 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
       mlir_type_subclass(m, "OperationType", mlirTypeIsAPDLOperationType);
   operationType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](py::object cls, MlirContext ctx) {
         return cls(mlirPDLOperationTypeGet(ctx));
       },
-      "Get an instance of OperationType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      "Get an instance of OperationType in given context.", py::arg("cls"),
+      py::arg("context") = py::none());
 
   //===-------------------------------------------------------------------===//
   // RangeType
@@ -59,12 +62,12 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   auto rangeType = mlir_type_subclass(m, "RangeType", mlirTypeIsAPDLRangeType);
   rangeType.def_classmethod(
       "get",
-      [](nb::object cls, MlirType elementType) {
+      [](py::object cls, MlirType elementType) {
         return cls(mlirPDLRangeTypeGet(elementType));
       },
       "Gets an instance of RangeType in the same context as the provided "
       "element type.",
-      nb::arg("cls"), nb::arg("element_type"));
+      py::arg("cls"), py::arg("element_type"));
   rangeType.def_property_readonly(
       "element_type",
       [](MlirType type) { return mlirPDLRangeTypeGetElementType(type); },
@@ -77,11 +80,11 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   auto typeType = mlir_type_subclass(m, "TypeType", mlirTypeIsAPDLTypeType);
   typeType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](py::object cls, MlirContext ctx) {
         return cls(mlirPDLTypeTypeGet(ctx));
       },
-      "Get an instance of TypeType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      "Get an instance of TypeType in given context.", py::arg("cls"),
+      py::arg("context") = py::none());
 
   //===-------------------------------------------------------------------===//
   // ValueType
@@ -90,14 +93,14 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   auto valueType = mlir_type_subclass(m, "ValueType", mlirTypeIsAPDLValueType);
   valueType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](py::object cls, MlirContext ctx) {
         return cls(mlirPDLValueTypeGet(ctx));
       },
-      "Get an instance of TypeType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      "Get an instance of TypeType in given context.", py::arg("cls"),
+      py::arg("context") = py::none());
 }
 
-NB_MODULE(_mlirDialectsPDL, m) {
+PYBIND11_MODULE(_mlirDialectsPDL, m) {
   m.doc() = "MLIR PDL dialect.";
   populateDialectPDLSubmodule(m);
 }

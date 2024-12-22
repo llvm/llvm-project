@@ -36,7 +36,7 @@ def clean(args):
             + "\tRemoves all files with extension from <path>."
         )
         return 1
-    for path in args[0:-1]:
+    for path in args[1:-1]:
         for filename in findFilesWithExtension(path, args[-1]):
             os.remove(filename)
     return 0

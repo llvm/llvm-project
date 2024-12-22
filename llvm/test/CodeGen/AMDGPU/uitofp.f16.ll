@@ -240,11 +240,9 @@ define amdgpu_kernel void @uitofp_v2i16_to_v2f16(
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -346,9 +344,8 @@ define amdgpu_kernel void @uitofp_v2i32_to_v2f16(
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;

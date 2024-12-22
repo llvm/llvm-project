@@ -35,7 +35,6 @@ typedef _Complex _Float128 cfloat128;
 typedef _Complex __float128 cfloat128;
 #elif (LDBL_MANT_DIG == 113)
 #define LIBC_TYPES_HAS_CFLOAT128
-#define LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE
 typedef _Complex long double cfloat128;
 #endif
 

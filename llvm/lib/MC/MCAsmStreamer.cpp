@@ -2428,7 +2428,10 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
-  if (!MAI->usesDwarfFileAndLocDirectives() && CurFrag)
+  assert(getCurrentSectionOnly() &&
+         "Cannot emit contents before setting section!");
+
+  if (!MAI->usesDwarfFileAndLocDirectives())
     // Now that a machine instruction has been assembled into this section, make
     // a line entry for any .loc directive that has been seen.
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());

@@ -211,8 +211,8 @@ static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
 void processArmCmseSymbols(Ctx &);
 
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
-                         uint8_t newFlag);
+uint8_t getMipsFpAbiFlag(Ctx &, uint8_t oldFlag, uint8_t newFlag,
+                         llvm::StringRef fileName);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
@@ -246,8 +246,8 @@ void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
-void sortArmMappingSymbols(Ctx &);
-void convertArmInstructionstoBE8(Ctx &, InputSection *sec, uint8_t *buf);
+void sortArmMappingSymbols();
+void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(Ctx &);
 void initSymbolAnchors(Ctx &);
 
@@ -292,7 +292,7 @@ inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
   if ((v & (n - 1)) != 0)
     Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
              << rel.type << ": 0x" << llvm::utohexstr(v)
-             << " is not aligned to " << n << " bytes";
+             << " is not aligned to " << Twine(n) << " bytes";
 }
 
 // Endianness-aware read/write.

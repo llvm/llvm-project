@@ -26,7 +26,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SpillPlacement.h"
+#include "SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -44,20 +44,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
-char SpillPlacementWrapperLegacy::ID = 0;
+char SpillPlacement::ID = 0;
 
-char &llvm::SpillPlacementID = SpillPlacementWrapperLegacy::ID;
+char &llvm::SpillPlacementID = SpillPlacement::ID;
 
-INITIALIZE_PASS_BEGIN(SpillPlacementWrapperLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
-INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
-INITIALIZE_PASS_END(SpillPlacementWrapperLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
+INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
-void SpillPlacementWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-  AU.addRequiredTransitive<EdgeBundlesWrapperLegacy>();
+  AU.addRequiredTransitive<EdgeBundles>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -189,64 +189,32 @@ struct SpillPlacement::Node {
   }
 };
 
-bool SpillPlacementWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
-  auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-
-  Impl.run(MF, Bundles, MBFI);
-  return false;
-}
-
-AnalysisKey SpillPlacementAnalysis::Key;
-
-SpillPlacement
-SpillPlacementAnalysis::run(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM) {
-  auto *Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
-  auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  SpillPlacement Impl;
-  Impl.run(MF, Bundles, MBFI);
-  return Impl;
-}
-
-bool SpillPlacementAnalysis::Result::invalidate(
-    MachineFunction &MF, const PreservedAnalyses &PA,
-    MachineFunctionAnalysisManager::Invalidator &Inv) {
-  auto PAC = PA.getChecker<SpillPlacementAnalysis>();
-  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<MachineFunction>>())
-    return true;
-  // Check dependencies.
-  return Inv.invalidate<EdgeBundlesAnalysis>(MF, PA) ||
-         Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
-}
-
-SpillPlacement::SpillPlacement() = default;
-SpillPlacement::~SpillPlacement() = default;
-SpillPlacement::SpillPlacement(SpillPlacement &&) = default;
-
-void SpillPlacement::releaseMemory() {
-  nodes.reset();
-  TodoList.clear();
-}
-
-void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
-                         MachineBlockFrequencyInfo *MBFI) {
+bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
-  this->bundles = Bundles;
-  this->MBFI = MBFI;
+  bundles = &getAnalysis<EdgeBundles>();
 
   assert(!nodes && "Leaking node array");
-  nodes.reset(new Node[bundles->getNumBundles()]);
+  nodes = new Node[bundles->getNumBundles()];
   TodoList.clear();
   TodoList.setUniverse(bundles->getNumBundles());
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   setThreshold(MBFI->getEntryFreq());
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
     BlockFrequencies[Num] = MBFI->getBlockFreq(&I);
   }
+
+  // We never change the function.
+  return false;
+}
+
+void SpillPlacement::releaseMemory() {
+  delete[] nodes;
+  nodes = nullptr;
+  TodoList.clear();
 }
 
 /// activate - mark node n as active if it wasn't already.
@@ -355,9 +323,9 @@ bool SpillPlacement::scanActiveBundles() {
 }
 
 bool SpillPlacement::update(unsigned n) {
-  if (!nodes[n].update(nodes.get(), Threshold))
+  if (!nodes[n].update(nodes, Threshold))
     return false;
-  nodes[n].getDissentingNeighbors(TodoList, nodes.get());
+  nodes[n].getDissentingNeighbors(TodoList, nodes);
   return true;
 }
 

@@ -1848,12 +1848,12 @@ static SDValue LowerTruncateToBTST(SDValue Op, ISD::CondCode CC,
 static bool hasNonFlagsUse(SDValue Op) {
   for (SDNode::use_iterator UI = Op->use_begin(), UE = Op->use_end(); UI != UE;
        ++UI) {
-    SDNode *User = UI->getUser();
-    unsigned UOpNo = UI->getOperandNo();
+    SDNode *User = *UI;
+    unsigned UOpNo = UI.getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
-      // Look past truncate.
-      UOpNo = User->use_begin()->getOperandNo();
-      User = User->use_begin()->getUser();
+      // Look pass truncate.
+      UOpNo = User->use_begin().getOperandNo();
+      User = *User->use_begin();
     }
 
     if (User->getOpcode() != ISD::BRCOND && User->getOpcode() != ISD::SETCC &&
@@ -1990,7 +1990,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   case ISD::XOR:
     // Due to the ISEL shortcoming noted above, be conservative if this op is
     // likely to be selected as part of a load-modify-store instruction.
-    for (const auto *U : Op.getNode()->users())
+    for (const auto *U : Op.getNode()->uses())
       if (U->getOpcode() == ISD::STORE)
         goto default_case;
 
@@ -2399,8 +2399,8 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         // Block CopyFromReg so partial register stalls are avoided.
         T1.getOpcode() != ISD::CopyFromReg &&
         T2.getOpcode() != ISD::CopyFromReg) {
-      SDValue Cmov =
-          DAG.getNode(M68kISD::CMOV, DL, T1.getValueType(), T2, T1, CC, Cond);
+      SDVTList VTs = DAG.getVTList(T1.getValueType(), MVT::Glue);
+      SDValue Cmov = DAG.getNode(M68kISD::CMOV, DL, VTs, T2, T1, CC, Cond);
       return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
     }
   }
@@ -2418,8 +2418,9 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   // M68kISD::CMOV means set the result (which is operand 1) to the RHS if
   // condition is true.
+  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {Op2, Op1, CC, Cond};
-  return DAG.getNode(M68kISD::CMOV, DL, Op.getValueType(), Ops);
+  return DAG.getNode(M68kISD::CMOV, DL, VTs, Ops);
 }
 
 /// Return true if node is an ISD::AND or ISD::OR of two M68k::SETcc nodes
@@ -2542,7 +2543,7 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
               (M68k::CondCode)Cond.getOperand(0).getConstantOperandVal(0);
           CCode = M68k::GetOppositeBranchCondition(CCode);
           CC = DAG.getConstant(CCode, DL, MVT::i8);
-          SDNode *User = *Op.getNode()->user_begin();
+          SDNode *User = *Op.getNode()->use_begin();
           // Look for an unconditional branch following this conditional branch.
           // We need this because we need to reverse the successors in order
           // to implement FCMP_OEQ.
@@ -2947,7 +2948,7 @@ void M68kTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         llvm_unreachable("Unhandled constant constraint");
       }
 
-      Result = DAG.getSignedTargetConstant(Val, SDLoc(Op), Op.getValueType());
+      Result = DAG.getTargetConstant(Val, SDLoc(Op), Op.getValueType());
       break;
     }
     default:
@@ -2983,7 +2984,7 @@ void M68kTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
           llvm_unreachable("Unhandled constant constraint");
         }
 
-        Result = DAG.getSignedTargetConstant(Val, SDLoc(Op), Op.getValueType());
+        Result = DAG.getTargetConstant(Val, SDLoc(Op), Op.getValueType());
         break;
       }
       default:
@@ -3415,7 +3416,7 @@ SDValue M68kTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     Result = DAG.getNode(ISD::SUB, DL, VT, SP, Size); // Value
     if (Align > StackAlign)
       Result = DAG.getNode(ISD::AND, DL, VT, Result,
-                           DAG.getSignedConstant(-(uint64_t)Align, DL, VT));
+                           DAG.getConstant(-(uint64_t)Align, DL, VT));
     Chain = DAG.getCopyToReg(Chain, DL, SPReg, Result); // Output chain
   }
 
@@ -3442,7 +3443,7 @@ SDValue M68kTargetLowering::LowerShiftLeftParts(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusRegisterSize = DAG.getSignedConstant(-32, DL, VT);
+  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
   SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
   SDValue ShamtMinusRegisterSize =
       DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
@@ -3494,7 +3495,7 @@ SDValue M68kTargetLowering::LowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusRegisterSize = DAG.getSignedConstant(-32, DL, VT);
+  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
   SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
   SDValue ShamtMinusRegisterSize =
       DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);

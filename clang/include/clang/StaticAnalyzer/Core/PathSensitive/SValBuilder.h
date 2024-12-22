@@ -329,10 +329,11 @@ public:
   }
 
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               APSIntPtr rhs, QualType type);
+                               const llvm::APSInt &rhs, QualType type);
 
-  nonloc::SymbolVal makeNonLoc(APSIntPtr rhs, BinaryOperator::Opcode op,
-                               const SymExpr *lhs, QualType type);
+  nonloc::SymbolVal makeNonLoc(const llvm::APSInt &rhs,
+                               BinaryOperator::Opcode op, const SymExpr *lhs,
+                               QualType type);
 
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
                                const SymExpr *rhs, QualType type);

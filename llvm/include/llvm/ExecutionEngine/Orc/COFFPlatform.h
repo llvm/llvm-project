@@ -22,7 +22,6 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
 #include <future>
-#include <list>
 #include <memory>
 #include <thread>
 #include <vector>

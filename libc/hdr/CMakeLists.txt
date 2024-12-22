@@ -126,30 +126,19 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_stat_macros
 )
 
-add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros
   HDRS
     unistd_macros.h
-  DEPENDS
-    .unistd_overlay
   FULL_BUILD_DEPENDS
     libc.include.unistd
     libc.include.llvm-libc-macros.unistd_macros
 )
 
-if (WIN32)
-  set(windows_addtional_time_macros libc.include.llvm-libc-macros.windows.time_macros_ext)
-else()
-  set(windows_addtional_time_macros "")
-endif()
-
 add_proxy_header_library(
   time_macros
   HDRS
     time_macros.h
-  DEPENDS
-    ${windows_addtional_time_macros}
   FULL_BUILD_DEPENDS
     libc.include.time
     libc.include.llvm-libc-macros.time_macros

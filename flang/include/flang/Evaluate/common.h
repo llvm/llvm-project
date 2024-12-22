@@ -16,7 +16,6 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
-#include "flang/Common/target-rounding.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include <cinttypes>
@@ -33,8 +32,6 @@ class IntrinsicProcTable;
 class TargetCharacteristics;
 
 using common::ConstantSubscript;
-using common::RealFlag;
-using common::RealFlags;
 using common::RelationalOperator;
 
 // Integers are always ordered; reals may not be.
@@ -130,6 +127,11 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   }
   return false; // silence g++ warning
 }
+
+// These are ordered like the bits in a common fenv.h header file.
+ENUM_CLASS(RealFlag, InvalidArgument, Denorm, DivideByZero, Overflow, Underflow,
+    Inexact)
+using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
 template <typename A> struct ValueWithRealFlags {
   A AccumulateFlags(RealFlags &f) {

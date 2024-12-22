@@ -404,14 +404,6 @@ INSTANTIATE_TEST_SUITE_P(
                 ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC |
                 ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD,
             "8.2-A"),
-        ARMCPUTestParams<uint64_t>("cortex-a510", "armv9-a", "neon-fp-armv8",
-                                   ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                                       ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP | ARM::AEK_CRC |
-                                       ARM::AEK_RAS | ARM::AEK_DOTPROD |
-                                       ARM::AEK_FP16FML | ARM::AEK_BF16 |
-                                       ARM::AEK_I8MM | ARM::AEK_SB,
-                                   "9-A"),
         ARMCPUTestParams<uint64_t>("cortex-a710", "armv9-a", "neon-fp-armv8",
                                    ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
                                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
@@ -529,7 +521,7 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-S")),
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
-static constexpr unsigned NumARMCPUArchs = 94;
+static constexpr unsigned NumARMCPUArchs = 93;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -1158,14 +1150,13 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("thunderxt88", "armv8-a"),
                       AArch64CPUTestParams("tsv110", "armv8.2-a"),
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
-                      AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
                       AArch64CPUTestParams("saphira", "armv8.4-a"),
                       AArch64CPUTestParams("oryon-1", "armv8.6-a")),
     AArch64CPUTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 82;
+static constexpr unsigned NumAArch64CPUArchs = 81;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

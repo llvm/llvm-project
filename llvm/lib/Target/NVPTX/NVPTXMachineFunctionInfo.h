@@ -14,14 +14,13 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXMACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXMACHINEFUNCTIONINFO_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 class NVPTXMachineFunctionInfo : public MachineFunctionInfo {
 private:
-  /// Stores a mapping from index to symbol name for image handles that are
-  /// replaced with image references
+  /// Stores a mapping from index to symbol name for removing image handles
+  /// on Fermi.
   SmallVector<std::string, 8> ImageHandleList;
 
 public:
@@ -37,27 +36,20 @@ public:
   /// Returns the index for the symbol \p Symbol. If the symbol was previously,
   /// added, the same index is returned. Otherwise, the symbol is added and the
   /// new index is returned.
-  unsigned getImageHandleSymbolIndex(StringRef Symbol) {
+  unsigned getImageHandleSymbolIndex(const char *Symbol) {
     // Is the symbol already present?
     for (unsigned i = 0, e = ImageHandleList.size(); i != e; ++i)
-      if (ImageHandleList[i] == Symbol)
+      if (ImageHandleList[i] == std::string(Symbol))
         return i;
     // Nope, insert it
-    ImageHandleList.push_back(Symbol.str());
+    ImageHandleList.push_back(Symbol);
     return ImageHandleList.size()-1;
   }
 
   /// Returns the symbol name at the given index.
-  StringRef getImageHandleSymbol(unsigned Idx) const {
+  const char *getImageHandleSymbol(unsigned Idx) const {
     assert(ImageHandleList.size() > Idx && "Bad index");
-    return ImageHandleList[Idx];
-  }
-
-  /// Check if the symbol has a mapping. Having a mapping means the handle is
-  /// replaced with a reference
-  bool checkImageHandleSymbol(StringRef Symbol) const {
-    return ImageHandleList.end() !=
-           std::find(ImageHandleList.begin(), ImageHandleList.end(), Symbol);
+    return ImageHandleList[Idx].c_str();
   }
 };
 }

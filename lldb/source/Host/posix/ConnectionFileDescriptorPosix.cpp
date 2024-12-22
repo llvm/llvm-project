@@ -535,7 +535,7 @@ lldb::ConnectionStatus ConnectionFileDescriptor::AcceptSocket(
     Status *error_ptr) {
   Status error;
   std::unique_ptr<Socket> listening_socket =
-      Socket::Create(socket_protocol, error);
+      Socket::Create(socket_protocol, /*child_processes_inherit=*/false, error);
   Socket *accepted_socket;
 
   if (!error.Fail())
@@ -543,7 +543,7 @@ lldb::ConnectionStatus ConnectionFileDescriptor::AcceptSocket(
 
   if (!error.Fail()) {
     post_listen_callback(*listening_socket);
-    error = listening_socket->Accept(/*timeout=*/std::nullopt, accepted_socket);
+    error = listening_socket->Accept(accepted_socket);
   }
 
   if (!error.Fail()) {
@@ -562,7 +562,8 @@ ConnectionFileDescriptor::ConnectSocket(Socket::SocketProtocol socket_protocol,
                                         llvm::StringRef socket_name,
                                         Status *error_ptr) {
   Status error;
-  std::unique_ptr<Socket> socket = Socket::Create(socket_protocol, error);
+  std::unique_ptr<Socket> socket =
+      Socket::Create(socket_protocol, /*child_processes_inherit=*/false, error);
 
   if (!error.Fail())
     error = socket->Connect(socket_name);
@@ -643,7 +644,8 @@ ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
                                      Status *error_ptr) {
   if (error_ptr)
     *error_ptr = Status();
-  llvm::Expected<std::unique_ptr<UDPSocket>> socket = Socket::UdpConnect(s);
+  llvm::Expected<std::unique_ptr<UDPSocket>> socket =
+      Socket::UdpConnect(s, /*child_processes_inherit=*/false);
   if (!socket) {
     if (error_ptr)
       *error_ptr = Status::FromError(socket.takeError());
@@ -688,7 +690,7 @@ ConnectionFileDescriptor::ConnectFD(llvm::StringRef s,
       // this. For now, we assume we must assume we don't own it.
 
       std::unique_ptr<TCPSocket> tcp_socket;
-      tcp_socket = std::make_unique<TCPSocket>(fd, /*should_close=*/false);
+      tcp_socket = std::make_unique<TCPSocket>(fd, false, false);
       // Try and get a socket option from this file descriptor to see if
       // this is a socket and set m_is_socket accordingly.
       int resuse;

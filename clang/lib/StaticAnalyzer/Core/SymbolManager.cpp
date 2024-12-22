@@ -261,7 +261,8 @@ SymbolManager::getCastSymbol(const SymExpr *Op,
 
 const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
                                                BinaryOperator::Opcode op,
-                                               APSIntPtr v, QualType t) {
+                                               const llvm::APSInt& v,
+                                               QualType t) {
   llvm::FoldingSetNodeID ID;
   SymIntExpr::Profile(ID, lhs, op, v, t);
   void *InsertPos;
@@ -275,9 +276,10 @@ const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
   return cast<SymIntExpr>(data);
 }
 
-const IntSymExpr *SymbolManager::getIntSymExpr(APSIntPtr lhs,
+const IntSymExpr *SymbolManager::getIntSymExpr(const llvm::APSInt& lhs,
                                                BinaryOperator::Opcode op,
-                                               const SymExpr *rhs, QualType t) {
+                                               const SymExpr *rhs,
+                                               QualType t) {
   llvm::FoldingSetNodeID ID;
   IntSymExpr::Profile(ID, lhs, op, rhs, t);
   void *InsertPos;

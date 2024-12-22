@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: m2and_rr
 define i1 @m2and_rr(i1 %a, i1 %b) {

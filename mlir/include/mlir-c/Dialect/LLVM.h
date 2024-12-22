@@ -37,9 +37,6 @@ MLIR_CAPI_EXPORTED MlirType mlirLLVMVoidTypeGet(MlirContext ctx);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMArrayTypeGet(MlirType elementType,
                                                  unsigned numElements);
 
-/// Returns the element type of the llvm.array type.
-MLIR_CAPI_EXPORTED MlirType mlirLLVMArrayTypeGetElementType(MlirType type);
-
 /// Creates an llvm.func type.
 MLIR_CAPI_EXPORTED MlirType
 mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
@@ -178,17 +175,17 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMComdatAttrGet(MlirContext ctx,
                                                        MlirLLVMComdat comdat);
 
 enum MlirLLVMLinkage {
-  MlirLLVMLinkageExternal = 0,
-  MlirLLVMLinkageAvailableExternally = 1,
-  MlirLLVMLinkageLinkonce = 2,
-  MlirLLVMLinkageLinkonceODR = 3,
+  MlirLLVMLinkagePrivate = 0,
+  MlirLLVMLinkageInternal = 1,
+  MlirLLVMLinkageAvailableExternally = 2,
+  MlirLLVMLinkageLinkonce = 3,
   MlirLLVMLinkageWeak = 4,
-  MlirLLVMLinkageWeakODR = 5,
+  MlirLLVMLinkageCommon = 5,
   MlirLLVMLinkageAppending = 6,
-  MlirLLVMLinkageInternal = 7,
-  MlirLLVMLinkagePrivate = 8,
-  MlirLLVMLinkageExternWeak = 9,
-  MlirLLVMLinkageCommon = 10,
+  MlirLLVMLinkageExternWeak = 7,
+  MlirLLVMLinkageLinkonceODR = 8,
+  MlirLLVMLinkageWeakODR = 9,
+  MlirLLVMLinkageExternal = 10,
 };
 typedef enum MlirLLVMLinkage MlirLLVMLinkage;
 

@@ -1135,16 +1135,9 @@ foreach mx = SchedMxList in {
   let Latency = 3, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVSHA2CHV", [SiFiveP600VectorCrypto], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSHA2CLV", [SiFiveP600VectorCrypto], mx, IsWorstCase>;
-    defvar ZvknhSEWs = !listremove(SchedSEWSet<mx>.val, [8, 16]);
-    // Largest SEW is the last element, assuming SchedSEWSet is sorted in ascending
-    // order.
-    defvar LargestZvknhSEW = !foldl(!head(ZvknhSEWs), ZvknhSEWs, last, curr, curr);
-    foreach sew = ZvknhSEWs in {
-      // The worst case for Zvknh[ab] is designated to the largest SEW and LMUL.
-      defvar IsWorstCaseVSHA2MSV = !and(IsWorstCase, !eq(sew, LargestZvknhSEW));
+    foreach sew = !listremove(SchedSEWSet<mx>.val, [8, 16]) in {
       let ReleaseAtCycles = [SiFiveP600VSHA2MSCycles<mx, sew>.c] in
-      defm "" : LMULSEWWriteResMXSEW<"WriteVSHA2MSV", [SiFiveP600VectorCrypto], mx, sew,
-                                     IsWorstCaseVSHA2MSV>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVSHA2MSV", [SiFiveP600VectorCrypto], mx, sew, IsWorstCase>;
     }
   }
   // Zvkned

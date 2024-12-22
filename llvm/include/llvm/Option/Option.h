@@ -100,8 +100,7 @@ public:
   /// Get the name of this option without any prefix.
   StringRef getName() const {
     assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionName(Info->ID);
+    return Info->getName();
   }
 
   const Option getGroup() const {
@@ -128,16 +127,15 @@ public:
 
   /// Get the default prefix for this option.
   StringRef getPrefix() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefix(Info->ID);
+    return Info->Prefixes.empty()
+               ? StringRef()
+               : static_cast<const StringRef &>(Info->Prefixes[0]);
   }
 
   /// Get the name of this option with the default prefix.
-  StringRef getPrefixedName() const {
+  StringLiteral getPrefixedName() const {
     assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefixedName(Info->ID);
+    return Info->PrefixedName;
   }
 
   /// Get the help text for this option.

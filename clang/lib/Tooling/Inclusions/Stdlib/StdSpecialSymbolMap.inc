@@ -261,11 +261,6 @@ SYMBOL(data, std::ranges::, <ranges>)
 SYMBOL(data, std::ranges::, <iterator>)
 SYMBOL(cdata, std::ranges::, <ranges>)
 SYMBOL(cdata, std::ranges::, <iterator>)
-// https://eel.is/c++draft/tuple.general#2:
-// In addition to being available via inclusion of the <tuple> header,
-// ignore ... is available when <utility> ... is included.
-SYMBOL(ignore, std::, <tuple>)
-SYMBOL(ignore, std::, <utility>)
 
 // Ignore specializations
 SYMBOL(hash, std::, <functional>)
@@ -394,10 +389,18 @@ SYMBOL(make_error_condition, std::, /*no headers*/)
 SYMBOL(erase, std::, /*no headers*/)
 SYMBOL(erase_if, std::, /*no headers*/)
 
+// cppreference symbol index page was missing these symbols.
+// Remove them when the cppreference offline archive catches up.
+SYMBOL(regular_invocable, std::, <concepts>)
+
 // Symbols missing from the generated symbol map as reported by users.
 // Remove when the generator starts producing them.
 SYMBOL(div, std::, <cstdlib>)
 SYMBOL(abort, std::, <cstdlib>)
+SYMBOL(atomic_wait, std::, <atomic>)
+SYMBOL(atomic_wait_explicit, std::, <atomic>)
+SYMBOL(move_backward, std::, <algorithm>)
+SYMBOL(month_weekday, std::chrono::, <chrono>)
 
 SYMBOL(binary_search, std::ranges::, <algorithm>)
 SYMBOL(equal_range, std::ranges::, <algorithm>)

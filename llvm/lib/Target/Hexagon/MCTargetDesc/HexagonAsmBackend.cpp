@@ -54,7 +54,7 @@ class HexagonAsmBackend : public MCAsmBackend {
 
     // Update the fragment.
     RF.setInst(HMB);
-    RF.setContents(Code);
+    RF.getContents() = Code;
     RF.getFixups() = Fixups;
   }
 

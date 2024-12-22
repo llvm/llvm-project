@@ -26,12 +26,14 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/xxhash.h"
 #include <functional>
@@ -1014,7 +1016,6 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_x87DoubleExtended: Out << 'X'; break;
   case APFloat::S_IEEEquad: Out << 'Y'; break;
   case APFloat::S_PPCDoubleDouble: Out << 'Z'; break;
-  case APFloat::S_PPCDoubleDoubleLegacy:
   case APFloat::S_Float8E5M2:
   case APFloat::S_Float8E4M3:
   case APFloat::S_Float8E4M3FN:
@@ -3373,15 +3374,7 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
                                          Qualifiers, SourceRange Range) {
-  Out << '?';
-
-  llvm::SmallString<64> Name;
-  Name += "<TTPT_";
-  Name += llvm::utostr(T->getDepth());
-  Name += "_";
-  Name += llvm::utostr(T->getIndex());
-  Name += ">";
-  mangleSourceName(Name);
+  Error(Range.getBegin(), "template type parameter type") << Range;
 }
 
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,

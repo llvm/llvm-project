@@ -10,7 +10,6 @@
 
 #include <new>
 #include <cassert>
-#include <cstddef>
 
 #include "test_macros.h"
 

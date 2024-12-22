@@ -65,7 +65,7 @@ VirtualUse VirtualUse::create(Scop *S, ScopStmt *UserStmt, Loop *UserScope,
   // We assume synthesizable which practically should have the same effect.
   auto *SE = S->getSE();
   if (SE->isSCEVable(Val->getType())) {
-    const SCEV *ScevExpr = SE->getSCEVAtScope(Val, UserScope);
+    auto *ScevExpr = SE->getSCEVAtScope(Val, UserScope);
     if (!UserStmt || canSynthesize(Val, *UserStmt->getParent(), SE, UserScope))
       return VirtualUse(UserStmt, Val, Synthesizable, ScevExpr, nullptr);
   }

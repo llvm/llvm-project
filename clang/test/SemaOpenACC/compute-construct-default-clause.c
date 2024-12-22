@@ -16,18 +16,21 @@ void SingleOnly() {
   #pragma acc kernels self default(present) present(i) default(none) copy(i)
   while(0);
 
-  // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'parallel' directive}}
+  // expected-warning@+3{{OpenACC clause 'copy' not yet implemented}}
+  // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'parallel loop' directive}}
   // expected-note@+1{{previous clause is here}}
-  #pragma acc parallel self default(present) private(i) default(none) copy(i)
+  #pragma acc parallel loop self default(present) private(i) default(none) copy(i)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{expected '('}}
-  #pragma acc serial self default private(i) default(none) if(i)
+  #pragma acc serial loop self default private(i) default(none) if(i)
   for(int i = 0; i < 5; ++i);
 
-  #pragma acc kernels default(none)
+  #pragma acc kernels loop default(none)
   for(int i = 0; i < 5; ++i);
 
+  // expected-warning@+2{{OpenACC construct 'data' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
   #pragma acc data default(none)
   while(0);
 
@@ -35,6 +38,7 @@ void SingleOnly() {
   #pragma acc loop default(none)
   for(int i = 5; i < 10;++i);
 
+  // expected-warning@+2{{OpenACC construct 'wait' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'wait' directive}}
   #pragma acc wait default(none)
   while(0);

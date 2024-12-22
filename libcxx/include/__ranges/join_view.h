@@ -377,8 +377,8 @@ template <class _JoinViewIterator>
            __has_random_access_iterator_category<typename _JoinViewIterator::_Outer>::value &&
            __has_random_access_iterator_category<typename _JoinViewIterator::_Inner>::value)
 struct __segmented_iterator_traits<_JoinViewIterator> {
-  using __segment_iterator _LIBCPP_NODEBUG =
-      __iterator_with_data<typename _JoinViewIterator::_Outer, typename _JoinViewIterator::_Parent*>;
+  using __segment_iterator =
+      _LIBCPP_NODEBUG __iterator_with_data<typename _JoinViewIterator::_Outer, typename _JoinViewIterator::_Parent*>;
   using __local_iterator = typename _JoinViewIterator::_Inner;
 
   // TODO: Would it make sense to enable the optimization for other iterator types?

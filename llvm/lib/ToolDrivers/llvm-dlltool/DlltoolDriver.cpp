@@ -31,10 +31,6 @@ using namespace llvm::COFF;
 
 namespace {
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 enum {
   OPT_INVALID = 0,
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -42,9 +38,12 @@ enum {
 #undef OPTION
 };
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -55,9 +54,7 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DllOptTable : public opt::GenericOptTable {
 public:
-  DllOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                             false) {}
+  DllOptTable() : opt::GenericOptTable(InfoTable, false) {}
 };
 
 // Opens a file. Path has to be resolved already.

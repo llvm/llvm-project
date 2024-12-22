@@ -10,7 +10,17 @@
 #define SCUDO_LIST_H_
 
 #include "internal_defs.h"
-#include "type_traits.h"
+
+// TODO: Move the helpers to a header.
+namespace {
+template <typename T> struct isPointer {
+  static constexpr bool value = false;
+};
+
+template <typename T> struct isPointer<T *> {
+  static constexpr bool value = true;
+};
+} // namespace
 
 namespace scudo {
 
@@ -48,15 +58,13 @@ public:
 
 template <class T> class LinkOp<T, /*LinkWithPtr=*/false> {
 public:
-  using LinkTy = typename assertSameType<
-      typename removeConst<decltype(T::Next)>::type,
-      typename removeConst<decltype(T::EndOfListVal)>::type>::type;
+  using LinkTy = decltype(T::Next);
 
   LinkOp() = default;
-  LinkOp(T *BaseT, uptr BaseSize)
-      : Base(BaseT), Size(static_cast<LinkTy>(BaseSize)) {}
+  LinkOp(T *BaseT, uptr BaseSize) : Base(BaseT), Size(BaseSize) {}
   void init(T *LinkBase, uptr BaseSize) {
     Base = LinkBase;
+    // TODO: Check if the `BaseSize` can fit in `Size`.
     Size = static_cast<LinkTy>(BaseSize);
   }
   T *getBase() const { return Base; }
@@ -71,12 +79,11 @@ public:
   }
   // Set `X->Next` to `Next`.
   void setNext(T *X, T *Next) const {
-    if (Next == nullptr) {
+    // TODO: Check if the offset fits in the size of `LinkTy`.
+    if (Next == nullptr)
       X->Next = getEndOfListVal();
-    } else {
-      assertElementInRange(Next);
+    else
       X->Next = static_cast<LinkTy>(Next - Base);
-    }
   }
 
   T *getPrev(T *X) const {
@@ -88,21 +95,16 @@ public:
   }
   // Set `X->Prev` to `Prev`.
   void setPrev(T *X, T *Prev) const {
-    if (Prev == nullptr) {
+    DCHECK_LT(reinterpret_cast<uptr>(Prev),
+              reinterpret_cast<uptr>(Base + Size));
+    if (Prev == nullptr)
       X->Prev = getEndOfListVal();
-    } else {
-      assertElementInRange(Prev);
+    else
       X->Prev = static_cast<LinkTy>(Prev - Base);
-    }
   }
 
+  // TODO: `LinkTy` should be the same as decltype(T::EndOfListVal).
   LinkTy getEndOfListVal() const { return T::EndOfListVal; }
-
-private:
-  void assertElementInRange(T *X) const {
-    DCHECK_GE(reinterpret_cast<uptr>(X), reinterpret_cast<uptr>(Base));
-    DCHECK_LE(static_cast<LinkTy>(X - Base), Size);
-  }
 
 protected:
   T *Base = nullptr;

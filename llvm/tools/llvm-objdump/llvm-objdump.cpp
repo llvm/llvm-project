@@ -99,11 +99,10 @@ namespace {
 
 class CommonOptTable : public opt::GenericOptTable {
 public:
-  CommonOptTable(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
-                 ArrayRef<Info> OptionInfos, const char *Usage,
+  CommonOptTable(ArrayRef<Info> OptionInfos, const char *Usage,
                  const char *Description)
-      : opt::GenericOptTable(StrTable, PrefixesTable, OptionInfos),
-        Usage(Usage), Description(Description) {
+      : opt::GenericOptTable(OptionInfos), Usage(Usage),
+        Description(Description) {
     setGroupedShortOptions(true);
   }
 
@@ -122,13 +121,12 @@ private:
 
 // ObjdumpOptID is in ObjdumpOptID.h
 namespace objdump_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "ObjdumpOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "ObjdumpOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -141,10 +139,9 @@ static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(
-            objdump_opt::OptionStrTable, objdump_opt::OptionPrefixesTable,
-            objdump_opt::ObjdumpInfoTable, " [options] <input object files>",
-            "llvm object file dumper") {}
+      : CommonOptTable(objdump_opt::ObjdumpInfoTable,
+                       " [options] <input object files>",
+                       "llvm object file dumper") {}
 };
 
 enum OtoolOptID {
@@ -155,13 +152,12 @@ enum OtoolOptID {
 };
 
 namespace otool {
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "OtoolOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "OtoolOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr opt::OptTable::Info OtoolInfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OTOOL_, __VA_ARGS__),
@@ -173,8 +169,7 @@ static constexpr opt::OptTable::Info OtoolInfoTable[] = {
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(otool::OptionStrTable, otool::OptionPrefixesTable,
-                       otool::OtoolInfoTable, " [option...] [file...]",
+      : CommonOptTable(otool::OtoolInfoTable, " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 
@@ -2561,7 +2556,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   if (!MAttrs.empty()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I)
       Features.AddFeature(MAttrs[I]);
-  } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
+  } else if (MCPU.empty() && Obj->getArch() == llvm::Triple::aarch64) {
     Features.AddFeature("+all");
   }
 

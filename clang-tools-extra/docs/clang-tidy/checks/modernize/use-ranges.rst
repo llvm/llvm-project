@@ -104,9 +104,6 @@ Calls to the following std library algorithms are checked:
 ``std::unique``,
 ``std::upper_bound``.
 
-Note: some range algorithms for ``vector<bool>`` require C++23 because it uses
-proxy iterators.
-
 Reverse Iteration
 -----------------
 

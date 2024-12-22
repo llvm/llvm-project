@@ -50,8 +50,7 @@ void DwarfCFIException::endModule() {
   // Emit indirect reference table for all used personality functions
   for (const GlobalValue *Personality : Personalities) {
     MCSymbol *Sym = Asm->getSymbol(Personality);
-    TLOF.emitPersonalityValue(*Asm->OutStreamer, Asm->getDataLayout(), Sym,
-                              Asm->MMI);
+    TLOF.emitPersonalityValue(*Asm->OutStreamer, Asm->getDataLayout(), Sym);
   }
   Personalities.clear();
 }

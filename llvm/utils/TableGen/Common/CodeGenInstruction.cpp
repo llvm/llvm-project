@@ -137,7 +137,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
                           " has the same name as a previous operand!");
 
     OperandInfo &OpInfo = OperandList.emplace_back(
-        Rec, std::string(ArgName), std::string(std::move(PrintMethod)),
+        Rec, std::string(ArgName), std::string(PrintMethod),
         OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
@@ -180,7 +180,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
       // method, the single encoder will multiple sub-ops, itself.
-      OpInfo.EncoderMethodNames[0] = std::move(EncoderMethod);
+      OpInfo.EncoderMethodNames[0] = EncoderMethod;
       for (unsigned j = 1; j < NumOps; ++j)
         OpInfo.DoNotEncode[j] = true;
     }

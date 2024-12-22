@@ -215,7 +215,6 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
     } else {
       switch (dyType->category()) {
       case TypeCategory::Integer:
-      case TypeCategory::Unsigned:
       case TypeCategory::Real:
       case TypeCategory::Complex:
         return &MakeNumericType(dyType->category(), KindExpr{dyType->kind()});

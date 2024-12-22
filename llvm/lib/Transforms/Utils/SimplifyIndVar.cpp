@@ -2164,14 +2164,16 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
-  auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
-    CmpPredicate Pred;
+  auto UpdateRangeFromCondition = [&] (Value *Condition,
+                                       bool TrueDest) {
+    CmpInst::Predicate Pred;
     Value *CmpRHS;
     if (!match(Condition, m_ICmp(Pred, m_Specific(NarrowDefLHS),
                                  m_Value(CmpRHS))))
       return;
 
-    CmpPredicate P = TrueDest ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
+    CmpInst::Predicate P =
+            TrueDest ? Pred : CmpInst::getInversePredicate(Pred);
 
     auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
     auto CmpConstrainedLHSRange =

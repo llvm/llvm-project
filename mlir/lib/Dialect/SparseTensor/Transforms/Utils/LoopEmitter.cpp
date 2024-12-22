@@ -87,7 +87,7 @@ static Value unFoldOpIntResult(OpBuilder &builder, Location loc,
                                OpFoldResult ofr) {
   if (std::optional<int64_t> i = getConstantIntValue(ofr); i.has_value())
     return constantIndex(builder, loc, *i);
-  return cast<Value>(ofr);
+  return ofr.get<Value>();
 }
 
 static Value tryFoldTensors(Value t) {

@@ -313,11 +313,11 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
   static void inputOne(IO &io, StringRef Key, TypeIdSummaryMapTy &V) {
     TypeIdSummary TId;
     io.mapRequired(Key.str().c_str(), TId);
-    V.insert({GlobalValue::getGUID(Key), {Key, TId}});
+    V.insert({GlobalValue::getGUID(Key), {std::string(Key), TId}});
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
     for (auto &TidIter : V)
-      io.mapRequired(TidIter.second.first.str().c_str(), TidIter.second.second);
+      io.mapRequired(TidIter.second.first.c_str(), TidIter.second.second);
   }
 };
 
@@ -327,21 +327,7 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
     if (!io.outputting())
       CustomMappingTraits<GlobalValueSummaryMapTy>::fixAliaseeLinks(
           index.GlobalValueMap);
-
-    if (io.outputting()) {
-      io.mapOptional("TypeIdMap", index.TypeIdMap);
-    } else {
-      TypeIdSummaryMapTy TypeIdMap;
-      io.mapOptional("TypeIdMap", TypeIdMap);
-      for (auto &[TypeGUID, TypeIdSummaryMap] : TypeIdMap) {
-        // Save type id references in index and point TypeIdMap to use the
-        // references owned by index.
-        StringRef KeyRef = index.TypeIdSaver.save(TypeIdSummaryMap.first);
-        index.TypeIdMap.insert(
-            {TypeGUID, {KeyRef, std::move(TypeIdSummaryMap.second)}});
-      }
-    }
-
+    io.mapOptional("TypeIdMap", index.TypeIdMap);
     io.mapOptional("WithGlobalValueDeadStripping",
                    index.WithGlobalValueDeadStripping);
 

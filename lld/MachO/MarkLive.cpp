@@ -160,7 +160,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s, entry);
         else
-          enqueue(cast<InputSection *>(r.referent), r.addend, entry);
+          enqueue(r.referent.get<InputSection *>(), r.addend, entry);
       }
       for (Defined *d : getInputSection(entry)->symbols)
         addSym(d, entry);
@@ -183,7 +183,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
           }
         } else {
-          auto *referentIsec = cast<InputSection *>(r.referent);
+          auto *referentIsec = r.referent.get<InputSection *>();
           if (referentIsec->isLive(r.addend))
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
         }

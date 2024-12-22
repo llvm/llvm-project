@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Test that we generate a hardware loop for long long counters.
 ; Tests signed/unsigned GT, EQ, and NEQ cases.

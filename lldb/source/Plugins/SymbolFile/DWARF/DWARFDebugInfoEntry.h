@@ -10,16 +10,17 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
 
 #include "SymbolFileDWARF.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include "DWARFAttribute.h"
 #include "DWARFBaseDIE.h"
+#include "DWARFDebugRanges.h"
 #include <map>
 #include <optional>
 #include <set>
 #include <vector>
 
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
-#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -95,7 +96,7 @@ public:
                                 dw_addr_t &hi_pc, uint64_t fail_value,
                                 bool check_elaborating_dies = false) const;
 
-  llvm::Expected<llvm::DWARFAddressRangesVector>
+  DWARFRangeList
   GetAttributeAddressRanges(DWARFUnit *cu, bool check_hi_lo_pc,
                             bool check_elaborating_dies = false) const;
 
@@ -106,13 +107,15 @@ public:
 
   const char *GetPubname(const DWARFUnit *cu) const;
 
-  bool GetDIENamesAndRanges(
-      DWARFUnit *cu, const char *&name, const char *&mangled,
-      llvm::DWARFAddressRangesVector &rangeList, std::optional<int> &decl_file,
-      std::optional<int> &decl_line, std::optional<int> &decl_column,
-      std::optional<int> &call_file, std::optional<int> &call_line,
-      std::optional<int> &call_column,
-      DWARFExpressionList *frame_base = nullptr) const;
+  bool GetDIENamesAndRanges(DWARFUnit *cu, const char *&name,
+                            const char *&mangled, DWARFRangeList &rangeList,
+                            std::optional<int> &decl_file,
+                            std::optional<int> &decl_line,
+                            std::optional<int> &decl_column,
+                            std::optional<int> &call_file,
+                            std::optional<int> &call_line,
+                            std::optional<int> &call_column,
+                            DWARFExpressionList *frame_base = nullptr) const;
 
   const llvm::DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const;

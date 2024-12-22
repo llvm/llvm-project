@@ -77,30 +77,30 @@ STATISTIC(NumClustered, "Number of load/store pairs clustered");
 
 namespace llvm {
 
-cl::opt<MISched::Direction> PreRADirection(
-    "misched-prera-direction", cl::Hidden,
-    cl::desc("Pre reg-alloc list scheduling direction"),
-    cl::init(MISched::Unspecified),
-    cl::values(
-        clEnumValN(MISched::TopDown, "topdown",
-                   "Force top-down pre reg-alloc list scheduling"),
-        clEnumValN(MISched::BottomUp, "bottomup",
-                   "Force bottom-up pre reg-alloc list scheduling"),
-        clEnumValN(MISched::Bidirectional, "bidirectional",
-                   "Force bidirectional pre reg-alloc list scheduling")));
-
-cl::opt<MISched::Direction> PostRADirection(
+cl::opt<bool> ForceTopDown("misched-topdown", cl::Hidden,
+                           cl::desc("Force top-down list scheduling"));
+cl::opt<bool> ForceBottomUp("misched-bottomup", cl::Hidden,
+                            cl::desc("Force bottom-up list scheduling"));
+namespace MISchedPostRASched {
+enum Direction {
+  TopDown,
+  BottomUp,
+  Bidirectional,
+};
+} // end namespace MISchedPostRASched
+cl::opt<MISchedPostRASched::Direction> PostRADirection(
     "misched-postra-direction", cl::Hidden,
     cl::desc("Post reg-alloc list scheduling direction"),
-    cl::init(MISched::Unspecified),
+    // Default to top-down because it was implemented first and existing targets
+    // expect that behavior by default.
+    cl::init(MISchedPostRASched::TopDown),
     cl::values(
-        clEnumValN(MISched::TopDown, "topdown",
+        clEnumValN(MISchedPostRASched::TopDown, "topdown",
                    "Force top-down post reg-alloc list scheduling"),
-        clEnumValN(MISched::BottomUp, "bottomup",
+        clEnumValN(MISchedPostRASched::BottomUp, "bottomup",
                    "Force bottom-up post reg-alloc list scheduling"),
-        clEnumValN(MISched::Bidirectional, "bidirectional",
+        clEnumValN(MISchedPostRASched::Bidirectional, "bidirectional",
                    "Force bidirectional post reg-alloc list scheduling")));
-
 cl::opt<bool>
 DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                        cl::desc("Print critical path length to stdout"));
@@ -1947,9 +1947,6 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     LocationSize Width = 0;
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
-      if (!Width.hasValue())
-        continue;
-
       MemOpRecords.push_back(
           MemOpInfo(&SU, BaseOps, Offset, OffsetIsScalable, Width));
 
@@ -3307,15 +3304,19 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.ShouldTrackLaneMasks = false;
   }
 
-  if (PreRADirection == MISched::TopDown) {
-    RegionPolicy.OnlyTopDown = true;
-    RegionPolicy.OnlyBottomUp = false;
-  } else if (PreRADirection == MISched::BottomUp) {
-    RegionPolicy.OnlyTopDown = false;
-    RegionPolicy.OnlyBottomUp = true;
-  } else if (PreRADirection == MISched::Bidirectional) {
-    RegionPolicy.OnlyBottomUp = false;
-    RegionPolicy.OnlyTopDown = false;
+  // Check -misched-topdown/bottomup can force or unforce scheduling direction.
+  // e.g. -misched-bottomup=false allows scheduling in both directions.
+  assert((!ForceTopDown || !ForceBottomUp) &&
+         "-misched-topdown incompatible with -misched-bottomup");
+  if (ForceBottomUp.getNumOccurrences() > 0) {
+    RegionPolicy.OnlyBottomUp = ForceBottomUp;
+    if (RegionPolicy.OnlyBottomUp)
+      RegionPolicy.OnlyTopDown = false;
+  }
+  if (ForceTopDown.getNumOccurrences() > 0) {
+    RegionPolicy.OnlyTopDown = ForceTopDown;
+    if (RegionPolicy.OnlyTopDown)
+      RegionPolicy.OnlyBottomUp = false;
   }
 }
 
@@ -3907,15 +3908,17 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, NumRegionInstrs);
 
   // After subtarget overrides, apply command line options.
-  if (PostRADirection == MISched::TopDown) {
-    RegionPolicy.OnlyTopDown = true;
-    RegionPolicy.OnlyBottomUp = false;
-  } else if (PostRADirection == MISched::BottomUp) {
-    RegionPolicy.OnlyTopDown = false;
-    RegionPolicy.OnlyBottomUp = true;
-  } else if (PostRADirection == MISched::Bidirectional) {
-    RegionPolicy.OnlyBottomUp = false;
-    RegionPolicy.OnlyTopDown = false;
+  if (PostRADirection.getNumOccurrences() > 0) {
+    if (PostRADirection == MISchedPostRASched::TopDown) {
+      RegionPolicy.OnlyTopDown = true;
+      RegionPolicy.OnlyBottomUp = false;
+    } else if (PostRADirection == MISchedPostRASched::BottomUp) {
+      RegionPolicy.OnlyTopDown = false;
+      RegionPolicy.OnlyBottomUp = true;
+    } else if (PostRADirection == MISchedPostRASched::Bidirectional) {
+      RegionPolicy.OnlyBottomUp = false;
+      RegionPolicy.OnlyTopDown = false;
+    }
   }
 }
 
@@ -3952,12 +3955,9 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Keep clustered nodes together.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  if (tryGreater(TryCand.SU == DAG->getNextClusterSucc(),
+                 Cand.SU == DAG->getNextClusterSucc(),
+                 TryCand, Cand, Cluster))
     return TryCand.Reason != NoCand;
 
   // Avoid critical resource consumption and balance the schedule.
@@ -3969,13 +3969,9 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
                  TryCand, Cand, ResourceDemand))
     return TryCand.Reason != NoCand;
 
-  // We only compare a subset of features when comparing nodes between
-  // Top and Bottom boundary.
-  if (Cand.AtTop == TryCand.AtTop) {
-    // Avoid serializing long latency dependence chains.
-    if (Cand.Policy.ReduceLatency &&
-        tryLatency(TryCand, Cand, Cand.AtTop ? Top : Bot))
-      return TryCand.Reason != NoCand;
+  // Avoid serializing long latency dependence chains.
+  if (Cand.Policy.ReduceLatency && tryLatency(TryCand, Cand, Top)) {
+    return TryCand.Reason != NoCand;
   }
 
   // Fall through to original instruction order.
@@ -4362,9 +4358,10 @@ public:
 } // end anonymous namespace
 
 static ScheduleDAGInstrs *createInstructionShuffler(MachineSchedContext *C) {
-  bool Alternate =
-      PreRADirection != MISched::TopDown && PreRADirection != MISched::BottomUp;
-  bool TopDown = PreRADirection != MISched::BottomUp;
+  bool Alternate = !ForceTopDown && !ForceBottomUp;
+  bool TopDown = !ForceBottomUp;
+  assert((TopDown || !ForceTopDown) &&
+         "-misched-topdown incompatible with -misched-bottomup");
   return new ScheduleDAGMILive(
       C, std::make_unique<InstructionShuffler>(Alternate, TopDown));
 }

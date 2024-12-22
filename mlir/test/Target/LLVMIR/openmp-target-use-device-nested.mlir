@@ -13,11 +13,7 @@
 // CHECK:            user_code.entry:                                  ; preds = %[[VAL_10:.*]]
 // CHECK-NEXT:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_3]], align 8
 // CHECK-NEXT:         br label %[[VAL_12:.*]]
-
-// CHECK:            [[VAL_12]]:
-// CHECK-NEXT:         br label %[[TARGET_REG_ENTRY:.*]]
-
-// CHECK:            [[TARGET_REG_ENTRY]]:                                       ; preds = %[[VAL_12]]
+// CHECK:            omp.target:                                       ; preds = %[[VAL_8]]
 // CHECK-NEXT:         %[[VAL_13:.*]] = load ptr, ptr %[[VAL_11]], align 8
 // CHECK-NEXT:         store i32 999, ptr %[[VAL_13]], align 4
 // CHECK-NEXT:         br label %[[VAL_14:.*]]

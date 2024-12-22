@@ -14,8 +14,6 @@
 // These compilers don't support constexpr `__builtin_signbit` yet.
 // UNSUPPORTED: clang-17, clang-18, clang-19, apple-clang-15, apple-clang-16
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cassert>
 #include <cmath>
 #include <limits>

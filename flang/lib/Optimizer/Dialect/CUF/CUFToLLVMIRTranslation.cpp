@@ -66,12 +66,8 @@ LogicalResult registerKernel(cuf::RegisterKernelOp op,
       llvm::FunctionType::get(
           ptrTy, ArrayRef<llvm::Type *>({ptrTy, ptrTy, ptrTy}), false));
   llvm::Value *modulePtr = moduleTranslation.lookupValue(op.getModulePtr());
-  if (!modulePtr)
-    return op.emitError() << "Couldn't find the module ptr";
   llvm::Function *fctSym =
       moduleTranslation.lookupFunction(op.getKernelName().str());
-  if (!fctSym)
-    return op.emitError() << "Couldn't find kernel name symbol";
   builder.CreateCall(fct, {modulePtr, fctSym,
                            getOrCreateFunctionName(
                                module, builder, op.getKernelModuleName().str(),

@@ -124,7 +124,6 @@ enum InfoLevelKind { InfoLevel1 = 1, InfoLevel2, InfoLevel3 };
 /// we use the level to determine the indentation of the key-value property at
 /// printing time. See the enum InfoLevelKind for the list of accepted levels.
 class InfoQueueTy {
-public:
   struct InfoQueueEntryTy {
     std::string Key;
     std::string Value;
@@ -132,7 +131,6 @@ public:
     uint64_t Level;
   };
 
-private:
   std::deque<InfoQueueEntryTy> Queue;
 
 public:
@@ -154,8 +152,6 @@ public:
     else
       Queue.push_back({Key, Value, Units, L});
   }
-
-  const std::deque<InfoQueueEntryTy> &getQueue() const { return Queue; }
 
   /// Print all info entries added to the queue.
   void print() const {
@@ -269,9 +265,8 @@ struct GenericKernelTy {
   Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
-  virtual Error launchImpl(GenericDeviceTy &GenericDevice,
-                           uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                           KernelArgsTy &KernelArgs,
+  virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
+                           uint64_t NumBlocks, KernelArgsTy &KernelArgs,
                            KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
@@ -321,15 +316,15 @@ protected:
 
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
-                        KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
-                        uint32_t NumBlocks[3]) const;
+                        KernelArgsTy &KernelArgs, uint32_t NumThreads,
+                        uint64_t NumBlocks) const;
 
   /// Prints plugin-specific kernel launch information after generic kernel
   /// launch information
   virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
-                                       uint32_t NumThreads[3],
-                                       uint32_t NumBlocks[3]) const;
+                                       uint32_t NumThreads,
+                                       uint64_t NumBlocks) const;
 
 private:
   /// Prepare the arguments before launching the kernel.
@@ -348,7 +343,7 @@ private:
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-  uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
+  uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
 
@@ -1584,6 +1579,9 @@ protected:
   /// The actual resource pool.
   std::deque<ResourceRef> ResourcePool;
 };
+
+/// A static check on whether or not we support RPC in libomptarget.
+bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

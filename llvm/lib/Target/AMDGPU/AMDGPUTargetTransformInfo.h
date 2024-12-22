@@ -220,10 +220,6 @@ public:
 
   bool canSimplifyLegacyMulToMul(const Instruction &I, const Value *Op0,
                                  const Value *Op1, InstCombiner &IC) const;
-
-  bool simplifyDemandedLaneMaskArg(InstCombiner &IC, IntrinsicInst &II,
-                                   unsigned LaneAgIdx) const;
-
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                     IntrinsicInst &II) const;
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(

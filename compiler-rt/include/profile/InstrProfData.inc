@@ -730,12 +730,10 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_VERSION 6
 
 /* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
- * version for other variants of profile. We set the 8th most significant bit
+ * version for other variants of profile. We set the 8th most significant bit 
  * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
- * The 54th bit indicates whether to always instrument loop entry blocks.
- * The 58th bit indicates whether to always instrument function entry blocks.
  * The 59th bit indicates whether to use debug info to correlate profiles.
  * The 60th bit indicates single byte coverage instrumentation.
  * The 61st bit indicates function entry instrumentation only.
@@ -744,7 +742,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define VARIANT_MASKS_ALL 0xffffffff00000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
-#define VARIANT_MASK_INSTR_LOOP_ENTRIES (0x1ULL << 55)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
 #define VARIANT_MASK_INSTR_ENTRY (0x1ULL << 58)

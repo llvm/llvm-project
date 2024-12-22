@@ -43,7 +43,6 @@
 #include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_unbounded_array.h>
@@ -57,6 +56,7 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
+#include <new>
 #include <typeinfo>
 #if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <__atomic/memory_order.h>

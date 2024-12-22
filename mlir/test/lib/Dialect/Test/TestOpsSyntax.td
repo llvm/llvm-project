@@ -431,13 +431,6 @@ def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
 }
 
-def FormatOptionalPropDict : TEST_Op<"format_optional_prop_dict"> {
-  let arguments = (ins
-    OptionalProperty<StringProperty>:$a,
-    DefaultValuedProperty<I32Property, "1">:$b);
-  let assemblyFormat = "prop-dict attr-dict";
-}
-
 def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
   let arguments = (ins CompoundAttrA:$compound);
   let assemblyFormat = "$compound attr-dict-with-keyword";

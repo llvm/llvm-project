@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 target triple = "hexagon"
 

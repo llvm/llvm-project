@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "RuntimeDyldCheckerImpl.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -20,7 +21,9 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include <cctype>
 #include <memory>
 #include <utility>

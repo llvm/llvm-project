@@ -16,7 +16,7 @@
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/iostat-consts.h"
+#include "flang/Runtime/iostat.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -166,6 +166,11 @@ struct IntrinsicLibrary {
   getRuntimeCallGenerator(llvm::StringRef name,
                           mlir::FunctionType soughtFuncType);
 
+  /// Helper to generate TODOs for module procedures that must be intercepted in
+  /// lowering and are not yet implemented.
+  template <const char *intrinsicName>
+  void genModuleProcTODO(llvm::ArrayRef<fir::ExtendedValue>);
+
   void genAbort(llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the ABS intrinsic. The ABS intrinsic expects one argument in
   /// the llvm::ArrayRef. The ABS intrinsic is lowered into MLIR/FIR operation
@@ -273,7 +278,6 @@ struct IntrinsicLibrary {
   template <bool isGet>
   void genIeeeGetOrSetStatus(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
-  void genIeeeGetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeInt(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -291,7 +295,6 @@ struct IntrinsicLibrary {
   template <bool isFlag>
   void genIeeeSetFlagOrHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeSetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
-  void genIeeeSetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpFPredicate pred>
   mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value>);
@@ -392,12 +395,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSignalSubroutine(llvm::ArrayRef<fir::ExtendedValue>);
   void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
-  void genSyncThreads(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genSyncThreadsAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genSystem(std::optional<mlir::Type>,
-                               mlir::ArrayRef<fir::ExtendedValue> args);
+  void genSystem(mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -405,9 +403,6 @@ struct IntrinsicLibrary {
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTranspose(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);
-  void genThreadFenceBlock(llvm::ArrayRef<fir::ExtendedValue>);
-  void genThreadFenceSystem(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);

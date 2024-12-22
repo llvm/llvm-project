@@ -103,7 +103,6 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ARROWLAKE_S,
   INTEL_COREI7_PANTHERLAKE,
   AMDFAM1AH_ZNVER5,
-  INTEL_COREI7_DIAMONDRAPIDS,
   CPU_SUBTYPE_MAX
 };
 
@@ -461,31 +460,16 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Alderlake:
     case 0x97:
     case 0x9a:
-      CPU = "alderlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ALDERLAKE;
-      break;
-
     // Raptorlake:
     case 0xb7:
     case 0xba:
     case 0xbf:
-      CPU = "raptorlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ALDERLAKE;
-      break;
-
     // Meteorlake:
     case 0xaa:
     case 0xac:
-      CPU = "meteorlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ALDERLAKE;
-      break;
-
     // Gracemont:
     case 0xbe:
-      CPU = "gracemont";
+      CPU = "alderlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;
       break;
@@ -501,14 +485,9 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake S:
     case 0xc6:
-      CPU = "arrowlake-s";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ARROWLAKE_S;
-      break;
-
     // Lunarlake:
     case 0xbd:
-      CPU = "lunarlake";
+      CPU = "arrowlake-s";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ARROWLAKE_S;
       break;
@@ -530,11 +509,6 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Emerald Rapids:
     case 0xcf:
-      CPU = "emeraldrapids";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
-      break;
-
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
@@ -623,19 +597,6 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
 
     default: // Unknown family 6 CPU.
-      break;
-    }
-    break;
-  case 19:
-    switch (Model) {
-    // Diamond Rapids:
-    case 0x01:
-      CPU = "diamondrapids";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_DIAMONDRAPIDS;
-      break;
-
-    default: // Unknown family 19 CPU.
       break;
     }
     break;

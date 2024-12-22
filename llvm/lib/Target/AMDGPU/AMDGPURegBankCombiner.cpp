@@ -48,7 +48,8 @@ protected:
   const RegisterBankInfo &RBI;
   const TargetRegisterInfo &TRI;
   const SIInstrInfo &TII;
-  const CombinerHelper Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
 
 public:
   AMDGPURegBankCombinerImpl(

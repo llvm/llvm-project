@@ -395,11 +395,6 @@ public:
 
   /// Returns the uncountable early exiting block.
   BasicBlock *getUncountableEarlyExitingBlock() const {
-    if (!HasUncountableEarlyExit) {
-      assert(getUncountableExitingBlocks().empty() &&
-             "Expected no uncountable exiting blocks");
-      return nullptr;
-    }
     assert(getUncountableExitingBlocks().size() == 1 &&
            "Expected only a single uncountable exiting block");
     return getUncountableExitingBlocks()[0];

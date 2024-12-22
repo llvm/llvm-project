@@ -4,5 +4,5 @@ add_mlir_unittest(MLIRDebugTests
   FileLineColLocBreakpointManagerTest.cpp
 )
 
-mlir_target_link_libraries(MLIRDebugTests
+target_link_libraries(MLIRDebugTests
   PRIVATE MLIRDebug)

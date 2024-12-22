@@ -381,6 +381,8 @@ public:
                   EndIdx = MI.getNumOperands();
          Idx < EndIdx; ++Idx) {
       MachineOperand &MO = MI.getOperand(Idx);
+      // Leave `undef` operands as is, StackMaps will rewrite them
+      // into a constant.
       if (!MO.isReg() || MO.isImplicit() || MO.isUndef())
         continue;
       Register Reg = MO.getReg();

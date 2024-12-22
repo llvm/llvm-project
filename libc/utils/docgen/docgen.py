@@ -10,9 +10,8 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Dict
-import os
 import sys
-import yaml
+import json
 
 from header import Header
 
@@ -23,14 +22,14 @@ class DocgenAPIFormatError(Exception):
 
 def check_api(header: Header, api: Dict):
     """
-    Checks that docgen yaml files are properly formatted. If there are any
+    Checks that docgen json files are properly formatted. If there are any
     fatal formatting errors, raises exceptions with error messages useful for
     fixing formatting. Warnings are printed to stderr on non-fatal formatting
     errors. The code that runs after ``check_api(api)`` is called expects that
-    ``check_api`` executed without raising formatting exceptions so the yaml
+    ``check_api`` executed without raising formatting exceptions so the json
     matches the formatting specified here.
 
-    The yaml file may contain:
+    The json file may contain:
     * an optional macros object
     * an optional functions object
 
@@ -49,15 +48,11 @@ def check_api(header: Header, api: Dict):
     this should be a C standard section number. For the ``"posix-definition"`` property,
     this should be a link to the definition.
 
-    :param api: docgen yaml file contents parsed into a dict
+    :param api: docgen json file contents parsed into a dict
     """
     errors = []
-    # We require entries to have at least one of these.
-    possible_keys = [
-        "c-definition",
-        "in-latest-posix",
-        "removed-in-posix-2008",
-    ]
+    cdef = "c-definition"
+    pdef = "posix-definition"
 
     # Validate macros
     if "macros" in api:
@@ -70,8 +65,8 @@ def check_api(header: Header, api: Dict):
         macros = api["macros"]
 
         for name, obj in macros.items():
-            if not any(k in obj for k in possible_keys):
-                err = f"error: Macro {name} does not contain at least one required property: {possible_keys}"
+            if not (cdef in obj or pdef in obj):
+                err = f'error: Macro {name} does not contain at least one required property: "{cdef}" or "{pdef}"'
                 errors.append(err)
 
     # Validate functions
@@ -84,8 +79,8 @@ def check_api(header: Header, api: Dict):
 
         fns = api["functions"]
         for name, obj in fns.items():
-            if not any(k in obj for k in possible_keys):
-                err = f"error: function {name} does not contain at least one required property: {possible_keys}"
+            if not (cdef in obj or pdef in obj):
+                err = f'error: function {name} does not contain at least one required property: "{cdef}" or "{pdef}"'
                 errors.append(err)
 
     if errors:
@@ -93,11 +88,11 @@ def check_api(header: Header, api: Dict):
 
 
 def load_api(header: Header) -> Dict:
-    api = header.docgen_yaml.read_text(encoding="utf-8")
-    return yaml.safe_load(api)
+    api = header.docgen_json.read_text(encoding="utf-8")
+    return json.loads(api)
 
 
-def print_tbl_dir(name):
+def print_tbl_dir():
     print(
         f"""
 .. list-table::
@@ -105,10 +100,10 @@ def print_tbl_dir(name):
   :align: center
   :header-rows: 1
 
-  * - {name}
+  * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX Docs"""
+    - POSIX.1-2017 Standard Section"""
     )
 
 
@@ -117,7 +112,7 @@ def print_functions_rst(header: Header, functions: Dict):
     print(tbl_hdr)
     print("=" * len(tbl_hdr))
 
-    print_tbl_dir("Function")
+    print_tbl_dir()
 
     for name in sorted(functions.keys()):
         print(f"  * - {name}")
@@ -132,14 +127,8 @@ def print_functions_rst(header: Header, functions: Dict):
         else:
             print("    -")
 
-        if "in-latest-posix" in functions[name]:
-            print(
-                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/{name}.html>`__"
-            )
-        elif "removed-in-posix-2008" in functions[name]:
-            print(
-                f"    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/{name}.html>`__"
-            )
+        if "posix-definition" in functions[name]:
+            print(f'    - {functions[name]["posix-definition"]}')
         else:
             print("    -")
 
@@ -149,7 +138,7 @@ def print_macros_rst(header: Header, macros: Dict):
     print(tbl_hdr)
     print("=" * len(tbl_hdr))
 
-    print_tbl_dir("Macro")
+    print_tbl_dir()
 
     for name in sorted(macros.keys()):
         print(f"  * - {name}")
@@ -164,20 +153,15 @@ def print_macros_rst(header: Header, macros: Dict):
         else:
             print("    -")
 
-        if "in-latest-posix" in macros[name]:
-            print(
-                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{header.name}.html>`__"
-            )
+        if "posix-definition" in macros[name]:
+            print(f'    - {macros[name]["posix-definition"]}')
         else:
             print("    -")
     print()
 
 
 def print_impl_status_rst(header: Header, api: Dict):
-    if os.sep in header.name:
-        print(".. include:: ../../check.rst\n")
-    else:
-        print(".. include:: ../check.rst\n")
+    print(".. include:: check.rst\n")
 
     print("=" * len(header.name))
     print(header.name)
@@ -192,22 +176,10 @@ def print_impl_status_rst(header: Header, api: Dict):
         print_functions_rst(header, api["functions"])
 
 
-# This code implicitly relies on docgen.py being in the same dir as the yaml
-# files and is likely to need to be fixed when re-integrating docgen into
-# hdrgen.
-def get_choices() -> list:
-    choices = []
-    for path in Path(__file__).parent.rglob("*.yaml"):
-        fname = path.with_suffix(".h").name
-        if path.parent != Path(__file__).parent:
-            fname = path.parent.name + os.sep + fname
-        choices.append(fname)
-    return choices
-
-
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    parser.add_argument("header_name", choices=get_choices())
+    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.json")]
+    parser.add_argument("header_name", choices=choices)
     return parser.parse_args()
 
 

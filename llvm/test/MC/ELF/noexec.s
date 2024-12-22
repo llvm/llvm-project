@@ -14,4 +14,3 @@
 // CHECK-NEXT:     AddressAlignment: 1
 // CHECK-NEXT:     EntrySize: 0
 // CHECK-NEXT:   }
-nop

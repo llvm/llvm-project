@@ -14,6 +14,7 @@
 
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -41,6 +42,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>

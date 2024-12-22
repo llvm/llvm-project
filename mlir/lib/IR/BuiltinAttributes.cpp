@@ -245,6 +245,9 @@ AffineMap StridedLayoutAttr::getAffineMap() const {
 LogicalResult
 StridedLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                           int64_t offset, ArrayRef<int64_t> strides) {
+  if (llvm::is_contained(strides, 0))
+    return emitError() << "strides must not be zero";
+
   return success();
 }
 
@@ -1544,12 +1547,6 @@ DenseResourceElementsAttr DenseResourceElementsAttr::get(ShapedType type,
   return get(type, manager.insert(blobName, std::move(blob)));
 }
 
-ArrayRef<char> DenseResourceElementsAttr::getData() {
-  if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
-    return blob->getDataAs<char>();
-  return {};
-}
-
 //===----------------------------------------------------------------------===//
 // DenseResourceElementsAttrBase
 
@@ -1818,6 +1815,7 @@ AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
   for (const auto &en : llvm::enumerate(strides)) {
     auto dim = en.index();
     auto stride = en.value();
+    assert(stride != 0 && "Invalid stride specification");
     auto d = getAffineDimExpr(dim, context);
     AffineExpr mult;
     // Static case.

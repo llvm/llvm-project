@@ -7831,14 +7831,10 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     // grainsize clause
     Data.Schedule.setInt(/*IntVal=*/false);
     Data.Schedule.setPointer(EmitScalarExpr(Clause->getGrainsize()));
-    Data.HasModifier =
-        (Clause->getModifier() == OMPC_GRAINSIZE_strict) ? true : false;
   } else if (const auto *Clause = S.getSingleClause<OMPNumTasksClause>()) {
     // num_tasks clause
     Data.Schedule.setInt(/*IntVal=*/true);
     Data.Schedule.setPointer(EmitScalarExpr(Clause->getNumTasks()));
-    Data.HasModifier =
-        (Clause->getModifier() == OMPC_NUMTASKS_strict) ? true : false;
   }
 
   auto &&BodyGen = [CS, &S](CodeGenFunction &CGF, PrePostActionTy &) {

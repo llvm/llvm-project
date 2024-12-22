@@ -2670,8 +2670,8 @@ public:
   }
 };
 
-/// This represents 'seq_cst' clause in the '#pragma omp atomic|flush'
-/// directives.
+/// This represents 'seq_cst' clause in the '#pragma omp atomic'
+/// directive.
 ///
 /// \code
 /// #pragma omp atomic seq_cst

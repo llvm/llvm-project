@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -function-sections < %s | FileCheck %s
+; RUN: llc  -march=hexagon -function-sections < %s | FileCheck %s
 ; CHECK: if (!p0)
 ; CHECK-NOT: if (p0.new)
 ; CHECK: {

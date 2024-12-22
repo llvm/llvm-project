@@ -28,7 +28,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __libcpp_remove_reference_t<_Tp>&&
 move(_LIBCPP_LIFETIMEBOUND _Tp&& __t) _NOEXCEPT {
-  using _Up _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tp>;
+  typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tp> _Up;
   return static_cast<_Up&&>(__t);
 }
 

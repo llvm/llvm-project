@@ -542,9 +542,6 @@ public:
   /// The result type of this function, as a C type.
   std::string ResultType;
 
-  /// Ownership convention for return value
-  std::string SwiftReturnOwnership;
-
   /// The function parameters.
   std::vector<ParamInfo> Params;
 
@@ -625,8 +622,7 @@ inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
          LHS.NumAdjustedNullable == RHS.NumAdjustedNullable &&
          LHS.NullabilityPayload == RHS.NullabilityPayload &&
          LHS.ResultType == RHS.ResultType && LHS.Params == RHS.Params &&
-         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention &&
-         LHS.SwiftReturnOwnership == RHS.SwiftReturnOwnership;
+         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention;
 }
 
 inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {

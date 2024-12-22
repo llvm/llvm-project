@@ -15,7 +15,6 @@
 #include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
-#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -29,7 +28,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
@@ -47,7 +45,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
-  initializeSPIRVStructurizerPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -95,11 +92,6 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setRequiresStructuredCFG(false);
 }
 
-void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-}
-
 namespace {
 // SPIR-V Code Generator Pass Configuration Options.
 class SPIRVPassConfig : public TargetPassConfig {
@@ -110,7 +102,6 @@ public:
   SPIRVTargetMachine &getSPIRVTargetMachine() const {
     return getTM<SPIRVTargetMachine>();
   }
-  void addMachineSSAOptimization() override;
   void addIRPasses() override;
   void addISelPrepare() override;
 
@@ -136,11 +127,6 @@ private:
 // the entire pipeline, so return nullptr to disable register allocation.
 FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
-}
-
-// A place to disable passes that may break CFG.
-void SPIRVPassConfig::addMachineSSAOptimization() {
-  TargetPassConfig::addMachineSSAOptimization();
 }
 
 // Disable passes that break from assuming no virtual registers exist.

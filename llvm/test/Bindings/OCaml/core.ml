@@ -48,21 +48,10 @@ let test_contained_types () =
   insist ([| i32_type; i8_type |] = struct_element_types ar)
 
 (*===-- Pointer types  ----------------------------------------------------===*)
-
 let test_pointer_types () =
-  insist (TypeKind.Pointer = classify_type (pointer_type context));
   insist (0 = address_space (pointer_type context));
   insist (0 = address_space (qualified_pointer_type context 0));
   insist (1 = address_space (qualified_pointer_type context 1))
-
-(*===-- Other types  ------------------------------------------------------===*)
-
-let test_other_types () =
-  insist (TypeKind.Void = classify_type void_type);
-  insist (TypeKind.Label = classify_type (label_type context));
-  insist (TypeKind.X86_amx = classify_type (x86_amx_type context));
-  insist (TypeKind.Token = classify_type (token_type context));
-  insist (TypeKind.Metadata = classify_type (metadata_type context))
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -1472,7 +1461,6 @@ let _ =
   suite "modules"          test_modules;
   suite "contained types"  test_contained_types;
   suite "pointer types"    test_pointer_types;
-  suite "other types"      test_other_types;
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;

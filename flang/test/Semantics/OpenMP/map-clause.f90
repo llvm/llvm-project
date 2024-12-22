@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! Check OpenMP MAP clause validity. Section 5.8.3 OpenMP 5.2.
 
 subroutine sb(arr)
@@ -33,11 +33,3 @@ subroutine sb(arr)
    c = 2
  !$omp end target
 end subroutine
-
-subroutine sb1
-  integer :: xx
-  integer :: a
-  !ERROR: Name 'xx' should be a mapper name
-  !$omp target map(mapper(xx), from:a)
-  !$omp end target
-end subroutine sb1

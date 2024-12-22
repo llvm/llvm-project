@@ -51,10 +51,6 @@ public:
     return false;
   }
   bool isPICDefaultForced() const override { return true; }
-
-  void
-  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                            llvm::opt::ArgStringList &CC1Args) const override;
 };
 
 } // namespace toolchains

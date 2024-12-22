@@ -15,8 +15,8 @@
 #include "clang/AST/ODRDiagsEmitter.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/CharInfo.h"
-#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -1454,7 +1454,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
 
   SmallVector<const IdentifierInfo *, 12> KeyIdents;
   SmallVector<SourceLocation, 12> KeyLocs;
-  SmallVector<SemaObjC::ObjCArgInfo, 12> ArgInfos;
+  SmallVector<ParmVarDecl *, 12> ObjCParamInfo;
   ParseScope PrototypeScope(this, Scope::FunctionPrototypeScope |
                             Scope::FunctionDeclarationScope | Scope::DeclScope);
 
@@ -1495,7 +1495,9 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     ArgInfo.NameLoc = Tok.getLocation();
     ConsumeToken(); // Eat the identifier.
 
-    ArgInfos.push_back(ArgInfo);
+    ParmVarDecl *Param = Actions.ObjC().ActOnMethodParmDeclaration(
+        getCurScope(), ArgInfo, ObjCParamInfo.size(), MethodDefinition);
+    ObjCParamInfo.push_back(Param);
     KeyIdents.push_back(SelIdent);
     KeyLocs.push_back(selLoc);
 
@@ -1553,17 +1555,6 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
                                                     ParmDecl.getIdentifierLoc(),
                                                     Param,
                                                     nullptr));
-  }
-
-  // Turn ArgInfos into parameters. This must happen after parsing all
-  // parameters for bug compatibility with previous versions of Clang. (For
-  // instance, if a method declares a parameter called "id", that parameter must
-  // not shadow the "id" type.)
-  SmallVector<ParmVarDecl *, 12> ObjCParamInfo;
-  for (auto &ArgInfo : ArgInfos) {
-    ParmVarDecl *Param = Actions.ObjC().ActOnMethodParmDeclaration(
-        getCurScope(), ArgInfo, ObjCParamInfo.size(), MethodDefinition);
-    ObjCParamInfo.push_back(Param);
   }
 
   // FIXME: Add support for optional parameter list...

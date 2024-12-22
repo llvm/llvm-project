@@ -19,6 +19,7 @@
 #include "R600ISelLowering.h"
 #include "R600InstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "R600GenSubtargetInfo.inc"
@@ -40,13 +41,11 @@ private:
   Generation Gen = R600;
   R600TargetLowering TLInfo;
   InstrItineraryData InstrItins;
-  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
+  SelectionDAGTargetInfo TSInfo;
 
 public:
   R600Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                 const TargetMachine &TM);
-
-  ~R600Subtarget() override;
 
   const R600InstrInfo *getInstrInfo() const override { return &InstrInfo; }
 
@@ -66,7 +65,10 @@ public:
     return &InstrItins;
   }
 
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
+  // Nothing implemented, just prevent crashes on use.
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
+    return &TSInfo;
+  }
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 

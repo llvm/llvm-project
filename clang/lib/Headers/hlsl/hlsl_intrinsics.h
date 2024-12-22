@@ -362,24 +362,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double4);
 
 //===----------------------------------------------------------------------===//
-// asdouble builtins
-//===----------------------------------------------------------------------===//
-
-/// \fn double asdouble(uint LowBits, uint HighBits)
-/// \brief Reinterprets a cast value (two 32-bit values) into a double.
-/// \param LowBits The low 32-bit pattern of the input value.
-/// \param HighBits The high 32-bit pattern of the input value.
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
-double asdouble(uint, uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
-double2 asdouble(uint2, uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
-double3 asdouble(uint3, uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
-double4 asdouble(uint4, uint4);
-
-//===----------------------------------------------------------------------===//
 // asfloat builtins
 //===----------------------------------------------------------------------===//
 
@@ -2241,24 +2223,6 @@ float4 trunc(float4);
 // Wave* builtins
 //===----------------------------------------------------------------------===//
 
-/// \brief Returns true if the expression is true in all active lanes in the
-/// current wave.
-///
-/// \param Val The boolean expression to evaluate.
-/// \return True if the expression is true in all lanes.
-_HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_true)
-__attribute__((convergent)) bool WaveActiveAllTrue(bool Val);
-
-/// \brief Returns true if the expression is true in any active lane in the
-/// current wave.
-///
-/// \param Val The boolean expression to evaluate.
-/// \return True if the expression is true in any lane.
-_HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_any_true)
-__attribute__((convergent)) bool WaveActiveAnyTrue(bool Val);
-
 /// \brief Counts the number of boolean variables which evaluate to true across
 /// all active lanes in the current wave.
 ///
@@ -2489,18 +2453,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float3 radians(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float4 radians(float4);
-
-//===----------------------------------------------------------------------===//
-// GroupMemoryBarrierWithGroupSync builtins
-//===----------------------------------------------------------------------===//
-
-/// \fn void GroupMemoryBarrierWithGroupSync(void)
-/// \brief Blocks execution of all threads in a group until all group shared
-/// accesses have been completed and all threads in the group have reached this
-/// call.
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
-void GroupMemoryBarrierWithGroupSync(void);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

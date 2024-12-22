@@ -7,7 +7,6 @@ Developer Guides
 Navigate to the links below for information on the respective topics:
 
 .. toctree::
-   :maxdepth: 1
 
    code_style
    source_tree_layout

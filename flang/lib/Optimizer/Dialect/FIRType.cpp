@@ -442,35 +442,19 @@ unsigned getBoxRank(mlir::Type boxTy) {
 /// Return the ISO_C_BINDING intrinsic module value of type \p ty.
 int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
   if (mlir::IntegerType intTy = mlir::dyn_cast<mlir::IntegerType>(ty)) {
-    if (intTy.isUnsigned()) {
-      switch (intTy.getWidth()) {
-      case 8:
-        return CFI_type_uint8_t;
-      case 16:
-        return CFI_type_uint16_t;
-      case 32:
-        return CFI_type_uint32_t;
-      case 64:
-        return CFI_type_uint64_t;
-      case 128:
-        return CFI_type_uint128_t;
-      }
-      llvm_unreachable("unsupported integer type");
-    } else {
-      switch (intTy.getWidth()) {
-      case 8:
-        return CFI_type_int8_t;
-      case 16:
-        return CFI_type_int16_t;
-      case 32:
-        return CFI_type_int32_t;
-      case 64:
-        return CFI_type_int64_t;
-      case 128:
-        return CFI_type_int128_t;
-      }
-      llvm_unreachable("unsupported integer type");
+    switch (intTy.getWidth()) {
+    case 8:
+      return CFI_type_int8_t;
+    case 16:
+      return CFI_type_int16_t;
+    case 32:
+      return CFI_type_int32_t;
+    case 64:
+      return CFI_type_int64_t;
+    case 128:
+      return CFI_type_int128_t;
     }
+    llvm_unreachable("unsupported integer type");
   }
   if (fir::LogicalType logicalTy = mlir::dyn_cast<fir::LogicalType>(ty)) {
     switch (kindMap.getLogicalBitsize(logicalTy.getFKind())) {
@@ -817,19 +801,6 @@ mlir::Type fir::IntegerType::parse(mlir::AsmParser &parser) {
 }
 
 void fir::IntegerType::print(mlir::AsmPrinter &printer) const {
-  printer << "<" << getFKind() << '>';
-}
-
-//===----------------------------------------------------------------------===//
-// UnsignedType
-//===----------------------------------------------------------------------===//
-
-// `unsigned` `<` kind `>`
-mlir::Type fir::UnsignedType::parse(mlir::AsmParser &parser) {
-  return parseKindSingleton<fir::UnsignedType>(parser);
-}
-
-void fir::UnsignedType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getFKind() << '>';
 }
 

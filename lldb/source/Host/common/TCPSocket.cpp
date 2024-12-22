@@ -38,15 +38,18 @@ using namespace lldb_private;
 
 static const int kType = SOCK_STREAM;
 
-TCPSocket::TCPSocket(bool should_close) : Socket(ProtocolTcp, should_close) {}
+TCPSocket::TCPSocket(bool should_close, bool child_processes_inherit)
+    : Socket(ProtocolTcp, should_close, child_processes_inherit) {}
 
 TCPSocket::TCPSocket(NativeSocket socket, const TCPSocket &listen_socket)
-    : Socket(ProtocolTcp, listen_socket.m_should_close_fd) {
+    : Socket(ProtocolTcp, listen_socket.m_should_close_fd,
+             listen_socket.m_child_processes_inherit) {
   m_socket = socket;
 }
 
-TCPSocket::TCPSocket(NativeSocket socket, bool should_close)
-    : Socket(ProtocolTcp, should_close) {
+TCPSocket::TCPSocket(NativeSocket socket, bool should_close,
+                     bool child_processes_inherit)
+    : Socket(ProtocolTcp, should_close, child_processes_inherit) {
   m_socket = socket;
 }
 
@@ -115,21 +118,14 @@ std::string TCPSocket::GetRemoteConnectionURI() const {
   return "";
 }
 
-std::vector<std::string> TCPSocket::GetListeningConnectionURI() const {
-  std::vector<std::string> URIs;
-  for (const auto &[fd, addr] : m_listen_sockets)
-    URIs.emplace_back(llvm::formatv("connection://[{0}]:{1}",
-                                    addr.GetIPAddress(), addr.GetPort()));
-  return URIs;
-}
-
 Status TCPSocket::CreateSocket(int domain) {
   Status error;
   if (IsValid())
     error = Close();
   if (error.Fail())
     return error;
-  m_socket = Socket::CreateSocket(domain, kType, IPPROTO_TCP, error);
+  m_socket = Socket::CreateSocket(domain, kType, IPPROTO_TCP,
+                                  m_child_processes_inherit, error);
   return error;
 }
 
@@ -187,8 +183,8 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   std::vector<SocketAddress> addresses = SocketAddress::GetAddressInfo(
       host_port->hostname.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (SocketAddress &address : addresses) {
-    int fd =
-        Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP, error);
+    int fd = Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP,
+                                  m_child_processes_inherit, error);
     if (error.Fail() || fd < 0)
       continue;
 
@@ -216,11 +212,11 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     }
 
     if (host_port->port == 0) {
-      socklen_t sa_len = listen_address.GetLength();
-      if (getsockname(fd, &listen_address.sockaddr(), &sa_len) == 0)
-        host_port->port = listen_address.GetPort();
+      socklen_t sa_len = address.GetLength();
+      if (getsockname(fd, &address.sockaddr(), &sa_len) == 0)
+        host_port->port = address.GetPort();
     }
-    m_listen_sockets[fd] = listen_address;
+    m_listen_sockets[fd] = address;
   }
 
   if (m_listen_sockets.empty()) {
@@ -245,13 +241,14 @@ TCPSocket::Accept(MainLoopBase &loop,
   std::vector<MainLoopBase::ReadHandleUP> handles;
   for (auto socket : m_listen_sockets) {
     auto fd = socket.first;
-    auto io_sp = std::make_shared<TCPSocket>(fd, false);
+    auto io_sp =
+        std::make_shared<TCPSocket>(fd, false, this->m_child_processes_inherit);
     auto cb = [this, fd, sock_cb](MainLoopBase &loop) {
       lldb_private::SocketAddress AcceptAddr;
       socklen_t sa_len = AcceptAddr.GetMaxLength();
       Status error;
-      NativeSocket sock =
-          AcceptSocket(fd, &AcceptAddr.sockaddr(), &sa_len, error);
+      NativeSocket sock = AcceptSocket(fd, &AcceptAddr.sockaddr(), &sa_len,
+                                       m_child_processes_inherit, error);
       Log *log = GetLog(LLDBLog::Host);
       if (error.Fail()) {
         LLDB_LOG(log, "AcceptSocket({0}): {1}", fd, error);

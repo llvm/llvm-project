@@ -39,7 +39,7 @@ struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
 
   void runOnOperation() final {
     // Invoke the pattern driver with the provided patterns.
-    (void)applyPatternsGreedily(getOperation(), patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), patterns);
   }
 
   FrozenRewritePatternSet patterns;

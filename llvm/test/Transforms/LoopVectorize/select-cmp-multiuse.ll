@@ -549,7 +549,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF4-IC1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC1:       scalar.ph:
-; CHECK-VF4-IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF4-IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-VF4-IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[BC_MERGE_RDX10:%.*]] = phi i1 [ [[RDX_SELECT9]], [[MIDDLE_BLOCK]] ], [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ]
 ; CHECK-VF4-IC1-NEXT:    br label [[FOR_BODY:%.*]]
@@ -711,7 +711,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC2:       scalar.ph:
-; CHECK-VF4-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i1 [ [[RDX_SELECT21]], [[MIDDLE_BLOCK]] ], [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ]
 ; CHECK-VF4-IC2-NEXT:    br label [[FOR_BODY:%.*]]
@@ -808,7 +808,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF1-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF1-IC2:       scalar.ph:
-; CHECK-VF1-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ]
 ; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX9:%.*]] = phi i1 [ [[RDX_SELECT8]], [[MIDDLE_BLOCK]] ], [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ]
 ; CHECK-VF1-IC2-NEXT:    br label [[FOR_BODY:%.*]]

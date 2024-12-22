@@ -1348,7 +1348,6 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::riscv64:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
-  case llvm::Triple::xtensa:
     return false;
   }
 }
@@ -1876,8 +1875,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   Args.addOptInFlag(CmdArgs,
                     options::OPT_fptrauth_init_fini_address_discrimination,
                     options::OPT_fno_ptrauth_init_fini_address_discrimination);
-  Args.addOptInFlag(CmdArgs, options::OPT_faarch64_jump_table_hardening,
-                    options::OPT_fno_aarch64_jump_table_hardening);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -3773,13 +3770,11 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
                              ArgStringList &CmdArgs) {
   const llvm::Triple &EffectiveTriple = TC.getEffectiveTriple();
 
-  if (!EffectiveTriple.isOSFreeBSD() && !EffectiveTriple.isOSLinux() &&
-      !EffectiveTriple.isOSFuchsia())
+  if (!EffectiveTriple.isOSFreeBSD() && !EffectiveTriple.isOSLinux())
     return;
 
   if (!EffectiveTriple.isX86() && !EffectiveTriple.isSystemZ() &&
-      !EffectiveTriple.isPPC64() && !EffectiveTriple.isAArch64() &&
-      !EffectiveTriple.isRISCV())
+      !EffectiveTriple.isPPC64() && !EffectiveTriple.isAArch64())
     return;
 
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_clash_protection,
@@ -4262,7 +4257,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (Args.hasArg(options::OPT_modules_reduced_bmi) &&
       (Input.getType() == driver::types::TY_CXXModule ||
        Input.getType() == driver::types::TY_PP_CXXModule)) {
-    CmdArgs.push_back("-fmodules-reduced-bmi");
+    CmdArgs.push_back("-fexperimental-modules-reduced-bmi");
 
     if (Args.hasArg(options::OPT_fmodule_output_EQ))
       Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
@@ -4272,7 +4267,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
           getCXX20NamedModuleOutputPath(Args, Input.getBaseInput())));
   }
 
-  // Noop if we see '-fmodules-reduced-bmi' with other translation
+  // Noop if we see '-fexperimental-modules-reduced-bmi' with other translation
   // units than module units. This is more user friendly to allow end uers to
   // enable this feature without asking for help from build systems.
   Args.ClaimAllArgs(options::OPT_modules_reduced_bmi);
@@ -4695,15 +4690,15 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   Args.ClaimAllArgs(options::OPT_g_flags_Group);
 
   // Column info is included by default for everything except SCE and
-  // CodeView if not use sampling PGO. Clang doesn't track end columns, just
-  // starting columns, which, in theory, is fine for CodeView (and PDB).  In
-  // practice, however, the Microsoft debuggers don't handle missing end columns
-  // well, and the AIX debugger DBX also doesn't handle the columns well, so
-  // it's better not to include any column info.
+  // CodeView. Clang doesn't track end columns, just starting columns, which,
+  // in theory, is fine for CodeView (and PDB).  In practice, however, the
+  // Microsoft debuggers don't handle missing end columns well, and the AIX
+  // debugger DBX also doesn't handle the columns well, so it's better not to
+  // include any column info.
   if (const Arg *A = Args.getLastArg(options::OPT_gcolumn_info))
     (void)checkDebugInfoOption(A, Args, D, TC);
   if (!Args.hasFlag(options::OPT_gcolumn_info, options::OPT_gno_column_info,
-                    !(EmitCodeView && !getLastProfileSampleUseArg(Args)) &&
+                    !EmitCodeView &&
                         (DebuggerTuning != llvm::DebuggerKind::SCE &&
                          DebuggerTuning != llvm::DebuggerKind::DBX)))
     CmdArgs.push_back("-gno-column-info");
@@ -5812,8 +5807,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
       if (Triple.getArch() != llvm::Triple::aarch64 &&
-          Triple.getArch() != llvm::Triple::aarch64_be &&
-          Triple.getArch() != llvm::Triple::riscv64)
+          Triple.getArch() != llvm::Triple::aarch64_be)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     }
@@ -5941,9 +5935,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
                     options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
     CmdArgs.push_back("-relaxed-aliasing");
-  if (Args.hasFlag(options::OPT_fno_pointer_tbaa, options::OPT_fpointer_tbaa,
+  if (Args.hasFlag(options::OPT_fpointer_tbaa, options::OPT_fno_pointer_tbaa,
                    false))
-    CmdArgs.push_back("-no-pointer-tbaa");
+    CmdArgs.push_back("-pointer-tbaa");
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
     CmdArgs.push_back("-no-struct-path-tbaa");

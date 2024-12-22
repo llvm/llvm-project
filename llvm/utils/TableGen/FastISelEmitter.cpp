@@ -218,7 +218,9 @@ struct OperandsSignature {
 
     const CodeGenRegisterClass *DstRC = nullptr;
 
-    for (const TreePatternNode &Op : InstPatNode.children()) {
+    for (unsigned i = 0, e = InstPatNode.getNumChildren(); i != e; ++i) {
+      TreePatternNode &Op = InstPatNode.getChild(i);
+
       // Handle imm operands specially.
       if (!Op.isLeaf() && Op.getOperator()->getName() == "imm") {
         unsigned PredNo = 0;
@@ -429,8 +431,8 @@ static std::string getLegalCName(std::string OpName) {
 
 FastISelMap::FastISelMap(StringRef instns) : InstNS(instns) {}
 
-static std::string PhysRegForNode(const TreePatternNode &Op,
-                                  const CodeGenTarget &Target) {
+static std::string PhyRegForNode(TreePatternNode &Op,
+                                 const CodeGenTarget &Target) {
   std::string PhysReg;
 
   if (!Op.isLeaf())
@@ -476,7 +478,8 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // For now, ignore multi-instruction patterns.
     bool MultiInsts = false;
-    for (const TreePatternNode &ChildOp : Dst.children()) {
+    for (unsigned i = 0, e = Dst.getNumChildren(); i != e; ++i) {
+      TreePatternNode &ChildOp = Dst.getChild(i);
       if (ChildOp.isLeaf())
         continue;
       if (ChildOp.getOperator()->isSubClassOf("Instruction")) {
@@ -552,18 +555,19 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
       // the mapping from the src to dst patterns is simple.
       bool FoundNonSimplePattern = false;
       unsigned DstIndex = 0;
-      for (const TreePatternNode &SrcChild : InstPatNode.children()) {
-        std::string PhysReg = PhysRegForNode(SrcChild, Target);
+      for (unsigned i = 0, e = InstPatNode.getNumChildren(); i != e; ++i) {
+        std::string PhysReg = PhyRegForNode(InstPatNode.getChild(i), Target);
         if (PhysReg.empty()) {
           if (DstIndex >= Dst.getNumChildren() ||
-              Dst.getChild(DstIndex).getName() != SrcChild.getName()) {
+              Dst.getChild(DstIndex).getName() !=
+                  InstPatNode.getChild(i).getName()) {
             FoundNonSimplePattern = true;
             break;
           }
           ++DstIndex;
         }
 
-        PhysRegInputs.push_back(std::move(PhysReg));
+        PhysRegInputs.push_back(PhysReg);
       }
 
       if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst.getNumChildren())
@@ -587,8 +591,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // Ok, we found a pattern that we can handle. Remember it.
     InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
-                         DstRC, std::move(SubRegNo), std::move(PhysRegInputs),
-                         PredicateCheck);
+                         DstRC, SubRegNo, PhysRegInputs, PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);
 

@@ -279,6 +279,8 @@ public:
 
   bool visit(Function &F);
 
+  bool isTriviallyScalarizable(Intrinsic::ID ID);
+
   // InstVisitor methods.  They return true if the instruction was scalarized,
   // false if nothing changed.
   bool visitInstruction(Instruction &I) { return false; }
@@ -681,6 +683,19 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
   return true;
 }
 
+bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
+  if (isTriviallyVectorizable(ID))
+    return true;
+  // TODO: Move frexp to isTriviallyVectorizable.
+  // https://github.com/llvm/llvm-project/issues/112408
+  switch (ID) {
+  case Intrinsic::frexp:
+    return true;
+  }
+  return Intrinsic::isTargetIntrinsic(ID) &&
+         TTI->isTargetIntrinsicTriviallyScalarizable(ID);
+}
+
 /// If a call to a vector typed intrinsic function, split into a scalar call per
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
@@ -700,7 +715,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -712,7 +727,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   SmallVector<llvm::Type *, 3> Tys;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1, TTI))
+  if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
     Tys.push_back(VS->SplitTy);
 
   if (AreAllVectorsOfMatchingSize) {
@@ -728,7 +743,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       // will only scalarize when the struct elements have the same bitness.
       if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
         return false;
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I, TTI))
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I))
         Tys.push_back(CurrVS->SplitTy);
     }
   }
@@ -752,13 +767,13 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       }
 
       Scattered[I] = scatter(&CI, OpI, *OpVS);
-      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I, TTI)) {
+      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I)) {
         OverloadIdx[I] = Tys.size();
         Tys.push_back(OpVS->SplitTy);
       }
     } else {
       ScalarOperands[I] = OpI;
-      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I, TTI))
+      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
         Tys.push_back(OpI->getType());
     }
   }
@@ -779,7 +794,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       Tys[0] = VS->RemainderTy;
 
     for (unsigned J = 0; J != NumArgs; ++J) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, J) ||
+          TTI->isTargetIntrinsicWithScalarOpAtArg(ID, J)) {
         ScalarCallOps.push_back(ScalarOperands[J]);
       } else {
         ScalarCallOps.push_back(Scattered[J][I]);
@@ -1073,7 +1089,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!F)
       return false;
     Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
       return false;
     // Note: Fall through means Operand is a`CallInst` and it is defined in
     // `isTriviallyScalarizable`.

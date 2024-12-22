@@ -1596,10 +1596,8 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     Prev = Index;
     std::unique_ptr<Arg> XOpenMPTargetArg(Opts.ParseOneArg(Args, Index));
     if (!XOpenMPTargetArg || Index > Prev + 1) {
-      if (!A->isClaimed()) {
-        getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
-            << A->getAsString(Args);
-      }
+      getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+          << A->getAsString(Args);
       continue;
     }
     if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&

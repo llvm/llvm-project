@@ -20,7 +20,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -272,11 +274,10 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 
   /// Get the subgroup size from the target or return a default.
-  static std::optional<int> getSubgroupSize(Operation *op) {
-    auto parentFunc = op->getParentOfType<LLVM::LLVMFuncOp>();
-    if (!parentFunc)
-      return std::nullopt;
-    return parentFunc.getIntelReqdSubGroupSize();
+  static int getSubgroupSize(Operation *op) {
+    return spirv::lookupTargetEnvOrDefault(op)
+        .getResourceLimits()
+        .getSubgroupSize();
   }
 
   static bool hasValidWidth(gpu::ShuffleOp op) {
@@ -409,7 +410,9 @@ struct GPUToLLVMSPVConversionPass final
     RewritePatternSet patterns(context);
 
     LowerToLLVMOptions options(context);
-    options.overrideIndexBitwidth(this->use64bitIndex ? 64 : 32);
+    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
+      options.overrideIndexBitwidth(indexBitwidth);
+
     LLVMTypeConverter converter(context, options);
     LLVMConversionTarget target(*context);
 

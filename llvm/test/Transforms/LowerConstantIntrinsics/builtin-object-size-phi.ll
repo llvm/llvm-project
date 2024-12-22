@@ -118,54 +118,6 @@ if.end:
   ret i64 %size
 }
 
-define dso_local i64 @pick_max_large(i1 %c) local_unnamed_addr {
-; CHECK-LABEL: @pick_max_large(
-; CHECK-NEXT:    [[BUFFER:%.*]] = alloca i8, i64 -7, align 1
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr null, ptr [[BUFFER]]
-; CHECK-NEXT:    ret i64 -1
-;
-  %buffer = alloca i8, i64 -7 ; Actually a very large positive integer
-  %s = select i1 %c, ptr null, ptr %buffer
-  %objsize = tail call i64 @llvm.objectsize.i64.p0(ptr %s, i1 false, i1 false, i1 false)
-  ret i64 %objsize
-
-}
-
-define dso_local i64 @pick_max_one_oob(i1 %c0, i1 %c1) {
-; CHECK-LABEL: @pick_max_one_oob(
-; CHECK-NEXT:    [[P:%.*]] = alloca [2 x i8], align 1
-; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[P_THEN:%.*]] = getelementptr inbounds [2 x i8], ptr [[P]], i64 0, i64 1
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    [[P_ELSE:%.*]] = getelementptr inbounds [2 x i8], ptr [[P]], i64 0, i64 -1
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[P_END:%.*]] = phi ptr [ [[P_ELSE]], [[IF_ELSE]] ], [ [[P_THEN]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[OBJSIZE:%.*]] = select i1 [[C1:%.*]], i64 -1, i64 0
-; CHECK-NEXT:    ret i64 [[OBJSIZE]]
-;
-  %p = alloca [2 x i8], align 1
-  br i1 %c0, label %if.then, label %if.else
-
-if.then:
-  %p.then = getelementptr inbounds [2 x i8], ptr %p, i64 0, i64 1
-  br label %if.end
-
-if.else:
-  %p.else = getelementptr inbounds [2 x i8], ptr %p, i64 0, i64 -1
-  br label %if.end
-
-if.end:
-  %p.end = phi ptr [%p.else, %if.else], [%p.then, %if.then]
-  %objsize.max = call i64 @llvm.objectsize.i64.p0(ptr %p.end, i1 false, i1 true, i1 false)
-  %objsize.min = call i64 @llvm.objectsize.i64.p0(ptr %p.end, i1 true, i1 true, i1 false)
-  %objsize = select i1 %c1, i64 %objsize.max, i64 %objsize.min
-  ret i64 %objsize
-}
-
-
 define i64 @pick_negative_offset(i32 %n) {
 ; CHECK-LABEL: @pick_negative_offset(
 ; CHECK-NEXT:  entry:

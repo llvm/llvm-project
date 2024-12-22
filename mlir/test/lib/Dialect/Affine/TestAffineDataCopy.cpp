@@ -136,7 +136,7 @@ void TestAffineDataCopy::runOnOperation() {
   }
   GreedyRewriteConfig config;
   config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  (void)applyOpPatternsGreedily(copyOps, std::move(patterns), config);
+  (void)applyOpPatternsAndFold(copyOps, std::move(patterns), config);
 }
 
 namespace mlir {

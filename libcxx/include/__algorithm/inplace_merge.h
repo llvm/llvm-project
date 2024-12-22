@@ -20,6 +20,8 @@
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__functional/identity.h>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/destruct_n.h>
@@ -27,6 +29,7 @@
 #include <__memory/unique_temporary_buffer.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

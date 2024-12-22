@@ -19,10 +19,6 @@ namespace llvm {
 
 class AArch64SelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
-  bool isTargetMemoryOpcode(unsigned Opcode) const override;
-
-  bool isTargetStrictFPOpcode(unsigned Opcode) const override;
-
   SDValue EmitMOPS(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
                    SDValue Chain, SDValue Dst, SDValue SrcOrValue, SDValue Size,
                    Align Alignment, bool isVolatile,

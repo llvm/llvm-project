@@ -9,6 +9,7 @@
 // Per-type parsers for executable statements
 
 #include "basic-parsers.h"
+#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
@@ -281,26 +282,18 @@ TYPE_CONTEXT_PARSER("loop control"_en_US,
                 "CONCURRENT" >> concurrentHeader,
                 many(Parser<LocalitySpec>{})))))
 
-// "DO" is a valid statement, so the loop control is optional; but for
-// better recovery from errors in the loop control, don't parse a
-// DO statement with a bad loop control as a DO statement that has
-// no loop control and is followed by garbage.
-static constexpr auto loopControlOrEndOfStmt{
-    construct<std::optional<LoopControl>>(Parser<LoopControl>{}) ||
-    lookAhead(";\n"_ch) >> construct<std::optional<LoopControl>>()};
-
 // R1121 label-do-stmt -> [do-construct-name :] DO label [loop-control]
 // A label-do-stmt with a do-construct-name is parsed as a nonlabel-do-stmt
 // with an optional label.
 TYPE_CONTEXT_PARSER("label DO statement"_en_US,
-    construct<LabelDoStmt>("DO" >> label, loopControlOrEndOfStmt))
+    construct<LabelDoStmt>("DO" >> label, maybe(loopControl)))
 
 // R1122 nonlabel-do-stmt -> [do-construct-name :] DO [loop-control]
 TYPE_CONTEXT_PARSER("nonlabel DO statement"_en_US,
     construct<NonLabelDoStmt>(
-        name / ":", "DO" >> maybe(label), loopControlOrEndOfStmt) ||
+        name / ":", "DO" >> maybe(label), maybe(loopControl)) ||
         construct<NonLabelDoStmt>(construct<std::optional<Name>>(),
-            construct<std::optional<Label>>(), "DO" >> loopControlOrEndOfStmt))
+            construct<std::optional<Label>>(), "DO" >> maybe(loopControl)))
 
 // R1132 end-do-stmt -> END DO [do-construct-name]
 TYPE_CONTEXT_PARSER("END DO statement"_en_US,

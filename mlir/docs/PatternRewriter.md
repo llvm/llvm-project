@@ -73,7 +73,7 @@ public:
     // otherwise.
     // ...
   }
-  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
+  void rewrite(Operation *op, PatternRewriter &rewriter) {
     // The `rewrite` method performs mutations on the IR rooted at `op` using
     // the provided rewriter. All mutations must go through the provided
     // rewriter.
@@ -81,7 +81,7 @@ public:
 
   /// In this section, the `match` and `rewrite` implementation is specified
   /// using a single hook.
-  LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) {
     // The `matchAndRewrite` method performs both the matching and the mutation.
     // Note that the match must reach a successful point before IR mutation may
     // take place.
@@ -358,7 +358,7 @@ which point the driver finishes.
 
 This driver comes in two fashions:
 
-*   `applyPatternsGreedily` ("region-based driver") applies patterns to
+*   `applyPatternsAndFoldGreedily` ("region-based driver") applies patterns to
     all ops in a given region or a given container op (but not the container op
     itself). I.e., the worklist is initialized with all containing ops.
 *   `applyOpPatternsAndFold` ("op-based driver") applies patterns to the
@@ -464,7 +464,7 @@ Passes that utilize rewrite patterns should aim to provide a common set of
 options and toggles to simplify the debugging experience when switching between
 different passes/projects/etc. To aid in this endeavor, MLIR provides a common
 set of utilities that can be easily included when defining a custom pass. These
-are defined in `mlir/Rewrite/PassUtil.td`; an example usage is shown below:
+are defined in `mlir/RewritePassUtil.td`; an example usage is shown below:
 
 ```tablegen
 def MyRewritePass : Pass<"..."> {

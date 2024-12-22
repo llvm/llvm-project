@@ -24,4 +24,4 @@
 #include "math/clc_sqrt.h"
 
 #define __CLC_FUNCTION sqrt
-#include <clc/math/unary_builtin.inc>
+#include "unary_builtin.inc"

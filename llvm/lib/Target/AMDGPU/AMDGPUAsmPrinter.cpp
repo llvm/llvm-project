@@ -1172,16 +1172,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
-  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
-    // LDS is allocated in 320 dword blocks.
-    LDSAlignShift = 11;
-  } else if (STM.getFeatureBits().test(
-                 FeatureAddressableLocalMemorySize65536)) {
-    // LDS is allocated in 128 dword blocks.
-    LDSAlignShift = 9;
-  } else {
+  if (STM.getGeneration() < AMDGPUSubtarget::SEA_ISLANDS) {
     // LDS is allocated in 64 dword blocks.
     LDSAlignShift = 8;
+  } else {
+    // LDS is allocated in 128 dword blocks.
+    LDSAlignShift = 9;
   }
 
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
@@ -1593,6 +1589,9 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
 
   if (UserSGPRInfo.hasPrivateSegmentSize())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
+
+  if (UserSGPRInfo.hasDispatchPtr())
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
   if (STM.isXNACKEnabled())
     Out.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;

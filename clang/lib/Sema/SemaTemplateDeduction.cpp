@@ -376,7 +376,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
     for (TemplateArgument::pack_iterator
              XA = X.pack_begin(),
              XAEnd = X.pack_end(), YA = Y.pack_begin(), YAEnd = Y.pack_end();
-         XA != XAEnd; ++XA) {
+         XA != XAEnd; ++XA, ++YA) {
       if (YA != YAEnd) {
         TemplateArgument Merged = checkDeducedTemplateArguments(
             Context, DeducedTemplateArgument(*XA, X.wasDeducedFromArrayBound()),
@@ -384,7 +384,6 @@ checkDeducedTemplateArguments(ASTContext &Context,
         if (Merged.isNull() && !(XA->isNull() && YA->isNull()))
           return DeducedTemplateArgument();
         NewPack.push_back(Merged);
-        ++YA;
       } else {
         NewPack.push_back(*XA);
       }

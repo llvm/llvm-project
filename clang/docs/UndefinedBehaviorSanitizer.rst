@@ -276,8 +276,8 @@ Stack traces and report symbolization
 If you want UBSan to print symbolized stack trace for each error report, you
 will need to:
 
-#. Compile with ``-g``, ``-fno-sanitize-merge`` and ``-fno-omit-frame-pointer``
-   to get proper debug information in your binary.
+#. Compile with ``-g`` and ``-fno-omit-frame-pointer`` to get proper debug
+   information in your binary.
 #. Run your program with environment variable
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.

@@ -383,7 +383,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
     AffineExpr s1 = builder.getAffineSymbolExpr(1);
     for (; doneStrideIdx < *dynSizeIdx; ++doneStrideIdx) {
       int64_t baseExpandedStride =
-          cast<IntegerAttr>(cast<Attribute>(expandedStrides[doneStrideIdx]))
+          cast<IntegerAttr>(expandedStrides[doneStrideIdx].get<Attribute>())
               .getInt();
       expandedStrides[doneStrideIdx] = makeComposedFoldedAffineApply(
           builder, expandShape.getLoc(),
@@ -396,7 +396,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   AffineExpr s0 = builder.getAffineSymbolExpr(0);
   for (; doneStrideIdx < groupSize; ++doneStrideIdx) {
     int64_t baseExpandedStride =
-        cast<IntegerAttr>(cast<Attribute>(expandedStrides[doneStrideIdx]))
+        cast<IntegerAttr>(expandedStrides[doneStrideIdx].get<Attribute>())
             .getInt();
     expandedStrides[doneStrideIdx] = makeComposedFoldedAffineApply(
         builder, expandShape.getLoc(), s0 * baseExpandedStride, {origStride});
@@ -1223,7 +1223,7 @@ struct ExpandStridedMetadataPass final
 void ExpandStridedMetadataPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateExpandStridedMetadataPatterns(patterns);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<Pass> memref::createExpandStridedMetadataPass() {

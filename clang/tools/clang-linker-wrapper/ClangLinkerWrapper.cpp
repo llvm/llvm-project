@@ -174,13 +174,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "LinkerWrapperOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LinkerWrapperOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
+#undef PREFIX
 
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -190,8 +189,7 @@ static constexpr OptTable::Info InfoTable[] = {
 
 class WrapperOptTable : public opt::GenericOptTable {
 public:
-  WrapperOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  WrapperOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 
 const OptTable &getOptTable() {
@@ -596,7 +594,6 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::ppc64:
   case Triple::ppc64le:
   case Triple::systemz:
-  case Triple::loongarch64:
     return generic::clang(InputFiles, Args);
   default:
     return createStringError(Triple.getArchName() +

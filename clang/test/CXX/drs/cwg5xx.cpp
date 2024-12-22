@@ -184,7 +184,7 @@ namespace cwg522 { // cwg522: yes
     b2(am);
     b2a(am);
     // expected-error@-1 {{no matching function for call to 'b2a'}}
-    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *S::*const *' of 1st parameter does not match adjusted type 'int *S::**' of argument}}
+    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *cwg522::S::*const *' of 1st parameter does not match adjusted type 'int *cwg522::S::**' of argument}}
     b3(d);
     b3(cd);
   }
@@ -1178,70 +1178,17 @@ namespace cwg590 { // cwg590: yes
   template<typename T> typename A<T>::B::C A<T>::B::C::f(A<T>::B::C) {}
 }
 
-namespace cwg591 { // cwg591: 20
+namespace cwg591 { // cwg591: no
   template<typename T> struct A {
     typedef int M;
     struct B {
       typedef void M;
       struct C;
-      struct D;
     };
-  };
-
-  template<typename T> struct G {
-    struct B {
-      typedef int M;
-      struct C {
-        typedef void M;
-        struct D;
-      };
-    };
-  };
-
-  template<typename T> struct H {
-    template<typename U> struct B {
-      typedef int M;
-      template<typename F> struct C {
-        typedef void M;
-        struct D;
-        struct P;
-      };
-    };
-  };
-
-  template <typename, bool> struct M {
-    class P;
-    int M;
   };
 
   template<typename T> struct A<T>::B::C : A<T> {
-    M m;
-  };
-
-  template<typename T> struct G<T>::B::C::D : B {
-    M m;
-  };
-
-  template<typename T>
-  template<typename U>
-  template<typename F>
-  struct H<T>::B<U>::C<F>::D : B<U> {
-    M m;
-  };
-
-  template<typename T, bool B> class M<T,B>::P : M {
-    int foo() { (void) M; }
-  };
-
-  template<typename T> struct A<T>::B::D : A<T*> {
-    M m;
-    // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
-  };
-
-  template<typename T>
-  template<typename U>
-  template<typename F>
-  struct H<T>::B<U>::C<F>::P : B<F> {
+    // FIXME: Should find member of non-dependent base class A<T>.
     M m;
     // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
   };

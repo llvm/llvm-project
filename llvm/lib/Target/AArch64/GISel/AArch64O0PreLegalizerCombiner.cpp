@@ -41,7 +41,8 @@ namespace {
 
 class AArch64O0PreLegalizerCombinerImpl : public Combiner {
 protected:
-  const CombinerHelper Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 

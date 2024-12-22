@@ -125,7 +125,7 @@ static void constifyIndexValues(
       values[it.index()] = builder.getIndexAttr(constValue);
   }
   for (OpFoldResult &ofr : values) {
-    if (auto attr = dyn_cast<Attribute>(ofr)) {
+    if (ofr.is<Attribute>()) {
       // FIXME: We shouldn't need to do that, but right now, the static indices
       // are created with the wrong type: `i64` instead of `index`.
       // As a result, if we were to keep the attribute as is, we may fail to see
@@ -139,11 +139,12 @@ static void constifyIndexValues(
       // The workaround here is to stick to the IndexAttr type for all the
       // values, hence we recreate the attribute even when it is already static
       // to make sure the type is consistent.
-      ofr = builder.getIndexAttr(llvm::cast<IntegerAttr>(attr).getInt());
+      ofr = builder.getIndexAttr(
+          llvm::cast<IntegerAttr>(ofr.get<Attribute>()).getInt());
       continue;
     }
     std::optional<int64_t> maybeConstant =
-        getConstantIntValue(cast<Value>(ofr));
+        getConstantIntValue(ofr.get<Value>());
     if (maybeConstant)
       ofr = builder.getIndexAttr(*maybeConstant);
   }
@@ -1405,11 +1406,12 @@ static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
     // infinite loops in the driver.
     if (result.use_empty() || maybeConstant == getAsOpFoldResult(result))
       continue;
-    assert(isa<Attribute>(maybeConstant) &&
+    assert(maybeConstant.template is<Attribute>() &&
            "The constified value should be either unchanged (i.e., == result) "
            "or a constant");
     Value constantVal = rewriter.create<arith::ConstantIndexOp>(
-        loc, llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
+        loc, llvm::cast<IntegerAttr>(maybeConstant.template get<Attribute>())
+                 .getInt());
     for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
       // modifyOpInPlace: lambda cannot capture structured bindings in C++17
       // yet.

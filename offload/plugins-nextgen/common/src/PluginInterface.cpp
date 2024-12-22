@@ -526,21 +526,20 @@ GenericKernelTy::getKernelLaunchEnvironment(
 
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
-                                       uint32_t NumThreads[3],
-                                       uint32_t NumBlocks[3]) const {
+                                       uint32_t NumThreads,
+                                       uint64_t NumBlocks) const {
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
-       "%s mode\n",
-       getName(), NumBlocks[0], NumBlocks[1], NumBlocks[2], NumThreads[0],
-       NumThreads[1], NumThreads[2], getExecutionModeName());
+       "Launching kernel %s with %" PRIu64
+       " blocks and %d threads in %s mode\n",
+       getName(), NumBlocks, NumThreads, getExecutionModeName());
   return printLaunchInfoDetails(GenericDevice, KernelArgs, NumThreads,
                                 NumBlocks);
 }
 
 Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                               KernelArgsTy &KernelArgs,
-                                              uint32_t NumThreads[3],
-                                              uint32_t NumBlocks[3]) const {
+                                              uint32_t NumThreads,
+                                              uint64_t NumBlocks) const {
   return Plugin::success();
 }
 
@@ -567,16 +566,10 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     Args, Ptrs, *KernelLaunchEnvOrErr);
   }
 
-  uint32_t NumThreads[3] = {KernelArgs.ThreadLimit[0],
-                            KernelArgs.ThreadLimit[1],
-                            KernelArgs.ThreadLimit[2]};
-  uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
-                           KernelArgs.NumTeams[2]};
-  if (!IsBareKernel) {
-    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
-    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
-                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
-  }
+  uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
+  uint64_t NumBlocks =
+      getNumBlocks(GenericDevice, KernelArgs.NumTeams, KernelArgs.Tripcount,
+                   NumThreads, KernelArgs.ThreadLimit[0] > 0);
 
   // Record the kernel description after we modified the argument count and num
   // blocks/threads.
@@ -585,8 +578,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     RecordReplay.saveImage(getName(), getImage());
     RecordReplay.saveKernelInput(getName(), getImage());
     RecordReplay.saveKernelDescr(getName(), LaunchParams, KernelArgs.NumArgs,
-                                 NumBlocks[0], NumThreads[0],
-                                 KernelArgs.Tripcount);
+                                 NumBlocks, NumThreads, KernelArgs.Tripcount);
   }
 
   if (auto Err =
@@ -626,10 +618,11 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause[3]) const {
-  assert(!IsBareKernel && "bare kernel should not call this function");
-
-  assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
+  assert(ThreadLimitClause[1] == 0 && ThreadLimitClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
+
+  if (IsBareKernel && ThreadLimitClause[0] > 0)
+    return ThreadLimitClause[0];
 
   if (ThreadLimitClause[0] > 0 && isGenericMode())
     ThreadLimitClause[0] += GenericDevice.getWarpSize();
@@ -639,15 +632,16 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                      : PreferredNumThreads);
 }
 
-uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
+uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint32_t NumTeamsClause[3],
                                        uint64_t LoopTripCount,
                                        uint32_t &NumThreads,
                                        bool IsNumThreadsFromUser) const {
-  assert(!IsBareKernel && "bare kernel should not call this function");
-
-  assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
+  assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
+
+  if (IsBareKernel && NumTeamsClause[0] > 0)
+    return NumTeamsClause[0];
 
   if (NumTeamsClause[0] > 0) {
     // TODO: We need to honor any value and consequently allow more than the
@@ -2184,4 +2178,12 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
   // Note that this is not the kernel's device address.
   *KernelPtr = &Kernel;
   return OFFLOAD_SUCCESS;
+}
+
+bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  return true;
+#else
+  return false;
+#endif
 }

@@ -55,11 +55,11 @@ declare <vscale x 8 x i64> @llvm.vp.llrint.nxv8i64.nxv8f32(<vscale x 8 x float>,
 define <vscale x 16 x i64> @llrint_nxv16i64_nxv16f32(<vscale x 16 x float> %x, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv16i64_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a3, a0, a1
+; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sltu a2, a0, a3
 ; CHECK-NEXT:    addi a2, a2, -1

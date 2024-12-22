@@ -1,9 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
-; XFAIL: expensive_checks
-
 ; CHECK-DAG: OpName %[[I9:.*]] "_ZN13BaseIncrement9incrementEPi"
 ; CHECK-DAG: OpName %[[I29:.*]] "_ZN12IncrementBy29incrementEPi"
 ; CHECK-DAG: OpName %[[I49:.*]] "_ZN12IncrementBy49incrementEPi"

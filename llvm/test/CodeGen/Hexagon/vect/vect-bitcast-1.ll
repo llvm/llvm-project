@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -march=hexagon < %s
 ; REQUIRES: asserts
 ; Used to fail with: Assertion `VT.getSizeInBits() == Operand.getValueType().getSizeInBits() && "Cannot BITCAST between types of different sizes!"' failed.
 

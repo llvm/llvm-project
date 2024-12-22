@@ -397,7 +397,7 @@ RenamerClangTidyCheck::RenamerClangTidyCheck(StringRef CheckName,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(CheckName, Context),
       AggressiveDependentMemberLookup(
-          Options.get("AggressiveDependentMemberLookup", false)) {}
+          Options.getLocalOrGlobal("AggressiveDependentMemberLookup", false)) {}
 RenamerClangTidyCheck::~RenamerClangTidyCheck() = default;
 
 void RenamerClangTidyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

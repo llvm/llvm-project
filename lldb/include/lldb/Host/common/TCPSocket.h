@@ -13,14 +13,13 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
 #include <map>
-#include <string>
-#include <vector>
 
 namespace lldb_private {
 class TCPSocket : public Socket {
 public:
-  explicit TCPSocket(bool should_close);
-  TCPSocket(NativeSocket socket, bool should_close);
+  TCPSocket(bool should_close, bool child_processes_inherit);
+  TCPSocket(NativeSocket socket, bool should_close,
+            bool child_processes_inherit);
   ~TCPSocket() override;
 
   // returns port number or 0 if error
@@ -53,8 +52,6 @@ public:
   bool IsValid() const override;
 
   std::string GetRemoteConnectionURI() const override;
-
-  std::vector<std::string> GetListeningConnectionURI() const override;
 
 private:
   TCPSocket(NativeSocket socket, const TCPSocket &listen_socket);

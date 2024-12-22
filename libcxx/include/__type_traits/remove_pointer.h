@@ -32,11 +32,11 @@ using __remove_pointer_t = __remove_pointer(_Tp);
 #  endif
 #else
 // clang-format off
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer                      {using type _LIBCPP_NODEBUG = _Tp;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp*>                {using type _LIBCPP_NODEBUG = _Tp;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* const>          {using type _LIBCPP_NODEBUG = _Tp;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* volatile>       {using type _LIBCPP_NODEBUG = _Tp;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* const volatile> {using type _LIBCPP_NODEBUG = _Tp;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer                      {typedef _LIBCPP_NODEBUG _Tp type;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp*>                {typedef _LIBCPP_NODEBUG _Tp type;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* const>          {typedef _LIBCPP_NODEBUG _Tp type;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* volatile>       {typedef _LIBCPP_NODEBUG _Tp type;};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* const volatile> {typedef _LIBCPP_NODEBUG _Tp type;};
 // clang-format on
 
 template <class _Tp>

@@ -3,8 +3,7 @@
 
 !CHECK-LABEL: func private @_copy_box_ptr_i32(
 !CHECK-SAME:                  %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>,
-!CHECK-SAME:                  %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>)
-!CHECK-SAME:                  attributes {llvm.linkage = #llvm.linkage<internal>} {
+!CHECK-SAME:                  %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>) {
 !CHECK-NEXT:    %[[DST:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<pointer>,
 !CHECK-SAME:      uniq_name = "_copy_box_ptr_i32_dst"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) ->
 !CHECK-SAME:      (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
@@ -18,8 +17,7 @@
 
 !CHECK-LABEL: func private @_copy_box_heap_Uxi32(
 !CHECK-SAME:        %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>,
-!CHECK-SAME:        %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-!CHECK-SAME:        attributes {llvm.linkage = #llvm.linkage<internal>} {
+!CHECK-SAME:        %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
 !CHECK-NEXT:    %[[DST:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<allocatable>,
 !CHECK-SAME:      uniq_name = "_copy_box_heap_Uxi32_dst"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
 !CHECK-SAME:      (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)

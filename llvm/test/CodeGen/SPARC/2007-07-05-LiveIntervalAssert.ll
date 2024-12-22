@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=sparc
+; RUN: llc < %s -march=sparc
 ; PR1540
 
 declare float @sinf(float)

@@ -11,6 +11,7 @@
 #include "LanaiInstrInfo.h"
 #include "MCTargetDesc/LanaiMCExpr.h"
 #include "TargetInfo/LanaiTargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>

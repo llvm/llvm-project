@@ -64,8 +64,7 @@ static llvm::DenseMap<const ValueDecl *, StorageLocation *> intersectDeclToLoc(
 // expression must map to the same location / value. This is the case if we are
 // performing a join for control flow within a full-expression (which is the
 // only case when this function should be used).
-template <typename MapT>
-static MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
+template <typename MapT> MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
   MapT Result = Map1;
 
   for (const auto &Entry : Map2) {
@@ -205,11 +204,10 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
 // Returns whether the values in `Map1` and `Map2` compare equal for those
 // keys that `Map1` and `Map2` have in common.
 template <typename Key>
-static bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
-                                  const llvm::MapVector<Key, Value *> &Map2,
-                                  const Environment &Env1,
-                                  const Environment &Env2,
-                                  Environment::ValueModel &Model) {
+bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
+                           const llvm::MapVector<Key, Value *> &Map2,
+                           const Environment &Env1, const Environment &Env2,
+                           Environment::ValueModel &Model) {
   for (auto &Entry : Map1) {
     Key K = Entry.first;
     assert(K != nullptr);
@@ -262,7 +260,7 @@ joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
 // Perform widening on either `LocToVal` or `ExprToVal`. `Key` must be either
 // `const StorageLocation *` or `const Expr *`.
 template <typename Key>
-static llvm::MapVector<Key, Value *>
+llvm::MapVector<Key, Value *>
 widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
                    const llvm::MapVector<Key, Value *> &PrevMap,
                    Environment &CurEnv, const Environment &PrevEnv,

@@ -777,8 +777,8 @@ INITIALIZE_PASS_BEGIN(LoopSimplify, "loop-simplify",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(LoopSimplify, "loop-simplify", "Canonicalize natural loops",
-                    false, true)
+INITIALIZE_PASS_END(LoopSimplify, "loop-simplify",
+                "Canonicalize natural loops", false, false)
 
 // Publicly exposed interface to pass...
 char &llvm::LoopSimplifyID = LoopSimplify::ID;

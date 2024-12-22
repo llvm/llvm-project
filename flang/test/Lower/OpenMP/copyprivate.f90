@@ -31,7 +31,7 @@
 !CHECK-DAG: func private @_copy_box_ptr_Uxc8x9(%{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>)
 
 !CHECK-LABEL: func private @_copy_i32(
-!CHECK-SAME:                  %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<i32>) attributes {llvm.linkage = #llvm.linkage<internal>} {
+!CHECK-SAME:                  %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<i32>) {
 !CHECK-NEXT:    %[[DST:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_copy_i32_dst"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[SRC:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_copy_i32_src"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = fir.load %[[SRC]]#0 : !fir.ref<i32>

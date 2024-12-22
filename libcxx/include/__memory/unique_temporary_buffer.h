@@ -16,9 +16,8 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/allocator.h>
 #include <__memory/unique_ptr.h>
-#include <__new/allocate.h>
-#include <__new/global_new_delete.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

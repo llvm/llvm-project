@@ -145,7 +145,7 @@ bool TextOutputSection::needsThunks() const {
     for (Reloc &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;
-      auto *sym = cast<Symbol *>(r.referent);
+      auto *sym = r.referent.get<Symbol *>();
       // Pre-populate the thunkMap and memoize call site counts for every
       // InputSection and ThunkInfo. We do this for the benefit of
       // estimateStubsInRangeVA().
@@ -297,7 +297,7 @@ void TextOutputSection::finalize() {
           backwardBranchRange < callVA ? callVA - backwardBranchRange : 0;
       uint64_t highVA = callVA + forwardBranchRange;
       // Calculate our call referent address
-      auto *funcSym = cast<Symbol *>(r.referent);
+      auto *funcSym = r.referent.get<Symbol *>();
       ThunkInfo &thunkInfo = thunkMap[funcSym];
       // The referent is not reachable, so we need to use a thunk ...
       if (funcSym->isInStubs() && callVA >= stubsInRangeVA) {

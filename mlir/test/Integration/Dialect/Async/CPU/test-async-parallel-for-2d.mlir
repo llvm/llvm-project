@@ -4,11 +4,9 @@
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-cf                                       \
-// RUN:               -finalize-memref-to-llvm                                 \
-// RUN:               -convert-func-to-llvm                                    \
-// RUN:               -convert-arith-to-llvm                                   \
-// RUN:               -convert-cf-to-llvm                                      \
+// RUN:               -convert-scf-to-cf                                      \
+// RUN:               -finalize-memref-to-llvm                                  \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
@@ -21,11 +19,9 @@
 // RUN:               -async-runtime-policy-based-ref-counting                 \
 // RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-cf                                       \
-// RUN:               -finalize-memref-to-llvm                                 \
-// RUN:               -convert-func-to-llvm                                    \
-// RUN:               -convert-arith-to-llvm                                   \
-// RUN:               -convert-cf-to-llvm                                      \
+// RUN:               -convert-scf-to-cf                                      \
+// RUN:               -finalize-memref-to-llvm                                  \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
@@ -41,11 +37,9 @@
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-cf                                       \
-// RUN:               -finalize-memref-to-llvm                                 \
-// RUN:               -convert-func-to-llvm                                    \
-// RUN:               -convert-arith-to-llvm                                   \
-// RUN:               -convert-cf-to-llvm                                      \
+// RUN:               -convert-scf-to-cf                                      \
+// RUN:               -finalize-memref-to-llvm                                  \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \

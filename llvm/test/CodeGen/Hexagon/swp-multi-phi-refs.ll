@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O3 < %s
+; RUN: llc -march=hexagon -O3 < %s
 ; REQUIRES: asserts
 
 ; Test that we generate the correct names for Phis when there is

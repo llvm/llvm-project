@@ -1142,9 +1142,10 @@ define <2 x half> @ucvtf_v2i64_v2f16(<2 x i64> %op1) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ucvtf z1.h, p0/m, z1.d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    ucvtf h0, x8
+; CHECK-NEXT:    ucvtf h1, x9
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -2595,9 +2596,10 @@ define <2 x half> @scvtf_v2i64_v2f16(<2 x i64> %op1) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    scvtf z1.h, p0/m, z1.d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    scvtf h0, x8
+; CHECK-NEXT:    scvtf h1, x9
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -2793,10 +2795,7 @@ define half @scvtf_i16_f16(ptr %0) {
 ; CHECK-LABEL: scvtf_i16_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrsh w8, [x0]
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    scvtf h0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_i16_f16:
@@ -2814,10 +2813,7 @@ define float @scvtf_i16_f32(ptr %0) {
 ; CHECK-LABEL: scvtf_i16_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrsh w8, [x0]
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    scvtf s0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_i16_f32:
@@ -2850,10 +2846,8 @@ define double @scvtf_i16_f64(ptr %0) {
 define half @scvtf_i32_f16(ptr %0) {
 ; CHECK-LABEL: scvtf_i32_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    scvtf h0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_i32_f16:
@@ -2870,10 +2864,8 @@ define half @scvtf_i32_f16(ptr %0) {
 define float @scvtf_i32_f32(ptr %0) {
 ; CHECK-LABEL: scvtf_i32_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    scvtf s0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_i32_f32:
@@ -2906,10 +2898,8 @@ define double @scvtf_i32_f64(ptr %0) {
 define half @scvtf_i64_f16(ptr %0) {
 ; CHECK-LABEL: scvtf_i64_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    scvtf h0, x8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_i64_f16:
@@ -2926,10 +2916,8 @@ define half @scvtf_i64_f16(ptr %0) {
 define float @scvtf_i64_f32(ptr %0) {
 ; CHECK-LABEL: scvtf_i64_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    scvtf s0, x8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_i64_f32:
@@ -2945,10 +2933,8 @@ define float @scvtf_i64_f32(ptr %0) {
 define double @scvtf_i64_f64(ptr %0) {
 ; CHECK-LABEL: scvtf_i64_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    scvtf d0, x8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_i64_f64:
@@ -2965,10 +2951,7 @@ define half @ucvtf_i16_f16(ptr %0) {
 ; CHECK-LABEL: ucvtf_i16_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ucvtf h0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_i16_f16:
@@ -2986,10 +2969,7 @@ define float @ucvtf_i16_f32(ptr %0) {
 ; CHECK-LABEL: ucvtf_i16_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ucvtf s0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_i16_f32:
@@ -3022,10 +3002,8 @@ define double @ucvtf_i16_f64(ptr %0) {
 define half @ucvtf_i32_f16(ptr %0) {
 ; CHECK-LABEL: ucvtf_i32_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ucvtf h0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_i32_f16:
@@ -3042,10 +3020,8 @@ define half @ucvtf_i32_f16(ptr %0) {
 define float @ucvtf_i32_f32(ptr %0) {
 ; CHECK-LABEL: ucvtf_i32_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ucvtf s0, w8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_i32_f32:
@@ -3078,10 +3054,8 @@ define double @ucvtf_i32_f64(ptr %0) {
 define half @ucvtf_i64_f16(ptr %0) {
 ; CHECK-LABEL: ucvtf_i64_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ucvtf h0, x8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_i64_f16:
@@ -3098,10 +3072,8 @@ define half @ucvtf_i64_f16(ptr %0) {
 define float @ucvtf_i64_f32(ptr %0) {
 ; CHECK-LABEL: ucvtf_i64_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ucvtf s0, x8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_i64_f32:
@@ -3117,10 +3089,8 @@ define float @ucvtf_i64_f32(ptr %0) {
 define double @ucvtf_i64_f64(ptr %0) {
 ; CHECK-LABEL: ucvtf_i64_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ucvtf d0, x8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_i64_f64:

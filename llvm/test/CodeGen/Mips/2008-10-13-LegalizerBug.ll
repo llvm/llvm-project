@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=mips
+; RUN: llc < %s -march=mips
 ; PR2794
 
 define i32 @main(ptr) nounwind {

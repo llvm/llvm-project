@@ -10,8 +10,6 @@
 
 // tuple_element<I, array<T, N> >::type
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <array>
 #include <cassert>
 

@@ -19,6 +19,7 @@
 #include <atomic>
 #include <fcntl.h>
 #include <functional>
+#include <thread>
 
 #ifndef _WIN32
 #include <poll.h>

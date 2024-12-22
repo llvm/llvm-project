@@ -671,7 +671,7 @@ void SystemZDAGToDAGISel::getAddressOperands(const SystemZAddressingMode &AM,
   }
 
   // Lower the displacement to a TargetConstant.
-  Disp = CurDAG->getSignedTargetConstant(AM.Disp, SDLoc(Base), VT);
+  Disp = CurDAG->getTargetConstant(AM.Disp, SDLoc(Base), VT);
 }
 
 void SystemZDAGToDAGISel::getAddressOperands(const SystemZAddressingMode &AM,
@@ -1886,11 +1886,11 @@ SystemZDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
     // physical CC register, which in turn is glued and chained to the
     // actual instruction that uses the CC value.  Bail out if we have
     // anything else than that.
-    SDNode *CCUser = *U->user_begin();
+    SDNode *CCUser = *U->use_begin();
     SDNode *CCRegUser = nullptr;
     if (CCUser->getOpcode() == ISD::CopyToReg ||
         cast<RegisterSDNode>(CCUser->getOperand(1))->getReg() == SystemZ::CC) {
-      for (auto *U : CCUser->users()) {
+      for (auto *U : CCUser->uses()) {
         if (CCRegUser == nullptr)
           CCRegUser = U;
         else if (CCRegUser != U)
@@ -2024,9 +2024,8 @@ SDValue SystemZDAGToDAGISel::expandSelectBoolean(SDNode *Node) {
                              CurDAG->getConstant(IPM.XORValue, DL, MVT::i32));
 
   if (IPM.AddValue)
-    Result =
-        CurDAG->getNode(ISD::ADD, DL, MVT::i32, Result,
-                        CurDAG->getSignedConstant(IPM.AddValue, DL, MVT::i32));
+    Result = CurDAG->getNode(ISD::ADD, DL, MVT::i32, Result,
+                             CurDAG->getConstant(IPM.AddValue, DL, MVT::i32));
 
   EVT VT = Node->getValueType(0);
   if (VT == MVT::i32 && IPM.Bit == 31) {

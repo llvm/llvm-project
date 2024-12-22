@@ -80,7 +80,9 @@ public:
 
   void linkerMain(llvm::ArrayRef<const char *> args);
 
-  void setMachine(llvm::COFF::MachineTypes machine);
+  // Adds various search paths based on the sysroot.  Must only be called once
+  // config->machine has been set.
+  void addWinSysRootLibSearchPaths();
 
   void addClangLibSearchPaths(const std::string &argv0);
 
@@ -113,10 +115,6 @@ private:
 
   // Determines the location of the sysroot based on `args`, environment, etc.
   void detectWinSysRoot(const llvm::opt::InputArgList &args);
-
-  // Adds various search paths based on the sysroot.  Must only be called once
-  // config->machine has been set.
-  void addWinSysRootLibSearchPaths();
 
   // Symbol names are mangled by prepending "_" on x86.
   StringRef mangle(StringRef sym);
@@ -197,6 +195,7 @@ private:
   bool run();
 
   std::list<std::function<void()>> taskQueue;
+  std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 
   llvm::DenseSet<StringRef> directivesExports;

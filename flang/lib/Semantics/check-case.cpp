@@ -253,10 +253,6 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
       common::SearchTypes(
           TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
       return;
-    case TypeCategory::Unsigned:
-      common::SearchTypes(
-          TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
-      return;
     case TypeCategory::Logical:
       CaseValues<evaluate::Type<TypeCategory::Logical, 1>>{context_, *exprType}
           .Check(caseList);
@@ -270,8 +266,6 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
     }
   }
   context_.Say(selectExpr.source,
-      context_.IsEnabled(common::LanguageFeature::Unsigned)
-          ? "SELECT CASE expression must be integer, unsigned, logical, or character"_err_en_US
-          : "SELECT CASE expression must be integer, logical, or character"_err_en_US);
+      "SELECT CASE expression must be integer, logical, or character"_err_en_US);
 }
 } // namespace Fortran::semantics

@@ -14,6 +14,7 @@
 
 #include "BPFCallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "bpf-call-lowering"
 

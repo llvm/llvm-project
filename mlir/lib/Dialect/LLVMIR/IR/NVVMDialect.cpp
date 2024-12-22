@@ -75,26 +75,21 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
-// This verifier is shared among the following Ops:
-// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
-// CpAsyncBulkTensorPrefetchOp (TMA Prefetch)
-// CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
+// This verifier is shared across:
+// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load) and
+// CpAsyncBulkTensorPrefetchOp (TMA Prefetch) Ops.
 static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
-                                                     bool isIm2Col,
                                                      size_t numIm2ColOffsets,
                                                      Location loc) {
   if (tensorDims < 1 || tensorDims > 5)
     return emitError(loc, "expects coordinates between 1 to 5 dimension");
 
-  // For Im2Col mode, there are two constraints:
-  if (isIm2Col) {
-    // 1. Tensor must always be at least 3-d.
+  if (numIm2ColOffsets) {
     if (tensorDims < 3)
       return emitError(
           loc,
           "to use im2col mode, the tensor has to be at least 3-dimensional");
-    // 2. When there are Im2ColOffsets, they must be (Dims - 2) in number.
-    if (numIm2ColOffsets && (tensorDims != (numIm2ColOffsets + 2)))
+    if (tensorDims != (numIm2ColOffsets + 2))
       return emitError(
           loc, "im2col offsets must be 2 less than number of coordinates");
   }
@@ -102,10 +97,8 @@ static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
 }
 
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  size_t numIm2ColOffsets = getIm2colOffsets().size();
-  bool isIm2Col = numIm2ColOffsets > 0;
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
-                                         numIm2ColOffsets, getLoc());
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
+                                         getIm2colOffsets().size(), getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
@@ -126,16 +119,8 @@ LogicalResult CpAsyncOp::verify() {
 }
 
 LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
-  size_t numIm2ColOffsets = getIm2colOffsets().size();
-  bool isIm2Col = numIm2ColOffsets > 0;
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
-                                         numIm2ColOffsets, getLoc());
-}
-
-LogicalResult CpAsyncBulkTensorReduceOp::verify() {
-  bool isIm2Col = (getMode() == TMAStoreMode::IM2COL);
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col, 0,
-                                         getLoc());
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
+                                         getIm2colOffsets().size(), getLoc());
 }
 
 // Given the element type of an operand and whether or not it is an accumulator,
@@ -1109,55 +1094,6 @@ llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
   }
 }
 
-#define CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, mode)                        \
-  llvm::Intrinsic::nvvm_cp_async_bulk_tensor_##op##_##mode##_##dim##d
-
-#define CP_ASYNC_BULK_TENSOR_REDUCE(op, dim, is_im2col)                        \
-  is_im2col ? CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, im2col)                \
-            : CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, tile)
-
-#define GET_CP_ASYNC_BULK_TENSOR_ID(op, dims, is_im2col)                       \
-  [&]() -> auto {                                                              \
-    switch (dims) {                                                            \
-    case 1:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                    \
-    case 2:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 2, tile);                    \
-    case 3:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 3, is_im2col);                    \
-    case 4:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 4, is_im2col);                    \
-    case 5:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 5, is_im2col);                    \
-    default:                                                                   \
-      llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorReduceOp.");     \
-    }                                                                          \
-  }()
-
-llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
-    int tensorDims, NVVM::TMAReduxKind kind, bool isIm2Col) {
-  using RedTy = NVVM::TMAReduxKind;
-  switch (kind) {
-  case RedTy::ADD:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_add, tensorDims, isIm2Col);
-  case RedTy::MIN:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_min, tensorDims, isIm2Col);
-  case RedTy::MAX:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_max, tensorDims, isIm2Col);
-  case RedTy::INC:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_inc, tensorDims, isIm2Col);
-  case RedTy::DEC:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_dec, tensorDims, isIm2Col);
-  case RedTy::AND:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_and, tensorDims, isIm2Col);
-  case RedTy::OR:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_or, tensorDims, isIm2Col);
-  case RedTy::XOR:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_xor, tensorDims, isIm2Col);
-  }
-  llvm_unreachable("Invalid Reduction Op for CpAsyncBulkTensorReduceOp");
-}
-
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
@@ -1190,22 +1126,18 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
                              << "' attribute attached to unexpected op";
     }
   }
-  // If maxntid / reqntid / cluster_dim exist, it must be an array with max 3
-  // dim
+  // If maxntid and reqntid exist, it must be an array with max 3 dim
   if (attrName == NVVMDialect::getMaxntidAttrName() ||
-      attrName == NVVMDialect::getReqntidAttrName() ||
-      attrName == NVVMDialect::getClusterDimAttrName()) {
+      attrName == NVVMDialect::getReqntidAttrName()) {
     auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
     if (!values || values.empty() || values.size() > 3)
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
   }
-  // If minctasm / maxnreg / cluster_max_blocks exist, it must be an integer
-  // attribute
+  // If minctasm and maxnreg exist, it must be an integer attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
-      attrName == NVVMDialect::getMaxnregAttrName() ||
-      attrName == NVVMDialect::getClusterMaxBlocksAttrName()) {
+      attrName == NVVMDialect::getMaxnregAttrName()) {
     if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";

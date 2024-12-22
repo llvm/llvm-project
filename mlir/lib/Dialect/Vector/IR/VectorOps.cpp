@@ -327,8 +327,8 @@ SmallVector<int64_t> vector::getAsIntegers(ArrayRef<OpFoldResult> foldResults) {
   SmallVector<int64_t> ints;
   llvm::transform(
       foldResults, std::back_inserter(ints), [](OpFoldResult foldResult) {
-        assert(isa<Attribute>(foldResult) && "Unexpected non-constant index");
-        return cast<IntegerAttr>(cast<Attribute>(foldResult)).getInt();
+        assert(foldResult.is<Attribute>() && "Unexpected non-constant index");
+        return cast<IntegerAttr>(foldResult.get<Attribute>()).getInt();
       });
   return ints;
 }
@@ -346,7 +346,7 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
                               loc, cast<IntegerAttr>(attr).getInt())
                           .getResult();
 
-                    return cast<Value>(foldResult);
+                    return foldResult.get<Value>();
                   });
   return values;
 }
@@ -1353,8 +1353,8 @@ LogicalResult vector::ExtractOp::verify() {
     return emitOpError(
         "expected position attribute of rank no greater than vector rank");
   for (auto [idx, pos] : llvm::enumerate(position)) {
-    if (auto attr = dyn_cast<Attribute>(pos)) {
-      int64_t constIdx = cast<IntegerAttr>(attr).getInt();
+    if (pos.is<Attribute>()) {
+      int64_t constIdx = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
       if (constIdx < 0 || constIdx >= getSourceVectorType().getDimSize(idx)) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
@@ -1754,6 +1754,11 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
 
   auto shapeCastOp = extractOp.getVector().getDefiningOp<vector::ShapeCastOp>();
   if (!shapeCastOp)
+    return Value();
+
+  // 0-D vectors not supported.
+  assert(!hasZeroDimVectors(extractOp) && "0-D vectors not supported");
+  if (hasZeroDimVectors(shapeCastOp))
     return Value();
 
   // Get the nth dimension size starting from lowest dimension.
@@ -4116,11 +4121,6 @@ VectorType mlir::vector::inferTransferOpMaskType(VectorType vecType,
   AffineMap invPermMap = inversePermutation(compressUnusedDims(permMap));
   assert(invPermMap && "Inversed permutation map couldn't be computed");
   SmallVector<int64_t, 8> maskShape = invPermMap.compose(vecType.getShape());
-
-  // The MaskOp specification doesn't support 0-D vectors at the moment. Turn a
-  // 0-D mask into a single-element 1-D mask.
-  if (maskShape.empty())
-    maskShape.push_back(1);
 
   SmallVector<bool> scalableDims =
       applyPermutationMap(invPermMap, vecType.getScalableDims());
@@ -6499,6 +6499,188 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                 SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
+}
+
+//===----------------------------------------------------------------------===//
+// WarpExecuteOnLane0Op
+//===----------------------------------------------------------------------===//
+
+void WarpExecuteOnLane0Op::print(OpAsmPrinter &p) {
+  p << "(" << getLaneid() << ")";
+
+  SmallVector<StringRef> coreAttr = {getWarpSizeAttrName()};
+  auto warpSizeAttr = getOperation()->getAttr(getWarpSizeAttrName());
+  p << "[" << llvm::cast<IntegerAttr>(warpSizeAttr).getInt() << "]";
+
+  if (!getArgs().empty())
+    p << " args(" << getArgs() << " : " << getArgs().getTypes() << ")";
+  if (!getResults().empty())
+    p << " -> (" << getResults().getTypes() << ')';
+  p << " ";
+  p.printRegion(getRegion(),
+                /*printEntryBlockArgs=*/true,
+                /*printBlockTerminators=*/!getResults().empty());
+  p.printOptionalAttrDict(getOperation()->getAttrs(), coreAttr);
+}
+
+ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
+                                        OperationState &result) {
+  // Create the region.
+  result.regions.reserve(1);
+  Region *warpRegion = result.addRegion();
+
+  auto &builder = parser.getBuilder();
+  OpAsmParser::UnresolvedOperand laneId;
+
+  // Parse predicate operand.
+  if (parser.parseLParen() ||
+      parser.parseOperand(laneId, /*allowResultNumber=*/false) ||
+      parser.parseRParen())
+    return failure();
+
+  int64_t warpSize;
+  if (parser.parseLSquare() || parser.parseInteger(warpSize) ||
+      parser.parseRSquare())
+    return failure();
+  result.addAttribute(getWarpSizeAttrName(OperationName(getOperationName(),
+                                                        builder.getContext())),
+                      builder.getI64IntegerAttr(warpSize));
+
+  if (parser.resolveOperand(laneId, builder.getIndexType(), result.operands))
+    return failure();
+
+  llvm::SMLoc inputsOperandsLoc;
+  SmallVector<OpAsmParser::UnresolvedOperand> inputsOperands;
+  SmallVector<Type> inputTypes;
+  if (succeeded(parser.parseOptionalKeyword("args"))) {
+    if (parser.parseLParen())
+      return failure();
+
+    inputsOperandsLoc = parser.getCurrentLocation();
+    if (parser.parseOperandList(inputsOperands) ||
+        parser.parseColonTypeList(inputTypes) || parser.parseRParen())
+      return failure();
+  }
+  if (parser.resolveOperands(inputsOperands, inputTypes, inputsOperandsLoc,
+                             result.operands))
+    return failure();
+
+  // Parse optional results type list.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+  // Parse the region.
+  if (parser.parseRegion(*warpRegion, /*arguments=*/{},
+                         /*argTypes=*/{}))
+    return failure();
+  WarpExecuteOnLane0Op::ensureTerminator(*warpRegion, builder, result.location);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  return success();
+}
+
+void WarpExecuteOnLane0Op::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  // The warp region is always executed
+  regions.push_back(RegionSuccessor(&getWarpRegion()));
+}
+
+void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
+                                 TypeRange resultTypes, Value laneId,
+                                 int64_t warpSize) {
+  build(builder, result, resultTypes, laneId, warpSize,
+        /*operands=*/std::nullopt, /*argTypes=*/std::nullopt);
+}
+
+void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
+                                 TypeRange resultTypes, Value laneId,
+                                 int64_t warpSize, ValueRange args,
+                                 TypeRange blockArgTypes) {
+  result.addOperands(laneId);
+  result.addAttribute(getAttributeNames()[0],
+                      builder.getI64IntegerAttr(warpSize));
+  result.addTypes(resultTypes);
+  result.addOperands(args);
+  assert(args.size() == blockArgTypes.size());
+  OpBuilder::InsertionGuard guard(builder);
+  Region *warpRegion = result.addRegion();
+  Block *block = builder.createBlock(warpRegion);
+  for (auto [type, arg] : llvm::zip_equal(blockArgTypes, args))
+    block->addArgument(type, arg.getLoc());
+}
+
+/// Helper check if the distributed vector type is consistent with the expanded
+/// type and distributed size.
+static LogicalResult verifyDistributedType(Type expanded, Type distributed,
+                                           int64_t warpSize, Operation *op) {
+  // If the types matches there is no distribution.
+  if (expanded == distributed)
+    return success();
+  auto expandedVecType = llvm::dyn_cast<VectorType>(expanded);
+  auto distributedVecType = llvm::dyn_cast<VectorType>(distributed);
+  if (!expandedVecType || !distributedVecType)
+    return op->emitOpError("expected vector type for distributed operands.");
+  if (expandedVecType.getRank() != distributedVecType.getRank() ||
+      expandedVecType.getElementType() != distributedVecType.getElementType())
+    return op->emitOpError(
+        "expected distributed vectors to have same rank and element type.");
+
+  SmallVector<int64_t> scales(expandedVecType.getRank(), 1);
+  for (int64_t i = 0, e = expandedVecType.getRank(); i < e; i++) {
+    int64_t eDim = expandedVecType.getDimSize(i);
+    int64_t dDim = distributedVecType.getDimSize(i);
+    if (eDim == dDim)
+      continue;
+    if (eDim % dDim != 0)
+      return op->emitOpError()
+             << "expected expanded vector dimension #" << i << " (" << eDim
+             << ") to be a multipler of the distributed vector dimension ("
+             << dDim << ")";
+    scales[i] = eDim / dDim;
+  }
+  if (std::accumulate(scales.begin(), scales.end(), 1,
+                      std::multiplies<int64_t>()) != warpSize)
+    return op->emitOpError()
+           << "incompatible distribution dimensions from " << expandedVecType
+           << " to " << distributedVecType << " with warp size = " << warpSize;
+
+  return success();
+}
+
+LogicalResult WarpExecuteOnLane0Op::verify() {
+  if (getArgs().size() != getWarpRegion().getNumArguments())
+    return emitOpError(
+        "expected same number op arguments and block arguments.");
+  auto yield =
+      cast<YieldOp>(getWarpRegion().getBlocks().begin()->getTerminator());
+  if (yield.getNumOperands() != getNumResults())
+    return emitOpError(
+        "expected same number of yield operands and return values.");
+  int64_t warpSize = getWarpSize();
+  for (auto [regionArg, arg] :
+       llvm::zip_equal(getWarpRegion().getArguments(), getArgs())) {
+    if (failed(verifyDistributedType(regionArg.getType(), arg.getType(),
+                                     warpSize, getOperation())))
+      return failure();
+  }
+  for (auto [yieldOperand, result] :
+       llvm::zip_equal(yield.getOperands(), getResults())) {
+    if (failed(verifyDistributedType(yieldOperand.getType(), result.getType(),
+                                     warpSize, getOperation())))
+      return failure();
+  }
+  return success();
+}
+
+bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
+  return succeeded(
+      verifyDistributedType(lhs, rhs, getWarpSize(), getOperation()));
 }
 
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,

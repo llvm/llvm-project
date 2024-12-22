@@ -38,6 +38,8 @@ namespace __locale {
 //
 using __locale_t = ::locale_t;
 
+inline _LIBCPP_HIDE_FROM_ABI __locale_t __uselocale(__locale_t __loc) { return ::uselocale(__loc); }
+
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __locale, __locale_t __base) {
   return ::newlocale(__category_mask, __locale, __base);
 }

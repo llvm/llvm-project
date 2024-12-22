@@ -268,7 +268,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
-  BatchAAResults BatchAA(AA, &EEA);
+  BatchAAResults BatchAA(AA, &EII);
   return getPointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst, Limit,
                                   BatchAA);
 }
@@ -1066,18 +1066,40 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // Invariant loads don't participate in caching. Thus no need to reconcile.
   if (!isInvariantLoad && !Pair.second) {
     if (CacheInfo->Size != Loc.Size) {
-      // The query's Size is not equal to the cached one. Throw out the cached
-      // data and proceed with the query with the new size.
-      CacheInfo->Pair = BBSkipFirstBlockPair();
-      CacheInfo->Size = Loc.Size;
-      for (auto &Entry : CacheInfo->NonLocalDeps)
-        if (Instruction *Inst = Entry.getResult().getInst())
-          RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
-      CacheInfo->NonLocalDeps.clear();
-      // The cache is cleared (in the above line) so we will have lost
-      // information about blocks we have already visited. We therefore must
-      // assume that the cache information is incomplete.
-      IsIncomplete = true;
+      bool ThrowOutEverything;
+      if (CacheInfo->Size.hasValue() && Loc.Size.hasValue()) {
+        // FIXME: We may be able to do better in the face of results with mixed
+        // precision. We don't appear to get them in practice, though, so just
+        // be conservative.
+        ThrowOutEverything =
+            CacheInfo->Size.isPrecise() != Loc.Size.isPrecise() ||
+            !TypeSize::isKnownGE(CacheInfo->Size.getValue(),
+                                 Loc.Size.getValue());
+      } else {
+        // For our purposes, unknown size > all others.
+        ThrowOutEverything = !Loc.Size.hasValue();
+      }
+
+      if (ThrowOutEverything) {
+        // The query's Size is greater than the cached one. Throw out the
+        // cached data and proceed with the query at the greater size.
+        CacheInfo->Pair = BBSkipFirstBlockPair();
+        CacheInfo->Size = Loc.Size;
+        for (auto &Entry : CacheInfo->NonLocalDeps)
+          if (Instruction *Inst = Entry.getResult().getInst())
+            RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
+        CacheInfo->NonLocalDeps.clear();
+        // The cache is cleared (in the above line) so we will have lost
+        // information about blocks we have already visited. We therefore must
+        // assume that the cache information is incomplete.
+        IsIncomplete = true;
+      } else {
+        // This query's Size is less than the cached one. Conservatively restart
+        // the query using the greater size.
+        return getNonLocalPointerDepFromBB(
+            QueryInst, Pointer, Loc.getWithNewSize(CacheInfo->Size), isLoad,
+            StartBB, Result, Visited, SkipFirstBlock, IsIncomplete);
+      }
     }
 
     // If the query's AATags are inconsistent with the cached one,
@@ -1176,7 +1198,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   bool GotWorklistLimit = false;
   LLVM_DEBUG(AssertSorted(*Cache));
 
-  BatchAAResults BatchAA(AA, &EEA);
+  BatchAAResults BatchAA(AA, &EII);
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
 
@@ -1488,7 +1510,7 @@ void MemoryDependenceResults::invalidateCachedPredecessors() {
 }
 
 void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
-  EEA.removeInstruction(RemInst);
+  EII.removeInstruction(RemInst);
 
   // Walk through the Non-local dependencies, removing this one as the value
   // for any cached queries.

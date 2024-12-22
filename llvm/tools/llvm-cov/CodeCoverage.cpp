@@ -1013,10 +1013,6 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                                       cl::desc("Show directory coverage"),
                                       cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowCreatedTime("show-created-time", cl::Optional,
-                                cl::desc("Show created time for each page."),
-                                cl::init(true), cl::cat(ViewCategory));
-
   cl::opt<std::string> ShowOutputDirectory(
       "output-dir", cl::init(""),
       cl::desc("Directory in which coverage information is written out"));
@@ -1116,15 +1112,12 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     return 1;
   }
 
-  if (ShowCreatedTime) {
-    auto ModifiedTime = Status.getLastModificationTime();
-    std::string ModifiedTimeStr = to_string(ModifiedTime);
-    size_t found = ModifiedTimeStr.rfind(':');
-    ViewOpts.CreatedTimeStr =
-        (found != std::string::npos)
-            ? "Created: " + ModifiedTimeStr.substr(0, found)
-            : "Created: " + ModifiedTimeStr;
-  }
+  auto ModifiedTime = Status.getLastModificationTime();
+  std::string ModifiedTimeStr = to_string(ModifiedTime);
+  size_t found = ModifiedTimeStr.rfind(':');
+  ViewOpts.CreatedTimeStr = (found != std::string::npos)
+                                ? "Created: " + ModifiedTimeStr.substr(0, found)
+                                : "Created: " + ModifiedTimeStr;
 
   auto Coverage = load();
   if (!Coverage)

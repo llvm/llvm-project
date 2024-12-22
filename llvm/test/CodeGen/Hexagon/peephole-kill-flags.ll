@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 ; CHECK: memw
 
 ; Check that the testcase compiles without errors.

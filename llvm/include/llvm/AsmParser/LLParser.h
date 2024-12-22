@@ -91,15 +91,12 @@ namespace llvm {
     }
 
     bool operator<(const ValID &RHS) const {
-      assert((((Kind == t_LocalID || Kind == t_LocalName) &&
-               (RHS.Kind == t_LocalID || RHS.Kind == t_LocalName)) ||
-              ((Kind == t_GlobalID || Kind == t_GlobalName) &&
-               (RHS.Kind == t_GlobalID || RHS.Kind == t_GlobalName))) &&
-             "Comparing ValIDs of different kinds");
-      if (Kind != RHS.Kind)
-        return Kind < RHS.Kind;
+      assert(Kind == RHS.Kind && "Comparing ValIDs of different kinds");
       if (Kind == t_LocalID || Kind == t_GlobalID)
         return UIntVal < RHS.UIntVal;
+      assert((Kind == t_LocalName || Kind == t_GlobalName ||
+              Kind == t_ConstantStruct || Kind == t_PackedConstantStruct) &&
+             "Ordering not defined for this ValID kind yet");
       return StrVal < RHS.StrVal;
     }
   };

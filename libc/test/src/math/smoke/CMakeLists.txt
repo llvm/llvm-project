@@ -13,17 +13,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  cosf16_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    cosf16_test.cpp
-  DEPENDS
-    libc.src.errno.errno
-    libc.src.math.cosf16
-)
-
-add_fp_unittest(
   cospif_test
   SUITE
     libc-math-smoke-tests
@@ -58,17 +47,6 @@ add_fp_unittest(
     libc.src.math.sinf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  sinf16_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    sinf16_test.cpp
-  DEPENDS
-    libc.src.errno.errno
-    libc.src.math.sinf16
 )
 
 add_fp_unittest(

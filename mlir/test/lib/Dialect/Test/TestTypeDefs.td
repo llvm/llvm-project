@@ -375,7 +375,7 @@ def TestI32 : Test_Type<"TestI32"> {
 }
 
 def TestRecursiveAlias
-    : Test_Type<"TestRecursiveAlias", [MutableType]> {
+    : Test_Type<"TestRecursiveAlias", [NativeTypeTrait<"IsMutable">]> {
   let mnemonic = "test_rec_alias";
   let storageClass = "TestRecursiveTypeStorage";
   let storageNamespace = "test";

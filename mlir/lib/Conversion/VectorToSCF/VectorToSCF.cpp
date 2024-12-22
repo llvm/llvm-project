@@ -1730,12 +1730,12 @@ struct ConvertVectorToSCFPass
     RewritePatternSet lowerTransferPatterns(&getContext());
     mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
         lowerTransferPatterns);
-    (void)applyPatternsGreedily(getOperation(),
-                                std::move(lowerTransferPatterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(),
+                                       std::move(lowerTransferPatterns));
 
     RewritePatternSet patterns(&getContext());
     populateVectorToSCFConversionPatterns(patterns, options);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 

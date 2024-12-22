@@ -56,22 +56,6 @@
   macro(Integer, 4, Complex, 8)                 \
   macro(Integer, 8, Complex, 4)                 \
   macro(Integer, 8, Complex, 8)                 \
-  macro(Unsigned, 1, Real, 4)                   \
-  macro(Unsigned, 1, Real, 8)                   \
-  macro(Unsigned, 2, Real, 4)                   \
-  macro(Unsigned, 2, Real, 8)                   \
-  macro(Unsigned, 4, Real, 4)                   \
-  macro(Unsigned, 4, Real, 8)                   \
-  macro(Unsigned, 8, Real, 4)                   \
-  macro(Unsigned, 8, Real, 8)                   \
-  macro(Unsigned, 1, Complex, 4)                \
-  macro(Unsigned, 1, Complex, 8)                \
-  macro(Unsigned, 2, Complex, 4)                \
-  macro(Unsigned, 2, Complex, 8)                \
-  macro(Unsigned, 4, Complex, 4)                \
-  macro(Unsigned, 4, Complex, 8)                \
-  macro(Unsigned, 8, Complex, 4)                \
-  macro(Unsigned, 8, Complex, 8)                \
   macro(Real, 4, Integer, 1)                    \
   macro(Real, 4, Integer, 2)                    \
   macro(Real, 4, Integer, 4)                    \
@@ -80,14 +64,6 @@
   macro(Real, 8, Integer, 2)                    \
   macro(Real, 8, Integer, 4)                    \
   macro(Real, 8, Integer, 8)                    \
-  macro(Real, 4, Unsigned, 1)                   \
-  macro(Real, 4, Unsigned, 2)                   \
-  macro(Real, 4, Unsigned, 4)                   \
-  macro(Real, 4, Unsigned, 8)                   \
-  macro(Real, 8, Unsigned, 1)                   \
-  macro(Real, 8, Unsigned, 2)                   \
-  macro(Real, 8, Unsigned, 4)                   \
-  macro(Real, 8, Unsigned, 8)                   \
   macro(Real, 4, Real, 4)                       \
   macro(Real, 4, Real, 8)                       \
   macro(Real, 8, Real, 4)                       \
@@ -104,14 +80,6 @@
   macro(Complex, 8, Integer, 2)                 \
   macro(Complex, 8, Integer, 4)                 \
   macro(Complex, 8, Integer, 8)                 \
-  macro(Complex, 4, Unsigned, 1)                \
-  macro(Complex, 4, Unsigned, 2)                \
-  macro(Complex, 4, Unsigned, 4)                \
-  macro(Complex, 4, Unsigned, 8)                \
-  macro(Complex, 8, Unsigned, 1)                \
-  macro(Complex, 8, Unsigned, 2)                \
-  macro(Complex, 8, Unsigned, 4)                \
-  macro(Complex, 8, Unsigned, 8)                \
   macro(Complex, 4, Real, 4)                    \
   macro(Complex, 4, Real, 8)                    \
   macro(Complex, 8, Real, 4)                    \
@@ -135,18 +103,10 @@ FOREACH_MATMUL_TYPE_PAIR(MATMUL_DIRECT_INSTANCE)
   macro(Integer, 16, Real, 8)                           \
   macro(Integer, 16, Complex, 4)                        \
   macro(Integer, 16, Complex, 8)                        \
-  macro(Unsigned, 16, Real, 4)                          \
-  macro(Unsigned, 16, Real, 8)                          \
-  macro(Unsigned, 16, Complex, 4)                       \
-  macro(Unsigned, 16, Complex, 8)                       \
   macro(Real, 4, Integer, 16)                           \
   macro(Real, 8, Integer, 16)                           \
   macro(Complex, 4, Integer, 16)                        \
   macro(Complex, 8, Integer, 16)                        \
-  macro(Real, 4, Unsigned, 16)                          \
-  macro(Real, 8, Unsigned, 16)                          \
-  macro(Complex, 4, Unsigned, 16)                       \
-  macro(Complex, 8, Unsigned, 16)                       \
 
 FOREACH_MATMUL_TYPE_PAIR_WITH_INT16(MATMUL_INSTANCE)
 FOREACH_MATMUL_TYPE_PAIR_WITH_INT16(MATMUL_DIRECT_INSTANCE)
@@ -156,36 +116,20 @@ MATMUL_INSTANCE(Integer, 16, Real, 10)
 MATMUL_INSTANCE(Integer, 16, Complex, 10)
 MATMUL_INSTANCE(Real, 10, Integer, 16)
 MATMUL_INSTANCE(Complex, 10, Integer, 16)
-MATMUL_INSTANCE(Unsigned, 16, Real, 10)
-MATMUL_INSTANCE(Unsigned, 16, Complex, 10)
-MATMUL_INSTANCE(Real, 10, Unsigned, 16)
-MATMUL_INSTANCE(Complex, 10, Unsigned, 16)
 MATMUL_DIRECT_INSTANCE(Integer, 16, Real, 10)
 MATMUL_DIRECT_INSTANCE(Integer, 16, Complex, 10)
 MATMUL_DIRECT_INSTANCE(Real, 10, Integer, 16)
 MATMUL_DIRECT_INSTANCE(Complex, 10, Integer, 16)
-MATMUL_DIRECT_INSTANCE(Unsigned, 16, Real, 10)
-MATMUL_DIRECT_INSTANCE(Unsigned, 16, Complex, 10)
-MATMUL_DIRECT_INSTANCE(Real, 10, Unsigned, 16)
-MATMUL_DIRECT_INSTANCE(Complex, 10, Unsigned, 16)
 #endif
 #if MATMUL_FORCE_ALL_TYPES || (HAS_LDBL128 || HAS_FLOAT128)
 MATMUL_INSTANCE(Integer, 16, Real, 16)
 MATMUL_INSTANCE(Integer, 16, Complex, 16)
 MATMUL_INSTANCE(Real, 16, Integer, 16)
 MATMUL_INSTANCE(Complex, 16, Integer, 16)
-MATMUL_INSTANCE(Unsigned, 16, Real, 16)
-MATMUL_INSTANCE(Unsigned, 16, Complex, 16)
-MATMUL_INSTANCE(Real, 16, Unsigned, 16)
-MATMUL_INSTANCE(Complex, 16, Unsigned, 16)
 MATMUL_DIRECT_INSTANCE(Integer, 16, Real, 16)
 MATMUL_DIRECT_INSTANCE(Integer, 16, Complex, 16)
 MATMUL_DIRECT_INSTANCE(Real, 16, Integer, 16)
 MATMUL_DIRECT_INSTANCE(Complex, 16, Integer, 16)
-MATMUL_DIRECT_INSTANCE(Unsigned, 16, Real, 16)
-MATMUL_DIRECT_INSTANCE(Unsigned, 16, Complex, 16)
-MATMUL_DIRECT_INSTANCE(Real, 16, Unsigned, 16)
-MATMUL_DIRECT_INSTANCE(Complex, 16, Unsigned, 16)
 #endif
 #endif // MATMUL_FORCE_ALL_TYPES || (defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
 
@@ -199,14 +143,6 @@ MATMUL_DIRECT_INSTANCE(Complex, 16, Unsigned, 16)
   macro(Integer, 4, Complex, 10)                            \
   macro(Integer, 8, Real, 10)                               \
   macro(Integer, 8, Complex, 10)                            \
-  macro(Unsigned, 1, Real, 10)                              \
-  macro(Unsigned, 1, Complex, 10)                           \
-  macro(Unsigned, 2, Real, 10)                              \
-  macro(Unsigned, 2, Complex, 10)                           \
-  macro(Unsigned, 4, Real, 10)                              \
-  macro(Unsigned, 4, Complex, 10)                           \
-  macro(Unsigned, 8, Real, 10)                              \
-  macro(Unsigned, 8, Complex, 10)                           \
   macro(Real, 4, Real, 10)                                  \
   macro(Real, 4, Complex, 10)                               \
   macro(Real, 8, Real, 10)                                  \
@@ -215,10 +151,6 @@ MATMUL_DIRECT_INSTANCE(Complex, 16, Unsigned, 16)
   macro(Real, 10, Integer, 2)                               \
   macro(Real, 10, Integer, 4)                               \
   macro(Real, 10, Integer, 8)                               \
-  macro(Real, 10, Unsigned, 1)                              \
-  macro(Real, 10, Unsigned, 2)                              \
-  macro(Real, 10, Unsigned, 4)                              \
-  macro(Real, 10, Unsigned, 8)                              \
   macro(Real, 10, Real, 4)                                  \
   macro(Real, 10, Real, 8)                                  \
   macro(Real, 10, Real, 10)                                 \
@@ -233,10 +165,6 @@ MATMUL_DIRECT_INSTANCE(Complex, 16, Unsigned, 16)
   macro(Complex, 10, Integer, 2)                            \
   macro(Complex, 10, Integer, 4)                            \
   macro(Complex, 10, Integer, 8)                            \
-  macro(Complex, 10, Unsigned, 1)                           \
-  macro(Complex, 10, Unsigned, 2)                           \
-  macro(Complex, 10, Unsigned, 4)                           \
-  macro(Complex, 10, Unsigned, 8)                           \
   macro(Complex, 10, Real, 4)                               \
   macro(Complex, 10, Real, 8)                               \
   macro(Complex, 10, Real, 10)                              \

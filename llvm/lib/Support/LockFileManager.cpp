@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
+#include <thread>
 #include <tuple>
 
 #ifdef _WIN32

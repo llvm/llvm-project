@@ -17,20 +17,20 @@ attributes(global) subroutine devsub()
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: fir.call @llvm.nvvm.barrier0() fastmath<contract> : () -> ()
+! CHECK: fir.call @__syncthreads()
 ! CHECK: fir.call @__syncwarp(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> ()
-! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1_i32_0) fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1_i32_1) fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1_i32_2) fastmath<contract> : (i32) -> i32
+! CHECK: fir.call @__threadfence()
+! CHECK: fir.call @__threadfence_block()
+! CHECK: fir.call @__threadfence_system()
+! CHECK: %{{.*}} = fir.call @__syncthreads_and(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK: %{{.*}} = fir.call @__syncthreads_count(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK: %{{.*}} = fir.call @__syncthreads_or(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
 
-! CHECK: func.func private @llvm.nvvm.barrier0()
+! CHECK: func.func private @__syncthreads() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads", fir.proc_attrs = #fir.proc_attrs<bind_c>}
 ! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @llvm.nvvm.membar.gl()
-! CHECK: func.func private @llvm.nvvm.membar.cta()
-! CHECK: func.func private @llvm.nvvm.membar.sys()
-! CHECK: func.func private @llvm.nvvm.barrier0.and(i32) -> i32
-! CHECK: func.func private @llvm.nvvm.barrier0.popc(i32) -> i32
-! CHECK: func.func private @llvm.nvvm.barrier0.or(i32) -> i32
+! CHECK: func.func private @__threadfence() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__threadfence_block() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_block", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__threadfence_system() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_system", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__syncthreads_and(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_and", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__syncthreads_count(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_count", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__syncthreads_or(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_or", fir.proc_attrs = #fir.proc_attrs<bind_c>}

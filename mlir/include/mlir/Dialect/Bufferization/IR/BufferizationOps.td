@@ -387,7 +387,9 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
-    AllElementTypesMatch<["memref", "result"]>
+    TypesMatchWith<"result type matches tensor equivalent of 'memref'",
+                   "memref", "result",
+                   "memref::getTensorTypeFromMemRefType($_self)">
   ]> {
   let summary = "create a tensor from a `memref`";
   let description = [{
@@ -402,7 +404,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     ```mlir
     // Produces a value of tensor<4x?xf32> type.
-    %t = bufferization.to_tensor %m : memref<4x?xf32, #layout, 0> to tensor<4x?xf32>
+    %t = bufferization.to_tensor %m : memref<4x?xf32, #layout, 0>
     ```
 
     If the `writable` unit attribute is set, the produced tensor is considered
@@ -425,7 +427,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     Example:
 
     ```
-    %t = bufferization.to_tensor %m restrict writable : memref<4xf32> to tensor<4xf32>
+    %t = bufferization.to_tensor %m restrict writable : memref<4xf32>
 
     // %t is writable, so the tensor.insert may bufferize in-place in the
     // absence of other conflicts.
@@ -474,15 +476,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
   let assemblyFormat = [{
     $memref (`restrict` $restrict^)? (`writable` $writable^)? attr-dict
-      `:` type($memref) `to` type($result)
+      `:` type($memref)
   }];
-
-  let builders = [
-    OpBuilder<(ins "Value":$memref, CArg<"bool", "false">:$restrict, CArg<"bool", "false">:$writeable), [{
-      auto rtt = memref::getTensorTypeFromMemRefType(memref.getType());
-      build($_builder, $_state, rtt, memref, restrict, writeable);
-    }]>
-  ];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -498,8 +493,9 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
     Pure,
-    AllShapesMatch<["memref", "tensor"]>,
-    AllElementTypesMatch<["memref", "tensor"]>
+    TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
+                   "memref", "tensor",
+                   "memref::getTensorTypeFromMemRefType($_self)">
   ]> {
   let summary = "cast a tensor to memref";
   let description = [{
@@ -507,7 +503,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
 
     ```mlir
     // Result type is memref<4x?xf32, #layout, 0>
-    %m = bufferization.to_memref %t : tensor<4x?xf32> to memref<4x?xf32, #layout, 0>
+    %m = bufferization.to_memref %t : memref<4x?xf32, #layout, 0>
     ```
 
     This operation is a specialized variant of the built-in
@@ -554,7 +550,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
   }];
 
   let assemblyFormat = [{
-    $tensor (`read_only` $read_only^)? attr-dict `:` type($tensor) `to` type($memref)
+    $tensor (`read_only` $read_only^)? attr-dict `:` type($memref)
   }];
 
   let hasFolder = 1;

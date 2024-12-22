@@ -646,7 +646,7 @@ class TypedVecListRegOperand<RegisterClass Reg, int lanes, string eltsize>
                                                    # eltsize # "'>">;
 
 multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
-  // With implicit types (probably on instruction instead). E.g. { v0, v1 } or {v0, v2, v4}.
+  // With implicit types (probably on instruction instead). E.g. { v0, v1 }
   def _64AsmOperand : AsmOperandClass {
     let Name = NAME # "64";
     let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ">";
@@ -665,17 +665,6 @@ multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
 
   def "128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_128AsmOperand");
-  }
-
-  // With implicit types (probably on instruction instead), consecutive registers. E.g. { v0, v1, v2 }
-  def _Consecutive128AsmOperand : AsmOperandClass {
-    let Name = NAME # "Consecutive128";
-    let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ", true>";
-    let RenderMethod = "addVectorListOperands<AArch64Operand::VecListIdx_QReg, " # count # ", true>";
-  }
-
-  def "Consecutive128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
-    let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_Consecutive128AsmOperand");
   }
 
   // 64-bit register lists with explicit type.

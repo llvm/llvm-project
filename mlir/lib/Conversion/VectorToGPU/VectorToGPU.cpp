@@ -1326,7 +1326,8 @@ struct ConvertVectorToGPUPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populatePrepareVectorToMMAPatterns(patterns, useNvGpu.getValue());
-    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+    if (failed(
+            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
 
     IRRewriter rewriter(&getContext());

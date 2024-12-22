@@ -21,12 +21,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct __unwrap_reference {
-  using type _LIBCPP_NODEBUG = _Tp;
+  typedef _LIBCPP_NODEBUG _Tp type;
 };
 
 template <class _Tp>
 struct __unwrap_reference<reference_wrapper<_Tp> > {
-  using type _LIBCPP_NODEBUG = _Tp&;
+  typedef _LIBCPP_NODEBUG _Tp& type;
 };
 
 #if _LIBCPP_STD_VER >= 20

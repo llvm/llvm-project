@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x c -fsyntax-only -verify %s
-// RUN: %clang_cc1 -x c++ -fsyntax-only -verify=expected,cxx %s
-// RUN: %clang_cc1 -x c++ -std=c++26 -fsyntax-only -verify=expected,cxx26 %s
+// RUN: %clang_cc1 -x c++ -fsyntax-only -verify %s
 
 #define DELIM "/"
 #define DOT "."
@@ -16,15 +15,15 @@ void test(const char *d) {
   if (NULL == "/")
     return;
   if ("/" != DELIM) // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ill-formed in C++26}}
+    return;
   if (DELIM == "/") // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ill-formed in C++26}}
+    return;
   if (DELIM != NULL)
     return;
   if (NULL == DELIM)
     return;
   if (DOT != DELIM) // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ill-formed in C++26}}
+    return;
   if (DELIM == DOT) // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ill-formed in C++26}}
+    return;
 }

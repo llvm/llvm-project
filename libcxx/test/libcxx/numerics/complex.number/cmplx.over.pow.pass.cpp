@@ -8,8 +8,6 @@
 
 // <complex>
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 //  template<class T, class U> complex<__promote<T, U>::type> pow(const complex<T>&, const U&);
 //  template<class T, class U> complex<__promote<T, U>::type> pow(const complex<T>&, const complex<U>&);
 //  template<class T, class U> complex<__promote<T, U>::type> pow(const T&, const complex<U>&);

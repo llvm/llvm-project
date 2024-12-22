@@ -95,26 +95,11 @@ def CallSiteLoc : DialectAttribute<(attr
   LocationAttr:$caller
 )>;
 
-let cType = "FileLineColRange" in {
-def FileLineColRange : DialectAttribute<(attr
-  StringAttr:$filename,
-  WithBuilder<"$_args",
-    WithType<"SmallVector<uint64_t>",
-    WithParser<"succeeded(readFileLineColRangeLocs($_reader, $_var))",
-    WithPrinter<"writeFileLineColRangeLocs($_writer, $_name)">>>>:$rawLocData
-)> {
-  let cBuilder = "getFileLineColRange(context, filename, rawLocData)";
-  let printerPredicate = "!::llvm::isa<FileLineColLoc>($_val)";
-}
-
 def FileLineColLoc : DialectAttribute<(attr
   StringAttr:$filename,
-  VarInt:$start_line,
-  VarInt:$start_column
-)> {
-  let printerPredicate = "::llvm::isa<FileLineColLoc>($_val)";
-}
-}
+  VarInt:$line,
+  VarInt:$column
+)>;
 
 let cType = "FusedLoc",
     cBuilder = "cast<FusedLoc>(get<FusedLoc>(context, $_args))" in {
@@ -336,8 +321,7 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     DenseIntOrFPElementsAttr,
     DenseStringElementsAttr,
     SparseElementsAttr,
-    DistinctAttr,
-    FileLineColRange,
+    DistinctAttr
   ];
 }
 

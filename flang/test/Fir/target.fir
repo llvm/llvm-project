@@ -26,7 +26,7 @@ func.func @gen4() -> complex<f32> {
   return %6 : complex<f32>
 }
 
-// I32-LABEL: define void @gen8(ptr nocapture sret({ double, double }) align 4 %
+// I32-LABEL: define void @gen8(ptr sret({ double, double }) align 4 %
 // X64-LABEL: define { double, double } @gen8()
 // AARCH64-LABEL: define { double, double } @gen8()
 // PPC-LABEL: define { double, double } @gen8()
@@ -93,9 +93,9 @@ func.func @call8() {
   return
 }
 
-// I32-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i32 %2, i32 %3)
-// X64-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i64 %2, i64 %3)
-// PPC-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i64 %2, i64 %3)
+// I32-LABEL: define i64 @char1lensum(ptr %0, ptr %1, i32 %2, i32 %3)
+// X64-LABEL: define i64 @char1lensum(ptr %0, ptr %1, i64 %2, i64 %3)
+// PPC-LABEL: define i64 @char1lensum(ptr %0, ptr %1, i64 %2, i64 %3)
 func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
   // X64-DAG: %[[p0:.*]] = insertvalue { ptr, i64 } undef, ptr %1, 0
   // X64-DAG: = insertvalue { ptr, i64 } %[[p0]], i64 %3, 1
@@ -109,4 +109,33 @@ func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 
   // I32: ret i64 %[[add]]
   // X64: ret i64 %[[add]]
   return %3 : i64
+}
+
+// I32-LABEL: define void @char1copy(ptr sret(i8) %0, i32 %1, ptr %2, i32 %3)
+// I64-LABEL: define void @char1copy(ptr sret(i8) %0, i64 %1, ptr %2, i64 %3)
+// PPC-LABEL: define void @char1copy(ptr sret(i8) %0, i64 %1, ptr %2, i64 %3)
+func.func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret = !fir.char<1, ?>}, %arg1 : !fir.boxchar<1>) {
+  // I32-DAG: %[[p0:.*]] = insertvalue { ptr, i32 } undef, ptr %2, 0
+  // I32-DAG: = insertvalue { ptr, i32 } %[[p0]], i32 %3, 1
+  // I32-DAG: %[[p1:.*]] = insertvalue { ptr, i32 } undef, ptr %0, 0
+  // I32-DAG: = insertvalue { ptr, i32 } %[[p1]], i32 %1, 1
+  // X64-DAG: %[[p0:.*]] = insertvalue { ptr, i64 } undef, ptr %2, 0
+  // X64-DAG: = insertvalue { ptr, i64 } %[[p0]], i64 %3, 1
+  // X64-DAG: %[[p1:.*]] = insertvalue { ptr, i64 } undef, ptr %0, 0
+  // X64-DAG: = insertvalue { ptr, i64 } %[[p1]], i64 %1, 1
+  %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.array<?x!fir.char<1>>>, i64)
+  %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.array<?x!fir.char<1>>>, i64)
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %3 = fir.convert %1#1 : (i64) -> index
+  %last = arith.subi %3, %c1 : index
+  fir.do_loop %i = %c0 to %last step %c1 {
+    %in_pos = fir.coordinate_of %2#0, %i : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+    %out_pos = fir.coordinate_of %1#0, %i : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+    %ch = fir.load %in_pos : !fir.ref<!fir.char<1>>
+    fir.store %ch to %out_pos : !fir.ref<!fir.char<1>>
+  }
+  // I32: ret void
+  // X64: ret void
+  return
 }

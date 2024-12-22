@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Check that there are no packets with two or more instructions, except
 ; for the endloop packet.
 

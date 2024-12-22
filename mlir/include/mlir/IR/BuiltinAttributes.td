@@ -153,8 +153,7 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
   }];
 }
 
-def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array", 
-    [BlobAttrInterface]> {
+def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array"> {
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
@@ -212,10 +211,6 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
     int64_t size() const { return getSize(); }
     /// Return true if there are no elements in the dense array.
     bool empty() const { return !size(); }
-    /// BlobAttrInterface method.
-    ArrayRef<char> getData() {
-      return getRawData();
-    }
   }];
 }
 
@@ -436,7 +431,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
-    "dense_resource_elements", [ElementsAttrInterface, BlobAttrInterface]> {
+    "dense_resource_elements", [ElementsAttrInterface]> {
   let summary = "An Attribute containing a dense multi-dimensional array "
                 "backed by a resource";
   let description = [{
@@ -490,10 +485,6 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
       "ShapedType":$type, "StringRef":$blobName, "AsmResourceBlob":$blob
     )>
   ];
-  let extraClassDeclaration = [{
-    /// BlobAttrInterface method.
-    ArrayRef<char> getData();
-  }];
 
   let skipDefaultBuilders = 1;
 }

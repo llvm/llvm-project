@@ -41,28 +41,6 @@ def ApplyEraseUnnecessaryInputsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyDecomposeTensorPackUnpackPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pack_unpack",
-         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Collect patterns to decompose tensor.pack and tensor.unpack into e.g.
-    tensor::PadOp, linalg::transposeOp Ops. Requires all outer dims to be unit.
-  }];
-
-  let assemblyFormat = "attr-dict";
-}
-
-def ApplyDecomposeTensorPadPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pad",
-         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Collect patterns to decompose tensor.pad into e.g. tensor::EmptyOp,
-    linalg::FillOp and tensor::InsertSliceOp.
-  }];
-
-  let assemblyFormat = "attr-dict";
-}
-
 def ApplyFoldUnitExtentDimsViaReshapesPatternsOp : Op<Transform_Dialect,
     "apply_patterns.linalg.fold_unit_extent_dims_via_reshapes",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -559,8 +537,7 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
     Return handles to the newly produced pad, expand_shape and transpose ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target,
-                       DefaultValuedAttr<BoolAttr, "true">:$lowerPadLikeWithInsertSlice);
+  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target);
   let results = (outs Transform_ConcreteOpType<"tensor.pad">:$pad_op,
                       Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op);
@@ -600,8 +577,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
     Return handles to the newly produced empty, transpose, collapse_shape and extract_slice ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target,
-                       DefaultValuedAttr<BoolAttr, "true">:$lowerUnpadLikeWithExtractSlice);
+  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target);
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
                       Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,

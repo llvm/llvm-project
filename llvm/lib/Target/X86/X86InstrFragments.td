@@ -45,7 +45,12 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisInt<0>,
                                              SDTCisVT<1, i32>,
                                              SDTCisVT<4, i32>]>;
-
+// RES1, RES2, FLAGS = op LHS, RHS
+def SDT2ResultBinaryArithWithFlags : SDTypeProfile<3, 2,
+                                            [SDTCisSameAs<0, 1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCisSameAs<0, 3>,
+                                             SDTCisInt<0>, SDTCisVT<1, i32>]>;
 def SDTX86BrCond  : SDTypeProfile<0, 3,
                                   [SDTCisVT<0, OtherVT>,
                                    SDTCisVT<1, i8>, SDTCisVT<2, i32>]>;
@@ -261,7 +266,7 @@ def X86add_flag  : SDNode<"X86ISD::ADD",  SDTBinaryArithWithFlags,
 def X86sub_flag  : SDNode<"X86ISD::SUB",  SDTBinaryArithWithFlags>;
 def X86smul_flag : SDNode<"X86ISD::SMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
-def X86umul_flag : SDNode<"X86ISD::UMUL", SDTBinaryArithWithFlags,
+def X86umul_flag : SDNode<"X86ISD::UMUL", SDT2ResultBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86adc_flag  : SDNode<"X86ISD::ADC",  SDTBinaryArithWithFlagsInOut>;
 def X86sbb_flag  : SDNode<"X86ISD::SBB",  SDTBinaryArithWithFlagsInOut>;
@@ -352,8 +357,7 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
                            SDNPMemOperand]>;
 
 // Define X86-specific addressing mode.
-let WantsParent = true in
-def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+def addr      : ComplexPattern<iPTR, 5, "selectAddr", [], [SDNPWantParent]>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
                                [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
@@ -379,8 +383,7 @@ def tls64addr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
 
-let WantsParent = true in
-def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr">;
+def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
 
 // A relocatable immediate is an operand that can be relocated by the linker to
 // an immediate, such as a regular symbol in non-PIC code.

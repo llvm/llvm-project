@@ -40,7 +40,8 @@ namespace {
 
 class RISCVPreLegalizerCombinerImpl : public Combiner {
 protected:
-  const CombinerHelper Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const RISCVPreLegalizerCombinerImplRuleConfig &RuleConfig;
   const RISCVSubtarget &STI;
 

@@ -1155,34 +1155,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> GNRDFeatures =
     !listconcat(GNRFeatures, GNRDAdditionalFeatures);
 
-  // Diamond Rapids
-  list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2_512,
-                                                  FeatureSM4,
-                                                  FeatureCMPCCXADD,
-                                                  FeatureAVXIFMA,
-                                                  FeatureAVXNECONVERT,
-                                                  FeatureAVXVNNIINT8,
-                                                  FeatureAVXVNNIINT16,
-                                                  FeatureUSERMSR,
-                                                  FeatureSHA512,
-                                                  FeatureSM3,
-                                                  FeatureEGPR,
-                                                  FeatureZU,
-                                                  FeatureCCMP,
-                                                  FeaturePush2Pop2,
-                                                  FeaturePPX,
-                                                  FeatureNDD,
-                                                  FeatureNF,
-                                                  FeatureCF,
-                                                  FeatureMOVRS,
-                                                  FeatureAMXMOVRS,
-                                                  FeatureAMXAVX512,
-                                                  FeatureAMXFP8,
-                                                  FeatureAMXTF32,
-                                                  FeatureAMXTRANSPOSE];
-  list<SubtargetFeature> DMRFeatures =
-    !listconcat(GNRDFeatures, DMRAdditionalFeatures);
-
   // Atom
   list<SubtargetFeature> AtomFeatures = [FeatureX87,
                                          FeatureCX8,
@@ -1884,8 +1856,6 @@ foreach P = ["graniterapids-d", "graniterapids_d"] in {
 def : ProcModel<P, SapphireRapidsModel,
                 ProcessorFeatures.GNRDFeatures, ProcessorFeatures.GNRTuning>;
 }
-def : ProcModel<"diamondrapids", SapphireRapidsModel,
-                ProcessorFeatures.DMRFeatures, ProcessorFeatures.GNRTuning>;
 
 // AMD CPUs.
 

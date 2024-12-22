@@ -60,7 +60,7 @@ struct TestMmaSyncF32ToTF32Patterns
     RewritePatternSet patterns(&getContext());
 
     populateMmaSyncF32ToTF32Patterns(patterns, tf32Precision);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 

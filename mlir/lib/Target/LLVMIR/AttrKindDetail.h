@@ -45,7 +45,6 @@ getAttrKindToNameMapping() {
       {llvm::Attribute::AttrKind::NonNull, LLVMDialect::getNonNullAttrName()},
       {llvm::Attribute::AttrKind::Preallocated,
        LLVMDialect::getPreallocatedAttrName()},
-      {llvm::Attribute::AttrKind::Range, LLVMDialect::getRangeAttrName()},
       {llvm::Attribute::AttrKind::ReadOnly, LLVMDialect::getReadonlyAttrName()},
       {llvm::Attribute::AttrKind::ReadNone, LLVMDialect::getReadnoneAttrName()},
       {llvm::Attribute::AttrKind::Returned, LLVMDialect::getReturnedAttrName()},

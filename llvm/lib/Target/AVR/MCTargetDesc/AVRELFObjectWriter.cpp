@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AVRFixupKinds.h"
+#include "MCTargetDesc/AVRMCExpr.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #include "llvm/MC/MCAssembler.h"

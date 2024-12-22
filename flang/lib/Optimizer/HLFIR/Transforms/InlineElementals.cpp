@@ -125,7 +125,7 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineElementalConversion>(context);
 
-    if (mlir::failed(mlir::applyPatternsGreedily(
+    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             getOperation(), std::move(patterns), config))) {
       mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR elemental inlining");

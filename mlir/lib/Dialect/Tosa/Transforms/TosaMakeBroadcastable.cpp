@@ -246,7 +246,7 @@ public:
     patterns.add<ConvertTosaOp<tosa::LogicalXorOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::SelectOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::PowOp>>(ctx);
-    (void)applyPatternsGreedily(func, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
 };
 } // namespace

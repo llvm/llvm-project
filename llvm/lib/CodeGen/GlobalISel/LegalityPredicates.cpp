@@ -101,12 +101,6 @@ LegalityPredicate LegalityPredicates::isPointer(unsigned TypeIdx,
   };
 }
 
-LegalityPredicate LegalityPredicates::isPointerVector(unsigned TypeIdx) {
-  return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx].isPointerVector();
-  };
-}
-
 LegalityPredicate LegalityPredicates::elementTypeIs(unsigned TypeIdx,
                                                     LLT EltTy) {
   return [=](const LegalityQuery &Query) {

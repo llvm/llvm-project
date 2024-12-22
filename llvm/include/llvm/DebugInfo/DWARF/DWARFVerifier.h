@@ -68,9 +68,7 @@ public:
 
     /// Inserts the address range. If the range overlaps with an existing
     /// range, the range that it overlaps with will be returned and the two
-    /// address ranges will be unioned together in "Ranges". If a duplicate
-    /// entry is attempted to be added, the duplicate range will not actually be
-    /// added and the returned iterator will point to end().
+    /// address ranges will be unioned together in "Ranges".
     ///
     /// This is used for finding overlapping ranges in the DW_AT_ranges
     /// attribute of a DIE. It is also used as a set of address ranges that
@@ -79,9 +77,7 @@ public:
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an
-    /// iterator to the overlapping range info. If a duplicate entry is
-    /// attempted to be added, the duplicate range will not actually be added
-    /// and the returned iterator will point to end().
+    /// iterator to the overlapping range info.
     ///
     /// This is used for finding overlapping children of the same DIE.
     die_range_info_iterator insert(const DieRangeInfo &RI);
@@ -90,7 +86,7 @@ public:
     bool contains(const DieRangeInfo &RHS) const;
 
     /// Return true if any range in this object intersects with any range in
-    /// RHS. Identical ranges are not considered to be intersecting.
+    /// RHS.
     bool intersects(const DieRangeInfo &RHS) const;
   };
 

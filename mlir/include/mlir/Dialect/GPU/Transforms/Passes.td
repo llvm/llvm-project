@@ -95,9 +95,7 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
-           "The target representation of the compilation process.">,
-    Option<"elfSection", "section", "std::string", [{""}],
-           "ELF section where binary is to be located.">
+           "The target representation of the compilation process.">
   ];
 }
 

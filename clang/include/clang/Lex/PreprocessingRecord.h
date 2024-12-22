@@ -180,13 +180,13 @@ class Token;
     }
 
     /// True if it is a builtin macro.
-    bool isBuiltinMacro() const { return isa<IdentifierInfo *>(NameOrDef); }
+    bool isBuiltinMacro() const { return NameOrDef.is<IdentifierInfo *>(); }
 
     /// The name of the macro being expanded.
     const IdentifierInfo *getName() const {
       if (MacroDefinitionRecord *Def = getDefinition())
         return Def->getName();
-      return cast<IdentifierInfo *>(NameOrDef);
+      return NameOrDef.get<IdentifierInfo *>();
     }
 
     /// The definition of the macro being expanded. May return null if

@@ -37,7 +37,6 @@ public:
   bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx);
-  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
 };
 } // namespace llvm
 

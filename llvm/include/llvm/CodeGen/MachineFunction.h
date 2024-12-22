@@ -186,7 +186,6 @@ public:
     Selected,
     TiedOpsRewritten,
     FailsVerification,
-    FailedRegAlloc,
     TracksDebugUserValues,
     LastProperty = TracksDebugUserValues,
   };
@@ -1011,7 +1010,7 @@ public:
   /// into \p MBB before \p InsertBefore.
   ///
   /// Note: Does not perform target specific adjustments; consider using
-  /// TargetInstrInfo::duplicate() instead.
+  /// TargetInstrInfo::duplicate() intead.
   MachineInstr &
   cloneMachineInstrBundle(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertBefore,

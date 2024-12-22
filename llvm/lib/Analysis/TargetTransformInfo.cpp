@@ -359,10 +359,6 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
   return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
 }
 
-unsigned TargetTransformInfo::getEpilogueVectorizationMinVF() const {
-  return TTIImpl->getEpilogueVectorizationMinVF();
-}
-
 bool TargetTransformInfo::preferPredicateOverEpilogue(
     TailFoldingInfo *TFI) const {
   return TTIImpl->preferPredicateOverEpilogue(TFI);
@@ -615,21 +611,11 @@ bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
   return TTIImpl->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
 }
 
-bool TargetTransformInfo::isTargetIntrinsicWithOverloadTypeAtArg(
-    Intrinsic::ID ID, int OpdIdx) const {
-  return TTIImpl->isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
-}
-
-bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
-    Intrinsic::ID ID, int RetIdx) const {
-  return TTIImpl->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
-}
-
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind) const {
   return TTIImpl->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind, VL);
+                                           CostKind);
 }
 
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(

@@ -52,13 +52,7 @@ public:
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
   void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &DL,
-                            const MCSymbol *Sym,
-                            const MachineModuleInfo *MMI) const override;
-
-  virtual void emitPersonalityValueImpl(MCStreamer &Streamer,
-                                        const DataLayout &DL,
-                                        const MCSymbol *Sym,
-                                        const MachineModuleInfo *MMI) const;
+                            const MCSymbol *Sym) const override;
 
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.

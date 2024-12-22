@@ -89,7 +89,6 @@ add_math_entrypoint_object(copysignf128)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
-add_math_entrypoint_object(cosf16)
 
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
@@ -485,7 +484,6 @@ add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
-add_math_entrypoint_object(sinf16)
 add_math_entrypoint_object(sinpif)
 add_math_entrypoint_object(sinpif16)
 

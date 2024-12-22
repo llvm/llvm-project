@@ -5,7 +5,6 @@
 define <vscale x 8 x i32> @insert_nxv8i32_nxv4i32_0(<vscale x 8 x i32> %vec, <vscale x 4 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv8i32_nxv4i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> %vec, <vscale x 4 x i32> %subvec, i64 0)
@@ -15,7 +14,6 @@ define <vscale x 8 x i32> @insert_nxv8i32_nxv4i32_0(<vscale x 8 x i32> %vec, <vs
 define <vscale x 8 x i32> @insert_nxv8i32_nxv4i32_4(<vscale x 8 x i32> %vec, <vscale x 4 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv8i32_nxv4i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v10, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> %vec, <vscale x 4 x i32> %subvec, i64 4)
@@ -25,7 +23,6 @@ define <vscale x 8 x i32> @insert_nxv8i32_nxv4i32_4(<vscale x 8 x i32> %vec, <vs
 define <vscale x 8 x i32> @insert_nxv8i32_nxv2i32_0(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv8i32_nxv2i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec, i64 0)
@@ -35,7 +32,6 @@ define <vscale x 8 x i32> @insert_nxv8i32_nxv2i32_0(<vscale x 8 x i32> %vec, <vs
 define <vscale x 8 x i32> @insert_nxv8i32_nxv2i32_2(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv8i32_nxv2i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec, i64 2)
@@ -45,7 +41,6 @@ define <vscale x 8 x i32> @insert_nxv8i32_nxv2i32_2(<vscale x 8 x i32> %vec, <vs
 define <vscale x 8 x i32> @insert_nxv8i32_nxv2i32_4(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv8i32_nxv2i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec, i64 4)
@@ -55,7 +50,6 @@ define <vscale x 8 x i32> @insert_nxv8i32_nxv2i32_4(<vscale x 8 x i32> %vec, <vs
 define <vscale x 8 x i32> @insert_nxv8i32_nxv2i32_6(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv8i32_nxv2i32_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, <vscale x 2 x i32> %subvec, i64 6)
@@ -92,7 +86,6 @@ define <vscale x 4 x i8> @insert_nxv1i8_nxv4i8_3(<vscale x 4 x i8> %vec, <vscale
 define <vscale x 16 x i32> @insert_nxv16i32_nxv8i32_0(<vscale x 16 x i32> %vec, <vscale x 8 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv8i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv8i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 8 x i32> %subvec, i64 0)
@@ -102,7 +95,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv8i32_0(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv8i32_8(<vscale x 16 x i32> %vec, <vscale x 8 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv8i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv4r.v v12, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv8i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 8 x i32> %subvec, i64 8)
@@ -112,7 +104,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv8i32_8(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_0(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv4i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec, i64 0)
@@ -122,7 +113,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_0(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_4(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv4i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v10, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec, i64 4)
@@ -132,7 +122,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_4(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_8(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv4i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v12, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec, i64 8)
@@ -142,7 +131,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_8(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_12(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv4i32_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v14, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 4 x i32> %subvec, i64 12)
@@ -152,7 +140,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv4i32_12(<vscale x 16 x i32> %vec,
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_0(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 0)
@@ -162,7 +149,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_0(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_2(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 2)
@@ -172,7 +158,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_2(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_4(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 4)
@@ -182,7 +167,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_4(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_6(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 6)
@@ -192,7 +176,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_6(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_8(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v12, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 8)
@@ -202,7 +185,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_8(<vscale x 16 x i32> %vec, 
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_10(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v13, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 10)
@@ -212,7 +194,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_10(<vscale x 16 x i32> %vec,
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_12(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v14, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 12)
@@ -222,7 +203,6 @@ define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_12(<vscale x 16 x i32> %vec,
 define <vscale x 16 x i32> @insert_nxv16i32_nxv2i32_14(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_nxv16i32_nxv2i32_14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v15, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, <vscale x 2 x i32> %subvec, i64 14)
@@ -532,7 +512,6 @@ define <vscale x 2 x i64> @insert_nxv2i64_nxv3i64(<3 x i64> %sv) #0 {
 define <vscale x 8 x i32> @insert_insert_combine(<2 x i32> %subvec) {
 ; CHECK-LABEL: insert_insert_combine:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    ret
   %inner = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32> undef, <2 x i32> %subvec, i64 0)
@@ -545,7 +524,6 @@ define <vscale x 8 x i32> @insert_insert_combine(<2 x i32> %subvec) {
 define <vscale x 8 x i32> @insert_insert_combine2(<vscale x 2 x i32> %subvec) {
 ; CHECK-LABEL: insert_insert_combine2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    ret
   %inner = call <vscale x 4 x i32> @llvm.vector.insert.nxv2i32.nxv4i32(<vscale x 4 x i32> undef, <vscale x 2 x i32> %subvec, i64 0)

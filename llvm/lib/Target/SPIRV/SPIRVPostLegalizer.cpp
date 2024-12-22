@@ -55,6 +55,12 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
 } // namespace llvm
 
+static bool isMetaInstrGET(unsigned Opcode) {
+  return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
+         Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
+         Opcode == SPIRV::GET_vfID || Opcode == SPIRV::GET_vpID;
+}
+
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
   case TargetOpcode::G_SMAX:
@@ -96,7 +102,10 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResType) {
             // There was no "assign type" actions, let's fix this now
             ResType = ScalarType;
-            setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
+            MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
+            MRI.setType(ResVReg,
+                        LLT::scalar(GR->getScalarOrVectorBitWidth(ResType)));
+            GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
           }
         }
       } else if (mayBeInserted(Opcode) && I.getNumDefs() == 1 &&
@@ -105,20 +114,29 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // registers, we must decorate them as if they were introduced in a
         // non-automatic way
         Register ResVReg = I.getOperand(0).getReg();
+        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(ResVReg);
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        if (MRI.getRegClassOrNull(ResVReg))
-          continue;
-        assert(GR->getSPIRVTypeForVReg(ResVReg) == nullptr);
-        // Check if we have type defined for operands of the new instruction
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
-        if (!ResVType)
-          continue;
-        // Set type & class
-        setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
+        if (!ResVType) {
+          // Set type of the defined register
+          ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
+          // Check if we have type defined for operands of the new instruction
+          if (!ResVType)
+            continue;
+          // Set type & class
+          MRI.setRegClass(ResVReg, GR->getRegClass(ResVType));
+          MRI.setType(ResVReg, GR->getRegType(ResVType));
+          GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
+        }
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here
         if (isTypeFoldingSupported(Opcode)) {
+          // Check if the instruction newly generated or already processed
+          MachineInstr *NextMI = I.getNextNode();
+          if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
+            continue;
+          // Restore usual instructions pattern for the newly inserted
+          // instruction
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
           processInstr(I, MIB, MRI, GR);
         }

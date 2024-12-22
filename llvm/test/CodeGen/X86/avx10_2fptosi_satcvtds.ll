@@ -85,7 +85,8 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vcvttpd2qq %xmm0, %xmm1
+; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    vcvttpd2qq %xmm1, %xmm1
 ; X86-NEXT:    vmovd %xmm1, %esi
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0

@@ -336,8 +336,8 @@ class SourceManagerTestCase(TestBase):
                 "stop reason = breakpoint",
                 f"{src_file}:0",
                 "static int foo();",
-                "note: This address is not associated with a specific line "
-                "of code. This may be due to compiler optimizations.",
+                "Note: this address is compiler-generated code in function",
+                "that has no source code associated with it.",
             ],
         )
 

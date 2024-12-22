@@ -23,7 +23,6 @@
 #include <__memory/allocator.h>
 #include <__memory/construct_at.h>
 #include <__memory/unique_ptr.h>
-#include <__new/exceptions.h>
 #include <__numeric/reduce.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
@@ -39,6 +38,7 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <new>
 #include <optional>
 
 _LIBCPP_PUSH_MACROS

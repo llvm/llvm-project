@@ -40,7 +40,9 @@ class X86ArgumentStackSlotPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit X86ArgumentStackSlotPass() : MachineFunctionPass(ID) {}
+  explicit X86ArgumentStackSlotPass() : MachineFunctionPass(ID) {
+    initializeX86ArgumentStackSlotPassPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

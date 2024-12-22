@@ -520,7 +520,7 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
     if (!V->getType()->isPointerTy())
       continue;
 
-    const SCEV *PtrSCEV = SE.getSCEVAtScope(V, Scope);
+    auto *PtrSCEV = SE.getSCEVAtScope(V, Scope);
     if (isa<SCEVConstant>(PtrSCEV))
       continue;
 
@@ -528,7 +528,7 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
     if (!BasePtr)
       return true;
 
-    Value *BasePtrVal = BasePtr->getValue();
+    auto *BasePtrVal = BasePtr->getValue();
     if (PtrVals.insert(BasePtrVal).second) {
       for (auto *PtrVal : PtrVals)
         if (PtrVal != BasePtrVal && !AA.isNoAlias(PtrVal, BasePtrVal))
@@ -720,8 +720,7 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
 
         // Bail if a pointer argument has a base address not known to
         // ScalarEvolution. Note that a zero pointer is acceptable.
-        const SCEV *ArgSCEV =
-            SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
+        auto *ArgSCEV = SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
         if (ArgSCEV->isZero())
           continue;
 
@@ -892,7 +891,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
           SmallVector<const SCEV *, 0> Operands;
 
-          for (const SCEV *MulOp : AF2->operands()) {
+          for (auto *MulOp : AF2->operands()) {
             if (auto *Const = dyn_cast<SCEVConstant>(MulOp))
               Operands.push_back(Const);
             if (auto *Unknown = dyn_cast<SCEVUnknown>(MulOp)) {
@@ -1367,7 +1366,7 @@ bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) {
 ScopDetection::LoopStats
 ScopDetection::countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
                                        unsigned MinProfitableTrips) {
-  const SCEV *TripCount = SE.getBackedgeTakenCount(L);
+  auto *TripCount = SE.getBackedgeTakenCount(L);
 
   int NumLoops = 1;
   int MaxLoopDepth = 1;

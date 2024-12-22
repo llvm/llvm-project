@@ -138,14 +138,6 @@ config.substitutions.append(
 config.substitutions.append(
     ("%clangxx_pgogen=", build_invocation(clang_cxxflags) + " -fprofile-generate=")
 )
-config.substitutions.append(
-    (
-        "%clangxx_pgogen_cont ",
-        build_invocation(clang_cxxflags)
-        + " -fprofile-generate "
-        + ("-mllvm -runtime-counter-relocation " if runtime_reloc else ""),
-    )
-)
 
 config.substitutions.append(
     ("%clang_cspgogen ", build_invocation(clang_cflags) + " -fcs-profile-generate ")

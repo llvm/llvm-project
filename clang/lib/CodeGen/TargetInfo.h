@@ -98,24 +98,6 @@ public:
                                     const CallArgList &Args,
                                     QualType ReturnType) const {}
 
-  /// Returns true if inlining the function call would produce incorrect code
-  /// for the current target and should be ignored (even with the always_inline
-  /// or flatten attributes).
-  ///
-  /// Note: This probably should be handled in LLVM. However, the LLVM
-  /// `alwaysinline` attribute currently means the inliner will ignore
-  /// mismatched attributes (which sometimes can generate invalid code). So,
-  /// this hook allows targets to avoid adding the LLVM `alwaysinline` attribute
-  /// based on C/C++ attributes or other target-specific reasons.
-  ///
-  /// See previous discussion here:
-  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
-  virtual bool
-  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
-                                      const FunctionDecl *Callee) const {
-    return false;
-  }
-
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:
   ///   struct _Unwind_Exception {

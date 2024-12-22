@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/CodeGen/RDFRegisters.h"

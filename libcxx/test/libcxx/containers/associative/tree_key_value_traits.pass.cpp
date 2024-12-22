@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__tree>
 #include <map>
 #include <set>

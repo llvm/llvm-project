@@ -132,7 +132,7 @@ static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
   if (!BI || !BI->isConditional())
     return;
 
-  CmpPredicate Pred;
+  CmpInst::Predicate Pred;
   Value *Cond = BI->getCondition();
   if (!match(Cond, m_ICmp(Pred, m_Value(), m_Constant())))
     return;
@@ -142,7 +142,7 @@ static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
     if (isCondRelevantToAnyCallArgument(Cmp, CB))
       Conditions.push_back({Cmp, From->getTerminator()->getSuccessor(0) == To
                                      ? Pred
-                                     : Cmp->getInverseCmpPredicate()});
+                                     : Cmp->getInversePredicate()});
 }
 
 /// Record ICmp conditions relevant to any argument in CB following Pred's

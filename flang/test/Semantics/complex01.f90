@@ -26,8 +26,8 @@ subroutine s()
   !ERROR: must be a constant
   !ERROR: must be a constant
   complex :: cvar10 = (rvar, ivar)
-  !ERROR: operands must be INTEGER, UNSIGNED, REAL, or BOZ
+  !ERROR: operands must be INTEGER or REAL
   complex :: cvar11 = (cconst, 1.0)
-  !ERROR: operands must be INTEGER, UNSIGNED, REAL, or BOZ
+  !ERROR: operands must be INTEGER or REAL
   complex :: cvar12 = (lconst, 1.0)
 end subroutine s

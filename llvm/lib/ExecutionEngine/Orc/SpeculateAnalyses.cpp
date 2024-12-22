@@ -18,6 +18,8 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include <algorithm>
+
 namespace {
 using namespace llvm;
 SmallVector<const BasicBlock *, 8> findBBwithCalls(const Function &F,

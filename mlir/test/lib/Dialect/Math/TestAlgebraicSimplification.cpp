@@ -40,7 +40,7 @@ struct TestMathAlgebraicSimplificationPass
 void TestMathAlgebraicSimplificationPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMathAlgebraicSimplificationPatterns(patterns);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

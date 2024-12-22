@@ -186,6 +186,3 @@ define void @global_gep_store() {
   store i32 1, i32* %3, align 4
   ret void
 }
-
-; Make sure we don't try to walk the body of a function declaration.
-declare void @opaque_function()

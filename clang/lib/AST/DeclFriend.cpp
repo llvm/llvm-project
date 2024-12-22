@@ -12,12 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclFriend.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstddef>
 
@@ -36,7 +37,8 @@ FriendDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
                    SourceLocation EllipsisLoc,
                    ArrayRef<TemplateParameterList *> FriendTypeTPLists) {
 #ifndef NDEBUG
-  if (const auto *D = dyn_cast<NamedDecl *>(Friend)) {
+  if (Friend.is<NamedDecl *>()) {
+    const auto *D = Friend.get<NamedDecl*>();
     assert(isa<FunctionDecl>(D) ||
            isa<CXXRecordDecl>(D) ||
            isa<FunctionTemplateDecl>(D) ||

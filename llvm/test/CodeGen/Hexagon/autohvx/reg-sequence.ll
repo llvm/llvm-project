@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; This testcase is to check that we use REG_SEQUENCE for reordering whole
 ; vectors.

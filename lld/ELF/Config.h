@@ -320,7 +320,6 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
-  std::optional<uint64_t> randomizeSectionPadding;
   bool rejectMismatch;
   bool relax;
   bool relaxGP;
@@ -363,7 +362,6 @@ struct Config {
   bool zInterpose;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
-  bool zNoBtCfi;
   bool zNodefaultlib;
   bool zNodelete;
   bool zNodlopen;
@@ -526,8 +524,6 @@ struct InStruct {
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
-  std::unique_ptr<SyntheticSection> gnuProperty;
-  std::unique_ptr<SyntheticSection> gnuStack;
   std::unique_ptr<GotSection> got;
   std::unique_ptr<GotPltSection> gotPlt;
   std::unique_ptr<IgotPltSection> igotPlt;
@@ -567,13 +563,13 @@ struct Ctx : CommonLinkerContext {
   Partition *mainPart = nullptr;
   PhdrEntry *tlsPhdr = nullptr;
   struct OutSections {
-    std::unique_ptr<OutputSection> elfHeader;
-    std::unique_ptr<OutputSection> programHeaders;
-    OutputSection *preinitArray = nullptr;
-    OutputSection *initArray = nullptr;
-    OutputSection *finiArray = nullptr;
+    OutputSection *elfHeader;
+    OutputSection *programHeaders;
+    OutputSection *preinitArray;
+    OutputSection *initArray;
+    OutputSection *finiArray;
   };
-  OutSections out;
+  OutSections out{};
   SmallVector<OutputSection *, 0> outputSections;
   std::vector<Partition> partitions;
 

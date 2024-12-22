@@ -215,28 +215,6 @@ commonly used first:
   this result correctly with a note that a force push did occur.
 
 
-Pre-merge Continuous Integration (CI)
--------------------------------------
-
-Multiple checks will be applied on a pull-request, either for linting/formatting
-or some build and tests. None of these are perfect and you will encounter
-false positive, infrastructure failures (unstable or unavailable worker), or
-you will be unlucky and based your change on a broken revision of the main branch.
-
-None of the checks are strictly mandatory: these are tools to help us build a
-better codebase and be more productive (by avoiding issues found post-merge and
-possible reverts). As a developer you're empowered to exercise your judgement
-about bypassing any of the checks when merging code.
-
-The infrastructure can print messages that make it seem like these are mandatory,
-but this is just an artifact of GitHub infrastructure and not a policy of the
-project.
-
-However, please make sure you do not force-merge any changes that have clear
-test failures directly linked to your changes. Our policy is still to keep the
-``main`` branch in a good condition, and introducing failures to be fixed later
-violates that policy.
-
 Problems After Landing Your Change
 ==================================
 
@@ -455,12 +433,3 @@ will be created with the specified commits.
 If a commit you want to backport does not apply cleanly, you may resolve
 the conflicts locally and then create a pull request against the release
 branch.  Just make sure to add the release milestone to the pull request.
-
-Getting admin access to CI infrastructure
-=========================================
-
-Any individual who is responsible for setting up and/or maintaining CI infrastructure for a LLVM project can
-request to be granted the CI/CD role to the LLVM organization admins. The request can be made by creating
-`a Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the ``infrastructure`` label.
-Applicants must include a justification for why the role is being requested. Applications are reviewed on a
-case-by-case basis by the LLVM admins and the role can be revoked at any point as the LLVM admins see fit.

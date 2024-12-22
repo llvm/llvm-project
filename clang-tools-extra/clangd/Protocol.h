@@ -452,7 +452,6 @@ struct ClientCapabilities {
   std::optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
   /// Whether the client accepts diagnostics with codeActions attached inline.
-  /// This is a clangd extension.
   /// textDocument.publishDiagnostics.codeActionsInline.
   bool DiagnosticFixes = false;
 
@@ -476,7 +475,6 @@ struct ClientCapabilities {
 
   /// Client supports displaying a container string for results of
   /// textDocument/reference (clangd extension)
-  /// textDocument.references.container
   bool ReferenceContainer = false;
 
   /// Client supports hierarchical document symbols.
@@ -565,7 +563,6 @@ struct ClientCapabilities {
 
   /// Whether the client supports the textDocument/inactiveRegions
   /// notification. This is a clangd extension.
-  /// textDocument.inactiveRegionsCapabilities.inactiveRegions
   bool InactiveRegions = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,

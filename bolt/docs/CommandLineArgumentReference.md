@@ -498,12 +498,9 @@
   Automatically put hot code on 2MB page(s) (hugify) at runtime. No manual call
   to hugify is needed in the binary (which is what --hot-text relies on).
 
-- `--icf=<value>`
+- `--icf`
 
   Fold functions with identical code
-  - `all`:  Enable identical code folding
-  - `none`: Disable identical code folding (default)
-  - `safe`: Enable safe identical code folding
 
 - `--icp`
 
