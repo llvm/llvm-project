@@ -2084,7 +2084,7 @@ void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
     buf += writtenSize;
   }
-  assert(buf - bufStart == sectionSize &&
+  assert(buf - bufStart == long(sectionSize) &&
          "Written size does not match expected section size");
 }
 
