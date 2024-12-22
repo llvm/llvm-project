@@ -2175,9 +2175,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
   // Use the custom lowering.
-  if (const auto Res = LowerBitcast(N)) {
+  if (SDValue Res = LowerBitcast(N))
     return Res;
-  }
 
   // If it fails fall back to the default method
   return CreateStackStoreLoad(N->getOperand(0), N->getValueType(0));
