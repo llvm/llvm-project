@@ -51,7 +51,7 @@
 "`P0137R1 <https://wg21.link/P0137R1>`__","Core Issue 1776: Replacement of class objects containing reference members","2016-06 (Oulu)","|Complete|","6",""
 "`P0163R0 <https://wg21.link/P0163R0>`__","shared_ptr::weak_type","2016-06 (Oulu)","|Complete|","3.9",""
 "`P0174R2 <https://wg21.link/P0174R2>`__","Deprecating Vestigial Library Parts in C++17","2016-06 (Oulu)","|Complete|","15",""
-"`P0175R1 <https://wg21.link/P0175R1>`__","Synopses for the C library","2016-06 (Oulu)","","",""
+"`P0175R1 <https://wg21.link/P0175R1>`__","Synopses for the C library","2016-06 (Oulu)","|Nothing To Do|","n/a",""
 "`P0180R2 <https://wg21.link/P0180R2>`__","Reserve a New Library Namespace for Future Standardization","2016-06 (Oulu)","|Nothing To Do|","n/a",""
 "`P0181R1 <https://wg21.link/P0181R1>`__","Ordered by Default","2016-06 (Oulu)","|Nothing To Do|","n/a","Pulled at the 2017-01 meeting in Kona"
 "`P0209R2 <https://wg21.link/P0209R2>`__","make_from_tuple: apply for construction","2016-06 (Oulu)","|Complete|","3.9",""

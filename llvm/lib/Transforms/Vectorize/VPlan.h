@@ -2839,12 +2839,12 @@ class VPPredInstPHIRecipe : public VPSingleDefRecipe {
 public:
   /// Construct a VPPredInstPHIRecipe given \p PredInst whose value needs a phi
   /// nodes after merging back from a Branch-on-Mask.
-  VPPredInstPHIRecipe(VPValue *PredV)
-      : VPSingleDefRecipe(VPDef::VPPredInstPHISC, PredV) {}
+  VPPredInstPHIRecipe(VPValue *PredV, DebugLoc DL)
+      : VPSingleDefRecipe(VPDef::VPPredInstPHISC, PredV, DL) {}
   ~VPPredInstPHIRecipe() override = default;
 
   VPPredInstPHIRecipe *clone() override {
-    return new VPPredInstPHIRecipe(getOperand(0));
+    return new VPPredInstPHIRecipe(getOperand(0), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPredInstPHISC)
