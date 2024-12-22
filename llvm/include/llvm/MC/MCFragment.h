@@ -190,10 +190,6 @@ protected:
       : MCEncodedFragment(FType, HasInstructions) {}
 
 public:
-
-  using const_fixup_iterator = SmallVectorImpl<MCFixup>::const_iterator;
-  using fixup_iterator = SmallVectorImpl<MCFixup>::iterator;
-
   SmallVectorImpl<char> &getContents() { return Contents; }
   const SmallVectorImpl<char> &getContents() const { return Contents; }
 
@@ -203,12 +199,6 @@ public:
 
   SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
   const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
-
-  fixup_iterator fixup_begin() { return Fixups.begin(); }
-  const_fixup_iterator fixup_begin() const { return Fixups.begin(); }
-
-  fixup_iterator fixup_end() { return Fixups.end(); }
-  const_fixup_iterator fixup_end() const { return Fixups.end(); }
 
   static bool classof(const MCFragment *F) {
     MCFragment::FragmentType Kind = F->getKind();
