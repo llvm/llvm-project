@@ -156,6 +156,62 @@ define i64 @test_inbounds_nuw_two_gep(ptr %base, i64 %idx, i64 %idx2) {
   ret i64 %d
 }
 
+define i64 @test_nusw_two_gep(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @test_nusw_two_gep(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[IDX2:%.*]], [[IDX:%.*]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %p1 = getelementptr nusw [0 x i32], ptr %base, i64 0, i64 %idx
+  %p2 = getelementptr nusw [0 x i32], ptr %base, i64 0, i64 %idx2
+  %i1 = ptrtoint ptr %p1 to i64
+  %i2 = ptrtoint ptr %p2 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @test_nuw_two_gep(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @test_nuw_two_gep(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i64 [[IDX2:%.*]], [[IDX:%.*]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = shl nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %p1 = getelementptr nuw [0 x i32], ptr %base, i64 0, i64 %idx
+  %p2 = getelementptr nuw [0 x i32], ptr %base, i64 0, i64 %idx2
+  %i1 = ptrtoint ptr %p1 to i64
+  %i2 = ptrtoint ptr %p2 to i64
+  %d = sub nuw i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @test_nuw_two_gep_missing_nuw_on_sub(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @test_nuw_two_gep_missing_nuw_on_sub(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[IDX2:%.*]], [[IDX:%.*]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %p1 = getelementptr nuw [0 x i32], ptr %base, i64 0, i64 %idx
+  %p2 = getelementptr nuw [0 x i32], ptr %base, i64 0, i64 %idx2
+  %i1 = ptrtoint ptr %p1 to i64
+  %i2 = ptrtoint ptr %p2 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @test_nuw_two_gep_missing_nuw_on_one_gep(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @test_nuw_two_gep_missing_nuw_on_one_gep(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[IDX2:%.*]], [[IDX:%.*]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %p1 = getelementptr nuw [0 x i32], ptr %base, i64 0, i64 %idx
+  %p2 = getelementptr [0 x i32], ptr %base, i64 0, i64 %idx2
+  %i1 = ptrtoint ptr %p1 to i64
+  %i2 = ptrtoint ptr %p2 to i64
+  %d = sub nuw i64 %i2, %i1
+  ret i64 %d
+}
+
 define i64 @test_inbounds_nuw_multi_index(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @test_inbounds_nuw_multi_index(
 ; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 3
@@ -715,7 +771,7 @@ define i1 @_gep_phi1(ptr %str1) {
 ; CHECK-NEXT:    br i1 [[CMP1_I]], label [[_Z3FOOPKC_EXIT]], label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[STR1]], [[LOR_LHS_FALSE_I]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -764,7 +820,7 @@ define i1 @_gep_phi2(ptr %str1, i64 %val2) {
 ; CHECK-NEXT:    br i1 [[CMP1_I]], label [[_Z3FOOPKC_EXIT]], label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[STR1]], [[LOR_LHS_FALSE_I]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]

@@ -305,6 +305,28 @@ bb:
   ret void
 }
 
+declare <4 x half> @llvm.amdgcn.ds.read.tr16.b64.v4f16(ptr addrspace(3))
+
+; CHECK: DIVERGENT: %tmp0 = call <4 x half> @llvm.amdgcn.ds.read.tr16.b64.v4f16(ptr addrspace(3) %gep)
+define amdgpu_kernel void @ds_read_b64_tr_b16_v4f16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
+  %tmp0 = call <4 x half> @llvm.amdgcn.ds.read.tr16.b64.v4f16(ptr addrspace(3) %gep)
+  store <4 x half> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+declare <4 x bfloat> @llvm.amdgcn.ds.read.tr16.b64.v4bf16(ptr addrspace(3))
+
+; CHECK: DIVERGENT: %tmp0 = call <4 x bfloat> @llvm.amdgcn.ds.read.tr16.b64.v4bf16(ptr addrspace(3) %gep)
+define amdgpu_kernel void @ds_read_b64_tr_b16_v4bf16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
+  %tmp0 = call <4 x bfloat> @llvm.amdgcn.ds.read.tr16.b64.v4bf16(ptr addrspace(3) %gep)
+  store <4 x bfloat> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
 declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half>, <8 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg)
 declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.f16(<8 x half>, <8 x half>, <16 x float>, i32 immarg, i32 immarg, i32 immarg)
 

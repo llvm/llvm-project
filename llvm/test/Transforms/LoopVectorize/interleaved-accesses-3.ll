@@ -55,7 +55,7 @@ define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i8 [[DOTCAST3]], 1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i8 [[X]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext i8 [[OFFSET_IDX]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP24:%.*]] = shl <4 x i32> [[TMP23]], splat (i32 1)
@@ -67,8 +67,8 @@ define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[FOR_BODY_PREHEADER]] ], [ [[X]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[VECTOR_SCEVCHECK]] ], [ [[X]], %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
@@ -76,9 +76,9 @@ define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[ADD:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[ADD:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i8 [[INDEX_011]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[TMP27]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]

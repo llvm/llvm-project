@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_SUPPORT_PTHREAD_H
-#define _LIBCPP___THREAD_SUPPORT_PTHREAD_H
+#ifndef _LIBCPP___CXX03___THREAD_SUPPORT_PTHREAD_H
+#define _LIBCPP___CXX03___THREAD_SUPPORT_PTHREAD_H
 
 #include <__cxx03/__chrono/convert_to_timespec.h>
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__config>
 #include <__cxx03/ctime>
 #include <__cxx03/errno.h>
-#include <__cxx03/pthread.h>
-#include <__cxx03/sched.h>
+#include <pthread.h>
+#include <sched.h>
 
 #ifdef __MVS__
 #  include <__cxx03/__support/ibm/nanosleep.h>
@@ -218,4 +218,4 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_tls_set(__libcpp_tls_key __key, void* 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_SUPPORT_PTHREAD_H
+#endif // _LIBCPP___CXX03___THREAD_SUPPORT_PTHREAD_H

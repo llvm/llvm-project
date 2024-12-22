@@ -89,6 +89,9 @@ public:
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
   virtual fir::ExtendedValue
+  symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) = 0;
+
+  virtual fir::ExtendedValue
   getSymbolExtendedValue(const Fortran::semantics::Symbol &sym,
                          Fortran::lower::SymMap *symMap = nullptr) = 0;
 
@@ -118,8 +121,11 @@ public:
 
   /// For a given symbol which is host-associated, create a clone using
   /// parameters from the host-associated symbol.
+  /// The clone is default initialized if its type has any default
+  /// initialization unless `skipDefaultInit` is set.
   virtual bool
-  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
+  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym,
+                              bool skipDefaultInit) = 0;
 
   virtual void
   createHostAssociateVarCloneDealloc(const Fortran::semantics::Symbol &sym) = 0;

@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/OpenACC.h"
-#include "DirectivesCommon.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -139,6 +140,8 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
   op.setStructured(structured);
   op.setImplicit(implicit);
   op.setDataClause(dataClause);
+  op.setVarType(mlir::cast<mlir::acc::PointerLikeType>(baseAddr.getType())
+                    .getElementType());
   op->setAttr(Op::getOperandSegmentSizeAttr(),
               builder.getDenseI32ArrayAttr(operandSegments));
   if (!asyncDeviceTypes.empty())
@@ -266,8 +269,8 @@ static void createDeclareDeallocFuncWithArg(
   if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
                 std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
     builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(),
-                           entryOp.getVarPtr(), entryOp.getBounds(),
-                           entryOp.getAsyncOperands(),
+                           entryOp.getVarPtr(), entryOp.getVarType(),
+                           entryOp.getBounds(), entryOp.getAsyncOperands(),
                            entryOp.getAsyncOperandsDeviceTypeAttr(),
                            entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
                            /*structured=*/false, /*implicit=*/false,
@@ -450,7 +453,7 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
                   std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
       builder.create<ExitOp>(
           entryOp.getLoc(), entryOp.getAccPtr(), entryOp.getVarPtr(),
-          entryOp.getBounds(), entryOp.getAsyncOperands(),
+          entryOp.getVarType(), entryOp.getBounds(), entryOp.getAsyncOperands(),
           entryOp.getAsyncOperandsDeviceTypeAttr(), entryOp.getAsyncOnlyAttr(),
           entryOp.getDataClause(), structured, entryOp.getImplicit(),
           builder.getStringAttr(*entryOp.getName()));

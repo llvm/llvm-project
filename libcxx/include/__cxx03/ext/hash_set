@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_HASH_SET
-#define _LIBCPP_HASH_SET
+#ifndef _LIBCPP___CXX03_HASH_SET
+#define _LIBCPP___CXX03_HASH_SET
 
 /*
 
@@ -581,4 +581,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const hash_multiset<_Value, _Hash, 
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_HASH_SET
+#endif // _LIBCPP___CXX03_HASH_SET

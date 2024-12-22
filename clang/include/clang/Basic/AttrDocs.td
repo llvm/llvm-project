@@ -1155,6 +1155,15 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
   }];
 }
 
+def NoSpecializationsDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates which should not be explicitly specialized by users. This is primarily
+used to diagnose user specializations of standard library type traits.
+  }];
+}
+
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
   let Heading = "pass_object_size, pass_dynamic_object_size";
@@ -3351,9 +3360,8 @@ def NoSanitizeAddressDocs : Documentation {
   // This function has multiple distinct spellings, and so it requires a custom
   // heading to be specified. The most common spelling is sufficient.
   let Heading = "no_sanitize_address, no_address_safety_analysis";
+  let Label = "langext-address_sanitizer";
   let Content = [{
-.. _langext-address_sanitizer:
-
 Use ``__attribute__((no_sanitize_address))`` on a function or a global
 variable declaration to specify that address safety instrumentation
 (e.g. AddressSanitizer) should not be applied.
@@ -3363,9 +3371,8 @@ variable declaration to specify that address safety instrumentation
 def NoSanitizeThreadDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_thread";
+  let Label = "langext-thread_sanitizer";
   let Content = [{
-.. _langext-thread_sanitizer:
-
 Use ``__attribute__((no_sanitize_thread))`` on a function declaration to
 specify that checks for data races on plain (non-atomic) memory accesses should
 not be inserted by ThreadSanitizer. The function is still instrumented by the
@@ -3376,9 +3383,8 @@ tool to avoid false positives and provide meaningful stack traces.
 def NoSanitizeMemoryDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_memory";
+  let Label = "langext-memory_sanitizer";
   let Content = [{
-.. _langext-memory_sanitizer:
-
 Use ``__attribute__((no_sanitize_memory))`` on a function declaration to
 specify that checks for uninitialized memory should not be inserted
 (e.g. by MemorySanitizer). The function may still be instrumented by the tool
@@ -3389,9 +3395,8 @@ to avoid false positives in other places.
 def CFICanonicalJumpTableDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "cfi_canonical_jump_table";
+  let Label = "langext-cfi_canonical_jump_table";
   let Content = [{
-.. _langext-cfi_canonical_jump_table:
-
 Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
 make the function's CFI jump table canonical. See :ref:`the CFI documentation
 <cfi-canonical-jump-tables>` for more details.
@@ -3975,6 +3980,8 @@ The capturing entity ``X`` can be one of the following:
       }
       std::set<std::string_view> s;
     };
+
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
 
 - `global`, `unknown`.
 
@@ -7931,6 +7938,17 @@ otherwise.
 The attribute ``no_randomize_layout``, when attached to a C structure,
 instructs the compiler that this structure should not have its field layout
 randomized.
+  }];
+}
+
+def HLSLSV_GroupThreadIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
+individual thread within a thread group is executing in. This attribute is
+only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
   }];
 }
 

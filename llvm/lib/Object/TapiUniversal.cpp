@@ -22,7 +22,7 @@ using namespace object;
 TapiUniversal::TapiUniversal(MemoryBufferRef Source, Error &Err)
     : Binary(ID_TapiUniversal, Source) {
   Expected<std::unique_ptr<InterfaceFile>> Result = TextAPIReader::get(Source);
-  ErrorAsOutParameter ErrAsOuParam(&Err);
+  ErrorAsOutParameter ErrAsOuParam(Err);
   if (!Result) {
     Err = Result.takeError();
     return;
