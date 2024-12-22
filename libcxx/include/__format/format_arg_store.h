@@ -199,7 +199,8 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
     // Using std::size on a character array will add the NUL-terminator to the size.
     if constexpr (__is_bounded_array_of<_Dp, __context_char_type>) {
       const auto __pbegin = std::begin(__value);
-      if (const _Dp* __pzero = char_traits<__context_char_type>::find(__pbegin, extent_v<_Dp>, __context_char_type{})) {
+      if (const __context_char_type* const __pzero =
+              char_traits<__context_char_type>::find(__pbegin, extent_v<_Dp>, __context_char_type{})) {
         return basic_format_arg<_Context>{
             __arg, basic_string_view<__context_char_type>{__pbegin, static_cast<size_t>(__pzero - __pbegin)}};
       } else {
