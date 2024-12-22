@@ -3211,11 +3211,6 @@ public:
     return true;
   }
 
-  /// Check if the induction described by \p Kind, /p Start and \p Step is
-  /// canonical, i.e.  has the same start and step (of 1) as the canonical IV.
-  bool isCanonical(InductionDescriptor::InductionKind Kind, VPValue *Start,
-                   VPValue *Step) const;
-
   /// Return the cost of this VPCanonicalIVPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
