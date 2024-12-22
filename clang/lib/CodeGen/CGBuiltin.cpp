@@ -4522,6 +4522,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BImemcmp: {
+    Address Src = EmitPointerWithAlignment(E->getArg(0));
+    Address Dst = EmitPointerWithAlignment(E->getArg(1));
+    Value *SizeVal = EmitScalarExpr(E->getArg(2));
+    llvm::Type *Tys[] = {Dst.getBasePointer()->getType(),
+                         Src.getBasePointer()->getType(), SizeVal->getType()};
+
+    Function *F = CGM.getIntrinsic(Intrinsic::memcmp, Tys);
+    Value *Mem1Value = EmitScalarExpr(E->getArg(0));
+    Value *Mem2Value = EmitScalarExpr(E->getArg(1));
+    Value *Args[] = {Mem1Value, Mem2Value, SizeVal};
+    return RValue::get(Builder.CreateCall(F, Args));
+  }
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImempcpy:

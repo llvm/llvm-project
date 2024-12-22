@@ -6534,6 +6534,25 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                             RegName, getValue(RegValue)));
     return;
   }
+  case Intrinsic::memcmp: {
+    const auto &CallI = cast<CallInst>(I);
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    SDValue Op3 = getValue(I.getArgOperand(2));
+
+    Align Mem0Align = CallI.getParamAlign(0).valueOrOne();
+    Align Mem1Align = CallI.getParamAlign(1).valueOrOne();
+    Align Alignment = std::min(Mem0Align, Mem1Align);
+    bool isVol = CallI.isVolatile();
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+
+    std::pair<SDValue, SDValue> MC =
+        DAG.getMemcmp(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
+                      /* AlwaysInline */ false, &I, std::nullopt);
+    setValue(&I, MC.first);
+    updateDAGForMaybeTailCall(MC.second);
+    return;
+  }
   case Intrinsic::memcpy: {
     const auto &MCI = cast<MemCpyInst>(I);
     SDValue Op1 = getValue(I.getArgOperand(0));
@@ -9358,7 +9377,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     visitInlineAsm(I);
     return;
   }
-
   diagnoseDontCall(I);
 
   if (Function *F = I.getCalledFunction()) {

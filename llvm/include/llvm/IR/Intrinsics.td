@@ -967,6 +967,12 @@ def int_memcpy  : Intrinsic<[],
                              WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
                              ImmArg<ArgIndex<3>>]>;
 
+def int_memcmp
+    : Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty],
+                [IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
+                 NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+                 ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
+
 // Memcpy semantic that is guaranteed to be inlined.
 // In particular this means that the generated code is not allowed to call any
 // external function.

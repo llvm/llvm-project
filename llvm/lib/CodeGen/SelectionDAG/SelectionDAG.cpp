@@ -8559,6 +8559,57 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
   }
 }
 
+std::pair<SDValue, SDValue>
+SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
+                        SDValue Mem1, SDValue Size, Align Alignment, bool isVol,
+                        bool AlwaysInline, const CallInst *CI,
+                        std::optional<bool> OverrideTailCall) {
+
+  // TODO: Add special case for situation where size is known.
+  // TODO: Add hooks for Target Specifc Code.
+  // TODO: Always inline not yet supported.
+  assert(!AlwaysInline && "Always inline for memcmp is not yet supported.");
+
+  // Emit a library call.
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Ty = PointerType::getUnqual(*getContext());
+  Entry.Node = Mem0;
+  Args.push_back(Entry);
+  Entry.Node = Mem1;
+  Args.push_back(Entry);
+
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
+  Entry.Node = Size;
+  Args.push_back(Entry);
+
+  // FIXME: pass in SDLoc
+  TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall = false;
+  if (OverrideTailCall.has_value()) {
+    IsTailCall = *OverrideTailCall;
+  } else {
+    bool LowersToMemcmp =
+        TLI->getLibcallName(RTLIB::MEMCMP) == StringRef("memcmp");
+    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+    IsTailCall = CI && CI->isTailCall() &&
+                 isInTailCallPosition(*CI, getTarget(),
+                                      ReturnsFirstArg && LowersToMemcmp);
+  }
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMCMP),
+                    Type::getInt32Ty(*getContext()),
+                    getExternalSymbol(TLI->getLibcallName(RTLIB::MEMCMP),
+                                      TLI->getPointerTy(getDataLayout())),
+                    std::move(Args))
+      .setTailCall(IsTailCall);
+
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
+  return CallResult;
+}
+
 SDValue SelectionDAG::getMemcpy(
     SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
     Align Alignment, bool isVol, bool AlwaysInline, const CallInst *CI,

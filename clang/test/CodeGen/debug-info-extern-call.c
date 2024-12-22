@@ -29,22 +29,22 @@
 // DECLS-FOR-EXTERN: [[FN1_TYPES]] = !{[[X_TYPE:![0-9]+]],
 // DECLS-FOR-EXTERN: [[X_TYPE]] = !DIDerivedType(tag: DW_TAG_typedef, name: "x",
 // DECLS-FOR-EXTERN-SAME: baseType: [[INT_TYPE]])
-// DECLS-FOR-EXTERN: !DISubprogram(name: "memcmp"
+// DECLS-FOR-EXTERN: !DISubprogram(name: "strcmp"
 // DECLS-FOR-EXTERN: !DISubprogram(name: "__some_reserved_name"
 
 // NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "fn1"
-// NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "memcmp"
+// NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "strcmp"
 // NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "__some_reserved_name"
 
 typedef int x;
 extern x fn1(int a, int b);
-extern int memcmp(const void *s1, const void *s2, unsigned long n);
+extern int strcmp(const char *s1, const char *s2);
 extern void __some_reserved_name(void);
 
-int fn2 (int *src, int *dst) {
+int fn2 (char *src, char *dst) {
   int x = 4, y = 5;
   int res = fn1(x, y);
-  int res2 = memcmp(dst, src, res);
+  int res2 = strcmp(dst, src);
   __some_reserved_name();
   return res + res2;
 }

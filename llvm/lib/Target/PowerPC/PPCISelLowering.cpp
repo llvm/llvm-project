@@ -1445,6 +1445,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setLibcallName(RTLIB::FREXP_F128, "frexpf128");
 
   if (Subtarget.isAIXABI()) {
+    setLibcallName(RTLIB::MEMCMP, isPPC64 ? "___memcmp64" : "___memcmp");
     setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
     setLibcallName(RTLIB::MEMMOVE, isPPC64 ? "___memmove64" : "___memmove");
     setLibcallName(RTLIB::MEMSET, isPPC64 ? "___memset64" : "___memset");
