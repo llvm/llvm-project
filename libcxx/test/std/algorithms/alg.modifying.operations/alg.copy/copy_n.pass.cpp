@@ -16,7 +16,6 @@
 #include <cassert>
 #include <vector>
 
-#include "common.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
@@ -95,7 +94,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(dst.a_ == 1);
     assert(dst.b_ == 2);
     assert(dst.c_ == 6);
-  } 
+  }
 
   { // Make sure that overlapping ranges can be copied
     int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};

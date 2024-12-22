@@ -24,18 +24,14 @@
 #include "test_iterators.h"
 #include "type_algorithms.h"
 #include "user_defined_integral.h"
- 
+
 typedef UserDefinedIntegral<unsigned> UDI;
 
 template <class Iter, class Container>
 TEST_CONSTEXPR_CXX20 void
-test(Container& in,
-     typename Container::iterator first,
-     size_t n,
-     typename Container::value_type value,
-     const Container& expected) {
-  Iter it = std::fill_n(Iter(first), UDI(n), value);
-  assert(base(it) == first + n);
+test(Container in, size_t from, size_t n, typename Container::value_type value, Container expected) {
+  Iter it = std::fill_n(Iter(in.data() + from), UDI(n), value);
+  assert(base(it) == in.data() + from + n);
   assert(in == expected);
 }
 
@@ -46,22 +42,23 @@ struct Test {
     {
       std::array<T, 4> in       = {1, 2, 3, 4};
       std::array<T, 4> expected = {5, 5, 5, 5};
-      test<Iter>(in, in.begin(), 4, 5, expected);
+      test<Iter>(in, 0, 4, 5, expected);
     }
     {
       std::array<T, 4> in       = {1, 2, 3, 4};
       std::array<T, 4> expected = {1, 5, 5, 4};
-      test<Iter>(in, in.begin() + 1, 2, 5, expected);
+      test<Iter>(in, 1, 2, 5, expected);
     }
   }
 };
 
-TEST_CONSTEXPR void test_int_array() {
+TEST_CONSTEXPR_CXX20 void test_int_array() {
   {
     int a[4] = {};
     assert(std::fill_n(a, UDI(4), static_cast<char>(1)) == a + 4);
     assert(a[0] == 1 && a[1] == 1 && a[2] == 1 && a[3] == 1);
   }
+#if TEST_STD_VER >= 11
   {
     const std::size_t N = 5;
     int ib[]            = {0, 0, 0, 0, 0, 0}; // one bigger than N
@@ -71,6 +68,7 @@ TEST_CONSTEXPR void test_int_array() {
            *it == 0 // don't overwrite the last value in the output array
     );
   }
+#endif
 }
 
 struct source {
@@ -153,12 +151,12 @@ TEST_CONSTEXPR_CXX20 void test_struct_array() {
     assert(a[2] == A('a'));
   }
   {
-    B test1a[4] = {};
-    assert(std::fill_n(test1a, UDI(4), static_cast<char>(10)) == test1a + 4);
-    assert(test1a[0].c == 11);
-    assert(test1a[1].c == 11);
-    assert(test1a[2].c == 11);
-    assert(test1a[3].c == 11);
+    B b[4] = {};
+    assert(std::fill_n(b, UDI(4), static_cast<char>(10)) == b + 4);
+    assert(b[0].c == 11);
+    assert(b[1].c == 11);
+    assert(b[2].c == 11);
+    assert(b[3].c == 11);
   }
   {
     Storage foo[5];

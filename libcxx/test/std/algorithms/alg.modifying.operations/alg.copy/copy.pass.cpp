@@ -16,30 +16,24 @@
 #include <cassert>
 #include <vector>
 
-#include "common.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
 
-TEST_CONSTEXPR_CXX20 void test_padding() {
-  { // Make sure that padding bits aren't copied
-    Derived src(1, 2, 3);
-    Derived dst(4, 5, 6);
-    std::copy(static_cast<PaddedBase*>(&src), static_cast<PaddedBase*>(&src) + 1, static_cast<PaddedBase*>(&dst));
-    assert(dst.a_ == 1);
-    assert(dst.b_ == 2);
-    assert(dst.c_ == 6);
-  }
-}
+class PaddedBase {
+public:
+  TEST_CONSTEXPR PaddedBase(std::int16_t a, std::int8_t b) : a_(a), b_(b) {}
 
-TEST_CONSTEXPR_CXX20 void test_overlapping() {
-  { // Make sure that overlapping ranges can be copied
-    int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    std::copy(a + 3, a + 10, a);
-    int expected[] = {4, 5, 6, 7, 8, 9, 10, 8, 9, 10};
-    assert(std::equal(a, a + 10, expected));
-  }
-}
+  std::int16_t a_;
+  std::int8_t b_;
+};
+
+class Derived : public PaddedBase {
+public:
+  TEST_CONSTEXPR Derived(std::int16_t a, std::int8_t b, std::int8_t c) : PaddedBase(a, b), c_(c) {}
+
+  std::int8_t c_;
+};
 
 template <class InIter>
 struct Test {
@@ -89,8 +83,21 @@ TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
 
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<const int*>(), TestInIters());
-  test_padding();
-  test_overlapping();
+
+  { // Make sure that padding bits aren't copied
+    Derived src(1, 2, 3);
+    Derived dst(4, 5, 6);
+    std::copy(static_cast<PaddedBase*>(&src), static_cast<PaddedBase*>(&src) + 1, static_cast<PaddedBase*>(&dst));
+    assert(dst.a_ == 1);
+    assert(dst.b_ == 2);
+    assert(dst.c_ == 6);
+  }
+  { // Make sure that overlapping ranges can be copied
+    int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::copy(a + 3, a + 10, a);
+    int expected[] = {4, 5, 6, 7, 8, 9, 10, 8, 9, 10};
+    assert(std::equal(a, a + 10, expected));
+  }
 
   { // Test vector<bool>::iterator optimization
     assert(test_vector_bool(8));
