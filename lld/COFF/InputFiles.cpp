@@ -114,15 +114,15 @@ void ArchiveFile::parse() {
   file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
-  if (isArm64EC(ctx.config.machine)) {
+  if (ctx.symtabEC) {
     iterator_range<Archive::symbol_iterator> symbols =
         CHECK(file->ec_symbols(), this);
     if (!symbols.empty()) {
       for (const Archive::Symbol &sym : symbols)
-        ctx.symtab.addLazyArchive(this, sym);
+        ctx.symtabEC->addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (ctx.config.machine != ARM64X)
+      if (!ctx.hybridSymtab)
         return;
     }
   }
@@ -162,13 +162,27 @@ lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   return v;
 }
 
-ObjFile::ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy)
-    : InputFile(ctx.symtab, ObjectKind, m, lazy) {}
+ObjFile::ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy)
+    : InputFile(symtab, ObjectKind, coffObj->getMemoryBufferRef(), lazy),
+      coffObj(coffObj) {}
+
+ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
+  // Parse a memory buffer as a COFF file.
+  Expected<std::unique_ptr<Binary>> bin = createBinary(m);
+  if (!bin)
+    Fatal(ctx) << "Could not parse " << m.getBufferIdentifier();
+
+  auto *obj = dyn_cast<COFFObjectFile>(bin->get());
+  if (!obj)
+    Fatal(ctx) << m.getBufferIdentifier() << " is not a COFF file";
+
+  bin->release();
+  return make<ObjFile>(ctx.getSymtab(MachineTypes(obj->getMachine())), obj,
+                       lazy);
+}
 
 void ObjFile::parseLazy() {
   // Native object file.
-  std::unique_ptr<Binary> coffObjPtr = CHECK(createBinary(mb), this);
-  COFFObjectFile *coffObj = cast<COFFObjectFile>(coffObjPtr.get());
   uint32_t numSymbols = coffObj->getNumberOfSymbols();
   for (uint32_t i = 0; i < numSymbols; ++i) {
     COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
@@ -179,6 +193,8 @@ void ObjFile::parseLazy() {
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab.addLazyObject(this, name);
+    if (!lazy)
+      return;
     i += coffSym.getNumberOfAuxSymbols();
   }
 }
@@ -219,16 +235,6 @@ void ObjFile::initializeECThunks() {
 }
 
 void ObjFile::parse() {
-  // Parse a memory buffer as a COFF file.
-  std::unique_ptr<Binary> bin = CHECK(createBinary(mb), this);
-
-  if (auto *obj = dyn_cast<COFFObjectFile>(bin.get())) {
-    bin.release();
-    coffObj.reset(obj);
-  } else {
-    Fatal(symtab.ctx) << toString(this) << " is not a COFF file";
-  }
-
   // Read section and symbol tables.
   initializeChunks();
   initializeSymbols();
@@ -807,9 +813,7 @@ std::optional<Symbol *> ObjFile::createDefined(
 }
 
 MachineTypes ObjFile::getMachineType() const {
-  if (coffObj)
-    return static_cast<MachineTypes>(coffObj->getMachine());
-  return IMAGE_FILE_MACHINE_UNKNOWN;
+  return static_cast<MachineTypes>(coffObj->getMachine());
 }
 
 ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef secName) {
@@ -1290,8 +1294,11 @@ void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   for (const lto::InputFile::Symbol &sym : obj->symbols())
-    if (!sym.isUndefined())
+    if (!sym.isUndefined()) {
       symtab.addLazyObject(this, sym.getName());
+      if (!lazy)
+        return;
+    }
 }
 
 MachineTypes BitcodeFile::getMachineType() const {

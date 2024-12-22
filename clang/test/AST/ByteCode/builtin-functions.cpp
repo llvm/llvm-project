@@ -1222,6 +1222,28 @@ namespace BuiltinMemcpy {
   static_assert(test_memcpy(1, 2, sizeof(int)) == 1334);
   static_assert(test_memcpy(0, 1, sizeof(int) * 2) == 2334); // both-error {{not an integral constant expression}} \
                                                              // both-note {{in call}}
+
+  /// Both memcpy and memmove must support pointers.
+  constexpr bool moveptr() {
+    int a = 0;
+    void *x = &a;
+    void *z = nullptr;
+
+    __builtin_memmove(&z, &x, sizeof(void*));
+    return z == x;
+  }
+  static_assert(moveptr());
+
+  constexpr bool cpyptr() {
+    int a = 0;
+    void *x = &a;
+    void *z = nullptr;
+
+    __builtin_memcpy(&z, &x, sizeof(void*));
+    return z == x;
+  }
+  static_assert(cpyptr());
+
 }
 
 namespace Memcmp {
@@ -1270,4 +1292,19 @@ namespace Memcmp {
   static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 7) != 0);
   static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 6) != 0);
   static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 5) == 0);
+
+
+  static_assert(__builtin_wmemcmp(L"abaa", L"abba", 3) == -1);
+  static_assert(__builtin_wmemcmp(L"abaa", L"abba", 2) == 0);
+  static_assert(__builtin_wmemcmp(0, 0, 0) == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wmemcmp(L"a\x83838383", L"aa", 2) ==
+                (wchar_t)-1U >> 31);
+#endif
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0banana", 100) == 0); // both-error {{not an integral constant}} \
+                                                                                // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 100) == -1); // FIXME: Should we reject this?
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 7) == -1);
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 6) == -1);
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 5) == 0);
 }

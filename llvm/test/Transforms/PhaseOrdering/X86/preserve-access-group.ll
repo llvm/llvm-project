@@ -22,10 +22,10 @@ define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %f
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_EPIL]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[ARRAYIDX_EPIL]], align 4, !tbaa [[TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
-; CHECK-NEXT:    [[GEP_EPIL:%.*]] = getelementptr inbounds i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_EPIL]]
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[GEP_EPIL]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_EPIL]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4, !tbaa [[TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_EPIL]]
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[Y]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[WIDE_LOAD12]] to <4 x i64>

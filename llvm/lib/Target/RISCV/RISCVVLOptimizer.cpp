@@ -270,6 +270,43 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VSSE64_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
 
+  // Vector Indexed Instructions
+  // vs(o|u)xei<eew>.v
+  // Dest/Data (operand 0) EEW=SEW, EMUL=LMUL. Source EEW=<eew> and
+  // EMUL=(EEW/SEW)*LMUL.
+  case RISCV::VLUXEI8_V:
+  case RISCV::VLOXEI8_V:
+  case RISCV::VSUXEI8_V:
+  case RISCV::VSOXEI8_V: {
+    if (MO.getOperandNo() == 0)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
+  }
+  case RISCV::VLUXEI16_V:
+  case RISCV::VLOXEI16_V:
+  case RISCV::VSUXEI16_V:
+  case RISCV::VSOXEI16_V: {
+    if (MO.getOperandNo() == 0)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+  }
+  case RISCV::VLUXEI32_V:
+  case RISCV::VLOXEI32_V:
+  case RISCV::VSUXEI32_V:
+  case RISCV::VSOXEI32_V: {
+    if (MO.getOperandNo() == 0)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
+  }
+  case RISCV::VLUXEI64_V:
+  case RISCV::VLOXEI64_V:
+  case RISCV::VSUXEI64_V:
+  case RISCV::VSOXEI64_V: {
+    if (MO.getOperandNo() == 0)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
+  }
+
   // Vector Integer Arithmetic Instructions
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
@@ -412,6 +449,8 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   // Vector Compress Instruction
   // EMUL=LMUL. EEW=SEW.
   case RISCV::VCOMPRESS_VM:
+  // Vector Element Index Instruction
+  case RISCV::VID_V:
     return OperandInfo(MIVLMul, MILog2SEW);
 
   // Vector Widening Integer Add/Subtract
@@ -524,6 +563,15 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VMSBF_M:
   case RISCV::VMSIF_M:
   case RISCV::VMSOF_M: {
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+  }
+
+  // Vector Iota Instruction
+  // EEW=SEW and EMUL=LMUL, except the mask operand has EEW=1 and EMUL=
+  // (EEW/SEW)*LMUL. Mask operand is not handled before this switch.
+  case RISCV::VIOTA_M: {
+    if (IsMODef || MO.getOperandNo() == 1)
+      return OperandInfo(MIVLMul, MILog2SEW);
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
   }
 
@@ -738,6 +786,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // vmsbf.m set-before-first mask bit
   // vmsif.m set-including-first mask bit
   // vmsof.m set-only-first mask bit
+  // Vector Iota Instruction
+  // Vector Element Index Instruction
   case RISCV::VMAND_MM:
   case RISCV::VMNAND_MM:
   case RISCV::VMANDN_MM:
@@ -749,6 +799,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSBF_M:
   case RISCV::VMSIF_M:
   case RISCV::VMSOF_M:
+  case RISCV::VIOTA_M:
+  case RISCV::VID_V:
     return true;
   }
 
@@ -887,13 +939,10 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     // Instructions like reductions may use a vector register as a scalar
     // register. In this case, we should treat it like a scalar register which
     // does not impact the decision on whether to optimize VL.
+    // TODO: Treat it like a scalar register instead of bailing out.
     if (isVectorOpUsedAsScalarOp(UserOp)) {
-      [[maybe_unused]] Register R = UserOp.getReg();
-      [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-      assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-             "Expect LMUL 1 register class for vector as scalar operands!");
-      LLVM_DEBUG(dbgs() << "    Use this operand as a scalar operand\n");
-      continue;
+      CanReduceVL = false;
+      break;
     }
 
     if (mayReadPastVL(UserMI)) {
@@ -924,24 +973,18 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
            "Did not expect X0 VL");
 
-    if (!CommonVL) {
+    // Use the largest VL among all the users. If we cannot determine this
+    // statically, then we cannot optimize the VL.
+    if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, VLOp)) {
       CommonVL = &VLOp;
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
-    } else if (!CommonVL->isIdenticalTo(VLOp)) {
-      // FIXME: This check requires all users to have the same VL. We can relax
-      // this and get the largest VL amongst all users.
-      LLVM_DEBUG(dbgs() << "    Abort because users have different VL\n");
+    } else if (!RISCV::isVLKnownLE(VLOp, *CommonVL)) {
+      LLVM_DEBUG(dbgs() << "    Abort because cannot determine a common VL\n");
       CanReduceVL = false;
       break;
     }
 
     // The SEW and LMUL of destination and source registers need to match.
-
-    // We know that MI DEF is a vector register, because that was the guard
-    // to call this function.
-    assert(isVectorRegClass(UserMI.getOperand(0).getReg(), MRI) &&
-           "Expected DEF and USE to be vector registers");
-
     OperandInfo ConsumerInfo = getOperandInfo(UserOp, MRI);
     OperandInfo ProducerInfo = getOperandInfo(MI.getOperand(0), MRI);
     if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown() ||

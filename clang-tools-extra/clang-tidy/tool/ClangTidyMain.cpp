@@ -526,6 +526,24 @@ static bool verifyFileExtensions(
   return AnyInvalid;
 }
 
+static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
+                          const ClangTidyOptions::OptionMap &OptionMap,
+                          StringRef Source) {
+  bool AnyInvalid = false;
+  for (auto Key : OptionMap.keys()) {
+    if (ValidOptions.contains(Key))
+      continue;
+    AnyInvalid = true;
+    auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
+                   << "unknown check option '" << Key << '\'';
+    llvm::StringRef Closest = closest(Key, ValidOptions);
+    if (!Closest.empty())
+      Output << "; did you mean '" << Closest << '\'';
+    Output << VerifyConfigWarningEnd;
+  }
+  return AnyInvalid;
+}
+
 static SmallString<256> makeAbsolute(llvm::StringRef Input) {
   if (Input.empty())
     return {};
@@ -629,29 +647,17 @@ int clangTidyMain(int argc, const char **argv) {
   if (VerifyConfig) {
     std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
         OptionsProvider->getRawOptions(FileName);
-    NamesAndOptions Valid =
+    ChecksAndOptions Valid =
         getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
     bool AnyInvalid = false;
     for (const auto &[Opts, Source] : RawOptions) {
       if (Opts.Checks)
-        AnyInvalid |= verifyChecks(Valid.Names, *Opts.Checks, Source);
-
+        AnyInvalid |= verifyChecks(Valid.Checks, *Opts.Checks, Source);
       if (Opts.HeaderFileExtensions && Opts.ImplementationFileExtensions)
         AnyInvalid |=
             verifyFileExtensions(*Opts.HeaderFileExtensions,
                                  *Opts.ImplementationFileExtensions, Source);
-
-      for (auto Key : Opts.CheckOptions.keys()) {
-        if (Valid.Options.contains(Key))
-          continue;
-        AnyInvalid = true;
-        auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
-                       << "unknown check option '" << Key << '\'';
-        llvm::StringRef Closest = closest(Key, Valid.Options);
-        if (!Closest.empty())
-          Output << "; did you mean '" << Closest << '\'';
-        Output << VerifyConfigWarningEnd;
-      }
+      AnyInvalid |= verifyOptions(Valid.Options, Opts.CheckOptions, Source);
     }
     if (AnyInvalid)
       return 1;

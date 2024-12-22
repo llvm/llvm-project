@@ -2189,6 +2189,9 @@ public:
   void VisitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct *D);
   void VisitOpenACCExitDataConstruct(const OpenACCExitDataConstruct *D);
   void VisitOpenACCHostDataConstruct(const OpenACCHostDataConstruct *D);
+  void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *D);
+  void VisitOpenACCInitConstruct(const OpenACCInitConstruct *D);
+  void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -2842,6 +2845,10 @@ void OpenACCClauseEnqueue::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
   Visitor.AddStmt(C.getIntExpr());
 }
+void OpenACCClauseEnqueue::VisitDeviceNumClause(
+    const OpenACCDeviceNumClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
 void OpenACCClauseEnqueue::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
   Visitor.AddStmt(C.getIntExpr());
@@ -2888,6 +2895,14 @@ void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
 }
 
 void OpenACCClauseEnqueue::VisitDetachClause(const OpenACCDetachClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDeleteClause(const OpenACCDeleteClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitUseDeviceClause(
+    const OpenACCUseDeviceClause &C) {
   VisitVarList(C);
 }
 
@@ -3619,6 +3634,25 @@ void EnqueueVisitor::VisitOpenACCExitDataConstruct(
 }
 void EnqueueVisitor::VisitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCInitConstruct(const OpenACCInitConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
@@ -6386,6 +6420,12 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCExitDataConstruct");
   case CXCursor_OpenACCHostDataConstruct:
     return cxstring::createRef("OpenACCHostDataConstruct");
+  case CXCursor_OpenACCWaitConstruct:
+    return cxstring::createRef("OpenACCWaitConstruct");
+  case CXCursor_OpenACCInitConstruct:
+    return cxstring::createRef("OpenACCInitConstruct");
+  case CXCursor_OpenACCShutdownConstruct:
+    return cxstring::createRef("OpenACCShutdownConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

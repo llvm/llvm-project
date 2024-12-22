@@ -375,4 +375,19 @@ define i32 @sixteenload() {
   ret i32 %a2
 }
 
+define i32 @testcallalloca() {
+; CHECK-LABEL: @testcallalloca(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void [[A]]()
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void %a()
+  %l1 = load i32, ptr %a
+  ret i32 %l1
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

@@ -1309,7 +1309,7 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
   return ::mlir::failure();
 )decl";
 

@@ -1707,7 +1707,7 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
     if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr))
       return cast<IntegerAttr>(attr).getInt() == value;
     llvm::APInt actual;
-    return matchPattern(ofr.get<Value>(), m_ConstantInt(&actual)) &&
+    return matchPattern(cast<Value>(ofr), m_ConstantInt(&actual)) &&
            actual.getSExtValue() == value;
   };
   if (!llvm::all_of(loopRanges, [&](Range range) {
@@ -2206,7 +2206,7 @@ struct LinalgElementwiseOpFusionPass
     // Use TopDownTraversal for compile time reasons
     GreedyRewriteConfig grc;
     grc.useTopDownTraversal = true;
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns), grc);
+    (void)applyPatternsGreedily(op, std::move(patterns), grc);
   }
 };
 

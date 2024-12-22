@@ -1182,7 +1182,7 @@ bool MachineOutliner::outline(
     }
   }
 
-  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
+  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n");
   return OutlinedSomething;
 }
 

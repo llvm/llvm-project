@@ -388,8 +388,9 @@ struct TestGreedyPatternDriver
     GreedyRewriteConfig config;
     config.useTopDownTraversal = this->useTopDownTraversal;
     config.maxIterations = this->maxIterations;
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
-                                       config);
+    config.fold = this->fold;
+    config.cseConstants = this->cseConstants;
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
   Option<bool> useTopDownTraversal{
@@ -400,6 +401,11 @@ struct TestGreedyPatternDriver
       *this, "max-iterations",
       llvm::cl::desc("Max. iterations in the GreedyRewriteConfig"),
       llvm::cl::init(GreedyRewriteConfig().maxIterations)};
+  Option<bool> fold{*this, "fold", llvm::cl::desc("Whether to fold"),
+                    llvm::cl::init(GreedyRewriteConfig().fold)};
+  Option<bool> cseConstants{*this, "cse-constants",
+                            llvm::cl::desc("Whether to CSE constants"),
+                            llvm::cl::init(GreedyRewriteConfig().cseConstants)};
 };
 
 struct DumpNotifications : public RewriterBase::Listener {
@@ -511,8 +517,8 @@ public:
     // operation will trigger the assertion while processing.
     bool changed = false;
     bool allErased = false;
-    (void)applyOpPatternsAndFold(ArrayRef(ops), std::move(patterns), config,
-                                 &changed, &allErased);
+    (void)applyOpPatternsGreedily(ArrayRef(ops), std::move(patterns), config,
+                                  &changed, &allErased);
     Builder b(ctx);
     getOperation()->setAttr("pattern_driver_changed", b.getBoolAttr(changed));
     getOperation()->setAttr("pattern_driver_all_erased",
@@ -2101,7 +2107,7 @@ struct TestSelectiveReplacementPatternDriver
     MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     patterns.add<TestSelectiveOpReplacementPattern>(context);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 } // namespace

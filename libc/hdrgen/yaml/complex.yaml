@@ -103,3 +103,35 @@ functions:
     arguments:
       - type: cfloat128
     guard: LIBC_TYPES_HAS_CFLOAT128
+  - name: cproj
+    standards:
+      - stdc
+    return_type: _Complex double
+    arguments:
+      - type: _Complex double
+  - name: cprojf
+    standards:
+      - stdc
+    return_type: _Complex float
+    arguments:
+      - type: _Complex float
+  - name: cprojl
+    standards:
+      - stdc
+    return_type: _Complex long double
+    arguments:
+      - type: _Complex long double
+  - name: cprojf16
+    standards:
+      - stdc
+    return_type: cfloat16
+    arguments:
+      - type: cfloat16
+    guard: LIBC_TYPES_HAS_CFLOAT16
+  - name: cprojf128
+    standards:
+      - stdc
+    return_type: cfloat128
+    arguments:
+      - type: cfloat128
+    guard: LIBC_TYPES_HAS_CFLOAT128
