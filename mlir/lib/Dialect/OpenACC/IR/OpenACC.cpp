@@ -2423,11 +2423,21 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
           "expect valid declare data entry operation or acc.getdeviceptr "
           "as defining op");
 
-    mlir::Value varPtr{getVarPtr(operand.getDefiningOp())};
+    mlir::Value varPtr{
+        llvm::TypeSwitch<mlir::Operation *, mlir::Value>(
+            operand.getDefiningOp())
+            .Case<ACC_DATA_ENTRY_OPS>(
+                [&](auto entry) { return entry.getVarPtr(); })
+            .Default([&](mlir::Operation *) { return mlir::Value(); })};
     assert(varPtr && "declare operands can only be data entry operations which "
                      "must have varPtr");
     std::optional<mlir::acc::DataClause> dataClauseOptional{
-        getDataClause(operand.getDefiningOp())};
+        llvm::TypeSwitch<mlir::Operation *,
+                         std::optional<mlir::acc::DataClause>>(
+            operand.getDefiningOp())
+            .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
+                [&](auto entry) { return entry.getDataClause(); })
+            .Default([&](mlir::Operation *) { return std::nullopt; })};
     assert(dataClauseOptional.has_value() &&
            "declare operands can only be data entry operations which must have "
            "dataClause");
@@ -2453,8 +2463,13 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
     // since implicit data action may be inserted to do actions like updating
     // device copy, in which case the variable is not necessarily implicitly
     // declare'd.
+    bool operandOpImplicitFlag{
+        llvm::TypeSwitch<mlir::Operation *, bool>(operand.getDefiningOp())
+            .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
+                [&](auto entry) { return entry.getImplicit(); })
+            .Default([&](mlir::Operation *) { return false; })};
     if (declAttr.getImplicit() &&
-        declAttr.getImplicit() != acc::getImplicitFlag(operand.getDefiningOp()))
+        declAttr.getImplicit() != operandOpImplicitFlag)
       return op.emitError(
           "implicitness must match between declare op and flag on variable");
   }
@@ -2912,127 +2927,3 @@ LogicalResult acc::WaitOp::verify() {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// acc dialect utilities
-//===----------------------------------------------------------------------===//
-
-mlir::Value mlir::acc::getVarPtr(mlir::Operation *accDataClauseOp) {
-  auto varPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
-                  .Case<ACC_DATA_ENTRY_OPS>(
-                      [&](auto entry) { return entry.getVarPtr(); })
-                  .Case<mlir::acc::CopyoutOp, mlir::acc::UpdateHostOp>(
-                      [&](auto exit) { return exit.getVarPtr(); })
-                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
-  return varPtr;
-}
-
-mlir::Value mlir::acc::getAccPtr(mlir::Operation *accDataClauseOp) {
-  auto accPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
-                  .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
-                      [&](auto dataClause) { return dataClause.getAccPtr(); })
-                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
-  return accPtr;
-}
-
-mlir::Value mlir::acc::getVarPtrPtr(mlir::Operation *accDataClauseOp) {
-  auto varPtrPtr{
-      llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
-          .Case<ACC_DATA_ENTRY_OPS>(
-              [&](auto dataClause) { return dataClause.getVarPtrPtr(); })
-          .Default([&](mlir::Operation *) { return mlir::Value(); })};
-  return varPtrPtr;
-}
-
-mlir::SmallVector<mlir::Value>
-mlir::acc::getBounds(mlir::Operation *accDataClauseOp) {
-  mlir::SmallVector<mlir::Value> bounds{
-      llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
-          accDataClauseOp)
-          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
-            return mlir::SmallVector<mlir::Value>(
-                dataClause.getBounds().begin(), dataClause.getBounds().end());
-          })
-          .Default([&](mlir::Operation *) {
-            return mlir::SmallVector<mlir::Value, 0>();
-          })};
-  return bounds;
-}
-
-mlir::SmallVector<mlir::Value>
-mlir::acc::getAsyncOperands(mlir::Operation *accDataClauseOp) {
-  return llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
-             accDataClauseOp)
-      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
-        return mlir::SmallVector<mlir::Value>(
-            dataClause.getAsyncOperands().begin(),
-            dataClause.getAsyncOperands().end());
-      })
-      .Default([&](mlir::Operation *) {
-        return mlir::SmallVector<mlir::Value, 0>();
-      });
-}
-
-mlir::ArrayAttr
-mlir::acc::getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp) {
-  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
-      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
-        return dataClause.getAsyncOperandsDeviceTypeAttr();
-      })
-      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
-}
-
-mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
-  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
-      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
-          [&](auto dataClause) { return dataClause.getAsyncOnlyAttr(); })
-      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
-}
-
-std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {
-  auto name{
-      llvm::TypeSwitch<mlir::Operation *, std::optional<llvm::StringRef>>(accOp)
-          .Case<ACC_DATA_ENTRY_OPS>([&](auto entry) { return entry.getName(); })
-          .Default([&](mlir::Operation *) -> std::optional<llvm::StringRef> {
-            return {};
-          })};
-  return name;
-}
-
-std::optional<mlir::acc::DataClause>
-mlir::acc::getDataClause(mlir::Operation *accDataEntryOp) {
-  auto dataClause{
-      llvm::TypeSwitch<mlir::Operation *, std::optional<mlir::acc::DataClause>>(
-          accDataEntryOp)
-          .Case<ACC_DATA_ENTRY_OPS>(
-              [&](auto entry) { return entry.getDataClause(); })
-          .Default([&](mlir::Operation *) { return std::nullopt; })};
-  return dataClause;
-}
-
-bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
-  auto implicit{llvm::TypeSwitch<mlir::Operation *, bool>(accDataEntryOp)
-                    .Case<ACC_DATA_ENTRY_OPS>(
-                        [&](auto entry) { return entry.getImplicit(); })
-                    .Default([&](mlir::Operation *) { return false; })};
-  return implicit;
-}
-
-mlir::ValueRange mlir::acc::getDataOperands(mlir::Operation *accOp) {
-  auto dataOperands{
-      llvm::TypeSwitch<mlir::Operation *, mlir::ValueRange>(accOp)
-          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>(
-              [&](auto entry) { return entry.getDataClauseOperands(); })
-          .Default([&](mlir::Operation *) { return mlir::ValueRange(); })};
-  return dataOperands;
-}
-
-mlir::MutableOperandRange
-mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
-  auto dataOperands{
-      llvm::TypeSwitch<mlir::Operation *, mlir::MutableOperandRange>(accOp)
-          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>(
-              [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
-          .Default([&](mlir::Operation *) { return nullptr; })};
-  return dataOperands;
-}
