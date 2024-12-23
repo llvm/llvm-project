@@ -7078,9 +7078,8 @@ bool CombinerHelper::matchSimplifyNegMinMax(MachineInstr &MI,
   if (mi_match(DestReg, MRI,
                m_Neg(m_OneUse(m_any_of(
                    m_GSMin(m_Reg(X), m_Reg(Y)), m_GSMax(m_Reg(X), m_Reg(Y)),
-                   m_CommutativeBinOp(TargetOpcode::G_UMIN, m_Reg(X), m_Reg(Y)),
-                   m_CommutativeBinOp(TargetOpcode::G_UMAX, m_Reg(X),
-                                      m_Reg(Y)))))) &&
+                   m_BinOp(TargetOpcode::G_UMIN, m_Reg(X), m_Reg(Y)),
+                   m_BinOp(TargetOpcode::G_UMAX, m_Reg(X), m_Reg(Y)))))) &&
       (mi_match(Y, MRI, m_all_of(m_Neg(m_SpecificReg(X)), m_Reg(Sub0))) ||
        mi_match(X, MRI, m_all_of(m_Neg(m_SpecificReg(Y)), m_Reg(Sub0))))) {
     MachineInstr *MinMaxMI = MRI.getVRegDef(MI.getOperand(2).getReg());
