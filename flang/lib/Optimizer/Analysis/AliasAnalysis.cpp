@@ -599,8 +599,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
-          bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
-                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
+          bool isDeclareOp =
+              llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
+              llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
             v = op.getMemref();
