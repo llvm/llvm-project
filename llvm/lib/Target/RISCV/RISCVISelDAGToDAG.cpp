@@ -2531,29 +2531,6 @@ bool RISCVDAGToDAGISel::SelectAddrFrameIndex(SDValue Addr, SDValue &Base,
   return false;
 }
 
-// Select a frame index and an optional immediate offset from an ADD or OR.
-bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
-                                              SDValue &Offset) {
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
-
-  if (!CurDAG->isBaseWithConstantOffset(Addr))
-    return false;
-
-  if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
-    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal)) {
-      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
-                                         Subtarget->getXLenVT());
-      Offset = CurDAG->getSignedTargetConstant(CVal, SDLoc(Addr),
-                                               Subtarget->getXLenVT());
-      return true;
-    }
-  }
-
-  return false;
-}
-
 // Fold constant addresses.
 static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
                                const MVT VT, const RISCVSubtarget *Subtarget,
