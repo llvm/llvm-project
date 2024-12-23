@@ -294,17 +294,32 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
   if (getOptions().Debug)
     errs() << "Branch at line " << BRV.getLine() << '\n';
 
-  for (const auto &R : BRV.Regions) {
-    double TruePercent = 0.0;
-    double FalsePercent = 0.0;
-    // FIXME: It may overflow when the data is too large, but I have not
-    // encountered it in actual use, and not sure whether to use __uint128_t.
-    uint64_t Total = R.ExecutionCount + R.FalseExecutionCount;
+  auto BranchCount = [&](StringRef Label, uint64_t Count, bool Folded,
+                         double Total) {
+    if (Folded)
+      return std::string{"Folded"};
 
-    if (!getOptions().ShowBranchCounts && Total != 0) {
-      TruePercent = ((double)(R.ExecutionCount) / (double)Total) * 100.0;
-      FalsePercent = ((double)(R.FalseExecutionCount) / (double)Total) * 100.0;
-    }
+    std::string Str;
+    raw_string_ostream OS(Str);
+
+    colored_ostream(OS, raw_ostream::RED, getOptions().Colors && !Count,
+                    /*Bold=*/false, /*BG=*/true)
+        << Label;
+
+    if (getOptions().ShowBranchCounts)
+      OS << ": " << formatCount(Count);
+    else
+      OS << ": " << format("%0.2f", (Total != 0 ? 100.0 * Count / Total : 0.0))
+         << "%";
+
+    return Str;
+  };
+
+  for (const auto &R : BRV.Regions) {
+    // This can be `double` since it is only used as a denominator.
+    // FIXME: It is still inaccurate if Count is greater than (1LL << 53).
+    double Total =
+        static_cast<double>(R.ExecutionCount) + R.FalseExecutionCount;
 
     renderLinePrefix(OS, ViewDepth);
     OS << "  Branch (" << R.LineStart << ":" << R.ColumnStart << "): [";
@@ -314,33 +329,9 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
       continue;
     }
 
-    if (R.TrueFolded)
-      OS << "Folded, ";
-    else {
-      colored_ostream(OS, raw_ostream::RED,
-                      getOptions().Colors && !R.ExecutionCount,
-                      /*Bold=*/false, /*BG=*/true)
-          << "True";
-
-      if (getOptions().ShowBranchCounts)
-        OS << ": " << formatCount(R.ExecutionCount) << ", ";
-      else
-        OS << ": " << format("%0.2f", TruePercent) << "%, ";
-    }
-
-    if (R.FalseFolded)
-      OS << "Folded]\n";
-    else {
-      colored_ostream(OS, raw_ostream::RED,
-                      getOptions().Colors && !R.FalseExecutionCount,
-                      /*Bold=*/false, /*BG=*/true)
-          << "False";
-
-      if (getOptions().ShowBranchCounts)
-        OS << ": " << formatCount(R.FalseExecutionCount) << "]\n";
-      else
-        OS << ": " << format("%0.2f", FalsePercent) << "%]\n";
-    }
+    OS << BranchCount("True", R.ExecutionCount, R.TrueFolded, Total) << ", "
+       << BranchCount("False", R.FalseExecutionCount, R.FalseFolded, Total)
+       << "]\n";
   }
 }
 

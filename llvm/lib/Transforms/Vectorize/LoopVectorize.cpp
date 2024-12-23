@@ -2905,8 +2905,17 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
     }
   }
 
-  assert((MissingVals.empty() || OrigLoop->getUniqueExitBlock()) &&
-         "Expected a single exit block for escaping values");
+  assert((MissingVals.empty() ||
+          all_of(MissingVals,
+                 [MiddleBlock, this](const std::pair<Value *, Value *> &P) {
+                   return all_of(
+                       predecessors(cast<Instruction>(P.first)->getParent()),
+                       [MiddleBlock, this](BasicBlock *Pred) {
+                         return Pred == MiddleBlock ||
+                                Pred == OrigLoop->getLoopLatch();
+                       });
+                 })) &&
+         "Expected escaping values from latch/middle.block only");
 
   for (auto &I : MissingVals) {
     PHINode *PHI = cast<PHINode>(I.first);
@@ -4265,7 +4274,6 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   if (TC == 0) {
     reportVectorizationFailure(
-        "Unable to calculate the loop count due to complex control flow",
         "unable to calculate the loop count due to complex control flow",
         "UnknownLoopCountComplexCFG", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -9049,22 +9057,23 @@ addUsersInExitBlocks(VPlan &Plan,
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-    VPValue *V = ExitIRI->getOperand(0);
-    // Pass live-in values used by exit phis directly through to their users in
-    // the exit block.
-    if (V->isLiveIn())
-      continue;
+    for (const auto &[Idx, Op] : enumerate(ExitIRI->operands())) {
+      // Pass live-in values used by exit phis directly through to their users
+      // in the exit block.
+      if (Op->isLiveIn())
+        continue;
 
-    // Currently only live-ins can be used by exit values from blocks not
-    // exiting via the vector latch through to the middle block.
-    if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
-      return false;
+      // Currently only live-ins can be used by exit values from blocks not
+      // exiting via the vector latch through to the middle block.
+      if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
+        return false;
 
-    LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
-    VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
-                                  {V, Plan.getOrAddLiveIn(ConstantInt::get(
-                                          IntegerType::get(Ctx, 32), 1))});
-    ExitIRI->setOperand(0, Ext);
+      LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
+      VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
+                                    {Op, Plan.getOrAddLiveIn(ConstantInt::get(
+                                             IntegerType::get(Ctx, 32), 1))});
+      ExitIRI->setOperand(Idx, Ext);
+    }
   }
   return true;
 }
@@ -9350,7 +9359,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
   if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) {
     reportVectorizationFailure(
-        "Some exit values in loop with uncountable exit not supported yet",
         "Some exit values in loop with uncountable exit not supported yet",
         "UncountableEarlyExitLoopsUnsupportedExitValue", ORE, OrigLoop);
     return nullptr;
@@ -10226,36 +10234,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasUncountableEarlyExit()) {
-    if (!EnableEarlyExitVectorization) {
-      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                                 "early exit is not enabled",
-                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
-      return false;
-    }
-
-    // In addUsersInExitBlocks we already bail out if there is an outside use
-    // of a loop-defined variable, but it ignores induction variables which are
-    // handled by InnerLoopVectorizer::fixupIVUsers. We need to bail out if we
-    // encounter induction variables too otherwise fixupIVUsers will crash.
-    BasicBlock *LoopLatch = L->getLoopLatch();
-    for (const auto &Induction : LVL.getInductionVars()) {
-      PHINode *Ind = Induction.first;
-      Instruction *IndUpdate =
-          cast<Instruction>(Ind->getIncomingValueForBlock(LoopLatch));
-      for (Instruction *I : {cast<Instruction>(Ind), IndUpdate}) {
-        for (User *U : I->users()) {
-          Instruction *UI = cast<Instruction>(U);
-          if (!L->contains(UI)) {
-            reportVectorizationFailure(
-                "Auto-vectorization of loops with uncountable early exits and "
-                "outside uses of induction variables unsupported",
-                "UncountableEarlyExitLoopIndLiveOutsUnsupported", ORE, L);
-            return false;
-          }
-        }
-      }
-    }
+  if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
+    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                               "early exit is not enabled",
+                               "UncountableEarlyExitLoopsDisabled", ORE, L);
+    return false;
   }
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
