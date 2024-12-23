@@ -8107,9 +8107,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   Attr *CCAttr = getCCTypeAttr(S.Context, attr);
 
   if (attr.getKind() == ParsedAttr::AT_RISCVVLSCC) {
-    // If the riscv_abi_vlen doesn't have any argument, we set set it to 2 to
-    // differentiate from functions without attribute.
-    unsigned ABIVLen = 2;
+    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
+    // value 128.
+    unsigned ABIVLen = 128;
     if (attr.getNumArgs() &&
         !S.checkUInt32Argument(attr, attr.getArgAsExpr(0), ABIVLen))
       return false;

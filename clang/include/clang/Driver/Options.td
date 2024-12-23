@@ -4992,10 +4992,6 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
       !eq(GlobalDocumentation.Program, "Flang") : "",
       true: " The value will be reflected in __riscv_v_fixed_vlen preprocessor define"),
     " (RISC-V only)")>;
-def mriscv_abi_vlen_EQ : Joined<["-"], "mriscv-abi-vlen=">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Specify the VLEN for VLS calling convention.">,
-  MarshallingInfoInt<CodeGenOpts<"RISCVABIVLen">>;
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/MIPSr6 only)">;
 def mno_unaligned_access : Flag<["-"], "mno-unaligned-access">, Group<m_Group>,
