@@ -176,7 +176,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
       (!Args.hasArgNoClaim(OPT_d) && !Args.hasArgNoClaim(OPT_l))) {
     Table.printHelp(outs(), "llvm-dlltool [options] file...", "llvm-dlltool",
                     false);
-    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec, r4000\n";
+    llvm::outs()
+        << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec, r4000\n";
     return 1;
   }
 
