@@ -208,6 +208,9 @@ cl::opt<bool> UpdateDebugSections(
     cl::desc("update DWARF debug sections of the executable"),
     cl::cat(BoltCategory));
 
+cl::opt<bool> StripBinary("strip-binary", cl::desc("perform binary stripping"),
+                          cl::cat(BoltCategory));
+
 cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),

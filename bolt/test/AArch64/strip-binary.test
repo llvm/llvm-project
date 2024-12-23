@@ -1,0 +1,26 @@
+## Verify that bolt correctly strips the binary of symbols and sections.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags -g %p/../Inputs/asm_foo.s %p/../Inputs/asm_main.c -o %t.exe -Wl,-q
+RUN: llvm-bolt %t.exe -o %t.stripped -strip-binary
+
+RUN: nm %t.stripped  2>&1 | FileCheck %s --check-prefix=CHECK-NM
+RUN: llvm-readelf --sections %t.stripped 2>&1 | FileCheck %s --check-prefix=CHECK-READELF
+
+CHECK-NM: nm: {{.*}}: no symbols
+CHECK-READELF-NOT: .debug
+CHECK-READELF-NOT: .comment
+CHECK-READELF-NOT: .note{{.*}}
+
+RUN: not llvm-bolt %t.exe -o %t -strip-binary -update-debug-sections 2>&1 | FileCheck %s --check-prefix CHECK-UPDATE-DEBUG
+CHECK-UPDATE-DEBUG: BOLT-ERROR: -strip-binary and -update-debug-sections cannot be used at the same time
+
+RUN: not llvm-bolt %t.exe -o %t -strip-binary -enable-bat 2>&1 | FileCheck %s --check-prefix CHECK-BAT
+CHECK-BAT: BOLT-ERROR: -strip-binary and -enable-bat cannot be used at the same time
+
+RUN: not llvm-bolt %t.exe -o %t -strip-binary -instrument 2>&1 | FileCheck %s --check-prefix CHECK-INSTRUMENT
+CHECK-INSTRUMENT: BOLT-ERROR: -strip-binary and -instrument cannot be used at the same time
+
+RUN: not llvm-bolt %t.exe -o %t -strip-binary -hugify 2>&1 | FileCheck %s --check-prefix CHECK-HUGIFY
+CHECK-HUGIFY: BOLT-ERROR: -strip-binary and -hugify cannot be used at the same time

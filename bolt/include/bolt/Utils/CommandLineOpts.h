@@ -62,6 +62,7 @@ extern llvm::cl::opt<bool> SplitEH;
 extern llvm::cl::opt<bool> StrictMode;
 extern llvm::cl::opt<bool> TimeOpts;
 extern llvm::cl::opt<bool> UseOldText;
+extern llvm::cl::opt<bool> StripBinary;
 extern llvm::cl::opt<bool> UpdateDebugSections;
 
 // The default verbosity level (0) is pretty terse, level 1 is fairly

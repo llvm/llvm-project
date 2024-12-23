@@ -2108,6 +2108,29 @@ void RewriteInstance::adjustCommandLineOptions() {
     opts::UseOldText = false;
   }
 
+  if (opts::StripBinary) {
+    auto exitStripFlagError = [&](StringRef IncompatibleFlag) {
+      BC->errs() << "BOLT-ERROR: -strip-binary and " << IncompatibleFlag
+                 << " cannot be used at the same time\n";
+      exit(1);
+    };
+
+    if (opts::UpdateDebugSections)
+      exitStripFlagError("-update-debug-sections");
+    if (opts::EnableBAT)
+      exitStripFlagError("-enable-bat");
+
+    // Incompatible with any other flags that introduce extra symbols/sections?
+    if (opts::Instrument)
+      exitStripFlagError("-instrument");
+    if (opts::Hugify)
+      exitStripFlagError("-hugify");
+
+    // Toggle symbol table removal on
+    if (!opts::RemoveSymtab)
+      opts::RemoveSymtab = true;
+  }
+
   if (opts::Lite && opts::StrictMode) {
     BC->errs()
         << "BOLT-ERROR: -strict and -lite cannot be used at the same time\n";
@@ -3640,7 +3663,7 @@ void RewriteInstance::updateMetadata() {
     DebugInfoRewriter->updateDebugInfo();
   }
 
-  if (opts::WriteBoltInfoSection)
+  if (opts::WriteBoltInfoSection && !opts::StripBinary)
     addBoltInfoSection();
 }
 
@@ -4367,6 +4390,13 @@ bool RewriteInstance::shouldStrip(const ELFShdrTy &Section,
   if (opts::RemoveSymtab && Section.sh_type == ELF::SHT_SYMTAB)
     return true;
 
+  if (opts::StripBinary) {
+    if (Section.sh_type == ELF::SHT_STRTAB)
+      return true;
+    if (Section.sh_type == ELF::SHT_PROGBITS && SectionName == ".comment")
+      return true;
+    // TODO: ignore any .note* sections here?
+  }
   return false;
 }
 
@@ -4788,7 +4818,7 @@ void RewriteInstance::updateELFSymbolTable(
 
   for (const ELFSymTy &Symbol : cantFail(Obj.symbols(&SymTabSection))) {
     // For regular (non-dynamic) symbol table strip unneeded symbols.
-    if (!IsDynSym && shouldStrip(Symbol))
+    if (!IsDynSym && shouldStrip(Symbol)) // TODO: -strip-all support ?
       continue;
 
     const BinaryFunction *Function =
