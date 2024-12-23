@@ -2,7 +2,11 @@
 # RUN: llvm-objcopy --wildcard --globalize-symbol="*" %t %t.copy
 # RUN: llvm-readobj --symbols %t.copy | FileCheck %s
 
-# CHECK: Symbols [
+# RUN: echo "*" > %t-star.txt
+# RUN: llvm-objcopy --wildcard --globalize-symbols="%t-star.txt" %t %t.copy
+# RUN: llvm-readobj --symbols %t.copy | FileCheck %s
+
+# CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: _PrivateSymbol
 # CHECK-NEXT:     Extern

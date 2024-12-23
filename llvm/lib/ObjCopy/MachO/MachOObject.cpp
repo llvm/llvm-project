@@ -38,10 +38,10 @@ void SymbolTable::updateSymbols(function_ref<void(SymbolEntry &)> Callable) {
     Callable(*Sym);
 
   // Partition symbols: local < defined external < undefined external.
-  auto it_ext = std::stable_partition(
+  auto ExternalBegin = std::stable_partition(
       std::begin(Symbols), std::end(Symbols),
       [](const auto &Sym) { return Sym->isLocalSymbol(); });
-  std::stable_partition(it_ext, std::end(Symbols), [](const auto &Sym) {
+  std::stable_partition(ExternalBegin, std::end(Symbols), [](const auto &Sym) {
     return !Sym->isUndefinedSymbol();
   });
 }

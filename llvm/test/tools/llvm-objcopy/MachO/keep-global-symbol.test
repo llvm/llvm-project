@@ -2,7 +2,11 @@
 # RUN: llvm-objcopy --keep-global-symbol _CommonSymbol %t %t.copy
 # RUN: llvm-readobj --symbols %t.copy | FileCheck %s
 
-# CHECK: Symbols [
+# RUN: echo _CommonSymbol > %t-sym-list.txt
+# RUN: llvm-objcopy --wildcard --keep-global-symbols="%t-sym-list.txt" %t %t.copy
+# RUN: llvm-readobj --symbols %t.copy | FileCheck %s
+
+# CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: _PrivateSymbol
 # CHECK-NEXT:     Type: Section (0xE)
