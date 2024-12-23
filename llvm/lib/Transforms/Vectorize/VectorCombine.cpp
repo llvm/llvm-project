@@ -3025,21 +3025,32 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   if (ExtIdx >= NumElts || InsIdx >= NumElts)
     return false;
 
-  SmallVector<int> Mask(NumElts, 0);
-  std::iota(Mask.begin(), Mask.end(), 0);
-  Mask[InsIdx] = ExtIdx + NumElts;
+  // Insertion into poison is a cheaper single operand shuffle.
+  TargetTransformInfo::ShuffleKind SK;
+  SmallVector<int> Mask(NumElts, PoisonMaskElem);
+  if (isa<PoisonValue>(DstVec) && !isa<UndefValue>(SrcVec)) {
+    SK = TargetTransformInfo::SK_PermuteSingleSrc;
+    Mask[InsIdx] = ExtIdx;
+    std::swap(DstVec, SrcVec);
+  } else {
+    SK = TargetTransformInfo::SK_PermuteTwoSrc;
+    std::iota(Mask.begin(), Mask.end(), 0);
+    Mask[InsIdx] = ExtIdx + NumElts;
+  }
+
   // Cost
   auto *Ins = cast<InsertElementInst>(&I);
   auto *Ext = cast<ExtractElementInst>(I.getOperand(1));
-
-  InstructionCost OldCost =
-      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx) +
+  InstructionCost InsCost =
       TTI.getVectorInstrCost(*Ins, VecTy, CostKind, InsIdx);
+  InstructionCost ExtCost =
+      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
+  InstructionCost OldCost = ExtCost + InsCost;
 
-  InstructionCost NewCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteTwoSrc, VecTy, Mask, CostKind);
+  InstructionCost NewCost = TTI.getShuffleCost(SK, VecTy, Mask, CostKind, 0,
+                                               nullptr, {DstVec, SrcVec});
   if (!Ext->hasOneUse())
-    NewCost += TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
+    NewCost += ExtCost;
 
   LLVM_DEBUG(dbgs() << "Found a insert/extract shuffle-like pair : " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
