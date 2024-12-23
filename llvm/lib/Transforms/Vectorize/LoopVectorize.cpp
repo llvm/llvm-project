@@ -2673,8 +2673,7 @@ void InnerLoopVectorizer::createInductionAdditionalBypassValues(
       auto *BinOp = II.getInductionBinOp();
       // Fast-math-flags propagate from the original induction instruction.
       if (isa_and_nonnull<FPMathOperator>(BinOp))
-        BypassBuilder.setFastMathFlags(
-            BinOp->getFastMathFlags());
+        BypassBuilder.setFastMathFlags(BinOp->getFastMathFlags());
 
       // Compute the end value for the additional bypass.
       EndValueFromAdditionalBypass =
