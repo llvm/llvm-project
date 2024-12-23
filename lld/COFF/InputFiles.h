@@ -72,7 +72,6 @@ public:
   enum Kind {
     ArchiveKind,
     ObjectKind,
-    LazyObjectKind,
     PDBKind,
     ImportKind,
     BitcodeKind,
