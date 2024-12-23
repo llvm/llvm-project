@@ -2742,3 +2742,7 @@
 // RISCV64-LINUX: #define __unix__ 1
 // RISCV64-LINUX: #define linux 1
 // RISCV64-LINUX: #define unix 1
+
+// RUN: %clang_cc1 -dM -triple=x86_64-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
+
+// UEFI: #define __UEFI__ 1
