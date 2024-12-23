@@ -958,24 +958,25 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
 
 /// This attempts to find load-store pairs in the body of the loop
 /// that could be replaced by an iter_args variable on the loop. The
-/// initial load and the final store are moved out of the loop. For 
+/// initial load and the final store are moved out of the loop. For
 /// such a pair to be eligible:
 /// 1. the load must be followed by the store
 /// 2. the memref must not be read again after the store
-/// 3. the indices of the load and store must match AND be 
+/// 3. the indices of the load and store must match AND be
 /// loop-invariant for the given loop.
 ///
 /// This is a useful transformation as
-/// - it exposes reduction dependencies that can be extracted by --affine-parallelize
+/// - it exposes reduction dependencies that can be extracted by
+/// --affine-parallelize
 /// - it is a common pattern in code lowered from linalg.
-/// - it exposes more opportunities for forwarding of load/store by 
+/// - it exposes more opportunities for forwarding of load/store by
 /// moving the load/store out of the loop and into a scope.
-/// 
-static void findReductionVariablesAndRewrite(
+///
+static bool findReductionVariablesAndRewrite(
     LoopLikeOpInterface loop, PostDominanceInfo &postDominanceInfo,
     llvm::function_ref<bool(Value, Value)> mayAlias) {
   if (!loop.getLoopResults())
-    return;
+    return false;
 
   SmallVector<std::pair<AffineReadOpInterface, AffineWriteOpInterface>> result;
   auto *region = loop.getLoopRegions()[0];
@@ -1017,13 +1018,13 @@ static void findReductionVariablesAndRewrite(
       if (!affine::hasNoInterveningEffect<MemoryEffects::Read>(
               asStore.getOperation(), asLoad, mayAlias))
         break;
-      
+
       // now let's just replace this pair of accesses with loop iter args
       result.push_back({asLoad, asStore});
     }
   }
   if (result.empty())
-    return;
+    return false;
   SmallVector<Value> newInitOperands;
   SmallVector<Value> newYieldOperands;
   IRRewriter rewriter(loop->getContext());
@@ -1043,7 +1044,7 @@ static void findReductionVariablesAndRewrite(
       });
   if (failed(rewritten)) {
     rewriter.cancelOpModification(loop->getParentOp());
-    return;
+    return false;
   }
   auto newLoop = *rewritten;
 
@@ -1064,6 +1065,7 @@ static void findReductionVariablesAndRewrite(
   rewriter.finalizeOpModification(newLoop->getParentOp());
   LLVM_DEBUG(llvm::dbgs() << "Replaced loop reduction variable: \n"
                           << newLoop << "\n");
+  return true;
 }
 
 // The load to load forwarding / redundant load elimination is similar to the
@@ -1153,24 +1155,52 @@ static void loadCSE(AffineReadOpInterface loadA,
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
+void doForwarding(Operation *parentOp, DominanceInfo &domInfo,
+                  PostDominanceInfo &postDomInfo,
+                  llvm::function_ref<bool(Value, Value)> mayAlias);
+
 void mlir::affine::affineScalarReplace(Operation *parentOp,
                                        DominanceInfo &domInfo,
                                        PostDominanceInfo &postDomInfo,
                                        AliasAnalysis &aliasAnalysis) {
-  // Load op's whose results were replaced by those forwarded from stores.
-  SmallVector<Operation *, 8> opsToErase;
-
-  // A list of memref's that are potentially dead / could be eliminated.
-  SmallPtrSet<Value, 4> memrefsToErase;
 
   auto mayAlias = [&](Value val1, Value val2) -> bool {
     return !aliasAnalysis.alias(val1, val2).isNo();
   };
 
-  // scalarize reduction variables as iter_args
-  parentOp->walk([&](AffineForOp loop) {
-    findReductionVariablesAndRewrite(loop, postDomInfo, mayAlias);
-  });
+  bool continueWalk;
+  do {
+    continueWalk = false;
+
+    // Walk loops and rewrite reduction variables. Once a loop has been
+    // rewritten, we need to perform forwarding to eliminate the new store and
+    // loads introduced before and after the new loop. Then we need to continue
+    // doing that loop by loop.
+    parentOp->walk([&](AffineForOp loop) {
+      Operation *loopParent = loop->getParentOp();
+      bool rewritten =
+          findReductionVariablesAndRewrite(loop, postDomInfo, mayAlias);
+      if (rewritten && loopParent != parentOp) {
+        doForwarding(loopParent, domInfo, postDomInfo, mayAlias);
+        continueWalk = true;
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    });
+  } while (continueWalk);
+
+  // cleanup the parent
+  doForwarding(parentOp, domInfo, postDomInfo, mayAlias);
+}
+
+void doForwarding(Operation *parentOp, DominanceInfo &domInfo,
+                  PostDominanceInfo &postDomInfo,
+                  llvm::function_ref<bool(Value, Value)> mayAlias) {
+  // Load op's whose results were replaced by those forwarded from stores.
+  SmallVector<Operation *, 8> opsToErase;
+
+  // A list of memref's that are potentially dead / could be eliminated.
+  SmallPtrSet<Value, 4> memrefsToErase;
 
   // Walk all load's and perform store to load forwarding.
   parentOp->walk([&](AffineReadOpInterface loadOp) {
