@@ -20008,16 +20008,16 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   return !(FlagMask & Val) || (AllowMask && !(FlagMask & ~Val));
 }
 
-bool Sema::ComputeBestEnumProperties(ASTContext &Context, EnumDecl *Enum,
-                                     bool is_cpp, bool isPacked,
+bool Sema::ComputeBestEnumProperties(ASTContext &Context, bool isPacked,
                                      unsigned NumNegativeBits,
                                      unsigned NumPositiveBits,
-                                     unsigned &BestWidth, QualType &BestType,
+                                     QualType &BestType,
                                      QualType &BestPromotionType) {
   unsigned IntWidth = Context.getTargetInfo().getIntWidth();
   unsigned CharWidth = Context.getTargetInfo().getCharWidth();
   unsigned ShortWidth = Context.getTargetInfo().getShortWidth();
-  bool enum_too_large = false;
+  bool EnumTooLarge = false;
+  unsigned BestWidth;
   if (NumNegativeBits) {
     // If there is a negative value, figure out the smallest integer type (of
     // int/long/longlong) that fits.
@@ -20042,7 +20042,7 @@ bool Sema::ComputeBestEnumProperties(ASTContext &Context, EnumDecl *Enum,
         BestWidth = Context.getTargetInfo().getLongLongWidth();
 
         if (NumNegativeBits > BestWidth || NumPositiveBits >= BestWidth)
-          enum_too_large = true;
+          EnumTooLarge = true;
         BestType = Context.LongLongTy;
       }
     }
@@ -20062,15 +20062,17 @@ bool Sema::ComputeBestEnumProperties(ASTContext &Context, EnumDecl *Enum,
     } else if (NumPositiveBits <= IntWidth) {
       BestType = Context.UnsignedIntTy;
       BestWidth = IntWidth;
-      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
-                              ? Context.UnsignedIntTy
-                              : Context.IntTy;
+      BestPromotionType =
+          (NumPositiveBits == BestWidth || !Context.getLangOpts().CPlusPlus)
+              ? Context.UnsignedIntTy
+              : Context.IntTy;
     } else if (NumPositiveBits <=
                (BestWidth = Context.getTargetInfo().getLongWidth())) {
       BestType = Context.UnsignedLongTy;
-      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
-                              ? Context.UnsignedLongTy
-                              : Context.LongTy;
+      BestPromotionType =
+          (NumPositiveBits == BestWidth || !Context.getLangOpts().CPlusPlus)
+              ? Context.UnsignedLongTy
+              : Context.LongTy;
     } else {
       BestWidth = Context.getTargetInfo().getLongLongWidth();
       if (NumPositiveBits > BestWidth) {
@@ -20078,15 +20080,16 @@ bool Sema::ComputeBestEnumProperties(ASTContext &Context, EnumDecl *Enum,
         // allowed as the type for an enumerator per C23 6.7.2.2p4 and p12.
         // FIXME: GCC uses __int128_t and __uint128_t for cases that fit within
         // a 128-bit integer, we should consider doing the same.
-        enum_too_large = true;
+        EnumTooLarge = true;
       }
       BestType = Context.UnsignedLongLongTy;
-      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
-                              ? Context.UnsignedLongLongTy
-                              : Context.LongLongTy;
+      BestPromotionType =
+          (NumPositiveBits == BestWidth || !Context.getLangOpts().CPlusPlus)
+              ? Context.UnsignedLongLongTy
+              : Context.LongLongTy;
     }
   }
-  return enum_too_large;
+  return EnumTooLarge;
 }
 
 void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
@@ -20177,10 +20180,11 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
     BestWidth = Context.getIntWidth(BestType);
   } else {
-    bool enum_too_large = ComputeBestEnumProperties(
-        Context, Enum, getLangOpts().CPlusPlus, Packed, NumNegativeBits,
-        NumPositiveBits, BestWidth, BestType, BestPromotionType);
-    if (enum_too_large)
+    bool EnumTooLarge =
+        ComputeBestEnumProperties(Context, Packed, NumNegativeBits,
+                                  NumPositiveBits, BestType, BestPromotionType);
+    BestWidth = Context.getIntWidth(BestType);
+    if (EnumTooLarge)
       Diag(Enum->getLocation(), diag::ext_enum_too_large);
   }
 
