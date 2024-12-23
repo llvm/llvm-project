@@ -1613,12 +1613,13 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         if (gepArgs.size() != 1)
           fir::emitFatalError(loc,
                               "corrupted substring GEP in fir.embox/fir.rebox");
-        mlir::Type outterOffsetTy = gepArgs[0].get<mlir::Value>().getType();
+        mlir::Type outterOffsetTy =
+            llvm::cast<mlir::Value>(gepArgs[0]).getType();
         mlir::Value cast =
             this->integerCast(loc, rewriter, outterOffsetTy, *substringOffset);
 
         gepArgs[0] = rewriter.create<mlir::LLVM::AddOp>(
-            loc, outterOffsetTy, gepArgs[0].get<mlir::Value>(), cast);
+            loc, outterOffsetTy, llvm::cast<mlir::Value>(gepArgs[0]), cast);
       }
     }
     mlir::Type llvmPtrTy = ::getLlvmPtrType(resultTy.getContext());
