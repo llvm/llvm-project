@@ -556,6 +556,22 @@ TEST_P(ASTMatchersTest, DeclRefExpr) {
                          Reference));
 }
 
+TEST_P(ASTMatchersTest, DependentScopeDeclRefExpr) {
+  if (!GetParam().isCXX() || GetParam().hasDelayedTemplateParsing()) {
+    // FIXME: Add a test for `dependentScopeDeclRefExpr()` that does not depend
+    // on C++.
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      dependentScopeDeclRefExpr()));
+
+  EXPECT_TRUE(
+      matches("template <typename T> struct S { static T Foo; };"
+              "template <typename T> void declToImport() { (void)S<T>::Foo; }",
+              dependentScopeDeclRefExpr()));
+}
+
 TEST_P(ASTMatchersTest, CXXMemberCallExpr) {
   if (!GetParam().isCXX()) {
     return;
@@ -629,10 +645,8 @@ TEST_P(ASTMatchersTest, MemberExpr_MatchesVariable) {
   EXPECT_TRUE(matches("template <class T>"
                       "class X : T { void f() { this->T::v; } };",
                       cxxDependentScopeMemberExpr()));
-  // FIXME: Add a matcher for DependentScopeDeclRefExpr.
-  EXPECT_TRUE(
-      notMatches("template <class T> class X : T { void f() { T::v; } };",
-                 cxxDependentScopeMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      dependentScopeDeclRefExpr()));
   EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
                       cxxDependentScopeMemberExpr()));
 }

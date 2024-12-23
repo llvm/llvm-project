@@ -1101,6 +1101,8 @@ AST Matchers
 
 - Ensure ``pointee`` matches Objective-C pointer types.
 
+- Add ``dependentScopeDeclRefExpr`` matcher to match expressions that refer to dependent scope declarations.
+
 clang-format
 ------------
 
