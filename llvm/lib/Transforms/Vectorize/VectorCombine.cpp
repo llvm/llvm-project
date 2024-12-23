@@ -1938,10 +1938,12 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
           return false;
         M = PoisonMaskElem;
         continue;
-      } else if (!NewX || NewX == Src) {
+      }
+      if (!NewX || NewX == Src) {
         NewX = Src;
         continue;
-      } else if (!NewY || NewY == Src) {
+      }
+      if (!NewY || NewY == Src) {
         M += NumSrcElts;
         NewY = Src;
         continue;
