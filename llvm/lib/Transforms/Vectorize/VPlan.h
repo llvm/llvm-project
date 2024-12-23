@@ -2778,12 +2778,11 @@ public:
 /// concrete recipes before codegen. The Operands are {ChainOp, VecOp,
 /// [Condition]}.
 class VPExtendedReductionRecipe : public VPReductionRecipe {
-  /// Opcode for the extend recipe.
+  /// Opcode of the extend recipe will be lowered to.
   Instruction::CastOps ExtOp;
-  /// Debug location of reduction instruction.
+  /// Debug location of reduction recipe will be lowered to.
   DebugLoc RedDL;
 
-protected:
 public:
   VPExtendedReductionRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
                             VPValue *ChainOp, VPWidenCastRecipe *Ext,
@@ -2794,6 +2793,7 @@ public:
                           Ext->getDebugLoc()),
         ExtOp(Ext->getOpcode()), RedDL(RedI->getDebugLoc()) {}
 
+  /// Contructor for cloning VPExtendedReductionRecipe.
   VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
       : VPReductionRecipe(
             VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceDescriptor(),
@@ -2842,25 +2842,26 @@ public:
   DebugLoc getRedDebugLoc() const { return RedDL; }
 };
 
-/// A recipe to represent inloop MulAccReduction operations, performing a
+/// A recipe to represent inloop MulAccumulateReduction operations, performing a
 /// reduction.add on the result of vector operands (might be extended)
 /// multiplication into a scalar value, and adding the result to a chain. This
 /// recipe is abstract and needs to be lowered to concrete recipes before
 /// codegen. The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
+  /// Opcode of the extend recipe.
   Instruction::CastOps ExtOp;
 
-  // Non-neg flag for the extend instruction.
+  /// Non-neg flag of the extend recipe.
   bool IsNonNeg;
 
-  // Debug location of extend instruction.
+  /// Debug location of extend recipes will be lowered to.
   DebugLoc Ext0DL;
   DebugLoc Ext1DL;
 
-  // Debug location of reduction instruction.
+  /// Debug location of the reduction recipe will be lowered to.
   DebugLoc RedDL;
 
-  // Is this mul-acc recipe contains extend recipes?
+  /// Is this multiply-accumulate-reduction recipe contains extend?
   bool IsExtended = false;
 
 public:
@@ -2878,7 +2879,8 @@ public:
         Ext0DL(Ext0->getDebugLoc()), Ext1DL(Ext1->getDebugLoc()),
         RedDL(RedI->getDebugLoc()) {
     assert(R.getOpcode() == Instruction::Add &&
-           "The reduction instruction in MulAccRecipe must be Add");
+           "The reduction instruction in MulAccumulateteReductionRecipe must "
+           "be Add");
     IsExtended = true;
   }
 
@@ -2893,7 +2895,8 @@ public:
                           Mul->hasNoSignedWrap(), Mul->getDebugLoc()),
         RedDL(RedI->getDebugLoc()) {
     assert(R.getOpcode() == Instruction::Add &&
-           "The reduction instruction in MulAccRecipe must be Add");
+           "The reduction instruction in MulAccumulateReductionRecipe must be "
+           "Add");
   }
 
   /// Constructor for cloning VPMulAccumulateReductionRecipe.
@@ -2901,8 +2904,8 @@ public:
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC,
             MulAcc->getRecurrenceDescriptor(),
-            ArrayRef<VPValue *>({MulAcc->getChainOp(), MulAcc->getOperand(1),
-                                 MulAcc->getOperand(2)}),
+            ArrayRef<VPValue *>({MulAcc->getChainOp(), MulAcc->getVecOp0(),
+                                 MulAcc->getVecOp1()}),
             MulAcc->getCondOp(), MulAcc->isOrdered(),
             MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
             MulAcc->getMulDebugLoc()),
@@ -2944,6 +2947,7 @@ public:
   /// Return if the operands of mul instruction come from same extend.
   bool isSameExtend() const { return getVecOp0() == getVecOp1(); }
 
+  /// Return the opcode of the underlying extend.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 
   /// Return if the extend opcode is ZExt.
