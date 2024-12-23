@@ -334,13 +334,13 @@ TODO: Design and implement more primitive constraints
 
 #### Optional and default-valued properties
 
-To declare a property with a default value, use `DefaultValuedProperty<..., "...">`.
+To declare a property with a default value, use `DefaultValuedProp<..., "...">`.
 If the property's storage data type is different from its interface type,
 for example, in the case of array properties (which are stored as `SmallVector`s
 but use `ArrayRef` as an interface type), add the storage-type equivalent
 of the default value as the third argument.
 
-To declare an optional property, use `OptionalProperty<...>`.
+To declare an optional property, use `OptionalProp<...>`.
 This wraps the underlying property in an `std::optional` and gives it a
 default value of `std::nullopt`.
 
@@ -449,7 +449,7 @@ def MyOp : ... {
     I32Attr:$i32_attr,
     F32Attr:$f32_attr,
     ...
-    I32Property:$i32_prop,
+    I32Prop:$i32_prop,
     ...
   );
 
@@ -1011,7 +1011,7 @@ foo.op is_read_only
 foo.op
 ```
 
-The same logic applies to a `UnitProperty`.
+The same logic applies to a `UnitProp`.
 
 ##### Optional "else" Group
 
