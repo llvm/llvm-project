@@ -112,7 +112,7 @@ else ()
   set(FLANG_RT_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
   set(FLANG_RT_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}/clang/${LLVM_VERSION_MAJOR}")
 
-  extend_path(FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR "${FLANG_RT_OUTPUT_DIR}" "${CMAKE_INSTALL_DIR}")
+  extend_path(FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR "${FLANG_RT_OUTPUT_DIR}" "${CMAKE_INSTALL_LIBDIR}")
 endif ()
 
 # Apply the arch-specific library dir with the resource dir.
