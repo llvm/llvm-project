@@ -319,7 +319,7 @@ TEST_F(TestTypeSystemClang, TestEnumerationValueSign) {
       OptionalClangModuleID(), Declaration(),
       m_ast->GetBasicType(lldb::eBasicTypeSignedChar), false);
   auto *enum_decl = m_ast->AddEnumerationValueToEnumerationType(
-      enum_type, nullptr, "minus_one", -1, 8);
+      enum_type, Declaration(), "minus_one", -1, 8);
   EXPECT_TRUE(enum_decl->getInitVal().isSigned());
 }
 
