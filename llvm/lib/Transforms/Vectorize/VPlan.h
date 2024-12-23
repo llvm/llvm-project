@@ -859,7 +859,7 @@ public:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
-    case VPRecipeBase::VPMulAccSC:
+    case VPRecipeBase::VPMulAccumulateReductionSC:
     case VPRecipeBase::VPExtendedReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
@@ -1077,7 +1077,7 @@ public:
            R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC ||
            R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPMulAccSC;
+           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2693,7 +2693,7 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPMulAccSC;
+           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2845,7 +2845,7 @@ public:
 /// multiplication into a scalar value, and adding the result to a chain. This
 /// recipe is abstract and needs to be lowered to concrete recipes before
 /// codegen. The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
-class VPMulAccRecipe : public VPReductionRecipe {
+class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   Instruction::CastOps ExtOp;
 
   // Non-neg flag for the extend instruction.
@@ -2862,11 +2862,11 @@ class VPMulAccRecipe : public VPReductionRecipe {
   bool IsExtended = false;
 
 protected:
-  VPMulAccRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
-                 Instruction *RedI, bool NUW, bool NSW, DebugLoc MulDL,
-                 Instruction::CastOps ExtOp, bool IsNonNeg, DebugLoc Ext0DL,
-                 DebugLoc Ext1DL, VPValue *ChainOp, VPValue *VecOp0,
-                 VPValue *VecOp1, VPValue *CondOp, bool IsOrdered)
+  VPMulAccumulateReductionRecipe(
+      const unsigned char SC, const RecurrenceDescriptor &R, Instruction *RedI,
+      bool NUW, bool NSW, DebugLoc MulDL, Instruction::CastOps ExtOp,
+      bool IsNonNeg, DebugLoc Ext0DL, DebugLoc Ext1DL, VPValue *ChainOp,
+      VPValue *VecOp0, VPValue *VecOp1, VPValue *CondOp, bool IsOrdered)
       : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
                           CondOp, IsOrdered, NUW, NSW, MulDL),
         ExtOp(ExtOp), IsNonNeg(IsNonNeg), Ext0DL(Ext0DL), Ext1DL(Ext1DL),
@@ -2876,10 +2876,12 @@ protected:
     IsExtended = true;
   }
 
-  VPMulAccRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
-                 Instruction *RedI, bool NUW, bool NSW, DebugLoc MulDL,
-                 VPValue *ChainOp, VPValue *VecOp0, VPValue *VecOp1,
-                 VPValue *CondOp, bool IsOrdered)
+  VPMulAccumulateReductionRecipe(const unsigned char SC,
+                                 const RecurrenceDescriptor &R,
+                                 Instruction *RedI, bool NUW, bool NSW,
+                                 DebugLoc MulDL, VPValue *ChainOp,
+                                 VPValue *VecOp0, VPValue *VecOp1,
+                                 VPValue *CondOp, bool IsOrdered)
       : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
                           CondOp, IsOrdered, NUW, NSW, MulDL),
         RedDL(RedI->getDebugLoc()) {
@@ -2888,36 +2890,43 @@ protected:
   }
 
 public:
-  VPMulAccRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
-                 VPValue *ChainOp, VPValue *CondOp, bool IsOrdered,
-                 VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
-                 VPWidenCastRecipe *Ext1)
-      : VPMulAccRecipe(VPDef::VPMulAccSC, R, RedI, Mul->hasNoUnsignedWrap(),
-                       Mul->hasNoSignedWrap(), Mul->getDebugLoc(),
-                       Ext0->getOpcode(), Ext0->isNonNeg(), Ext0->getDebugLoc(),
-                       Ext1->getDebugLoc(), ChainOp, Ext0->getOperand(0),
-                       Ext1->getOperand(0), CondOp, IsOrdered) {}
+  VPMulAccumulateReductionRecipe(const RecurrenceDescriptor &R,
+                                 Instruction *RedI, VPValue *ChainOp,
+                                 VPValue *CondOp, bool IsOrdered,
+                                 VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+                                 VPWidenCastRecipe *Ext1)
+      : VPMulAccumulateReductionRecipe(
+            VPDef::VPMulAccumulateReductionSC, R, RedI,
+            Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap(),
+            Mul->getDebugLoc(), Ext0->getOpcode(), Ext0->isNonNeg(),
+            Ext0->getDebugLoc(), Ext1->getDebugLoc(), ChainOp,
+            Ext0->getOperand(0), Ext1->getOperand(0), CondOp, IsOrdered) {}
 
-  VPMulAccRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
-                 VPValue *ChainOp, VPValue *CondOp, bool IsOrdered,
-                 VPWidenRecipe *Mul)
-      : VPMulAccRecipe(VPDef::VPMulAccSC, R, RedI, Mul->hasNoUnsignedWrap(),
-                       Mul->hasNoSignedWrap(), Mul->getDebugLoc(), ChainOp,
-                       Mul->getOperand(0), Mul->getOperand(1), CondOp,
-                       IsOrdered) {}
+  VPMulAccumulateReductionRecipe(const RecurrenceDescriptor &R,
+                                 Instruction *RedI, VPValue *ChainOp,
+                                 VPValue *CondOp, bool IsOrdered,
+                                 VPWidenRecipe *Mul)
+      : VPMulAccumulateReductionRecipe(
+            VPDef::VPMulAccumulateReductionSC, R, RedI,
+            Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap(),
+            Mul->getDebugLoc(), ChainOp, Mul->getOperand(0), Mul->getOperand(1),
+            CondOp, IsOrdered) {}
 
-  ~VPMulAccRecipe() override = default;
+  ~VPMulAccumulateReductionRecipe() override = default;
 
-  VPMulAccRecipe *clone() override { llvm_unreachable("Not implement yet"); }
+  VPMulAccumulateReductionRecipe *clone() override {
+    llvm_unreachable("Not implement yet");
+  }
 
-  VP_CLASSOF_IMPL(VPDef::VPMulAccSC);
+  VP_CLASSOF_IMPL(VPDef::VPMulAccumulateReductionSC);
 
   void execute(VPTransformState &State) override {
-    llvm_unreachable("VPMulAccRecipe should transform to VPWidenCastRecipe + "
+    llvm_unreachable("VPMulAccumulateReductionRecipe should transform to "
+                     "VPWidenCastRecipe + "
                      "VPWidenRecipe + VPReductionRecipe before execution");
   }
 
-  /// Return the cost of VPMulAccRecipe.
+  /// Return the cost of VPMulAccumulateReductionRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 

@@ -2232,7 +2232,8 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
                                           RdxDesc.getFastMathFlags(), CostKind);
 }
 
-InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
+InstructionCost
+VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
@@ -2309,8 +2310,8 @@ void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
          "outside of loop)";
 }
 
-void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
-                           VPSlotTracker &SlotTracker) const {
+void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                           VPSlotTracker &SlotTracker) const {
   const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
   Type *RedTy = RdxDesc.getRecurrenceType();
 
