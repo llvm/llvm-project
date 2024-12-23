@@ -21,6 +21,9 @@ target_link_libraries(tco PRIVATE
   FIROpenACCSupport
   FlangOpenMPTransforms
   FortranCommon
+)
+
+mlir_target_link_libraries(tco PRIVATE
   ${dialect_libs}
   ${extension_libs}
   MLIRIR
