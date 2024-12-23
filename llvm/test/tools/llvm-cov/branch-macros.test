@@ -4,7 +4,7 @@
 
 // RUN: yaml2obj %S/Inputs/branch-macros-single.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/branch-macros-single.proftext -o %t.profdata
-// RUN: llvm-cov show --show-expansions --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/branch-macros.cpp -D#C=999
+// RUN: llvm-cov show --show-expansions --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/branch-macros.cpp -D#C=1
 
 // REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
