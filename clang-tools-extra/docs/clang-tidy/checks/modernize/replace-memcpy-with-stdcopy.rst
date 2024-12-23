@@ -1,6 +1,6 @@
-.. title:: clang-tidy - modernize-with-stdcopy
+.. title:: clang-tidy - modernize-replace-with-stdcopy
 
-modernize-with-stdcopy
+modernize-replace-with-stdcopy
 ===================================
 
 Replaces all occurrences of the C ``memcpy`` function with ``std::copy``

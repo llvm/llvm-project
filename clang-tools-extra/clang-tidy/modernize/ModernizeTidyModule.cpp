@@ -24,8 +24,8 @@
 #include "RedundantVoidArgCheck.h"
 #include "ReplaceAutoPtrCheck.h"
 #include "ReplaceDisallowCopyAndAssignMacroCheck.h"
-#include "ReplaceMemcpyWithStdCopy.h"
 #include "ReplaceRandomShuffleCheck.h"
+#include "ReplaceWithStdCopyCheck.h"
 #include "ReturnBracedInitListCheck.h"
 #include "ShrinkToFitCheck.h"
 #include "TypeTraitsCheck.h"
@@ -95,8 +95,8 @@ public:
         "modernize-replace-auto-ptr");
     CheckFactories.registerCheck<ReplaceDisallowCopyAndAssignMacroCheck>(
         "modernize-replace-disallow-copy-and-assign-macro");
-    CheckFactories.registerCheck<ReplaceMemcpyWithStdCopy>(
-        "modernize-replace-memcpy-by-stdcopy");
+    CheckFactories.registerCheck<ReplaceWithStdCopyCheck>(
+        "modernize-replace-with-stdcopy");
     CheckFactories.registerCheck<ReplaceRandomShuffleCheck>(
         "modernize-replace-random-shuffle");
     CheckFactories.registerCheck<ReturnBracedInitListCheck>(
@@ -113,11 +113,11 @@ public:
     CheckFactories.registerCheck<UseDefaultMemberInitCheck>(
         "modernize-use-default-member-init");
     CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
-    CheckFactories.registerCheck<UseEqualsDefaultCheck>("modernize-use-equals-default");
+    CheckFactories.registerCheck<UseEqualsDefaultCheck>(
+        "modernize-use-equals-default");
     CheckFactories.registerCheck<UseEqualsDeleteCheck>(
         "modernize-use-equals-delete");
-    CheckFactories.registerCheck<UseNodiscardCheck>(
-        "modernize-use-nodiscard");
+    CheckFactories.registerCheck<UseNodiscardCheck>("modernize-use-nodiscard");
     CheckFactories.registerCheck<UseNoexceptCheck>("modernize-use-noexcept");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
