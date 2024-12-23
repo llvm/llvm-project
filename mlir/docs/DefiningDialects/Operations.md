@@ -102,8 +102,9 @@ their semantics via a special [TableGen backend][TableGenBackend]:
     constraints over attributes. A notable subclass hierarchy is `Attr`, which
     stands for constraints for attributes whose values are of common types.
 *   The `Property` class hierarchy: They are used to specify non-attribute-backed
-    properties that are inherent to operations. This will be expanded to a
-    `PropertyConstraint` class or something similar in the future.
+    properties that are inherent to operations. These properties can have
+    constraints imposed on them using the `predicate` field or the
+    `ConfinedProp` class.
 
 An operation is defined by specializing the `Op` class with concrete contents
 for all the fields it requires. For example, `tf.AvgPool` is defined as
@@ -202,15 +203,15 @@ let arguments = (ins
   ...
   <attr-constraint>:$<attr-name>,
   ...
-  <property-constraint>:$<property-name>,
+  <property>:$<property-name>,
 );
 ```
 
 Here `<type-constraint>` is a TableGen `def` from the `TypeConstraint` class
 hierarchy. Similarly, `<attr-constraint>` is a TableGen `def` from the
-`AttrConstraint` class hierarchy and `<property-constraint>` is a subclass
-of `Property` (though a `PropertyConstraint` hierarchy is planned).
-See [Constraints](#constraints) for more information.
+`AttrConstraint` class hierarchy and `<property>` is a subclass
+of `Property` (constraints can be imposed onto it using its `predicate` field
+or the `ConfinedProp` subclass).
 
 There is no requirements on the relative order of operands and attributes; they
 can mix freely. The relative order of operands themselves matters. From each
