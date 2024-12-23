@@ -1,0 +1,28 @@
+add_subdirectory(testdata)
+add_custom_target(libc_ftw_unittests)
+
+add_libc_unittest(
+  ftw_test
+  SUITE
+    libc_ftw_unittests
+  SRCS
+    ftw_test.cpp
+  DEPENDS
+    libc.hdr.ftw_macros
+    libc.include.ftw
+    libc.src.__support.CPP.string_view
+    libc.src.dirent.closedir
+    libc.src.dirent.opendir
+    libc.src.dirent.readdir
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.ftw.ftw
+    libc.src.ftw.nftw
+    libc.src.sys.stat.chmod
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.close
+    libc.src.unistd.getcwd
+    libc.src.unistd.rmdir
+    libc.src.unistd.symlink
+    libc.src.unistd.unlink
+)

@@ -1,0 +1,28 @@
+header: ftw.h
+header_template: ftw.h.def
+macros: []
+types:
+  - type_name: struct_FTW
+  - type_name: __ftw_func_t
+  - type_name: __nftw_func_t
+enums: []
+objects: []
+functions:
+  - name: ftw
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: __ftw_func_t
+      - type: int
+  - name: nftw
+    standards:
+      - posix
+      - gnu
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: __nftw_func_t
+      - type: int
+      - type: int

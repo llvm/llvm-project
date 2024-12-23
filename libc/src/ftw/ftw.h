@@ -1,4 +1,4 @@
-//===-- Implementation header for lstat -------------------------*- C++ -*-===//
+//===-- Implementation header of ftw ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_STAT_LSTAT_H
-#define LLVM_LIBC_SRC_SYS_STAT_LSTAT_H
+#ifndef LLVM_LIBC_SRC_FTW_FTW_H
+#define LLVM_LIBC_SRC_FTW_FTW_H
 
+#include "include/llvm-libc-types/__ftw_func_t.h"
 #include "src/__support/macros/config.h"
-#ifdef LIBC_FULL_BUILD
-#include "include/llvm-libc-types/struct_stat.h"
-#else
-#include <sys/stat.h>
-#endif
 
 namespace LIBC_NAMESPACE_DECL {
 
-int lstat(const char *__restrict path, struct stat *__restrict statbuf);
+int ftw(const char *DirPath, __ftw_func_t Fn, int FdLimit);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SYS_STAT_LSTAT_H
+#endif // LLVM_LIBC_SRC_FTW_FTW_H

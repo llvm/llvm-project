@@ -49,6 +49,7 @@ if (SPHINX_FOUND)
       errno
       fenv
       float
+      ftw
       glob
       inttypes
       locale

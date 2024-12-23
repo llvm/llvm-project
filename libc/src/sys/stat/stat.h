@@ -10,7 +10,11 @@
 #define LLVM_LIBC_SRC_SYS_STAT_STAT_H
 
 #include "src/__support/macros/config.h"
+#ifdef LIBC_FULL_BUILD
+#include "include/llvm-libc-types/struct_stat.h"
+#else
 #include <sys/stat.h>
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 

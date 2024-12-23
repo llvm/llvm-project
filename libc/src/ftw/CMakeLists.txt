@@ -1,0 +1,61 @@
+add_object_library(
+  ftw_impl
+  SRCS
+    ftw_impl.cpp
+  HDRS
+    ftw_impl.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.ftw_macros
+    libc.hdr.sys_stat_macros
+    libc.include.dirent
+    libc.include.ftw
+    libc.include.sys_stat
+    libc.include.llvm-libc-types.struct_dirent
+    libc.include.llvm-libc-types.struct_FTW
+    libc.include.llvm-libc-types.struct_stat
+    libc.src.__support.CPP.expected
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.dir
+    libc.src.__support.File.scoped_dir
+    libc.src.__support.libc_errno
+    libc.src.fcntl.open
+    libc.src.sys.stat.lstat
+    libc.src.sys.stat.stat
+    libc.src.unistd.chdir
+    libc.src.unistd.close
+    libc.src.unistd.fchdir
+)
+
+add_entrypoint_object(
+  ftw
+  SRCS
+    ftw.cpp
+  HDRS
+    ftw.h
+  DEPENDS
+    libc.hdr.ftw_macros
+    libc.include.ftw
+    libc.include.llvm-libc-types.__ftw_func_t
+    libc.src.__support.CPP.string
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    .ftw_impl
+)
+
+add_entrypoint_object(
+  nftw
+  SRCS
+    nftw.cpp
+  HDRS
+    nftw.h
+  DEPENDS
+    libc.hdr.ftw_macros
+    libc.include.ftw
+    libc.include.llvm-libc-types.__nftw_func_t
+    libc.src.__support.CPP.string
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    .ftw_impl
+)

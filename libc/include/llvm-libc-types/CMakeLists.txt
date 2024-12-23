@@ -9,6 +9,7 @@ add_header(
     libc.include.llvm-libc-macros.annex_k_macros
 )
 add_header(ssize_t HDR ssize_t.h)
+add_header(struct_FTW HDR struct_FTW.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__search_compare_t HDR __search_compare_t.h)
 add_header(__call_once_func_t HDR __call_once_func_t.h)
@@ -137,6 +138,8 @@ add_header(
     .dev_t .ino_t .mode_t .nlink_t .uid_t .gid_t .off_t .struct_timespec
     .blksize_t .blkcnt_t
 )
+add_header(__ftw_func_t HDR __ftw_func_t.h DEPENDS .struct_stat)
+add_header(__nftw_func_t HDR __nftw_func_t.h DEPENDS .struct_stat .struct_FTW)
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_utsname HDR struct_utsname.h)
 add_header(thrd_start_t HDR thrd_start_t.h)

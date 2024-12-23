@@ -65,6 +65,18 @@ add_header_macro(
 )
 
 add_header_macro(
+  ftw
+  ../libc/include/ftw.yaml
+  ftw.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.ftw_macros
+    .llvm-libc-types.struct_FTW
+    .llvm-libc-types.__ftw_func_t
+    .llvm-libc-types.__nftw_func_t
+)
+
+add_header_macro(
   dlfcn
   ../libc/include/dlfcn.yaml
   dlfcn.h

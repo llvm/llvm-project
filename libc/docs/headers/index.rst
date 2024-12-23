@@ -15,6 +15,7 @@ Implementation Status
    errno
    fenv
    float
+   ftw
    glob
    inttypes
    locale
