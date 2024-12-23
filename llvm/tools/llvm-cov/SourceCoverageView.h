@@ -268,9 +268,13 @@ protected:
   /// digits.
   static std::string formatCount(uint64_t N);
 
-  uint64_t Count1(uint64_t N) const { return (N && BinaryCounters ? 1 : N); }
+  uint64_t BinaryCount(uint64_t N) const {
+    return (N && BinaryCounters ? 1 : N);
+  }
 
-  std::string formatCount1(uint64_t N) const { return formatCount(Count1(N)); }
+  std::string formatBinaryCount(uint64_t N) const {
+    return formatCount(BinaryCount(N));
+  }
 
   /// Check if region marker output is expected for a line.
   bool shouldRenderRegionMarkers(const LineCoverageStats &LCS) const;
