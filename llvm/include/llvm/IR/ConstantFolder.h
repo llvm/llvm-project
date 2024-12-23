@@ -170,6 +170,12 @@ public:
     return nullptr;
   }
 
+  Value *FoldInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                          Value *Idx) const override {
+    // Use TargetFolder or InstSimplifyFolder instead.
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     if (auto *C = dyn_cast<Constant>(V)) {

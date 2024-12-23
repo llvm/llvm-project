@@ -13711,12 +13711,13 @@ Value *BoUpSLP::gather(
     Instruction *InsElt;
     if (auto *VecTy = dyn_cast<FixedVectorType>(Scalar->getType())) {
       assert(SLPReVec && "FixedVectorType is not expected.");
-      Vec = InsElt = Builder.CreateInsertVector(
+      Vec = Builder.CreateInsertVector(
           Vec->getType(), Vec, Scalar,
           Builder.getInt64(Pos * VecTy->getNumElements()));
-      auto *II = dyn_cast<IntrinsicInst>(InsElt);
+      auto *II = dyn_cast<IntrinsicInst>(Vec);
       if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
         return Vec;
+      InsElt = II;
     } else {
       Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));
       InsElt = dyn_cast<InsertElementInst>(Vec);

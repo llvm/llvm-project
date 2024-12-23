@@ -3099,6 +3099,56 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
   return nullptr;
 }
 
+static Constant *ConstantFoldIntrinsicCall3(Intrinsic::ID IntrinsicID, Type *Ty,
+                                            ArrayRef<Constant *> Operands) {
+  assert(Operands.size() == 3 && "Wrong number of operands.");
+  switch (IntrinsicID) {
+  case Intrinsic::vector_insert: {
+    Constant *SrcVec = Operands[0];
+    Constant *SubVec = Operands[1];
+    Constant *Idx = Operands[2];
+    assert(SrcVec->getType()->isVectorTy() && "Destination is not a vector.");
+    assert(SubVec->getType()->isVectorTy() && "Source is not a vector.");
+    // The actual length is unknown.
+    if (isa<ScalableVectorType>(SrcVec->getType()))
+      return nullptr;
+    assert(
+        isa<FixedVectorType>(SubVec->getType()) &&
+        "Scalable vectors can only be inserted into other scalable vectors.");
+    assert(SrcVec->getType()->getScalarType() ==
+               SubVec->getType()->getScalarType() &&
+           "The element type of source does not match the element type of "
+           "destination.");
+    assert(Idx->getType()->isIntegerTy(64) && "Index must be i64.");
+    if (isa<UndefValue>(Idx))
+      return PoisonValue::get(Ty);
+    uint64_t IdxValue = cast<ConstantInt>(Idx)->getValue().getZExtValue();
+    unsigned SubVecNumElements =
+        cast<FixedVectorType>(SubVec->getType())->getNumElements();
+    assert(IdxValue % SubVecNumElements == 0 &&
+           "Index should be a multiple of the length of source.");
+    unsigned SrcVecNumElements =
+        cast<FixedVectorType>(SrcVec->getType())->getNumElements();
+    if (SrcVecNumElements <= IdxValue)
+      return PoisonValue::get(Ty);
+    SmallVector<Constant *, 16> Result;
+    Result.reserve(SrcVecNumElements);
+    auto *Int32Ty = Type::getInt32Ty(SrcVec->getContext());
+    for (unsigned I = 0; I != SrcVecNumElements; ++I) {
+      if (IdxValue <= I && I < IdxValue + SubVecNumElements) {
+        Result.push_back(ConstantExpr::getExtractElement(
+            SubVec, ConstantInt::get(Int32Ty, I - IdxValue)));
+        continue;
+      }
+      Result.push_back(ConstantExpr::getExtractElement(
+          SrcVec, ConstantInt::get(Int32Ty, I)));
+    }
+    return ConstantVector::get(Result);
+  }
+  }
+  return nullptr;
+}
+
 static APFloat ConstantFoldAMDGCNCubeIntrinsic(Intrinsic::ID IntrinsicID,
                                                const APFloat &S0,
                                                const APFloat &S1,
@@ -3593,6 +3643,14 @@ Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                             Instruction *FMFSource) {
   return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS},
                                     dyn_cast_if_present<CallBase>(FMFSource));
+}
+
+Constant *llvm::ConstantFoldInsertVectorIntrinsic(Type *DstType,
+                                                  Constant *SrcVec,
+                                                  Constant *SubVec,
+                                                  Constant *Idx) {
+  return ConstantFoldIntrinsicCall3(Intrinsic::vector_insert, DstType,
+                                    {SrcVec, SubVec, Idx});
 }
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,

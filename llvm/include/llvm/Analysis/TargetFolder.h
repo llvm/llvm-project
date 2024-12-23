@@ -181,6 +181,16 @@ public:
     return nullptr;
   }
 
+  Value *FoldInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                          Value *Idx) const override {
+    auto *CSrcVec = dyn_cast<Constant>(SrcVec);
+    auto *CSubVec = dyn_cast<Constant>(SubVec);
+    auto *CIdx = dyn_cast<Constant>(Idx);
+    if (CSrcVec && CSubVec && CIdx)
+      return ConstantFoldInsertVectorIntrinsic(DstType, CSrcVec, CSubVec, CIdx);
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     if (auto *C = dyn_cast<Constant>(V))

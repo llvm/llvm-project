@@ -113,6 +113,11 @@ public:
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
   }
 
+  Value *FoldInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                          Value *Idx) const override {
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     return simplifyCastInst(Op, V, DestTy, SQ);

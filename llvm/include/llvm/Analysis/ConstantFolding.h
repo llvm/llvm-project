@@ -205,6 +205,9 @@ Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                       Constant *RHS, Type *Ty,
                                       Instruction *FMFSource);
 
+Constant *ConstantFoldInsertVectorIntrinsic(Type *DstType, Constant *SrcVec,
+                                            Constant *SubVec, Constant *Idx);
+
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to
 /// integer and vice versa if their sizes are equal.

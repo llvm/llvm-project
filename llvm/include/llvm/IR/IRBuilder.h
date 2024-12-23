@@ -1057,8 +1057,10 @@ public:
   }
 
   /// Create a call to the vector.insert intrinsic.
-  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
-                               Value *Idx, const Twine &Name = "") {
+  Value *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                            Value *Idx, const Twine &Name = "") {
+    if (Value *V = Folder.FoldInsertVector(DstType, SrcVec, SubVec, Idx))
+      return V;
     return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
