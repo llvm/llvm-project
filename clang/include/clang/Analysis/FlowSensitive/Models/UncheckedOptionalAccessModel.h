@@ -23,6 +23,8 @@
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/ExtensibleRTTI.h"
+#include <memory>
 
 namespace clang {
 namespace dataflow {
@@ -53,23 +55,24 @@ using UncheckedOptionalAccessLattice = CachedConstAccessorsLattice<NoopLattice>;
 /// Dataflow analysis that models whether optionals hold values or not.
 ///
 /// Models the `std::optional`, `absl::optional`, and `base::Optional` types.
-class UncheckedOptionalAccessModel
-    : public DataflowAnalysis<UncheckedOptionalAccessModel,
-                              UncheckedOptionalAccessLattice> {
+class UncheckedOptionalAccessModel : public DataflowAnalysis {
 public:
+  using Lattice = UncheckedOptionalAccessLattice;
+
   UncheckedOptionalAccessModel(ASTContext &Ctx, dataflow::Environment &Env);
 
   /// Returns a matcher for the optional classes covered by this model.
   static ast_matchers::DeclarationMatcher optionalClassDecl();
 
-  static UncheckedOptionalAccessLattice initialElement() { return {}; }
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>();
+  }
 
-  void transfer(const CFGElement &Elt, UncheckedOptionalAccessLattice &L,
-                Environment &Env);
+  void transfer(const CFGElement &Elt, DataflowLattice &L,
+                Environment &Env) override;
 
 private:
-  CFGMatchSwitch<TransferState<UncheckedOptionalAccessLattice>>
-      TransferMatchSwitch;
+  CFGMatchSwitch<TransferState<Lattice>> TransferMatchSwitch;
 };
 
 class UncheckedOptionalAccessDiagnoser {

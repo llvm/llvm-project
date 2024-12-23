@@ -20,6 +20,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 namespace clang {
 namespace dataflow {
@@ -45,9 +46,15 @@ namespace dataflow {
 ///     use(s.getFoo().value()); // unsafe (invalidate cache for s)
 ///   }
 /// }
-template <typename Base> class CachedConstAccessorsLattice : public Base {
+template <typename Base>
+class CachedConstAccessorsLattice
+    : public llvm::RTTIExtends<CachedConstAccessorsLattice<Base>, Base> {
 public:
-  using Base::Base; // inherit all constructors
+  using Parent = llvm::RTTIExtends<CachedConstAccessorsLattice, Base>;
+  using Parent::Parent; // inherit all constructors
+
+  /// For RTTI.
+  inline static char ID = 0;
 
   /// Creates or returns a previously created `Value` associated with a const
   /// method call `obj.getFoo()` where `RecordLoc` is the
@@ -88,7 +95,16 @@ public:
     return Base::operator==(Other);
   }
 
-  LatticeJoinEffect join(const CachedConstAccessorsLattice &Other);
+  std::unique_ptr<DataflowLattice> clone() override {
+    return std::make_unique<CachedConstAccessorsLattice>(*this);
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return llvm::isa<const CachedConstAccessorsLattice>(Other) &&
+           *this == llvm::cast<const CachedConstAccessorsLattice>(Other);
+  }
+
+  LatticeEffect join(const DataflowLattice &Other) override;
 
 private:
   // Maps a record storage location and const method to the value to return
@@ -145,10 +161,11 @@ joinConstMethodMap(
 } // namespace internal
 
 template <typename Base>
-LatticeEffect CachedConstAccessorsLattice<Base>::join(
-    const CachedConstAccessorsLattice<Base> &Other) {
+LatticeEffect
+CachedConstAccessorsLattice<Base>::join(const DataflowLattice &L) {
+  LatticeEffect Effect = Base::join(L);
 
-  LatticeEffect Effect = Base::join(Other);
+  const auto &Other = llvm::cast<const CachedConstAccessorsLattice<Base>>(L);
 
   // For simplicity, we only retain values that are identical, but not ones that
   // are non-identical but equivalent. This is likely to be sufficient in

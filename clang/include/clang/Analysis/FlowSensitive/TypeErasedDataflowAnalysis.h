@@ -25,7 +25,6 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "llvm/ADT/Any.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -40,73 +39,42 @@ struct DataflowAnalysisOptions {
       DataflowAnalysisContext::Options{};
 };
 
-/// Type-erased lattice element container.
-///
-/// Requirements:
-///
-///  The type of the object stored in the container must be a bounded
-///  join-semilattice.
-struct TypeErasedLattice {
-  llvm::Any Value;
-};
-
-/// Type-erased base class for dataflow analyses built on a single lattice type.
-class TypeErasedDataflowAnalysis : public Environment::ValueModel {
+/// Base class for dataflow analyses built on a single lattice type. The
+/// framework guarantees that the type of lattice elements passed to `transfer`
+/// and `transferBranch` always matches the type of elements provided by
+/// `initialElement`.
+class DataflowAnalysis : public Environment::ValueModel {
+  ASTContext &Context;
   DataflowAnalysisOptions Options;
 
 public:
-  TypeErasedDataflowAnalysis() : Options({}) {}
+  explicit DataflowAnalysis(ASTContext &Context) : Context(Context) {}
 
-  TypeErasedDataflowAnalysis(DataflowAnalysisOptions Options)
-      : Options(Options) {}
-
-  virtual ~TypeErasedDataflowAnalysis() {}
+  explicit DataflowAnalysis(ASTContext &Context,
+                            DataflowAnalysisOptions Options)
+      : Context(Context), Options(Options) {}
 
   /// Returns the `ASTContext` that is used by the analysis.
-  virtual ASTContext &getASTContext() = 0;
+  ASTContext &getASTContext() { return Context; }
 
-  /// Returns a type-erased lattice element that models the initial state of a
+  /// Returns a lattice element that models the initial state of a
   /// basic block.
-  virtual TypeErasedLattice typeErasedInitialElement() = 0;
-
-  /// Joins two type-erased lattice elements by computing their least upper
-  /// bound. Places the join result in the left element and returns an effect
-  /// indicating whether any changes were made to it.
-  virtual TypeErasedLattice joinTypeErased(const TypeErasedLattice &,
-                                           const TypeErasedLattice &) = 0;
-
-  /// Chooses a lattice element that approximates the current element at a
-  /// program point, given the previous element at that point. Places the
-  /// widened result in the current element (`Current`). Widening is optional --
-  /// it is only needed to either accelerate convergence (for lattices with
-  /// non-trivial height) or guarantee convergence (for lattices with infinite
-  /// height).
-  ///
-  /// Returns an indication of whether any changes were made to `Current` in
-  /// order to widen. This saves a separate call to `isEqualTypeErased` after
-  /// the widening.
-  virtual LatticeJoinEffect
-  widenTypeErased(TypeErasedLattice &Current,
-                  const TypeErasedLattice &Previous) = 0;
-
-  /// Returns true if and only if the two given type-erased lattice elements are
-  /// equal.
-  virtual bool isEqualTypeErased(const TypeErasedLattice &,
-                                 const TypeErasedLattice &) = 0;
+  virtual DataflowLatticePtr initialElement() = 0;
 
   /// Applies the analysis transfer function for a given control flow graph
-  /// element and type-erased lattice element.
-  virtual void transferTypeErased(const CFGElement &, TypeErasedLattice &,
-                                  Environment &) = 0;
+  /// element and type-erased lattice element. The derived type of Lattice will
+  /// always match the type of the lattice returned by `initialElement`.
+  virtual void transfer(const CFGElement &, DataflowLattice &Lattice,
+                        Environment &) = 0;
 
   /// Applies the analysis transfer function for a given edge from a CFG block
-  /// of a conditional statement.
+  /// of a conditional statement. This method is optional and so the default
+  /// implementation is a no-op.
   /// @param Stmt The condition which is responsible for the split in the CFG.
   /// @param Branch True if the edge goes to the basic block where the
   /// condition is true.
-  // FIXME: Change `Stmt` argument to a reference.
-  virtual void transferBranchTypeErased(bool Branch, const Stmt *,
-                                        TypeErasedLattice &, Environment &) = 0;
+  virtual void transferBranch(bool Branch, const Stmt &Stmt, DataflowLattice &,
+                              Environment &) {};
 
   /// If the built-in model is enabled, returns the options to be passed to
   /// them. Otherwise returns empty.
@@ -119,16 +87,17 @@ public:
 /// Type-erased model of the program at a given program point.
 struct TypeErasedDataflowAnalysisState {
   /// Type-erased model of a program property.
-  TypeErasedLattice Lattice;
+  std::unique_ptr<DataflowLattice> Lattice;
 
   /// Model of the state of the program (store and heap).
   Environment Env;
 
-  TypeErasedDataflowAnalysisState(TypeErasedLattice Lattice, Environment Env)
+  TypeErasedDataflowAnalysisState(std::unique_ptr<DataflowLattice> Lattice,
+                                  Environment Env)
       : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
 
   TypeErasedDataflowAnalysisState fork() const {
-    return TypeErasedDataflowAnalysisState(Lattice, Env.fork());
+    return TypeErasedDataflowAnalysisState(Lattice->clone(), Env.fork());
   }
 };
 
@@ -159,7 +128,7 @@ struct CFGEltCallbacksTypeErased {
 /// from converging.
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
-    const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
+    const AdornedCFG &ACFG, DataflowAnalysis &Analysis,
     const Environment &InitEnv,
     const CFGEltCallbacksTypeErased &PostAnalysisCallbacks,
     std::int32_t MaxBlockVisits);

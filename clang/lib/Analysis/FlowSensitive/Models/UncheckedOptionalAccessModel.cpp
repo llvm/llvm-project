@@ -1102,9 +1102,7 @@ UncheckedOptionalAccessModel::optionalClassDecl() {
 
 UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
                                                            Environment &Env)
-    : DataflowAnalysis<UncheckedOptionalAccessModel,
-                       UncheckedOptionalAccessLattice>(Ctx),
-      TransferMatchSwitch(buildTransferMatchSwitch()) {
+    : DataflowAnalysis(Ctx), TransferMatchSwitch(buildTransferMatchSwitch()) {
   Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
       [&Ctx](QualType Ty) -> llvm::StringMap<QualType> {
         const CXXRecordDecl *Optional =
@@ -1117,9 +1115,10 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
 }
 
 void UncheckedOptionalAccessModel::transfer(const CFGElement &Elt,
-                                            UncheckedOptionalAccessLattice &L,
+                                            DataflowLattice &L,
                                             Environment &Env) {
-  LatticeTransferState State(L, Env);
+  LatticeTransferState State(llvm::cast<UncheckedOptionalAccessLattice>(L),
+                             Env);
   TransferMatchSwitch(Elt, getASTContext(), State);
 }
 

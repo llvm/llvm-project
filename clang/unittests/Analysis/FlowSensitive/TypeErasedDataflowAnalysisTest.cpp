@@ -20,6 +20,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Tooling/Tooling.h"
@@ -28,6 +29,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Testing/ADT/StringMapEntry.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -407,34 +409,50 @@ TEST_F(DiscardExprStateTest, CallWithParenExprTreatedCorrectly) {
   EXPECT_NE(CallExpectState.Env.getValue(FnToPtrDecay), nullptr);
 }
 
-struct NonConvergingLattice {
+struct NonConvergingLattice
+    : public llvm::RTTIExtends<NonConvergingLattice, DataflowLattice> {
+  inline static char ID = 0;
   int State;
+
+  explicit NonConvergingLattice(int S) : State(S) {}
 
   bool operator==(const NonConvergingLattice &Other) const {
     return State == Other.State;
   }
 
-  LatticeJoinEffect join(const NonConvergingLattice &Other) {
-    if (Other.State == 0)
+  LatticeEffect join(const DataflowLattice &Other) override {
+    const auto &L = llvm::cast<const NonConvergingLattice>(Other);
+    if (L.State == 0)
       return LatticeJoinEffect::Unchanged;
-    State += Other.State;
+    State += L.State;
     return LatticeJoinEffect::Changed;
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return *this == llvm::cast<const NonConvergingLattice>(Other);
+  }
+
+  std::unique_ptr<DataflowLattice> clone() override {
+    return std::make_unique<NonConvergingLattice>(*this);
   }
 };
 
-class NonConvergingAnalysis
-    : public DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice> {
+class NonConvergingAnalysis : public DataflowAnalysis {
 public:
+  using Lattice = NonConvergingLattice;
+
   explicit NonConvergingAnalysis(ASTContext &Context)
-      : DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice>(
-            Context,
-            // Don't apply builtin transfer function.
-            DataflowAnalysisOptions{std::nullopt}) {}
+      : DataflowAnalysis(Context,
+                         // Don't apply builtin transfer function.
+                         DataflowAnalysisOptions{std::nullopt}) {}
 
-  static NonConvergingLattice initialElement() { return {0}; }
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>(0);
+  }
 
-  void transfer(const CFGElement &, NonConvergingLattice &E, Environment &) {
-    ++E.State;
+  void transfer(const CFGElement &, DataflowLattice &L,
+                Environment &) override {
+    ++llvm::cast<NonConvergingLattice>(L).State;
   }
 };
 
@@ -481,7 +499,9 @@ TEST_F(DataflowAnalysisTest, JoinBoolLValues) {
       llvm::Succeeded());
 }
 
-struct FunctionCallLattice {
+struct FunctionCallLattice
+    : public llvm::RTTIExtends<FunctionCallLattice, DataflowLattice> {
+  inline static char ID = 0;
   using FunctionSet = llvm::SmallSet<std::string, 8>;
   FunctionSet CalledFunctions;
 
@@ -489,7 +509,8 @@ struct FunctionCallLattice {
     return CalledFunctions == Other.CalledFunctions;
   }
 
-  LatticeJoinEffect join(const FunctionCallLattice &Other) {
+  LatticeEffect join(const DataflowLattice &L) override {
+    const auto &Other = llvm::cast<const FunctionCallLattice>(L);
     if (Other.CalledFunctions.empty())
       return LatticeJoinEffect::Unchanged;
     const size_t size_before = CalledFunctions.size();
@@ -497,6 +518,13 @@ struct FunctionCallLattice {
                            Other.CalledFunctions.end());
     return CalledFunctions.size() == size_before ? LatticeJoinEffect::Unchanged
                                                  : LatticeJoinEffect::Changed;
+  }
+
+  std::unique_ptr<DataflowLattice> clone() override {
+    return std::make_unique<FunctionCallLattice>(*this);
+  }
+  bool isEqual(const DataflowLattice &Other) const override {
+    return *this == llvm::cast<const FunctionCallLattice>(Other);
   }
 };
 
@@ -507,22 +535,27 @@ std::ostream &operator<<(std::ostream &OS, const FunctionCallLattice &L) {
   return OS << "{" << S << "}";
 }
 
-class FunctionCallAnalysis
-    : public DataflowAnalysis<FunctionCallAnalysis, FunctionCallLattice> {
+class FunctionCallAnalysis : public DataflowAnalysis {
 public:
+  using Lattice = FunctionCallLattice;
+
   explicit FunctionCallAnalysis(ASTContext &Context)
-      : DataflowAnalysis<FunctionCallAnalysis, FunctionCallLattice>(Context) {}
+      : DataflowAnalysis(Context) {}
 
-  static FunctionCallLattice initialElement() { return {}; }
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>();
+  }
 
-  void transfer(const CFGElement &Elt, FunctionCallLattice &E, Environment &) {
+  void transfer(const CFGElement &Elt, DataflowLattice &L,
+                Environment &) override {
+    auto &FCL = llvm::cast<FunctionCallLattice>(L);
     auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;
     const auto *S = CS->getStmt();
     if (auto *C = dyn_cast<CallExpr>(S)) {
       if (auto *F = dyn_cast<FunctionDecl>(C->getCalleeDecl())) {
-        E.CalledFunctions.insert(F->getNameInfo().getAsString());
+        FCL.CalledFunctions.insert(F->getNameInfo().getAsString());
       }
     }
   }
@@ -695,11 +728,12 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
 }
 
 // Models an analysis that uses flow conditions.
-class SpecialBoolAnalysis final
-    : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
+class SpecialBoolAnalysis final : public DataflowAnalysis {
 public:
+  using Lattice = NoopLattice;
+
   explicit SpecialBoolAnalysis(ASTContext &Context, Environment &Env)
-      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {
+      : DataflowAnalysis(Context) {
     Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
         [](QualType Ty) -> llvm::StringMap<QualType> {
           RecordDecl *RD = Ty->getAsRecordDecl();
@@ -710,9 +744,12 @@ public:
         });
   }
 
-  static NoopLattice initialElement() { return {}; }
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>();
+  }
 
-  void transfer(const CFGElement &Elt, NoopLattice &, Environment &Env) {
+  void transfer(const CFGElement &Elt, DataflowLattice &,
+                Environment &Env) override {
     auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;
@@ -807,15 +844,19 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
       });
 }
 
-class NullPointerAnalysis final
-    : public DataflowAnalysis<NullPointerAnalysis, NoopLattice> {
+class NullPointerAnalysis final : public DataflowAnalysis {
 public:
+  using Lattice = NoopLattice;
+
   explicit NullPointerAnalysis(ASTContext &Context)
-      : DataflowAnalysis<NullPointerAnalysis, NoopLattice>(Context) {}
+      : DataflowAnalysis(Context) {}
 
-  static NoopLattice initialElement() { return {}; }
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>();
+  }
 
-  void transfer(const CFGElement &Elt, NoopLattice &, Environment &Env) {
+  void transfer(const CFGElement &Elt, DataflowLattice &,
+                Environment &Env) override {
     auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;
@@ -1520,14 +1561,18 @@ TEST_F(FlowConditionTest, PointerToBoolImplicitCast) {
       });
 }
 
-class TopAnalysis final : public DataflowAnalysis<TopAnalysis, NoopLattice> {
+class TopAnalysis final : public DataflowAnalysis {
 public:
-  explicit TopAnalysis(ASTContext &Context)
-      : DataflowAnalysis<TopAnalysis, NoopLattice>(Context) {}
+  using Lattice = NoopLattice;
 
-  static NoopLattice initialElement() { return {}; }
+  explicit TopAnalysis(ASTContext &Context) : DataflowAnalysis(Context) {}
 
-  void transfer(const CFGElement &Elt, NoopLattice &, Environment &Env) {
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>();
+  }
+
+  void transfer(const CFGElement &Elt, DataflowLattice &,
+                Environment &Env) override {
     auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;

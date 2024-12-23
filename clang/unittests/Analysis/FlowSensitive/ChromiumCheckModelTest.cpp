@@ -108,16 +108,19 @@ std::string ReplacePattern(std::string S, const std::string &Pattern,
   return S;
 }
 
-template <typename Model>
-class ModelAdaptorAnalysis
-    : public DataflowAnalysis<ModelAdaptorAnalysis<Model>, NoopLattice> {
+template <typename Model> class ModelAdaptorAnalysis : public DataflowAnalysis {
 public:
+  using Lattice = NoopLattice;
+
   explicit ModelAdaptorAnalysis(ASTContext &Context)
-      : DataflowAnalysis<ModelAdaptorAnalysis, NoopLattice>(Context) {}
+      : DataflowAnalysis(Context) {}
 
-  static NoopLattice initialElement() { return NoopLattice(); }
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>();
+  }
 
-  void transfer(const CFGElement &E, NoopLattice &, Environment &Env) {
+  void transfer(const CFGElement &E, DataflowLattice &,
+                Environment &Env) override {
     M.transfer(E, Env);
   }
 
