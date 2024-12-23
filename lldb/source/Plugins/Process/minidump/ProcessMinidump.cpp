@@ -360,7 +360,6 @@ bool ProcessMinidump::IsLLDBMinidump() {
   return lldb_generated_section.has_value();
 }
 
-
 DynamicLoader *ProcessMinidump::GetDynamicLoader() {
   // This is a workaround for the dynamic loader not playing nice in issue
   // #119598. The specific reason we use the dynamic loader is to get the TLS
