@@ -48,7 +48,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
 static bool isBarePointer(ValueRange values) {
   return values.size() == 1 &&
          isa<LLVM::LLVMPointerType>(values.front().getType());
-};
+}
 
 /// Pack SSA values into an unranked memref descriptor struct.
 static Value packUnrankedMemRefDesc(OpBuilder &builder,
@@ -94,7 +94,7 @@ static Value unrankedMemRefMaterialization(OpBuilder &builder,
     return Value();
   return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
       .getResult(0);
-};
+}
 
 /// MemRef descriptor elements -> MemRefType
 static Value rankedMemRefMaterialization(OpBuilder &builder,
