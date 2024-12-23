@@ -679,6 +679,35 @@ lldb::BasicType PickCharType(const dil::StringLiteralParser& literal) {
   return lldb::eBasicTypeChar;
 }
 
+std::string FormatDiagnostics(DILSourceManager& sm, const std::string& message,
+                              uint32_t loc) {
+  // Get the source buffer and the location of the current token.
+  llvm::StringRef text = sm.GetSource();
+  size_t loc_offset = (size_t) loc;
+
+  // Look for the start of the line.
+  size_t line_start = text.rfind('\n', loc_offset);
+  line_start = line_start == llvm::StringRef::npos ? 0 : line_start + 1;
+
+  // Look for the end of the line.
+  size_t line_end = text.find('\n', loc_offset);
+  line_end = line_end == llvm::StringRef::npos ? text.size() : line_end;
+
+  // Get a view of the current line in the source code and the position of the
+  // diagnostics pointer.
+  llvm::StringRef line = text.slice(line_start, line_end);
+  int32_t arrow = loc + 1; // Column offset starts at 1, not 0.
+
+  // Calculate the padding in case we point outside of the expression (this can
+  // happen if the parser expected something, but got EOF).˚
+  size_t expr_rpad = std::max(0, arrow - static_cast<int32_t>(line.size()));
+  size_t arrow_rpad = std::max(0, static_cast<int32_t>(line.size()) - arrow);
+
+  return llvm::formatv("<expr:1:{0}>: {1}\n{2}\n{3}", loc,
+                       message, llvm::fmt_pad(line, 0, expr_rpad),
+                       llvm::fmt_pad("^", arrow - 1, arrow_rpad));
+}
+
 DILParser::DILParser(std::shared_ptr<DILSourceManager> dil_sm,
                      std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
@@ -4044,40 +4073,6 @@ std::string DILParser::TokenDescription(const DILToken& token) {
   const auto& spelling = ((DILToken)token).getSpelling();
   const std::string kind_name = DILToken::getTokenName(((DILToken)token).getKind());
   return llvm::formatv("<'{0}' ({1})>", spelling, kind_name);
-}
-
-std::string DILParser::FormatDiagnostics(
-    DILSourceManager& sm,
-    const std::string& message,
-    uint32_t loc) {
-  return message; // CAROLINE!!  TODO: Fix this?
-
-  // Get the source buffer and the location of the current token.
-  llvm::StringRef text = sm.GetSource();
-  size_t loc_offset = (size_t) loc;
-
-  // Look for the start of the line.
-  size_t line_start = text.rfind('\n', loc_offset);
-  line_start = line_start == llvm::StringRef::npos ? 0 : line_start + 1;
-
-  // Look for the end of the line.
-  size_t line_end = text.find('\n', loc_offset);
-  line_end = line_end == llvm::StringRef::npos ? text.size() : line_end;
-
-  // Get a view of the current line in the source code and the position of the
-  // diagnostics pointer.
-  llvm::StringRef line = text.slice(line_start, line_end);
-  int32_t arrow = loc;
-
-  // Calculate the padding in case we point outside of the expression (this can
-  // happen if the parser expected something, but got EOF).˚
-  size_t expr_rpad = std::max(0, arrow - static_cast<int32_t>(line.size()));
-  size_t arrow_rpad = std::max(0, static_cast<int32_t>(line.size()) - arrow);
-
-  //return llvm::formatv("<expr:1:{0}>: {1}\n{2}\n{3}", loc,
-  return llvm::formatv("{0}: {1}\n{2}\n{3}", loc,
-                       message, llvm::fmt_pad(line, 0, expr_rpad),
-                       llvm::fmt_pad("^", arrow - 1, arrow_rpad));
 }
 
 bool DILParser::ImplicitConversionIsAllowed(CompilerType src, CompilerType dst,

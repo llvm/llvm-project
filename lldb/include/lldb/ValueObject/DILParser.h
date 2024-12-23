@@ -59,6 +59,9 @@ enum class ErrorCode : unsigned char {
   kUnknown,
 };
 
+std::string FormatDiagnostics(DILSourceManager& sm, const std::string& message,
+                              uint32_t loc);
+
 void SetUbStatus(Status& error, ErrorCode code);
 
 /// TypeDeclaration builds information about the literal type definition as
@@ -219,10 +222,6 @@ class DILParser {
   void Expect(dil::TokenKind kind);
 
   std::string TokenDescription(const DILToken& token);
-
-  std::string FormatDiagnostics(DILSourceManager& sm,
-                                const std::string& message,
-                                uint32_t loc);
 
   template <typename... Ts>
   void ExpectOneOf(dil::TokenKind k, Ts... ks);
