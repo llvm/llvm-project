@@ -29,6 +29,7 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 template <class In, class Out = In, class Sent = sentinel_wrapper<In>>
 concept HasCopyBackwardIt = requires(In in, Sent sent, Out out) { std::ranges::copy_backward(in, sent, out); };
@@ -61,16 +62,16 @@ template <class In, class Out, class Sent>
 constexpr void test_iterators() {
   { // simple test
     {
-      std::array in {1, 2, 3, 4};
+      std::array in{1, 2, 3, 4};
       std::array<int, 4> out;
       std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
-        std::ranges::copy_backward(In(in.data()), Sent(In(in.data() + in.size())), Out(out.data() + out.size()));
+          std::ranges::copy_backward(In(in.data()), Sent(In(in.data() + in.size())), Out(out.data() + out.size()));
       assert(in == out);
       assert(base(ret.in) == in.data() + in.size());
       assert(base(ret.out) == out.data());
     }
     {
-      std::array in {1, 2, 3, 4};
+      std::array in{1, 2, 3, 4};
       std::array<int, 4> out;
       auto range = std::ranges::subrange(In(in.data()), Sent(In(in.data() + in.size())));
       std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
@@ -94,7 +95,7 @@ constexpr void test_iterators() {
       std::array<int, 0> in;
       std::array<int, 0> out;
       auto range = std::ranges::subrange(In(in.data()), Sent(In(in.data() + in.size())));
-      auto ret = std::ranges::copy_backward(range, Out(out.data()));
+      auto ret   = std::ranges::copy_backward(range, Out(out.data()));
       assert(base(ret.in) == in.data() + in.size());
       assert(base(ret.out) == out.data());
     }
@@ -104,16 +105,16 @@ constexpr void test_iterators() {
 template <class InContainer, class OutContainer, class In, class Out, class Sent = In>
 constexpr void test_containers() {
   {
-    InContainer in {1, 2, 3, 4};
+    InContainer in{1, 2, 3, 4};
     OutContainer out(4);
     std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
-      std::ranges::copy_backward(In(in.begin()), Sent(In(in.end())), Out(out.end()));
+        std::ranges::copy_backward(In(in.begin()), Sent(In(in.end())), Out(out.end()));
     assert(std::ranges::equal(in, out));
     assert(base(ret.in) == in.end());
     assert(base(ret.out) == out.begin());
   }
   {
-    InContainer in {1, 2, 3, 4};
+    InContainer in{1, 2, 3, 4};
     OutContainer out(4);
     auto range = std::ranges::subrange(In(in.begin()), Sent(In(in.end())));
     std::same_as<std::ranges::in_out_result<In, Out>> auto ret = std::ranges::copy_backward(range, Out(out.end()));
@@ -125,13 +126,12 @@ constexpr void test_containers() {
 
 template <class Iter, class Sent>
 constexpr void test_join_view() {
-  auto to_subranges = std::views::transform([](auto& vec) {
-          return std::ranges::subrange(Iter(vec.begin()), Sent(Iter(vec.end())));
-        });
+  auto to_subranges =
+      std::views::transform([](auto& vec) { return std::ranges::subrange(Iter(vec.begin()), Sent(Iter(vec.end()))); });
 
   { // segmented -> contiguous
     std::vector<std::vector<int>> vectors = {};
-    auto range = vectors | to_subranges;
+    auto range                            = vectors | to_subranges;
     std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
     std::array<int, 0> arr;
 
@@ -140,7 +140,7 @@ constexpr void test_join_view() {
   }
   { // segmented -> contiguous
     std::vector<std::vector<int>> vectors = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10}, {}};
-    auto range = vectors | to_subranges;
+    auto range                            = vectors | to_subranges;
     std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
     std::array<int, 10> arr;
 
@@ -149,7 +149,7 @@ constexpr void test_join_view() {
   }
   { // contiguous -> segmented
     std::vector<std::vector<int>> vectors = {{0, 0, 0, 0}, {0, 0}, {0, 0, 0, 0}, {}};
-    auto range = vectors | to_subranges;
+    auto range                            = vectors | to_subranges;
     std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
     std::array arr = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -158,10 +158,10 @@ constexpr void test_join_view() {
   }
   { // segmented -> segmented
     std::vector<std::vector<int>> vectors = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10}, {}};
-    auto range1 = vectors | to_subranges;
+    auto range1                           = vectors | to_subranges;
     std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range1.begin(), range1.end());
     std::vector<std::vector<int>> to_vectors = {{0, 0, 0, 0}, {0, 0, 0, 0}, {}, {0, 0}};
-    auto range2 = to_vectors | to_subranges;
+    auto range2                              = to_vectors | to_subranges;
     std::vector<std::ranges::subrange<Iter, Sent>> to_subrange_vector(range2.begin(), range2.end());
 
     std::ranges::copy_backward(subrange_vector | std::views::join, (to_subrange_vector | std::views::join).end());
@@ -224,6 +224,30 @@ constexpr void test_proxy_in_iterators() {
   test_sentinels<ProxyIterator, Out>();
 }
 
+#if TEST_STD_VER >= 23
+
+constexpr bool test_vector_bool(std::size_t N) {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+
+  { // Test copy_backward with aligned bytes
+    std::vector<bool> out(N);
+    std::ranges::copy_backward(in, out.end());
+    assert(in == out);
+  }
+  { // Test copy_backward with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::ranges::copy_backward(in, out.end() - 4);
+    for (std::size_t i = 0; i < N; ++i)
+      assert(out[i + 4] == in[i]);
+  }
+
+  return true;
+};
+
+#endif
+
 constexpr bool test() {
   test_in_iterators<bidirectional_iterator>();
   test_in_iterators<random_access_iterator>();
@@ -237,13 +261,13 @@ constexpr bool test() {
   { // check that ranges::dangling is returned
     std::array<int, 4> out;
     std::same_as<std::ranges::in_out_result<std::ranges::dangling, int*>> auto ret =
-      std::ranges::copy_backward(std::array {1, 2, 3, 4}, out.data() + out.size());
+        std::ranges::copy_backward(std::array{1, 2, 3, 4}, out.data() + out.size());
     assert(ret.out == out.data());
     assert((out == std::array{1, 2, 3, 4}));
   }
 
   { // check that an iterator is returned with a borrowing range
-    std::array in {1, 2, 3, 4};
+    std::array in{1, 2, 3, 4};
     std::array<int, 4> out;
     std::same_as<std::ranges::in_out_result<std::array<int, 4>::iterator, int*>> auto ret =
         std::ranges::copy_backward(std::views::all(in), out.data() + out.size());
@@ -254,8 +278,8 @@ constexpr bool test() {
 
   { // check that every element is copied exactly once
     struct CopyOnce {
-      bool copied = false;
-      constexpr CopyOnce() = default;
+      bool copied                               = false;
+      constexpr CopyOnce()                      = default;
       constexpr CopyOnce(const CopyOnce& other) = delete;
       constexpr CopyOnce& operator=(const CopyOnce& other) {
         assert(!other.copied);
@@ -264,16 +288,16 @@ constexpr bool test() {
       }
     };
     {
-      std::array<CopyOnce, 4> in {};
-      std::array<CopyOnce, 4> out {};
+      std::array<CopyOnce, 4> in{};
+      std::array<CopyOnce, 4> out{};
       auto ret = std::ranges::copy_backward(in.begin(), in.end(), out.end());
       assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(std::all_of(out.begin(), out.end(), [](const auto& e) { return e.copied; }));
     }
     {
-      std::array<CopyOnce, 4> in {};
-      std::array<CopyOnce, 4> out {};
+      std::array<CopyOnce, 4> in{};
+      std::array<CopyOnce, 4> out{};
       auto ret = std::ranges::copy_backward(in, out.end());
       assert(ret.in == in.end());
       assert(ret.out == out.begin());
@@ -284,8 +308,8 @@ constexpr bool test() {
   { // check that the range is copied backwards
     struct OnlyBackwardsCopyable {
       OnlyBackwardsCopyable* next = nullptr;
-      bool canCopy = false;
-      OnlyBackwardsCopyable() = default;
+      bool canCopy                = false;
+      OnlyBackwardsCopyable()     = default;
       constexpr OnlyBackwardsCopyable& operator=(const OnlyBackwardsCopyable&) {
         assert(canCopy);
         if (next != nullptr)
@@ -294,12 +318,12 @@ constexpr bool test() {
       }
     };
     {
-      std::array<OnlyBackwardsCopyable, 3> in {};
-      std::array<OnlyBackwardsCopyable, 3> out {};
-      out[1].next = &out[0];
-      out[2].next = &out[1];
+      std::array<OnlyBackwardsCopyable, 3> in{};
+      std::array<OnlyBackwardsCopyable, 3> out{};
+      out[1].next    = &out[0];
+      out[2].next    = &out[1];
       out[2].canCopy = true;
-      auto ret = std::ranges::copy_backward(in, out.end());
+      auto ret       = std::ranges::copy_backward(in, out.end());
       assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(out[0].canCopy);
@@ -307,12 +331,12 @@ constexpr bool test() {
       assert(out[2].canCopy);
     }
     {
-      std::array<OnlyBackwardsCopyable, 3> in {};
-      std::array<OnlyBackwardsCopyable, 3> out {};
-      out[1].next = &out[0];
-      out[2].next = &out[1];
+      std::array<OnlyBackwardsCopyable, 3> in{};
+      std::array<OnlyBackwardsCopyable, 3> out{};
+      out[1].next    = &out[0];
+      out[2].next    = &out[1];
       out[2].canCopy = true;
-      auto ret = std::ranges::copy_backward(in.begin(), in.end(), out.end());
+      auto ret       = std::ranges::copy_backward(in.begin(), in.end(), out.end());
       assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(out[0].canCopy);
@@ -320,6 +344,16 @@ constexpr bool test() {
       assert(out[2].canCopy);
     }
   }
+
+#if TEST_STD_VER >= 23
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(16));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(256));
+  }
+#endif
 
   return true;
 }

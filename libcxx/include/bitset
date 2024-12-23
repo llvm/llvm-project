@@ -130,6 +130,10 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__cxx03/bitset>
 #else
 #  include <__algorithm/copy.h>
+<<<<<<< HEAD
+=======
+#  include <__algorithm/copy_backward.h>
+>>>>>>> 03028d1b8610 (Optimize ranges::copy_backward for vector<bool>::iterator)
 #  include <__algorithm/count.h>
 #  include <__algorithm/fill.h>
 #  include <__algorithm/fill_n.h>
