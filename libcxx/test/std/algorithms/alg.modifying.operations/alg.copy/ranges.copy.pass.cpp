@@ -26,6 +26,7 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "type_algorithms.h"
 
 template <class In, class Out = In, class Sent = sentinel_wrapper<In>>
@@ -98,6 +99,30 @@ constexpr void test_iterators() {
   }
 }
 // clang-format on
+
+#if TEST_STD_VER >= 23
+template <std::size_t N>
+struct TestBitIter {
+  std::vector<bool> in;
+  TEST_CONSTEXPR_CXX20 TestBitIter() : in(N, false) {
+    for (std::size_t i = 0; i < N; i += 2)
+      in[i] = true;
+  }
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    { // Test copy with aligned bytes
+      std::vector<bool> out(N);
+      std::ranges::copy(in, out.begin());
+      assert(in == out);
+    }
+    { // Test copy with unaligned bytes
+      std::vector<bool> out(N + 8);
+      std::ranges::copy(in, out.begin() + 4);
+      for (std::size_t i = 0; i < N; ++i)
+        assert(out[i + 4] == in[i]);
+    }
+  }
+};
+#endif
 
 constexpr bool test() {
   types::for_each(types::forward_iterator_list<int*>{}, []<class Out>() {
@@ -203,6 +228,16 @@ constexpr bool test() {
       assert(out[2].canCopy);
     }
   }
+
+#if TEST_STD_VER >= 23
+  { // Test vector<bool>::iterator optimization
+    TestBitIter<8>()();
+    TestBitIter<16>()();
+    TestBitIter<32>()();
+    TestBitIter<64>()();
+    TestBitIter<1024>()();
+  }
+#endif
 
   return true;
 }
