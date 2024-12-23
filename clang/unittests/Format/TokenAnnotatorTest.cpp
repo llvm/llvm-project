@@ -752,6 +752,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
 
+  Tokens = annotate("(std::__type_identity_t<int>)-2;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("template <typename> using type = int;\n"
+                    "auto = (type<int>)+5;");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("template <class t> t c;"
+                    "auto = (c<int>) + 5;");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[15], tok::r_paren, TT_Unknown);
+
   Tokens = annotate("return (Foo)p;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_CastRParen);
