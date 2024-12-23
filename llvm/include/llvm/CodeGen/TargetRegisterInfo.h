@@ -347,12 +347,27 @@ public:
   const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
                                                     MVT VT = MVT::Other) const;
 
+  /// Returns the common Register Class of two physical registers of the given
+  /// type, picking the most sub register class of the right type that contains
+  /// these two physregs.
+  const TargetRegisterClass *
+  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2,
+                               MVT VT = MVT::Other) const;
+
   /// Returns the Register Class of a physical register of the given type,
   /// picking the most sub register class of the right type that contains this
   /// physreg. If there is no register class compatible with the given type,
   /// returns nullptr.
   const TargetRegisterClass *getMinimalPhysRegClassLLT(MCRegister Reg,
                                                        LLT Ty = LLT()) const;
+
+  /// Returns the common Register Class of two physical registers of the given
+  /// type, picking the most sub register class of the right type that contains
+  /// these two physregs. If there is no register class compatible with the
+  /// given type, returns nullptr.
+  const TargetRegisterClass *
+  getCommonMinimalPhysRegClassLLT(MCRegister Reg1, MCRegister Reg2,
+                                  LLT Ty = LLT()) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
