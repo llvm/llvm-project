@@ -223,8 +223,6 @@ public:
   virtual void GetObjCMethods(ConstString class_name,
                               llvm::function_ref<bool(DWARFDIE die)> callback);
 
-  bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
-
   DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
   static DWARFDIE GetParentSymbolContextDIE(const DWARFDIE &die);
@@ -395,8 +393,7 @@ protected:
   Function *ParseFunction(CompileUnit &comp_unit, const DWARFDIE &die);
 
   size_t ParseBlocksRecursive(CompileUnit &comp_unit, Block *parent_block,
-                              const DWARFDIE &die,
-                              lldb::addr_t subprogram_low_pc, uint32_t depth);
+                              DWARFDIE die, lldb::addr_t subprogram_low_pc);
 
   size_t ParseTypes(const SymbolContext &sc, const DWARFDIE &die,
                     bool parse_siblings, bool parse_children);
@@ -525,7 +522,6 @@ protected:
   ExternalTypeModuleMap m_external_type_modules;
   std::unique_ptr<DWARFIndex> m_index;
   bool m_fetched_external_modules : 1;
-  LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
 
   typedef std::set<DIERef> DIERefSet;
   typedef llvm::StringMap<DIERefSet> NameToOffsetMap;

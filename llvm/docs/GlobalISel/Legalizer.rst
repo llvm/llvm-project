@@ -338,8 +338,8 @@ G_BUILD_VECTOR_TRUNC, G_CONCAT_VECTORS, G_UNMERGE_VALUES, G_PTRTOINT, and
 G_INTTOPTR have already been noted above. In addition to those, the following
 operations have requirements:
 
-* At least one G_IMPLICIT_DEF must be legal. This is usually trivial as it
-  requires no code to be selected.
+* For every type that can be produced by any instruction, G_IMPLICIT_DEF must be
+  legal.
 * G_PHI must be legal for all types in the producer and consumer typesets. This
   is usually trivial as it requires no code to be selected.
 * At least one G_FRAME_INDEX must be legal

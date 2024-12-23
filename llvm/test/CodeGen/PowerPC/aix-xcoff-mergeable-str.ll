@@ -4,14 +4,14 @@
 ; tests for XCOFF object files.
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -xcoff-traceback-table=false \
-; RUN:     -mtriple powerpc-ibm-aix-xcoff  -data-sections=false -ppc-merge-string-pool=false \
+; RUN:     -mtriple powerpc-ibm-aix-xcoff  -data-sections=false \
 ; RUN:     -global-merge-all-const=false < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -xcoff-traceback-table=false \
-; RUN:     -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false \
+; RUN:     -mtriple powerpc64-ibm-aix-xcoff -data-sections=false \
 ; RUN:     -global-merge-all-const=false < %s | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
-; RUN:     -xcoff-traceback-table=false -data-sections=false -ppc-merge-string-pool=false \
+; RUN:     -xcoff-traceback-table=false -data-sections=false \
 ; RUN:     -global-merge-all-const=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
 

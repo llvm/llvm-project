@@ -18,7 +18,8 @@ struct MyStruct {
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0)
-// DXIL: %"class.hlsl::ConsumeStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }, 1, 0)
+// DXIL: %"class.hlsl::ConsumeStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct, 1, 0)
+// DXIL: %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }
 
 ConsumeStructuredBuffer<int16_t> BufI16;
 ConsumeStructuredBuffer<uint16_t> BufU16;

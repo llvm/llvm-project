@@ -78,6 +78,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv73") {
     Builder.defineMacro("__HEXAGON_V73__");
     Builder.defineMacro("__HEXAGON_ARCH__", "73");
+  } else if (CPU == "hexagonv75") {
+    Builder.defineMacro("__HEXAGON_V75__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "75");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -229,13 +232,13 @@ struct CPUSuffix {
 };
 
 static constexpr CPUSuffix Suffixes[] = {
-    {{"hexagonv5"},  {"5"}},  {{"hexagonv55"},  {"55"}},
-    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"},  {"62"}},
-    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"},  {"66"}},
+    {{"hexagonv5"}, {"5"}},   {{"hexagonv55"}, {"55"}},
+    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"}, {"62"}},
+    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"}, {"66"}},
     {{"hexagonv67"}, {"67"}}, {{"hexagonv67t"}, {"67t"}},
-    {{"hexagonv68"}, {"68"}}, {{"hexagonv69"},  {"69"}},
-    {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"},  {"71t"}},
-    {{"hexagonv73"}, {"73"}},
+    {{"hexagonv68"}, {"68"}}, {{"hexagonv69"}, {"69"}},
+    {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"}, {"71t"}},
+    {{"hexagonv73"}, {"73"}}, {{"hexagonv75"}, {"75"}},
 };
 
 std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {

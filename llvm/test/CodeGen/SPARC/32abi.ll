@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-BE
-; RUN: llc < %s -march=sparcel -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-LE
-; RUN: llc < %s -march=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=CHECK-BE
+; RUN: llc < %s -mtriple=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-BE
+; RUN: llc < %s -mtriple=sparcel -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-LE
+; RUN: llc < %s -mtriple=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=CHECK-BE
 
 ; CHECK-LABEL: intarg:
 ; The save/restore frame is not strictly necessary here, but we would need to

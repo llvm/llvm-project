@@ -483,7 +483,7 @@ define void @test_upper_vXf32(<2 x float> %a64, <2 x float> %b64, <4 x float> %a
 ; SSE-LABEL: 'test_upper_vXf32'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64 = shufflevector <2 x float> %a64, <2 x float> %b64, <2 x i32> <i32 3, i32 3>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V128 = shufflevector <4 x float> %a128, <4 x float> %b128, <4 x i32> <i32 6, i32 6, i32 6, i32 6>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512 = shufflevector <16 x float> %a512, <16 x float> %b512, <16 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;

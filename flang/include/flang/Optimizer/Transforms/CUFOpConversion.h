@@ -23,10 +23,15 @@ class SymbolTable;
 
 namespace cuf {
 
+/// Patterns that convert CUF operations to runtime calls.
 void populateCUFToFIRConversionPatterns(const fir::LLVMTypeConverter &converter,
                                         mlir::DataLayout &dl,
                                         const mlir::SymbolTable &symtab,
                                         mlir::RewritePatternSet &patterns);
+
+/// Patterns that updates fir operations in presence of CUF.
+void populateFIRCUFConversionPatterns(const mlir::SymbolTable &symtab,
+                                      mlir::RewritePatternSet &patterns);
 
 } // namespace cuf
 
