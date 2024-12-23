@@ -1183,7 +1183,7 @@ size_t Arm64XDynamicRelocEntry::getSize() const {
 
 void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
   auto out = reinterpret_cast<ulittle16_t *>(buf);
-  *out = (offset & 0xfff) | (type << 12);
+  *out = (offset.get() & 0xfff) | (type << 12);
 
   switch (type) {
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
@@ -1211,14 +1211,19 @@ void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
 void DynamicRelocsChunk::finalize() {
   llvm::stable_sort(arm64xRelocs, [=](const Arm64XDynamicRelocEntry &a,
                                       const Arm64XDynamicRelocEntry &b) {
-    return a.offset < b.offset;
+    return a.offset.get() < b.offset.get();
   });
 
-  size = sizeof(coff_dynamic_reloc_table) + sizeof(coff_dynamic_relocation64) +
-         sizeof(coff_base_reloc_block_header);
+  size = sizeof(coff_dynamic_reloc_table) + sizeof(coff_dynamic_relocation64);
+  uint32_t prevPage = 0xfff;
 
   for (const Arm64XDynamicRelocEntry &entry : arm64xRelocs) {
-    assert(!(entry.offset & ~0xfff)); // Not yet supported.
+    uint32_t page = entry.offset.get() & ~0xfff;
+    if (page != prevPage) {
+      size = alignTo(size, sizeof(uint32_t)) +
+             sizeof(coff_base_reloc_block_header);
+      prevPage = page;
+    }
     size += entry.getSize();
   }
 
@@ -1235,17 +1240,31 @@ void DynamicRelocsChunk::writeTo(uint8_t *buf) const {
   header->Symbol = IMAGE_DYNAMIC_RELOCATION_ARM64X;
   buf += sizeof(*header);
 
-  auto pageHeader = reinterpret_cast<coff_base_reloc_block_header *>(buf);
-  pageHeader->BlockSize = sizeof(*pageHeader);
+  coff_base_reloc_block_header *pageHeader = nullptr;
+  size_t relocSize = 0;
   for (const Arm64XDynamicRelocEntry &entry : arm64xRelocs) {
-    entry.writeTo(buf + pageHeader->BlockSize);
-    pageHeader->BlockSize += entry.getSize();
-  }
-  pageHeader->BlockSize = alignTo(pageHeader->BlockSize, sizeof(uint32_t));
+    uint32_t page = entry.offset.get() & ~0xfff;
+    if (!pageHeader || page != pageHeader->PageRVA) {
+      relocSize = alignTo(relocSize, sizeof(uint32_t));
+      if (pageHeader)
+        pageHeader->BlockSize =
+            buf + relocSize - reinterpret_cast<uint8_t *>(pageHeader);
+      pageHeader =
+          reinterpret_cast<coff_base_reloc_block_header *>(buf + relocSize);
+      pageHeader->PageRVA = page;
+      relocSize += sizeof(*pageHeader);
+    }
 
-  header->BaseRelocSize = pageHeader->BlockSize;
-  table->Size += header->BaseRelocSize;
-  assert(size == sizeof(*table) + sizeof(*header) + header->BaseRelocSize);
+    entry.writeTo(buf + relocSize);
+    relocSize += entry.getSize();
+  }
+  relocSize = alignTo(relocSize, sizeof(uint32_t));
+  pageHeader->BlockSize =
+      buf + relocSize - reinterpret_cast<uint8_t *>(pageHeader);
+
+  header->BaseRelocSize = relocSize;
+  table->Size += relocSize;
+  assert(size == sizeof(*table) + sizeof(*header) + relocSize);
 }
 
 } // namespace lld::coff
