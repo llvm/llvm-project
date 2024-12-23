@@ -969,8 +969,10 @@ void ClauseProcessor::processMapObjects(
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const {
+    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
+    std::string mapperIdName) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::FlatSymbolRefAttr mapperId;
 
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -1003,6 +1005,20 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
+    if (!mapperIdName.empty()) {
+      if (mapperIdName == "default") {
+        auto &typeSpec = object.sym()->owner().IsDerivedType()
+                             ? *object.sym()->owner().derivedTypeSpec()
+                             : object.sym()->GetType()->derivedTypeSpec();
+        mapperIdName = typeSpec.name().ToString() + ".default";
+        mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
+      }
+      assert(converter.getMLIRSymbolTable()->lookup(mapperIdName) &&
+             "mapper not found");
+      mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                              mapperIdName);
+      mapperIdName.clear();
+    }
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
     // types to optimise
@@ -1016,7 +1032,8 @@ void ClauseProcessor::processMapObjects(
         static_cast<
             std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
             mapTypeBits),
-        mlir::omp::VariableCaptureKind::ByRef, baseOp.getType());
+        mlir::omp::VariableCaptureKind::ByRef, baseOp.getType(), false,
+        mapperId);
 
     if (parentObj.has_value()) {
       parentMemberIndices[parentObj.value()].addChildIndexAndMapToParent(
@@ -1047,6 +1064,7 @@ bool ClauseProcessor::processMap(
     const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    std::string mapperIdName;
     // If the map type is specified, then process it else Tofrom is the
     // default.
     Map::MapType type = mapType.value_or(Map::MapType::Tofrom);
@@ -1090,13 +1108,17 @@ bool ClauseProcessor::processMap(
            "Support for iterator modifiers is not implemented yet");
     }
     if (mappers) {
-      TODO(currentLocation,
-           "Support for mapper modifiers is not implemented yet");
+      assert(mappers->size() == 1 && "more than one mapper");
+      mapperIdName = mappers->front().v.id().symbol->name().ToString();
+      if (mapperIdName != "default")
+        mapperIdName = converter.mangleName(
+            mapperIdName, mappers->front().v.id().symbol->owner());
     }
 
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
-                      parentMemberIndices, result.mapVars, *ptrMapSyms);
+                      parentMemberIndices, result.mapVars, *ptrMapSyms,
+                      mapperIdName);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
