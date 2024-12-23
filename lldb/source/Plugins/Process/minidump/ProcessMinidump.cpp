@@ -355,27 +355,11 @@ DataExtractor ProcessMinidump::GetAuxvData() {
 }
 
 bool ProcessMinidump::IsLLDBMinidump() {
-  // If we've already checked, return the cached value
-  if (m_is_lldb_generated.has_value())
-    return *m_is_lldb_generated;
-
-  // If the minidump doesn't have a LLDBGeneratedStream, it's not an LLDB
-  // We also check to see if the section was generated correctly, but not
-  // enforcing an exact size so we can change it in the future without
-  // impacting older generated Minidumps.
-  llvm::ArrayRef<uint8_t> lldbStream =
-      m_minidump_parser->GetStream(StreamType::LLDBGenerated);
-  if (lldbStream.empty() || lldbStream.size() <= sizeof(StreamType)) {
-    m_is_lldb_generated = false;
-    return false;
-  }
-
-  const uint32_t *lldbStreamType =
-      reinterpret_cast<const uint32_t *>(lldbStream.data());
-
-  m_is_lldb_generated = *lldbStreamType == (uint32_t)StreamType::LLDBGenerated;
-  return *m_is_lldb_generated;
+  std::optional<llvm::ArrayRef<uint8_t>> lldb_generated_section =
+      m_minidump_parser->GetRawStream(StreamType::LLDBGenerated);
+  return lldb_generated_section.has_value();
 }
+
 
 DynamicLoader *ProcessMinidump::GetDynamicLoader() {
   // This is a workaround for the dynamic loader not playing nice in issue

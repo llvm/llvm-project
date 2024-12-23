@@ -76,8 +76,8 @@ public:
 
   ArchSpec GetArchitecture();
 
-  Status GetMemoryRegions(
-      lldb_private::MemoryRegionInfos &region_list) override;
+  Status
+  GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) override;
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
@@ -106,7 +106,6 @@ protected:
   JITLoaderList &GetJITLoaders() override;
 
 private:
-  std::optional<bool> m_is_lldb_generated;
   lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<minidump::Thread> m_thread_list;
   std::unordered_map<uint32_t, const minidump::ExceptionStream>

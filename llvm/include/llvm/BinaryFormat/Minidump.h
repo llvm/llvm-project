@@ -52,7 +52,6 @@ enum class StreamType : uint32_t {
 #include "llvm/BinaryFormat/MinidumpConstants.def"
   Unused = 0,
   LastReserved = 0x0000ffff,
-  LLDBGenerated = 0x4C4C4442, // ASCII for 'LLDB'
 };
 
 /// Specifies the location (and size) of various objects in the minidump file.

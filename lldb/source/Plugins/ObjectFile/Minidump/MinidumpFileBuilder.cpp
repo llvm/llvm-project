@@ -132,12 +132,7 @@ Status MinidumpFileBuilder::AddDirectory(StreamType type,
 Status MinidumpFileBuilder::AddLLDBGeneratedStream() {
   Status error;
   StreamType type = StreamType::LLDBGenerated;
-  error = AddDirectory(type, sizeof(StreamType));
-  if (error.Fail())
-    return error;
-
-  error = AddData(&type, sizeof(StreamType));
-  return error;
+  return AddDirectory(type, 0);
 }
 
 Status MinidumpFileBuilder::AddSystemInfo() {
