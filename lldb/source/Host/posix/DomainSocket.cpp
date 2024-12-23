@@ -16,6 +16,9 @@
 #include <memory>
 #include <sys/socket.h>
 #include <sys/un.h>
+#ifdef _AIX
+#include <strings.h>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -86,7 +89,8 @@ Status DomainSocket::Connect(llvm::StringRef name) {
   if (error.Fail())
     return error;
   if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
-        (struct sockaddr *)&saddr_un, saddr_un_len) < 0)
+                                  (struct sockaddr *)&saddr_un,
+                                  saddr_un_len) < 0)
     SetLastError(error);
 
   return error;

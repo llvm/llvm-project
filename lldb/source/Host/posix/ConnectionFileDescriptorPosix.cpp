@@ -119,8 +119,7 @@ bool ConnectionFileDescriptor::IsConnected() const {
 
 ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
                                                    Status *error_ptr) {
-  return Connect(
-      path, [](llvm::StringRef) {}, error_ptr);
+  return Connect(path, [](llvm::StringRef) {}, error_ptr);
 }
 
 ConnectionStatus
@@ -716,7 +715,7 @@ ConnectionFileDescriptor::ConnectFD(llvm::StringRef s,
 ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     llvm::StringRef s, socket_id_callback_type socket_id_callback,
     Status *error_ptr) {
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX && !defined(_AIX)
   std::string addr_str = s.str();
   // file:///PATH
   int fd = FileSystem::Instance().Open(addr_str.c_str(), O_RDWR);
@@ -747,7 +746,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
 
   m_io_sp = std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, true);
   return eConnectionStatusSuccess;
-#endif // LLDB_ENABLE_POSIX
+#endif // LLDB_ENABLE_POSIX && !defined(_AIX)
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
 }
 
