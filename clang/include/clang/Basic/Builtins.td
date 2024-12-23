@@ -1462,13 +1462,13 @@ def ElementwiseSubSat : Builtin {
 
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceMin : Builtin {
   let Spellings = ["__builtin_reduce_min"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
