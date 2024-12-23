@@ -2619,6 +2619,10 @@ defm sanitize_cfi_canonical_jump_tables : BoolOption<"f", "sanitize-cfi-canonica
           "Do not make">,
   BothFlags<[], [ClangOption], " the jump table addresses canonical in the symbol table">>,
   Group<f_clang_Group>;
+def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
+                           Group<f_clang_Group>,
+                           HelpText<"Embed function arity information into the KCFI patchable function prefix">,
+                           MarshallingInfoFlag<CodeGenOpts<"SanitizeKcfiArity">>;
 defm sanitize_stats : BoolOption<"f", "sanitize-stats",
   CodeGenOpts<"SanitizeStats">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,

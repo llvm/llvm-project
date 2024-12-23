@@ -277,6 +277,7 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types
                                                     ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
                                                  ///< instead of creating a local jump table.
+CODEGENOPT(SanitizeKcfiArity, 1, 0) ///< Embed arity in KCFI patchable function prefix
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage

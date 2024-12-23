@@ -2220,6 +2220,12 @@ are listed below.
 
    This option is currently experimental.
 
+.. option:: -fsanitize-kcfi-arity
+
+   Extends kernel indirect call forward-edge control flow integrity with
+   additional function arity information (for supported targets). See
+   :doc:`ControlFlowIntegrity` for more details.
+
 .. option:: -fstrict-vtable-pointers
 
    Enable optimizations based on the strict rules for overwriting polymorphic

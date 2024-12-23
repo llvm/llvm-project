@@ -829,6 +829,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     CfiICallNormalizeIntegers =
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
 
+    KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
+
     if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
           << "-fsanitize=kcfi"
@@ -1382,6 +1384,14 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (CfiICallNormalizeIntegers)
     CmdArgs.push_back("-fsanitize-cfi-icall-experimental-normalize-integers");
+
+  if (KcfiArity) {
+    if (!TC.getTriple().isOSLinux() || !TC.getTriple().isArch64Bit()) {
+      TC.getDriver().Diag(clang::diag::err_drv_kcfi_arity_unsupported_target)
+          << TC.getTriple().str();
+    }
+    CmdArgs.push_back("-fsanitize-kcfi-arity");
+  }
 
   if (CfiCanonicalJumpTables)
     CmdArgs.push_back("-fsanitize-cfi-canonical-jump-tables");
