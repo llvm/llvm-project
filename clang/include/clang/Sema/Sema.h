@@ -3987,6 +3987,13 @@ public:
                           SourceLocation IdLoc, IdentifierInfo *Id,
                           const ParsedAttributesView &Attrs,
                           SourceLocation EqualLoc, Expr *Val);
+
+  bool ComputeBestEnumProperties(ASTContext &Context, EnumDecl *Enum,
+                                 bool isCpp, bool isPacked,
+                                 unsigned NumNegativeBits,
+                                 unsigned NumPositiveBits, unsigned &BestWidth,
+                                 QualType &BestType,
+                                 QualType &BestPromotionType);
   void ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                      Decl *EnumDecl, ArrayRef<Decl *> Elements, Scope *S,
                      const ParsedAttributesView &Attr);
