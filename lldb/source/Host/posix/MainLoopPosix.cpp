@@ -99,6 +99,7 @@ public:
   ~RunImpl() = default;
 
   Status Poll();
+  int StartPoll(std::optional<MainLoopPosix::TimePoint> point);
   void ProcessReadEvents();
 
 private:
@@ -159,6 +160,22 @@ MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
   read_fds.reserve(loop.m_read_fds.size());
 }
 
+int MainLoopPosix::RunImpl::StartPoll(
+    std::optional<MainLoopPosix::TimePoint> point) {
+#if HAVE_PPOLL
+  return ppoll(read_fds.data(), read_fds.size(), ToTimeSpec(point),
+               /*sigmask=*/nullptr);
+#else
+  using namespace std::chrono;
+  int timeout = -1;
+  if (point) {
+    nanosecond dur = std::max(*point - steady_clock::now(), nanoseconds(0));
+    timeout = ceil<milliseconds>(dur).count();
+  }
+  return poll(read_fds.data(), read_fds.size(), timeout);
+#endif
+}
+
 Status MainLoopPosix::RunImpl::Poll() {
   read_fds.clear();
 
@@ -169,24 +186,10 @@ Status MainLoopPosix::RunImpl::Poll() {
     pfd.revents = 0;
     read_fds.push_back(pfd);
   }
+  int ready = StartPoll(loop.GetNextWakeupTime());
 
-#if defined(_AIX)
-  sigset_t origmask;
-  int timeout;
-
-  timeout = -1;
-  pthread_sigmask(SIG_SETMASK, nullptr, &origmask);
-  int ready = poll(read_fds.data(), read_fds.size(), timeout);
-  pthread_sigmask(SIG_SETMASK, &origmask, nullptr);
   if (ready == -1 && errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
-#else
-  if (ppoll(read_fds.data(), read_fds.size(),
-            ToTimeSpec(loop.GetNextWakeupTime()),
-            /*sigmask=*/nullptr) == -1 &&
-      errno != EINTR)
-    return Status(errno, eErrorTypePOSIX);
-#endif
 
   return Status();
 }
