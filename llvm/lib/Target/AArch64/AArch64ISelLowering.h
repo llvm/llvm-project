@@ -673,6 +673,8 @@ public:
                                           MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitAllocateSMESaveBuffer(MachineInstr &MI,
                                                MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
+                                        MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,

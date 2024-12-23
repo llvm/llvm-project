@@ -535,8 +535,8 @@ define void @agnostic_za_function(ptr %ptr) nounwind "aarch64_za_state_agnostic"
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    mov x8, x0
 ; CHECK-COMMON-NEXT:    bl __arm_sme_state_size
-; CHECK-COMMON-NEXT:    sub x20, sp, x0
-; CHECK-COMMON-NEXT:    mov sp, x20
+; CHECK-COMMON-NEXT:    sub sp, sp, x0
+; CHECK-COMMON-NEXT:    mov x20, sp
 ; CHECK-COMMON-NEXT:    mov x0, x20
 ; CHECK-COMMON-NEXT:    bl __arm_sme_save
 ; CHECK-COMMON-NEXT:    blr x8

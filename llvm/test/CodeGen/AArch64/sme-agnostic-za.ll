@@ -29,8 +29,8 @@ define i64 @agnostic_caller_private_za_callee(i64 %v) nounwind "aarch64_za_state
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    bl __arm_sme_state_size
-; CHECK-NEXT:    sub x19, sp, x0
-; CHECK-NEXT:    mov sp, x19
+; CHECK-NEXT:    sub sp, sp, x0
+; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    bl __arm_sme_save
 ; CHECK-NEXT:    mov x0, x8

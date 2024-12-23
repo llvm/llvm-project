@@ -3244,16 +3244,15 @@ AArch64TargetLowering::EmitAllocateSMESaveBuffer(MachineInstr &MI,
 
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   if (FuncInfo->getSMESaveBufferUsed()) {
-    // Allocate a lazy-save buffer object of the size given, normally SVL * SVL
+    // Allocate a buffer object of the size given by MI.getOperand(1).
     auto Size = MI.getOperand(1).getReg();
     auto Dest = MI.getOperand(0).getReg();
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrx64), Dest)
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrx64), AArch64::SP)
         .addReg(AArch64::SP)
         .addReg(Size)
         .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-            AArch64::SP)
-        .addReg(Dest);
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), Dest)
+        .addReg(AArch64::SP);
 
     // We have just allocated a variable sized object, tell this to PEI.
     MFI.CreateVariableSizedObject(Align(16), nullptr);
@@ -3261,6 +3260,32 @@ AArch64TargetLowering::EmitAllocateSMESaveBuffer(MachineInstr &MI,
     BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
             MI.getOperand(0).getReg());
 
+  BB->remove_instr(&MI);
+  return BB;
+}
+
+MachineBasicBlock *
+AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const {
+  // If the buffer is used, emit a call to __arm_sme_state_size()
+  MachineFunction *MF = BB->getParent();
+  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  if (FuncInfo->getSMESaveBufferUsed()) {
+    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
+        .addExternalSymbol("__arm_sme_state_size")
+        .addReg(AArch64::X0, RegState::ImplicitDefine)
+        .addRegMask(TRI->getCallPreservedMask(
+            *MF, CallingConv::
+                     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            MI.getOperand(0).getReg())
+        .addReg(AArch64::X0);
+  } else
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            MI.getOperand(0).getReg())
+        .addReg(AArch64::XZR);
   BB->remove_instr(&MI);
   return BB;
 }
@@ -3301,29 +3326,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitAllocateZABuffer(MI, BB);
   case AArch64::AllocateSMESaveBuffer:
     return EmitAllocateSMESaveBuffer(MI, BB);
-  case AArch64::GetSMESaveSize: {
-    // If the buffer is used, emit a call to __arm_sme_state_size()
-    MachineFunction *MF = BB->getParent();
-    AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
-    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-    if (FuncInfo->getSMESaveBufferUsed()) {
-      const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-      BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
-          .addExternalSymbol("__arm_sme_state_size")
-          .addReg(AArch64::X0, RegState::ImplicitDefine)
-          .addRegMask(TRI->getCallPreservedMask(
-              *MF, CallingConv::
-                       AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
-      BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-              MI.getOperand(0).getReg())
-          .addReg(AArch64::X0);
-    } else
-      BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-              MI.getOperand(0).getReg())
-          .addReg(AArch64::XZR);
-    BB->remove_instr(&MI);
-    return BB;
-  }
+  case AArch64::GetSMESaveSize:
+    return EmitGetSMESaveSize(MI, BB);
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
   case TargetOpcode::STATEPOINT:
@@ -8826,6 +8830,10 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
                                        SelectionDAG &DAG,
                                        AArch64FunctionInfo *Info, SDLoc DL,
                                        SDValue Chain, bool IsSave) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  FuncInfo->setSMESaveBufferUsed();
+
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
   Entry.Ty = PointerType::getUnqual(*DAG.getContext());
@@ -8841,7 +8849,6 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
       CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1, RetTy,
       Callee, std::move(Args));
-
   return TLI.LowerCallTo(CLI).second;
 }
 
@@ -9007,7 +9014,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
   bool RequiresSaveAllZA =
       CallerAttrs.requiresPreservingAllZAState(CalleeAttrs);
-  SDValue ZAStateBuffer;
   if (RequiresLazySave) {
     const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     MachinePointerInfo MPI =
@@ -9589,7 +9595,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   } else if (RequiresSaveAllZA) {
     Result = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
                                      /*IsSave=*/false);
-    FuncInfo->setSMESaveBufferUsed();
   }
 
   if (RequiresSMChange || RequiresLazySave || ShouldPreserveZT0 ||
