@@ -1045,6 +1045,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
+static MachineOperand One = MachineOperand::CreateImm(1);
+
 bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
                                   MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
@@ -1059,8 +1061,9 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     // Instructions like reductions may use a vector register as a scalar
     // register. In this case, we should treat it like a scalar register which
     // does not impact the decision on whether to optimize VL. But if there is
-    // another user of MI and it has VL=0, we need to be sure not to reduce the
-    // VL of MI to zero when the VLOp of UserOp is may be non-zero.
+    // another user of MI and it may have VL=0, we need to be sure not to reduce
+    // the VL of MI to zero when the VLOp of UserOp is may be non-zero. The most
+    // we can reduce it to is one.
     if (isVectorOpUsedAsScalarOp(UserOp)) {
       [[maybe_unused]] Register R = UserOp.getReg();
       [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
@@ -1071,16 +1074,9 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
       unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
       const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
       if (VLOp.isReg() || (VLOp.isImm() && VLOp.getImm() != 0)) {
-        if (!CommonVL) {
-          CommonVL = &VLOp;
-          continue;
-        }
-        if (!CommonVL->isIdenticalTo(VLOp)) {
-          CanReduceVL = false;
-          break;
-        }
+        CommonVL = &One;
+        continue;
       }
-      continue;
     }
 
     if (mayReadPastVL(UserMI)) {
