@@ -1735,6 +1735,7 @@ module std [system] {
       export std.functional.bind_back
     }
     module common_view                    { header "__ranges/common_view.h" }
+    module concat_view                    { header "__ranges/concat_view.h" }
     module concepts                       { header "__ranges/concepts.h" }
     module container_compatible_range     { header "__ranges/container_compatible_range.h" }
     module counted {
