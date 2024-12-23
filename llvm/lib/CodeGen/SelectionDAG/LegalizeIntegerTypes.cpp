@@ -474,7 +474,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
 
   switch (getTypeAction(InVT)) {
   case TargetLowering::TypeLegal:
-    break;
+    // Try and use in-register bitcast
+     if (SDValue Res = LowerBitcastInRegister(N))
+       return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT,
+                          Res);
+     // Fallback to stack load store
+     break;
+    
   case TargetLowering::TypePromoteInteger:
     if (NOutVT.bitsEq(NInVT) && !NOutVT.isVector() && !NInVT.isVector())
       // The input promotes to the same size.  Convert the promoted value.
@@ -2174,11 +2180,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
-  // Use the custom lowering.
-  if (SDValue Res = LowerBitcast(N))
+  // Try and use in register bitcast
+  if (SDValue Res = LowerBitcastInRegister(N))
     return Res;
 
-  // If it fails fall back to the default method
+  // Fallback
   return CreateStackStoreLoad(N->getOperand(0), N->getValueType(0));
 }
 

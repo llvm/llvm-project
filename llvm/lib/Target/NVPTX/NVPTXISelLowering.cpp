@@ -472,13 +472,6 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
   return VectorInfo;
 }
 
-static SDValue MaybeBitcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
-                            SDValue Value) {
-  if (Value->getValueType(0) == VT)
-    return Value;
-  return DAG.getNode(ISD::BITCAST, DL, VT, Value);
-}
-
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
@@ -621,9 +614,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8, Custom);
-
-  // Custom conversions to/from v2i8.
-  setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
 
   // Only logical ops can be done on v4i8 directly, others must be done
   // elementwise.
@@ -2594,8 +2584,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return Op;
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
-  case ISD::BITCAST:
-    return SDValue();
   case ISD::EXTRACT_SUBVECTOR:
     return Op;
   case ISD::EXTRACT_VECTOR_ELT:
@@ -5178,28 +5166,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
-static void ReplaceBITCAST(SDNode *Node, SelectionDAG &DAG,
-                           SmallVectorImpl<SDValue> &Results) {
-  // Handle bitcasting to v2i8 without hitting the default promotion
-  // strategy which goes through stack memory.
-  SDValue Op(Node, 0);
-  EVT ToVT = Op->getValueType(0);
-  if (ToVT != MVT::v2i8) {
-    return;
-  }
-
-  // Bitcast to i16 and unpack elements into a vector
-  SDLoc DL(Node);
-  SDValue AsInt = MaybeBitcast(DAG, DL, MVT::i16, Op->getOperand(0));
-  SDValue Vec0 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, AsInt);
-  SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
-  SDValue Vec1 =
-      DAG.getNode(ISD::TRUNCATE, DL, MVT::i8,
-                  DAG.getNode(ISD::SRL, DL, MVT::i16, {AsInt, Const8}));
-  Results.push_back(
-      DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i8, {Vec0, Vec1}));
-}
-
 /// ReplaceVectorLoad - Convert vector loads into multi-output scalar loads.
 static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                               SmallVectorImpl<SDValue> &Results) {
@@ -5435,9 +5401,6 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   switch (N->getOpcode()) {
   default:
     report_fatal_error("Unhandled custom legalization");
-  case ISD::BITCAST:
-    ReplaceBITCAST(N, DAG, Results);
-    return;
   case ISD::LOAD:
     ReplaceLoadVector(N, DAG, Results);
     return;
