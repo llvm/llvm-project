@@ -2674,7 +2674,7 @@ void InnerLoopVectorizer::createInductionAdditionalBypassValues(
       // Fast-math-flags propagate from the original induction instruction.
       if (isa_and_nonnull<FPMathOperator>(BinOp))
         BypassBuilder.setFastMathFlags(
-            II.getInductionBinOp()->getFastMathFlags());
+            BinOp->getFastMathFlags());
 
       // Compute the end value for the additional bypass.
       EndValueFromAdditionalBypass =
@@ -8855,9 +8855,9 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-/// Create and return a ResumePhi for \p PhiR, if it is wide induction recipe.
-/// If the induction recipe is not canonical, creates a VPDerivedIVRecipe to
-/// compute the end value of the induction.
+/// Create and return a ResumePhi for \p WideIF, unless it is truncated. If the
+/// induction recipe is not canonical, creates a VPDerivedIVRecipe to compute
+/// the end value of the induction.
 static VPValue *addResumePhiRecipeForInduction(VPWidenInductionRecipe *WideIV,
                                                VPBuilder &VectorPHBuilder,
                                                VPBuilder &ScalarPHBuilder,
