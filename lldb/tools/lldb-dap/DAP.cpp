@@ -48,6 +48,14 @@
 
 using namespace lldb_dap;
 
+namespace {
+#ifdef _WIN32
+const char *DEV_NULL = "nul";
+#else
+const char *DEV_NULL = "/dev/null";
+#endif
+} // namespace
+
 namespace lldb_dap {
 
 DAP::DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
@@ -180,9 +188,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 }
 
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
-  auto *inull = lldb_private::FileSystem::Instance().Fopen(
-      lldb_private::FileSystem::DEV_NULL, "w");
-  in = lldb::SBFile(inull, true);
+  in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
   if (auto Error = out.RedirectTo([this](llvm::StringRef output) {
         SendOutput(OutputType::Stdout, output);

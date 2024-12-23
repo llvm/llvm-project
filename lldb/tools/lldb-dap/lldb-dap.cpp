@@ -45,6 +45,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <map>
 #include <memory>
 #include <optional>
@@ -4941,19 +4942,12 @@ static void redirection_test() {
 }
 
 /// Duplicates a file descriptor, setting FD_CLOEXEC if applicable.
-static int DuplicateFileDescriptor(int fildes) {
-  int fd = ::dup(fildes);
-  if (fd == -1)
-    return fd;
-
-#if defined(FD_CLOEXEC)
-  int flags = ::fcntl(fd, F_GETFD);
-  if (flags == -1)
-    return -1;
-  if (::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) != 0)
-    return -1;
+static int DuplicateFileDescriptor(int fd) {
+#if defined(F_DUPFD_CLOEXEC)
+  // Ensure FD_CLOEXEC is set.
+  return ::fcntl(fd, F_DUPFD_CLOEXEC, 0);
 #else
-  return fd;
+  return ::dup(fd);
 #endif
 }
 
@@ -5051,7 +5045,13 @@ int main(int argc, char *argv[]) {
     log = std::make_unique<std::ofstream>(log_file_path);
 
   // Initialize LLDB first before we do anything.
-  lldb::SBDebugger::Initialize();
+  lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();
+  if (error.Fail()) {
+    lldb::SBStream os;
+    error.GetDescription(os);
+    llvm::errs() << "lldb initialize failed: " << os.GetData() << "\n";
+    return EXIT_FAILURE;
+  }
 
   // Terminate the debugger before the C++ destructor chain kicks in.
   auto terminate_debugger =
