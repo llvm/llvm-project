@@ -313,6 +313,16 @@ TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeBasicTypes) {
   }
 }
 
+TEST_F(TestTypeSystemClang, TestEnumerationValueSign) {
+  CompilerType enum_type = m_ast->CreateEnumerationType(
+      "my_enum_signed", m_ast->GetTranslationUnitDecl(),
+      OptionalClangModuleID(), Declaration(),
+      m_ast->GetBasicType(lldb::eBasicTypeSignedChar), false);
+  auto *enum_decl = m_ast->AddEnumerationValueToEnumerationType(
+      enum_type, nullptr, "minus_one", -1, 8);
+  EXPECT_TRUE(enum_decl->getInitVal().isSigned());
+}
+
 TEST_F(TestTypeSystemClang, TestOwningModule) {
   auto holder =
       std::make_unique<clang_utils::TypeSystemClangHolder>("module_ast");
