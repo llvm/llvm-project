@@ -152,8 +152,6 @@ struct DAP {
   lldb::SBBroadcaster broadcaster;
   std::thread event_thread;
   std::thread progress_event_thread;
-  std::thread stdout_forward_thread;
-  std::thread stderr_forward_thread;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;

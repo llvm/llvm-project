@@ -18,7 +18,8 @@
 
 namespace lldb_dap {
 
-struct OutputRedirector {
+class OutputRedirector {
+public:
   /// Creates writable file descriptor that will invoke the given callback on
   /// each write in a background thread.
   ///

@@ -49,7 +49,7 @@ Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
         continue;
 
       // EOF detected
-      if (bytes_read == 0)
+      if (bytes_read == 0 || m_stopped)
         break;
 
       callback(StringRef(buffer, bytes_read));
@@ -63,9 +63,9 @@ void OutputRedirector::Stop() {
   m_stopped = true;
 
   if (m_pipe.CanWrite()) {
-    // If the fd is waiting for input and is closed it may not return from the
-    // current select/poll/kqueue/etc. asyncio wait operation. Write a null byte
-    // to ensure the read fd wakes to detect the closed FD.
+    // Closing the pipe may not be sufficient to wake up the thread in case the
+    // write descriptor is duplicated (to stdout/err or to another process).
+    // Write a null byte to ensure the read call returns.
     char buf[] = "\0";
     size_t bytes_written;
     m_pipe.Write(buf, sizeof(buf), bytes_written);

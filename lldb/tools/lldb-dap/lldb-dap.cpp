@@ -5048,7 +5048,7 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<std::ofstream> log = nullptr;
   const char *log_file_path = getenv("LLDBDAP_LOG");
   if (log_file_path)
-    log.reset(new std::ofstream(log_file_path));
+    log = std::make_unique<std::ofstream>(log_file_path);
 
   // Initialize LLDB first before we do anything.
   lldb::SBDebugger::Initialize();
@@ -5083,8 +5083,9 @@ int main(int argc, char *argv[]) {
 
     int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
     if (stdout_fd == -1) {
-      llvm::errs() << "Failed to configure stdout redirect: "
-                   << lldb_private::Status::FromErrno().takeError() << "\n";
+      llvm::logAllUnhandledErrors(
+          llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
+          "Failed to configure stdout redirect: ");
       return EXIT_FAILURE;
     }
 
@@ -5100,8 +5101,8 @@ int main(int argc, char *argv[]) {
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
-    llvm::errs() << "Failed to configure lldb-dap IO operations: " << Err
-                 << "\n";
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                "Failed to configure lldb-dap IO operations: ");
     return EXIT_FAILURE;
   }
 

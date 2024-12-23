@@ -195,11 +195,7 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
       return Error;
 
     if (dup2(*fd, fileno(overrideOut)) == -1)
-      return llvm::make_error<llvm::StringError>(
-          llvm::errnoAsErrorCode(),
-          llvm::formatv("override fd=%d failed", fileno(overrideOut))
-              .str()
-              .c_str());
+      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
   }
 
   if (auto Error = err.RedirectTo([this](llvm::StringRef output) {
@@ -213,11 +209,7 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
       return Error;
 
     if (dup2(*fd, fileno(overrideErr)) == -1)
-      return llvm::make_error<llvm::StringError>(
-          llvm::errnoAsErrorCode(),
-          llvm::formatv("override fd=%d failed", fileno(overrideErr))
-              .str()
-              .c_str());
+      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
   }
 
   return llvm::Error::success();
