@@ -1504,7 +1504,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
     setFlags(CastOp);
 }
 
-// Computes the CastContextHint from a recipes that may access memory.
+/// Computes the CastContextHint for a recipe.
 static TTI::CastContextHint computeCCH(const VPRecipeBase *R, ElementCount VF) {
   if (VF.isScalar())
     return TTI::CastContextHint::Normal;

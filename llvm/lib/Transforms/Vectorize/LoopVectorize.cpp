@@ -9466,19 +9466,26 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
                             CM);
       bool IsOrderedRed = CM.useOrderedReductions(RdxDesc);
-      if (auto *MulAcc =
-              VPlanTransforms::tryToMatchAndCreateMulAccumulateReduction(
-                  RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
-                  IsOrderedRed, CostCtx, Range))
-        RedRecipe = MulAcc;
-      else if (auto *ExtRed =
-                   VPlanTransforms::tryToMatchAndCreateExtendedReduction(
-                       RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
-                       IsOrderedRed, CostCtx, Range))
-        RedRecipe = ExtRed;
-      else
+      // TODO: Remove EVL check when we support EVL version of
+      // VPExtendedReductionRecipe and VPMulAccumulateReductionRecipe.
+      if (CM.foldTailWithEVL()) {
         RedRecipe = new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink,
                                           VecOp, CondOp, IsOrderedRed);
+      } else {
+        if (auto *MulAcc =
+                VPlanTransforms::tryToMatchAndCreateMulAccumulateReduction(
+                    RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
+                    IsOrderedRed, CostCtx, Range))
+          RedRecipe = MulAcc;
+        else if (auto *ExtRed =
+                     VPlanTransforms::tryToMatchAndCreateExtendedReduction(
+                         RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
+                         IsOrderedRed, CostCtx, Range))
+          RedRecipe = ExtRed;
+        else
+          RedRecipe = new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink,
+                                            VecOp, CondOp, IsOrderedRed);
+      }
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including

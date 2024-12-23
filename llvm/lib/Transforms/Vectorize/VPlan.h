@@ -2778,32 +2778,34 @@ public:
 /// concrete recipes before codegen. The Operands are {ChainOp, VecOp,
 /// [Condition]}.
 class VPExtendedReductionRecipe : public VPReductionRecipe {
+  /// Opcode for the extend recipe.
   Instruction::CastOps ExtOp;
+  /// Debug location of reduction instruction.
   DebugLoc RedDL;
 
 protected:
-  VPExtendedReductionRecipe(const unsigned char SC,
-                            const RecurrenceDescriptor &R, Instruction *RedI,
-                            Instruction::CastOps ExtOp, DebugLoc ExtDL,
-                            bool IsNonNeg, VPValue *ChainOp, VPValue *VecOp,
-                            VPValue *CondOp, bool IsOrdered)
-      : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered, IsNonNeg, ExtDL),
-        ExtOp(ExtOp), RedDL(RedI->getDebugLoc()) {}
-
 public:
   VPExtendedReductionRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
                             VPValue *ChainOp, VPWidenCastRecipe *Ext,
                             VPValue *CondOp, bool IsOrdered)
-      : VPExtendedReductionRecipe(VPDef::VPExtendedReductionSC, R, RedI,
-                                  Ext->getOpcode(), Ext->getDebugLoc(),
-                                  Ext->isNonNeg(), ChainOp, Ext->getOperand(0),
-                                  CondOp, IsOrdered) {}
+      : VPReductionRecipe(VPDef::VPExtendedReductionSC, R,
+                          ArrayRef<VPValue *>({ChainOp, Ext->getOperand(0)}),
+                          CondOp, IsOrdered, Ext->isNonNeg(),
+                          Ext->getDebugLoc()),
+        ExtOp(Ext->getOpcode()), RedDL(RedI->getDebugLoc()) {}
+
+  VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
+      : VPReductionRecipe(
+            VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceDescriptor(),
+            ArrayRef<VPValue *>({ExtRed->getChainOp(), ExtRed->getVecOp()}),
+            ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->isNonNeg(),
+            ExtRed->getExtDebugLoc()),
+        ExtOp(ExtRed->getExtOpcode()), RedDL(ExtRed->getRedDebugLoc()) {}
 
   ~VPExtendedReductionRecipe() override = default;
 
   VPExtendedReductionRecipe *clone() override {
-    llvm_unreachable("Not implement yet");
+    return new VPExtendedReductionRecipe(this);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPExtendedReductionSC);
@@ -2861,61 +2863,57 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   // Is this mul-acc recipe contains extend recipes?
   bool IsExtended = false;
 
-protected:
-  VPMulAccumulateReductionRecipe(
-      const unsigned char SC, const RecurrenceDescriptor &R, Instruction *RedI,
-      bool NUW, bool NSW, DebugLoc MulDL, Instruction::CastOps ExtOp,
-      bool IsNonNeg, DebugLoc Ext0DL, DebugLoc Ext1DL, VPValue *ChainOp,
-      VPValue *VecOp0, VPValue *VecOp1, VPValue *CondOp, bool IsOrdered)
-      : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
-                          CondOp, IsOrdered, NUW, NSW, MulDL),
-        ExtOp(ExtOp), IsNonNeg(IsNonNeg), Ext0DL(Ext0DL), Ext1DL(Ext1DL),
-        RedDL(RedI->getDebugLoc()) {
-    assert(R.getOpcode() == Instruction::Add &&
-           "The reduction instruction in MulAccRecipe must be Add");
-    IsExtended = true;
-  }
-
-  VPMulAccumulateReductionRecipe(const unsigned char SC,
-                                 const RecurrenceDescriptor &R,
-                                 Instruction *RedI, bool NUW, bool NSW,
-                                 DebugLoc MulDL, VPValue *ChainOp,
-                                 VPValue *VecOp0, VPValue *VecOp1,
-                                 VPValue *CondOp, bool IsOrdered)
-      : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
-                          CondOp, IsOrdered, NUW, NSW, MulDL),
-        RedDL(RedI->getDebugLoc()) {
-    assert(R.getOpcode() == Instruction::Add &&
-           "The reduction instruction in MulAccRecipe must be Add");
-  }
-
 public:
   VPMulAccumulateReductionRecipe(const RecurrenceDescriptor &R,
                                  Instruction *RedI, VPValue *ChainOp,
                                  VPValue *CondOp, bool IsOrdered,
                                  VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
                                  VPWidenCastRecipe *Ext1)
-      : VPMulAccumulateReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC, R, RedI,
-            Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap(),
-            Mul->getDebugLoc(), Ext0->getOpcode(), Ext0->isNonNeg(),
-            Ext0->getDebugLoc(), Ext1->getDebugLoc(), ChainOp,
-            Ext0->getOperand(0), Ext1->getOperand(0), CondOp, IsOrdered) {}
+      : VPReductionRecipe(VPDef::VPMulAccumulateReductionSC, R,
+                          ArrayRef<VPValue *>({ChainOp, Ext0->getOperand(0),
+                                               Ext1->getOperand(0)}),
+                          CondOp, IsOrdered, Mul->hasNoUnsignedWrap(),
+                          Mul->hasNoSignedWrap(), Mul->getDebugLoc()),
+        ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()),
+        Ext0DL(Ext0->getDebugLoc()), Ext1DL(Ext1->getDebugLoc()),
+        RedDL(RedI->getDebugLoc()) {
+    assert(R.getOpcode() == Instruction::Add &&
+           "The reduction instruction in MulAccRecipe must be Add");
+    IsExtended = true;
+  }
 
   VPMulAccumulateReductionRecipe(const RecurrenceDescriptor &R,
                                  Instruction *RedI, VPValue *ChainOp,
                                  VPValue *CondOp, bool IsOrdered,
                                  VPWidenRecipe *Mul)
-      : VPMulAccumulateReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC, R, RedI,
-            Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap(),
-            Mul->getDebugLoc(), ChainOp, Mul->getOperand(0), Mul->getOperand(1),
-            CondOp, IsOrdered) {}
+      : VPReductionRecipe(VPDef::VPMulAccumulateReductionSC, R,
+                          ArrayRef<VPValue *>({ChainOp, Mul->getOperand(0),
+                                               Mul->getOperand(1)}),
+                          CondOp, IsOrdered, Mul->hasNoUnsignedWrap(),
+                          Mul->hasNoSignedWrap(), Mul->getDebugLoc()),
+        RedDL(RedI->getDebugLoc()) {
+    assert(R.getOpcode() == Instruction::Add &&
+           "The reduction instruction in MulAccRecipe must be Add");
+  }
+
+  /// Constructor for cloning VPMulAccumulateReductionRecipe.
+  VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
+      : VPReductionRecipe(
+            VPDef::VPMulAccumulateReductionSC,
+            MulAcc->getRecurrenceDescriptor(),
+            ArrayRef<VPValue *>({MulAcc->getChainOp(), MulAcc->getOperand(1),
+                                 MulAcc->getOperand(2)}),
+            MulAcc->getCondOp(), MulAcc->isOrdered(),
+            MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
+            MulAcc->getMulDebugLoc()),
+        ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
+        Ext0DL(MulAcc->getExt0DebugLoc()), Ext1DL(MulAcc->getExt1DebugLoc()),
+        RedDL(MulAcc->getRedDebugLoc()), IsExtended(MulAcc->isExtended()) {}
 
   ~VPMulAccumulateReductionRecipe() override = default;
 
   VPMulAccumulateReductionRecipe *clone() override {
-    llvm_unreachable("Not implement yet");
+    return new VPMulAccumulateReductionRecipe(this);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPMulAccumulateReductionSC);
