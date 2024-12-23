@@ -282,8 +282,8 @@ An overview of all the command-line options:
                                    globs can be specified as a list instead of a
                                    string.
     ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
-    ExtraArgs                    - Same as '--extra-args'.
-    ExtraArgsBefore              - Same as '--extra-args-before'.
+    ExtraArgs                    - Same as '--extra-arg'.
+    ExtraArgsBefore              - Same as '--extra-arg-before'.
     FormatStyle                  - Same as '--format-style'.
     HeaderFileExtensions         - File extensions to consider to determine if a
                                    given diagnostic is located in a header file.
