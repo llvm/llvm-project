@@ -3962,23 +3962,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                                       m_UMax(m_Value(X), NegPat),
                                       m_SMin(m_Value(X), NegPat),
                                       m_UMin(m_Value(X), NegPat))))) {
-      unsigned NewOpc = 0;
-      switch (N1->getOpcode()) {
-      case ISD::SMAX:
-        NewOpc = ISD::SMIN;
-        break;
-      case ISD::UMAX:
-        NewOpc = ISD::UMIN;
-        break;
-      case ISD::SMIN:
-        NewOpc = ISD::SMAX;
-        break;
-      case ISD::UMIN:
-        NewOpc = ISD::UMAX;
-        break;
-      default:
-        llvm_unreachable("unrecognized opcode");
-      }
+      unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
       if (hasOperation(NewOpc, VT))
         return DAG.getNode(NewOpc, DL, VT, X, S0);
     }
