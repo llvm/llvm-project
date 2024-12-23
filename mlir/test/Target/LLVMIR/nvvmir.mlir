@@ -708,9 +708,19 @@ llvm.func @nvvm_exit() {
 
 
 // -----
+
 // CHECK-LABEL: @nvvm_breakpoint
 llvm.func @nvvm_breakpoint() {
   // CHECK: call void @llvm.debugtrap()
   nvvm.breakpoint
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @nvvm_trap
+llvm.func @nvvm_trap() {
+  // CHECK: call void @llvm.trap()
+  nvvm.trap
   llvm.return
 }

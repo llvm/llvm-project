@@ -685,27 +685,6 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
   let hasVerifier = 1;
 }
 
-def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
-def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
-def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max register action",
-  [SetMaxRegisterActionDecrease, SetMaxRegisterActionIncrease]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
-
-def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
-  let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
-  let assemblyFormat = "$action $regCount attr-dict";
-  let hasVerifier = 1;
-  string llvmBuilder = [{
-    auto intId = (op.getAction() == NVVM::SetMaxRegisterAction::increase) ?
-      llvm::Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32 :
-      llvm::Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32;
-
-    createIntrinsicCall(builder, intId, builder.getInt32($regCount));
-  }];
-}
 
 def NVVM_FenceMbarrierInitOp : NVVM_PTXBuilder_Op<"fence.mbarrier.init"> {
   let arguments = (ins );
@@ -2331,7 +2310,7 @@ def NVVM_Exit : NVVM_Op<"exit"> {
 
 
 //===----------------------------------------------------------------------===//
-// NVVM breakpoint Op
+// NVVM Miscellaneous instructions
 //===----------------------------------------------------------------------===//
 
 def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
@@ -2345,6 +2324,41 @@ def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def NVVM_Trap : NVVM_Op<"trap"> {
+  let summary = "Trap Op";
+  let description = [{
+    Trap aborts execution and generate an interrupt to the host CPU.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-trap)
+  }];
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::trap);
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
+def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
+def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max register action",
+  [SetMaxRegisterActionDecrease, SetMaxRegisterActionIncrease]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
+
+def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
+  let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
+  let assemblyFormat = "$action $regCount attr-dict";
+  let hasVerifier = 1;
+  string llvmBuilder = [{
+    auto intId = (op.getAction() == NVVM::SetMaxRegisterAction::increase) ?
+      llvm::Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32 :
+      llvm::Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32;
+
+    createIntrinsicCall(builder, intId, builder.getInt32($regCount));
+  }];
 }
 
 //===----------------------------------------------------------------------===//
