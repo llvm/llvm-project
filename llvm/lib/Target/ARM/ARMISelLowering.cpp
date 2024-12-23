@@ -804,6 +804,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setAllExpand(MVT::bf16);
     if (!Subtarget->hasFullFP16())
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+  } else {
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f32, Custom);
   }
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -1110,12 +1113,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   for (MVT VT : MVT::fp_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
   }
 
   // ... or truncating stores
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
 
   // ARM does not have i1 sign extending load.
   for (MVT VT : MVT::integer_valuetypes())
@@ -6301,10 +6307,13 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
                      DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op));
 
   if ((DstVT == MVT::i16 || DstVT == MVT::i32) &&
-      (SrcVT == MVT::f16 || SrcVT == MVT::bf16))
+      (SrcVT == MVT::f16 || SrcVT == MVT::bf16)) {
+    if (Subtarget->hasFullFP16() && !Subtarget->hasBF16())
+      Op = DAG.getBitcast(MVT::f16, Op);
     return DAG.getNode(
         ISD::TRUNCATE, SDLoc(N), DstVT,
         MoveFromHPR(SDLoc(N), DAG, MVT::i32, SrcVT.getSimpleVT(), Op));
+  }
 
   if (!(SrcVT == MVT::i64 || DstVT == MVT::i64))
     return SDValue();
@@ -10588,6 +10597,17 @@ SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getFrameIndex(FI, VT);
 }
 
+SDValue ARMTargetLowering::LowerFP_TO_BF16(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  MVT SVT = Op.getOperand(0).getSimpleValueType();
+  RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, MVT::bf16);
+  SDValue Res =
+      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+  return DAG.getBitcast(MVT::i32, Res);
+}
+
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Lowering node: "; Op.dump());
   switch (Op.getOpcode()) {
@@ -10713,6 +10733,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCCS: return LowerFSETCC(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return LowerFP_TO_BF16(Op, DAG);
   case ARMISD::WIN__DBZCHK: return SDValue();
   }
 }
@@ -16200,14 +16222,12 @@ static SDValue CombineBaseUpdate(SDNode *N,
   SmallVector<BaseUpdateUser, 8> BaseUpdates;
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-         UE = Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (UI.getUse().getResNo() != Addr.getResNo() ||
-        User->getNumOperands() != 2)
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (Use.getResNo() != Addr.getResNo() || User->getNumOperands() != 2)
       continue;
 
-    SDValue Inc = User->getOperand(UI.getOperandNo() == 1 ? 0 : 1);
+    SDValue Inc = User->getOperand(Use.getOperandNo() == 1 ? 0 : 1);
     unsigned ConstInc =
         getPointerConstIncrement(User->getOpcode(), Addr, Inc, DCI.DAG);
 
@@ -16222,15 +16242,14 @@ static SDValue CombineBaseUpdate(SDNode *N,
   if (findPointerConstIncrement(Addr.getNode(), &Base, &CInc)) {
     unsigned Offset =
         getPointerConstIncrement(Addr->getOpcode(), Base, CInc, DCI.DAG);
-    for (SDNode::use_iterator UI = Base->use_begin(), UE = Base->use_end();
-         UI != UE; ++UI) {
+    for (SDUse &Use : Base->uses()) {
 
-      SDNode *User = *UI;
-      if (UI.getUse().getResNo() != Base.getResNo() || User == Addr.getNode() ||
+      SDNode *User = Use.getUser();
+      if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
           User->getNumOperands() != 2)
         continue;
 
-      SDValue UserInc = User->getOperand(UI.getOperandNo() == 0 ? 1 : 0);
+      SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
       unsigned UserOffset =
           getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
 
@@ -16303,12 +16322,9 @@ static SDValue PerformMVEVLDCombine(SDNode *N,
     return SDValue();
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-                            UE = Addr.getNode()->use_end();
-       UI != UE; ++UI) {
-    SDNode *User = *UI;
-    if (User->getOpcode() != ISD::ADD ||
-        UI.getUse().getResNo() != Addr.getResNo())
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::ADD || Use.getResNo() != Addr.getResNo())
       continue;
 
     // Check that the add is independent of the load/store.  Otherwise, folding
@@ -16438,12 +16454,11 @@ static bool CombineVLDDUP(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // First check that all the vldN-lane uses are VDUPLANEs and that the lane
   // numbers match the load.
   unsigned VLDLaneNo = VLD->getConstantOperandVal(NumVecs + 3);
-  for (SDNode::use_iterator UI = VLD->use_begin(), UE = VLD->use_end();
-       UI != UE; ++UI) {
+  for (SDUse &Use : VLD->uses()) {
     // Ignore uses of the chain result.
-    if (UI.getUse().getResNo() == NumVecs)
+    if (Use.getResNo() == NumVecs)
       continue;
-    SDNode *User = *UI;
+    SDNode *User = Use.getUser();
     if (User->getOpcode() != ARMISD::VDUPLANE ||
         VLDLaneNo != User->getConstantOperandVal(1))
       return false;
@@ -16463,14 +16478,12 @@ static bool CombineVLDDUP(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
                                            VLDMemInt->getMemOperand());
 
   // Update the uses.
-  for (SDNode::use_iterator UI = VLD->use_begin(), UE = VLD->use_end();
-       UI != UE; ++UI) {
-    unsigned ResNo = UI.getUse().getResNo();
+  for (SDUse &Use : VLD->uses()) {
+    unsigned ResNo = Use.getResNo();
     // Ignore uses of the chain result.
     if (ResNo == NumVecs)
       continue;
-    SDNode *User = *UI;
-    DCI.CombineTo(User, SDValue(VLDDup.getNode(), ResNo));
+    DCI.CombineTo(Use.getUser(), SDValue(VLDDup.getNode(), ResNo));
   }
 
   // Now the vldN-lane intrinsic is dead except for its chain result.

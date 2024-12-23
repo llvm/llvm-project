@@ -3208,14 +3208,16 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
   // can be store-folded. Therefore, it's probably not worth splitting the load.
   EVT VT = Load->getValueType(0);
   if ((VT.is256BitVector() || VT.is512BitVector()) && !Load->hasOneUse()) {
-    for (auto UI = Load->use_begin(), UE = Load->use_end(); UI != UE; ++UI) {
+    for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
-      if (UI.getUse().getResNo() != 0)
+      if (Use.getResNo() != 0)
         continue;
 
+      SDNode *User = Use.getUser();
+
       // If this use is not an extract + store, it's probably worth splitting.
-      if (UI->getOpcode() != ISD::EXTRACT_SUBVECTOR || !UI->hasOneUse() ||
-          UI->user_begin()->getOpcode() != ISD::STORE)
+      if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR || !User->hasOneUse() ||
+          User->user_begin()->getOpcode() != ISD::STORE)
         return true;
     }
     // All non-chain uses are extract + store.
@@ -5244,7 +5246,8 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
     SmallVector<APInt> EltBits;
     if (getTargetConstantBitsFromNode(V.getOperand(0),
                                       V.getScalarValueSizeInBits(), UndefElts,
-                                      EltBits)) {
+                                      EltBits) &&
+        !ISD::isBuildVectorOfConstantSDNodes(V.getOperand(1).getNode())) {
       // Don't fold min_signed_value -> (min_signed_value - 1)
       bool MinSigned = false;
       for (APInt &Elt : EltBits) {
@@ -18965,11 +18968,10 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, GlobalAddressSDNode *GA,
   SDValue Ret;
   if (LocalDynamic && UseTLSDESC) {
     TGA = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT, OperandFlags);
-    auto UI = TGA->use_begin();
     // Reuse existing GetTLSADDR node if we can find it.
-    if (UI != TGA->use_end()) {
+    if (TGA->hasOneUse()) {
       // TLSDESC uses TGA.
-      auto TLSDescOp = UI;
+      SDNode *TLSDescOp = *TGA->user_begin();
       assert(TLSDescOp->getOpcode() == X86ISD::TLSDESC &&
              "Unexpected TLSDESC DAG");
       // CALLSEQ_END uses TGA via a chain and glue.
@@ -22867,14 +22869,13 @@ static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
 
 /// return true if \c Op has a use that doesn't just read flags.
 static bool hasNonFlagsUse(SDValue Op) {
-  for (SDNode::use_iterator UI = Op->use_begin(), UE = Op->use_end(); UI != UE;
-       ++UI) {
-    SDNode *User = *UI;
-    unsigned UOpNo = UI.getOperandNo();
+  for (SDUse &Use : Op->uses()) {
+    SDNode *User = Use.getUser();
+    unsigned UOpNo = Use.getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
-      // Look pass truncate.
-      UOpNo = User->user_begin().getOperandNo();
-      User = *User->user_begin();
+      // Look past truncate.
+      UOpNo = User->use_begin()->getOperandNo();
+      User = User->use_begin()->getUser();
     }
 
     if (User->getOpcode() != ISD::BRCOND && User->getOpcode() != ISD::SETCC &&
@@ -30125,11 +30126,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // element to the other.
     // This optimized lowering is only valid if the elements in a pair can
     // be treated identically.
-    SmallVector<SDValue, 32> AmtWideElts;
-    AmtWideElts.reserve(NumElts);
-    for (unsigned I = 0; I != NumElts; ++I) {
-      AmtWideElts.push_back(Amt.getOperand(I));
-    }
+    SmallVector<SDValue, 32> AmtWideElts(Amt->op_begin(), Amt->op_end());
     SmallVector<SDValue, 32> TmpAmtWideElts;
     int WideEltSizeInBits = EltSizeInBits;
     while (WideEltSizeInBits < 32) {
@@ -32653,8 +32650,7 @@ static SDValue ExtendToType(SDValue InOp, MVT NVT, SelectionDAG &DAG,
          "Unexpected request for vector widening");
 
   SDLoc dl(InOp);
-  if (InOp.getOpcode() == ISD::CONCAT_VECTORS &&
-      InOp.getNumOperands() == 2) {
+  if (InOp.getOpcode() == ISD::CONCAT_VECTORS && InOp.getNumOperands() == 2) {
     SDValue N1 = InOp.getOperand(1);
     if ((ISD::isBuildVectorAllZeros(N1.getNode()) && FillWithZeroes) ||
         N1.isUndef()) {
@@ -32665,22 +32661,17 @@ static SDValue ExtendToType(SDValue InOp, MVT NVT, SelectionDAG &DAG,
   }
   if (ISD::isBuildVectorOfConstantSDNodes(InOp.getNode()) ||
       ISD::isBuildVectorOfConstantFPSDNodes(InOp.getNode())) {
-    SmallVector<SDValue, 16> Ops;
-    for (unsigned i = 0; i < InNumElts; ++i)
-      Ops.push_back(InOp.getOperand(i));
-
     EVT EltVT = InOp.getOperand(0).getValueType();
-
-    SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, EltVT) :
-      DAG.getUNDEF(EltVT);
-    for (unsigned i = 0; i < WidenNumElts - InNumElts; ++i)
-      Ops.push_back(FillVal);
+    SDValue FillVal =
+        FillWithZeroes ? DAG.getConstant(0, dl, EltVT) : DAG.getUNDEF(EltVT);
+    SmallVector<SDValue, 16> Ops(InOp->op_begin(), InOp->op_end());
+    Ops.append(WidenNumElts - InNumElts, FillVal);
     return DAG.getBuildVector(NVT, dl, Ops);
   }
-  SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, NVT) :
-    DAG.getUNDEF(NVT);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, NVT, FillVal,
-                     InOp, DAG.getIntPtrConstant(0, dl));
+  SDValue FillVal =
+      FillWithZeroes ? DAG.getConstant(0, dl, NVT) : DAG.getUNDEF(NVT);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, NVT, FillVal, InOp,
+                     DAG.getIntPtrConstant(0, dl));
 }
 
 static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
@@ -46730,11 +46721,10 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   auto OnlyUsedAsSelectCond = [](SDValue Cond) {
-    for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
-         UI != UE; ++UI)
-      if ((UI->getOpcode() != ISD::VSELECT &&
-           UI->getOpcode() != X86ISD::BLENDV) ||
-          UI.getOperandNo() != 0)
+    for (SDUse &Use : Cond->uses())
+      if ((Use.getUser()->getOpcode() != ISD::VSELECT &&
+           Use.getUser()->getOpcode() != X86ISD::BLENDV) ||
+          Use.getOperandNo() != 0)
         return false;
 
     return true;
@@ -54492,7 +54482,8 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI) {
-  bool IsStrict = N->isTargetStrictFPOpcode();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+  bool IsStrict = TSI.isTargetStrictFPOpcode(N->getOpcode());
   EVT VT = N->getValueType(0);
 
   // Convert a full vector load into vzload when not all bits are needed.
@@ -55113,7 +55104,10 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
-  bool IsStrict = N->isStrictFPOpcode() || N->isTargetStrictFPOpcode();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+  bool IsStrict = N->isTargetOpcode()
+                      ? TSI.isTargetStrictFPOpcode(N->getOpcode())
+                      : N->isStrictFPOpcode();
 
   // Let legalize expand this if it isn't a legal type yet.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();

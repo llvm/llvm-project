@@ -319,6 +319,9 @@ Changes in existing checks
   member function calls too and to only expand macros starting with ``PRI``
   and ``__PRI`` from ``<inttypes.h>`` in the format string.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by not expanding macros.
+
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
   placeholder when lexer cannot get source text.

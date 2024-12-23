@@ -312,7 +312,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
       continue;
     }
 
-    Type typeSample = kvp.second.front().getKey().get<Type>();
+    Type typeSample = cast<Type>(kvp.second.front().getKey());
     assert(&typeSample.getDialect() !=
                typeSample.getContext()->getLoadedDialect<BuiltinDialect>() &&
            "unexpected data layout entry for built-in type");
@@ -325,7 +325,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
   }
 
   for (const auto &kvp : newEntriesForID) {
-    StringAttr id = kvp.second.getKey().get<StringAttr>();
+    StringAttr id = cast<StringAttr>(kvp.second.getKey());
     Dialect *dialect = id.getReferencedDialect();
     if (!entriesForID.count(id)) {
       entriesForID[id] = kvp.second;
@@ -574,7 +574,7 @@ public:
 
   LogicalResult verifyEntry(DataLayoutEntryInterface entry,
                             Location loc) const final {
-    StringRef entryName = entry.getKey().get<StringAttr>().strref();
+    StringRef entryName = cast<StringAttr>(entry.getKey()).strref();
     if (entryName == DLTIDialect::kDataLayoutEndiannessKey) {
       auto value = dyn_cast<StringAttr>(entry.getValue());
       if (value &&

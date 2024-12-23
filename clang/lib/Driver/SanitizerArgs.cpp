@@ -27,9 +27,9 @@ using namespace llvm::opt;
 
 static const SanitizerMask NeedsUbsanRt =
     SanitizerKind::Undefined | SanitizerKind::Integer |
-    SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
-    SanitizerKind::CFI | SanitizerKind::FloatDivideByZero |
-    SanitizerKind::ObjCCast;
+    SanitizerKind::LocalBounds | SanitizerKind::ImplicitConversion |
+    SanitizerKind::Nullability | SanitizerKind::CFI |
+    SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask NeedsUbsanCxxRt =
     SanitizerKind::Vptr | SanitizerKind::CFI;
 static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
@@ -69,7 +69,8 @@ static const SanitizerMask TrappingSupported =
     SanitizerKind::LocalBounds | SanitizerKind::CFI |
     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask MergeDefault = SanitizerKind::Undefined;
-static const SanitizerMask TrappingDefault = SanitizerKind::CFI;
+static const SanitizerMask TrappingDefault =
+    SanitizerKind::CFI | SanitizerKind::LocalBounds;
 static const SanitizerMask CFIClasses =
     SanitizerKind::CFIVCall | SanitizerKind::CFINVCall |
     SanitizerKind::CFIMFCall | SanitizerKind::CFIDerivedCast |
@@ -1106,10 +1107,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                    options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
 
   // Parse -link-cxx-sanitizer flag.
-  LinkCXXRuntimes = Args.hasArg(options::OPT_fsanitize_link_cxx_runtime,
-                                options::OPT_fno_sanitize_link_cxx_runtime,
-                                LinkCXXRuntimes) ||
-                    D.CCCIsCXX();
+  LinkCXXRuntimes = D.CCCIsCXX();
+  LinkCXXRuntimes =
+      Args.hasFlag(options::OPT_fsanitize_link_cxx_runtime,
+                   options::OPT_fno_sanitize_link_cxx_runtime, LinkCXXRuntimes);
 
   NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
                                 options::OPT_fmemory_profile_EQ,

@@ -680,6 +680,7 @@
 // RUN:     -fcoverage-mapping \
 // RUN:     -fno-coverage-mapping \
 // RUN:     -fdiagnostics-color \
+// RUN:     -fdiagnostics-color=auto \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
 // RUN:     -fdebug-compilation-dir=. \

@@ -89,6 +89,9 @@ public:
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
   virtual fir::ExtendedValue
+  symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) = 0;
+
+  virtual fir::ExtendedValue
   getSymbolExtendedValue(const Fortran::semantics::Symbol &sym,
                          Fortran::lower::SymMap *symMap = nullptr) = 0;
 

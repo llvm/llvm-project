@@ -2052,7 +2052,6 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
 }
 
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
-                                             lldb_private::Type *type,
                                              const CompilerType &clang_type) {
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -2189,7 +2188,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
   case DW_TAG_class_type:
-    CompleteRecordType(die, type, clang_type);
+    CompleteRecordType(die, clang_type);
     break;
   case DW_TAG_enumeration_type:
     CompleteEnumType(die, type, clang_type);

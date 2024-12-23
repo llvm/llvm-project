@@ -4123,6 +4123,16 @@ public:
     // but in the future we will implement some sort of IR.
   }
 
+  void EmitOpenACCInitConstruct(const OpenACCInitConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//

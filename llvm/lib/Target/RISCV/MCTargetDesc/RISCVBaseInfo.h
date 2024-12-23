@@ -316,6 +316,9 @@ enum OperandType : unsigned {
   OPERAND_UIMM11,
   OPERAND_UIMM12,
   OPERAND_UIMM16,
+  OPERAND_UIMM20,
+  OPERAND_UIMMLOG2XLEN,
+  OPERAND_UIMMLOG2XLEN_NONZERO,
   OPERAND_UIMM32,
   OPERAND_UIMM48,
   OPERAND_UIMM64,
@@ -327,9 +330,6 @@ enum OperandType : unsigned {
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
-  OPERAND_UIMM20,
-  OPERAND_UIMMLOG2XLEN,
-  OPERAND_UIMMLOG2XLEN_NONZERO,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -452,9 +452,9 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char *Name;
-  const char *AltName;
-  const char *DeprecatedName;
+  const char Name[32];
+  const char AltName[32];
+  const char DeprecatedName[32];
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
