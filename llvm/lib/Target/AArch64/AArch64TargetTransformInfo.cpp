@@ -267,11 +267,6 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       return false;
   }
 
-  if (CalleeAttrs.hasAgnosticZAInterface()) {
-    if (hasPossibleIncompatibleOps(Callee))
-      return false;
-  }
-
   return BaseT::areInlineCompatible(Caller, Callee);
 }
 
