@@ -1487,6 +1487,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+  ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
@@ -1897,9 +1898,6 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
                      << ": " << e.message();
   }
-
-  if (ctx.arg.osabi == ELFOSABI_OPENBSD)
-    ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
 }
 
 static bool isFormatBinary(Ctx &ctx, StringRef s) {
