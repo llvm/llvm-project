@@ -241,6 +241,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
                                                   uint64_t Addr) {
   LookupResult LR;
   LR.LookupAddr = Addr;
+  LR.FunctionInfoData = Data;
   uint64_t Offset = 0;
   LR.FuncRange = {FuncAddr, FuncAddr + Data.getU32(&Offset)};
   uint32_t NameOffset = Data.getU32(&Offset);
@@ -287,6 +288,11 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
           LineEntry = ExpectedLE.get();
         else
           return ExpectedLE.takeError();
+        break;
+
+      case InfoType::MergedFunctionsInfo:
+        // Store the merged functions data for later parsing, if needed.
+        LR.MergedFunctionsData = InfoData;
         break;
 
       case InfoType::InlineInfo:

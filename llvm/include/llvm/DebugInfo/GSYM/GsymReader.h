@@ -132,6 +132,17 @@ public:
   /// for failing to lookup the address.
   llvm::Expected<LookupResult> lookup(uint64_t Addr) const;
 
+  /// Lookup all merged functions for a given address.
+  ///
+  /// This function performs a lookup for the specified address and then
+  /// retrieves additional LookupResults from any merged functions associated
+  /// with the primary LookupResult.
+  ///
+  /// \param Addr The address to lookup.
+  /// \returns A vector of LookupResult objects, where the first element is the
+  /// primary result, followed by results for any merged functions
+  llvm::Expected<std::vector<LookupResult>> lookupAll(uint64_t Addr) const;
+
   /// Get a string from the string table.
   ///
   /// \param Offset The string table offset for the string to retrieve.
