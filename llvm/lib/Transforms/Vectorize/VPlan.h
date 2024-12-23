@@ -3869,12 +3869,8 @@ public:
   const VPBasicBlock *getEntry() const { return Entry; }
 
   /// Returns the preheader of the vector loop region.
-  VPBasicBlock *getVectorPreheader() {
-    auto *LoopRegion = getVectorLoopRegion();
-    if (!LoopRegion)
-      return nullptr;
-    return dyn_cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
-  }
+  VPBasicBlock *getVectorPreheader();
+  VPBasicBlock *getVectorPreheader() const;
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion();

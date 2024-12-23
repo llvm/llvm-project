@@ -70,7 +70,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:  IR   %n.vec = sub i64 %and, %n.mod.vf
 ; CHECK-NEXT:  IR   %ind.end = sub i64 %and, %n.vec
 ; CHECK-NEXT:  IR   %ind.end1 = getelementptr i8, ptr %A, i64 %n.vec
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   vp<[[STEPS1:%.+]]> = SCALAR-STEPS ir<0>, ir<1>
@@ -85,7 +85,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
 ; CHECK-NEXT:   WIDEN store vp<[[VPTR3]]>, ir<%add>
 ; CHECK-NEXT:   WIDEN store vp<[[VPTR4]]>, ir<%add>.1
-; CHECK-NEXT: Successor(s): middle.block
+; CHECK-NEXT: Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<middle.block>:
 ; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>

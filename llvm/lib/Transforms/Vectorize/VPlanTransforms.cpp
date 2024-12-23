@@ -718,6 +718,11 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
     Header->setParent(nullptr);
     Exiting->setParent(nullptr);
+
+    for (VPBlockBase *B : vp_depth_first_shallow(LoopRegion->getEntry())) {
+      if (isa<VPRegionBlock>(B))
+        B->setParent(nullptr);
+    }
     VPBlockUtils::connectBlocks(Preheader, Header);
 
     VPBlockUtils::connectBlocks(Exiting, Middle);

@@ -2406,12 +2406,12 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   // End if-block.
   VPRegionBlock *Parent = RepRecipe->getParent()->getParent();
   bool IfPredicateInstr = Parent ? Parent->isReplicator() : false;
-  assert((Parent || all_of(RepRecipe->operands(),
-                           [](VPValue *Op) {
-                             return Op->isDefinedOutsideLoopRegions();
-                           })) &&
-         "Expected a recipe is either within a region or all of its operands "
-         "are defined outside the vectorized region.");
+  assert(
+      (Parent || !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
+       all_of(RepRecipe->operands(),
+              [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
+      "Expected a recipe is either within a region or all of its operands "
+      "are defined outside the vectorized region.");
   if (IfPredicateInstr)
     PredicatedInstructions.push_back(Cloned);
 }

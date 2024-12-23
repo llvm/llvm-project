@@ -16,20 +16,22 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i64 0, 4
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 0, 4
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 0, 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i64 0, 4
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i64 1, 4
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 2, 4
+; CHECK-NEXT:    [[TMP15:%.*]] = mul nsw i64 3, 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[TMP11]], i32 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <4 x i8> [[TMP19]], zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [8 x i32], ptr @src, i64 0, i64 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP22]], i32 0
@@ -44,21 +46,21 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP20]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP27]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP20]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP29]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP20]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP31]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:

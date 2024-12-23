@@ -1081,19 +1081,28 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   return getVectorLoopRegion()->cost(VF, Ctx);
 }
 
+VPBasicBlock *VPlan::getVectorPreheader() {
+  VPBlockBase *Current = getEntry()->getSuccessors().back();
+  while (Current->getNumSuccessors() == 2)
+    Current = Current->getSuccessors().back();
+  return cast<VPBasicBlock>(Current);
+}
+
+VPBasicBlock *VPlan::getVectorPreheader() const {
+  VPBlockBase *Current = getEntry()->getSuccessors().back();
+  while (Current->getNumSuccessors() == 2)
+    Current = Current->getSuccessors().back();
+  return cast<VPBasicBlock>(Current);
+}
+
 VPRegionBlock *VPlan::getVectorLoopRegion() {
   // TODO: Cache if possible.
-  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R;
-  return nullptr;
+  return dyn_cast<VPRegionBlock>(getVectorPreheader()->getSingleSuccessor());
+  ;
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {
-  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R;
-  return nullptr;
+  return dyn_cast<VPRegionBlock>(getVectorPreheader()->getSingleSuccessor());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1415,8 +1424,10 @@ void VPlanIngredient::print(raw_ostream &O) const {
 #endif
 
 bool VPValue::isDefinedOutsideLoopRegions() const {
+
   return !hasDefiningRecipe() ||
-         !getDefiningRecipe()->getParent()->getEnclosingLoopRegion();
+         (!getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
+          getDefiningRecipe()->getParent()->getPlan()->getVectorLoopRegion());
 }
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
