@@ -35,7 +35,7 @@ typedef struct {
     ttinfo *ttinfo;
 } tzset;
 
-tzset *get_timezone_offset(char *timezone);
+tzset *get_tzset(char *timezone);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
