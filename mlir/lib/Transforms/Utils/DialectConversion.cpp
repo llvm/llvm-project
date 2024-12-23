@@ -2843,7 +2843,6 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 
 LogicalResult TypeConverter::convertType(Type t,
                                          SmallVectorImpl<Type> &results) const {
-  assert(this && "expected non-null type converter");
   assert(t && "expected non-null type");
 
   {
