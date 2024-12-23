@@ -1632,7 +1632,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
         to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
       }
-    } else {
+    } else if (!isa<DeclareMapperInfoOp>(op)) {
       emitError(op->getLoc(), "map argument is not a map entry operation");
     }
   }
