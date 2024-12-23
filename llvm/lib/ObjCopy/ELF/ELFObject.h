@@ -1163,7 +1163,6 @@ private:
   std::vector<SegPtr> Segments;
   std::vector<SecPtr> RemovedSections;
   DenseMap<SectionBase *, std::vector<uint8_t>> UpdatedSections;
-  DenseMap<Segment *, std::vector<uint8_t>> UpdatedSegments;
 
   static bool sectionIsAlloc(const SectionBase &Sec) {
     return Sec.Flags & ELF::SHF_ALLOC;
@@ -1243,10 +1242,6 @@ public:
     Segments.emplace_back(std::make_unique<Segment>(Data));
     return *Segments.back();
   }
-  using OffsetAndSize = std::pair<uint64_t, uint64_t>;
-  using Section2OffsetAndSize = DenseMap<const SectionBase *, OffsetAndSize>;
-  void updateSegmentData(Segment &S, std::vector<uint8_t> NewSegmentData,
-                         const Section2OffsetAndSize &SectionMapping);
   bool isRelocatable() const {
     return (Type != ELF::ET_DYN && Type != ELF::ET_EXEC) || MustBeRelocatable;
   }

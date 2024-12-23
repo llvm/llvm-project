@@ -467,7 +467,7 @@ them.
 .. option:: --remove-note [<name>/]<type>
 
  Remove notes of integer type ``<type>`` and name ``<name>`` from SHT_NOTE
- sections and PT_NOTE segments. Can be specified multiple times.
+ sections that are not in a segment. Can be specified multiple times.
 
 .. option:: --rename-section <old>=<new>[,<flag>,...]
 

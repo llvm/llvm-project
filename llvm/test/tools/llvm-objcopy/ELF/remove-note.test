@@ -23,17 +23,17 @@
 # RUN: yaml2obj -D ALIGN=8 -D ELFCLASS=64 -D ENDIANNESS=LSB %s -o %t8.64.lsb
 # RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/2 --remove-note=CORE/0x03 %t8.64.lsb %t8.64.lsb.o
 # RUN: llvm-readobj --segments --sections --notes %t8.64.lsb.o | \
-# RUN:   FileCheck %s -D#SIZE0=32 -D#SIZE1=32 -D#SIZE3=32
+# RUN:   FileCheck %s -D#SIZE0=32 -D#SIZE1=32
 
 # RUN: yaml2obj -D ALIGN=4 -D ELFCLASS=64 -D ENDIANNESS=MSB %s -o %t4.64.msb
 # RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4.64.msb %t4.64.msb.o
 # RUN: llvm-readobj --segments --sections --notes %t4.64.msb.o | \
-# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=24 -D#SIZE3=24
+# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=24
 
 # RUN: yaml2obj -D ALIGN=4 -D ELFCLASS=32 -D ENDIANNESS=LSB %s -o %t4.32.lsb
 # RUN: llvm-objcopy --remove-note=1 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4.32.lsb %t4.32.lsb.o
 # RUN: llvm-readobj --segments --sections --notes %t4.32.lsb.o | \
-# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=24 -D#SIZE3=24
+# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=24
 
 # CHECK:      Sections [
 # CHECK:        Section {
@@ -42,43 +42,27 @@
 # CHECK-NEXT:     Flags [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address:
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0:]]
+# CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size: [[#%d,SIZE0]]
 # CHECK:          Name: .note1
 # CHECK-NEXT:     Type: SHT_NOTE
 # CHECK-NEXT:     Flags [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address:
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0]]
+# CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size: [[#%d,SIZE1]]
 # CHECK:          Name: .note2
 # CHECK-NEXT:     Type: SHT_NOTE
 # CHECK-NEXT:     Flags [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address:
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0+SIZE1]]
+# CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size: 0
-# CHECK:          Name: .note3
-# CHECK-NEXT:     Type: SHT_NOTE
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET3:]]
-# CHECK-NEXT:     Size: [[#%d,SIZE3]]
-
-# CHECK:      ProgramHeaders [
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_NOTE
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0]]
-# CHECK-NEXT:     VirtualAddress: 0x0
-# CHECK-NEXT:     PhysicalAddress: 0x0
-# CHECK-NEXT:     FileSize: [[#%d,SIZE0+SIZE1]]
-# CHECK-NEXT:     MemSize: 0
 
 # CHECK:      NoteSections [
 # CHECK-NEXT:   NoteSection {
 # CHECK-NEXT:     Name: .note0
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0]]
+# CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size: 0x[[#%X,SIZE0]]
 # CHECK-NEXT:     Notes [
 # CHECK-NEXT:       {
@@ -93,7 +77,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   NoteSection {
 # CHECK-NEXT:     Name: .note1
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0]]
+# CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size: 0x[[#%X,SIZE1]]
 # CHECK-NEXT:     Notes [
 # CHECK-NEXT:       {
@@ -108,39 +92,18 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   NoteSection {
 # CHECK-NEXT:     Name: .note2
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET0+SIZE0+SIZE1]]
+# CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size: 0x0
 # CHECK-NEXT:     Notes [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
-# CHECK-NEXT:   NoteSection {
-# CHECK-NEXT:     Name: .note3
-# CHECK-NEXT:     Offset: 0x[[#%X,OFFSET3]]
-# CHECK-NEXT:     Size: 0x[[#%X,SIZE3]]
-# CHECK-NEXT:     Notes [
-# CHECK-NEXT:       {
-# CHECK-NEXT:         Owner: CORE
-# CHECK-NEXT:         Data size: 0x2
-# CHECK-NEXT:         Type: NT_ARCH
-# CHECK-NEXT:         Description data (
-# CHECK-NEXT:           0000: 0707
-# CHECK-NEXT:         )
-# CHECK-NEXT:       }
-# CHECK-NEXT:     ]
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
 
 --- !ELF
 FileHeader:
   Class:          ELFCLASS[[ELFCLASS]]
   Data:           ELFDATA2[[ENDIANNESS]]
-  Type:           ET_EXEC
+  Type:           ET_REL
   Machine:        EM_X86_64
-ProgramHeaders:
-  - Type:         PT_NOTE
-    MemSize:      0
-    FirstSec:     .note0
-    LastSec:      .note2
 Sections:
   - Name:         .note0
     Type:         SHT_NOTE
@@ -169,17 +132,4 @@ Sections:
       - Name:   LINUX
         Type:   0x01
         Desc:   0505
-  - Name:         .note3
-    Type:         SHT_NOTE
-    AddressAlign: [[ALIGN]]
-    Notes:
-      - Name:   GNU
-        Type:   0x01
-        Desc:   0606
-      - Name:   CORE
-        Type:   0x02
-        Desc:   0707
-      - Name:   CORE
-        Type:   0x03
-        Desc:   0808
 ...

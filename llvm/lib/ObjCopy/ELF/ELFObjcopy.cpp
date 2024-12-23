@@ -623,8 +623,6 @@ struct RemoveNoteDetail {
                     ArrayRef<RemoveNoteInfo> NotesToRemove);
   static std::vector<uint8_t> updateData(ArrayRef<uint8_t> OldData,
                                          ArrayRef<DeletedRange> ToRemove);
-  static Object::Section2OffsetAndSize
-  getSectionMapping(const Segment &Seg, ArrayRef<DeletedRange> ToRemove);
 };
 
 } // namespace
@@ -678,53 +676,10 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
   return NewData;
 }
 
-Object::Section2OffsetAndSize
-RemoveNoteDetail::getSectionMapping(const Segment &Seg,
-                                    ArrayRef<DeletedRange> ToRemove) {
-  auto CalculateNewOffset = [&](uint64_t SecOffset) {
-    uint64_t Pos = SecOffset - Seg.Offset;
-    auto It = llvm::upper_bound(
-        ToRemove, Pos, [](const uint64_t &Pos, const DeletedRange &Range) {
-          return Pos < Range.OldFrom;
-        });
-    if (It != ToRemove.begin()) {
-      --It;
-      Pos = (Pos > It->OldTo) ? (Pos - It->OldTo + It->NewPos) : It->NewPos;
-    }
-    return Pos + Seg.Offset;
-  };
-
-  // Remap the segment's sections
-  Object::Section2OffsetAndSize Mapping;
-  for (const SectionBase *Sec : Seg.Sections) {
-    uint64_t NewOffset = CalculateNewOffset(Sec->Offset);
-    uint64_t NewSize = CalculateNewOffset(Sec->Offset + Sec->Size) - NewOffset;
-    Mapping.try_emplace(Sec, NewOffset, NewSize);
-  }
-  return Mapping;
-}
-
 static Error removeNote(Object &Obj, endianness Endianness,
                         ArrayRef<RemoveNoteInfo> NotesToRemove) {
-  for (Segment &Seg : Obj.segments()) {
-    // TODO: Support nested segments
-    if (Seg.Type != PT_NOTE || Seg.ParentSegment)
-      continue;
-    ArrayRef<uint8_t> OldData = Seg.getContents();
-    size_t Align = std::max<size_t>(4, Seg.Align);
-    // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
-    // header, so the parsers are the same.
-    auto ToRemove = (Endianness == endianness::little)
-                        ? RemoveNoteDetail::findNotesToRemove<ELF64LE>(
-                              OldData, Align, NotesToRemove)
-                        : RemoveNoteDetail::findNotesToRemove<ELF64BE>(
-                              OldData, Align, NotesToRemove);
-    if (!ToRemove.empty())
-      Obj.updateSegmentData(Seg,
-                            RemoveNoteDetail::updateData(OldData, ToRemove),
-                            RemoveNoteDetail::getSectionMapping(Seg, ToRemove));
-  }
   for (auto &Sec : Obj.sections()) {
+    // TODO: Support note sections in segments
     if (Sec.Type != SHT_NOTE || Sec.ParentSegment || !Sec.hasContents())
       continue;
     ArrayRef<uint8_t> OldData = Sec.getContents();

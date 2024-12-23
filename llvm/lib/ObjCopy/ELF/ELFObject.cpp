@@ -2319,34 +2319,6 @@ Error Object::addNewSymbolTable() {
   return Error::success();
 }
 
-void Object::updateSegmentData(
-    Segment &S, std::vector<uint8_t> NewSegmentData,
-    const DenseMap<const SectionBase *, std::pair<uint64_t, uint64_t>>
-        &SectionMapping) {
-  // TODO: Update the parent segment
-  assert(!S.ParentSegment);
-  // TODO: Update nested segments
-  assert(!llvm::any_of(
-      Segments, [&S](const SegPtr &Seg) { return Seg->ParentSegment == &S; }));
-  auto It =
-      UpdatedSegments.insert_or_assign(&S, std::move(NewSegmentData)).first;
-  S.Contents = It->second;
-  S.FileSize = S.Contents.size();
-  if (S.MemSize)
-    S.MemSize = S.FileSize;
-  assert(SectionMapping.size() == S.Sections.size());
-  assert(S.Offset == S.OriginalOffset);
-  for (const auto &SM : SectionMapping) {
-    assert(SM.first->ParentSegment == &S && S.Sections.count(SM.first));
-    assert(SM.second.first >= S.Offset);
-    assert((SM.second.first + SM.second.second) <= (S.Offset + S.FileSize));
-    assert(SM.first->Offset == SM.first->OriginalOffset);
-    SectionBase *MutSec = const_cast<SectionBase *>(SM.first);
-    MutSec->OriginalOffset = MutSec->Offset = SM.second.first;
-    MutSec->Size = SM.second.second;
-  }
-}
-
 // Orders segments such that if x = y->ParentSegment then y comes before x.
 static void orderSegments(std::vector<Segment *> &Segments) {
   llvm::stable_sort(Segments, compareSegmentsByOffset);
