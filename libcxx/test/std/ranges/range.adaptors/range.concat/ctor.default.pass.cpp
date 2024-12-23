@@ -54,9 +54,7 @@ constexpr bool test() {
   }
 
   // Check cases where the default constructor isn't provided
-  {
-    static_assert(!std::is_default_constructible_v<std::ranges::concat_view<NoDefaultView >>);
-  }
+  { static_assert(!std::is_default_constructible_v<std::ranges::concat_view<NoDefaultView >>); }
 
   // Check noexcept-ness
   {
