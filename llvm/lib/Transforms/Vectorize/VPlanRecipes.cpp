@@ -292,66 +292,6 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
   llvm_unreachable("subclasses should implement computeCost");
 }
 
-InstructionCost
-VPPartialReductionRecipe::computeCost(ElementCount VF,
-                                      VPCostContext &Ctx) const {
-  std::optional<unsigned> Opcode = std::nullopt;
-  VPRecipeBase *BinOpR = getOperand(0)->getDefiningRecipe();
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
-    Opcode = std::make_optional(WidenR->getOpcode());
-
-  VPRecipeBase *ExtAR = BinOpR->getOperand(0)->getDefiningRecipe();
-  VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
-
-  auto GetExtendKind = [](VPRecipeBase *R) {
-    auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
-    if (!WidenCastR)
-      return TargetTransformInfo::PR_None;
-    if (WidenCastR->getOpcode() == Instruction::CastOps::ZExt)
-      return TargetTransformInfo::PR_ZeroExtend;
-    if (WidenCastR->getOpcode() == Instruction::CastOps::SExt)
-      return TargetTransformInfo::PR_SignExtend;
-    return TargetTransformInfo::PR_None;
-  };
-
-  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  auto *ExtTy = Ctx.Types.inferScalarType(ExtAR->getOperand(0));
-
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), ExtTy, PhiType, VF,
-                                         GetExtendKind(ExtAR),
-                                         GetExtendKind(ExtBR), Opcode);
-}
-
-void VPPartialReductionRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
-  auto &Builder = State.Builder;
-
-  assert(getOpcode() == Instruction::Add &&
-         "Unhandled partial reduction opcode");
-
-  Value *BinOpVal = State.get(getOperand(0));
-  Value *PhiVal = State.get(getOperand(1));
-  assert(PhiVal && BinOpVal && "Phi and Mul must be set");
-
-  Type *RetTy = PhiVal->getType();
-
-  CallInst *V = Builder.CreateIntrinsic(
-      RetTy, Intrinsic::experimental_vector_partial_reduce_add,
-      {PhiVal, BinOpVal}, nullptr, "partial.reduce");
-
-  State.set(this, V);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPPartialReductionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const {
-  O << Indent << "PARTIAL-REDUCE ";
-  printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(getOpcode()) << " ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -689,7 +629,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *IncomingFromOtherPreds =
         State.get(getOperand(1), /* IsScalar */ true);
     auto *NewPhi =
-        Builder.CreatePHI(IncomingFromOtherPreds->getType(), 2, Name);
+        Builder.CreatePHI(State.TypeAnalysis.inferScalarType(this), 2, Name);
     BasicBlock *VPlanPred =
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
@@ -1027,7 +967,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     // Some intrinsics have a scalar argument - don't replace it with a
     // vector.
     Value *Arg;
-    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
+    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index(),
+                                           State.TTI))
       Arg = State.get(I.value(), VPLane(0));
     else
       Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
@@ -2451,6 +2392,7 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(State.Lane && "Predicated instruction PHI works per instance.");
   Instruction *ScalarPredInst =
       cast<Instruction>(State.get(getOperand(0), *State.Lane));
@@ -3182,24 +3124,6 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPCanonicalIVPHIRecipe::isCanonical(
-    InductionDescriptor::InductionKind Kind, VPValue *Start,
-    VPValue *Step) const {
-  // Must be an integer induction.
-  if (Kind != InductionDescriptor::IK_IntInduction)
-    return false;
-  // Start must match the start value of this canonical induction.
-  if (Start != getStartValue())
-    return false;
-
-  // If the step is defined by a recipe, it is not a ConstantInt.
-  if (Step->getDefiningRecipe())
-    return false;
-
-  ConstantInt *StepC = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
-  return StepC && StepC->isOne();
-}
-
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return IsScalarAfterVectorization &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
@@ -3427,8 +3351,6 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
-  auto VF = State.VF.divideCoefficientBy(VFScaleFactor);
-
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
   VPValue *StartVPV = getStartValue();
@@ -3438,9 +3360,9 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  bool ScalarPHI = VF.isScalar() || IsInLoop;
-  Type *VecTy =
-      ScalarPHI ? StartV->getType() : VectorType::get(StartV->getType(), VF);
+  bool ScalarPHI = State.VF.isScalar() || IsInLoop;
+  Type *VecTy = ScalarPHI ? StartV->getType()
+                          : VectorType::get(StartV->getType(), State.VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
   assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
@@ -3490,13 +3412,13 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
         // Create start and identity vector values for the reduction in the
         // preheader.
         // TODO: Introduce recipes in VPlan preheader to create initial values.
-        Iden = Builder.CreateVectorSplat(VF, Iden);
+        Iden = Builder.CreateVectorSplat(State.VF, Iden);
         IRBuilderBase::InsertPointGuard IPBuilder(Builder);
         Builder.SetInsertPoint(VectorPH->getTerminator());
         Constant *Zero = Builder.getInt32(0);
         StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
       } else {
-        Iden = Builder.CreateVectorSplat(VF, Iden);
+        Iden = Builder.CreateVectorSplat(State.VF, Iden);
       }
     }
   }
@@ -3514,8 +3436,6 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
-  if (VFScaleFactor != 1)
-    O << " (VF scaled by 1/" << VFScaleFactor << ")";
 }
 #endif
 

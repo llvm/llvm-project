@@ -2190,7 +2190,15 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCWaitConstruct = 327,
 
-  CXCursor_LastStmt = CXCursor_OpenACCWaitConstruct,
+  /** OpenACC init Construct.
+   */
+  CXCursor_OpenACCInitConstruct = 328,
+
+  /** OpenACC shutdown Construct.
+   */
+  CXCursor_OpenACCShutdownConstruct = 329,
+
+  CXCursor_LastStmt = CXCursor_OpenACCShutdownConstruct,
 
   /**
    * Cursor that represents the translation unit itself.

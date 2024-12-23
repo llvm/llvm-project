@@ -103,7 +103,7 @@ let TargetPrefix = "spv" in {
   // type appropriate for the kind of resource given the set id, binding id,
   // array size of the binding, as well as an index and an indicator
   // whether that index may be non-uniform.
-  def int_spv_handle_fromBinding
+  def int_spv_resource_handlefrombinding
       : DefaultAttrsIntrinsic<
             [llvm_any_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
@@ -112,19 +112,19 @@ let TargetPrefix = "spv" in {
   def int_spv_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
   def int_spv_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
 
-  def int_spv_bufferUpdateCounter
+  def int_spv_resource_updatecounter
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
                               [IntrInaccessibleMemOrArgMemOnly]>;
 
   // Read a value from the image buffer. It does not translate directly to a
   // single OpImageRead because the result type is not necessarily a 4 element
   // vector.
-  def int_spv_typedBufferLoad
+  def int_spv_resource_load_typedbuffer
       : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_any_ty, llvm_i32_ty]>;
 
   // Write a value to the image buffer. Translates directly to a single
   // OpImageWrite.
-  def int_spv_typedBufferStore
+  def int_spv_resource_store_typedbuffer
     : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_anyvector_ty]>;
 
 }

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "tysan/tysan.h"
 
@@ -28,23 +29,11 @@ extern "C" int mallopt(int param, int value);
 using namespace __sanitizer;
 using namespace __tysan;
 
-static const uptr early_alloc_buf_size = 16384;
-static uptr allocated_bytes;
-static char early_alloc_buf[early_alloc_buf_size];
-
-static bool isInEarlyAllocBuf(const void *ptr) {
-  return ((uptr)ptr >= (uptr)early_alloc_buf &&
-          ((uptr)ptr - (uptr)early_alloc_buf) < sizeof(early_alloc_buf));
-}
-
-// Handle allocation requests early (before all interceptors are setup). dlsym,
-// for example, calls calloc.
-static void *handleEarlyAlloc(uptr size) {
-  void *mem = (void *)&early_alloc_buf[allocated_bytes];
-  allocated_bytes += size;
-  CHECK_LT(allocated_bytes, early_alloc_buf_size);
-  return mem;
-}
+namespace {
+struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return !tysan_inited; }
+};
+} // namespace
 
 INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
   if (!tysan_inited && REAL(memset) == nullptr)
@@ -111,9 +100,8 @@ INTERCEPTOR(char *, __strdup, const char *s) {
 #endif // TYSAN_INTERCEPT___STRDUP
 
 INTERCEPTOR(void *, malloc, uptr size) {
-  if (tysan_init_is_running && REAL(malloc) == nullptr)
-    return handleEarlyAlloc(size);
-
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
   void *res = REAL(malloc)(size);
   if (res)
     tysan_set_type_unknown(res, size);
@@ -121,6 +109,8 @@ INTERCEPTOR(void *, malloc, uptr size) {
 }
 
 INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
   void *res = REAL(realloc)(ptr, size);
   // We might want to copy the types from the original allocation (although
   // that would require that we knew its size).
@@ -130,21 +120,18 @@ INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
 }
 
 INTERCEPTOR(void *, calloc, uptr nmemb, uptr size) {
-  if (tysan_init_is_running && REAL(calloc) == nullptr)
-    return handleEarlyAlloc(nmemb * size);
-
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
   void *res = REAL(calloc)(nmemb, size);
   if (res)
     tysan_set_type_unknown(res, nmemb * size);
   return res;
 }
 
-INTERCEPTOR(void, free, void *p) {
-  // There are only a few early allocation requests,
-  // so we simply skip the free.
-  if (isInEarlyAllocBuf(p))
-    return;
-  REAL(free)(p);
+INTERCEPTOR(void, free, void *ptr) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  REAL(free)(ptr);
 }
 
 INTERCEPTOR(void *, valloc, uptr size) {

@@ -736,9 +736,10 @@ at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
 
-The integer reduction intrinsics, including ``__builtin_reduce_add``,
-``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
-and ``__builtin_reduce_xor``, can be called in a ``constexpr`` context.
+The integer reduction intrinsics, including ``__builtin_reduce_max``,
+``__builtin_reduce_min``, ``__builtin_reduce_add``, ``__builtin_reduce_mul``,
+``__builtin_reduce_and``, ``__builtin_reduce_or``, and ``__builtin_reduce_xor``,
+can be called in a ``constexpr`` context.
 
 Example:
 

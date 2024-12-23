@@ -3,7 +3,8 @@
 // RUN:   -convert-scf-to-cf --convert-complex-to-standard \
 // RUN:   -finalize-memref-to-llvm -convert-math-to-llvm -convert-math-to-libm \
 // RUN:   -convert-vector-to-llvm -convert-complex-to-llvm \
-// RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
+// RUN:   -convert-func-to-llvm -convert-arith-to-llvm -convert-cf-to-llvm \
+// RUN:   -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_c_runner_utils |\

@@ -3290,10 +3290,9 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
       if (!OpsList->getArgName(j))
         P->error("Operands list should have names for each operand!");
       StringRef ArgNameStr = OpsList->getArgNameStr(j);
-      if (!OperandsSet.count(ArgNameStr))
+      if (!OperandsSet.erase(ArgNameStr))
         P->error("'" + ArgNameStr +
                  "' does not occur in pattern or was multiply specified!");
-      OperandsSet.erase(ArgNameStr);
       Args.push_back(std::string(ArgNameStr));
     }
 
@@ -3509,9 +3508,8 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
         Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
       if (Dest->getName().empty())
         I.error("set destination must have a name!");
-      if (InstResults.count(Dest->getName()))
+      if (!InstResults.insert_or_assign(Dest->getName(), Dest).second)
         I.error("cannot set '" + Dest->getName() + "' multiple times");
-      InstResults[Dest->getName()] = Dest;
     } else if (Val->getDef()->isSubClassOf("Register")) {
       InstImpResults.push_back(Val->getDef());
     } else {
