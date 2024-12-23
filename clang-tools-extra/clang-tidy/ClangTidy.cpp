@@ -149,8 +149,7 @@ public:
                                    Repl.getLength(), Repl.getReplacementText());
             auto &Entry = FileReplacements[R.getFilePath()];
             Replacements &Replacements = Entry.Replaces;
-            llvm::Error Err = Replacements.addOrMerge(R);
-            if (Err) {
+            if (llvm::Error Err = Replacements.addOrMerge(R)) {
               // FIXME: Implement better conflict handling.
               llvm::errs()
                   << "Can't resolve conflict, skipping the replacement: "

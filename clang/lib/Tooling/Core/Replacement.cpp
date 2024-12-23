@@ -343,8 +343,7 @@ llvm::Error Replacements::add(const Replacement &R) {
 }
 
 llvm::Error Replacements::addOrMerge(const Replacement &R) {
-  auto Err = add(R);
-  if (Err) {
+  if (llvm::Error Err = add(R)) {
     llvm::consumeError(std::move(Err));
     auto Replace = getReplacementInChangedCode(R);
     if (Replace.getLength() != R.getLength()) {

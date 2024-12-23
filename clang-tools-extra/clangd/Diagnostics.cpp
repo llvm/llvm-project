@@ -765,8 +765,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
       auto R = tooling::Replacement(SM, FixIt.RemoveRange, FixIt.CodeToInsert,
                                     *LangOpts);
-      auto Err = Replacements->addOrMerge(R);
-      if (Err) {
+      if (llvm::Error Err = Replacements->addOrMerge(R)) {
         log("Skipping formatting the replacement due to conflict: {0}",
             llvm::toString(std::move(Err)));
         Replacements = std::nullopt;
@@ -778,21 +777,20 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     if (Replacements) {
       StringRef Code = SM.getBufferData(SM.getMainFileID());
-      auto Repl = format::cleanupAroundReplacements(Code, *Replacements,
-                                                    format::getNoStyle());
+      Expected<tooling::Replacements> Repl = format::cleanupAroundReplacements(
+          Code, *Replacements, format::getNoStyle());
       if (!Repl) {
         log("Skipping formatting the replacement due to conflict: {0}",
-            llvm::toString(std::move(Repl.takeError())));
+            llvm::toString(Repl.takeError()));
         Replacements = std::nullopt;
       } else {
-        auto Es = replacementsToEdits(Code, *Repl);
+        std::vector<TextEdit> Es = replacementsToEdits(Code, *Repl);
         Edits.append(Es.begin(), Es.end());
       }
     }
     if (!Replacements) {
-      for (auto &FixIt : FixIts) {
+      for (auto &FixIt : FixIts)
         Edits.push_back(toTextEdit(FixIt, SM, *LangOpts));
-      }
     }
 
     llvm::SmallString<64> Message;
