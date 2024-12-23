@@ -1533,11 +1533,16 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   assert(&STI == &MF.getSubtarget<X86Subtarget>() &&
          "MF used frame lowering for wrong subtarget");
+
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &Fn = MF.getFunction();
+
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
+
+  // errs() << "********** MaxAlign size " << MaxAlign;
+
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
   bool IsFunclet = MBB.isEHFuncletEntry();
   EHPersonality Personality = EHPersonality::Unknown;
@@ -1548,6 +1553,12 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool IsClrFunclet = IsFunclet && FnHasClrFunclet;
   bool HasFP = hasFP(MF);
   bool IsWin64Prologue = isWin64Prologue(MF);
+
+  // if(IsWin64Prologue) {
+  //   errs() << "********** IsWin64Prologue TRUE ";
+  // } else {
+  //   errs() << "********** IsWin64Prologue FALSE FALSE FALSE ";
+  // }
   bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
   bool NeedsWinFPO = !IsFunclet && STI.isTargetWin32() &&
@@ -1671,6 +1682,12 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // pointer, calls, or dynamic alloca then we do not need to adjust the
   // stack pointer (we fit in the Red Zone). We also check that we don't
   // push and pop from the stack.
+
+  // if (has128ByteRedZone(MF)) {
+  //   errs() << "********** has128ByteRedZone TRUE ";
+  // } else {
+  //   errs() << "********** has128ByteRedZone FALSE FALSE FALSE ";
+  // }
   if (has128ByteRedZone(MF) && !TRI->hasStackRealignment(MF) &&
       !MFI.hasVarSizedObjects() &&             // No dynamic alloca.
       !MFI.adjustsStack() &&                   // No calls.
@@ -1679,6 +1696,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       !MF.shouldSplitStack()) {                // Regular stack
     uint64_t MinSize =
         X86FI->getCalleeSavedFrameSize() - X86FI->getTCReturnAddrDelta();
+
     if (HasFP)
       MinSize += SlotSize;
     X86FI->setUsesRedZone(MinSize > 0 || StackSize > 0);
@@ -1894,7 +1912,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
            Opc == X86::PUSH2 || Opc == X86::PUSH2P;
   };
 
+  // uint64_t cont3 = 1;
   while (IsCSPush(MBBI)) {
+    // llvm::outs() << "\n*********** cont3 " << cont3++;
     PushedRegs = true;
     Register Reg = MBBI->getOperand(0).getReg();
     LastCSPush = MBBI;
