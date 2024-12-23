@@ -9561,7 +9561,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       bool IsOrderedRed = CM.useOrderedReductions(RdxDesc);
       // TODO: Remove EVL check when we support EVL version of
       // VPExtendedReductionRecipe and VPMulAccumulateReductionRecipe.
-      if (CM.foldTailWithEVL()) {
+      if (ForceTailFoldingStyle == TailFoldingStyle::DataWithEVL) {
         RedRecipe = new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink,
                                           VecOp, CondOp, IsOrderedRed);
       } else {
