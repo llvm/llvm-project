@@ -88,13 +88,12 @@ static Instruction *getContextInstForUse(Use &U) {
 namespace {
 /// Struct to express a condition of the form %Op0 Pred %Op1.
 struct ConditionTy {
-  CmpInst::Predicate Pred;
-  Value *Op0;
-  Value *Op1;
+  CmpPredicate Pred;
+  Value *Op0 = nullptr;
+  Value *Op1 = nullptr;
 
-  ConditionTy()
-      : Pred(CmpInst::BAD_ICMP_PREDICATE), Op0(nullptr), Op1(nullptr) {}
-  ConditionTy(CmpInst::Predicate Pred, Value *Op0, Value *Op1)
+  ConditionTy() = default;
+  ConditionTy(CmpPredicate Pred, Value *Op0, Value *Op1)
       : Pred(Pred), Op0(Op0), Op1(Op1) {}
 };
 
@@ -132,18 +131,17 @@ struct FactOrCheck {
         Ty(Ty) {}
 
   FactOrCheck(DomTreeNode *DTN, Use *U)
-      : U(U), DoesHold(CmpInst::BAD_ICMP_PREDICATE, nullptr, nullptr),
-        NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
+      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
         Ty(EntryTy::UseCheck) {}
 
-  FactOrCheck(DomTreeNode *DTN, CmpInst::Predicate Pred, Value *Op0, Value *Op1,
-              ConditionTy Precond = ConditionTy())
+  FactOrCheck(DomTreeNode *DTN, CmpPredicate Pred, Value *Op0, Value *Op1,
+              ConditionTy Precond = {})
       : Cond(Pred, Op0, Op1), DoesHold(Precond), NumIn(DTN->getDFSNumIn()),
         NumOut(DTN->getDFSNumOut()), Ty(EntryTy::ConditionFact) {}
 
-  static FactOrCheck getConditionFact(DomTreeNode *DTN, CmpInst::Predicate Pred,
+  static FactOrCheck getConditionFact(DomTreeNode *DTN, CmpPredicate Pred,
                                       Value *Op0, Value *Op1,
-                                      ConditionTy Precond = ConditionTy()) {
+                                      ConditionTy Precond = {}) {
     return FactOrCheck(DTN, Pred, Op0, Op1, Precond);
   }
 
@@ -528,6 +526,13 @@ static Decomposition decompose(Value *V,
 
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
       return MergeResults(Op0, Op1, IsSigned);
+
+    if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
+      auto ResA = decompose(Op0, Preconditions, IsSigned, DL);
+      auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
+      ResA.sub(ResB);
+      return ResA;
+    }
 
     ConstantInt *CI;
     if (match(V, m_NSWMul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
@@ -1176,8 +1181,7 @@ void State::addInfoFor(BasicBlock &BB) {
         if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
           WorkList.emplace_back(FactOrCheck::getConditionFact(
               DT.getNode(Successor),
-              IsOr ? CmpInst::getInversePredicate(Cmp->getPredicate())
-                   : Cmp->getPredicate(),
+              IsOr ? Cmp->getInverseCmpPredicate() : Cmp->getCmpPredicate(),
               Cmp->getOperand(0), Cmp->getOperand(1)));
           continue;
         }
@@ -1201,13 +1205,12 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
   if (canAddSuccessor(BB, Br->getSuccessor(0)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(0)), CmpI->getPredicate(),
+        DT.getNode(Br->getSuccessor(0)), CmpI->getCmpPredicate(),
         CmpI->getOperand(0), CmpI->getOperand(1)));
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(1)),
-        CmpInst::getInversePredicate(CmpI->getPredicate()), CmpI->getOperand(0),
-        CmpI->getOperand(1)));
+        DT.getNode(Br->getSuccessor(1)), CmpI->getInverseCmpPredicate(),
+        CmpI->getOperand(0), CmpI->getOperand(1)));
 }
 
 #ifndef NDEBUG
@@ -1806,7 +1809,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       continue;
     }
 
-    auto AddFact = [&](CmpInst::Predicate Pred, Value *A, Value *B) {
+    auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
       LLVM_DEBUG(dbgs() << "Processing fact to add to the system: ";
                  dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
       if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
@@ -1820,7 +1823,18 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
         ReproducerCondStack.emplace_back(Pred, A, B);
 
-      Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      if (ICmpInst::isRelational(Pred)) {
+        // If samesign is present on the ICmp, simply flip the sign of the
+        // predicate, transferring the information from the signed system to the
+        // unsigned system, and viceversa.
+        if (Pred.hasSameSign())
+          Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
+                       CB.NumIn, CB.NumOut, DFSInStack);
+        else
+          Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
+                                     DFSInStack);
+      }
+
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size()) {
         // Add dummy entries to ReproducerCondStack to keep it in sync with
         // DFSInStack.

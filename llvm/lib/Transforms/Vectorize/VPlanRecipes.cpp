@@ -621,8 +621,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
            "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
     Value *Addend = State.get(getOperand(1), VPLane(0));
-    return isInBounds() ? Builder.CreateInBoundsPtrAdd(Ptr, Addend, Name)
-                        : Builder.CreatePtrAdd(Ptr, Addend, Name);
+    return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::ResumePhi: {
     Value *IncomingFromVPlanPred =
@@ -630,15 +629,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *IncomingFromOtherPreds =
         State.get(getOperand(1), /* IsScalar */ true);
     auto *NewPhi =
-        Builder.CreatePHI(IncomingFromOtherPreds->getType(), 2, Name);
+        Builder.CreatePHI(State.TypeAnalysis.inferScalarType(this), 2, Name);
     BasicBlock *VPlanPred =
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    // TODO: Predecessors are temporarily reversed to reduce test changes.
-    // Remove it and update remaining tests after functional change landed.
-    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
-    for (auto *OtherPred : reverse(Predecessors)) {
+    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
       if (OtherPred == VPlanPred)
         continue;
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
@@ -971,7 +967,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     // Some intrinsics have a scalar argument - don't replace it with a
     // vector.
     Value *Arg;
-    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
+    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index(),
+                                           State.TTI))
       Arg = State.get(I.value(), VPLane(0));
     else
       Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
@@ -1276,8 +1273,12 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
     getFastMathFlags().print(O);
     break;
   case OperationType::GEPOp:
-    if (GEPFlags.IsInBounds)
+    if (GEPFlags.isInBounds())
       O << " inbounds";
+    else if (GEPFlags.hasNoUnsignedSignedWrap())
+      O << " nusw";
+    if (GEPFlags.hasNoUnsignedWrap())
+      O << " nuw";
     break;
   case OperationType::NonNegOp:
     if (NonNegFlags.NonNeg)
@@ -1594,10 +1595,10 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 }
 
 /// This function adds
-/// (StartIdx * Step, (StartIdx + 1) * Step, (StartIdx + 2) * Step, ...)
-/// to each vector element of Val. The sequence starts at StartIndex.
+/// (0 * Step, 1 * Step, 2 * Step, ...)
+/// to each vector element of Val.
 /// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
+static Value *getStepVector(Value *Val, Value *Step,
                             Instruction::BinaryOps BinOp, ElementCount VF,
                             IRBuilderBase &Builder) {
   assert(VF.isVector() && "only vector VFs are supported");
@@ -1622,11 +1623,7 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
   }
   Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
 
-  // Splat the StartIdx
-  Value *StartIdxSplat = Builder.CreateVectorSplat(VLen, StartIdx);
-
   if (STy->isIntegerTy()) {
-    InitVec = Builder.CreateAdd(InitVec, StartIdxSplat);
     Step = Builder.CreateVectorSplat(VLen, Step);
     assert(Step->getType() == Val->getType() && "Invalid step vec");
     // FIXME: The newly created binary instructions should contain nsw/nuw
@@ -1639,7 +1636,6 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
   assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
          "Binary Opcode should be specified for FP induction");
   InitVec = Builder.CreateUIToFP(InitVec, ValVTy);
-  InitVec = Builder.CreateFAdd(InitVec, StartIdxSplat);
 
   Step = Builder.CreateVectorSplat(VLen, Step);
   Value *MulOp = Builder.CreateFMul(InitVec, Step);
@@ -1660,12 +1656,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   const InductionDescriptor &ID = getInductionDescriptor();
   TruncInst *Trunc = getTruncInst();
   IRBuilderBase &Builder = State.Builder;
-  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
+  assert(getPHINode()->getType() == ID.getStartValue()->getType() &&
+         "Types must match");
   assert(State.VF.isVector() && "must have vector VF");
 
   // The value from the original loop to which we are mapping the new induction
   // variable.
-  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
+  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : getPHINode();
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
@@ -1690,10 +1687,9 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
   }
 
-  Value *Zero = getSignedIntOrFpConstant(Start->getType(), 0);
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(
-      SplatStart, Zero, Step, ID.getInductionOpcode(), State.VF, State.Builder);
+  Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
+                                      State.VF, State.Builder);
 
   // We create vector phi nodes for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -1733,14 +1729,14 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   // factor. The last of those goes into the PHI.
   PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind");
   VecInd->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
-  VecInd->setDebugLoc(EntryVal->getDebugLoc());
+  VecInd->setDebugLoc(getDebugLoc());
   State.set(this, VecInd);
 
   Instruction *LastInduction = cast<Instruction>(
       Builder.CreateBinOp(AddOp, VecInd, SplatVF, "vec.ind.next"));
   if (isa<TruncInst>(EntryVal))
     State.addMetadata(LastInduction, EntryVal);
-  LastInduction->setDebugLoc(EntryVal->getDebugLoc());
+  LastInduction->setDebugLoc(getDebugLoc());
 
   VecInd->addIncoming(SteppedStart, VectorPH);
   // Add induction update using an incorrect block temporarily. The phi node
@@ -1754,20 +1750,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-INDUCTION";
-  if (getTruncInst()) {
-    O << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-    O << " +\n" << Indent << "\"  ";
-    getVPValue(0)->printAsOperand(O, SlotTracker);
-  } else
-    O << " " << VPlanIngredient(IV);
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = WIDEN-INDUCTION  ";
+  printOperands(O, SlotTracker);
 
-  O << ", ";
-  getStepValue()->printAsOperand(O, SlotTracker);
-
-  O << ", ";
-  getVFValue()->printAsOperand(O, SlotTracker);
+  if (auto *TI = getTruncInst())
+    O << " (truncated to " << *TI->getType() << ")";
 }
 #endif
 
@@ -1918,9 +1907,9 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     for (unsigned I = 0, E = getNumOperands(); I != E; I++)
       Ops.push_back(State.get(getOperand(I), VPLane(0)));
 
-    auto *NewGEP =
-        State.Builder.CreateGEP(GEP->getSourceElementType(), Ops[0],
-                                ArrayRef(Ops).drop_front(), "", isInBounds());
+    auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ops[0],
+                                           ArrayRef(Ops).drop_front(), "",
+                                           getGEPNoWrapFlags());
     Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
     State.set(this, Splat);
     State.addMetadata(Splat, GEP);
@@ -1946,7 +1935,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
     // but it should be a vector, otherwise.
     auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ptr,
-                                           Indices, "", isInBounds());
+                                           Indices, "", getGEPNoWrapFlags());
     assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
            "NewGEP is not a pointer vector");
     State.set(this, NewGEP);
@@ -1997,9 +1986,10 @@ void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
   // LastLane = 1 - RunTimeVF
   Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  bool InBounds = isInBounds();
-  Value *ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", InBounds);
-  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "", InBounds);
+  Value *ResultPtr =
+      Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
+  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
+                                getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -2009,9 +1999,9 @@ void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
                                          VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = reverse-vector-pointer ";
-  if (isInBounds())
-    O << "inbounds ";
+  O << " = reverse-vector-pointer";
+  printFlags(O);
+  O << " ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -2023,10 +2013,10 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
                                 CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  bool InBounds = isInBounds();
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  Value *ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
+  Value *ResultPtr =
+      Builder.CreateGEP(IndexedTy, Ptr, Increment, "", getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -2402,6 +2392,7 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(State.Lane && "Predicated instruction PHI works per instance.");
   Instruction *ScalarPredInst =
       cast<Instruction>(State.get(getOperand(0), *State.Lane));
@@ -3133,31 +3124,14 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPCanonicalIVPHIRecipe::isCanonical(
-    InductionDescriptor::InductionKind Kind, VPValue *Start,
-    VPValue *Step) const {
-  // Must be an integer induction.
-  if (Kind != InductionDescriptor::IK_IntInduction)
-    return false;
-  // Start must match the start value of this canonical induction.
-  if (Start != getStartValue())
-    return false;
-
-  // If the step is defined by a recipe, it is not a ConstantInt.
-  if (Step->getDefiningRecipe())
-    return false;
-
-  ConstantInt *StepC = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
-  return StepC && StepC->isOne();
-}
-
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return IsScalarAfterVectorization &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
 }
 
 void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
-  assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
+  assert(getInductionDescriptor().getKind() ==
+             InductionDescriptor::IK_PtrInduction &&
          "Not a pointer induction according to InductionDescriptor!");
   assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
          "Unexpected type.");
@@ -3182,6 +3156,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
     NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
                                     CanonicalIV->getIterator());
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
+    NewPointerPhi->setDebugLoc(getDebugLoc());
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
     // shared among all unrolled parts of the recipe.
@@ -3192,8 +3167,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
   // A pointer induction, performed by using a gep
   BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
-  Value *ScalarStepValue = State.get(getOperand(1), VPLane(0));
-  Type *PhiType = IndDesc.getStep()->getType();
+  Value *ScalarStepValue = State.get(getStepValue(), VPLane(0));
+  Type *PhiType = State.TypeAnalysis.inferScalarType(getStepValue());
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
@@ -3245,7 +3220,8 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-POINTER-INDUCTION ";
   getStartValue()->printAsOperand(O, SlotTracker);
-  O << ", " << *IndDesc.getStep();
+  O << ", ";
+  getStepValue()->printAsOperand(O, SlotTracker);
   if (getNumOperands() == 4) {
     O << ", ";
     getOperand(2)->printAsOperand(O, SlotTracker);
@@ -3413,13 +3389,15 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     }
   } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
     // [I|F]FindLastIV will use a sentinel value to initialize the reduction
-    // phi. In the exit block, ComputeReductionResult will generate checks to
-    // verify if the reduction result is the sentinel value. If the result is
-    // the sentinel value, it will be corrected back to the start value.
+    // phi or the resume value from the main vector loop when vectorizing the
+    // epilogue loop. In the exit block, ComputeReductionResult will generate
+    // checks to verify if the reduction result is the sentinel value. If the
+    // result is the sentinel value, it will be corrected back to the start
+    // value.
     // TODO: The sentinel value is not always necessary. When the start value is
     // a constant, and smaller than the start value of the induction variable,
     // the start value can be directly used to initialize the reduction phi.
-    StartV = Iden = RdxDesc.getSentinelValue();
+    Iden = StartV;
     if (!ScalarPHI) {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());

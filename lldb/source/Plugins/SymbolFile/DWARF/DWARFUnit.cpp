@@ -736,16 +736,6 @@ bool DWARFUnit::LinkToSkeletonUnit(DWARFUnit &skeleton_unit) {
   return false; // Already linked to a different unit.
 }
 
-bool DWARFUnit::Supports_DW_AT_APPLE_objc_complete_type() {
-  return GetProducer() != eProducerLLVMGCC;
-}
-
-bool DWARFUnit::DW_AT_decl_file_attributes_are_invalid() {
-  // llvm-gcc makes completely invalid decl file attributes and won't ever be
-  // fixed, so we need to know to ignore these.
-  return GetProducer() == eProducerLLVMGCC;
-}
-
 bool DWARFUnit::Supports_unnamed_objc_bitfields() {
   if (GetProducer() == eProducerClang)
     return GetProducerVersion() >= llvm::VersionTuple(425, 0, 13);
@@ -768,10 +758,6 @@ void DWARFUnit::ParseProducerInfo() {
       llvm::StringRef(R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
   static const RegularExpression g_clang_version_regex(
       llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
-  static const RegularExpression g_llvm_gcc_regex(
-      llvm::StringRef(R"(4\.[012]\.[01] )"
-                      R"(\(Based on Apple Inc\. build [0-9]+\) )"
-                      R"(\(LLVM build [\.0-9]+\)$)"));
 
   llvm::SmallVector<llvm::StringRef, 3> matches;
   if (g_swiftlang_version_regex.Execute(producer, &matches)) {
@@ -783,8 +769,6 @@ void DWARFUnit::ParseProducerInfo() {
     m_producer = eProducerClang;
   } else if (producer.contains("GNU")) {
     m_producer = eProducerGCC;
-  } else if (g_llvm_gcc_regex.Execute(producer)) {
-    m_producer = eProducerLLVMGCC;
   }
 }
 

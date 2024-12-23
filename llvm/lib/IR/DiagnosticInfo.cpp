@@ -80,6 +80,24 @@ void DiagnosticInfoInlineAsm::print(DiagnosticPrinter &DP) const {
     DP << " at line " << getLocCookie();
 }
 
+DiagnosticInfoRegAllocFailure::DiagnosticInfoRegAllocFailure(
+    const Twine &MsgStr, const Function &Fn, const DiagnosticLocation &DL,
+    DiagnosticSeverity Severity)
+    : DiagnosticInfoWithLocationBase(DK_RegAllocFailure, Severity, Fn,
+                                     DL.isValid() ? DL : Fn.getSubprogram()),
+      MsgStr(MsgStr) {}
+
+DiagnosticInfoRegAllocFailure::DiagnosticInfoRegAllocFailure(
+    const Twine &MsgStr, const Function &Fn, DiagnosticSeverity Severity)
+    : DiagnosticInfoWithLocationBase(DK_RegAllocFailure, Severity, Fn,
+                                     Fn.getSubprogram()),
+      MsgStr(MsgStr) {}
+
+void DiagnosticInfoRegAllocFailure::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << MsgStr << " in function '" << getFunction()
+     << '\'';
+}
+
 DiagnosticInfoResourceLimit::DiagnosticInfoResourceLimit(
     const Function &Fn, const char *ResourceName, uint64_t ResourceSize,
     uint64_t ResourceLimit, DiagnosticSeverity Severity, DiagnosticKind Kind)
