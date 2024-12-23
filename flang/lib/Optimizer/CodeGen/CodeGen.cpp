@@ -1728,9 +1728,12 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 static bool isDeviceAllocation(mlir::Value val) {
   if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
     return isDeviceAllocation(loadOp.getMemref());
+  if (auto boxAddrOp =
+          mlir::dyn_cast_or_null<fir::BoxAddrOp>(val.getDefiningOp()))
+    return isDeviceAllocation(boxAddrOp.getVal());
   if (auto convertOp =
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
-    val = convertOp.getValue();
+    return isDeviceAllocation(convertOp.getValue());
   if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
     if (callOp.getCallee() &&
         (callOp.getCallee().value().getRootReference().getValue().starts_with(
