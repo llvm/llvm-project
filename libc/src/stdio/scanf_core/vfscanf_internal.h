@@ -103,7 +103,7 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
                                  const char *__restrict format,
                                  internal::ArgList &args) {
   internal::flockfile(stream);
-  scanf_core::Reader reader(stream, &internal::getc, internal::ungetc);
+  scanf_core::Reader reader(stream);
   int retval = scanf_core::scanf_main(&reader, format, args);
   if (retval == 0 && internal::ferror_unlocked(stream))
     retval = EOF;

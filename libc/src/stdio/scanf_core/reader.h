@@ -16,9 +16,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
-using StreamGetc = int (*)(void *);
-using StreamUngetc = void (*)(int, void *);
-
 // This is intended to be either a raw string or a buffer syncronized with the
 // file's internal buffer.
 struct ReadBuffer {
@@ -29,38 +26,21 @@ struct ReadBuffer {
 
 class Reader {
   ReadBuffer *rb;
-
   void *input_stream = nullptr;
-
-  // TODO: Remove these unnecessary function pointers
-  StreamGetc stream_getc = nullptr;
-  StreamUngetc stream_ungetc = nullptr;
-
   size_t cur_chars_read = 0;
 
 public:
   // TODO: Set buff_len with a proper constant
   LIBC_INLINE Reader(ReadBuffer *string_buffer) : rb(string_buffer) {}
 
-  LIBC_INLINE Reader(void *stream, StreamGetc stream_getc_in,
-                     StreamUngetc stream_ungetc_in,
+  LIBC_INLINE Reader(void *stream,
                      ReadBuffer *stream_buffer = nullptr)
-      : rb(stream_buffer), input_stream(stream), stream_getc(stream_getc_in),
-        stream_ungetc(stream_ungetc_in) {}
+      : rb(stream_buffer), input_stream(stream){}
 
   // This returns the next character from the input and advances it by one
   // character. When it hits the end of the string or file it returns '\0' to
   // signal to stop parsing.
-  LIBC_INLINE char getc() {
-    ++cur_chars_read;
-    if (rb != nullptr) {
-      char output = rb->buffer[rb->buff_cur];
-      ++(rb->buff_cur);
-      return output;
-    }
-    // This should reset the buffer if applicable.
-    return static_cast<char>(stream_getc(input_stream));
-  }
+  char getc(); 
 
   // This moves the input back by one character, placing c into the buffer if
   // this is a file reader, else c is ignored.
