@@ -1697,6 +1697,7 @@ set(files
   __cxx03/__ranges/as_rvalue_view.h
   __cxx03/__ranges/chunk_by_view.h
   __cxx03/__ranges/common_view.h
+  __cxx03/__ranges/concat_view.h
   __cxx03/__ranges/concepts.h
   __cxx03/__ranges/container_compatible_range.h
   __cxx03/__ranges/counted.h
