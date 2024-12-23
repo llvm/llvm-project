@@ -21,8 +21,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -53,21 +51,6 @@ struct EVLIndVarSimplifyImpl {
 
   // Returns true if modify the loop.
   bool run(Loop &L);
-};
-
-struct EVLIndVarSimplify : public LoopPass {
-  static char ID;
-
-  EVLIndVarSimplify() : LoopPass(ID) {
-    initializeEVLIndVarSimplifyPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.setPreservesCFG();
-  }
 };
 } // anonymous namespace
 
@@ -251,21 +234,3 @@ PreservedAnalyses EVLIndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &LAM,
     return PreservedAnalyses::allInSet<CFGAnalyses>();
   return PreservedAnalyses::all();
 }
-
-char EVLIndVarSimplify::ID = 0;
-
-INITIALIZE_PASS_BEGIN(EVLIndVarSimplify, DEBUG_TYPE,
-                      "EVL-based Induction Variables Simplify", false, false)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(EVLIndVarSimplify, DEBUG_TYPE,
-                    "EVL-based Induction Variables Simplify", false, false)
-
-bool EVLIndVarSimplify::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
-    return false;
-
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  return EVLIndVarSimplifyImpl(SE).run(*L);
-}
-
-Pass *llvm::createEVLIndVarSimplifyPass() { return new EVLIndVarSimplify(); }

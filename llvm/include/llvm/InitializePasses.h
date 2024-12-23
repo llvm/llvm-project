@@ -113,7 +113,6 @@ void initializeExpandReductionsPass(PassRegistry &);
 void initializeExpandVariadicsPass(PassRegistry &);
 void initializeExpandVectorPredicationPass(PassRegistry &);
 void initializeExternalAAWrapperPassPass(PassRegistry &);
-void initializeEVLIndVarSimplifyPass(PassRegistry &);
 void initializeFEntryInserterPass(PassRegistry &);
 void initializeFinalizeISelPass(PassRegistry &);
 void initializeFinalizeMachineBundlesPass(PassRegistry &);

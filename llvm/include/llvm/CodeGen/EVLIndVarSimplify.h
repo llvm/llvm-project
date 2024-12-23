@@ -20,7 +20,6 @@
 namespace llvm {
 class Loop;
 class LPMUpdater;
-class Pass;
 
 /// Turn vectorized loops with canonical induction variables into loops that
 /// only use a single EVL-based induction variable.
@@ -28,7 +27,5 @@ struct EVLIndVarSimplifyPass : public PassInfoMixin<EVLIndVarSimplifyPass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &LAM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
-
-Pass *createEVLIndVarSimplifyPass();
 } // namespace llvm
 #endif
