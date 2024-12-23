@@ -81,7 +81,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
         }
       }
 
-      auto padSizeTy = RankedTensorType::get({4, 2}, rewriter.getI64Type());
+      auto padSizeTy = RankedTensorType::get({8}, rewriter.getI64Type());
       auto padSize =
           DenseIntElementsAttr::get(padSizeTy, ArrayRef<int64_t>(pad));
       Value padSizeVal =
