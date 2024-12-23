@@ -209,7 +209,13 @@ void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
                  SYCLKernelEntryPointAttr(SemaRef.Context, AL, TSI));
 }
 
-static SourceLocation SourceLocationForType(QualType QT) {
+// Given a potentially qualified type, SourceLocationForUserDeclaredType()
+// returns the source location of the canonical declaration of the unqualified
+// desugared user declared type, if any. For non-user declared types, an
+// invalid source location is returned. The intended usage of this function
+// is to identify an appropriate source location, if any, for a
+// "entity declared here" diagnostic note.
+static SourceLocation SourceLocationForUserDeclaredType(QualType QT) {
   SourceLocation Loc;
   const Type *T = QT->getUnqualifiedDesugaredType();
   if (const TagType *TT = dyn_cast<TagType>(T))
@@ -233,7 +239,7 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
     // clarification from the SYCL WG.
     //   https://github.com/KhronosGroup/SYCL-Docs/issues/568
     S.Diag(Loc, diag::warn_sycl_kernel_name_not_a_class_type) << KernelName;
-    SourceLocation DeclTypeLoc = SourceLocationForType(KernelName);
+    SourceLocation DeclTypeLoc = SourceLocationForUserDeclaredType(KernelName);
     if (DeclTypeLoc.isValid())
       S.Diag(DeclTypeLoc, diag::note_entity_declared_at) << KernelName;
     return true;
@@ -246,10 +252,9 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   // Ensure that all attributes present on the declaration are consistent
   // and warn about any redundant ones.
   SYCLKernelEntryPointAttr *SKEPAttr = nullptr;
-  for (auto SAI = FD->specific_attr_begin<SYCLKernelEntryPointAttr>();
-       SAI != FD->specific_attr_end<SYCLKernelEntryPointAttr>(); ++SAI) {
+  for (auto* SAI : FD->specific_attrs<SYCLKernelEntryPointAttr>()) {
     if (!SKEPAttr) {
-      SKEPAttr = *SAI;
+      SKEPAttr = SAI;
       continue;
     }
     if (!getASTContext().hasSameType(SAI->getKernelName(),
@@ -289,7 +294,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
     }
   }
 
-  if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     if (!MD->isStatic()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << /*non-static member function*/ 0;
@@ -312,7 +317,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   }
   if (FD->isNoReturn()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << /*noreturn function*/ 6;
+        << /*function declared with the 'noreturn' attribute*/ 6;
     SKEPAttr->setInvalidAttr();
   }
 

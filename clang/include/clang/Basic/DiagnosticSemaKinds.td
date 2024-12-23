@@ -12411,8 +12411,9 @@ def err_sycl_special_type_num_init_method : Error<
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "'sycl_kernel_entry_point' attribute cannot be applied to a"
-  " %select{non-static member|variadic|deleted|defaulted|constexpr|consteval|"
-           "noreturn|coroutine}0 function">;
+  " %select{non-static member function|variadic function|deleted function|"
+           "defaulted function|constexpr function|consteval function|"
+           "function declared with the 'noreturn' attribute|coroutine}0">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "'sycl_kernel_entry_point' kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}0,1">;
@@ -12420,7 +12421,7 @@ def err_sycl_kernel_name_conflict : Error<
   "'sycl_kernel_entry_point' kernel name argument conflicts with a previous"
   " declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
-  "%0 is not a valid SYCL kernel name type; a class type is required">,
+  "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
   InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
 def warn_sycl_entry_point_redundant_declaration : Warning<
   "redundant 'sycl_kernel_entry_point' attribute">, InGroup<RedundantAttribute>;

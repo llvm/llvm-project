@@ -13,33 +13,33 @@ struct S1;
   clang::sycl_kernel_entry_point(S1)]]
 void ok1();
 
-// expected-error@+1 {{'int' is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+1 {{'int' is not a valid SYCL kernel name type; a non-union class type is required}}
 [[clang::sycl_kernel_entry_point(int)]] void bad2();
 
-// expected-error@+1 {{'int ()' is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+1 {{'int ()' is not a valid SYCL kernel name type; a non-union class type is required}}
 [[clang::sycl_kernel_entry_point(int())]] void bad3();
 
-// expected-error@+1 {{'int (*)()' is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+1 {{'int (*)()' is not a valid SYCL kernel name type; a non-union class type is required}}
 [[clang::sycl_kernel_entry_point(int(*)())]] void bad4();
 
-// expected-error@+1 {{'int (&)()' is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+1 {{'int (&)()' is not a valid SYCL kernel name type; a non-union class type is required}}
 [[clang::sycl_kernel_entry_point(int(&)())]] void bad5();
 
-// expected-error@+1 {{'decltype(nullptr)' (aka 'std::nullptr_t') is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+1 {{'decltype(nullptr)' (aka 'std::nullptr_t') is not a valid SYCL kernel name type; a non-union class type is required}}
 [[clang::sycl_kernel_entry_point(decltype(nullptr))]] void bad6();
 
 union U7; // #U7-decl
-// expected-error@+2 {{'U7' is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+2 {{'U7' is not a valid SYCL kernel name type; a non-union class type is required}}
 // expected-note@#U7-decl {{'U7' declared here}}
 [[clang::sycl_kernel_entry_point(U7)]] void bad7();
 
 enum E8 {}; // #E8-decl
-// expected-error@+2 {{'E8' is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+2 {{'E8' is not a valid SYCL kernel name type; a non-union class type is required}}
 // expected-note@#E8-decl {{'E8' declared here}}
 [[clang::sycl_kernel_entry_point(E8)]] void bad8();
 
 enum E9 : int; // #E9-decl
-// expected-error@+2 {{'E9' is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+2 {{'E9' is not a valid SYCL kernel name type; a non-union class type is required}}
 // expected-note@#E9-decl {{'E9' declared here}}
 [[clang::sycl_kernel_entry_point(E9)]] void bad9();
 
@@ -96,7 +96,7 @@ void bad16(); // The attribute from the previous declaration is inherited.
 
 template<int>
 struct B17 {
-  // expected-error@+1 {{'int' is not a valid SYCL kernel name type; a class type is required}}
+  // expected-error@+1 {{'int' is not a valid SYCL kernel name type; a non-union class type is required}}
   [[clang::sycl_kernel_entry_point(int)]]
   static void bad_17();
 };

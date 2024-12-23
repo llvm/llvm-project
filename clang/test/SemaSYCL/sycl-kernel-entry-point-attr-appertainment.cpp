@@ -208,7 +208,7 @@ template<void (fp [[clang::sycl_kernel_entry_point(BADKN<18>)]])()>
 void bad18();
 
 #if __cplusplus >= 202002L
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a coroutine function}}
+// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a coroutine}}
 [[clang::sycl_kernel_entry_point(BADKN<19>)]]
 void bad19() {
   co_return;
@@ -245,7 +245,7 @@ constexpr void bad24() {}
 consteval void bad25() {}
 #endif
 
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a noreturn function}}
+// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a function declared with the 'noreturn' attribute}}
 [[clang::sycl_kernel_entry_point(BADKN<26>)]]
 [[noreturn]] void bad26();
 

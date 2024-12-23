@@ -51,7 +51,7 @@ struct Select3 {
   using bad_type = int;
   using good_type = S3;
 };
-// expected-error@+5 {{'typename Select3::bad_type' (aka 'int') is not a valid SYCL kernel name type; a class type is required}}
+// expected-error@+5 {{'typename Select3::bad_type' (aka 'int') is not a valid SYCL kernel name type; a non-union class type is required}}
 // expected-note@+9 {{in instantiation of function template specialization 'ok3<Select3>' requested here}}
 template<typename T>
 [[clang::sycl_kernel_entry_point(typename T::good_type)]] void ok3(int) {}
