@@ -562,8 +562,7 @@ void handleConstMemberCall(const CallExpr *CE,
       return;
     StorageLocation &Loc =
         State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *RecordLoc, DirectCallee, State.Env,
-            [&](StorageLocation &Loc) {
+            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
               setHasValue(cast<RecordStorageLocation>(Loc),
                           State.Env.makeAtomicBoolValue(), State.Env);
             });
