@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass liveintervals -run-pass machineverifier -run-pass register-coalescer %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass liveintervals -run-pass machineverifier -run-pass register-coalescer %s -o - | FileCheck %s
 #
 # If there is no consumer of the live intervals, the live intervals pass
 # will be freed immediately after it runs, before the verifier. Add a

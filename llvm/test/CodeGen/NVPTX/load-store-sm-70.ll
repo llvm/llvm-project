@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | FileCheck %s
-; RUN: %if ptxas-12.2 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify -arch=sm_70 %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | FileCheck %s
+; RUN: %if ptxas-12.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify -arch=sm_70 %}
 
 ; TODO: fix "atomic load volatile acquire": generates "ld.acquire.sys;"
 ;       but should generate "ld.mmio.relaxed.sys; fence.acq_rel.sys;"

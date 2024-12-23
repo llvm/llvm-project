@@ -104,7 +104,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
-      .clampMaxNumElements(0, p0, 2);
+      .clampMaxNumElements(0, p0, 2)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
@@ -562,13 +563,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2s16; },
           1, s32)
       .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
-          s64)
+          [=](const LegalityQuery &Query) {
+            return Query.Types[1].isPointerVector();
+          },
+          0, s64)
       .moreElementsToNextPow2(1)
       .clampNumElements(1, v8s8, v16s8)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
       .clampNumElements(1, v2s64, v2s64)
+      .clampNumElements(1, v2p0, v2p0)
       .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
@@ -1034,7 +1038,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({s32, s64, v8s8, v16s8})
       .widenScalarToNextPow2(0, /*Min = */ 32)
-      .clampScalar(0, s32, s64);
+      .clampScalar(0, s32, s64)
+      .lower();
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
@@ -1082,6 +1087,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .bitcastIf(isPointerVector(0), [=](const LegalityQuery &Query) {
         // Bitcast pointers vector to i64.
         const LLT DstTy = Query.Types[0];

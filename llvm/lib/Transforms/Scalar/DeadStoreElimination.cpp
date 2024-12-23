@@ -164,9 +164,9 @@ static cl::opt<bool>
     OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
                       cl::desc("Allow DSE to optimize memory accesses."));
 
-// TODO: remove this flag.
+// TODO: turn on and remove this flag.
 static cl::opt<bool> EnableInitializesImprovement(
-    "enable-dse-initializes-attr-improvement", cl::init(true), cl::Hidden,
+    "enable-dse-initializes-attr-improvement", cl::init(false), cl::Hidden,
     cl::desc("Enable the initializes attr improvement in DSE"));
 
 //===----------------------------------------------------------------------===//
@@ -2014,8 +2014,9 @@ struct DSEState {
       return false;
     IRBuilder<> IRB(Malloc);
     Type *SizeTTy = Malloc->getArgOperand(0)->getType();
-    auto *Calloc = emitCalloc(Malloc->getType(), ConstantInt::get(SizeTTy, 1),
-                              Malloc->getArgOperand(0), IRB, TLI);
+    auto *Calloc =
+        emitCalloc(ConstantInt::get(SizeTTy, 1), Malloc->getArgOperand(0), IRB,
+                   TLI, Malloc->getType()->getPointerAddressSpace());
     if (!Calloc)
       return false;
 
@@ -2053,7 +2054,7 @@ struct DSEState {
       return false;
 
     Instruction *ICmpL;
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!match(BI->getCondition(),
                m_c_ICmp(Pred,
                         m_CombineAnd(m_Load(m_Specific(StorePtr)),

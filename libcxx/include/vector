@@ -304,8 +304,9 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 
 // clang-format on
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/vector>
+#else
 #  include <__config>
 
 #  include <__vector/comparison.h>
@@ -368,6 +369,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_VECTOR

@@ -188,6 +188,7 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
     return;
   } else
     OS << "Lazy\n";
+  int Index = 0;
 
   auto printBlockInfo = [&](BasicBlockT *BB, StringRef Ending) {
     if (BB) {
@@ -205,10 +206,12 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
           typename ArrayRef<DomTreeUpdate>::const_iterator end) {
         if (begin == end)
           OS << "  None\n";
-        for (auto [Index, DTUpdate] : enumerate(make_range(begin, end))) {
-          if (!DTUpdate.IsCriticalEdgeSplit) {
-            auto U = DTUpdate.Update;
+        Index = 0;
+        for (auto It = begin, ItEnd = end; It != ItEnd; ++It) {
+          if (!It->IsCriticalEdgeSplit) {
+            auto U = It->Update;
             OS << "  " << Index << " : ";
+            ++Index;
             if (U.getKind() == DomTreeT::Insert)
               OS << "Insert, ";
             else
@@ -216,8 +219,8 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
             printBlockInfo(U.getFrom(), ", ");
             printBlockInfo(U.getTo(), "\n");
           } else {
-            const auto &Edge = DTUpdate.EdgeSplit;
-            OS << "  " << Index << " : Split critical edge, ";
+            const auto &Edge = It->EdgeSplit;
+            OS << "  " << Index++ << " : Split critical edge, ";
             printBlockInfo(Edge.FromBB, ", ");
             printBlockInfo(Edge.ToBB, ", ");
             printBlockInfo(Edge.NewBB, "\n");
@@ -246,8 +249,10 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
   }
 
   OS << "Pending DeletedBBs:\n";
-  for (auto [Index, BB] : enumerate(DeletedBBs)) {
+  Index = 0;
+  for (const auto *BB : DeletedBBs) {
     OS << "  " << Index << " : ";
+    ++Index;
     if (BB->hasName())
       OS << BB->getName() << "(";
     else
@@ -436,6 +441,8 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
   }
 }
 
+// Post dominator tree is different, the new basic block in critical edge
+// may become the new root.
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
     splitPDTCriticalEdges(ArrayRef<CriticalEdge> Edges) {
@@ -443,36 +450,14 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
   if (!PDT || Edges.empty())
     return;
 
-  SmallBitVector IsNewIPDom(Edges.size(), true);
-  SmallSet<BasicBlockT *, 8> NewBBs;
-  for (const auto &Edge : Edges)
-    NewBBs.insert(Edge.NewBB);
-
-  for (const auto &[Idx, Edge] : enumerate(Edges)) {
-    // Same as DT version but from another direction.
-    BasicBlockT *Pred = Edge.FromBB;
-    auto *PredDTNode = PDT->getNode(Pred);
-    for (BasicBlockT *SuccBB : successors(Pred)) {
-      if (SuccBB == Edge.NewBB)
-        continue;
-      if (NewBBs.count(SuccBB)) {
-        assert(succ_size(SuccBB) == 1 && "A basic block resulting from a "
-                                         "critical edge split has more "
-                                         "than one successor!");
-        SuccBB = *succ_begin(SuccBB);
-      }
-      if (!PDT->dominates(PredDTNode, PDT->getNode(SuccBB))) {
-        IsNewIPDom[Idx] = false;
-        break;
-      }
-    }
+  std::vector<UpdateT> Updates;
+  for (const auto &Edge : Edges) {
+    Updates.push_back({PostDomTreeT::Insert, Edge.FromBB, Edge.NewBB});
+    Updates.push_back({PostDomTreeT::Insert, Edge.NewBB, Edge.ToBB});
+    if (!llvm::is_contained(successors(Edge.FromBB), Edge.ToBB))
+      Updates.push_back({PostDomTreeT::Delete, Edge.FromBB, Edge.ToBB});
   }
-
-  for (const auto &[Idx, Edge] : enumerate(Edges)) {
-    auto *NewPDTNode = PDT->addNewBlock(Edge.NewBB, Edge.ToBB);
-    if (IsNewIPDom[Idx])
-      PDT->changeImmediateDominator(PDT->getNode(Edge.FromBB), NewPDTNode);
-  }
+  PDT->applyUpdates(Updates);
 }
 
 } // namespace llvm
