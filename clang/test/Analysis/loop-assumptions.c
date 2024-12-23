@@ -200,3 +200,20 @@ void innerLoopOpaqueCondition(int arg) {
     }
   }
 }
+
+void onlyLoopConditions(int arg) {
+  // This "don't assume third iteration" logic only examines the conditions of
+  // loop statements and does not affect the analysis of code that implements
+  // similar behavior with different language features like if + break, goto,
+  // recursive functions, ...
+  int i = 0;
+  while (1) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+
+    // This is not a loop condition.
+    if (i++ > arg)
+      break;
+  }
+
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+}
