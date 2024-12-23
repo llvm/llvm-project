@@ -1244,6 +1244,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
       return InsertPt;
     }
+    if (Dst.getOperator()->getName() == "tframeindex") {
+      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
+      return InsertPt;
+    }
     if (Dst.getOperator()->getName() == "imm") {
       DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(Dst.getName());
       return InsertPt;
