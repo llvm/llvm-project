@@ -531,7 +531,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     emitModuleCommandLines(M);
     // Now we can generate section information.
-    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+    OutStreamer->switchSection(
+        OutContext.getObjectFileInfo()->getTextSection());
 
     // To work around an AIX assembler and/or linker bug, generate
     // a rename for the default text-section symbol name.  This call has

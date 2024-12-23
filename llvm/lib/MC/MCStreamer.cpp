@@ -414,7 +414,7 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 }
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
-  switchSection(getContext().getObjectFileInfo()->getTextSection());
+  switchSectionNoPrint(getContext().getObjectFileInfo()->getTextSection());
 }
 
 void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -1386,7 +1386,10 @@ bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
 void MCStreamer::switchSectionNoPrint(MCSection *Section) {
   SectionStack.back().second = SectionStack.back().first;
   SectionStack.back().first = MCSectionSubPair(Section, 0);
-  CurFrag = &Section->getDummyFragment();
+  changeSection(Section, 0);
+  MCSymbol *Sym = Section->getBeginSymbol();
+  if (Sym && !Sym->isInSection())
+    emitLabel(Sym);
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {
