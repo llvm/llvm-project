@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_CONCAT_VIEW_H
-#define _LIBCPP___RANGES_CONCAT_VIEW_H
+#ifndef _LIBCPP___CXX03___RANGES_CONCAT_VIEW_H
+#define _LIBCPP___CXX03___RANGES_CONCAT_VIEW_H
 
 #include <__cxx03/__algorithm/ranges_find_if.h>
 #include <__cxx03/__assert>
@@ -53,7 +53,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 26
 
 namespace ranges {
 
@@ -616,8 +616,8 @@ inline constexpr auto concat = __concat::__fn{};
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_CONCAT_VIEW_H
+#endif /// _LIBCPP___CXX03___RANGES_CONCAT_VIEW_H

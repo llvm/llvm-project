@@ -442,6 +442,10 @@ namespace std {
 #    include <__ranges/zip_view.h>
 #  endif
 
+#  if _LIBCPP_STD_VER >= 26
+#    include <__ranges/concat_view.h>
+#  endif
+
 #  include <version>
 
 // standard-mandated includes

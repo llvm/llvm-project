@@ -53,7 +53,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 26
 
 namespace ranges {
 
@@ -616,7 +616,7 @@ inline constexpr auto concat = __concat::__fn{};
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
