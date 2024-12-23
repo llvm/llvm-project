@@ -11,48 +11,27 @@
 #include <stdio.h> // TODO: Remove all printf functions
 #include <sys/types.h>
 
-#include "src/time/time_utils.h"
 #include "src/__support/common.h"
 #include "src/time/timezone.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
+tzset *get_timezone_offset(char *timezone) {
+  static ttinfo ttinfo;
+  static tzset result;
 
-void rev_str(char *str) {
-    int start = 0;
-    int end = 0;
+  unsigned char hdr[TIMEZONE_HDR_SIZE * 10];
 
-    while (str[end] != '\0') {
-        end++;
-    }
-    end--;
-
-    while (start < end) {
-        str[start] = str[start] ^ str[end];
-        str[end] = str[start] ^ str[end];
-        str[start] = str[start] ^ str[end];
-
-        start++;
-        end--;
-    }
-}
-
-int get_timezone_offset(char *timezone) {
-  (void)timezone;
-
-  unsigned char hdr[TIMEZONE_HDR_SIZE + 1];
-
-  int32_t magic;
+  int64_t magic;
   unsigned char version;
   __int128_t reserved;
-  int32_t tzh_ttisutcnt;
-  int32_t tzh_ttisstdcnt;
-  int32_t tzh_leapcnt;
-  int32_t tzh_timecnt;
-  int32_t tzh_typecnt;
-  int32_t tzh_charcnt;
+  uint32_t tzh_ttisutcnt;
+  uint32_t tzh_ttisstdcnt;
+  uint32_t tzh_leapcnt;
+  uint32_t tzh_timecnt;
+  uint32_t tzh_typecnt;
+  uint32_t tzh_charcnt;
 
   int fd;
   size_t bytes;
@@ -60,13 +39,14 @@ int get_timezone_offset(char *timezone) {
   fd = open("/etc/localtime", O_RDONLY);
   if (fd < 0) {
     close(fd);
-    return 0;
+    return nullptr;
   }
 
   bytes = read(fd, hdr, sizeof(hdr));
-  if (bytes != sizeof(hdr)) {
-    close(fd);
-    return 0;
+  // TODO: Remove the number of bytes to check
+  if (bytes != 379) {
+      close(fd);
+      return nullptr;
   }
 
   size_t i;
@@ -80,49 +60,36 @@ int get_timezone_offset(char *timezone) {
     tmp = (tmp << 8) | hdr[i];
   }
   reserved = tmp;
-  tzh_ttisutcnt = (hdr[21] << 24) | (hdr[22] << 16) | (hdr[23] << 8) | hdr[24];
-  tzh_ttisstdcnt = (hdr[25] << 24) | (hdr[26] << 16) | (hdr[27] << 8) | hdr[28];
-  tzh_leapcnt = (hdr[29] << 24) | (hdr[30] << 16) | (hdr[31] << 8) | hdr[32];
-  tzh_timecnt = (hdr[33] << 24) | (hdr[34] << 16) | (hdr[35] << 8) | hdr[36];
-  tzh_typecnt = (hdr[37] << 24) | (hdr[38] << 16) | (hdr[39] << 8) | hdr[40];
-  tzh_charcnt = (hdr[41] << 24) | (hdr[42] << 16) | (hdr[43] << 8) | hdr[44];
-  (void)tzh_ttisutcnt;
-  (void)tzh_ttisstdcnt;
-  (void)tzh_leapcnt;
-  (void)tzh_typecnt;
-  (void)tzh_charcnt;
+  tzh_ttisutcnt = (hdr[20] << 24) | (hdr[21] << 16) | (hdr[22] << 8) | hdr[23];
+  tzh_ttisstdcnt = (hdr[24] << 24) | (hdr[25] << 16) | (hdr[26] << 8) | hdr[27];
+  tzh_leapcnt = (hdr[28] << 24) | (hdr[29] << 16) | (hdr[30] << 8) | hdr[31];
+  tzh_timecnt = (hdr[32] << 24) | (hdr[33] << 16) | (hdr[34] << 8) | hdr[35];
+  tzh_typecnt = (hdr[36] << 24) | (hdr[37] << 16) | (hdr[38] << 8) | hdr[39];
+  tzh_charcnt = (hdr[40] << 24) | (hdr[41] << 16) | (hdr[42] << 8) | hdr[43];
+
+  result.tzh_ttisutcnt = tzh_ttisutcnt;
+  result.tzh_ttisstdcnt = tzh_ttisstdcnt;
+  result.tzh_leapcnt = tzh_leapcnt;
+  result.tzh_timecnt = tzh_timecnt;
+  result.tzh_typecnt = tzh_typecnt;
+  result.tzh_charcnt = tzh_charcnt;
 
   if (magic != 0x545A6966) {
-    return 0;
+    return nullptr;
   }
 
   if (version != 0x32 && version != 0x33 && version != 0x34) {
-    return 0;
+    return nullptr;
   }
 
   // according to `tzfile`, 15 bytes should be 0
   if (reserved != 0) {
-    return 0;
-  }
-
-  for (i = 0; i < (size_t)tzh_timecnt; i++) {
-    uint8_t buf[4];
-    bytes = read(fd, buf, 4);
-    if (bytes != 4) {
-      continue;
-    }
-
-    int32_t transition = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
-    transition = ((transition & 0xFF000000) >> 24) |
-        ((transition & 0x00FF0000) >> 8) |
-        ((transition & 0x0000FF00) << 8) |
-        ((transition & 0x000000FF) << 24);
-    printf("transition %d:   %d\n", i, transition);
+    return nullptr;
   }
 
   close(fd);
 
-  return 0;
+  return &result;
 }
 
 } // namespace timezone
