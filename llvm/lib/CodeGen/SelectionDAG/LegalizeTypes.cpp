@@ -948,7 +948,6 @@ SDValue DAGTypeLegalizer::PackBitcastInRegister(SDNode *N) const {
   return DAG.getBitcast(ToVT, Packed);
 }
 
-
 SDValue DAGTypeLegalizer::UnpackBitcastInRegister(SDNode *N) const {
   assert(N->getOpcode() == ISD::BITCAST && "Unexpected opcode!");
   EVT FromVT = N->getOperand(0)->getValueType(0);
@@ -990,9 +989,9 @@ SDValue DAGTypeLegalizer::UnpackBitcastInRegister(SDNode *N) const {
   return DAG.getBuildVector(ToVT, DL, Elements);
 }
 
-
 SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
-  // Try the pack, if we aren't going from vector -> scalar it will backout immediately.
+  // Try the pack, if we aren't going from vector -> scalar it will backout
+  // immediately.
   if (SDValue Res = PackBitcastInRegister(N)) {
     return Res;
   }
