@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-// CHECK: |{{ +}}[[C4:4|1]]|void func(
+// CHECK: | [[#min(C,4)]]|void func(
 void func(int a, int b) {
   bool b0 = a <= b;
   bool b1 = a == b;
