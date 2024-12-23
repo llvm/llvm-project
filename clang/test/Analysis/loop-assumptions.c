@@ -31,7 +31,7 @@ void opaqueCondition(int arg) {
   for (int i = 0; i < arg; i++)
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
 
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 int check(void);
@@ -45,7 +45,7 @@ void opaqueConditionCall(int arg) {
   while (check())
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
 
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void opaqueConditionDoWhile(int arg) {
@@ -57,7 +57,7 @@ void opaqueConditionDoWhile(int arg) {
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
   } while (i++ < arg);
 
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void dontRememberOldBifurcation(int arg) {
@@ -78,7 +78,7 @@ void dontRememberOldBifurcation(int arg) {
     i++;
   }
 
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void dontAssumeFourthIterartion(int arg) {
@@ -92,7 +92,7 @@ void dontAssumeFourthIterartion(int arg) {
   for (int i = 0; i < arg; i++)
     clang_analyzer_numTimesReached(); // expected-warning {{3}}
 
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 #define TRUE 1
@@ -111,7 +111,7 @@ void shortCircuitInLoopCondition(int arg) {
   for (int i = 0; i < arg && TRUE; i++) {
     clang_analyzer_numTimesReached(); // expected-warning {{4}}
   }
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void shortCircuitInLoopConditionRHS(int arg) {
@@ -121,7 +121,7 @@ void shortCircuitInLoopConditionRHS(int arg) {
   for (int i = 0; TRUE && i < arg; i++) {
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
   }
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void eagerlyAssumeInSubexpression(int arg) {
@@ -137,7 +137,7 @@ void eagerlyAssumeInSubexpression(int arg) {
   for (int i = 0; (i >= arg) - 1; i++) {
     clang_analyzer_numTimesReached(); // eagerlyassume-warning {{4}} noeagerlyassume-warning {{2}}
   }
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} 
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void calledTwice(int arg, int isFirstCall) {
