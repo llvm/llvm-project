@@ -14,10 +14,12 @@ define void @nonza_callee() {
 ; CHECK-LABEL: define void @nonza_callee
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  call void asm sideeffect "; inlineasm", ""()
   call void @inlined_body()
   ret void
 }
@@ -26,10 +28,12 @@ define void @shared_za_callee() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_callee
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  call void asm sideeffect "; inlineasm", ""()
   call void @inlined_body()
   ret void
 }
@@ -37,9 +41,11 @@ entry:
 define void @new_za_callee() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_callee
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
+  call void asm sideeffect "; inlineasm", ""()
   call void @inlined_body()
   ret void
 }
@@ -49,7 +55,7 @@ define void @new_za_callee() "aarch64_new_za" {
 ; Test for a number of combinations, where:
 ; N   Not using ZA.
 ; S   Shared ZA interface
-; Z   New ZA interface
+; Z   New ZA with Private-ZA interface
 
 ; [x] N -> N
 ; [ ] N -> S (This combination is invalid)
@@ -58,6 +64,7 @@ define void @nonza_caller_nonza_callee_inline() {
 ; CHECK-LABEL: define void @nonza_caller_nonza_callee_inline
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -84,11 +91,11 @@ entry:
 ; [x] Z -> N
 ; [ ] Z -> S
 ; [ ] Z -> Z
-define void @new_za_caller_nonza_callee_inline() "aarch64_new_za" {
-; CHECK-LABEL: define void @new_za_caller_nonza_callee_inline
+define void @new_za_caller_nonza_callee_dont_inline() "aarch64_new_za" {
+; CHECK-LABEL: define void @new_za_caller_nonza_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    call void @nonza_callee()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -103,6 +110,7 @@ define void @new_za_caller_shared_za_callee_inline() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_caller_shared_za_callee_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -126,14 +134,14 @@ entry:
   ret void
 }
 
-; [x] Z -> N
-; [ ] Z -> S
-; [ ] Z -> Z
-define void @shared_za_caller_nonza_callee_inline() "aarch64_inout_za" {
-; CHECK-LABEL: define void @shared_za_caller_nonza_callee_inline
+; [x] S -> N
+; [ ] S -> S
+; [ ] S -> Z
+define void @shared_za_caller_nonza_callee_dont_inline() "aarch64_inout_za" {
+; CHECK-LABEL: define void @shared_za_caller_nonza_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    call void @nonza_callee()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -163,6 +171,7 @@ define void @shared_za_caller_shared_za_callee_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_shared_za_callee_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;

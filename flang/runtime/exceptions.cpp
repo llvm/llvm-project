@@ -84,9 +84,7 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
 // Check if the processor has the ability to control whether to halt or
 // continue execution when a given exception is raised.
 bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
-#ifdef _WIN32
-  return false;
-#else
+#if (defined(__arm__) || defined(__aarch64__)) && !defined(_WIN32)
   except = RTNAME(MapException)(except);
   int currentSet = fegetexcept(), flipSet, ok;
   if (currentSet & except) {
@@ -99,6 +97,8 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
     ok |= fedisableexcept(except);
   }
   return ok != -1 && currentSet != flipSet;
+#else
+  return false;
 #endif
 }
 
