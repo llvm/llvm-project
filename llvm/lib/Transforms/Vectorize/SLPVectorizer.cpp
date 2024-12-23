@@ -311,6 +311,26 @@ static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
   Mask.swap(NewMask);
 }
 
+static void transformVectorShuffleIndiciesToScalar(unsigned VecTyNumElements,
+                                                   SmallVectorImpl<int> &Mask) {
+  // This is a restored process of transformScalarShuffleIndiciesToVector.
+  SmallVector<int> NewMask(Mask.size() / VecTyNumElements);
+  for (unsigned I : seq<unsigned>(NewMask.size())) {
+    ArrayRef<int> Elements =
+        ArrayRef(Mask).slice(I * VecTyNumElements, VecTyNumElements);
+    if (all_of(Elements, [](int E) { return E == PoisonMaskElem; })) {
+      NewMask[I] = PoisonMaskElem;
+      continue;
+    }
+    assert((Elements[0] % VecTyNumElements == 0) &&
+           equal(Elements,
+                 createSequentialMask(Elements[0], VecTyNumElements, 0)) &&
+           "Not a valid mask from transformScalarShuffleIndiciesToVector.");
+    NewMask[I] = Elements[0] / VecTyNumElements;
+  }
+  Mask.swap(NewMask);
+}
+
 /// \returns the number of groups of shufflevector
 /// A group has the following features
 /// 1. All of value in a group are shufflevector.
@@ -14286,7 +14306,18 @@ public:
         std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), VecVF), 0);
         Vec = createShuffle(Vec, nullptr, ResizeMask);
       }
+      // We need to transform CommonMask into scalar form because the Action
+      // (TryPackScalars) interpret the mask by the number of elements in
+      // Scalars.
+      if (ScalarTyNumElements != 1) {
+        assert(SLPReVec && "FixedVectorType is not expected.");
+        transformVectorShuffleIndiciesToScalar(ScalarTyNumElements, CommonMask);
+      }
       Action(Vec, CommonMask);
+      if (ScalarTyNumElements != 1) {
+        assert(SLPReVec && "FixedVectorType is not expected.");
+        transformScalarShuffleIndiciesToVector(ScalarTyNumElements, CommonMask);
+      }
       InVectors.front() = Vec;
     }
     if (!SubVectors.empty()) {
