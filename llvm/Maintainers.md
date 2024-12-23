@@ -46,10 +46,12 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
-#### InstCombine, ConstantFold
+#### InstCombine, InstSimplify, ValueTracking, ConstantFold
 
-David Majnemer \
-david.majnemer@gmail.com (email), [majnemer](https://github.com/majnemer) (GitHub)
+Nikita Popov \
+llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse) \
+Yingwei Zheng \
+dtcxzyw2333@gmail.com (email), [dtcxzyw](https://github.com/dtcxzyw) (GitHub)
 
 #### InstrProfiling and related parts of ProfileData
 
@@ -458,6 +460,7 @@ Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
