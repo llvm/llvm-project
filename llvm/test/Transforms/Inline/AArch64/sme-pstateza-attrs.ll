@@ -272,8 +272,8 @@ entry:
 ; [x] A -> Z
 ; [ ] A -> S
 ; [ ] A -> A
-define void @agnostic_za_caller_now_za_callee_dont_inline() "aarch64_za_state_agnostic" {
-; CHECK-LABEL: define void @agnostic_za_caller_now_za_callee_dont_inline
+define void @agnostic_za_caller_new_za_callee_dont_inline() "aarch64_za_state_agnostic" {
+; CHECK-LABEL: define void @agnostic_za_caller_new_za_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @new_za_callee()
