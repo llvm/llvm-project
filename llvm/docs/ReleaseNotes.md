@@ -350,16 +350,16 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
-* llvm-objcopy now supports the following options for MachO:
+* llvm-objcopy now supports the following options for Mach-O:
   `--globalize-symbol`, `--globalize-symbols`,
-  `--keep-global-symbol`, `-G`, `--keep-global-symbols`,
-  `--localize-symbol`, `-L`, `--localize-symbols`,
+  `--keep-global-symbol`, `--keep-global-symbols`,
+  `--localize-symbol`, `--localize-symbols`,
   `--skip-symbol`, `--skip-symbols`.
 
 Changes to LLDB
 ---------------------------------
 
-* LLDB now supports inline diagnostics for the expression evaluator and command line parser.
+* LLDB now now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
   ```

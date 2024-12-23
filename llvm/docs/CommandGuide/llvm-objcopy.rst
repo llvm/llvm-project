@@ -83,16 +83,12 @@ multiple file formats.
  Mark any defined symbols named ``<symbol>`` as global symbols in the output.
  Can be specified multiple times to mark multiple symbols.
 
- This option is only supported for ELF and MachO.
-
 .. option:: --globalize-symbols <filename>
 
  Read a list of names from the file ``<filename>`` and mark defined symbols with
  those names as global in the output. In the file, each line represents a single
  symbol, with leading and trailing whitespace ignored, as is anything following
  a '#'. Can be specified multiple times to read names from multiple files.
-
- This option is only supported for ELF and MachO.
 
 .. option:: --help, -h
 
@@ -103,8 +99,6 @@ multiple file formats.
  Mark all symbols local in the output, except for symbols with the name
  ``<symbol>``. Can be specified multiple times to ignore multiple symbols.
 
- This option is only supported for ELF and MachO.
-
 .. option:: --keep-global-symbols <filename>
 
  Mark all symbols local in the output, except for symbols named in the file
@@ -112,14 +106,10 @@ multiple file formats.
  and trailing whitespace ignored, as is anything following a '#'. Can be
  specified multiple times to read names from multiple files.
 
- This option is only supported for ELF and MachO.
-
 .. option:: --localize-symbol <symbol>, -L
 
  Mark any defined non-common symbol named ``<symbol>`` as a local symbol in the
  output. Can be specified multiple times to mark multiple symbols as local.
-
- This option is only supported for ELF and MachO.
 
 .. option:: --localize-symbols <filename>
 
@@ -128,8 +118,6 @@ multiple file formats.
  represents a single symbol, with leading and trailing whitespace ignored, as is
  anything following a '#'. Can be specified multiple times to read names from
  multiple files.
-
- This option is only supported for ELF and MachO.
 
 .. option:: --only-keep-debug
 
@@ -231,8 +219,6 @@ multiple file formats.
  Do not change the parameters of symbol ``<symbol>`` when executing other
  options that can change the symbol's name, binding or visibility.
 
- This option is only supported for ELF and MachO.
-
 .. option:: --skip-symbols <filename>
 
  Do not change the parameters of symbols named in the file ``<filename>`` when
@@ -240,8 +226,6 @@ multiple file formats.
  visibility. In the file, each line represents a single symbol, with leading
  and trailing whitespace ignored, as is anything following a '#'.
  Can be specified multiple times to read names from multiple files.
-
- This option is only supported for ELF and MachO.
 
 .. option:: --strip-all-gnu
 
