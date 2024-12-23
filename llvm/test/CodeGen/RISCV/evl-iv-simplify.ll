@@ -20,16 +20,6 @@ define void @simple(ptr noalias %a, ptr noalias %b, <vscale x 4 x i32> %c, i64 %
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP8]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 4
-; CHECK-NEXT:    [[TMP22:%.*]] = udiv i64 [[N_RND_UP]], [[TMP10]]
-; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw i64 [[TMP22]], 2
-; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 4, [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = mul i64 [[TMP24]], [[TMP9]]
-; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 0, [[TMP25]]
-; CHECK-NEXT:    [[TMP16:%.*]] = udiv i64 [[TMP15]], [[TMP10]]
-; CHECK-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP16]], [[TMP9]]
-; CHECK-NEXT:    [[TMP27:%.*]] = shl i64 [[TMP26]], 2
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -38,15 +28,15 @@ define void @simple(ptr noalias %a, ptr noalias %b, <vscale x 4 x i32> %c, i64 %
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[EVL_BASED_IV]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 0
-; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP17]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP12]])
+; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = add nsw <vscale x 4 x i32> [[C]], [[VP_OP_LOAD1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i32 0
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP18]], ptr align 4 [[TMP20]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP12]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP18]], ptr align 4 [[TMP20]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP21]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[TMP28:%.*]] = icmp ugt i64 [[INDEX_EVL_NEXT]], [[TMP27]]
-; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp uge i64 [[INDEX_EVL_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -75,20 +65,6 @@ define void @simple(ptr noalias %a, ptr noalias %b, <vscale x 4 x i32> %c, i64 %
 ; LOOP-DEL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; LOOP-DEL-NEXT:    br i1 [[TMP3]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; LOOP-DEL:       vector.ph:
-; LOOP-DEL-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; LOOP-DEL-NEXT:    [[TMP18:%.*]] = mul i64 [[TMP17]], 4
-; LOOP-DEL-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP18]], 1
-; LOOP-DEL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP19]]
-; LOOP-DEL-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; LOOP-DEL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP20]], 4
-; LOOP-DEL-NEXT:    [[TMP9:%.*]] = udiv i64 [[N_RND_UP]], [[TMP8]]
-; LOOP-DEL-NEXT:    [[TMP21:%.*]] = shl nuw nsw i64 [[TMP9]], 2
-; LOOP-DEL-NEXT:    [[TMP22:%.*]] = sub i64 4, [[TMP21]]
-; LOOP-DEL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP22]], [[TMP20]]
-; LOOP-DEL-NEXT:    [[TMP24:%.*]] = sub i64 0, [[TMP23]]
-; LOOP-DEL-NEXT:    [[TMP25:%.*]] = udiv i64 [[TMP24]], [[TMP8]]
-; LOOP-DEL-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP25]], [[TMP20]]
-; LOOP-DEL-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 2
 ; LOOP-DEL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LOOP-DEL:       vector.body:
 ; LOOP-DEL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -97,15 +73,15 @@ define void @simple(ptr noalias %a, ptr noalias %b, <vscale x 4 x i32> %c, i64 %
 ; LOOP-DEL-NEXT:    [[TMP6:%.*]] = add i64 [[EVL_BASED_IV]], 0
 ; LOOP-DEL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP6]]
 ; LOOP-DEL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; LOOP-DEL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP5]])
+; LOOP-DEL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; LOOP-DEL-NEXT:    [[TMP11:%.*]] = add nsw <vscale x 4 x i32> [[C]], [[VP_OP_LOAD1]]
 ; LOOP-DEL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; LOOP-DEL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 0
-; LOOP-DEL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP11]], ptr align 4 [[TMP13]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP5]])
+; LOOP-DEL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP11]], ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; LOOP-DEL-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP5]] to i64
 ; LOOP-DEL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP14]], [[EVL_BASED_IV]]
-; LOOP-DEL-NEXT:    [[TMP26:%.*]] = icmp ugt i64 [[INDEX_EVL_NEXT]], [[TMP16]]
-; LOOP-DEL-NEXT:    br i1 [[TMP26]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; LOOP-DEL-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[INDEX_EVL_NEXT]], [[N]]
+; LOOP-DEL-NEXT:    br i1 [[TMP15]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LOOP-DEL:       for.body:
 ; LOOP-DEL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; LOOP-DEL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
@@ -186,26 +162,19 @@ define void @fixed_iv_step(ptr %arg0, ptr %arg1, i64 %N) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[ARG0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[N_VEC]], -16
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP0]], i32 2, i1 true)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[ARG1]], i64 [[EVL_BASED_IV]]
-; CHECK-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP1]])
+; CHECK-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[EVL_BASED_IV]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[INDEX_EVL_NEXT]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[FOR_END_LOOPEXIT5:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[INDEX_EVL_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_END_LOOPEXIT5:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
 ; CHECK:       for.end.loopexit5:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
@@ -214,26 +183,19 @@ define void @fixed_iv_step(ptr %arg0, ptr %arg1, i64 %N) #0 {
 ; LOOP-DEL-LABEL: define void @fixed_iv_step(
 ; LOOP-DEL-SAME: ptr [[ARG0:%.*]], ptr [[ARG1:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; LOOP-DEL-NEXT:  entry:
-; LOOP-DEL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
-; LOOP-DEL-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; LOOP-DEL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[ARG0]], i64 0
 ; LOOP-DEL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; LOOP-DEL-NEXT:    [[TMP5:%.*]] = add i64 [[N_VEC]], -16
-; LOOP-DEL-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 4
-; LOOP-DEL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; LOOP-DEL-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP6]], [[TMP7]]
-; LOOP-DEL-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 1
 ; LOOP-DEL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LOOP-DEL:       vector.body:
 ; LOOP-DEL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LOOP-DEL-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; LOOP-DEL-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP0]], i32 2, i1 true)
 ; LOOP-DEL-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[ARG1]], i64 [[EVL_BASED_IV]]
-; LOOP-DEL-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP1]])
+; LOOP-DEL-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; LOOP-DEL-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; LOOP-DEL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[EVL_BASED_IV]], [[TMP2]]
-; LOOP-DEL-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[INDEX_EVL_NEXT]], [[TMP4]]
-; LOOP-DEL-NEXT:    br i1 [[TMP8]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
+; LOOP-DEL-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[INDEX_EVL_NEXT]], [[N]]
+; LOOP-DEL-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
 ; LOOP-DEL:       for.end:
 ; LOOP-DEL-NEXT:    ret void
 ;
@@ -276,19 +238,17 @@ define void @fixed_iv_step_tc(ptr %arg0, ptr %arg1) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[ARG0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw i64 [[TMP3]], 10
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 87, [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP0]], i32 2, i1 true)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[ARG1]], i64 [[EVL_BASED_IV]]
-; CHECK-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP1]])
+; CHECK-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[EVL_BASED_IV]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[INDEX_EVL_NEXT]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_END_LOOPEXIT5:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[INDEX_EVL_NEXT]], 87
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_END_LOOPEXIT5:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
 ; CHECK:       for.end.loopexit5:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
@@ -299,19 +259,17 @@ define void @fixed_iv_step_tc(ptr %arg0, ptr %arg1) #0 {
 ; LOOP-DEL-NEXT:  entry:
 ; LOOP-DEL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[ARG0]], i64 0
 ; LOOP-DEL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; LOOP-DEL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; LOOP-DEL-NEXT:    [[TMP4:%.*]] = mul nuw nsw i64 [[TMP3]], 10
 ; LOOP-DEL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LOOP-DEL:       vector.body:
 ; LOOP-DEL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LOOP-DEL-NEXT:    [[TMP0:%.*]] = sub i64 87, [[EVL_BASED_IV]]
 ; LOOP-DEL-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP0]], i32 2, i1 true)
 ; LOOP-DEL-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[ARG1]], i64 [[EVL_BASED_IV]]
-; LOOP-DEL-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP1]])
+; LOOP-DEL-NEXT:    tail call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], ptr align 8 [[GEP]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; LOOP-DEL-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; LOOP-DEL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[EVL_BASED_IV]], [[TMP2]]
-; LOOP-DEL-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[INDEX_EVL_NEXT]], [[TMP4]]
-; LOOP-DEL-NEXT:    br i1 [[TMP5]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
+; LOOP-DEL-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[INDEX_EVL_NEXT]], 87
+; LOOP-DEL-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3]]
 ; LOOP-DEL:       for.end:
 ; LOOP-DEL-NEXT:    ret void
 ;
