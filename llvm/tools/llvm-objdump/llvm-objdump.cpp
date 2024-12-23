@@ -2367,11 +2367,11 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 while (It != SectionAddresses.begin()) {
                   --It;
                   if (It->first != TargetSecAddr) {
-                    if (FoundSymbols)
-                      break;
-                    else {
+                    if (!FoundSymbols) {
                       TargetSecAddr = It->first;
                       AbsoluteFirst = true;
+                    } else {
+                      break;
                     }
                   }
                   TargetSectionSymbols.push_back(&AllSymbols[It->second]);
