@@ -21,6 +21,14 @@ mlir::Value fir::runtime::genMapExcept(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, excepts).getResult(0);
 }
 
+mlir::Value fir::runtime::genSupportHalting(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Value excepts) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(SupportHalting)>(loc, builder)};
+  return builder.create<fir::CallOp>(loc, func, excepts).getResult(0);
+}
+
 mlir::Value fir::runtime::genGetUnderflowMode(fir::FirOpBuilder &builder,
                                               mlir::Location loc) {
   mlir::func::FuncOp func{
