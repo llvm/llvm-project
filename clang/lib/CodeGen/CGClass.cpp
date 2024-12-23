@@ -1544,8 +1544,8 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (DtorType == Dtor_Deleting) {
-    if (CXXStructorImplicitParamValue) {
+  if (DtorType == Dtor_Deleting || DtorType == Dtor_VectorDeleting) {
+    if (CXXStructorImplicitParamValue && DtorType == Dtor_VectorDeleting) {
       EmitConditionalArrayDtorCall(Dtor, *this, CXXStructorImplicitParamValue,
                                    false);
     }

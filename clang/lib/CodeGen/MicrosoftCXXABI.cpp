@@ -70,9 +70,8 @@ public:
       switch (GD.getDtorType()) {
       case Dtor_Complete:
       case Dtor_Deleting:
-        return true;
       case Dtor_VectorDeleting:
-	return true;
+        return true;
       case Dtor_Base:
         return false;
 
@@ -261,7 +260,7 @@ public:
 
         // There's only Dtor_Deleting in vftable but it shares the this
         // adjustment with the base one, so look up the deleting one instead.
-        LookupGD = GlobalDecl(DD, Dtor_Deleting);
+        LookupGD = GlobalDecl(DD, Dtor_VectorDeleting);
       }
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
@@ -895,7 +894,8 @@ void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
   // FIXME: Provide a source location here even though there's no
   // CXXMemberCallExpr for dtor call.
   bool UseGlobalDelete = DE->isGlobalDelete();
-  CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
+  // FIXME check that vector deletion is actually required.
+  CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_VectorDeleting;
   llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
                                                   /*CallOrInvoke=*/nullptr);
   if (UseGlobalDelete)
@@ -1443,7 +1443,7 @@ MicrosoftCXXABI::getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) {
 
     // There's no Dtor_Base in vftable but it shares the this adjustment with
     // the deleting one, so look it up instead.
-    GD = GlobalDecl(DD, Dtor_Deleting);
+    GD = GlobalDecl(DD, Dtor_VectorDeleting);
   }
 
   MethodVFTableLocation ML =
@@ -2015,10 +2015,12 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   llvm::FunctionType *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
   CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
+  bool UseGlobalDelete = D->isGlobalDelete();
+  bool CallDelete = !UseGlobalDelete;
   ASTContext &Context = getContext();
   llvm::Value *ImplicitParam = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(CGF.getLLVMContext()),
-      DtorType == Dtor_Deleting);
+      2 * (DtorType == Dtor_VectorDeleting) + CallDelete);
 
   QualType ThisTy;
   if (CE) {

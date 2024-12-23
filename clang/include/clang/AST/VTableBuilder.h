@@ -161,7 +161,7 @@ public:
     case CK_CompleteDtorPointer:
       return GlobalDecl(DtorDecl, CXXDtorType::Dtor_Complete);
     case CK_DeletingDtorPointer:
-      return GlobalDecl(DtorDecl, CXXDtorType::Dtor_Deleting);
+      return GlobalDecl(DtorDecl, CXXDtorType::Dtor_VectorDeleting);
     case CK_VCallOffset:
     case CK_VBaseOffset:
     case CK_OffsetToTop:

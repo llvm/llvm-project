@@ -2654,11 +2654,11 @@ private:
       MethodVFTableLocation Loc(MI.VBTableIndex, WhichVFPtr.getVBaseWithVPtr(),
                                 WhichVFPtr.NonVirtualOffset, MI.VFTableIndex);
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-	if (!Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+        if (!Context.getTargetInfo().getCXXABI().isMicrosoft()) {
           MethodVFTableLocations[GlobalDecl(DD, Dtor_Deleting)] = Loc;
-	} else {
-	  MethodVFTableLocations[GlobalDecl(DD, Dtor_VectorDeleting)] = Loc;
-	}  
+        } else {
+          MethodVFTableLocations[GlobalDecl(DD, Dtor_VectorDeleting)] = Loc;
+        }
       } else {
         MethodVFTableLocations[MD] = Loc;
       }
@@ -3879,12 +3879,9 @@ MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
   assert(hasVtableSlot(cast<CXXMethodDecl>(GD.getDecl())) &&
          "Only use this method for virtual methods or dtors");
   if (isa<CXXDestructorDecl>(GD.getDecl())) {
-    if (!Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-      assert(GD.getDtorType() == Dtor_Deleting);
-    } else {
-      assert(GD.getDtorType() == Dtor_VectorDeleting);
-    }  
-  }  
+    assert(GD.getDtorType() == Dtor_Deleting ||
+           GD.getDtorType() == Dtor_VectorDeleting);
+  }
 
   GD = GD.getCanonicalDecl();
 
