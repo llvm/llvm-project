@@ -120,7 +120,7 @@ void perror(const char* s);
 #      undef putchar
 #      undef getchar
 
-#    endif
-#  endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#    endif // __cplusplus
+#  endif   // _LIBCPP_STDIO_H
 
-#endif // _LIBCPP_STDIO_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

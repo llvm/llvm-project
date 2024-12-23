@@ -206,6 +206,6 @@ size_t wcsnrtombs(
 } // extern "C"
 #      endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 #    endif   // _LIBCPP_HAS_WIDE_CHARACTERS
-#  endif     // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  endif     // _LIBCPP_WCHAR_H
 
-#endif // _LIBCPP_WCHAR_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
