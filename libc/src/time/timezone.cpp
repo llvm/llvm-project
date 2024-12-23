@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-tzset *get_timezone_offset(char *timezone) {
+tzset *get_tzset(char *timezone) {
   static ttinfo ttinfo;
   static tzset result;
 
