@@ -6,6 +6,7 @@
 // RUN: FileCheck --check-prefix=CHECK-REQ %s < %t.2
 
 // ALL: .text
+.text
   mrs x0, apiakeylo_el1
   mrs x0, apiakeyhi_el1
   mrs x0, apibkeylo_el1

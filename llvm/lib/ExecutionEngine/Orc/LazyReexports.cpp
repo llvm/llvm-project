@@ -294,14 +294,14 @@ LazyReexportsManager::Create(EmitTrampolinesFn EmitTrampolines,
 
 Error LazyReexportsManager::handleRemoveResources(JITDylib &JD, ResourceKey K) {
   JD.getExecutionSession().runSessionLocked([&]() {
-    auto I = KeyToReentryAddr.find(K);
-    if (I != KeyToReentryAddr.end()) {
+    auto I = KeyToReentryAddrs.find(K);
+    if (I != KeyToReentryAddrs.end()) {
       auto &ReentryAddrs = I->second;
       for (auto &ReentryAddr : ReentryAddrs) {
         assert(CallThroughs.count(ReentryAddr) && "CallTrhough missing");
         CallThroughs.erase(ReentryAddr);
       }
-      KeyToReentryAddr.erase(I);
+      KeyToReentryAddrs.erase(I);
     }
   });
   return Error::success();
@@ -310,19 +310,18 @@ Error LazyReexportsManager::handleRemoveResources(JITDylib &JD, ResourceKey K) {
 void LazyReexportsManager::handleTransferResources(JITDylib &JD,
                                                    ResourceKey DstK,
                                                    ResourceKey SrcK) {
-  auto I = KeyToReentryAddr.find(SrcK);
-  if (I != KeyToReentryAddr.end()) {
-    auto J = KeyToReentryAddr.find(DstK);
-    if (J == KeyToReentryAddr.end()) {
+  auto I = KeyToReentryAddrs.find(SrcK);
+  if (I != KeyToReentryAddrs.end()) {
+    auto J = KeyToReentryAddrs.find(DstK);
+    if (J == KeyToReentryAddrs.end()) {
       auto Tmp = std::move(I->second);
-      KeyToReentryAddr.erase(I);
-      KeyToReentryAddr[DstK] = std::move(Tmp);
+      KeyToReentryAddrs.erase(I);
+      KeyToReentryAddrs[DstK] = std::move(Tmp);
     } else {
-      auto &SrcReentryAddrs = I->second;
-      auto &DstReentryAddrs = J->second;
-      for (auto &ReentryAddr : SrcReentryAddrs)
-        DstReentryAddrs.push_back(std::move(ReentryAddr));
-      KeyToReentryAddr.erase(I);
+      auto &SrcAddrs = I->second;
+      auto &DstAddrs = J->second;
+      DstAddrs.insert(DstAddrs.end(), SrcAddrs.begin(), SrcAddrs.end());
+      KeyToReentryAddrs.erase(I);
     }
   }
 }
@@ -390,7 +389,7 @@ void LazyReexportsManager::emitRedirectableSymbols(
           const auto &ReentryPoint = (*ReentryPoints)[I++];
           CallThroughs[ReentryPoint.getAddress()] = {Name, AI.Aliasee,
                                                      &MR->getTargetJITDylib()};
-          KeyToReentryAddr[K].push_back(ReentryPoint.getAddress());
+          KeyToReentryAddrs[K].push_back(ReentryPoint.getAddress());
         }
       })) {
     MR->getExecutionSession().reportError(std::move(Err));
