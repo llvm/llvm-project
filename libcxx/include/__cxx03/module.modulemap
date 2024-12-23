@@ -1720,6 +1720,7 @@ module cxx03_std_private_ranges_empty                      [system] { header "__
 module cxx03_std_private_ranges_empty_view                 [system] { header "__ranges/empty_view.h" }
 module cxx03_std_private_ranges_enable_borrowed_range      [system] { header "__ranges/enable_borrowed_range.h" }
 module cxx03_std_private_ranges_enable_view                [system] { header "__ranges/enable_view.h" }
+module cxx03_std_private_ranges_concat_view                [system] { header "__ranges/concat_view.h" }
 module cxx03_std_private_ranges_filter_view                [system] {
   header "__ranges/filter_view.h"
   export std_private_ranges_range_adaptor

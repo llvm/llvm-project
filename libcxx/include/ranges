@@ -197,6 +197,16 @@ namespace std::ranges {
     inline constexpr unspecified filter = unspecified;
   }
 
+  // [range.concat], concat view
+  template <input_range... Views>
+      requires (view<Views> && ...) && (sizeof...(Views) > 0) &&
+                concatable<Views...>
+  class concat_view;
+
+  namespace views {
+    inline constexpr unspecified concat = unspecified;
+  }
+
   // [range.drop], drop view
   template<view V>
     class drop_view;
