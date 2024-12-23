@@ -138,6 +138,7 @@ private:
   }
 
   void eraseInstruction(Instruction &I) {
+    LLVM_DEBUG(dbgs() << "VC: Erasing: " << I << '\n');
     for (Value *Op : I.operands())
       Worklist.pushValue(Op);
     Worklist.remove(&I);
@@ -794,17 +795,21 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
       IsUnary ? TargetTransformInfo::SK_PermuteSingleSrc
               : TargetTransformInfo::SK_PermuteTwoSrc;
 
-  InstructionCost DestCost =
+  InstructionCost NewCost =
       TTI.getShuffleCost(SK, NewShuffleTy, NewMask, CostKind) +
       (NumOps * TTI.getCastInstrCost(Instruction::BitCast, NewShuffleTy, SrcTy,
                                      TargetTransformInfo::CastContextHint::None,
                                      CostKind));
-  InstructionCost SrcCost =
+  InstructionCost OldCost =
       TTI.getShuffleCost(SK, SrcTy, Mask, CostKind) +
       TTI.getCastInstrCost(Instruction::BitCast, DestTy, OldShuffleTy,
                            TargetTransformInfo::CastContextHint::None,
                            CostKind);
-  if (DestCost > SrcCost || !DestCost.isValid())
+
+  LLVM_DEBUG(dbgs() << "Found a bitcasted shuffle: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
+  if (NewCost > OldCost || !NewCost.isValid())
     return false;
 
   // bitcast (shuf V0, V1, MaskC) --> shuf (bitcast V0), (bitcast V1), MaskC'
@@ -1526,6 +1531,10 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
                                     TTI::CastContextHint::None, CostKind);
   if (ShAmtX > 0)
     NewCost += TTI.getArithmeticInstrCost(Instruction::Shl, Ty, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found a concatenation of bitcasted bool masks: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
 
   if (NewCost > OldCost)
     return false;
@@ -2366,6 +2375,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
   if (NumVisited <= 1)
     return false;
+
+  LLVM_DEBUG(dbgs() << "Found a superfluous identity shuffle: " << I << "\n");
 
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.

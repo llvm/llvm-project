@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
 
 #include "Globals.h"
 #include "IRModule.h"
 #include "NanobindUtils.h"
 #include "Pass.h"
 #include "Rewrite.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 
 namespace nb = nanobind;
 using namespace mlir;
