@@ -187,7 +187,7 @@ struct ConversionValueMapping {
   }
 
   /// Drop the last mapping for the given values.
-  void erase(ValueVector value) { mapping.erase(value); }
+  void erase(const ValueVector &value) { mapping.erase(value); }
 
 private:
   /// Current value mappings.
@@ -221,7 +221,7 @@ ConversionValueMapping::lookupOrDefault(ValueVector from,
     }
     if (next != from) {
       // If at least one value was replaced, continue the lookup from there.
-      from = next;
+      from = std::move(next);
       continue;
     }
 
@@ -1175,7 +1175,7 @@ UnresolvedMaterializationRewrite::UnresolvedMaterializationRewrite(
     ValueVector mappedValues)
     : OperationRewrite(Kind::UnresolvedMaterialization, rewriterImpl, op),
       converterAndKind(converter, kind), originalType(originalType),
-      mappedValues(mappedValues) {
+      mappedValues(std::move(mappedValues)) {
   assert((!originalType || kind == MaterializationKind::Target) &&
          "original type is valid only for target materializations");
   rewriterImpl.unresolvedMaterializations[op] = this;
@@ -1265,9 +1265,9 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
     ValueVector repl = mapping.lookupOrDefault({operand}, legalTypes);
     if (!repl.empty() && TypeRange(repl) == legalTypes) {
       // Mapped values have the correct type or there is an existing
-      // materialization. Or the opreand is not mapped at all and has the
+      // materialization. Or the operand is not mapped at all and has the
       // correct type.
-      remapped.push_back(repl);
+      remapped.push_back(std::move(repl));
       continue;
     }
 
@@ -1416,8 +1416,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     // used as a replacement.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
-    ValueVector replArgVals = llvm::map_to_vector<1>(
-        replArgs, [](BlockArgument arg) -> Value { return arg; });
+    ValueVector replArgVals = llvm::to_vector_of<Value, 1>(replArgs);
     mapping.map({origArg}, replArgVals);
     appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
   }
@@ -1462,8 +1461,8 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     mapping.map(valuesToMap, convertOp.getResults());
   if (castOp)
     *castOp = convertOp;
-  appendRewrite<UnresolvedMaterializationRewrite>(convertOp, converter, kind,
-                                                  originalType, valuesToMap);
+  appendRewrite<UnresolvedMaterializationRewrite>(
+      convertOp, converter, kind, originalType, std::move(valuesToMap));
   return convertOp.getResults();
 }
 
@@ -1495,10 +1494,13 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
     // `applySignatureConversion`.)
     return Value();
   }
-  Value castValue = buildUnresolvedMaterialization(
-      MaterializationKind::Source, computeInsertPoint(repl), value.getLoc(),
-      /*valuesToMap=*/{value}, /*inputs=*/repl, /*outputType=*/value.getType(),
-      /*originalType=*/Type(), converter)[0];
+  Value castValue =
+      buildUnresolvedMaterialization(MaterializationKind::Source,
+                                     computeInsertPoint(repl), value.getLoc(),
+                                     /*valuesToMap=*/{value}, /*inputs=*/repl,
+                                     /*outputType=*/value.getType(),
+                                     /*originalType=*/Type(), converter)
+          .front();
   mapping.map({value}, {castValue});
   return castValue;
 }
