@@ -1488,7 +1488,7 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
       })
       .Case<VPWidenIntrinsicRecipe, VPWidenCastRecipe>(
           [&](auto *CR) -> VPRecipeBase * {
-            Intrinsic::ID VPID;
+            Intrinsic::ID VPID = Intrinsic::not_intrinsic;
             if (auto *CallR = dyn_cast<VPWidenIntrinsicRecipe>(CR))
               VPID =
                   VPIntrinsic::getForIntrinsic(CallR->getVectorIntrinsicID());
