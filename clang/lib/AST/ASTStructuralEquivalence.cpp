@@ -1833,12 +1833,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Check the fields for consistency.
   QualType D2Type = Context.ToCtx.getTypeDeclType(D2);
-  RecordDecl::field_iterator Field2 = D2->field_begin(),
-                             Field2End = D2->field_end();
-  for (RecordDecl::field_iterator Field1 = D1->field_begin(),
-                                  Field1End = D1->field_end();
-       Field1 != Field1End; ++Field1, ++Field2) {
-    if (Field2 == Field2End) {
+  std::optional<FieldDecl*> Field2Opt = std::nullopt;
+
+  for (auto FieldsTuple : llvm::zip_first(D1->fields(), D2->fields())) {
+    FieldDecl *Field1 = std::get<0>(FieldsTuple);
+    std::optional<FieldDecl*> Field2Opt = std::get<1>(FieldsTuple);
+
+    if (!Field2Opt.has_value()) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
                       Context.getApplicableDiagnostic(
@@ -1851,12 +1852,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     }
 
-    if (!IsStructurallyEquivalent(Context, *Field1, *Field2, D2Type))
+    FieldDecl *Field2 = std::get<1>(FieldsTuple);
+    if (!IsStructurallyEquivalent(Context, Field1, Field2, D2Type))
       return false;
   }
 
-  if (Field2 != Field2End) {
+  if (Field2Opt.has_value()) {
     if (Context.Complain) {
+      FieldDecl *Field2 = *Field2Opt;
       Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
                                            diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(D2);

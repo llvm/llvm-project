@@ -4057,14 +4057,12 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  RecordDecl::field_iterator Field = RD->field_begin(),
-                          FieldEnd = RD->field_end();
-  if (Field == FieldEnd) {
+  if (RD->field_empty()) {
     S.Diag(AL.getLoc(), diag::warn_transparent_union_attribute_zero_fields);
     return;
   }
 
-  FieldDecl *FirstField = *Field;
+  FieldDecl *FirstField = *RD->field_begin();
   QualType FirstType = FirstField->getType();
   if (FirstType->hasFloatingRepresentation() || FirstType->isVectorType()) {
     S.Diag(FirstField->getLocation(),
@@ -4077,7 +4075,7 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   uint64_t FirstSize = S.Context.getTypeSize(FirstType);
   uint64_t FirstAlign = S.Context.getTypeAlign(FirstType);
-  for (; Field != FieldEnd; ++Field) {
+  for (FieldDecl *Field : RD->fields()) {
     QualType FieldType = Field->getType();
     if (FieldType->isIncompleteType())
       return;
@@ -4094,7 +4092,7 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                   : S.Context.getTypeAlign(FieldType);
       S.Diag(Field->getLocation(),
              diag::warn_transparent_union_attribute_field_size_align)
-          << isSize << *Field << FieldBits;
+          << isSize << Field << FieldBits;
       unsigned FirstBits = isSize ? FirstSize : FirstAlign;
       S.Diag(FirstField->getLocation(),
              diag::note_transparent_union_first_field_size_align)

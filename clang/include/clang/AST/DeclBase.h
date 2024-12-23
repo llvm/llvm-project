@@ -2346,19 +2346,61 @@ public:
 
   /// decls_begin/decls_end - Iterate over the declarations stored in
   /// this context.
-  decl_range decls() const { return decl_range(decls_begin(), decls_end()); }
-  decl_iterator decls_begin() const;
-  decl_iterator decls_end() const { return decl_iterator(); }
-  bool decls_empty() const;
+  decl_range decls() const;
+  decl_iterator decls_begin() const { return decls().begin(); }
+  decl_iterator decls_end() const { return decls().end(); }
+  bool decls_empty() const {return decls().empty(); }
 
   /// noload_decls_begin/end - Iterate over the declarations stored in this
   /// context that are currently loaded; don't attempt to retrieve anything
   /// from an external source.
   decl_range noload_decls() const {
-    return decl_range(noload_decls_begin(), noload_decls_end());
+    return { decl_iterator(FirstDecl), decl_iterator{}};
   }
-  decl_iterator noload_decls_begin() const { return decl_iterator(FirstDecl); }
-  decl_iterator noload_decls_end() const { return decl_iterator(); }
+
+  decl_iterator noload_decls_begin() const { return noload_decls().begin(); }
+  decl_iterator noload_decls_end() const { return noload_decls().end(); }
+
+  template <typename ItTy, typename SpecificDecl>
+  class decl_cast_iterator : public llvm::mapped_iterator_base<
+                                 decl_cast_iterator<ItTy, SpecificDecl>, ItTy,
+                                 SpecificDecl *> {
+    using BaseT =
+        llvm::mapped_iterator_base<decl_cast_iterator<ItTy, SpecificDecl>, ItTy,
+                                   SpecificDecl *>;
+
+  public:
+    decl_cast_iterator() : BaseT(ItTy{}) {}
+    decl_cast_iterator(ItTy Itr) : BaseT(Itr) {}
+
+    SpecificDecl *mapElement(Decl *D) const {
+      return cast<SpecificDecl>(D);
+    }
+  };
+
+  template <typename SpecificDecl, typename ItTy>
+  static decl_cast_iterator<ItTy, SpecificDecl>
+  make_decl_cast_iterator(ItTy Itr) {
+    return decl_cast_iterator<ItTy, SpecificDecl>(Itr);
+  }
+
+  /// Makes a casting filter range for the decls collection.
+  template <typename SpecificDecl> auto specific_decls() {
+    auto filtered_range =
+        llvm::make_filter_range(decls(), llvm::IsaPred<SpecificDecl>);
+    return llvm::make_range(
+        make_decl_cast_iterator<SpecificDecl>(filtered_range.begin()),
+        make_decl_cast_iterator<SpecificDecl>(filtered_range.end()));
+  }
+
+  /// Makes a casting filter range for the decls collection.
+  template <typename SpecificDecl> auto specific_decls() const {
+    auto filtered_range =
+        llvm::make_filter_range(decls(), llvm::IsaPred<SpecificDecl>);
+    return llvm::make_range(
+        make_decl_cast_iterator<SpecificDecl>(filtered_range.begin()),
+        make_decl_cast_iterator<SpecificDecl>(filtered_range.end()));
+  }
 
   /// specific_decl_iterator - Iterates over a subrange of
   /// declarations stored in a DeclContext, providing only those that

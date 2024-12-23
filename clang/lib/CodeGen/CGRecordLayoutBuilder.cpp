@@ -381,9 +381,9 @@ void CGRecordLowering::accumulateFields(bool isNonVirtualBaseType) {
   for (RecordDecl::field_iterator Field = D->field_begin(),
                                   FieldEnd = D->field_end();
        Field != FieldEnd;) {
-    if (Field->isBitField()) {
+    if ((*Field)->isBitField()) {
       Field = accumulateBitFields(isNonVirtualBaseType, Field, FieldEnd);
-      assert((Field == FieldEnd || !Field->isBitField()) &&
+      assert((Field == FieldEnd || !(*Field)->isBitField()) &&
              "Failed to accumulate all the bitfields");
     } else if (isEmptyFieldForLayout(Context, *Field)) {
       // Empty fields have no storage.
@@ -393,8 +393,8 @@ void CGRecordLowering::accumulateFields(bool isNonVirtualBaseType) {
       // as it is done in RecordLayoutBuilder
       Members.push_back(MemberInfo(
           bitsToCharUnits(getFieldBitOffset(*Field)), MemberInfo::Field,
-          Field->isPotentiallyOverlapping()
-              ? getStorageType(Field->getType()->getAsCXXRecordDecl())
+          (*Field)->isPotentiallyOverlapping()
+              ? getStorageType((*Field)->getType()->getAsCXXRecordDecl())
               : getStorageType(*Field),
           *Field));
       ++Field;
@@ -421,14 +421,14 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
     // used to determine if the ASTRecordLayout is treating these two bitfields
     // as contiguous. StartBitOffset is offset of the beginning of the Run.
     uint64_t StartBitOffset, Tail = 0;
-    for (; Field != FieldEnd && Field->isBitField(); ++Field) {
+    for (; Field != FieldEnd && (*Field)->isBitField(); ++Field) {
       // Zero-width bitfields end runs.
-      if (Field->isZeroLengthBitField(Context)) {
+      if ((*Field)->isZeroLengthBitField(Context)) {
         Run = FieldEnd;
         continue;
       }
       uint64_t BitOffset = getFieldBitOffset(*Field);
-      llvm::Type *Type = Types.ConvertTypeForMem(Field->getType());
+      llvm::Type *Type = Types.ConvertTypeForMem((*Field)->getType());
       // If we don't have a run yet, or don't live within the previous run's
       // allocated storage then we allocate some storage and start a new run.
       if (Run == FieldEnd || BitOffset >= Tail) {
@@ -536,7 +536,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
     bool AtAlignedBoundary = false;
     bool Barrier = false;
 
-    if (Field != FieldEnd && Field->isBitField()) {
+    if (Field != FieldEnd && (*Field)->isBitField()) {
       uint64_t BitOffset = getFieldBitOffset(*Field);
       if (Begin == FieldEnd) {
         // Beginning a new span.
@@ -559,7 +559,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
         // Bitfield potentially begins a new span. This includes zero-length
         // bitfields on non-aligning targets that lie at character boundaries
         // (those are barriers to merging).
-        if (Field->isZeroLengthBitField(Context))
+        if ((*Field)->isZeroLengthBitField(Context))
           Barrier = true;
         AtAlignedBoundary = true;
       }
@@ -676,7 +676,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
     }
 
     if (InstallBest) {
-      assert((Field == FieldEnd || !Field->isBitField() ||
+      assert((Field == FieldEnd || !(*Field)->isBitField() ||
               (getFieldBitOffset(*Field) % CharBits) == 0) &&
              "Installing but not at an aligned bitfield or limit");
       CharUnits AccessSize = BestEndOffset - BeginOffset;
@@ -697,7 +697,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
         }
         Members.push_back(StorageInfo(BeginOffset, Type));
         for (; Begin != BestEnd; ++Begin)
-          if (!Begin->isZeroLengthBitField(Context))
+          if (!(*Begin)->isZeroLengthBitField(Context))
             Members.push_back(
                 MemberInfo(BeginOffset, MemberInfo::Field, nullptr, *Begin));
       }
@@ -705,11 +705,11 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
       Field = BestEnd;
       Begin = FieldEnd;
     } else {
-      assert(Field != FieldEnd && Field->isBitField() &&
+      assert(Field != FieldEnd && (*Field)->isBitField() &&
              "Accumulating past end of bitfields");
       assert(!Barrier && "Accumulating across barrier");
       // Accumulate this bitfield into the current (potential) span.
-      BitSizeSinceBegin += Field->getBitWidthValue(Context);
+      BitSizeSinceBegin += (*Field)->getBitWidthValue(Context);
       ++Field;
     }
   }

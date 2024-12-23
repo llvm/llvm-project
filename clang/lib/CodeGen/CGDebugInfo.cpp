@@ -1716,8 +1716,10 @@ llvm::DIDerivedType *CGDebugInfo::createBitFieldSeparatorIfNeeded(
       PreviousMDField->getSizeInBits() == 0)
     return nullptr;
 
-  auto PreviousBitfield = RD->field_begin();
-  std::advance(PreviousBitfield, BitFieldDecl->getFieldIndex() - 1);
+  auto PreviousBitfieldItr = RD->field_begin();
+  std::advance(PreviousBitfieldItr, BitFieldDecl->getFieldIndex() - 1);
+
+  FieldDecl *PreviousBitfield = *PreviousBitfieldItr;
 
   assert(PreviousBitfield->isBitField());
 
@@ -1741,7 +1743,7 @@ llvm::DIDerivedType *CGDebugInfo::createBitFieldSeparatorIfNeeded(
   llvm::DINode::DIFlags Flags =
       getAccessFlag(PreviousBitfield->getAccess(), RD);
   llvm::DINodeArray Annotations =
-      CollectBTFDeclTagAnnotations(*PreviousBitfield);
+      CollectBTFDeclTagAnnotations(PreviousBitfield);
   return DBuilder.createBitFieldMemberType(
       RecordTy, "", File, Line, 0, StorageOffsetInBits, StorageOffsetInBits,
       Flags, DebugType, Annotations);
@@ -1800,12 +1802,8 @@ void CGDebugInfo::CollectRecordLambdaFields(
   // has the name and the location of the variable so we should iterate over
   // both concurrently.
   const ASTRecordLayout &layout = CGM.getContext().getASTRecordLayout(CXXDecl);
-  RecordDecl::field_iterator Field = CXXDecl->field_begin();
-  unsigned fieldno = 0;
-  for (CXXRecordDecl::capture_const_iterator I = CXXDecl->captures_begin(),
-                                             E = CXXDecl->captures_end();
-       I != E; ++I, ++Field, ++fieldno) {
-    const LambdaCapture &C = *I;
+  for (const auto &[fieldno, C, Field] :
+           llvm::enumerate(CXXDecl->captures(), CXXDecl->fields())) {
     if (C.capturesVariable()) {
       SourceLocation Loc = C.getLocation();
       assert(!Field->isBitField() && "lambdas don't have bitfield members!");
@@ -1822,13 +1820,12 @@ void CGDebugInfo::CollectRecordLambdaFields(
       // this of the lambda class and having a field member of 'this' or
       // by using AT_object_pointer for the function and having that be
       // used as 'this' for semantic references.
-      FieldDecl *f = *Field;
-      llvm::DIFile *VUnit = getOrCreateFile(f->getLocation());
-      QualType type = f->getType();
+      llvm::DIFile *VUnit = getOrCreateFile(Field->getLocation());
+      QualType type = Field->getType();
       StringRef ThisName =
           CGM.getCodeGenOpts().EmitCodeView ? "__this" : "this";
       llvm::DIType *fieldType = createFieldType(
-          ThisName, type, f->getLocation(), f->getAccess(),
+          ThisName, type, Field->getLocation(), Field->getAccess(),
           layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
 
       elements.push_back(fieldType);
@@ -2695,7 +2692,7 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
       // This is a template, check the origin of the first member.
       if (CXXDecl->field_begin() == CXXDecl->field_end())
         return TemplateKind == TSK_ExplicitInstantiationDeclaration;
-      if (!CXXDecl->field_begin()->isFromASTFile())
+      if (!(*CXXDecl->field_begin())->isFromASTFile())
         return false;
     }
   }

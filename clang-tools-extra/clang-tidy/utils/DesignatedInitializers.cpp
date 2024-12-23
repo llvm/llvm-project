@@ -80,12 +80,12 @@ public:
       return false; // Bases can't be designated. Should we make one up?
     if (FieldsIt != FieldsEnd) {
       llvm::StringRef FieldName;
-      if (const IdentifierInfo *II = FieldsIt->getIdentifier())
+      if (const IdentifierInfo *II = (*FieldsIt)->getIdentifier())
         FieldName = II->getName();
 
       // For certain objects, their subobjects may be named directly.
       if (ForSubobject &&
-          (FieldsIt->isAnonymousStructOrUnion() ||
+          ((*FieldsIt)->isAnonymousStructOrUnion() ||
            // std::array<int,3> x = {1,2,3}. Designators not strictly valid!
            (OneField && isReservedName(FieldName))))
         return true;

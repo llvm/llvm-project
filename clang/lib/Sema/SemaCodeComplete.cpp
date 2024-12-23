@@ -6987,11 +6987,8 @@ void SemaCodeCompletion::CodeCompleteNamespaceDecl(Scope *S) {
     // extended namespace declaration. Keep track of the most recent
     // definition of each namespace.
     std::map<NamespaceDecl *, NamespaceDecl *> OrigToLatest;
-    for (DeclContext::specific_decl_iterator<NamespaceDecl>
-             NS(Ctx->decls_begin()),
-         NSEnd(Ctx->decls_end());
-         NS != NSEnd; ++NS)
-      OrigToLatest[NS->getFirstDecl()] = *NS;
+    for (auto *NS : Ctx->specific_decls<NamespaceDecl>())
+      OrigToLatest[NS->getFirstDecl()] = NS;
 
     // Add the most recent definition (or extended definition) of each
     // namespace to the list of results.

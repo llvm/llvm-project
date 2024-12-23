@@ -2345,8 +2345,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
       // allow at most one initializer per member.
       bool AnyAnonStructUnionMembers = false;
       unsigned Fields = 0;
-      for (CXXRecordDecl::field_iterator I = RD->field_begin(),
-           E = RD->field_end(); I != E; ++I, ++Fields) {
+      for (auto FieldCountTuple : llvm::enumerate(RD->fields())) {
+        FieldDecl *I = FieldCountTuple.value();
+        Fields = FieldCountTuple.index();
         if (I->isAnonymousStructOrUnion()) {
           AnyAnonStructUnionMembers = true;
           break;
@@ -9920,8 +9921,7 @@ static CXXConstructorDecl *findUserDeclaredCtor(CXXRecordDecl *RD) {
       return CI;
 
   // Look for constructor templates.
-  typedef CXXRecordDecl::specific_decl_iterator<FunctionTemplateDecl> tmpl_iter;
-  for (tmpl_iter TI(RD->decls_begin()), TE(RD->decls_end()); TI != TE; ++TI) {
+  for (auto *TI : RD->specific_decls<FunctionTemplateDecl>()) {
     if (CXXConstructorDecl *CD =
           dyn_cast<CXXConstructorDecl>(TI->getTemplatedDecl()))
       return CD;
@@ -11832,7 +11832,7 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
   //   (2) The field is an integral or enumeration type.
   auto FIt = Info->Record->field_begin(), FEnd = Info->Record->field_end();
   if (std::distance(FIt, FEnd) != 1 ||
-      !FIt->getType()->isIntegralOrEnumerationType()) {
+      !(*FIt)->getType()->isIntegralOrEnumerationType()) {
     return UnsupportedSTLError();
   }
 

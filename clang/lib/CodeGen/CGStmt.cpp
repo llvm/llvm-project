@@ -3146,15 +3146,13 @@ LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {
   LValue SlotLV =
     MakeAddrLValue(CreateMemTemp(RecordTy, "agg.captured"), RecordTy);
 
-  RecordDecl::field_iterator CurField = RD->field_begin();
-  for (CapturedStmt::const_capture_init_iterator I = S.capture_init_begin(),
-                                                 E = S.capture_init_end();
-       I != E; ++I, ++CurField) {
-    LValue LV = EmitLValueForFieldInitialization(SlotLV, *CurField);
+  for (const auto &[CurField, I] :
+       llvm::zip_equal(RD->fields(), S.capture_inits())) {
+    LValue LV = EmitLValueForFieldInitialization(SlotLV, CurField);
     if (CurField->hasCapturedVLAType()) {
       EmitLambdaVLACapture(CurField->getCapturedVLAType(), LV);
     } else {
-      EmitInitializerForField(*CurField, LV, *I);
+      EmitInitializerForField(CurField, LV, I);
     }
   }
 

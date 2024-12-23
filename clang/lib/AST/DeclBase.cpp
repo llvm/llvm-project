@@ -497,8 +497,8 @@ bool Decl::isFlexibleArrayMemberLike(
   }
 
   // Test that the field is the last in the structure.
-  RecordDecl::field_iterator FI(
-      DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
+  RecordDecl::field_iterator FI = llvm::find(FD->getParent()->fields(), FD);
+  assert(FI != FD->getParent()->field_end() && "Not contained in own parent?");
   return ++FI == FD->getParent()->field_end();
 }
 
@@ -1621,17 +1621,10 @@ ExternalASTSource::SetExternalVisibleDeclsForName(const DeclContext *DC,
   return List.getLookupResult();
 }
 
-DeclContext::decl_iterator DeclContext::decls_begin() const {
+DeclContext::decl_range DeclContext::decls() const {
   if (hasExternalLexicalStorage())
     LoadLexicalDeclsFromExternalStorage();
-  return decl_iterator(FirstDecl);
-}
-
-bool DeclContext::decls_empty() const {
-  if (hasExternalLexicalStorage())
-    LoadLexicalDeclsFromExternalStorage();
-
-  return !FirstDecl;
+  return {decl_iterator(FirstDecl), decl_iterator{}};
 }
 
 bool DeclContext::containsDecl(Decl *D) const {

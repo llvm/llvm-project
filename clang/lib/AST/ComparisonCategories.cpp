@@ -50,7 +50,7 @@ bool ComparisonCategoryInfo::ValueInfo::hasValidIntValue() const {
   // actually have one (and only one) field.
   const auto *Record = VD->getType()->getAsCXXRecordDecl();
   if (std::distance(Record->field_begin(), Record->field_end()) != 1 ||
-      !Record->field_begin()->getType()->isIntegralOrEnumerationType())
+      !(*Record->field_begin())->getType()->isIntegralOrEnumerationType())
     return false;
 
   return true;

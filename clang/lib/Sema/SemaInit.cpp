@@ -2288,9 +2288,9 @@ void InitListChecker::CheckStructUnionTypes(
         return;
       for (RecordDecl::field_iterator FieldEnd = RD->field_end();
            Field != FieldEnd; ++Field) {
-        if (Field->hasInClassInitializer() ||
-            (Field->isAnonymousStructOrUnion() &&
-             Field->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
+        if ((*Field)->hasInClassInitializer() ||
+            ((*Field)->isAnonymousStructOrUnion() &&
+             (*Field)->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
           StructuredList->setInitializedFieldInUnion(*Field);
           // FIXME: Actually build a CXXDefaultInitExpr?
           return;
@@ -2303,7 +2303,7 @@ void InitListChecker::CheckStructUnionTypes(
     // bitfield.
     for (RecordDecl::field_iterator FieldEnd = RD->field_end();
          Field != FieldEnd; ++Field) {
-      if (!Field->isUnnamedBitField()) {
+      if (!(*Field)->isUnnamedBitField()) {
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
@@ -2463,10 +2463,10 @@ void InitListChecker::CheckStructUnionTypes(
       return;
 
     // Stop if we've hit a flexible array member.
-    if (Field->getType()->isIncompleteArrayType())
+    if ((*Field)->getType()->isIncompleteArrayType())
       break;
 
-    if (Field->isUnnamedBitField()) {
+    if ((*Field)->isUnnamedBitField()) {
       // Don't initialize unnamed bitfields, e.g. "int : 20;"
       ++Field;
       continue;
@@ -2487,7 +2487,7 @@ void InitListChecker::CheckStructUnionTypes(
     }
 
     if (!VerifyOnly) {
-      QualType ET = SemaRef.Context.getBaseElementType(Field->getType());
+      QualType ET = SemaRef.Context.getBaseElementType((*Field)->getType());
       if (checkDestructorReference(ET, InitLoc, SemaRef)) {
         hadError = true;
         return;
@@ -2496,7 +2496,7 @@ void InitListChecker::CheckStructUnionTypes(
 
     InitializedEntity MemberEntity =
       InitializedEntity::InitializeMember(*Field, &Entity);
-    CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
+    CheckSubElementType(MemberEntity, IList, (*Field)->getType(), Index,
                         StructuredList, StructuredIndex);
     InitializedSomething = true;
     InitializedFields.insert(*Field);
@@ -2525,8 +2525,8 @@ void InitListChecker::CheckStructUnionTypes(
       if (HasDesignatedInit && InitializedFields.count(*it))
         continue;
 
-      if (!it->isUnnamedBitField() && !it->hasInClassInitializer() &&
-          !it->getType()->isIncompleteArrayType()) {
+      if (!(*it)->isUnnamedBitField() && !(*it)->hasInClassInitializer() &&
+          !(*it)->getType()->isIncompleteArrayType()) {
         auto Diag = HasDesignatedInit
                         ? diag::warn_missing_designated_field_initializers
                         : diag::warn_missing_field_initializers;
@@ -2539,9 +2539,9 @@ void InitListChecker::CheckStructUnionTypes(
   // Check that any remaining fields can be value-initialized if we're not
   // building a structured list. (If we are, we'll check this later.)
   if (!StructuredList && Field != FieldEnd && !RD->isUnion() &&
-      !Field->getType()->isIncompleteArrayType()) {
+      !(*Field)->getType()->isIncompleteArrayType()) {
     for (; Field != FieldEnd && !hadError; ++Field) {
-      if (!Field->isUnnamedBitField() && !Field->hasInClassInitializer())
+      if (!(*Field)->isUnnamedBitField() && !(*Field)->hasInClassInitializer())
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
@@ -2555,7 +2555,7 @@ void InitListChecker::CheckStructUnionTypes(
     RecordDecl::field_iterator I = HasDesignatedInit ? RD->field_begin()
                                                      : Field;
     for (RecordDecl::field_iterator E = RD->field_end(); I != E; ++I) {
-      QualType ET = SemaRef.Context.getBaseElementType(I->getType());
+      QualType ET = SemaRef.Context.getBaseElementType((*I)->getType());
       if (checkDestructorReference(ET, IList->getEndLoc(), SemaRef)) {
         hadError = true;
         return;
@@ -2563,7 +2563,7 @@ void InitListChecker::CheckStructUnionTypes(
     }
   }
 
-  if (Field == FieldEnd || !Field->getType()->isIncompleteArrayType() ||
+  if (Field == FieldEnd || !(*Field)->getType()->isIncompleteArrayType() ||
       Index >= IList->getNumInits())
     return;
 
@@ -2579,10 +2579,10 @@ void InitListChecker::CheckStructUnionTypes(
 
   if (isa<InitListExpr>(IList->getInit(Index)) ||
       AggrDeductionCandidateParamTypes)
-    CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
+    CheckSubElementType(MemberEntity, IList, (*Field)->getType(), Index,
                         StructuredList, StructuredIndex);
   else
-    CheckImplicitInitList(MemberEntity, IList, Field->getType(), Index,
+    CheckImplicitInitList(MemberEntity, IList, (*Field)->getType(), Index,
                           StructuredList, StructuredIndex);
 
   if (RD->isUnion() && isInitializedStructuredList(StructuredList)) {
@@ -2921,7 +2921,9 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     }
 
     RecordDecl::field_iterator Field =
-        RecordDecl::field_iterator(DeclContext::decl_iterator(KnownField));
+        llvm::find(KnownField->getParent()->fields(), KnownField);
+    assert(Field != KnownField->getParent()->field_end() &&
+           "Field not in own parent?");
 
     // All of the fields of a union are located at the same place in
     // the initializer list.
@@ -2981,16 +2983,16 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     if (IsFirstDesignator && !VerifyOnly && SemaRef.getLangOpts().CPlusPlus &&
         NextField &&
         (*NextField == RD->field_end() ||
-         (*NextField)->getFieldIndex() > Field->getFieldIndex() + 1)) {
+         (**NextField)->getFieldIndex() > (*Field)->getFieldIndex() + 1)) {
       // Find the field that we just initialized.
       FieldDecl *PrevField = nullptr;
-      for (auto FI = RD->field_begin(); FI != RD->field_end(); ++FI) {
+      for (FieldDecl *FI : RD->fields()) {
         if (FI->isUnnamedBitField())
           continue;
         if (*NextField != RD->field_end() &&
-            declaresSameEntity(*FI, **NextField))
+            declaresSameEntity(FI, **NextField))
           break;
-        PrevField = *FI;
+        PrevField = FI;
       }
 
       if (PrevField &&
@@ -3021,7 +3023,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       StructuredList->resizeInits(SemaRef.Context, FieldIndex + 1);
 
     // This designator names a flexible array member.
-    if (Field->getType()->isIncompleteArrayType()) {
+    if ((*Field)->getType()->isIncompleteArrayType()) {
       bool Invalid = false;
       if ((DesigIdx + 1) != DIE->size()) {
         // We can't designate an object within the flexible array
@@ -3032,7 +3034,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
           SemaRef.Diag(NextD->getBeginLoc(),
                        diag::err_designator_into_flexible_array_member)
               << SourceRange(NextD->getBeginLoc(), DIE->getEndLoc());
-          SemaRef.Diag(Field->getLocation(), diag::note_flexible_array_member)
+          SemaRef.Diag((*Field)->getLocation(), diag::note_flexible_array_member)
             << *Field;
         }
         Invalid = true;
@@ -3045,7 +3047,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
           SemaRef.Diag(DIE->getInit()->getBeginLoc(),
                        diag::err_flexible_array_init_needs_braces)
               << DIE->getInit()->getSourceRange();
-          SemaRef.Diag(Field->getLocation(), diag::note_flexible_array_member)
+          SemaRef.Diag((*Field)->getLocation(), diag::note_flexible_array_member)
             << *Field;
         }
         Invalid = true;
@@ -3069,7 +3071,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
       InitializedEntity MemberEntity =
         InitializedEntity::InitializeMember(*Field, &Entity);
-      CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
+      CheckSubElementType(MemberEntity, IList, (*Field)->getType(), Index,
                           StructuredList, newStructuredIndex);
 
       IList->setInit(OldIndex, DIE);
@@ -3083,7 +3085,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       }
     } else {
       // Recurse to check later designated subobjects.
-      QualType FieldType = Field->getType();
+      QualType FieldType = (*Field)->getType();
       unsigned newStructuredIndex = FieldIndex;
 
       InitializedEntity MemberEntity =
@@ -3103,7 +3105,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     // If this the first designator, our caller will continue checking
     // the rest of this struct/class/union subobject.
     if (IsFirstDesignator) {
-      if (Field != RD->field_end() && Field->isUnnamedBitField())
+      if (Field != RD->field_end() && (*Field)->isUnnamedBitField())
         ++Field;
 
       if (NextField)
@@ -8392,8 +8394,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
           return InvalidType();
 
         // Start pointer
-        if (!Field->getType()->isPointerType() ||
-            !S.Context.hasSameType(Field->getType()->getPointeeType(),
+        if (!(*Field)->getType()->isPointerType() ||
+            !S.Context.hasSameType((*Field)->getType()->getPointeeType(),
                                    ElementType.withConst()))
           return InvalidType();
 
@@ -8401,13 +8403,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
           return InvalidType();
 
         // Size or end pointer
-        if (const auto *PT = Field->getType()->getAs<PointerType>()) {
+        if (const auto *PT = (*Field)->getType()->getAs<PointerType>()) {
           if (!S.Context.hasSameType(PT->getPointeeType(),
                                      ElementType.withConst()))
             return InvalidType();
         } else {
-          if (Field->isBitField() ||
-              !S.Context.hasSameType(Field->getType(), S.Context.getSizeType()))
+          if ((*Field)->isBitField() ||
+              !S.Context.hasSameType((*Field)->getType(), S.Context.getSizeType()))
             return InvalidType();
         }
 

@@ -693,9 +693,7 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
       return true;
   }
 
-  using var_iter = CXXRecordDecl::specific_decl_iterator<VarDecl>;
-  using var_range = iterator_range<var_iter>;
-  for (const auto *Var : var_range(D->decls())) {
+  for (const auto *Var : D->specific_decls<VarDecl>()) {
     // Skip const static member variables.
     // \code
     // struct S {

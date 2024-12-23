@@ -4348,20 +4348,17 @@ public:
   // Iterator access to field members. The field iterator only visits
   // the non-static data members of this class, ignoring any static
   // data members, functions, constructors, destructors, etc.
-  using field_iterator = specific_decl_iterator<FieldDecl>;
-  using field_range = llvm::iterator_range<specific_decl_iterator<FieldDecl>>;
+  using field_range =
+      decltype(std::declval<DeclContext>().specific_decls<FieldDecl>());
+  using field_iterator = decltype(std::declval<field_range>().begin());
 
-  field_range fields() const { return field_range(field_begin(), field_end()); }
-  field_iterator field_begin() const;
+  field_range fields() const;
+  field_iterator field_begin() const { return fields().begin(); }
 
-  field_iterator field_end() const {
-    return field_iterator(decl_iterator());
-  }
+  field_iterator field_end() const { return fields().end(); }
 
   // Whether there are any fields (non-static data members) in this record.
-  bool field_empty() const {
-    return field_begin() == field_end();
-  }
+  bool field_empty() const { return fields().empty(); }
 
   /// Note that the definition of this type is now complete.
   virtual void completeDefinition();

@@ -5436,7 +5436,7 @@ HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
   const clang::Type *Ty = RT->getUnqualifiedDesugaredType();
   if (const RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
     if (!RD->fields().empty()) {
-      const auto &FirstFD = RD->fields().begin();
+      FieldDecl *FirstFD = *RD->field_begin();
       return dyn_cast<HLSLAttributedResourceType>(
           FirstFD->getType().getTypePtr());
     }

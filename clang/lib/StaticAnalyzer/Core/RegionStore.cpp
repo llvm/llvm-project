@@ -2782,18 +2782,18 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
     }
   }
 
-  RecordDecl::field_iterator FI, FE;
+  RecordDecl::field_iterator FI = RD->field_begin(), FE = RD->field_end();
 
-  for (FI = RD->field_begin(), FE = RD->field_end(); FI != FE; ++FI) {
+  for (; FI != FE; ++FI) {
 
     if (VI == VE)
       break;
 
     // Skip any unnamed bitfields to stay in sync with the initializers.
-    if (FI->isUnnamedBitField())
+    if ((*FI)->isUnnamedBitField())
       continue;
 
-    QualType FTy = FI->getType();
+    QualType FTy = (*FI)->getType();
     const FieldRegion* FR = MRMgr.getFieldRegion(*FI, R);
 
     if (FTy->isArrayType())

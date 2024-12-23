@@ -430,7 +430,7 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
   RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
-         Ctx.hasSameType(Field->getType()->getPointeeType(),
+         Ctx.hasSameType((*Field)->getType()->getPointeeType(),
                          ArrayType->getElementType()) &&
          "Expected std::initializer_list first field to be const E *");
 
@@ -446,14 +446,14 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
 
   llvm::Value *Size = Builder.getInt(ArrayType->getSize());
   LValue EndOrLength = CGF.EmitLValueForFieldInitialization(DestLV, *Field);
-  if (Ctx.hasSameType(Field->getType(), Ctx.getSizeType())) {
+  if (Ctx.hasSameType((*Field)->getType(), Ctx.getSizeType())) {
     // Length.
     CGF.EmitStoreThroughLValue(RValue::get(Size), EndOrLength);
 
   } else {
     // End pointer.
-    assert(Field->getType()->isPointerType() &&
-           Ctx.hasSameType(Field->getType()->getPointeeType(),
+    assert((*Field)->getType()->isPointerType() &&
+           Ctx.hasSameType((*Field)->getType()->getPointeeType(),
                            ArrayType->getElementType()) &&
            "Expected std::initializer_list second field to be const E *");
     llvm::Value *Zero = llvm::ConstantInt::get(CGF.PtrDiffTy, 0);
@@ -1385,8 +1385,8 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
        i != e; ++i, ++CurField) {
     // Emit initialization
     LValue LV = CGF.EmitLValueForFieldInitialization(SlotLV, *CurField);
-    if (CurField->hasCapturedVLAType()) {
-      CGF.EmitLambdaVLACapture(CurField->getCapturedVLAType(), LV);
+    if ((*CurField)->hasCapturedVLAType()) {
+      CGF.EmitLambdaVLACapture((*CurField)->getCapturedVLAType(), LV);
       continue;
     }
 
@@ -1394,11 +1394,11 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 
     // Push a destructor if necessary.
     if (QualType::DestructionKind DtorKind =
-            CurField->getType().isDestructedType()) {
+            (*CurField)->getType().isDestructedType()) {
       assert(LV.isSimple());
       if (DtorKind)
         CGF.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, LV.getAddress(),
-                                            CurField->getType(),
+                                            (*CurField)->getType(),
                                             CGF.getDestroyer(DtorKind), false);
     }
   }

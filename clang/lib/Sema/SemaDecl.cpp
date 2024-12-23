@@ -15563,14 +15563,14 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
           /*RefersToEnclosingVariableOrCapture*/true, C.getLocation(),
           /*EllipsisLoc*/C.isPackExpansion()
                          ? C.getEllipsisLoc() : SourceLocation(),
-          I->getType(), /*Invalid*/false);
+          (*I)->getType(), /*Invalid*/false);
 
     } else if (C.capturesThis()) {
-      LSI->addThisCapture(/*Nested*/ false, C.getLocation(), I->getType(),
+      LSI->addThisCapture(/*Nested*/ false, C.getLocation(), (*I)->getType(),
                           C.getCaptureKind() == LCK_StarThis);
     } else {
-      LSI->addVLATypeCapture(C.getLocation(), I->getCapturedVLAType(),
-                             I->getType());
+      LSI->addVLATypeCapture(C.getLocation(), (*I)->getCapturedVLAType(),
+                             (*I)->getType());
     }
     ++I;
   }
@@ -19398,9 +19398,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       bool ZeroSize = true;
       bool IsEmpty = true;
       unsigned NonBitFields = 0;
-      for (RecordDecl::field_iterator I = Record->field_begin(),
-                                      E = Record->field_end();
-           (NonBitFields == 0 || ZeroSize) && I != E; ++I) {
+      for (FieldDecl *I : Record->fields()) {
+        if (NonBitFields != 0 && !ZeroSize)
+          break;
         IsEmpty = false;
         if (I->isUnnamedBitField()) {
           if (!I->isZeroLengthBitField(Context))

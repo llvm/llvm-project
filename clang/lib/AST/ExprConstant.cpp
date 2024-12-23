@@ -6609,7 +6609,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     // We might be initializing the same field again if this is an indirect
     // field initialization.
     if (FieldIt == RD->field_end() ||
-        FieldIt->getFieldIndex() > FD->getFieldIndex()) {
+        (*FieldIt)->getFieldIndex() > FD->getFieldIndex()) {
       assert(Indirect && "fields out of order?");
       return;
     }
@@ -6617,10 +6617,10 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     // Default-initialize any fields with no explicit initializer.
     for (; !declaresSameEntity(*FieldIt, FD); ++FieldIt) {
       assert(FieldIt != RD->field_end() && "missing field?");
-      if (!FieldIt->isUnnamedBitField())
+      if (!(*FieldIt)->isUnnamedBitField())
         Success &= handleDefaultInitValue(
-            FieldIt->getType(),
-            Result.getStructField(FieldIt->getFieldIndex()));
+            (*FieldIt)->getType(),
+            Result.getStructField((*FieldIt)->getFieldIndex()));
     }
     ++FieldIt;
   };
@@ -6727,10 +6727,10 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   // Default-initialize any remaining fields.
   if (!RD->isUnion()) {
     for (; FieldIt != RD->field_end(); ++FieldIt) {
-      if (!FieldIt->isUnnamedBitField())
+      if (!(*FieldIt)->isUnnamedBitField())
         Success &= handleDefaultInitValue(
-            FieldIt->getType(),
-            Result.getStructField(FieldIt->getFieldIndex()));
+            (*FieldIt)->getType(),
+            Result.getStructField((*FieldIt)->getFieldIndex()));
     }
   }
 
@@ -10542,7 +10542,7 @@ bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
     if (!HandleLValueMember(Info, E, Subobject, *I))
       return false;
     Result = APValue(*I);
-    ImplicitValueInitExpr VIE(I->getType());
+    ImplicitValueInitExpr VIE((*I)->getType());
     return EvaluateInPlace(Result.getUnionValue(), Info, Subobject, &VIE);
   }
 
@@ -10818,19 +10818,19 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
-         Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
+         Info.Ctx.hasSameType((*Field)->getType()->getPointeeType(),
                               ArrayType->getElementType()) &&
          "Expected std::initializer_list first field to be const E *");
   ++Field;
   assert(Field != Record->field_end() &&
          "Expected std::initializer_list to have two fields");
 
-  if (Info.Ctx.hasSameType(Field->getType(), Info.Ctx.getSizeType())) {
+  if (Info.Ctx.hasSameType((*Field)->getType(), Info.Ctx.getSizeType())) {
     // Length.
     Result.getStructField(1) = APValue(APSInt(ArrayType->getSize()));
   } else {
     // End pointer.
-    assert(Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
+    assert(Info.Ctx.hasSameType((*Field)->getType()->getPointeeType(),
                                 ArrayType->getElementType()) &&
            "Expected std::initializer_list second field to be const E *");
     if (!HandleLValueArrayAdjustment(Info, E, Array,

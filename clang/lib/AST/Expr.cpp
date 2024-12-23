@@ -2048,12 +2048,10 @@ const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
                                                         QualType OpType) {
   auto &Ctx = RD->getASTContext();
-  RecordDecl::field_iterator Field, FieldEnd;
-  for (Field = RD->field_begin(), FieldEnd = RD->field_end();
-       Field != FieldEnd; ++Field) {
+  for (FieldDecl *Field : RD->fields()) {
     if (Ctx.hasSameUnqualifiedType(Field->getType(), OpType) &&
         !Field->isUnnamedBitField()) {
-      return *Field;
+      return Field;
     }
   }
   return nullptr;

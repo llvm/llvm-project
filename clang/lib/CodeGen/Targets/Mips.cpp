@@ -156,7 +156,7 @@ llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
   // double fields.
   for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
        i != e; ++i, ++idx) {
-    const QualType Ty = i->getType();
+    const QualType Ty = (*i)->getType();
     const BuiltinType *BT = Ty->getAs<BuiltinType>();
 
     if (!BT || BT->getKind() != BuiltinType::Double)
@@ -263,12 +263,12 @@ MipsABIInfo::returnAggregateInRegs(QualType RetTy, uint64_t Size) const {
     if (FieldCnt && (FieldCnt <= 2) && !Layout.getFieldOffset(0)) {
       RecordDecl::field_iterator b = RD->field_begin(), e = RD->field_end();
       for (; b != e; ++b) {
-        const BuiltinType *BT = b->getType()->getAs<BuiltinType>();
+        const BuiltinType *BT = (*b)->getType()->getAs<BuiltinType>();
 
         if (!BT || !BT->isFloatingPoint())
           break;
 
-        RTList.push_back(CGT.ConvertType(b->getType()));
+        RTList.push_back(CGT.ConvertType((*b)->getType()));
       }
 
       if (b == e)

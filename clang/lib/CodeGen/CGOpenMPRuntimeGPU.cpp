@@ -1953,7 +1953,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   if (CS.capture_size() > 0) {
     ASTContext &CGFContext = CGF.getContext();
     for (unsigned I = 0, E = CS.capture_size(); I < E; ++I, ++CI, ++CurField) {
-      QualType ElemTy = CurField->getType();
+      QualType ElemTy = (*CurField)->getType();
       Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, I + Idx);
       Address TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
           Src, CGF.ConvertTypeForMem(CGFContext.getPointerType(ElemTy)),

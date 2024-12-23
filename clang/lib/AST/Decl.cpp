@@ -5089,14 +5089,14 @@ bool RecordDecl::isOrContainsUnion() const {
   return false;
 }
 
-RecordDecl::field_iterator RecordDecl::field_begin() const {
+RecordDecl::field_range RecordDecl::fields() const {
   if (hasExternalLexicalStorage() && !hasLoadedFieldsFromExternalStorage())
     LoadFieldsFromExternalStorage();
   // This is necessary for correctness for C++ with modules.
   // FIXME: Come up with a test case that breaks without definition.
   if (RecordDecl *D = getDefinition(); D && D != this)
-    return D->field_begin();
-  return field_iterator(decl_iterator(FirstDecl));
+    return D->fields();
+  return specific_decls<FieldDecl>();
 }
 
 /// completeDefinition - Notes that the definition of this type is now

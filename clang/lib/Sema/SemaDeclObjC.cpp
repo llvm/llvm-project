@@ -3246,7 +3246,7 @@ static bool tryMatchRecordTypes(ASTContext &Context,
   RecordDecl::field_iterator li = left->field_begin(), le = left->field_end();
   RecordDecl::field_iterator ri = right->field_begin(), re = right->field_end();
   for (; li != le && ri != re; ++li, ++ri) {
-    if (!matchTypes(Context, strategy, li->getType(), ri->getType()))
+    if (!matchTypes(Context, strategy, (*li)->getType(), (*ri)->getType()))
       return false;
   }
   return (li == le && ri == re);

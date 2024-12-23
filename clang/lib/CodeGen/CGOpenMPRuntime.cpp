@@ -3113,7 +3113,7 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
   auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
   Base = CGF.EmitLValueForField(Base, *FI);
   for (const auto *Field :
-       cast<RecordDecl>(FI->getType()->getAsTagDecl())->fields()) {
+       cast<RecordDecl>((*FI)->getType()->getAsTagDecl())->fields()) {
     if (QualType::DestructionKind DtorKind =
             Field->getType().isDestructedType()) {
       LValue FieldLValue = CGF.EmitLValueForField(Base, Field);
@@ -3264,7 +3264,7 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
             CGF.ConvertTypeForMem(SharedsTy)),
         SharedsTy);
   }
-  FI = cast<RecordDecl>(FI->getType()->getAsTagDecl())->field_begin();
+  FI = cast<RecordDecl>((*FI)->getType()->getAsTagDecl())->field_begin();
   for (const PrivateDataTy &Pair : Privates) {
     // Do not initialize private locals.
     if (Pair.second.isLocalPrivate()) {
@@ -3678,8 +3678,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
       std::next(TaskFunction->arg_begin(), 3)->getType();
   if (!Privates.empty()) {
     auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
-    TaskPrivatesMap =
-        emitTaskPrivateMappingFunction(CGM, Loc, Data, FI->getType(), Privates);
+    TaskPrivatesMap = emitTaskPrivateMappingFunction(
+        CGM, Loc, Data, (*FI)->getType(), Privates);
     TaskPrivatesMap = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
         TaskPrivatesMap, TaskPrivatesMapTy);
   } else {
@@ -9210,7 +9210,7 @@ static void genMapInfoForCaptures(
           MappableExprsHandler::DeviceInfoTy::None);
       CurInfo.Pointers.push_back(*CV);
       CurInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
-          CGF.getTypeSize(RI->getType()), CGF.Int64Ty, /*isSigned=*/true));
+          CGF.getTypeSize((*RI)->getType()), CGF.Int64Ty, /*isSigned=*/true));
       // Copy to the device as an argument. No need to retrieve it.
       CurInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
                               OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |

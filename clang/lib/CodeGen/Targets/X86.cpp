@@ -2075,14 +2075,12 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     }
 
     // Classify the fields one at a time, merging the results.
-    unsigned idx = 0;
     bool UseClang11Compat = getContext().getLangOpts().getClangABICompat() <=
                                 LangOptions::ClangABI::Ver11 ||
                             getContext().getTargetInfo().getTriple().isPS();
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
-    for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
-           i != e; ++i, ++idx) {
+    for (const auto &[idx, i] : llvm::enumerate(RD->fields())) {
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
@@ -2348,9 +2346,7 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
     // this could be sped up a lot by being smarter about queried fields,
     // however we're only looking at structs up to 16 bytes, so we don't care
     // much.
-    unsigned idx = 0;
-    for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
-         i != e; ++i, ++idx) {
+    for (const auto &[idx, i] : llvm::enumerate(RD->fields())) {
       unsigned FieldOffset = (unsigned)Layout.getFieldOffset(idx);
 
       // If we found a field after the region we care about, then we're done.
