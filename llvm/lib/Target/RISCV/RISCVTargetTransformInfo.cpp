@@ -398,8 +398,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       LegalVT = getTypeLegalizationCost(
                     FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
                     .second;
-      NumOfDests = divideCeil(Mask.size(),
-                              LegalVT.getVectorNumElements());
+      NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
     }
     if (NumOfDests.isValid() && NumOfDests > 1 &&
         LegalVT.isFixedLengthVector() &&
