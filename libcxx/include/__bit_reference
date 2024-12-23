@@ -210,22 +210,6 @@ private:
         __mask_(__m) {}
 };
 
-// move
-
-template <class _Cp, bool _IsConst>
-inline _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
-move(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result) {
-  return std::copy(__first, __last, __result);
-}
-
-// move_backward
-
-template <class _Cp, bool _IsConst>
-inline _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> move_backward(
-    __bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result) {
-  return std::copy_backward(__first, __last, __result);
-}
-
 // swap_ranges
 
 template <class _Cl, class _Cr>

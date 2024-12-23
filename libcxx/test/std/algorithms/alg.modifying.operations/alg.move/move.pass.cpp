@@ -20,6 +20,7 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <vector>
 
 #include "MoveOnly.h"
 #include "test_iterators.h"
@@ -45,15 +46,15 @@ struct Test {
   template <class OutIter>
   TEST_CONSTEXPR_CXX20 void operator()() {
     const unsigned N = 1000;
-    int ia[N] = {};
+    int ia[N]        = {};
     for (unsigned i = 0; i < N; ++i)
-        ia[i] = i;
+      ia[i] = i;
     int ib[N] = {0};
 
-    OutIter r = std::move(InIter(ia), InIter(ia+N), OutIter(ib));
-    assert(base(r) == ib+N);
+    OutIter r = std::move(InIter(ia), InIter(ia + N), OutIter(ib));
+    assert(base(r) == ib + N);
     for (unsigned i = 0; i < N; ++i)
-        assert(ia[i] == ib[i]);
+      assert(ia[i] == ib[i]);
   }
 };
 
@@ -73,13 +74,13 @@ struct Test1 {
     const unsigned N = 100;
     std::unique_ptr<int> ia[N];
     for (unsigned i = 0; i < N; ++i)
-        ia[i].reset(new int(i));
+      ia[i].reset(new int(i));
     std::unique_ptr<int> ib[N];
 
-    OutIter r = std::move(InIter(ia), InIter(ia+N), OutIter(ib));
-    assert(base(r) == ib+N);
+    OutIter r = std::move(InIter(ia), InIter(ia + N), OutIter(ib));
+    assert(base(r) == ib + N);
     for (unsigned i = 0; i < N; ++i)
-        assert(*ib[i] == static_cast<int>(i));
+      assert(*ib[i] == static_cast<int>(i));
   }
 };
 
@@ -91,6 +92,26 @@ struct Test1OutIters {
                     Test1<InIter>());
   }
 };
+
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+
+  { // Test move with aligned bytes
+    std::vector<bool> out(N);
+    std::move(in.begin(), in.end(), out.begin());
+    assert(in == out);
+  }
+  { // Test move with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::move(in.begin(), in.end(), out.begin() + 4);
+    for (std::size_t i = 0; i < N; ++i)
+      assert(out[i + 4] == in[i]);
+  }
+
+  return true;
+}
 
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestOutIters());
@@ -118,7 +139,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     // When non-trivial
     {
       MoveOnly from[3] = {1, 2, 3};
-      MoveOnly to[3] = {};
+      MoveOnly to[3]   = {};
       std::move(std::begin(from), std::end(from), std::begin(to));
       assert(to[0] == MoveOnly(1));
       assert(to[1] == MoveOnly(2));
@@ -127,12 +148,22 @@ TEST_CONSTEXPR_CXX20 bool test() {
     // When trivial
     {
       TrivialMoveOnly from[3] = {1, 2, 3};
-      TrivialMoveOnly to[3] = {};
+      TrivialMoveOnly to[3]   = {};
       std::move(std::begin(from), std::end(from), std::begin(to));
       assert(to[0] == TrivialMoveOnly(1));
       assert(to[1] == TrivialMoveOnly(2));
       assert(to[2] == TrivialMoveOnly(3));
     }
+  }
+
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
   }
 
   return true;
