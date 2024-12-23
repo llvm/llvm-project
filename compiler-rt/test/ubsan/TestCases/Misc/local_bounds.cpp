@@ -25,7 +25,7 @@ test(char i) {
   // CHECK: error: access out of bounds
   // CHECK: SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior
   // LINE: local_bounds.cpp:[[#@LINE-3]]:{{.*}}runtime error: access out of bounds
-  // LINE: SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior {{.*}}local_bounds.cpp:[[#@LINE-4]]:
+  // LINE: SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior {{.*}}local_bounds.cpp:[[#@LINE-4]]
 }
 
 int main(int argc, char **argv) {

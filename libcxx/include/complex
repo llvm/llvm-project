@@ -256,8 +256,9 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/complex>
+#else
 #  include <__config>
 #  include <__fwd/complex.h>
 #  include <__fwd/tuple.h>
@@ -1476,6 +1477,6 @@ _LIBCPP_POP_MACROS
 #    include <stdexcept>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_COMPLEX
