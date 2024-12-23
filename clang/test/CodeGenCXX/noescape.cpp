@@ -6,6 +6,7 @@ struct S {
   S &operator=(int * __attribute__((noescape)));
   void m0(int *, int * __attribute__((noescape)));
   virtual void vm1(int *, int * __attribute__((noescape)));
+  virtual void vm2(int *, S __attribute__((noescape)));
 };
 
 // CHECK: define{{.*}} void @_ZN1SC2EPiS0_(ptr {{.*}}, {{.*}}, {{.*}} noundef captures(none) {{%.*}})
@@ -22,6 +23,9 @@ void S::m0(int *, int * __attribute__((noescape))) {}
 
 // CHECK: define{{.*}} void @_ZN1S3vm1EPiS0_(ptr {{.*}}, {{.*}} noundef captures(none) {{%.*}})
 void S::vm1(int *, int * __attribute__((noescape))) {}
+
+// CHECK-NOT: nocapture
+void S::vm2(int *, S __attribute__((noescape))) {}
 
 // CHECK-LABEL: define{{.*}} void @_Z5test0P1SPiS1_(
 // CHECK: call void @_ZN1SC1EPiS0_(ptr {{.*}}, {{.*}}, {{.*}} noundef captures(none) {{.*}})

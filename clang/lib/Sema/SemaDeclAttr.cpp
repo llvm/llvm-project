@@ -1231,37 +1231,11 @@ static void handleNoSpecializations(Sema &S, Decl *D, const ParsedAttr &AL) {
       NoSpecializationsAttr::Create(S.Context, Message, AL));
 }
 
-bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
-  if (T->isDependentType())
-    return true;
-  if (RefOkay) {
-    if (T->isReferenceType())
-      return true;
-  } else {
-    T = T.getNonReferenceType();
-  }
-
-  // The nonnull attribute, and other similar attributes, can be applied to a
-  // transparent union that contains a pointer type.
-  if (const RecordType *UT = T->getAsUnionType()) {
-    if (UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
-      RecordDecl *UD = UT->getDecl();
-      for (const auto *I : UD->fields()) {
-        QualType QT = I->getType();
-        if (QT->isAnyPointerType() || QT->isBlockPointerType())
-          return true;
-      }
-    }
-  }
-
-  return T->isAnyPointerType() || T->isBlockPointerType();
-}
-
 static bool attrNonNullArgCheck(Sema &S, QualType T, const ParsedAttr &AL,
                                 SourceRange AttrParmRange,
                                 SourceRange TypeRange,
                                 bool isReturnValue = false) {
-  if (!S.isValidPointerAttrType(T)) {
+  if (!isValidPointerAttrType(T)) {
     if (isReturnValue)
       S.Diag(AL.getLoc(), diag::warn_attribute_return_pointers_only)
           << AL << AttrParmRange << TypeRange;
@@ -1312,7 +1286,7 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     for (unsigned I = 0, E = getFunctionOrMethodNumParams(D);
          I != E && !AnyPointers; ++I) {
       QualType T = getFunctionOrMethodParamType(D, I);
-      if (T->isDependentType() || S.isValidPointerAttrType(T)) {
+      if (T->isDependentType() || isValidPointerAttrType(T)) {
         AnyPointers = true;
         /*TO_UPSTREAM(BoundsSafety) ON*/
         if (auto DCPTy = T->getAs<CountAttributedType>()) {
@@ -1371,10 +1345,11 @@ static void handleNoEscapeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (D->isInvalidDecl())
     return;
 
-  // noescape only applies to pointer types.
+  // noescape only applies to pointer and record types.
   QualType T = cast<ParmVarDecl>(D)->getType();
-  if (!S.isValidPointerAttrType(T, /* RefOkay */ true)) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_pointers_only)
+  if (!isValidPointerAttrType(T, /* RefOkay */ true) && !T->isRecordType()) {
+    S.Diag(AL.getLoc(),
+           diag::warn_attribute_pointer_or_reference_or_record_only)
         << AL << AL.getRange() << 0;
     return;
   }

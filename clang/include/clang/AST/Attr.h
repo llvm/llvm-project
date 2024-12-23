@@ -409,6 +409,13 @@ inline ParameterABI ParameterABIAttr::getABI() const {
     llvm_unreachable("bad parameter ABI attribute kind");
   }
 }
+
+/// Determine if type T is a valid subject for a nonnull and similar
+/// attributes. Dependent types are considered valid so they can be checked
+/// during instantiation time. By default, we look through references (the
+/// behavior used by nonnull), but if the second parameter is true, then we
+/// treat a reference type as valid.
+bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 }  // end namespace clang
 
 #endif
