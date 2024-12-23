@@ -32,7 +32,6 @@ from pathlib import Path
 LLVM_TABLEGEN = "llvm-tblgen"
 LIT_TEST_PATH = "../test/Driver/Inputs/unsupported-driver-options-check.ll"
 INCLUDE_PATH = "../../llvm/include"
-PREFIX = "CHECK-"
 
 # Strings used in Options.td for various driver flavours
 OPTION_CC1AS = "CC1AsOption"
@@ -43,37 +42,27 @@ OPTION_DEFAULT = "DefaultVis"
 OPTION_FC1 = "FC1Option"
 OPTION_FLANG = "FlangOption"
 
-# Error messages output from each driver
-ERROR_MSG_CC1AS = ": error: unknown argument"
-ERROR_MSG_CC1 = "error: unknown argument"
-ERROR_MSG_CL = "" # TODO
-ERROR_MSG_DXC = "" # TODO
-ERROR_MSG_DEFAULT = "clang: error: unknown argument"
-ERROR_MSG_FC1 = "error: unknown argument"
-ERROR_MSG_FLANG = "flang: error: unknown argument"
+# See clang/include/clang/Basic/DiagnosticDriverKinds.td for the *unknown_argument* strings
+# As per Driver::ParseArgStrings from Driver.cpp, all the driver modes use the
+# string "unknown argument" in their unsupported option error messages
+ERROR_MSG_GENERAL = "unknown argument"
 
-# Lit CHECK prefixes
-CHECK_PREFIX_CC1AS = PREFIX + OPTION_CC1AS
-CHECK_PREFIX_CC1 = PREFIX + OPTION_CC1
-CHECK_PREFIX_CL = PREFIX + OPTION_CL
-CHECK_PREFIX_DXC = PREFIX + OPTION_DXC
-CHECK_PREFIX_DEFAULT = PREFIX + OPTION_DEFAULT
-CHECK_PREFIX_FC1 = PREFIX + OPTION_FC1
-CHECK_PREFIX_FLANG = PREFIX + OPTION_FLANG
+RUN_CMD_END = " -help 2>&1 | FileCheck %s\n"
 
-LIT_TEST_NOTE = ("; NOTE: This lit test was automatically generated to validate " +
-                 "unintentionally exposed arguments to various driver flavours.\n"
-                 "; NOTE: To make changes, see " + Path(__file__).resolve().as_posix()
-                 + " from which it was generated.\n\n")
+LIT_TEST_NOTE = (
+    "; NOTE: This lit test was automatically generated to validate "
+    + "unintentionally exposed arguments to various driver flavours.\n"
+    "; NOTE: To make changes, see "
+    + Path(__file__).resolve().as_posix()
+    + " from which it was generated.\n\n"
+)
 
 def print_usage():
-    """ Print valid usage of this script
-    """
-    sys.exit( "usage: python " + sys.argv[0] + " <path>/Options.td [<path>/llvm-tblgen]" )
+    """Print valid usage of this script"""
+    sys.exit("usage: python " + sys.argv[0] + " <path>/Options.td [<path>/llvm-tblgen]")
 
 def find_file(file_name, search_path):
-    """ Find the given file name under a search path
-    """
+    """Find the given file name under a search path"""
     result = []
 
     for root, dir, files in os.walk(search_path):
@@ -82,7 +71,7 @@ def find_file(file_name, search_path):
     return result
 
 def is_valid_file(path, expected_name):
-    """ Is a file valid
+    """Is a file valid
     Check if a given path is to a file, and if it matches the expected file name
     """
     if path.is_file() and path.name == expected_name:
@@ -91,8 +80,7 @@ def is_valid_file(path, expected_name):
         return False
 
 def find_tablegen():
-    """ Validate the TableGen executable
-    """
+    """Validate the TableGen executable"""
     result = shutil.which(LLVM_TABLEGEN)
     if result is None:
         sys.exit("Unable to find " + LLVM_TABLEGEN + ".\nExiting")
@@ -101,7 +89,7 @@ def find_tablegen():
         return result
 
 def find_groups(group_sequence, options_json, option):
-    """ Find the groups for a given option
+    """Find the groups for a given option
     Note that groups can themselves be part of groups, hence the recursion
     """
     group_json = options_json[option]["Group"]
@@ -118,7 +106,7 @@ def find_groups(group_sequence, options_json, option):
     return find_groups(group_sequence, options_json, option)
 
 
-class UnsupportedDriverOption():
+class UnsupportedDriverOption:
     def __init__(self, driver, option):
         self.driver = driver
         self.option = option
@@ -167,8 +155,17 @@ else:
     tablegen = find_tablegen()
 
 # Run TableGen to convert Options.td to json
-options_json_str = subprocess.run([ tablegen, "-I", os.path.join(current_path, INCLUDE_PATH), options_td, "-dump-json"], stdout=subprocess.PIPE)
-options_json = json.loads(options_json_str.stdout.decode('utf-8'))
+options_json_str = subprocess.run(
+    [
+        tablegen,
+        "-I",
+        os.path.join(current_path, INCLUDE_PATH),
+        options_td,
+        "-dump-json",
+    ],
+    stdout=subprocess.PIPE,
+)
+options_json = json.loads(options_json_str.stdout.decode("utf-8"))
 
 # Gather list of driver flavours
 for i in options_json["!instanceof"]["OptionVisibility"]:
@@ -185,7 +182,8 @@ for option in options_sequence:
 
     # Check for the option's explicit visibility
     for visibility in options_json[option]["Visibility"]:
-        tmp_vis_list.append(visibility["def"])
+        if visibility is not None:
+            tmp_vis_list.append(visibility["def"])
 
     # Check for the option's group's visibility
     find_groups(group_sequence, options_json, option)
@@ -208,42 +206,52 @@ try:
             for i in unsupported_sequence:
                 if i.driver == OPTION_CC1AS:
                     lit_file.write(
-                        "; RUN: not clang -cc1as -" + i.option + " -help 2>&1 | FileCheck -check-prefix=" + CHECK_PREFIX_CC1AS + " %s\n")
+                        "; RUN: not clang -cc1as -"
+                        + i.option
+                        + RUN_CMD_END)
                     continue
                 if i.driver == OPTION_CC1:
                     lit_file.write(
-                        "; RUN: not clang -cc1 -" + i.option + " -help 2>&1 | FileCheck -check-prefix=" + CHECK_PREFIX_CC1 + " %s\n")
+                        "; RUN: not clang -cc1 -"
+                        + i.option
+                        + RUN_CMD_END)
                     continue
-                # if i.driver == OPTION_CL:
-                #     lit_file.write(
-                #         "; RUN: not clang-cl -" + i.option + " -help 2>&1 | FileCheck -check-prefix=" + CHECK_PREFIX_CL + " %s\n")
-                #     continue
-                # if i.driver == OPTION_DXC:
-                #     lit_file.write(
-                #         "; RUN: not clang-dxc -" + i.option + " -help 2>&1 | FileCheck -check-prefix=" + CHECK_PREFIX_DXC + " %s\n")
-                #     continue
+                if i.driver == OPTION_CL:
+                    lit_file.write(
+                        "; RUN: not clang-cl -"
+                        + i.option
+                        + RUN_CMD_END)
+                    continue
+                if i.driver == OPTION_DXC:
+                    lit_file.write(
+                        "; RUN: not clang-dxc -"
+                        + i.option
+                        + RUN_CMD_END)
+                    continue
                 if i.driver == OPTION_DEFAULT:
                     lit_file.write(
-                        "; RUN: not clang -" + i.option + " -help 2>&1 | FileCheck -check-prefix=" + CHECK_PREFIX_DEFAULT + " %s\n")
+                        "; RUN: not clang -"
+                        + i.option
+                        + RUN_CMD_END)
                     continue
                 if i.driver == OPTION_FC1:
                     lit_file.write(
-                        "; RUN: not flang -fc1 -" + i.option + " -help 2>&1 | FileCheck -check-prefix=" + CHECK_PREFIX_FC1 + " %s\n")
+                        "; RUN: not flang -fc1 -"
+                        + i.option
+                        + RUN_CMD_END)
                     continue
                 if i.driver == OPTION_FLANG:
                     lit_file.write(
-                        "; RUN: not flang -" + i.option + " -help 2>&1 | FileCheck -check-prefix=" + CHECK_PREFIX_FLANG + " %s\n")
+                        "; RUN: not flang -"
+                        + i.option
+                        + RUN_CMD_END)
 
-            lit_file.write("; " + CHECK_PREFIX_CC1AS + ": " + ERROR_MSG_CC1AS + "\n")
-            lit_file.write("; " + CHECK_PREFIX_CC1 + ": " + ERROR_MSG_CC1 + "\n")
-            lit_file.write("; " + CHECK_PREFIX_CL + ": " + ERROR_MSG_CL + "\n")
-            lit_file.write("; " + CHECK_PREFIX_DXC + ": " + ERROR_MSG_DXC + "\n")
-            lit_file.write("; " + CHECK_PREFIX_DEFAULT + ": " + ERROR_MSG_DEFAULT + "\n")
-            lit_file.write("; " + CHECK_PREFIX_FC1 + ": " + ERROR_MSG_FC1 + "\n")
-            lit_file.write("; " + CHECK_PREFIX_FLANG + ": " + ERROR_MSG_FLANG + "\n")
+            lit_file.write(
+                "; CHECK: "+ ERROR_MSG_GENERAL + "\n"
+            )
         except(IOError, OSError):
             sys.exit("Error writing to " + "LIT_TEST_PATH. Exiting")
-except(FileNotFoundError, PermissionError, OSError):
+except (FileNotFoundError, PermissionError, OSError):
     sys.exit("Error opening " + "LIT_TEST_PATH" + ". Exiting")
 else:
     lit_file.close()
