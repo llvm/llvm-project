@@ -11,6 +11,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "stdint.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
@@ -18,7 +19,23 @@ namespace timezone {
 // accoring to `tzfile`, timezone header if always 44 bytes
 #define TIMEZONE_HDR_SIZE 44
 
-int get_timezone_offset(char *timezone);
+typedef struct {
+    int64_t tt_utoff;
+    uint8_t tt_isdst;
+    uint8_t tt_desigidx;
+} ttinfo;
+
+typedef struct {
+    uint64_t tzh_ttisutcnt;
+    uint64_t tzh_ttisstdcnt;
+    uint64_t tzh_leapcnt;
+    uint64_t tzh_timecnt;
+    uint64_t tzh_typecnt;
+    uint64_t tzh_charcnt;
+    ttinfo *ttinfo;
+} tzset;
+
+tzset *get_timezone_offset(char *timezone);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
