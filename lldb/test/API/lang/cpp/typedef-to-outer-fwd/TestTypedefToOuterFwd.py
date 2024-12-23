@@ -6,9 +6,11 @@ from lldbsuite.test import lldbutil
 
 class TestCaseTypedefToOuterFwd(TestBase):
     """
-    We a global variable whose type is forward declared. We then
-    try to get the Ref typedef (whose definition is in either main.o
-    or lib.o). Make sure we correctly resolve this typedef.
+    We find a global variable whose type is forward declared
+    (whose definition is in either main.o or lib.o). We then
+    try to get the 'Ref' typedef nested within that forward
+    declared type. This test makes sure we correctly resolve
+    this typedef.
 
     We test this for two cases, where the definition lives
     in main.o or lib.o.
@@ -29,12 +31,8 @@ class TestCaseTypedefToOuterFwd(TestBase):
 
         self.assertEqual(ref.GetCanonicalType(), var_type)
 
-    def test_definition_in_main(self):
+    def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.check_global_var(target, "gLibExternalDef")
-
-    def test_definition_in_lib(self):
-        self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.check_global_var(target, "gMainExternalDef")
