@@ -169,7 +169,7 @@ int MainLoopPosix::RunImpl::StartPoll(
   using namespace std::chrono;
   int timeout = -1;
   if (point) {
-    nanosecond dur = std::max(*point - steady_clock::now(), nanoseconds(0));
+    nanoseconds dur = std::max(*point - steady_clock::now(), nanoseconds(0));
     timeout = ceil<milliseconds>(dur).count();
   }
   return poll(read_fds.data(), read_fds.size(), timeout);
