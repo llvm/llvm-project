@@ -44,9 +44,6 @@ function (add_flangrt_library name)
       ")
   endif ()
 
-  # Also add header files to IDEs to list as part of the library
-  set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
-
   # Forward libtype to add_library
   set(extra_args "")
   if (ARG_SHARED)
@@ -61,6 +58,9 @@ function (add_flangrt_library name)
   if (ARG_EXCLUDE_FROM_ALL)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
+
+  # Also add header files to IDEs to list as part of the library.
+  set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
   add_library(${name} ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
 
@@ -103,7 +103,7 @@ function (add_flangrt_library name)
       )
   endif ()
 
-  # Flang-rt's public headers
+  # Flang-RT's public headers
   target_include_directories(${name} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
 
   # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
@@ -121,12 +121,24 @@ function (add_flangrt_library name)
   endif ()
 
   # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
-  # should only depend on msv(u)crt. LLVM still emits libgcc/compiler-rt
+  # should only depend on msvcrt/ucrt. LLVM still emits libgcc/compiler-rt
   # functions in some cases like 128-bit integer math (__udivti3, __modti3,
   # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
   # dependency to Compiler-RT's builtin library where these are implemented.
-  if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FLANG_RT_BUILTINS_LIBRARY)
-    target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
+  if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (FLANG_RT_BUILTINS_LIBRARY)
+      target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
+    endif ()
+  endif ()
+  if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    if (FLANG_RT_BUILTINS_LIBRARY)
+      target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
+    else ()
+      message(WARNING "Did not find libclang_rt.builtins.lib.
+        LLVM may emit builtins that are not implemented in msvcrt/ucrt and
+        instead falls back to builtins from Compiler-RT. Linking with ${name}
+        may result in a linker error.")
+    endif ()
   endif ()
 
   # Non-GTest unittests depend on LLVMSupport
@@ -146,19 +158,15 @@ function (add_flangrt_library name)
   if (ARG_INSTALL_WITH_TOOLCHAIN)
     set_target_properties(${name}
       PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
-        ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
+        ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
       )
 
     install(TARGETS ${name}
-        LIBRARY DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
-        ARCHIVE DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
-        RUNTIME DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
+        ARCHIVE DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
       )
   endif ()
 
-  # flang-rt should build all the flang-rt targets that are built in an
+  # flang-rt should build all the Flang-RT targets that are built in an
   # 'all' build.
   if (NOT ARG_EXCLUDE_FROM_ALL)
     add_dependencies(flang-rt ${name})
