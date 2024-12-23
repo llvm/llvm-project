@@ -2362,11 +2362,8 @@ void Writer::setECSymbols() {
       if (auto thunkChunk =
               dyn_cast<ECExportThunkChunk>(altEntrySym->getChunk()))
         altEntrySym = thunkChunk->target;
-      Symbol *nativeEntrySym =
-          symtab->findUnderscore("__arm64x_native_entrypoint");
-      replaceSymbol<DefinedAbsolute>(
-          nativeEntrySym, ctx, "__arm64x_native_entrypoint",
-          ctx.config.imageBase + altEntrySym->getRVA());
+      symtab->findUnderscore("__arm64x_native_entrypoint")
+          ->replaceKeepingName(altEntrySym, sizeof(SymbolUnion));
     }
   }
 }
