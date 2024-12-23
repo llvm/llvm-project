@@ -1025,7 +1025,8 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
   cl::opt<bool> BinaryCounters(
       "binary-counters", cl::Optional,
-      cl::desc("Show 1/0 instead of actual counter values."),
+      cl::desc("Show when lines/branches are covered (1) or uncovered (0) "
+               "instead of showing actual counter values."),
       cl::cat(ViewCategory));
 
   cl::opt<uint32_t> TabSize(
