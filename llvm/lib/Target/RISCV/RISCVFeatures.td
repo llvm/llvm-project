@@ -842,13 +842,11 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
                  AssemblerPredicate<(all_of FeatureStdExtH),
                                     "'H' (Hypervisor)">;
 
-// Debugger extensions
+// Supervisor extensions
 
 def FeatureStdExtSdext : RISCVExperimentalExtension<1, 0, "External debugger">;
 
 def FeatureStdExtSdtrig : RISCVExperimentalExtension<1, 0, "Debugger triggers">;
-
-// Supervisor extensions
 
 def FeatureStdExtShgatpa
     : RISCVExtension<1, 0,
