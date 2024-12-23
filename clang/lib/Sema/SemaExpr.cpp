@@ -13291,22 +13291,24 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   if (!DRE) return NCCK_None;
   if (!DRE->refersToEnclosingVariableOrCapture()) return NCCK_None;
 
-  // The declaration must be a variable which is not declared 'const'.
-  VarDecl *var = dyn_cast<VarDecl>(DRE->getDecl());
-  if (!var) {
-    // Bindings also can be captured by lambda in C++
-    BindingDecl *binding = dyn_cast<BindingDecl>(DRE->getDecl());
-    if (!binding || binding->getType().isConstQualified())
-      return NCCK_None;
+  ValueDecl *Value = dyn_cast<ValueDecl>(DRE->getDecl());
 
+  // The declaration must be a value which is not declared 'const'.
+  if (!Value || Value->getType().isConstQualified())
+    return NCCK_None;
+
+  BindingDecl *Binding = dyn_cast<BindingDecl>(Value);
+  if (Binding) {
     assert(S.getLangOpts().CPlusPlus && "BindingDecl outside of C++?");
-    assert(!isa<BlockDecl>(binding->getDeclContext()));
-
+    assert(!isa<BlockDecl>(Binding->getDeclContext()));
     return NCCK_Lambda;
   }
 
-  if (var->getType().isConstQualified()) return NCCK_None;
-  assert(var->hasLocalStorage() && "capture added 'const' to non-local?");
+  VarDecl *Var = dyn_cast<VarDecl>(Value);
+  if (!Var)
+    return NCCK_None;
+
+  assert(Var->hasLocalStorage() && "capture added 'const' to non-local?");
 
   // Decide whether the first capture was for a block or a lambda.
   DeclContext *DC = S.CurContext, *Prev = nullptr;
@@ -13315,16 +13317,16 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
     // For init-capture, it is possible that the variable belongs to the
     // template pattern of the current context.
     if (auto *FD = dyn_cast<FunctionDecl>(DC))
-      if (var->isInitCapture() &&
-          FD->getTemplateInstantiationPattern() == var->getDeclContext())
+      if (Var->isInitCapture() &&
+          FD->getTemplateInstantiationPattern() == Var->getDeclContext())
         break;
-    if (DC == var->getDeclContext())
+    if (DC == Var->getDeclContext())
       break;
     Prev = DC;
     DC = DC->getParent();
   }
   // Unless we have an init-capture, we've gone one step too far.
-  if (!var->isInitCapture())
+  if (!Var->isInitCapture())
     DC = Prev;
   return (isa<BlockDecl>(DC) ? NCCK_Block : NCCK_Lambda);
 }
