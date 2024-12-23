@@ -836,16 +836,12 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");
     if (SrcGIOrNull->TheDef->getName() == "G_CONSTANT" ||
-        SrcGIOrNull->TheDef->getName() == "G_FCONSTANT") {
+        SrcGIOrNull->TheDef->getName() == "G_FCONSTANT" ||
+        SrcGIOrNull->TheDef->getName() == "G_FRAME_INDEX") {
       // imm/fpimm still have operands but we don't need to do anything with it
       // here since we don't support ImmLeaf predicates yet. However, we still
       // need to note the hidden operand to get GIM_CheckNumOperands correct.
       InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
-      return InsnMatcher;
-    }
-
-    if (SrcGIOrNull->TheDef->getName() == "G_FRAME_INDEX") {
-      InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
       return InsnMatcher;
     }
 
