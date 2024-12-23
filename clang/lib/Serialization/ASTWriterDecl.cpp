@@ -798,6 +798,17 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     }
   }
 
+  if (D->getFriendObjectKind()) {
+    // For a function defined inline within a class template, we have to force
+    // the canonical definition to be the one inside the canonical definition of
+    // the template. Remember this relation to deserialize them together.
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
+      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
+        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+            Writer.GetDeclRef(D));
+      }
+  }
+
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
     Record.AddDeclRef(P);
@@ -1563,7 +1574,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     // For lambdas inside canonical FunctionDecl remember the mapping.
     if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
         FD && FD->isCanonicalDecl()) {
-      Writer.FunctionToLambdasMap[Writer.GetDeclRef(FD)].push_back(
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
   } else {
@@ -1694,7 +1705,7 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
   // so as to simplify memory allocation during deserialization.
   Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  bool hasFriendDecl = D->Friend.is<NamedDecl*>();
+  bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
   if (hasFriendDecl)
     Record.AddDeclRef(D->getFriendDecl());
@@ -1795,7 +1806,7 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   if (Decl *InstFromD = InstFrom.dyn_cast<ClassTemplateDecl *>()) {
     Record.AddDeclRef(InstFromD);
   } else {
-    Record.AddDeclRef(InstFrom.get<ClassTemplatePartialSpecializationDecl *>());
+    Record.AddDeclRef(cast<ClassTemplatePartialSpecializationDecl *>(InstFrom));
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 
@@ -1873,7 +1884,7 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
   if (Decl *InstFromD = InstFrom.dyn_cast<VarTemplateDecl *>()) {
     Record.AddDeclRef(InstFromD);
   } else {
-    Record.AddDeclRef(InstFrom.get<VarTemplatePartialSpecializationDecl *>());
+    Record.AddDeclRef(cast<VarTemplatePartialSpecializationDecl *>(InstFrom));
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 

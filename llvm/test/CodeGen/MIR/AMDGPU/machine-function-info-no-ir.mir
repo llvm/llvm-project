@@ -39,6 +39,7 @@
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -143,6 +144,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -218,6 +220,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -294,6 +297,7 @@ body:             |
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: psInputAddr:     0
 # FULL-NEXT: psInputEnable:   0
+# FULL-NEXT: maxMemoryClusterDWords:   8
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -592,4 +596,16 @@ body: |
   bb.0:
     %2:sgpr_64 = COPY %1
     %1:sgpr_64 = COPY %0
+...
+
+---
+# ALL-LABEL: name: max_memory_cluster_dwords
+# ALL: maxMemoryClusterDWords: 16
+name: max_memory_cluster_dwords
+machineFunctionInfo:
+  maxMemoryClusterDWords: 16
+body:             |
+  bb.0:
+    SI_RETURN
+
 ...

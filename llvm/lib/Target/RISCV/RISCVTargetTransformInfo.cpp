@@ -388,13 +388,20 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // First, handle cases where having a fixed length vector enables us to
   // give a more accurate cost than falling back to generic scalable codegen.
   // TODO: Each of these cases hints at a modeling gap around scalable vectors.
-  if (isa<FixedVectorType>(Tp)) {
+  if (ST->hasVInstructions() && isa<FixedVectorType>(Tp)) {
     MVT LegalVT = LT.second;
-    InstructionCost NumOfDests = LT.first;
-    if (ST->hasVInstructions() &&
-        LT.second.getSizeInBits().getFixedValue() >
-            ST->getRealVLen().value_or(UINT_MAX) &&
-        !Mask.empty() && NumOfDests.isValid() && NumOfDests > 1 &&
+    InstructionCost NumOfDests = InstructionCost::getInvalid();
+    const auto VLen = ST->getRealVLen();
+    if (VLen && LegalVT.isFixedLengthVector() && !Mask.empty()) {
+      MVT ElemVT = LegalVT.getVectorElementType();
+      unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
+      LegalVT = getTypeLegalizationCost(
+                    FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
+                    .second;
+      NumOfDests = divideCeil(Mask.size(),
+                              LegalVT.getVectorNumElements());
+    }
+    if (NumOfDests.isValid() && NumOfDests > 1 &&
         LegalVT.isFixedLengthVector() &&
         LegalVT.getVectorElementType().getSizeInBits() ==
             Tp->getElementType()->getPrimitiveSizeInBits() &&
@@ -403,7 +410,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       unsigned VecTySize = DL.getTypeStoreSize(Tp);
       unsigned LegalVTSize = LegalVT.getStoreSize();
       // Number of source vectors after legalization:
-      unsigned NumOfSrcs = (VecTySize + LegalVTSize - 1) / LegalVTSize;
+      unsigned NumOfSrcs = divideCeil(VecTySize, LegalVTSize);
       // Number of destination vectors after legalization:
 
       auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(),
@@ -422,9 +429,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // copy of the previous destination register (the cost is
       // TTI::TCC_Basic). If the source register is just reused, the cost for
       // this operation is 0.
-      NumOfDests = getTypeLegalizationCost(
-                       FixedVectorType::get(Tp->getElementType(), Mask.size()))
-                       .first;
       unsigned E = *NumOfDests.getValue();
       unsigned NormalizedVF =
           LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
@@ -455,14 +459,14 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                        RegMask, CostKind, 0, nullptr);
               } else {
                 // Just a copy of previous destination register.
-                Cost += TTI::TCC_Basic;
+                Cost += TTI::TCC_Free;
               }
               return;
             }
             if (SrcReg != DestReg &&
                 any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
               // Just a copy of the source register.
-              Cost += TTI::TCC_Basic;
+              Cost += TTI::TCC_Free;
             }
             PrevSrcReg = SrcReg;
             PrevRegMask = RegMask;
@@ -2079,6 +2083,34 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
 
+  // When the vector needs to split into multiple register groups and the index
+  // exceeds single vector register group, we need to insert/extract the element
+  // via stack.
+  if (LT.first > 1 &&
+      ((Index == -1U) || (Index >= LT.second.getVectorMinNumElements() &&
+                          LT.second.isScalableVector()))) {
+    Type *ScalarType = Val->getScalarType();
+    Align VecAlign = DL.getPrefTypeAlign(Val);
+    Align SclAlign = DL.getPrefTypeAlign(ScalarType);
+    // Extra addi for unknown index.
+    InstructionCost IdxCost = Index == -1U ? 1 : 0;
+
+    // Store all split vectors into stack and load the target element.
+    if (Opcode == Instruction::ExtractElement)
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+             getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
+                             CostKind) +
+             IdxCost;
+
+    // Store all split vectors into stack and store the target element and load
+    // vectors back.
+    return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Load, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
+                           CostKind) +
+           IdxCost;
+  }
+
   // Extract i64 in the target that has XLEN=32 need more instruction.
   if (Val->getScalarType()->isIntegerTy() &&
       ST->getXLen() < Val->getScalarSizeInBits()) {
@@ -2517,6 +2549,8 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   switch (II->getIntrinsicID()) {
   case Intrinsic::fma:
   case Intrinsic::vp_fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::vp_fmuladd:
     return Operand == 0 || Operand == 1;
   case Intrinsic::vp_shl:
   case Intrinsic::vp_lshr:

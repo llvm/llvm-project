@@ -62,11 +62,7 @@ BitcastBuffer::copyBits(Bits BitOffset, Bits BitWidth, Bits FullBitWidth,
 }
 
 bool BitcastBuffer::allInitialized() const {
-  Bits Sum;
-  for (BitRange BR : InitializedBits)
-    Sum += BR.size();
-
-  return Sum == FinalBitSize;
+  return rangeInitialized(Bits::zero(), FinalBitSize);
 }
 
 void BitcastBuffer::markInitialized(Bits Offset, Bits Length) {
@@ -109,6 +105,34 @@ void BitcastBuffer::markInitialized(Bits Offset, Bits Length) {
     assert(Prev.End.N < Cur.Start.N);
   }
 #endif
+}
+
+bool BitcastBuffer::rangeInitialized(Bits Offset, Bits Length) const {
+  if (Length.isZero())
+    return true;
+
+  BitRange Range(Offset, Offset + Length - Bits(1));
+  Bits Sum;
+  bool FoundStart = false;
+  for (BitRange BR : InitializedBits) {
+    if (FoundStart) {
+      if (BR.contains(Range.End)) {
+        Sum += (Range.End - BR.Start + Bits(1));
+        break;
+      }
+
+      // Else, BR is completely inside Range.
+      Sum += BR.size();
+    }
+    if (BR.contains(Range.Start)) {
+      Sum += (BR.End - Range.Start + Bits(1));
+      FoundStart = true;
+    }
+  }
+
+  // Note that Sum can be larger than Range, e.g. when Range is fully
+  // contained in one range.
+  return Sum >= Range.size();
 }
 
 #if 0

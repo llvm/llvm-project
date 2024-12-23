@@ -195,6 +195,7 @@ Changes to the RISC-V Backend
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * `-mcpu=tt-ascalon-d8` was added.
+* `-mcpu=mips-p8700` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
@@ -220,6 +221,10 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the Qualcomm uC 'Xqcisls` (Scaled Load Store)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcics` (Conditonal Select)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
   extension.
 
 Changes to the WebAssembly Backend
@@ -268,6 +273,13 @@ Changes to the X86 Backend
 * Supported ISA of `MSR_IMM`.
 
 * Supported ``-mcpu=diamondrapids``
+
+* Supported emitting relocation types for x86-64 target:
+  * `R_X86_64_CODE_4_GOTPCRELX`
+  * `R_X86_64_CODE_4_GOTTPOFF`
+  * `R_X86_64_CODE_4_GOTPC32_TLSDESC`
+  * `R_X86_64_CODE_6_GOTTPOFF`
+
 
 Changes to the OCaml bindings
 -----------------------------
@@ -341,7 +353,7 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* LLDB now now supports inline diagnostics for the expression evaluator and command line parser.
+* LLDB now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
   ```

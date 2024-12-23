@@ -131,9 +131,18 @@ private:
                       int OpIdx) const;
   void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                  int OpIdx) const;
+  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 
   void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
                            int OpIdx) const;
+  void renderXLenSubTrailingOnes(MachineInstrBuilder &MIB,
+                                 const MachineInstr &MI, int OpIdx) const;
+
+  void renderAddiPairImmLarge(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                              int OpIdx) const;
+  void renderAddiPairImmSmall(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                              int OpIdx) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -708,14 +717,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.setDesc(TII.get(RISCV::PseudoBRIND));
     MI.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  case TargetOpcode::G_FRAME_INDEX: {
-    // TODO: We may want to replace this code with the SelectionDAG patterns,
-    // which fail to get imported because it uses FrameAddrRegImm, which is a
-    // ComplexPattern
-    MI.setDesc(TII.get(RISCV::ADDI));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB);
   case TargetOpcode::G_FCMP:
@@ -852,6 +853,14 @@ void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
   MIB.addImm(CstVal);
 }
 
+void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
+         "Expected G_FRAME_INDEX");
+  MIB.add(MI.getOperand(1));
+}
+
 void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
                                                    const MachineInstr &MI,
                                                    int OpIdx) const {
@@ -859,6 +868,33 @@ void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   uint64_t C = MI.getOperand(1).getCImm()->getZExtValue();
   MIB.addImm(llvm::countr_zero(C));
+}
+
+void RISCVInstructionSelector::renderXLenSubTrailingOnes(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t C = MI.getOperand(1).getCImm()->getZExtValue();
+  MIB.addImm(Subtarget->getXLen() - llvm::countr_one(C));
+}
+
+void RISCVInstructionSelector::renderAddiPairImmSmall(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+  int64_t Adj = Imm < 0 ? -2048 : 2047;
+  MIB.addImm(Imm - Adj);
+}
+
+void RISCVInstructionSelector::renderAddiPairImmLarge(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue() < 0 ? -2048 : 2047;
+  MIB.addImm(Imm);
 }
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(

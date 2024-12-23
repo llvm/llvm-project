@@ -1446,6 +1446,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-strings
     llvm-strip
     llvm-profdata
+    llvm-profgen
     llvm-symbolizer
     # symlink version of some of above tools that are enabled by
     # LLVM_INSTALL_BINUTILS_SYMLINKS.
@@ -1483,7 +1484,7 @@ macro(llvm_add_tool project name)
 
     if ( ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
       if( LLVM_BUILD_TOOLS )
-        get_target_export_arg(${name} LLVM export_to_llvmexports)
+        get_target_export_arg(${name} ${project} export_to_llvmexports)
         install(TARGETS ${name}
                 ${export_to_llvmexports}
                 RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
@@ -1497,7 +1498,8 @@ macro(llvm_add_tool project name)
       endif()
     endif()
     if( LLVM_BUILD_TOOLS )
-      set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+      string(TOUPPER "${project}" project_upper)
+      set_property(GLOBAL APPEND PROPERTY ${project_upper}_EXPORTS ${name})
     endif()
   endif()
   get_subproject_title(subproject_title)

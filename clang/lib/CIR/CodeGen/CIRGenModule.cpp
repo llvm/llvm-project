@@ -25,17 +25,38 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
-                           clang::ASTContext &astctx,
+CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
+                           clang::ASTContext &astContext,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
-    : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&context))},
-      diags(diags), target(astCtx.getTargetInfo()), genTypes(*this) {}
+    : builder(mlirContext, *this), astContext(astContext),
+      langOpts(astContext.getLangOpts()),
+      theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
+      diags(diags), target(astContext.getTargetInfo()), genTypes(*this) {
+
+  // Initialize cached types
+  VoidTy = cir::VoidType::get(&getMLIRContext());
+  SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
+  SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
+  SInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
+  SInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
+  SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
+  UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
+  UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
+  UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
+  UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
+  UInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
+  FP16Ty = cir::FP16Type::get(&getMLIRContext());
+  BFloat16Ty = cir::BF16Type::get(&getMLIRContext());
+  FloatTy = cir::SingleType::get(&getMLIRContext());
+  DoubleTy = cir::DoubleType::get(&getMLIRContext());
+  FP80Ty = cir::FP80Type::get(&getMLIRContext());
+  FP128Ty = cir::FP128Type::get(&getMLIRContext());
+}
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
-  const SourceManager &sm = astCtx.getSourceManager();
+  const SourceManager &sm = astContext.getSourceManager();
   PresumedLoc pLoc = sm.getPresumedLoc(cLoc);
   StringRef filename = pLoc.getFilename();
   return mlir::FileLineColLoc::get(builder.getStringAttr(filename),

@@ -273,11 +273,11 @@ define void @fold_stpncpy_s4(ptr %dst, i64 %n) {
 
 define void @call_stpncpy_xx_n(ptr %dst, i64 %n) {
 ; ANY-LABEL: @call_stpncpy_xx_n(
-; ANY-NEXT:    [[EA1_N:%.*]] = call ptr @stpncpy(ptr [[DST:%.*]], ptr nonnull dereferenceable(2) getelementptr inbounds (i8, ptr @a4, i64 3), i64 [[N:%.*]])
+; ANY-NEXT:    [[EA1_N:%.*]] = call ptr @stpncpy(ptr [[DST:%.*]], ptr nonnull dereferenceable(2) getelementptr inbounds nuw (i8, ptr @a4, i64 3), i64 [[N:%.*]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[EA1_N]])
 ; ANY-NEXT:    [[EA4_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(5) @a4, i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[EA4_N]])
-; ANY-NEXT:    [[ES1_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(2) getelementptr inbounds (i8, ptr @s4, i64 3), i64 [[N]])
+; ANY-NEXT:    [[ES1_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(2) getelementptr inbounds nuw (i8, ptr @s4, i64 3), i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES1_N]])
 ; ANY-NEXT:    [[ES4_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(5) @s4, i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES4_N]])

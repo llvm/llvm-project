@@ -92,12 +92,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -106,7 +107,9 @@ static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 };
 class LLDBDAPOptTable : public llvm::opt::GenericOptTable {
 public:
-  LLDBDAPOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
+  LLDBDAPOptTable()
+      : llvm::opt::GenericOptTable(OptionStrTable, OptionPrefixesTable,
+                                   InfoTable, true) {}
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);

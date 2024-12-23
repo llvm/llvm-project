@@ -4329,13 +4329,12 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     DC->setHasExternalVisibleStorage(true);
   }
 
-  // Load any pending lambdas for the function.
-  if (auto *FD = dyn_cast<FunctionDecl>(D); FD && FD->isCanonicalDecl()) {
-    if (auto IT = FunctionToLambdasMap.find(ID);
-        IT != FunctionToLambdasMap.end()) {
+  // Load any pending related decls.
+  if (D->isCanonicalDecl()) {
+    if (auto IT = RelatedDeclsMap.find(ID); IT != RelatedDeclsMap.end()) {
       for (auto LID : IT->second)
         GetDecl(LID);
-      FunctionToLambdasMap.erase(IT);
+      RelatedDeclsMap.erase(IT);
     }
   }
 
@@ -4598,7 +4597,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
                     .dyn_cast<FunctionTemplateSpecializationInfo *>())
           FTSInfo->setPointOfInstantiation(POI);
         else
-          FD->TemplateOrSpecialization.get<MemberSpecializationInfo *>()
+          cast<MemberSpecializationInfo *>(FD->TemplateOrSpecialization)
               ->setPointOfInstantiation(POI);
       }
       break;
@@ -4697,8 +4696,8 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
 
           // FIXME: If we already have a partial specialization set,
           // check that it matches.
-          if (!Spec->getSpecializedTemplateOrPartial()
-                   .is<ClassTemplatePartialSpecializationDecl *>())
+          if (!isa<ClassTemplatePartialSpecializationDecl *>(
+                  Spec->getSpecializedTemplateOrPartial()))
             Spec->setInstantiationOf(PartialSpec, TemplArgList);
         }
       }

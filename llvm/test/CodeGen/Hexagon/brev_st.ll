@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
-; RUN: llc -march=hexagon -verify-machineinstrs=true < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs=true < %s | FileCheck %s
 ; Test these 5 bitreverse store intrinsics:
 ;   Q6_bitrev_store_update_D(inputLR, pDelay, nConvLength);
 ;   Q6_bitrev_store_update_W(inputLR, pDelay, nConvLength);
