@@ -31,10 +31,10 @@ Requirements:
   * [Same as LLVM](https://llvm.org/docs/GettingStarted.html#requirements).
 
 
-### Bootstrap/In-Tree Build
+### Bootstrappng Runtimes Build
 
-The bootstrap build will first build Clang and Flang, then use these compilers
-to compile Flang-RT. CMake will create a secondary build tree
+The bootstrapping build will first build Clang and Flang, then use these
+compilers to compile Flang-RT. CMake will create a secondary build tree
 configured to use these just-built compilers. The secondary build will reuse
 the same build options (Flags, Debug/Release, ...) as the primary build.
 It will also ensure that once built, Flang-RT is found by Flang from either
@@ -78,12 +78,12 @@ $ ninja install
 ```
 
 
-### Runtime-only/Out-of-Tree Build
+### Standalone Runtimes Build
 
-Instead of building Clang and Flang from scratch, the Runtime-only build uses
-CMake's environment introspection to find a C, C++, and Fortran compiler. The
-compiler to be used can be controlled using CMake's standard mechanisms such as
-`CMAKE_CXX_COMPILER`, `CMAKE_CXX_COMPILER`, and `CMAKE_Fortran_COMPILER`.
+Instead of building Clang and Flang from scratch, the standalone Runtime build
+uses CMake's environment introspection to find a C, C++, and Fortran compiler.
+The compiler to be used can be controlled using CMake's standard mechanisms such
+as `CMAKE_CXX_COMPILER`, `CMAKE_CXX_COMPILER`, and `CMAKE_Fortran_COMPILER`.
 `CMAKE_Fortran_COMPILER` must be `flang` built from the same Git commit as
 Flang-RT to ensure they are using the same ABI. The C and C++ compiler
 can be any compiler supporting the same ABI.
@@ -113,24 +113,14 @@ Of course, Flang-RT can be built multiple times with different build
 configurations, but have to be located manually when using with the Flang
 driver using the `-L` option.
 
-A more complete build configuration could be the following:
+After configuration, build, test, and install the runtime via
 
-```bash
-cmake -S <path-to-llvm-project-source>/runtimes                               \
-  -GNinja                                                                     \
-  -DCMAKE_BUILD_TYPE=Release                                                  \
-  -DCMAKE_INSTALL_PREFIX="${HOME}/local"                                      \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt"                               \
-  -DCMAKE_C_COMPILER=gcc                                                      \
-  -DCMAKE_CXX_COMPILER=g++                                                    \
-  -DLLVM_BINARY_DIR=<path-to-llvm-builddir>                                   \
-  -DLLVM_DIR=<path-to-llvm-builddir>/lib/cmake/llvm                           \
-  -DClang_DIR=<path-to-llvm-builddir>/lib/cmake/clang                         \
-  -DCMAKE_Fortran_COMPILER=<path-to-llvm-builddir-or-installprefix>/bin/flang \
-  -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu                               \
-  -DLLVM_RUNTIMES_TARGET=x86_64-linux-gnu                                     \
-  ...
+```shell
+$ ninja
+$ ninja check-flang-rt
+$ ninja install
 ```
+
 
 ## Configuration Option Reference
 
@@ -170,7 +160,7 @@ CMake itself provide.
    (no `CMAKE_CUDA_COMPILER`).
 
 
-### Exprimental CUDA Support
+### Experimental CUDA Support
 
 With `-DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA`, the following
 additional configuration options become available.
@@ -186,7 +176,7 @@ additional configuration options become available.
    default.
 
 
-### Exprimental OpenMP Offload Support
+### Experimental OpenMP Offload Support
 
 With `-DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=OpenMP`, the following
 additional configuration options become available.

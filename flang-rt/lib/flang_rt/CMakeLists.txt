@@ -154,11 +154,17 @@ else()
         ADDITIONAL_HEADERS ${public_headers} ${private_headers}
       )
 
+    if (msvc_lib)
+      set_target_properties(${name}
+          PROPERTIES
+            MSVC_RUNTIME_LIBRARY "${msvc_lib}"
+        )
+    endif ()
+
     # Setting an unique Fortran_MODULE_DIRECTORY is required for each variant to
     # write a different .mod file.
     set_target_properties(${name}
         PROPERTIES
-          MSVC_RUNTIME_LIBRARY ${msvc_lib}
           Fortran_MODULE_DIRECTORY "module.${suffix}"
       )
 
@@ -167,14 +173,12 @@ else()
     add_dependencies(flang_rt ${name})
   endfunction ()
 
-  add_win_flangrt_library(STATIC static     MultiThreaded      INSTALL_WITH_TOOLCHAIN)
-  add_win_flangrt_library(STATIC static_dbg MultiThreadedDebug INSTALL_WITH_TOOLCHAIN)
-
-  # unittests link against LLVMSupport which is compiled with /MD
-  add_win_flangrt_library(STATIC unittest   MultiThreadedDLL EXCLUDE_FROM_ALL)
-
-  # FIXME: Generating runtime DLLs is currently not possible. There are two
-  # roadblocks:
+  # Variants of the static flang_rt for different versions of the msvc runtime.
+  #
+  # The dynamic/dynamic_dbg variants are not DLLs themselves, only require
+  # linking to msvcrt(d).dll.
+  # FIXME: Generating actual runtime DLLs is currently not possible. There are
+  # two roadblocks:
   #
   #  * Flang emits /DEFAULTLIB:flang_rt.dynamic.lib into
   #    iso_fortran_env_impl.f90.obj. Because that file is itself part of
@@ -186,7 +190,24 @@ else()
   #    is CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS which would also export the internal
   #    C++ symbols and still requires global data symbols to be annotated
   #    manually.
-  #
-  #add_win_flangrt_library(SHARED dynamic     MultiThreadedDLL)
-  #add_win_flangrt_library(SHARED dynamic_dbg MultiThreadedDebugDLL)
+  add_win_flangrt_library(STATIC static      MultiThreaded         INSTALL_WITH_TOOLCHAIN)
+  add_win_flangrt_library(STATIC static_dbg  MultiThreadedDebug    INSTALL_WITH_TOOLCHAIN)
+  add_win_flangrt_library(STATIC dynamic     MultiThreadedDLL      INSTALL_WITH_TOOLCHAIN)
+  add_win_flangrt_library(STATIC dynamic_dbg MultiThreadedDebugDLL INSTALL_WITH_TOOLCHAIN)
+
+  # Unittests link against LLVMSupport which is using CMake's default runtime
+  # library selection, which is either MultiThreadedDLL or MultiThreadedDebugDLL
+  # depending on the configuration. They have to match or linking will fail.
+  if (GENERATOR_IS_MULTI_CONFIG)
+    # We cannot select an ALIAS library because it may be different
+    # per configuration. Fallback to CMake's default.
+    add_win_flangrt_library(STATIC unittest "" EXCLUDE_FROM_ALL)
+  else ()
+    string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
+    if (build_type STREQUAL "debug")
+      add_library(flang_rt.unittest ALIAS flang_rt.dynamic_dbg)
+    else ()
+      add_library(flang_rt.unittest ALIAS flang_rt.dynamic)
+    endif ()
+  endif ()
 endif()

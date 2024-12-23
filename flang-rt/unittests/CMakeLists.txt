@@ -23,9 +23,6 @@ if (NOT TARGET llvm_gtest)
   build_gtest()
 endif ()
 
-# Required because LLVMSupport is compiled with this option (by default).
-set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
-
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()
@@ -71,6 +68,14 @@ function(add_flangrt_unittest test_dirname)
   target_include_directories(${test_dirname} PRIVATE "${FLANG_SOURCE_DIR}/include")
   target_link_libraries(${test_dirname} PRIVATE ${ARG_LINK_LIBS})
   add_flangrt_unittest_offload_properties(${test_dirname})
+
+  # Required because LLVMSupport is compiled with this option.
+  # FIXME: According to CMake documentation, this is the default. Why is it
+  #        needed? LLVM's add_unittest doesn't set it either.
+  set_target_properties(${test_dirname}
+      PROPERTIES
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+    )
 endfunction()
 
 function(add_flangrt_nongtest_unittest test_name)
