@@ -132,8 +132,7 @@ void transferSmartPointerLikeCachedDeref(
 
   StorageLocation &LocForValue =
       State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-          *SmartPointerLoc, CanonicalCallee, CanonicalCallee->getReturnType(),
-          State.Env, InitializeLoc);
+          *SmartPointerLoc, CanonicalCallee, State.Env, InitializeLoc);
   State.Env.setStorageLocation(*DerefExpr, LocForValue);
 }
 
@@ -151,8 +150,7 @@ void transferSmartPointerLikeCachedGet(
   if (CanonicalCallee != nullptr) {
     auto &LocForValue =
         State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *SmartPointerLoc, CanonicalCallee, CanonicalCallee->getReturnType(),
-            State.Env, InitializeLoc);
+            *SmartPointerLoc, CanonicalCallee, State.Env, InitializeLoc);
     State.Env.setValue(*GetExpr,
                        State.Env.template create<PointerValue>(LocForValue));
   } else {

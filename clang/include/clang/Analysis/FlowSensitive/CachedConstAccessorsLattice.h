@@ -82,18 +82,17 @@ public:
 
   /// Creates or returns a previously created `StorageLocation` associated with
   /// a const method call `obj.getFoo()` where `RecordLoc` is the
-  /// `RecordStorageLocation` of `obj`, `Callee` is the decl for `getFoo`,
-  /// and `Type` is the return type of `getFoo`.
+  /// `RecordStorageLocation` of `obj`, `Callee` is the decl for `getFoo`.
   ///
   /// The callback `Initialize` runs on the storage location if newly created.
   ///
   /// Requirements:
   ///
-  ///  - `Type` should return a location (GLValue or a record type).
+  ///  - `Callee` should return a location (return type is a reference type or a
+  ///     record type).
   StorageLocation &getOrCreateConstMethodReturnStorageLocation(
       const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
-      QualType Type, Environment &Env,
-      llvm::function_ref<void(StorageLocation &)> Initialize);
+      Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize);
 
   void clearConstMethodReturnValues(const RecordStorageLocation &RecordLoc) {
     ConstMethodReturnValues.erase(&RecordLoc);
@@ -236,9 +235,9 @@ template <typename Base>
 StorageLocation &
 CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
     const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
-    QualType Type, Environment &Env,
-    llvm::function_ref<void(StorageLocation &)> Initialize) {
+    Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
   assert(Callee != nullptr);
+  QualType Type = Callee->getReturnType();
   assert(!Type.isNull());
   assert(Type->isReferenceType() || Type->isRecordType());
   auto &ObjMap = ConstMethodReturnStorageLocations[&RecordLoc];
