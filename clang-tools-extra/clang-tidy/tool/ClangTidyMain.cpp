@@ -19,6 +19,8 @@
 #include "../ClangTidyForceLinker.h"
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
@@ -26,7 +28,11 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include <algorithm>
+#include <iterator>
 #include <optional>
+#include <string>
+#include <vector>
 
 using namespace clang::tooling;
 using namespace llvm;
@@ -476,7 +482,7 @@ static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
   return Closest;
 }
 
-static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
+static constexpr StringRef VerifyConfigWarningEnd = " [-verify-config]\n";
 
 static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
                          StringRef Source) {
@@ -569,8 +575,91 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
   return BaseFS;
 }
 
+static void recreateOptionsParserIfNeeded(
+    llvm::Expected<CommonOptionsParser> &OptionsParser,
+    llvm::ArrayRef<const char *> Args,
+    const ClangTidyOptions &EffectiveOptions) {
+
+  if (Args.empty())
+    return;
+
+  const auto DoubleDashIt = llvm::find(Args, StringRef("--"));
+
+  // Exit if we don't have any compiler arguments
+  if (DoubleDashIt == Args.end() || Args.back() == StringRef("--"))
+    return;
+
+  auto IsDriverMode = [](StringRef Argument) {
+    return Argument.starts_with("--driver-mode=");
+  };
+
+  // Exit if --driver-mode= is explicitly passed in compiler arguments
+  if (Args.end() !=
+      std::find_if(std::next(DoubleDashIt), Args.end(), IsDriverMode))
+    return;
+
+  std::vector<std::string> CommandArguments(std::next(DoubleDashIt),
+                                            Args.end());
+
+  // Add clang-tool as program name if not added
+  if (CommandArguments.empty() ||
+      llvm::StringRef(CommandArguments.front()).starts_with("-"))
+    CommandArguments.insert(CommandArguments.begin(), "clang-tool");
+
+  // Apply --extra-arg and --extra-arg-before to compiler arguments
+  CommandArguments =
+      OptionsParser->getArgumentsAdjuster()(CommandArguments, "");
+
+  // Apply ExtraArgsBefore from clang-tidy config to compiler arguments
+  if (EffectiveOptions.ExtraArgsBefore)
+    CommandArguments = tooling::getInsertArgumentAdjuster(
+        *EffectiveOptions.ExtraArgsBefore,
+        tooling::ArgumentInsertPosition::BEGIN)(CommandArguments, "");
+
+  // Apply ExtraArgs from clang-tidy config to compiler arguments
+  if (EffectiveOptions.ExtraArgs)
+    CommandArguments = tooling::getInsertArgumentAdjuster(
+        *EffectiveOptions.ExtraArgs,
+        tooling::ArgumentInsertPosition::END)(CommandArguments, "");
+
+  // Check if now we have --driver-mode=
+  auto DriverModeIt = std::find_if(CommandArguments.begin(),
+                                   CommandArguments.end(), IsDriverMode);
+  if (DriverModeIt == CommandArguments.end()) {
+    // Try to detect and add --driver-mode=
+    const std::string ExeName = CommandArguments.front();
+    tooling::addTargetAndModeForProgramName(CommandArguments, ExeName);
+    DriverModeIt = llvm::find_if(CommandArguments, IsDriverMode);
+  }
+
+  // Exit if there is no --driver-mode= at this stage
+  if (DriverModeIt == CommandArguments.end())
+    return;
+
+  std::vector<const char *> NewArgs = Args.vec();
+
+  // Find place to insert --driver-mode= into new args, best after program name.
+  auto InsertIt =
+      NewArgs.begin() + std::distance(Args.begin(), DoubleDashIt) + 1U;
+  if (!StringRef(*InsertIt).starts_with("-"))
+    ++InsertIt;
+  NewArgs.insert(InsertIt, DriverModeIt->c_str());
+
+  // Re-create CommonOptionsParser with assumption that
+  // FixedCompilationDatabase::loadFromCommandLine will be now called with
+  // proper --driver-mode=
+  int ArgC = NewArgs.size();
+  const char **ArgV = NewArgs.data();
+  OptionsParser = CommonOptionsParser::create(ArgC, ArgV, ClangTidyCategory,
+                                              cl::ZeroOrMore);
+}
+
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
+
+  // Save original arguments because CommonOptionsParser::create will change
+  // `argc`.
+  llvm::ArrayRef<const char *> Args(argv, argc);
 
   // Enable help for -load option, if plugins are enabled.
   if (cl::Option *LoadOpt = cl::getRegisteredOptions().lookup("load"))
@@ -603,6 +692,12 @@ int clangTidyMain(int argc, const char **argv) {
 
   SmallString<256> FilePath = makeAbsolute(FileName);
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
+
+  recreateOptionsParserIfNeeded(OptionsParser, Args, EffectiveOptions);
+  if (!OptionsParser) {
+    llvm::WithColor::error() << llvm::toString(OptionsParser.takeError());
+    return 1;
+  }
 
   std::vector<std::string> EnabledChecks =
       getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);

@@ -108,12 +108,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
-  the configuration options of the `Clang Static Analyzer Checks
-  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
-
-- Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
-  happening on certain platforms when interrupting the script.
+- Improved handling of `--driver-mode=`, now automatically deducing it from
+  the compiler name after `--`, or properly utilizing it when passed as an
+  extra argument during :program:`clang-tidy` invocation with explicit compiler
+  arguments.
 
 - Removed :program:`clang-tidy`'s global options for most of checks. All options
   are changed to local options except `IncludeStyle`, `StrictMode` and
