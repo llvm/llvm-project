@@ -142,7 +142,8 @@ else ()
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." ON)
 endif ()
 if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
-  message(FATAL_ERROR "Must build at least one type of library
+  message(FATAL_ERROR "
+      Must build at least one type of library
       (FLANG_RT_ENABLE_STATIC=ON, FLANG_RT_ENABLE_SHARED=ON, or both)
     ")
 endif ()

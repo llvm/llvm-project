@@ -96,16 +96,16 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
 
   if (WIN32)
     # Do not create a FortranFloat128Math library under Windows, the Flang
-    # driver never links it. Instead, add the sources to the flang_rt itself.
+    # driver never links it. Instead, add the sources to flang_rt itself.
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
     target_compile_definitions(FortranFloat128MathILib INTERFACE HAS_QUADMATHLIB)
   else ()
     add_flangrt_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN
       ${sources})
-   endif ()
-   target_include_directories(FortranFloat128Math PRIVATE
-     "${FLANG_RT_SOURCE_DIR}/lib/flang_rt"
-     )
+    target_include_directories(FortranFloat128Math PRIVATE
+        "${FLANG_RT_SOURCE_DIR}/lib/flang_rt"
+      )
+  endif ()
 elseif (HAVE_LDBL_MANT_DIG_113)
   # We can use 'long double' versions from libc.
   check_library_exists(m sinl "" FOUND_LIBM)

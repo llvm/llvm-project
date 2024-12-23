@@ -10,7 +10,7 @@
 # output. Therefore it also needs to include files from LLVM. Unfortunately,
 # LLVM/GTest doesn't add the include search path itself. Limiting the scope
 # using target_include_directories does not work because with
-# LLVM_INSTALL_GTEST=ON, llvm_gtest is an IMPORT library.
+# LLVM_INSTALL_GTEST=ON, as llvm_gtest is an IMPORT library.
 include_directories("${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
 
 # Add GTest if not already present.
@@ -94,8 +94,10 @@ function(add_flangrt_nongtest_unittest test_name)
   add_executable(${test_name}${suffix} ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang-RT/Tests/Unit")
 
-  target_include_directories(${test_name}${suffix} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
-  target_include_directories(${test_name}${suffix} PRIVATE "${FLANG_SOURCE_DIR}/include")
+  target_include_directories(${test_name}${suffix} PRIVATE
+      "${FLANG_RT_SOURCE_DIR}/include"
+      "${FLANG_SOURCE_DIR}/include"
+    )
   target_link_libraries(${test_name}${suffix} PRIVATE NonGTestTesting ${ARG_LINK_LIBS})
 
   if(NOT ARG_SLOW_TEST)

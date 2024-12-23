@@ -16,7 +16,8 @@
 #   STATIC
 #     Build a static (.a/.lib) library
 #   OBJECT
-#     Create only object files without static/dynamic library
+#     Always create an object library.
+#     Without SHARED/STATIC, build only the object library.
 #   INSTALL_WITH_TOOLCHAIN
 #     Install library into Clang's resource directory so it can be found by the
 #     Flang driver during compilation, including tests
@@ -42,30 +43,35 @@ function (add_flangrt_library name)
         INSTALL_WITH_TOOLCHAIN and EXCLUDE_FROM_ALL are in conflict. When
         installing an artifact it must have been built first in the 'all' target.
       ")
-    return ()
   endif ()
 
-  #if (ARG_CMAKE_CONFIGURABLE AND (ARG_STATIC OR ARG_SHARED))
-  #  message(SEND_ERROR "add_flangrt_library(${name} ...):
-  #     CMAKE_CONFIGURABLE cannot be used together with STATIC or SHARED.
-  #    ")
-  #  return ()
-  #endif ()
-
-  #if (NOT ARG_STATIC AND NOT ARG_SHARED AND NOT ARG_CMAKE_CONFIGURABLE AND NOT ARG_OBJECT)
-  #  message(SEND_ERROR "add_flangrt_library(${name} ...):
-  #     Must specifiy library type.
-  #    ")
-  #  return ()
-  #endif () 
-
-  set(build_static OFF)
-  set(build_shared OFF)
-  if (ARG_STATIC AND FLANG_RT_ENABLE_STATIC)
-    set(build_static ON)
+  # Internal names of libraries. If called with just single type option, use
+  # the default name for it. Name of targets must only depend on function
+  # arguments to be predictable for callers.
+  set(name_static "${name}.static")
+  set(name_shared "${name}.shared")
+  set(name_object "obj.${name}")
+  if (ARG_STATIC AND NOT ARG_SHARED)
+    set(name_static "${name}")
+  elseif (NOT ARG_STATIC AND ARG_SHARED)
+    set(name_shared "${name}")
+  elseif (NOT ARG_STATIC AND NOT ARG_SHARED AND ARG_OBJECT)
+    set(name_object "${name}")
+  elseif (NOT ARG_STATIC AND NOT ARG_SHARED AND NOT ARG_OBJECT)
+    # Only one of them will actually be built.
+    set(name_static "${name}")
+    set(name_shared "${name}")
   endif ()
-  if (ARG_SHARED AND FLANG_RT_ENABLE_SHARED)
-    set(build_shared ON)
+
+  # Determine what to build. If not explicitly specified, honor
+  # BUILD_SHARED_LIBS (e.g. for unittest libraries). If can build static and
+  # shared, use ENABLE_STATIC/ENABLE_SHARED setting.
+  if (ARG_STATIC AND ARG_SHARED)
+    set(build_static ${FLANG_RT_ENABLE_STATIC})
+    set(build_shared ${FLANG_RT_ENABLE_SHARED})
+  else ()
+    set(build_static ${ARG_STATIC})
+    set(build_shared ${ARG_SHARED})
   endif ()
   if (NOT ARG_STATIC AND NOT ARG_SHARED AND NOT ARG_OBJECT)
     if (BUILD_SHARED_LIBS)
@@ -75,73 +81,61 @@ function (add_flangrt_library name)
     endif ()
   endif ()
 
-  # Name of targets must only depend on function arguments to be predictable for callers.
-  if (ARG_STATIC AND ARG_SHARED)
-    set(name_static "${name}.static")
-    set(name_shared "${name}.shared")
-  else ()
-    set(name_static "${name}")
-    set(name_shared "${name}")
-  endif ()
-  if (ARG_OBJECT AND NOT ARG_STATIC AND NOT ARG_SHARED)
-    set(name_object "${name}")
-  else ()
-    set(name_object "obj.${name}")
+  # Build an object library if building multiple libraries at once or if
+  # explicitly requested.
+  set(build_object OFF)
+  if (ARG_OBJECT)
+    set(build_object ON)
+  elseif (build_static AND build_shared)
+    set(build_object ON)
   endif ()
 
-
-  if (ARG_OBJECT AND NOT build_static AND NOT build_shared)
-    set(build_only_objectlib ON)
-  else ()
-    set(build_only_objectlib OFF)
+  # srctargets: targets that contain source files
+  # libtargets: static/shared if they are built
+  # alltargets: static/shared/object if they are built
+  set(srctargets "")
+  set(libtargets "")
+  set(alltargets "")
+  if (build_static)
+    list(APPEND srctargets "${name_static}")
+    list(APPEND libtargets "${name_static}")
+    list(APPEND alltargets "${name_static}")
   endif ()
-  if (build_only_objectlib OR (build_static AND build_shared))
-    set(need_objectlib ON)
-  else ()
-    set(need_objectlib OFF)
+  if (build_shared)
+    list(APPEND srctargets "${name_shared}")
+    list(APPEND libtargets "${name_shared}")
+    list(APPEND alltargets "${name_shared}")
   endif ()
-
-  if (NOT build_static AND NOT build_shared AND NOT need_objectlib)
-    # Nothing to build
-    return ()
+  if (build_object)
+    set(srctargets "${name_object}")
+    list(APPEND alltargets "${name_object}")
   endif ()
-
-  # Also add header files to IDEs to list as part of the library
-  set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
   set(extra_args "")
   if (ARG_EXCLUDE_FROM_ALL)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
+  # Also add header files to IDEs to list as part of the library.
+  set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
-  if (need_objectlib)
+  # Create selected library types.
+  if (build_object)
     add_library(${name_object} OBJECT ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    set_target_properties(${name_object} PROPERTIES FOLDER "Flang-RT/Object Libraries")
+    set_target_properties(${name_object} PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+        FOLDER "Flang-RT/Object Libraries"
+      )
 
-    # Replace arguments for the libraries we are going to create
+    # Replace arguments for the libraries we are going to create.
     set(ARG_ADDITIONAL_HEADERS "")
-    set(ARG_UNPARSED_ARGUMENTS $<TARGET_OBJECTS:${objectlib_name}>)
-    set(srctargets ${name_object})
-    set(liblist nostargets)
-    set(alltargets ${name_object})
-  else ()
-    set(liblist srctargets)
-    set(alltargets)
+    set(ARG_UNPARSED_ARGUMENTS "$<TARGET_OBJECTS:${objectlib_name}>")
   endif ()
-
-  set(libtargets "")
   if (build_static)
     add_library(${name_static} STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    list(APPEND alltargets ${name_static})
-    list(APPEND libtargets ${name_static})
-    list(APPEND ${liblist} ${name_static})
   endif ()
   if (build_shared)
     add_library(${name_shared} SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    list(APPEND alltargets ${name_shared})
-    list(APPEND libtargets ${name_shared})
-    list(APPEND ${liblist} ${name_shared})
   endif ()
 
   foreach (name IN LISTS libtargets)
@@ -152,98 +146,114 @@ function (add_flangrt_library name)
     endif ()
   endforeach ()
 
+  # Define how to compile and link the library.
+  # Some conceptionally only apply to ${srctargets} or ${libtargets}, but we
+  # apply them to ${alltargets}. In worst case, they are ignored by CMake.
   foreach (name IN LISTS alltargets)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${name} PRIVATE cxx_std_17)
 
+    # Use compiler-specific options to disable exceptions and RTTI.
+    if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+      target_compile_options(${name} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
+        )
+    elseif (MSVC)
+      target_compile_options(${name} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
+        )
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+      target_compile_options(${name} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
+        )
+    endif ()
 
-  # Use compiler-specific options to disable exceptions and RTTI.
-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    target_compile_options(${name} PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
-      )
-  elseif (MSVC)
-    target_compile_options(${name} PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
-      )
-  elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-    target_compile_options(${name} PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
-      )
-  endif ()
+    # Also for CUDA source when compiling with FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA
+    if (CMAKE_CUDA_COMPILER_ID MATCHES "NVIDIA")
+      # Assuming gcc as host compiler.
+      target_compile_options(${name} PRIVATE
+          $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions -Xcompiler -fno-rtti -Xcompiler -fno-unwind-tables -Xcompiler -fno-asynchronous-unwind-tables>
+        )
+    else ()
+      # Assuming a clang-compatible CUDA compiler.
+      target_compile_options(${name} PRIVATE
+          $<$<COMPILE_LANGUAGE:CUDA>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
+        )
+    endif ()
 
-  # Also for CUDA source when compiling with FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA
-  if (CMAKE_CUDA_COMPILER_ID MATCHES "NVIDIA")
-    # Assuming gcc as host compiler.
-    target_compile_options(${name} PRIVATE
-        $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions -Xcompiler -fno-rtti -Xcompiler -fno-unwind-tables -Xcompiler -fno-asynchronous-unwind-tables>
-      )
-  else ()
-    # Assuming a clang-compatible CUDA compiler.
-    target_compile_options(${name} PRIVATE
-        $<$<COMPILE_LANGUAGE:CUDA>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
-      )
-  endif ()
+    # Flang-RT's public headers
+    target_include_directories(${name} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
 
-  # Flang-rt's public headers
-  target_include_directories(${name} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
+    # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
+    # User applications can use #include <ISO_Fortran_binding.h>
+    target_include_directories(${name} PRIVATE "${FLANG_SOURCE_DIR}/include")
 
-  # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
-  # User applications can use #include <ISO_Fortran_binding.h>
-  target_include_directories(${name} PRIVATE "${FLANG_SOURCE_DIR}/include")
+    # For Flang-RT's configured config.h to be found
+    target_include_directories(${name} PRIVATE "${FLANG_RT_BINARY_DIR}")
 
-  # For Flang-RT's configured config.h to be found
-  target_include_directories(${name} PRIVATE "${FLANG_RT_BINARY_DIR}")
+    # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
+    # build, to avoid an unwanted dependency on libstdc++/libc++.so.
+    if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
+      target_compile_options(${name} PUBLIC -U_GLIBCXX_ASSERTIONS)
+      target_compile_options(${name} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
+    endif ()
 
-  # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
-  # build, to avoid an unwanted dependency on libstdc++/libc++.so.
-  if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
-    target_compile_options(${name} PUBLIC -U_GLIBCXX_ASSERTIONS)
-    target_compile_options(${name} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
-  endif ()
+    # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
+    # should only depend on msvcrt/ucrt. LLVM still emits libgcc/compiler-rt
+    # functions in some cases like 128-bit integer math (__udivti3, __modti3,
+    # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
+    # dependency to Compiler-RT's builtin library where these are implemented.
+    if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      if (FLANG_RT_BUILTINS_LIBRARY)
+        target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
+      endif ()
+    endif ()
+    if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+      if (FLANG_RT_BUILTINS_LIBRARY)
+        target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
+      else ()
+        message(WARNING "Did not find libclang_rt.builtins.lib.
+          LLVM may emit builtins that are not implemented in msvcrt/ucrt and
+          instead falls back to builtins from Compiler-RT. Linking with ${name}
+          may result in a linker error.")
+      endif ()
+    endif ()
 
-  # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
-  # should only depend on msv(u)crt. LLVM still emits libgcc/compiler-rt
-  # functions in some cases like 128-bit integer math (__udivti3, __modti3,
-  # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
-  # dependency to Compiler-RT's builtin library where these are implemented.
-  if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FLANG_RT_BUILTINS_LIBRARY)
-    target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
-  endif ()
+    # Non-GTest unittests depend on LLVMSupport
+    if (ARG_LINK_TO_LLVM)
+      if (LLVM_LINK_LLVM_DYLIB)
+        set(llvm_libs LLVM)
+      else()
+        llvm_map_components_to_libnames(llvm_libs Support)
+      endif()
+      target_link_libraries(${name} PUBLIC ${llvm_libs})
+      target_include_directories(${name} PUBLIC ${LLVM_INCLUDE_DIRS})
+    endif ()
+  endforeach ()
 
-  # Non-GTest unittests depend on LLVMSupport
-  if (ARG_LINK_TO_LLVM)
-    if (LLVM_LINK_LLVM_DYLIB)
-      set(llvm_libs LLVM)
-    else()
-      llvm_map_components_to_libnames(llvm_libs Support)
-    endif()
-    target_link_libraries(${name} PUBLIC ${llvm_libs})
-    target_include_directories(${name} PUBLIC ${LLVM_INCLUDE_DIRS})
-  endif ()
+  foreach (name IN LISTS libtargets)
+    # If this is part of the toolchain, put it into the compiler's resource
+    # directory. Otherwise it is part of testing and is not installed at all.
+    # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
+    if (ARG_INSTALL_WITH_TOOLCHAIN)
+      set_target_properties(${name}
+        PROPERTIES
+          LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
+          ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
+          RUNTIME_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
+        )
 
-  # If this is part of the toolchain, put it into the compiler's resource
-  # directory. Otherwise it is part of testing and is not installed at all.
-  # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
-  if (ARG_INSTALL_WITH_TOOLCHAIN)
-    set_target_properties(${name}
-      PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
-        ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
-      )
+      install(TARGETS ${name}
+          LIBRARY DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
+          ARCHIVE DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
+          RUNTIME DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
+        )
+    endif ()
 
-    install(TARGETS ${name}
-        LIBRARY DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
-        ARCHIVE DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
-        RUNTIME DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
-      )
-  endif ()
-
-  # flang-rt should build all the flang-rt targets that are built in an
-  # 'all' build.
-  if (NOT ARG_EXCLUDE_FROM_ALL)
-    add_dependencies(flang-rt ${name})
-  endif ()
+    # flang-rt should build all the Flang-RT targets that are built in an
+    # 'all' build.
+    if (NOT ARG_EXCLUDE_FROM_ALL)
+      add_dependencies(flang-rt ${name})
+    endif ()
   endforeach ()
 endfunction (add_flangrt_library)
