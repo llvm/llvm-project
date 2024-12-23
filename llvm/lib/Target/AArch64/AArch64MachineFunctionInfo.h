@@ -263,7 +263,7 @@ public:
   Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
   void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
 
-  unsigned getSMESaveBufferUsed() const { return SMESaveBufferUsed; };
+  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
   void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
 
   Register getPStateSMReg() const { return PStateSMReg; };

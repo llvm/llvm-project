@@ -3243,7 +3243,7 @@ AArch64TargetLowering::EmitAllocateSMESaveBuffer(MachineInstr &MI,
          "Lazy ZA save is not yet supported on Windows");
 
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  if (FuncInfo->getSMESaveBufferUsed()) {
+  if (FuncInfo->isSMESaveBufferUsed()) {
     // Allocate a buffer object of the size given by MI.getOperand(1).
     auto Size = MI.getOperand(1).getReg();
     auto Dest = MI.getOperand(0).getReg();
@@ -3271,7 +3271,7 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
   MachineFunction *MF = BB->getParent();
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  if (FuncInfo->getSMESaveBufferUsed()) {
+  if (FuncInfo->isSMESaveBufferUsed()) {
     const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
     BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
         .addExternalSymbol("__arm_sme_state_size")
