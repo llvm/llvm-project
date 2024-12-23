@@ -32,11 +32,10 @@ using namespace lldb_dap;
 
 namespace lldb_dap {
 
-DAP g_dap;
-
-DAP::DAP()
-    : broadcaster("lldb-dap"), exception_breakpoints(),
-      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
+DAP::DAP(llvm::StringRef path, ReplMode repl_mode)
+    : debug_adaptor_path(path), broadcaster("lldb-dap"),
+      exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
+      stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       display_extended_backtrace(false),
@@ -44,7 +43,7 @@ DAP::DAP()
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(ReplMode::Auto) {
+      reverse_request_seq(0), repl_mode(repl_mode) {
   const char *log_file_path = getenv("LLDBDAP_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -693,15 +692,15 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
     auto handler_pos = request_handlers.find(command);
-    if (handler_pos != request_handlers.end()) {
-      handler_pos->second(object);
-      return true; // Success
-    } else {
+    if (handler_pos == request_handlers.end()) {
       if (log)
         *log << "error: unhandled command \"" << command.data() << "\""
              << std::endl;
       return false; // Fail
     }
+
+    handler_pos->second(*this, object);
+    return true; // Success
   }
 
   if (packet_type == "response") {

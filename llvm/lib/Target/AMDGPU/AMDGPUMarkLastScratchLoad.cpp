@@ -44,7 +44,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexesWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addRequired<LiveStacks>();
+    AU.addRequired<LiveStacksWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -64,7 +64,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
   if (ST.getGeneration() < AMDGPUSubtarget::GFX12)
     return false;
 
-  LS = &getAnalysis<LiveStacks>();
+  LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   SI = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   SII = ST.getInstrInfo();
@@ -137,6 +137,6 @@ char &llvm::AMDGPUMarkLastScratchLoadID = AMDGPUMarkLastScratchLoad::ID;
 INITIALIZE_PASS_BEGIN(AMDGPUMarkLastScratchLoad, DEBUG_TYPE,
                       "AMDGPU Mark last scratch load", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveStacks)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_END(AMDGPUMarkLastScratchLoad, DEBUG_TYPE,
                     "AMDGPU Mark last scratch load", false, false)

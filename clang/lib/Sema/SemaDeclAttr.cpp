@@ -18,20 +18,18 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
-#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Attr.h"
@@ -48,7 +46,6 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaMSP430.h"
@@ -64,7 +61,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/Assumptions.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
@@ -275,6 +271,19 @@ static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
   return checkRecordDeclForAttr<CapabilityAttr>(RT->getDecl());
 }
 
+static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
+  const RecordType *RT = getRecordType(Ty);
+
+  if (!RT)
+    return false;
+
+  // Don't check for the capability if the class hasn't been defined yet.
+  if (RT->isIncompleteType())
+    return true;
+
+  return checkRecordDeclForAttr<ScopedLockableAttr>(RT->getDecl());
+}
+
 static bool checkTypedefTypeForCapability(QualType Ty) {
   const auto *TD = Ty->getAs<TypedefType>();
   if (!TD)
@@ -418,6 +427,19 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
 
     Args.push_back(ArgExp);
   }
+}
+
+static bool checkFunParamsAreScopedLockable(Sema &S,
+                                            const ParmVarDecl *ParamDecl,
+                                            const ParsedAttr &AL) {
+  QualType ParamType = ParamDecl->getType();
+  if (const auto *RefType = ParamType->getAs<ReferenceType>();
+      RefType &&
+      checkRecordTypeForScopedCapability(S, RefType->getPointeeType()))
+    return true;
+  S.Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_scoped_lockable_param)
+      << AL;
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -647,6 +669,10 @@ static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
@@ -725,8 +751,7 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
 namespace {
 /// Determines if a given Expr references any of the given function's
 /// ParmVarDecls, or the function's implicit `this` parameter (if applicable).
-class ArgumentDependenceChecker
-    : public RecursiveASTVisitor<ArgumentDependenceChecker> {
+class ArgumentDependenceChecker : public DynamicRecursiveASTVisitor {
 #ifndef NDEBUG
   const CXXRecordDecl *ClassType;
 #endif
@@ -750,14 +775,14 @@ public:
     return Result;
   }
 
-  bool VisitCXXThisExpr(CXXThisExpr *E) {
+  bool VisitCXXThisExpr(CXXThisExpr *E) override {
     assert(E->getType()->getPointeeCXXRecordDecl() == ClassType &&
            "`this` doesn't refer to the enclosing class?");
     Result = true;
     return false;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
       if (Parms.count(PVD)) {
         Result = true;
@@ -781,9 +806,9 @@ static void handleDiagnoseAsBuiltinAttr(Sema &S, Decl *D,
   auto DiagnoseType = [&](unsigned Index, AttributeArgumentNType T) {
     SourceLocation Loc = [&]() {
       auto Union = AL.getArg(Index - 1);
-      if (Union.is<Expr *>())
-        return Union.get<Expr *>()->getBeginLoc();
-      return Union.get<IdentifierLoc *>()->Loc;
+      if (auto *E = dyn_cast<Expr *>(Union))
+        return E->getBeginLoc();
+      return cast<IdentifierLoc *>(Union)->Loc;
     }();
 
     S.Diag(Loc, diag::err_attribute_argument_n_type) << AL << Index << T;
@@ -1215,6 +1240,14 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *TT = T->getAs<TypedefType>())
     S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
         << TT->getDecl();
+}
+
+static void handleNoSpecializations(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Message;
+  if (AL.getNumArgs() != 0)
+    S.checkStringLiteralArgumentAttr(AL, 0, Message);
+  D->getDescribedTemplate()->addAttr(
+      NoSpecializationsAttr::Create(S.Context, Message, AL));
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
@@ -5905,6 +5938,10 @@ static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   SmallVector<Expr*, 1> Args;
   if (!checkLockFunAttrCommon(S, D, AL, Args))
     return;
@@ -5925,6 +5962,9 @@ static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
   // Check that all arguments are lockable objects.
   SmallVector<Expr *, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 0, true);
@@ -5935,6 +5975,10 @@ static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
 
 static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
                                          const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
@@ -6918,6 +6962,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PreferredName:
     handlePreferredName(S, D, AL);
     break;
+  case ParsedAttr::AT_NoSpecializations:
+    handleNoSpecializations(S, D, AL);
+    break;
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
     break;
@@ -7107,6 +7154,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupThreadID:
+    S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupID:
+    S.HLSL().handleSV_GroupIDAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
@@ -7373,7 +7426,9 @@ void Sema::ProcessDeclAttributeList(
   // good to have a way to specify "these attributes must appear as a group",
   // for these. Additionally, it would be good to have a way to specify "these
   // attribute must never appear as a group" for attributes like cold and hot.
-  if (!D->hasAttr<OpenCLKernelAttr>()) {
+  if (!(D->hasAttr<OpenCLKernelAttr>() ||
+        (D->hasAttr<CUDAGlobalAttr>() &&
+         Context.getTargetInfo().getTriple().isSPIRV()))) {
     // These attributes cannot be applied to a non-kernel function.
     if (const auto *A = D->getAttr<ReqdWorkGroupSizeAttr>()) {
       // FIXME: This emits a different error message than

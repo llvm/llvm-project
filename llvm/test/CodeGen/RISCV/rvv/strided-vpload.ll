@@ -663,6 +663,7 @@ declare <vscale x 3 x double> @llvm.experimental.vp.strided.load.nxv3f64.p0.i32(
 define <vscale x 16 x double> @strided_load_nxv16f64(ptr %ptr, i64 %stride, <vscale x 16 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_load_nxv16f64:
 ; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-RV32-NEXT:    vmv1r.v v9, v0
 ; CHECK-RV32-NEXT:    csrr a4, vlenb
 ; CHECK-RV32-NEXT:    sub a2, a3, a4
@@ -688,6 +689,7 @@ define <vscale x 16 x double> @strided_load_nxv16f64(ptr %ptr, i64 %stride, <vsc
 ;
 ; CHECK-RV64-LABEL: strided_load_nxv16f64:
 ; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-RV64-NEXT:    vmv1r.v v9, v0
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
 ; CHECK-RV64-NEXT:    sub a3, a2, a4
@@ -765,9 +767,10 @@ declare <vscale x 16 x double> @llvm.experimental.vp.strided.load.nxv16f64.p0.i6
 define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vscale x 17 x i1> %mask, i32 zeroext %evl, ptr %hi_ptr) {
 ; CHECK-RV32-LABEL: strided_load_nxv17f64:
 ; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-RV32-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV32-NEXT:    csrr a2, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a2, 1
-; CHECK-RV32-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV32-NEXT:    mv a6, a3
 ; CHECK-RV32-NEXT:    bltu a3, a7, .LBB57_2
 ; CHECK-RV32-NEXT:  # %bb.1:
@@ -784,12 +787,12 @@ define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vsc
 ; CHECK-RV32-NEXT:  .LBB57_4:
 ; CHECK-RV32-NEXT:    mul t1, a5, a1
 ; CHECK-RV32-NEXT:    srli t2, a2, 3
+; CHECK-RV32-NEXT:    sub a7, a3, a7
 ; CHECK-RV32-NEXT:    vsetvli t3, zero, e8, mf4, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vx v0, v8, t2
 ; CHECK-RV32-NEXT:    add t1, a0, t1
 ; CHECK-RV32-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v16, (t1), a1, v0.t
-; CHECK-RV32-NEXT:    sub a7, a3, a7
 ; CHECK-RV32-NEXT:    sltu a3, a3, a7
 ; CHECK-RV32-NEXT:    addi a3, a3, -1
 ; CHECK-RV32-NEXT:    and a3, a3, a7
@@ -812,9 +815,10 @@ define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vsc
 ;
 ; CHECK-RV64-LABEL: strided_load_nxv17f64:
 ; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-RV64-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a4, 1
-; CHECK-RV64-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV64-NEXT:    mv a6, a2
 ; CHECK-RV64-NEXT:    bltu a2, a7, .LBB57_2
 ; CHECK-RV64-NEXT:  # %bb.1:
@@ -831,12 +835,12 @@ define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vsc
 ; CHECK-RV64-NEXT:  .LBB57_4:
 ; CHECK-RV64-NEXT:    mul t1, a5, a1
 ; CHECK-RV64-NEXT:    srli t2, a4, 3
+; CHECK-RV64-NEXT:    sub a7, a2, a7
 ; CHECK-RV64-NEXT:    vsetvli t3, zero, e8, mf4, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vx v0, v8, t2
 ; CHECK-RV64-NEXT:    add t1, a0, t1
 ; CHECK-RV64-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v16, (t1), a1, v0.t
-; CHECK-RV64-NEXT:    sub a7, a2, a7
 ; CHECK-RV64-NEXT:    sltu a2, a2, a7
 ; CHECK-RV64-NEXT:    addi a2, a2, -1
 ; CHECK-RV64-NEXT:    and a2, a2, a7

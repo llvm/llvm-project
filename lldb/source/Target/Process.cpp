@@ -2517,7 +2517,8 @@ bool Process::GetWatchpointReportedAfter() {
   llvm::Triple triple = arch.GetTriple();
 
   if (triple.isMIPS() || triple.isPPC64() || triple.isRISCV() ||
-      triple.isAArch64() || triple.isArmMClass() || triple.isARM())
+      triple.isAArch64() || triple.isArmMClass() || triple.isARM() ||
+      triple.isLoongArch())
     reported_after = false;
 
   return reported_after;
@@ -6080,6 +6081,10 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
+lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
+  return lldb_private::UUID();
+}
+
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
   ThreadCollectionSP threads;
 
@@ -6184,7 +6189,12 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
-  return DoGetMemoryRegionInfo(load_addr, range_info);
+  Status error = DoGetMemoryRegionInfo(load_addr, range_info);
+  // Reject a region that does not contain the requested address.
+  if (error.Success() && !range_info.GetRange().Contains(load_addr))
+    error = Status::FromErrorString("Invalid memory region");
+
+  return error;
 }
 
 Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {

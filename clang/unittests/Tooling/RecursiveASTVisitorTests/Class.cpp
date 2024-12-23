@@ -14,10 +14,11 @@ namespace {
 
 // Checks for lambda classes that are not marked as implicitly-generated.
 // (There should be none.)
-class ClassVisitor : public ExpectedLocationVisitor<ClassVisitor> {
+class ClassVisitor : public ExpectedLocationVisitor {
 public:
   ClassVisitor() : SawNonImplicitLambdaClass(false) {}
-  bool VisitCXXRecordDecl(CXXRecordDecl* record) {
+
+  bool VisitCXXRecordDecl(CXXRecordDecl *record) override {
     if (record->isLambda() && !record->isImplicit())
       SawNonImplicitLambdaClass = true;
     return true;

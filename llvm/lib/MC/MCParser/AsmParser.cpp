@@ -162,8 +162,8 @@ private:
   };
   CppHashInfoTy CppHashInfo;
 
-  /// The filename from the first cpp hash file line comment, if any.
-  StringRef FirstCppHashFilename;
+  /// Have we seen any file line comment.
+  bool HadCppHashFilename = false;
 
   /// List of forward directional labels for diagnosis at the end.
   SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
@@ -952,12 +952,6 @@ bool AsmParser::enabledGenDwarfForAssembly() {
   // the assembler source was produced with debug info already) then emit one
   // describing the assembler source file itself.
   if (getContext().getGenDwarfFileNumber() == 0) {
-    // Use the first #line directive for this, if any. It's preprocessed, so
-    // there is no checksum, and of course no source directive.
-    if (!FirstCppHashFilename.empty())
-      getContext().setMCLineTableRootFile(
-          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
-          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
     getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
@@ -2440,8 +2434,20 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
   CppHashInfo.Filename = Filename;
   CppHashInfo.LineNumber = LineNumber;
   CppHashInfo.Buf = CurBuffer;
-  if (FirstCppHashFilename.empty())
-    FirstCppHashFilename = Filename;
+  if (!HadCppHashFilename) {
+    HadCppHashFilename = true;
+    // If we haven't encountered any .file directives, then the first #line
+    // directive describes the "root" file and directory of the compilation
+    // unit.
+    if (getContext().getGenDwarfForAssembly() &&
+        getContext().getGenDwarfFileNumber() == 0) {
+      // It's preprocessed, so there is no checksum, and of course no source
+      // directive.
+      getContext().setMCLineTableRootFile(
+          /*CUID=*/0, getContext().getCompilationDir(), Filename,
+          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
+    }
+  }
   return false;
 }
 
@@ -6287,7 +6293,7 @@ bool AsmParser::parseMSInlineAsm(
   if (AsmStart != AsmEnd)
     OS << StringRef(AsmStart, AsmEnd - AsmStart);
 
-  AsmString = AsmStringIR;
+  AsmString = std::move(AsmStringIR);
   return false;
 }
 
@@ -6417,33 +6423,6 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
 namespace llvm {
 namespace MCParserUtils {
 
-/// Returns whether the given symbol is used anywhere in the given expression,
-/// or subexpressions.
-static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
-  switch (Value->getKind()) {
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = static_cast<const MCBinaryExpr *>(Value);
-    return isSymbolUsedInExpression(Sym, BE->getLHS()) ||
-           isSymbolUsedInExpression(Sym, BE->getRHS());
-  }
-  case MCExpr::Target:
-  case MCExpr::Constant:
-    return false;
-  case MCExpr::SymbolRef: {
-    const MCSymbol &S =
-        static_cast<const MCSymbolRefExpr *>(Value)->getSymbol();
-    if (S.isVariable() && !S.isWeakExternal())
-      return isSymbolUsedInExpression(Sym, S.getVariableValue());
-    return &S == Sym;
-  }
-  case MCExpr::Unary:
-    return isSymbolUsedInExpression(
-        Sym, static_cast<const MCUnaryExpr *>(Value)->getSubExpr());
-  }
-
-  llvm_unreachable("Unknown expr kind!");
-}
-
 bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                MCAsmParser &Parser, MCSymbol *&Sym,
                                const MCExpr *&Value) {
@@ -6468,7 +6447,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     //
     // FIXME: Diagnostics. Note the location of the definition as a label.
     // FIXME: Diagnose assignment to protected identifier (e.g., register name).
-    if (isSymbolUsedInExpression(Sym, Value))
+    if (Value->isSymbolUsedInExpression(Sym))
       return Parser.Error(EqualLoc, "Recursive use of '" + Name + "'");
     else if (Sym->isUndefined(/*SetUsed*/ false) && !Sym->isUsed() &&
              !Sym->isVariable())

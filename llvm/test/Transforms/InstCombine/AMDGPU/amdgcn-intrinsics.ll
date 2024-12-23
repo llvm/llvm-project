@@ -6547,3 +6547,21 @@ define half @test_constant_fold_exp2_f16_neg_denorm() {
   %val = call half @llvm.amdgcn.exp2.f16(half 0xH83ff)
   ret half %val
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.prng
+; --------------------------------------------------------------------
+declare i32 @llvm.amdgcn.prng.b32(i32)
+define i32 @prng_undef_i32() {
+; CHECK-LABEL: @prng_undef_i32(
+; CHECK-NEXT:    ret i32 undef
+  %prng = call i32 @llvm.amdgcn.prng.b32(i32 undef)
+  ret i32 %prng
+}
+
+define i32 @prng_poison_i32() {
+; CHECK-LABEL: @prng_poison_i32(
+; CHECK-NEXT:    ret i32 poison
+  %prng = call i32 @llvm.amdgcn.prng.b32(i32 poison)
+  ret i32 %prng
+}

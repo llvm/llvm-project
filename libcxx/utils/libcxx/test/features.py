@@ -160,14 +160,6 @@ DEFAULT_FEATURES = [
     ),
     Feature(name="has-fblocks", when=lambda cfg: hasCompileFlag(cfg, "-fblocks")),
     Feature(
-        name="-fsized-deallocation",
-        when=lambda cfg: hasCompileFlag(cfg, "-fsized-deallocation"),
-    ),
-    Feature(
-        name="-faligned-allocation",
-        when=lambda cfg: hasCompileFlag(cfg, "-faligned-allocation"),
-    ),
-    Feature(
         name="fdelayed-template-parsing",
         when=lambda cfg: hasCompileFlag(cfg, "-fdelayed-template-parsing"),
     ),

@@ -76,10 +76,10 @@ define amdgpu_cs void @constant_mask_inverse_ballot(ptr addrspace(1) %out) {
 ; SDAG-LABEL: constant_mask_inverse_ballot:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_mov_b32 s0, 0xf8010000
-; SDAG-NEXT:    s_mov_b32 s2, 0
 ; SDAG-NEXT:    s_mov_b32 s1, 64
-; SDAG-NEXT:    v_mov_b32_e32 v3, s2
+; SDAG-NEXT:    s_mov_b32 s2, 0
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
+; SDAG-NEXT:    v_mov_b32_e32 v3, s2
 ; SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; SDAG-NEXT:    s_endpgm
 entry:

@@ -56,6 +56,7 @@ protected:
   bool ATTRIBUTE = DEFAULT;
 #include "AArch64GenSubtargetInfo.inc"
 
+  unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
@@ -87,7 +88,7 @@ protected:
   unsigned StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
-  unsigned VScaleForTuning = 2;
+  unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
   bool EnableSubregLiveness;
@@ -237,6 +238,9 @@ public:
            hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
+  unsigned getEpilogueVectorizationMinVF() const {
+    return EpilogueVectorizationMinVF;
+  }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }

@@ -78,7 +78,7 @@ let F = [HasSME2p2, HasSVE2p2orSME2p2, HasNonStreamingSVEorSME2p2,
 def SME2p2Unsupported : AArch64Unsupported;
 
 def SME2p1Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2p1, HasSVE2p1_or_HasSME2p1, HasSVE2p1orSSVE_AES],
+  let F = !listconcat([HasSME2p1, HasSVE2p1_or_HasSME2p1, HasNonStreamingSVE2p1orSSVE_AES],
                       SME2p2Unsupported.F);
 }
 

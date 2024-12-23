@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_LIST
-#define _LIBCPP_LIST
+#ifndef _LIBCPP___CXX03_LIST
+#define _LIBCPP___CXX03_LIST
 
 /*
     list synopsis
@@ -1739,4 +1739,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_LIST
+#endif // _LIBCPP___CXX03_LIST

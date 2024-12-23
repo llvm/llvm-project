@@ -161,6 +161,13 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
 
+static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
+    "basic-block-address-map-skip-bb-entries",
+    cl::desc("Skip emitting basic block entries in the SHT_LLVM_BB_ADDR_MAP "
+             "section. It's used to save binary size when BB entries are "
+             "unnecessary for some PGOAnalysisMap features."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
@@ -524,7 +531,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     emitModuleCommandLines(M);
     // Now we can generate section information.
-    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+    OutStreamer->switchSection(
+        OutContext.getObjectFileInfo()->getTextSection());
 
     // To work around an AIX assembler and/or linker bug, generate
     // a rename for the default text-section symbol name.  This call has
@@ -1411,8 +1419,15 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+
+  if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
+    MF.getFunction().getContext().emitError(
+        "BB entries info is required for BBFreq and BrProb "
+        "features");
+  }
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
-          MF.hasBBSections() && NumMBBSectionRanges > 1};
+          MF.hasBBSections() && NumMBBSectionRanges > 1,
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1469,24 +1484,28 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(MBBSectionNumBlocks[MBB.getSectionID()]);
       PrevMBBEndSymbol = MBBSymbol;
     }
-    // TODO: Remove this check when version 1 is deprecated.
-    if (BBAddrMapVersion > 1) {
-      OutStreamer->AddComment("BB id");
-      // Emit the BB ID for this basic block.
-      // We only emit BaseID since CloneID is unset for
-      // -basic-block-adress-map.
-      // TODO: Emit the full BBID when labels and sections can be mixed
-      // together.
-      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
+
+    if (!Features.OmitBBEntries) {
+      // TODO: Remove this check when version 1 is deprecated.
+      if (BBAddrMapVersion > 1) {
+        OutStreamer->AddComment("BB id");
+        // Emit the BB ID for this basic block.
+        // We only emit BaseID since CloneID is unset for
+        // -basic-block-adress-map.
+        // TODO: Emit the full BBID when labels and sections can be mixed
+        // together.
+        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
+      }
+      // Emit the basic block offset relative to the end of the previous block.
+      // This is zero unless the block is padded due to alignment.
+      emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
+      // Emit the basic block size. When BBs have alignments, their size cannot
+      // always be computed from their offsets.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      // Emit the Metadata.
+      OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     }
-    // Emit the basic block offset relative to the end of the previous block.
-    // This is zero unless the block is padded due to alignment.
-    emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-    // Emit the basic block size. When BBs have alignments, their size cannot
-    // always be computed from their offsets.
-    emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
-    // Emit the Metadata.
-    OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -1773,7 +1792,7 @@ void AsmPrinter::emitFunctionBody() {
     MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
     if (!MDT) {
       OwnedMDT = std::make_unique<MachineDominatorTree>();
-      OwnedMDT->getBase().recalculate(*MF);
+      OwnedMDT->recalculate(*MF);
       MDT = OwnedMDT.get();
     }
 
@@ -1782,7 +1801,7 @@ void AsmPrinter::emitFunctionBody() {
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     if (!MLI) {
       OwnedMLI = std::make_unique<MachineLoopInfo>();
-      OwnedMLI->analyze(MDT->getBase());
+      OwnedMLI->analyze(*MDT);
       MLI = OwnedMLI.get();
     }
   }
@@ -2388,11 +2407,52 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
+static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
+  Constant *Initializer = G->getInitializer();
+  uint64_t SizeInBytes =
+      M.getDataLayout().getTypeAllocSize(Initializer->getType());
+
+  uint64_t NewSize = alignTo(SizeInBytes, 16);
+  if (SizeInBytes != NewSize) {
+    // Pad the initializer out to the next multiple of 16 bytes.
+    llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
+    Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
+    Initializer = ConstantStruct::getAnon({Initializer, Padding});
+    auto *NewGV = new GlobalVariable(
+        M, Initializer->getType(), G->isConstant(), G->getLinkage(),
+        Initializer, "", G, G->getThreadLocalMode(), G->getAddressSpace());
+    NewGV->copyAttributesFrom(G);
+    NewGV->setComdat(G->getComdat());
+    NewGV->copyMetadata(G, 0);
+
+    NewGV->takeName(G);
+    G->replaceAllUsesWith(NewGV);
+    G->eraseFromParent();
+    G = NewGV;
+  }
+
+  if (G->getAlign().valueOrOne() < 16)
+    G->setAlignment(Align(16));
+
+  // Ensure that tagged globals don't get merged by ICF - as they should have
+  // different tags at runtime.
+  G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
+
+  std::vector<GlobalVariable *> GlobalsToTag;
+  for (GlobalVariable &G : M.globals()) {
+    if (G.isDeclaration() || !G.isTagged())
+      continue;
+    GlobalsToTag.push_back(&G);
+  }
+  for (GlobalVariable *G : GlobalsToTag)
+    tagGlobalDefinition(M, G);
 
   // Gather all GOT equivalent globals in the module. We really need two
   // passes over the globals: one to compute and another to avoid its emission
@@ -3584,10 +3644,11 @@ static void emitGlobalConstantArray(const DataLayout &DL,
 
 static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
 
-static void emitGlobalConstantVector(const DataLayout &DL,
-                                     const ConstantVector *CV, AsmPrinter &AP,
+static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
+                                     AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
-  Type *ElementType = CV->getType()->getElementType();
+  auto *VTy = cast<FixedVectorType>(CV->getType());
+  Type *ElementType = VTy->getElementType();
   uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
   uint64_t ElementAllocSizeInBits = DL.getTypeAllocSizeInBits(ElementType);
   uint64_t EmittedSize;
@@ -3600,7 +3661,7 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     Type *IntT =
         IntegerType::get(CV->getContext(), DL.getTypeSizeInBits(CV->getType()));
     ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
-        ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT), DL));
+        ConstantExpr::getBitCast(const_cast<Constant *>(CV), IntT), DL));
     if (!CI) {
       report_fatal_error(
           "Cannot lower vector global with unusual element type");
@@ -3609,12 +3670,11 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     emitGlobalConstantLargeInt(CI, AP);
     EmittedSize = DL.getTypeStoreSize(CV->getType());
   } else {
-    for (unsigned I = 0, E = CV->getType()->getNumElements(); I != E; ++I) {
+    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
       emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
-      emitGlobalConstantImpl(DL, CV->getOperand(I), AP);
+      emitGlobalConstantImpl(DL, CV->getAggregateElement(I), AP);
     }
-    EmittedSize =
-        DL.getTypeAllocSize(ElementType) * CV->getType()->getNumElements();
+    EmittedSize = DL.getTypeAllocSize(ElementType) * VTy->getNumElements();
   }
 
   unsigned Size = DL.getTypeAllocSize(CV->getType());
@@ -3849,6 +3909,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
                                    AsmPrinter &AP, const Constant *BaseCV,
                                    uint64_t Offset,
                                    AsmPrinter::AliasMapTy *AliasList) {
+  assert((!AliasList || AP.TM.getTargetTriple().isOSBinFormatXCOFF()) &&
+         "AliasList only expected for XCOFF");
   emitGlobalAliasInline(AP, Offset, AliasList);
   uint64_t Size = DL.getTypeAllocSize(CV->getType());
 
@@ -3858,12 +3920,34 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (!BaseCV && CV->hasOneUse())
     BaseCV = dyn_cast<Constant>(CV->user_back());
 
-  if (isa<ConstantAggregateZero>(CV) || isa<UndefValue>(CV))
+  if (isa<ConstantAggregateZero>(CV)) {
+    StructType *structType;
+    if (AliasList && (structType = llvm::dyn_cast<StructType>(CV->getType()))) {
+      // Handle cases of aliases to direct struct elements
+      const StructLayout *Layout = DL.getStructLayout(structType);
+      uint64_t SizeSoFar = 0;
+      for (unsigned int i = 0, n = structType->getNumElements(); i < n - 1;
+           ++i) {
+        uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
+        AP.OutStreamer->emitZeros(GapToNext);
+        SizeSoFar += GapToNext;
+        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
+      }
+      AP.OutStreamer->emitZeros(Size - SizeSoFar);
+      return;
+    } else {
+      return AP.OutStreamer->emitZeros(Size);
+    }
+  }
+
+  if (isa<UndefValue>(CV))
     return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
+    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
     if (StoreSize <= 8) {
       if (AP.isVerbose())
         AP.OutStreamer->getCommentOS()
@@ -3880,8 +3964,12 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return;
   }
 
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV))
-    return emitGlobalConstantFP(CFP, AP);
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
+    else
+      return emitGlobalConstantFP(CFP, AP);
+  }
 
   if (isa<ConstantPointerNull>(CV)) {
     AP.OutStreamer->emitIntValue(0, Size);
@@ -3913,8 +4001,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     }
   }
 
-  if (const ConstantVector *V = dyn_cast<ConstantVector>(CV))
-    return emitGlobalConstantVector(DL, V, AP, AliasList);
+  if (isa<ConstantVector>(CV))
+    return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.

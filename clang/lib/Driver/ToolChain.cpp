@@ -19,13 +19,11 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1598,8 +1596,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     Prev = Index;
     std::unique_ptr<Arg> XOpenMPTargetArg(Opts.ParseOneArg(Args, Index));
     if (!XOpenMPTargetArg || Index > Prev + 1) {
-      getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
-          << A->getAsString(Args);
+      if (!A->isClaimed()) {
+        getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+            << A->getAsString(Args);
+      }
       continue;
     }
     if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&

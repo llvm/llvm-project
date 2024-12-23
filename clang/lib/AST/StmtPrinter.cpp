@@ -33,7 +33,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
@@ -45,11 +44,9 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -130,6 +127,8 @@ namespace {
     void PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                      bool ForceNoStmt = false);
     void PrintFPPragmas(CompoundStmt *S);
+    void PrintOpenACCClauseList(OpenACCConstructStmt *S);
+    void PrintOpenACCConstruct(OpenACCConstructStmt *S);
 
     void PrintExpr(Expr *E) {
       if (E)
@@ -1158,42 +1157,76 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 //===----------------------------------------------------------------------===//
 //  OpenACC construct printing methods
 //===----------------------------------------------------------------------===//
-void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
-  Indent() << "#pragma acc " << S->getDirectiveKind();
-
+void StmtPrinter::PrintOpenACCClauseList(OpenACCConstructStmt *S) {
   if (!S->clauses().empty()) {
     OS << ' ';
     OpenACCClausePrinter Printer(OS, Policy);
     Printer.VisitClauseList(S->clauses());
   }
+}
+void StmtPrinter::PrintOpenACCConstruct(OpenACCConstructStmt *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+  PrintOpenACCClauseList(S);
   OS << '\n';
-
+}
+void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  PrintOpenACCConstruct(S);
   PrintStmt(S->getStructuredBlock());
 }
 
 void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
-  Indent() << "#pragma acc loop";
-
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
-  }
-  OS << '\n';
-
+  PrintOpenACCConstruct(S);
   PrintStmt(S->getLoop());
 }
 
 void StmtPrinter::VisitOpenACCCombinedConstruct(OpenACCCombinedConstruct *S) {
-  Indent() << "#pragma acc " << S->getDirectiveKind();
-  if (!S->clauses().empty()) {
-    OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
-    Printer.VisitClauseList(S->clauses());
-  }
-  OS << '\n';
-
+  PrintOpenACCConstruct(S);
   PrintStmt(S->getLoop());
+}
+
+void StmtPrinter::VisitOpenACCDataConstruct(OpenACCDataConstruct *S) {
+  PrintOpenACCConstruct(S);
+  PrintStmt(S->getStructuredBlock());
+}
+void StmtPrinter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
+  PrintOpenACCConstruct(S);
+  PrintStmt(S->getStructuredBlock());
+}
+void StmtPrinter::VisitOpenACCEnterDataConstruct(OpenACCEnterDataConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+void StmtPrinter::VisitOpenACCExitDataConstruct(OpenACCExitDataConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+void StmtPrinter::VisitOpenACCInitConstruct(OpenACCInitConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+void StmtPrinter::VisitOpenACCShutdownConstruct(OpenACCShutdownConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+
+void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
+  Indent() << "#pragma acc wait";
+  if (!S->getLParenLoc().isInvalid()) {
+    OS << "(";
+    if (S->hasDevNumExpr()) {
+      OS << "devnum: ";
+      S->getDevNumExpr()->printPretty(OS, nullptr, Policy);
+      OS << " : ";
+    }
+
+    if (S->hasQueuesTag())
+      OS << "queues: ";
+
+    llvm::interleaveComma(S->getQueueIdExprs(), OS, [&](const Expr *E) {
+      E->printPretty(OS, nullptr, Policy);
+    });
+
+    OS << ")";
+  }
+
+  PrintOpenACCClauseList(S);
+  OS << '\n';
 }
 
 //===----------------------------------------------------------------------===//
@@ -2517,7 +2550,10 @@ void StmtPrinter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 }
 
 void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
-  OS << E->getPackIdExpression() << "...[" << E->getIndexExpr() << "]";
+  PrintExpr(E->getPackIdExpression());
+  OS << "...[";
+  PrintExpr(E->getIndexExpr());
+  OS << "]";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

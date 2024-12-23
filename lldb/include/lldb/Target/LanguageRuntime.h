@@ -241,6 +241,11 @@ public:
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
 
+  /// Language runtime plugins can use this API to report
+  /// language-specific runtime information about this compile unit,
+  /// such as additional language version details or feature flags.
+  virtual StructuredData::ObjectSP GetLanguageSpecificData(SymbolContext sc);
+
 protected:
   // The static GetRuntimeUnwindPlan method above is only implemented in the
   // base class; subclasses may override this protected member if they can

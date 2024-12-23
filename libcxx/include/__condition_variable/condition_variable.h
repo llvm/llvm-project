@@ -16,7 +16,7 @@
 #include <__config>
 #include <__mutex/mutex.h>
 #include <__mutex/unique_lock.h>
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <__thread/support.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>

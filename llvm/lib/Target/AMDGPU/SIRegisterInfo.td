@@ -903,10 +903,10 @@ multiclass SRegClass<int numRegs,
 
     def SReg_ # suffix :
       SIRegisterClass<"AMDGPU", regTypes, 32,
-                    !con(!dag(add, [!cast<RegisterClass>(sgprName)], ["sgpr"]),
-                    !if(hasTTMP,
-                        !dag(add, [!cast<RegisterClass>(ttmpName)], ["ttmp"]),
-                        (add)))> {
+                      !con((add !cast<RegisterClass>(sgprName)),
+                           !if(hasTTMP,
+                               (add !cast<RegisterClass>(ttmpName)),
+                               (add)))> {
       let isAllocatable = 0;
       let BaseClassOrder = !mul(numRegs, 32);
     }
@@ -1161,7 +1161,8 @@ def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPW32", "OPERAND_REG_IMM_INT32"
 class SrcRegOrImmDeferred9<RegisterClass regClass, string opWidth,
                            string operandType, int immWidth, int OperandSemantics>
     : RegOrImmOperand<regClass, operandType> {
-  let DecoderMethod = "decodeSrcRegOrImmDeferred9<AMDGPUDisassembler::" #
+  string DecoderMethodName = "decodeSrcRegOrImmDeferred9";
+  let DecoderMethod = DecoderMethodName # "<AMDGPUDisassembler::" #
                       opWidth # ", " # immWidth # ", " # OperandSemantics # ">";
 }
 
@@ -1222,6 +1223,13 @@ def VSrc_bf16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_B
 def VSrc_f16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED", 16, OperandSemantics.FP16>;
 def VSrc_f32_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED", 32, OperandSemantics.FP32>;
 
+// True 16 Operands
+def VSrcT_f16_Lo128_Deferred : SrcRegOrImmDeferred9<VS_16_Lo128, "OPW16",
+                                                   "OPERAND_REG_IMM_FP16_DEFERRED", 16, OperandSemantics.FP16> {
+  let DecoderMethodName = "decodeOperand_VSrcT16_Lo128_Deferred";
+  let EncoderMethod = "getMachineOpValueT16Lo128";
+}
+
 def VSrcFake16_bf16_Lo128_Deferred
   : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED", 16, OperandSemantics.BF16>;
 def VSrcFake16_f16_Lo128_Deferred
@@ -1241,9 +1249,20 @@ def VRegSrc_32 : SrcReg9<VGPR_32, "OPW32">;
 def VRegSrc_64 : SrcReg9<VReg_64, "OPW64">;
 def VRegSrc_96 : SrcReg9<VReg_96, "OPW96">;
 def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
+def VRegSrc_192: SrcReg9<VReg_192, "OPW192">;
 def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
+def VRegSrc_512: SrcReg9<VReg_512, "OPW512">;
+def VRegSrc_1024: SrcReg9<VReg_1024, "OPW1024">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 
+// True 16 Operands
+def VRegSrc_16 : RegisterOperand<VGPR_16> {
+  let DecoderMethod = "decodeOperand_VGPR_16";
+  let EncoderMethod = "getMachineOpValueT16";
+}
+def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 //===----------------------------------------------------------------------===//
 // VGPRSrc_*
 //===----------------------------------------------------------------------===//
@@ -1330,11 +1349,14 @@ class AVSrcOperand<RegisterClass regClass, string width>
 def AVSrc_32 : AVSrcOperand<AV_32, "OPW32">;
 def AVSrc_64 : AVSrcOperand<AV_64, "OPW64">;
 def AVSrc_128 : AVSrcOperand<AV_128, "OPW128">;
+def AVSrc_192 : AVSrcOperand<AV_192, "OPW192">;
+def AVSrc_256 : AVSrcOperand<AV_256, "OPW256">;
 
 class AVDstOperand<RegisterClass regClass, string width>
   : AVOperand<regClass, "decodeAV10", width>;
 
 def AVDst_128 : AVDstOperand<AV_128, "OPW128">;
+def AVDst_256 : AVDstOperand<AV_256, "OPW256">;
 def AVDst_512 : AVDstOperand<AV_512, "OPW512">;
 
 class AVLdStOperand<RegisterClass regClass, string width>

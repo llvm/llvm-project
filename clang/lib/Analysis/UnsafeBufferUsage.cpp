@@ -9,9 +9,9 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
@@ -82,11 +82,8 @@ static std::string getDREAncestorString(const DeclRefExpr *DRE,
 namespace clang::ast_matchers {
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
-class MatchDescendantVisitor
-    : public RecursiveASTVisitor<MatchDescendantVisitor> {
+class MatchDescendantVisitor : public DynamicRecursiveASTVisitor {
 public:
-  typedef RecursiveASTVisitor<MatchDescendantVisitor> VisitorBase;
-
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
@@ -96,7 +93,10 @@ public:
                          internal::ASTMatchFinder::BindKind Bind,
                          const bool ignoreUnevaluatedContext)
       : Matcher(Matcher), Finder(Finder), Builder(Builder), Bind(Bind),
-        Matches(false), ignoreUnevaluatedContext(ignoreUnevaluatedContext) {}
+        Matches(false), ignoreUnevaluatedContext(ignoreUnevaluatedContext) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
+  }
 
   // Returns true if a match is found in a subtree of `DynNode`, which belongs
   // to the same callable of `DynNode`.
@@ -117,7 +117,7 @@ public:
   // For the matchers so far used in safe buffers, we only need to match
   // `Stmt`s.  To override more as needed.
 
-  bool TraverseDecl(Decl *Node) {
+  bool TraverseDecl(Decl *Node) override {
     if (!Node)
       return true;
     if (!match(*Node))
@@ -126,69 +126,64 @@ public:
     if (isa<FunctionDecl, BlockDecl, ObjCMethodDecl>(Node))
       return true;
     // Traverse descendants
-    return VisitorBase::TraverseDecl(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecl(Node);
   }
 
-  bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) {
+  bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) override {
     // These are unevaluated, except the result expression.
     if (ignoreUnevaluatedContext)
       return TraverseStmt(Node->getResultExpr());
-    return VisitorBase::TraverseGenericSelectionExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseGenericSelectionExpr(Node);
   }
 
-  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) {
+  bool
+  TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseUnaryExprOrTypeTraitExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
   }
 
-  bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) {
+  bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseCXXNoexceptExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseCXXNoexceptExpr(Node);
   }
 
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) {
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseCXXTypeidExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
   }
 
-  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) {
+  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) override {
     if (!TraverseStmt(Node->getExpr()))
       return false;
-    return VisitorBase::TraverseCXXDefaultInitExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseCXXDefaultInitExpr(Node);
   }
 
-  bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
+  bool TraverseStmt(Stmt *Node) override {
     if (!Node)
       return true;
     if (!match(*Node))
       return false;
-    return VisitorBase::TraverseStmt(Node);
-  }
-
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const {
-    // TODO: let's ignore implicit code for now
-    return false;
+    return DynamicRecursiveASTVisitor::TraverseStmt(Node);
   }
 
 private:
@@ -444,36 +439,25 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //    already duplicated
   //  - call both from Sema and from here
 
-  const auto *BaseDRE =
-      dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  const auto *SLiteral =
-      dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts());
-  uint64_t size;
-
-  if (!BaseDRE && !SLiteral)
+  uint64_t limit;
+  if (const auto *CATy =
+          dyn_cast<ConstantArrayType>(Node.getBase()
+                                          ->IgnoreParenImpCasts()
+                                          ->getType()
+                                          ->getUnqualifiedDesugaredType())) {
+    limit = CATy->getLimitedSize();
+  } else if (const auto *SLiteral = dyn_cast<StringLiteral>(
+                 Node.getBase()->IgnoreParenImpCasts())) {
+    limit = SLiteral->getLength() + 1;
+  } else {
     return false;
-
-  if (BaseDRE) {
-    if (!BaseDRE->getDecl())
-      return false;
-    const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-        BaseDRE->getDecl()->getType());
-    if (!CATy) {
-      return false;
-    }
-    size = CATy->getLimitedSize();
-  } else if (SLiteral) {
-    size = SLiteral->getLength() + 1;
   }
 
   if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
     const APInt ArrIdx = IdxLit->getValue();
-    // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
-    // bug
-    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < size)
+    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
   }
-
   return false;
 }
 
@@ -2343,7 +2327,8 @@ static StringRef getEndOfLine() {
 }
 
 // Returns the text indicating that the user needs to provide input there:
-std::string getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
+static std::string
+getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
   std::string s = std::string("<# ");
   s += HintTextToUser;
   s += " #>";

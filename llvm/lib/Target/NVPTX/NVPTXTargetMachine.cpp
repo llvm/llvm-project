@@ -21,7 +21,6 @@
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -153,9 +152,10 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
-                        CPU, FS, Options, Reloc::PIC_,
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T,
+                               computeDataLayout(is64bit, UseShortPointersOpt),
+                               TT, CPU, FS, Options, Reloc::PIC_,
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {
@@ -404,14 +404,10 @@ void NVPTXPassConfig::addIRPasses() {
 }
 
 bool NVPTXPassConfig::addInstSelector() {
-  const NVPTXSubtarget &ST = *getTM<NVPTXTargetMachine>().getSubtargetImpl();
-
   addPass(createLowerAggrCopies());
   addPass(createAllocaHoisting());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
-
-  if (!ST.hasImageHandles())
-    addPass(createNVPTXReplaceImageHandlesPass());
+  addPass(createNVPTXReplaceImageHandlesPass());
 
   return false;
 }
@@ -497,6 +493,6 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
   addPass(&MachineSinkingID);
   printAndVerify("After Machine LICM, CSE and Sinking passes");
 
-  addPass(&PeepholeOptimizerID);
+  addPass(&PeepholeOptimizerLegacyID);
   printAndVerify("After codegen peephole optimization pass");
 }

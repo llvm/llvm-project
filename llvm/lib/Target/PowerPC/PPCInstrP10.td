@@ -79,6 +79,10 @@ def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
   SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
 ]>;
 
+def SDT_PPCsetbc : SDTypeProfile<1, 1, [
+  SDTCisInt<0>, SDTCisInt<1>
+]>;
+
 //===----------------------------------------------------------------------===//
 // ISA 3.1 specific PPCISD nodes.
 //
@@ -91,6 +95,8 @@ def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
 def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
                         []>;
 def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
+def PPCsetbc  : SDNode<"PPCISD::SETBC",   SDT_PPCsetbc, []>;
+def PPCsetbcr : SDNode<"PPCISD::SETBCR",  SDT_PPCsetbc, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -105,7 +111,7 @@ def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
 
 // PPC Specific DAG Nodes.
 def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // Top-level class for prefixed instructions.
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -1401,10 +1407,12 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
 
 let Predicates = [IsISA3_1] in {
   def SETBC : XForm_XT5_BI5<31, 384, (outs gprc:$RST), (ins crbitrc:$BI),
-                            "setbc $RST, $BI", IIC_IntCompare, []>,
+                            "setbc $RST, $BI", IIC_IntCompare,
+                            [(set i32:$RST, (PPCsetbc i1:$BI))]>,
                             SExt32To64, ZExt32To64;
   def SETBCR : XForm_XT5_BI5<31, 416, (outs gprc:$RST), (ins crbitrc:$BI),
-                             "setbcr $RST, $BI", IIC_IntCompare, []>,
+                             "setbcr $RST, $BI", IIC_IntCompare,
+                             [(set i32:$RST, (PPCsetbcr i1:$BI))]>,
                              SExt32To64, ZExt32To64;
   def SETNBC : XForm_XT5_BI5<31, 448, (outs gprc:$RST), (ins crbitrc:$BI),
                              "setnbc $RST, $BI", IIC_IntCompare, []>,

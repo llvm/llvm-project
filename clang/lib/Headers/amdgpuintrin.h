@@ -24,11 +24,11 @@ _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 
 // Type aliases to the address spaces used by the AMDGPU backend.
-#define __gpu_private __attribute__((opencl_private))
-#define __gpu_constant __attribute__((opencl_constant))
-#define __gpu_local __attribute__((opencl_local))
-#define __gpu_global __attribute__((opencl_global))
-#define __gpu_generic __attribute__((opencl_generic))
+#define __gpu_private __attribute__((address_space(5)))
+#define __gpu_constant __attribute__((address_space(4)))
+#define __gpu_local __attribute__((address_space(3)))
+#define __gpu_global __attribute__((address_space(1)))
+#define __gpu_generic __attribute__((address_space(0)))
 
 // Attribute to declare a function as a kernel.
 #define __gpu_kernel __attribute__((amdgpu_kernel, visibility("protected")))
@@ -160,14 +160,14 @@ __gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
 
 // Returns true if the flat pointer points to CUDA 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
-  return __builtin_amdgcn_is_shared(
-      (void __attribute__((address_space(0))) *)((void __gpu_generic *)ptr));
+  return __builtin_amdgcn_is_shared((void __attribute__((address_space(0))) *)((
+      void [[clang::opencl_generic]] *)ptr));
 }
 
 // Returns true if the flat pointer points to CUDA 'local' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
-  return __builtin_amdgcn_is_private(
-      (void __attribute__((address_space(0))) *)((void __gpu_generic *)ptr));
+  return __builtin_amdgcn_is_private((void __attribute__((
+      address_space(0))) *)((void [[clang::opencl_generic]] *)ptr));
 }
 
 // Terminates execution of the associated wavefront.

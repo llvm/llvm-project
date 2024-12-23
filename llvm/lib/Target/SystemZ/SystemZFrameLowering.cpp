@@ -8,7 +8,6 @@
 
 #include "SystemZFrameLowering.h"
 #include "SystemZCallingConv.h"
-#include "SystemZInstrBuilder.h"
 #include "SystemZInstrInfo.h"
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZRegisterInfo.h"

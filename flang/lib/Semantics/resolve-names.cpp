@@ -31,6 +31,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/program-tree.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
@@ -984,6 +985,7 @@ public:
   bool Pre(const parser::TypeDeclarationStmt &);
   void Post(const parser::TypeDeclarationStmt &);
   void Post(const parser::IntegerTypeSpec &);
+  void Post(const parser::UnsignedTypeSpec &);
   void Post(const parser::IntrinsicTypeSpec::Real &);
   void Post(const parser::IntrinsicTypeSpec::Complex &);
   void Post(const parser::IntrinsicTypeSpec::Logical &);
@@ -1471,6 +1473,8 @@ public:
 
   bool Pre(const parser::OpenMPDeclareMapperConstruct &);
 
+  bool Pre(const parser::OmpMapClause &);
+
   void Post(const parser::OmpBeginLoopDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1637,6 +1641,33 @@ bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   EndDeclTypeSpec();
   PopScope();
   return false;
+}
+
+bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
+  auto &mods{OmpGetModifiers(x)};
+  if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
+    if (auto *symbol{FindSymbol(currScope(), mapper->v)}) {
+      // TODO: Do we need a specific flag or type here, to distinghuish against
+      // other ConstructName things? Leaving this for the full implementation
+      // of mapper lowering.
+      auto *misc{symbol->detailsIf<MiscDetails>()};
+      if (!misc || misc->kind() != MiscDetails::Kind::ConstructName)
+        context().Say(mapper->v.source,
+            "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
+      else
+        mapper->v.symbol = symbol;
+    } else {
+      mapper->v.symbol =
+          &MakeSymbol(mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
+      // TODO: When completing the implementation, we probably want to error if
+      // the symbol is not declared, but right now, testing that the TODO for
+      // OmpMapClause happens is obscured by the TODO for declare mapper, so
+      // leaving this out. Remove the above line once the declare mapper is
+      // implemented. context().Say(mapper->v.source, "'%s' not
+      // declared"_err_en_US, mapper->v.source);
+    }
+  }
+  return true;
 }
 
 // Walk the parse tree and resolve names to symbols.
@@ -4821,10 +4852,13 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   } else if (attrs.test(Attr::PARAMETER)) { // C882, C883
     Say(name, "Missing initialization for parameter '%s'"_err_en_US);
   }
-  if (auto *scopeSymbol{currScope().symbol()})
-    if (auto *details{scopeSymbol->detailsIf<DerivedTypeDetails>()})
-      if (details->isDECStructure())
+  if (auto *scopeSymbol{currScope().symbol()}) {
+    if (auto *details{scopeSymbol->detailsIf<DerivedTypeDetails>()}) {
+      if (details->isDECStructure()) {
         details->add_component(symbol);
+      }
+    }
+  }
 }
 
 void DeclarationVisitor::Post(const parser::PointerDecl &x) {
@@ -5324,6 +5358,15 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
 void DeclarationVisitor::Post(const parser::IntegerTypeSpec &x) {
   if (!isVectorType_) {
     SetDeclTypeSpec(MakeNumericType(TypeCategory::Integer, x.v));
+  }
+}
+void DeclarationVisitor::Post(const parser::UnsignedTypeSpec &x) {
+  if (!isVectorType_) {
+    if (!context().IsEnabled(common::LanguageFeature::Unsigned) &&
+        !context().AnyFatalError()) {
+      context().Say("-funsigned is required to enable UNSIGNED type"_err_en_US);
+    }
+    SetDeclTypeSpec(MakeNumericType(TypeCategory::Unsigned, x.v));
   }
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Real &x) {
@@ -7632,6 +7675,7 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
   switch (type.category()) {
     SWITCH_COVERS_ALL_CASES
   case common::TypeCategory::Integer:
+  case common::TypeCategory::Unsigned:
   case common::TypeCategory::Real:
   case common::TypeCategory::Complex:
     return context().MakeNumericType(type.category(), type.kind());
@@ -7694,8 +7738,52 @@ public:
     --blockDepth_;
     PopScope();
   }
+  // Note declarations of local names in BLOCK constructs.
+  // Don't have to worry about INTENT(), VALUE, or OPTIONAL
+  // (pertinent only to dummy arguments), ASYNCHRONOUS/VOLATILE,
+  // or accessibility attributes,
   bool Pre(const parser::EntityDecl &x) {
     Hide(std::get<parser::ObjectName>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ObjectDecl &x) {
+    Hide(std::get<parser::ObjectName>(x.t));
+    return true;
+  }
+  bool Pre(const parser::PointerDecl &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::BindEntity &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ContiguousStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::DimensionStmt::Declaration &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ExternalStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::IntrinsicStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::CodimensionStmt &x) {
+    for (const parser::CodimensionDecl &decl : x.v) {
+      Hide(std::get<parser::Name>(decl.t));
+    }
     return true;
   }
   void Post(const parser::ImportStmt &x) {
@@ -8876,6 +8964,18 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
+  bool inDeviceSubprogram = false;
+  if (auto *subp{currScope().symbol()
+              ? currScope().symbol()->detailsIf<SubprogramDetails>()
+              : nullptr}) {
+    if (auto attrs{subp->cudaSubprogramAttrs()}) {
+      if (*attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::Global ||
+          *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+        inDeviceSubprogram = true;
+      }
+    }
+  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -8883,6 +8983,14 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
     if (NeedsExplicitType(symbol)) {
       ApplyImplicitRules(symbol);
+    }
+    if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
+      auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+      if (!object->cudaDataAttr() && !IsValue(symbol) &&
+          (IsDummy(symbol) || object->IsArray())) {
+        // Implicitly set device attribute if none is set in device context.
+        object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
     }
     if (IsDummy(symbol) && isImplicitNoneType() &&
         symbol.test(Symbol::Flag::Implicit) && !context().HasError(symbol)) {

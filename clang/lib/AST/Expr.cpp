@@ -25,7 +25,6 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -1616,33 +1615,43 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
   return FnType->getReturnType();
 }
 
-const Attr *CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+std::pair<const NamedDecl *, const Attr *>
+CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+  // If the callee is marked nodiscard, return that attribute
+  const Decl *D = getCalleeDecl();
+  if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
+    return {nullptr, A};
+
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
   if (const TagDecl *TD = getCallReturnType(Ctx)->getAsTagDecl())
     if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
-      return A;
+      return {TD, A};
 
   for (const auto *TD = getCallReturnType(Ctx)->getAs<TypedefType>(); TD;
        TD = TD->desugar()->getAs<TypedefType>())
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
-      return A;
-
-  // Otherwise, see if the callee is marked nodiscard and return that attribute
-  // instead.
-  const Decl *D = getCalleeDecl();
-  return D ? D->getAttr<WarnUnusedResultAttr>() : nullptr;
+      return {TD->getDecl(), A};
+  return {nullptr, nullptr};
 }
 
 SourceLocation CallExpr::getBeginLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getBeginLoc();
 
+  if (const auto *Method =
+          dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
+      Method && Method->isExplicitObjectMemberFunction()) {
+    assert(getNumArgs() > 0 && getArg(0));
+    return getArg(0)->getBeginLoc();
+  }
+
   SourceLocation begin = getCallee()->getBeginLoc();
   if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
     begin = getArg(0)->getBeginLoc();
   return begin;
 }
+
 SourceLocation CallExpr::getEndLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getEndLoc();
@@ -2981,6 +2990,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case ExprWithCleanupsClass:
     return cast<ExprWithCleanups>(this)->getSubExpr()
                ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  case OpaqueValueExprClass:
+    return cast<OpaqueValueExpr>(this)->getSourceExpr()->isUnusedResultAWarning(
+        WarnE, Loc, R1, R2, Ctx);
   }
 }
 

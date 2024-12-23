@@ -87,6 +87,7 @@ module std_core [system] {
     module decay                                      { header "__type_traits/decay.h" }
     module dependent_type                             { header "__type_traits/dependent_type.h" }
     module desugars_to                                { header "__type_traits/desugars_to.h" }
+    module detected_or                                { header "__type_traits/detected_or.h" }
     module disjunction                                { header "__type_traits/disjunction.h" }
     module enable_if                                  { header "__type_traits/enable_if.h" }
     module extent                                     { header "__type_traits/extent.h" }
@@ -844,7 +845,6 @@ module std [system] {
 
   module atomic {
     module aliases                { header "__atomic/aliases.h" }
-    module atomic_base            { header "__atomic/atomic_base.h" }
     module atomic_flag            { header "__atomic/atomic_flag.h" }
     module atomic_init            { header "__atomic/atomic_init.h" }
     module atomic_lock_free       { header "__atomic/atomic_lock_free.h" }
@@ -856,12 +856,17 @@ module std [system] {
     }
     module check_memory_order     { header "__atomic/check_memory_order.h" }
     module contention_t           { header "__atomic/contention_t.h" }
-    module cxx_atomic_impl        { header "__atomic/cxx_atomic_impl.h" }
     module fence                  { header "__atomic/fence.h" }
     module is_always_lock_free    { header "__atomic/is_always_lock_free.h" }
     module kill_dependency        { header "__atomic/kill_dependency.h" }
     module memory_order           { header "__atomic/memory_order.h" }
     module to_gcc_order           { header "__atomic/to_gcc_order.h" }
+
+    module support {
+      header "__atomic/support.h"
+      textual header "__atomic/support/c11.h"
+      textual header "__atomic/support/gcc.h"
+    }
 
     header "atomic"
     export *
@@ -1230,6 +1235,7 @@ module std [system] {
 
   module flat_map {
     module flat_map                       { header "__flat_map/flat_map.h" }
+    module key_value_iterator             { header "__flat_map/key_value_iterator.h" }
     module sorted_unique                  { header "__flat_map/sorted_unique.h" }
 
     header "flat_map"
@@ -1460,7 +1466,7 @@ module std [system] {
 
   module locale {
     header "locale"
-    header "__locale_dir/locale_guard.h"
+    module pad_and_output { header "__locale_dir/pad_and_output.h" }
 
     module support {
       header "__locale_dir/locale_base_api.h"
@@ -1471,6 +1477,7 @@ module std [system] {
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
+      textual header "__locale_dir/support/windows.h"
     }
 
     module locale_base_api {
@@ -1481,7 +1488,6 @@ module std [system] {
       textual header "__locale_dir/locale_base_api/ibm.h"
       textual header "__locale_dir/locale_base_api/musl.h"
       textual header "__locale_dir/locale_base_api/openbsd.h"
-      textual header "__locale_dir/locale_base_api/win32.h"
     }
     export *
   }
@@ -1595,6 +1601,21 @@ module std [system] {
 
   module new {
     header "new"
+    module align_val_t          { header "__new/align_val_t.h" }
+    module allocate             { header "__new/allocate.h" }
+    module destroying_delete_t  { header "__new/destroying_delete_t.h" }
+    module exceptions           { header "__new/exceptions.h" }
+    module global_new_delete    {
+      header "__new/global_new_delete.h"
+
+      export std.new.nothrow_t
+    }
+    module interference_size    { header "__new/interference_size.h" }
+    module launder              { header "__new/launder.h" }
+    module new_handler          { header "__new/new_handler.h" }
+    module nothrow_t            { header "__new/nothrow_t.h" }
+    module placement_new_delete { header "__new/placement_new_delete.h" }
+
     export *
   }
 
@@ -1641,6 +1662,7 @@ module std [system] {
       header "__ostream/print.h"
       export *
     }
+    module put_character_sequence { header "__ostream/put_character_sequence.h" }
 
     header "ostream"
     export *
@@ -1921,6 +1943,7 @@ module std [system] {
     }
     module error_condition    { header "__system_error/error_condition.h" }
     module system_error       { header "__system_error/system_error.h" }
+    module throw_system_error { header "__system_error/throw_system_error.h" }
 
     header "system_error"
     export *
@@ -2261,15 +2284,15 @@ module std_stdbool_h [system] {
   textual header "stdbool.h"
 }
 module std_stddef_h [system] {
-  // <stddef.h>'s __need_* macros require textual inclusion.
+  // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
 }
 module std_stdio_h [system] {
-  // <stdio.h>'s __need_* macros require textual inclusion.
+  // <stdio.h> supports being included multiple times with different pre-defined macros
   textual header "stdio.h"
 }
 module std_stdlib_h [system] {
-  // <stdlib.h>'s __need_* macros require textual inclusion.
+  // <stdlib.h> supports being included multiple times with different pre-defined macros
   textual header "stdlib.h"
 }
 module std_string_h [system] {
@@ -2285,7 +2308,7 @@ module std_uchar_h [system] {
   export *
 }
 module std_wchar_h [system] {
-  // <wchar.h>'s __need_* macros require textual inclusion.
+  // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
 }
 module std_wctype_h [system] {

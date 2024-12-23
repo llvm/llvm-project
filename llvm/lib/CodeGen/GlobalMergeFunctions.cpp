@@ -31,14 +31,6 @@ static cl::opt<bool> DisableCGDataForMerging(
              "merging is still enabled within a module."),
     cl::init(false));
 
-STATISTIC(NumMismatchedFunctionHash,
-          "Number of mismatched function hash for global merge function");
-STATISTIC(NumMismatchedInstCount,
-          "Number of mismatched instruction count for global merge function");
-STATISTIC(NumMismatchedConstHash,
-          "Number of mismatched const hash for global merge function");
-STATISTIC(NumMismatchedModuleId,
-          "Number of mismatched Module Id for global merge function");
 STATISTIC(NumMergedFunctions,
           "Number of functions that are actually merged using function hash");
 STATISTIC(NumAnalyzedModues, "Number of modules that are analyzed");
@@ -110,7 +102,7 @@ bool isEligibleFunction(Function *F) {
   return true;
 }
 
-static bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
+static bool isEligibleInstructionForConstantSharing(const Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Load:
   case Instruction::Store:
@@ -122,10 +114,15 @@ static bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
   }
 }
 
+// This function takes an instruction, \p I, and an operand index, \p OpIdx.
+// It returns true if the operand should be ignored in the hash computation.
+// If \p OpIdx is out of range based on the other instruction context, it cannot
+// be ignored.
 static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
-  assert(OpIdx < I->getNumOperands() && "Invalid operand index");
+  if (OpIdx >= I->getNumOperands())
+    return false;
 
-  if (!isEligibleInstrunctionForConstantSharing(I))
+  if (!isEligibleInstructionForConstantSharing(I))
     return false;
 
   if (!isa<Constant>(I->getOperand(OpIdx)))
@@ -157,7 +154,7 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
     auto *DestAT = dyn_cast<ArrayType>(DestTy);
     assert(DestAT);
     assert(SrcAT->getNumElements() == DestAT->getNumElements());
-    Value *Result = UndefValue::get(DestTy);
+    Value *Result = PoisonValue::get(DestTy);
     for (unsigned int I = 0, E = SrcAT->getNumElements(); I < E; ++I) {
       Value *Element =
           createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
@@ -203,9 +200,9 @@ void GlobalMergeFunc::analyze(Module &M) {
 struct FuncMergeInfo {
   StableFunctionMap::StableFunctionEntry *SF;
   Function *F;
-  std::unique_ptr<IndexInstrMap> IndexInstruction;
+  IndexInstrMap *IndexInstruction;
   FuncMergeInfo(StableFunctionMap::StableFunctionEntry *SF, Function *F,
-                std::unique_ptr<IndexInstrMap> IndexInstruction)
+                IndexInstrMap *IndexInstruction)
       : SF(SF), F(F), IndexInstruction(std::move(IndexInstruction)) {}
 };
 
@@ -408,113 +405,88 @@ static ParamLocsVecTy computeParamInfo(
   }
 
   ParamLocsVecTy ParamLocsVec;
-  for (auto &[HashSeq, Locs] : HashSeqToLocs) {
+  for (auto &[HashSeq, Locs] : HashSeqToLocs)
     ParamLocsVec.push_back(std::move(Locs));
-    llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
-      return L[0] < R[0];
-    });
-  }
+
+  llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
+    return L[0] < R[0];
+  });
+
   return ParamLocsVec;
 }
 
 bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   bool Changed = false;
 
-  // Build a map from stable function name to function.
-  StringMap<Function *> StableNameToFuncMap;
-  for (auto &F : M)
-    StableNameToFuncMap[get_stable_name(F.getName())] = &F;
-  // Track merged functions
-  DenseSet<Function *> MergedFunctions;
+  // Collect stable functions related to the current module.
+  DenseMap<stable_hash, SmallVector<std::pair<Function *, FunctionHashInfo>>>
+      HashToFuncs;
+  auto &Maps = FunctionMap->getFunctionMap();
+  for (auto &F : M) {
+    if (!isEligibleFunction(&F))
+      continue;
+    auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
+    if (Maps.contains(FI.FunctionHash))
+      HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
+  }
 
-  auto ModId = M.getModuleIdentifier();
-  for (auto &[Hash, SFS] : FunctionMap->getFunctionMap()) {
-    // Parameter locations based on the unique hash sequences
-    // across the candidates.
+  for (auto &[Hash, Funcs] : HashToFuncs) {
     std::optional<ParamLocsVecTy> ParamLocsVec;
-    Function *MergedFunc = nullptr;
-    std::string MergedModId;
     SmallVector<FuncMergeInfo> FuncMergeInfos;
-    for (auto &SF : SFS) {
-      // Get the function from the stable name.
-      auto I = StableNameToFuncMap.find(
-          *FunctionMap->getNameForId(SF->FunctionNameId));
-      if (I == StableNameToFuncMap.end())
-        continue;
-      Function *F = I->second;
-      assert(F);
-      // Skip if the function has been merged before.
-      if (MergedFunctions.count(F))
-        continue;
-      // Consider the function if it is eligible for merging.
-      if (!isEligibleFunction(F))
+    auto &SFS = Maps.at(Hash);
+    assert(!SFS.empty());
+    auto &RFS = SFS[0];
+
+    // Iterate functions with the same hash.
+    for (auto &[F, FI] : Funcs) {
+      // Check if the function is compatible with any stable function
+      // in terms of the number of instructions and ignored operands.
+      if (RFS->InstCount != FI.IndexInstruction->size())
         continue;
 
-      auto FI = llvm::StructuralHashWithDifferences(*F, ignoreOp);
-      uint64_t FuncHash = FI.FunctionHash;
-      if (Hash != FuncHash) {
-        ++NumMismatchedFunctionHash;
-        continue;
-      }
-
-      if (SF->InstCount != FI.IndexInstruction->size()) {
-        ++NumMismatchedInstCount;
-        continue;
-      }
-      bool HasValidSharedConst = true;
-      for (auto &[Index, Hash] : *SF->IndexOperandHashMap) {
-        auto [InstIndex, OpndIndex] = Index;
-        assert(InstIndex < FI.IndexInstruction->size());
-        auto *Inst = FI.IndexInstruction->lookup(InstIndex);
-        if (!ignoreOp(Inst, OpndIndex)) {
-          HasValidSharedConst = false;
-          break;
+      auto hasValidSharedConst = [&](StableFunctionMap::StableFunctionEntry *SF,
+                                     FunctionHashInfo &FHI) {
+        for (auto &[Index, Hash] : *SF->IndexOperandHashMap) {
+          auto [InstIndex, OpndIndex] = Index;
+          assert(InstIndex < FHI.IndexInstruction->size());
+          auto *Inst = FHI.IndexInstruction->lookup(InstIndex);
+          if (!ignoreOp(Inst, OpndIndex))
+            return false;
         }
-      }
-      if (!HasValidSharedConst) {
-        ++NumMismatchedConstHash;
+        return true;
+      };
+      if (!hasValidSharedConst(RFS.get(), FI))
         continue;
-      }
-      if (!checkConstHashCompatible(*SF->IndexOperandHashMap,
-                                    *FI.IndexOperandHashMap)) {
-        ++NumMismatchedConstHash;
-        continue;
-      }
-      if (!ParamLocsVec.has_value()) {
-        ParamLocsVec = computeParamInfo(SFS);
-        LLVM_DEBUG(dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash
-                          << " with Params " << ParamLocsVec->size() << "\n");
-      }
-      if (!checkConstLocationCompatible(*SF, *FI.IndexInstruction,
-                                        *ParamLocsVec)) {
-        ++NumMismatchedConstHash;
-        continue;
-      }
 
-      if (MergedFunc) {
-        // Check if the matched functions fall into the same (first) module.
-        // This module check is not strictly necessary as the functions can move
-        // around. We just want to avoid merging functions from different
-        // modules than the first one in the function map, as they may not end
-        // up with being ICFed by the linker.
-        if (MergedModId != *FunctionMap->getNameForId(SF->ModuleNameId)) {
-          ++NumMismatchedModuleId;
+      for (auto &SF : SFS) {
+        assert(SF->InstCount == FI.IndexInstruction->size());
+        assert(hasValidSharedConst(SF.get(), FI));
+        // Check if there is any stable function that is compatiable with the
+        // current one.
+        if (!checkConstHashCompatible(*SF->IndexOperandHashMap,
+                                      *FI.IndexOperandHashMap))
           continue;
+        if (!ParamLocsVec.has_value()) {
+          ParamLocsVec = computeParamInfo(SFS);
+          LLVM_DEBUG(dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash
+                            << " with Params " << ParamLocsVec->size() << "\n");
         }
-      } else {
-        MergedFunc = F;
-        MergedModId = *FunctionMap->getNameForId(SF->ModuleNameId);
-      }
+        if (!checkConstLocationCompatible(*SF, *FI.IndexInstruction,
+                                          *ParamLocsVec))
+          continue;
 
-      FuncMergeInfos.emplace_back(SF.get(), F, std::move(FI.IndexInstruction));
-      MergedFunctions.insert(F);
+        // If a stable function matching the current one is found,
+        // create a candidate for merging and proceed to the next function.
+        FuncMergeInfos.emplace_back(SF.get(), F, FI.IndexInstruction.get());
+        break;
+      }
     }
     unsigned FuncMergeInfoSize = FuncMergeInfos.size();
     if (FuncMergeInfoSize == 0)
       continue;
 
     LLVM_DEBUG(dbgs() << "[GlobalMergeFunc] Merging function count "
-                      << FuncMergeInfoSize << " in  " << ModId << "\n");
+                      << FuncMergeInfoSize << " for hash:  " << Hash << "\n");
 
     for (auto &FMI : FuncMergeInfos) {
       Changed = true;
@@ -666,7 +638,6 @@ bool GlobalMergeFuncPassWrapper::runOnModule(Module &M) {
 
 PreservedAnalyses GlobalMergeFuncPass::run(Module &M,
                                            AnalysisManager<Module> &AM) {
-  ModuleSummaryIndex *Index = &(AM.getResult<ModuleSummaryIndexAnalysis>(M));
-  bool Changed = GlobalMergeFunc(Index).run(M);
+  bool Changed = GlobalMergeFunc(ImportSummary).run(M);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

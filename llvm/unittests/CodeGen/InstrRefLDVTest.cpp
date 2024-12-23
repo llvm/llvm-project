@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -21,7 +22,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include "../lib/CodeGen/LiveDebugValues/InstrRefBasedImpl.h"
@@ -90,11 +90,11 @@ public:
         Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &*Mod);
 
     unsigned FunctionNum = 42;
-    MMI = std::make_unique<MachineModuleInfo>((LLVMTargetMachine *)&*Machine);
+    MMI = std::make_unique<MachineModuleInfo>(Machine.get());
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
-    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
-                                           STI, MMI->getContext(), FunctionNum);
+    MF = std::make_unique<MachineFunction>(*F, *Machine, STI, MMI->getContext(),
+                                           FunctionNum);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_PRINT
-#define _LIBCPP_PRINT
+#ifndef _LIBCPP___CXX03_PRINT
+#define _LIBCPP___CXX03_PRINT
 
 /*
 namespace std {
@@ -399,4 +399,4 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_ar
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_PRINT
+#endif // _LIBCPP___CXX03_PRINT

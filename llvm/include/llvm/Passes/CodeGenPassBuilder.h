@@ -52,8 +52,12 @@
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
+#include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegUsageInfoCollector.h"
+#include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -443,7 +447,8 @@ protected:
   Error addFastRegAlloc(AddMachinePass &) const;
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// LLVMTargetMachine provides standard regalloc passes for most targets.
+  /// CodeGenTargetMachineImpl provides standard regalloc passes for most
+  /// targets.
   void addOptimizedRegAlloc(AddMachinePass &) const;
 
   /// Add passes that optimize machine instructions after register allocation.
@@ -905,9 +910,10 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     addPass(LocalStackSlotAllocationPass());
   }
 
-  if (TM.Options.EnableIPRA)
+  if (TM.Options.EnableIPRA) {
+    addPass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>());
     addPass(RegUsageInfoPropagationPass());
-
+  }
   // Run pre-ra passes.
   derived().addPreRegAlloc(addPass);
 

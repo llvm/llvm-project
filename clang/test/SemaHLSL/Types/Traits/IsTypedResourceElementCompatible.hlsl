@@ -1,109 +1,58 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -fnative-half-type -verify %s
 // expected-no-diagnostics
 
-struct oneInt {
-    int i;
-};
-
-struct twoInt {
-   int aa;
-   int ab;
-};
-
-struct threeInts {
-  oneInt o;
-  twoInt t;
-};
-
-struct oneFloat {
-    float f;
-};
-struct depthDiff {
-  int i;
-  oneInt o;
-  oneFloat f;
-};
-
-struct notHomogenous{     
-  int i;
-  float f;
-};
-
-struct EightElements {
-  twoInt x[2];
-  twoInt y[2];
-};
-
-struct EightHalves {
-half x[8]; 
-};
-
-struct intVec {
-  int2 i;
-};
-
-struct oneIntWithVec {
-  int i;
-  oneInt i2;
-  int2 i3;
-};
-
-struct weirdStruct {
-  int i;
-  intVec iv;
-};
 
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(int), "");
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(float), "");
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(float4), "");
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(double2), "");
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(oneInt), "");
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(oneFloat), "");
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(twoInt), "");
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(threeInts), "");
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(notHomogenous), "");
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(depthDiff), "");
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(EightElements), "");
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(EightHalves), "");
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(oneIntWithVec), "");
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(weirdStruct), "");
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(RWBuffer<int>), "");
 
+// types must be complete
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(RWBuffer<int>), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(__hlsl_resource_t), "");
+
+struct notComplete;
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(notComplete), "");
+
+
+struct s {
+    int x;
+};
+
+struct Empty {};
+
+template<typename T> struct TemplatedBuffer {
+    T a;
+};
+
+template<typename T> struct TemplatedVector {
+    vector<T, 4> v;
+};
+
+// structs not allowed
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(s), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(Empty), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(TemplatedBuffer<int>), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(TemplatedVector<int>), "");
 
 // arrays not allowed
 _Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(half[4]), "");
 
-template<typename T> struct TemplatedBuffer {
-    T a;
-    __hlsl_resource_t h;
-};
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(TemplatedBuffer<int>), "");
+typedef vector<int, 8> int8;
+// too many elements
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(int8), "");
 
-struct MyStruct1 : TemplatedBuffer<float> {
-    float x;
-};
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(MyStruct1), "");
+typedef int MyInt;
+_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(MyInt), "");
 
-struct MyStruct2 {
-    const TemplatedBuffer<float> TB[10];
-};
-_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(MyStruct2), "");
+// bool and enums not allowed
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(bool), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(vector<bool, 2>), "");
 
-template<typename T> struct SimpleTemplate {
-    T a;
-};
+enum numbers { one, two, three };
 
-// though the element type is incomplete, the type trait should still technically return true
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(SimpleTemplate<__hlsl_resource_t>), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(numbers), "");
 
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(SimpleTemplate<float>), "");
+// size exceeds 16 bytes, and exceeds element count limit after splitting 64 bit types into 32 bit types
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(double3), "");
 
-
-typedef int myInt;
-
-struct TypeDefTest {
-    int x;
-    myInt y;
-};
-
-_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(TypeDefTest), "");

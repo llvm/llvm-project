@@ -208,6 +208,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
+defvar XLenPairVT = untyped;
+
 // Allow f64 in GPR for ZDINX on RV64.
 def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
@@ -231,7 +233,7 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
 }
 
 class GPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[XLenVT, XLenFVT, i32], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT, i32, i16], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -323,7 +325,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 let RegInfos = XLenPairRI,
     DecoderMethod = "DecodeGPRPairRegisterClass" in {
-def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
+def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
@@ -332,11 +334,11 @@ def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X0_Pair, X2_X3, X4_X5
 )>;
 
-def GPRPairNoX0 : RISCVRegisterClass<[XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
+def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
 } // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
 let RegInfos = XLenPairRI in
-def GPRPairC : RISCVRegisterClass<[XLenPairFVT], 64, (add
+def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
 
@@ -461,7 +463,6 @@ def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
 def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
                                                  (sequence "X%u_W", 8, 9))>;
 def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
-
 
 //===----------------------------------------------------------------------===//
 // Vector type mapping to LLVM types.

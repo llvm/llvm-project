@@ -14,10 +14,10 @@ declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 
 define void @call_external_sym(ptr %dst) {
 ; LARGE-LABEL: call_external_sym:
-; LARGE:         pcalau12i [[REG1:\$[a-z0-9]+]], %pc_hi20(memset)
-; LARGE-NEXT:    addi.d [[REG2:\$[a-z0-9]+]], $zero, %pc_lo12(memset)
-; LARGE-NEXT:    lu32i.d [[REG2]], %pc64_lo20(memset)
-; LARGE-NEXT:    lu52i.d [[REG2]], [[REG2]], %pc64_hi12(memset)
+; LARGE:         pcalau12i [[REG1:\$[a-z0-9]+]], %got_pc_hi20(memset)
+; LARGE-NEXT:    addi.d [[REG2:\$[a-z0-9]+]], $zero, %got_pc_lo12(memset)
+; LARGE-NEXT:    lu32i.d [[REG2]], %got64_pc_lo20(memset)
+; LARGE-NEXT:    lu52i.d [[REG2]], [[REG2]], %got64_pc_hi12(memset)
 entry:
   call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 1000, i1 false)
   ret void

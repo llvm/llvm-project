@@ -12,7 +12,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -33,6 +33,7 @@ class RawPtrRefCallArgsChecker
   mutable BugReporter *BR;
 
   TrivialFunctionAnalysis TFA;
+  EnsureFunctionAnalysis EFA;
 
 public:
   RawPtrRefCallArgsChecker(const char *description)
@@ -49,34 +50,31 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
-      using Base = RecursiveASTVisitor<LocalVisitor>;
-
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const RawPtrRefCallArgsChecker *Checker;
       Decl *DeclWithIssue{nullptr};
 
       explicit LocalVisitor(const RawPtrRefCallArgsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
         if (isRefType(safeGetName(Decl)))
           return true;
-        return Base::TraverseClassTemplateDecl(Decl);
+        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
       }
 
-      bool TraverseDecl(Decl *D) {
+      bool TraverseDecl(Decl *D) override {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
-        return Base::TraverseDecl(D);
+        return DynamicRecursiveASTVisitor::TraverseDecl(D);
       }
 
-      bool VisitCallExpr(const CallExpr *CE) {
+      bool VisitCallExpr(CallExpr *CE) override {
         Checker->visitCallExpr(CE, DeclWithIssue);
         return true;
       }
@@ -143,7 +141,7 @@ public:
 
   bool isPtrOriginSafe(const Expr *Arg) const {
     return tryToFindPtrOrigin(Arg, /*StopAtFirstRefCountedObj=*/true,
-                              [](const clang::Expr *ArgOrigin, bool IsSafe) {
+                              [&](const clang::Expr *ArgOrigin, bool IsSafe) {
                                 if (IsSafe)
                                   return true;
                                 if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
@@ -156,6 +154,8 @@ public:
                                   return true;
                                 }
                                 if (isASafeCallArg(ArgOrigin))
+                                  return true;
+                                if (EFA.isACallToEnsureFn(ArgOrigin))
                                   return true;
                                 return false;
                               });

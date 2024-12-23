@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefixes=GFX68,VERDE %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=GFX68,GFX8 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GFX12 %s
 
 define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 ; GFX68-LABEL: buffer_store:
@@ -497,8 +498,8 @@ define amdgpu_ps void @raw_buffer_store_x1_offset_merged(<4 x i32> inreg %rsrc, 
   ret void
 }
 
-define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged(<4 x i32> inreg %rsrc, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
-; GFX68-LABEL: raw_buffer_store_x1_offset_swizzled_not_merged:
+define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged_pregfx12(<4 x i32> inreg %rsrc, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
+; GFX68-LABEL: raw_buffer_store_x1_offset_swizzled_not_merged_pregfx12:
 ; GFX68:       ; %bb.0:
 ; GFX68-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX68-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:8
@@ -508,7 +509,7 @@ define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged(<4 x i32> 
 ; GFX68-NEXT:    buffer_store_dword v5, off, s[0:3], 0 offset:32
 ; GFX68-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: raw_buffer_store_x1_offset_swizzled_not_merged:
+; GFX11-LABEL: raw_buffer_store_x1_offset_swizzled_not_merged_pregfx12:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x5
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0 offset:4
@@ -524,6 +525,26 @@ define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged(<4 x i32> 
   call void @llvm.amdgcn.raw.buffer.store.f32(float %v4, <4 x i32> %rsrc, i32 16, i32 0, i32 8)
   call void @llvm.amdgcn.raw.buffer.store.f32(float %v5, <4 x i32> %rsrc, i32 28, i32 0, i32 8)
   call void @llvm.amdgcn.raw.buffer.store.f32(float %v6, <4 x i32> %rsrc, i32 32, i32 0, i32 8)
+  ret void
+}
+
+define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged(<4 x i32> inreg %rsrc, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
+; GFX12-LABEL: raw_buffer_store_x1_offset_swizzled_not_merged:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_clause 0x5
+; GFX12-NEXT:    buffer_store_b32 v0, off, s[0:3], null offset:4
+; GFX12-NEXT:    buffer_store_b32 v1, off, s[0:3], null offset:8
+; GFX12-NEXT:    buffer_store_b32 v2, off, s[0:3], null offset:12
+; GFX12-NEXT:    buffer_store_b32 v3, off, s[0:3], null offset:16
+; GFX12-NEXT:    buffer_store_b32 v4, off, s[0:3], null offset:28
+; GFX12-NEXT:    buffer_store_b32 v5, off, s[0:3], null offset:32
+; GFX12-NEXT:    s_endpgm
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v1, <4 x i32> %rsrc, i32 4, i32 0, i32 64)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v2, <4 x i32> %rsrc, i32 8, i32 0, i32 64)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v3, <4 x i32> %rsrc, i32 12, i32 0, i32 64)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v4, <4 x i32> %rsrc, i32 16, i32 0, i32 64)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v5, <4 x i32> %rsrc, i32 28, i32 0, i32 64)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v6, <4 x i32> %rsrc, i32 32, i32 0, i32 64)
   ret void
 }
 

@@ -655,8 +655,8 @@
 ; GCN-O1-OPTS-NEXT:        Register Coalescer
 ; GCN-O1-OPTS-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-OPTS-NEXT:        Rewrite Partial Register Uses
-; GCN-O1-OPTS-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O1-OPTS-NEXT:        Machine Instruction Scheduler
+; GCN-O1-OPTS-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O1-OPTS-NEXT:        SI Whole Quad Mode
 ; GCN-O1-OPTS-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O1-OPTS-NEXT:        AMDGPU Pre-RA Long Branch Reg
@@ -968,8 +968,8 @@
 ; GCN-O2-NEXT:        Register Coalescer
 ; GCN-O2-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O2-NEXT:        Rewrite Partial Register Uses
-; GCN-O2-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O2-NEXT:        Machine Instruction Scheduler
+; GCN-O2-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O2-NEXT:        SI Whole Quad Mode
 ; GCN-O2-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O2-NEXT:        SI Form memory clauses
@@ -1295,8 +1295,8 @@
 ; GCN-O3-NEXT:        Register Coalescer
 ; GCN-O3-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O3-NEXT:        Rewrite Partial Register Uses
-; GCN-O3-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O3-NEXT:        Machine Instruction Scheduler
+; GCN-O3-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O3-NEXT:        SI Whole Quad Mode
 ; GCN-O3-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O3-NEXT:        SI Form memory clauses
