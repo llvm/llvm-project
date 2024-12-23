@@ -35,9 +35,6 @@ target triple = "aarch64-unknown-linux-gnu"
 ; DEBUG: LV: can fold tail by masking.
 ; DEBUG: Executing best plan with VF=vscale x 16, UF=1
 
-; TODO: Clean up unused add instruction computing the end value of the
-; induction, which gets created during execution of the main plan once
-; VPlan's scope includes both vector loops.
 define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef %val) {
 ; CHECK-VS1-LABEL: define void @low_vf_ic_is_better(
 ; CHECK-VS1-SAME: ptr nocapture noundef [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -77,7 +74,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-VS1-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS1-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 16
-; CHECK-VS1-NEXT:    [[TMP40:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-VS1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -186,7 +182,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-VS2-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS2-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 8
-; CHECK-VS2-NEXT:    [[TMP40:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-VS2-NEXT:    br label %[[VECTOR_BODY:.*]]

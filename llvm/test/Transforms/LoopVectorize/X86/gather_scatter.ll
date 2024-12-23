@@ -639,8 +639,6 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; AVX512:       vector.ph:
 ; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; AVX512-NEXT:    [[TMP36:%.*]] = mul i64 [[N_VEC]], 4
-; AVX512-NEXT:    [[TMP37:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP36]]
 ; AVX512-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 64
 ; AVX512-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DEST]], i64 [[TMP13]]
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]

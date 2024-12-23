@@ -331,8 +331,6 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP50:%.*]] = mul i64 [[N_VEC]], 16
-; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP50]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
