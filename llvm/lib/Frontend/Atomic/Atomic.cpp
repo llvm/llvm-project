@@ -1,5 +1,4 @@
-//===--- Atomic.h - Codegen of atomic operations
-//---------------------------===//
+//===--- Atomic.cpp - Codegen of atomic operations ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/Atomic/Atomic.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include <utility>
 
 using namespace llvm;
 
