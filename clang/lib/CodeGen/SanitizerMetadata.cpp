@@ -145,6 +145,9 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
     for (auto *Attr : D.specific_attrs<NoSanitizeAttr>())
       NoSanitizeMask |= Attr->getMask();
 
+    if (D.hasExternalStorage())
+      NoSanitizeMask |= SanitizerKind::Type;
+
     return NoSanitizeMask;
   };
 

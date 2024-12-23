@@ -216,6 +216,81 @@ ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
     llvm_unreachable("Unknown handle type");
 }
 
+static void formatTypeName(SmallString<64> &Dest, StringRef Name,
+                           bool isWriteable, bool isROV) {
+  Dest = isWriteable ? (isROV ? "RasterizerOrdered" : "RW") : "";
+  Dest += Name;
+}
+
+StructType *ResourceTypeInfo::createElementStruct() {
+  SmallString<64> TypeName;
+
+  switch (Kind) {
+  case ResourceKind::Texture1D:
+  case ResourceKind::Texture2D:
+  case ResourceKind::Texture3D:
+  case ResourceKind::TextureCube:
+  case ResourceKind::Texture1DArray:
+  case ResourceKind::Texture2DArray:
+  case ResourceKind::TextureCubeArray: {
+    auto *RTy = cast<TextureExtType>(HandleTy);
+    formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::Texture2DMS:
+  case ResourceKind::Texture2DMSArray: {
+    auto *RTy = cast<MSTextureExtType>(HandleTy);
+    formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
+                   /*IsROV=*/false);
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::TypedBuffer: {
+    auto *RTy = cast<TypedBufferExtType>(HandleTy);
+    formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::RawBuffer: {
+    auto *RTy = cast<RawBufferExtType>(HandleTy);
+    formatTypeName(TypeName, "ByteAddressBuffer", RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
+                              TypeName);
+  }
+  case ResourceKind::StructuredBuffer: {
+    auto *RTy = cast<RawBufferExtType>(HandleTy);
+    formatTypeName(TypeName, "StructuredBuffer", RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::FeedbackTexture2D:
+  case ResourceKind::FeedbackTexture2DArray: {
+    auto *RTy = cast<FeedbackTextureExtType>(HandleTy);
+    TypeName = formatv("{0}<{1}>", getResourceKindName(Kind),
+                       llvm::to_underlying(RTy->getFeedbackType()));
+    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
+                              TypeName);
+  }
+  case ResourceKind::CBuffer:
+    return StructType::create(HandleTy->getContext(), "cbuffer");
+  case ResourceKind::Sampler: {
+    auto *RTy = cast<SamplerExtType>(HandleTy);
+    TypeName = formatv("SamplerState<{0}>",
+                       llvm::to_underlying(RTy->getSamplerType()));
+    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
+                              TypeName);
+  }
+  case ResourceKind::TBuffer:
+  case ResourceKind::RTAccelerationStructure:
+    llvm_unreachable("Unhandled resource kind");
+  case ResourceKind::Invalid:
+  case ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind");
+  }
+  llvm_unreachable("Unhandled ResourceKind enum");
+}
+
 bool ResourceTypeInfo::isUAV() const { return RC == ResourceClass::UAV; }
 
 bool ResourceTypeInfo::isCBuffer() const {
@@ -449,6 +524,15 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   }
 }
 
+GlobalVariable *ResourceBindingInfo::createSymbol(Module &M, StructType *Ty,
+                                                  StringRef Name) {
+  assert(!Symbol && "Symbol has already been created");
+  Symbol = new GlobalVariable(M, Ty, /*isConstant=*/true,
+                              GlobalValue::ExternalLinkage,
+                              /*Initializer=*/nullptr, Name);
+  return Symbol;
+}
+
 MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
                                             dxil::ResourceTypeInfo &RTI) const {
   LLVMContext &Ctx = M.getContext();
@@ -468,13 +552,9 @@ MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
   };
 
   MDVals.push_back(getIntMD(Binding.RecordID));
-
-  // TODO: We need API to create a symbol of the appropriate type to emit here.
-  // See https://github.com/llvm/llvm-project/issues/116849
-  MDVals.push_back(
-      ValueAsMetadata::get(UndefValue::get(PointerType::getUnqual(Ctx))));
-  MDVals.push_back(MDString::get(Ctx, ""));
-
+  assert(Symbol && "Cannot yet create useful resource metadata without symbol");
+  MDVals.push_back(ValueAsMetadata::get(Symbol));
+  MDVals.push_back(MDString::get(Ctx, Symbol->getName()));
   MDVals.push_back(getIntMD(Binding.Space));
   MDVals.push_back(getIntMD(Binding.LowerBound));
   MDVals.push_back(getIntMD(Binding.Size));
@@ -573,6 +653,12 @@ ResourceBindingInfo::getAnnotateProps(Module &M,
 
 void ResourceBindingInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
                                 const DataLayout &DL) const {
+  if (Symbol) {
+    OS << "  Symbol: ";
+    Symbol->printAsOperand(OS);
+    OS << "\n";
+  }
+
   OS << "  Binding:\n"
      << "    Record ID: " << Binding.RecordID << "\n"
      << "    Space: " << Binding.Space << "\n"
@@ -605,7 +691,7 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
     switch (ID) {
     default:
       continue;
-    case Intrinsic::dx_handle_fromBinding: {
+    case Intrinsic::dx_resource_handlefrombinding: {
       auto *HandleTy = cast<TargetExtType>(F.getReturnType());
       ResourceTypeInfo &RTI = DRTM[HandleTy];
 

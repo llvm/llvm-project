@@ -86,7 +86,6 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   Type *Int32x2Ty = FixedVectorType::get(Int32Ty, 2);
 
   MDBuilder TestMD(Context, Int32Ty, Int1Ty);
-  Value *DummyGV = UndefValue::get(PointerType::getUnqual(Context));
 
   // ByteAddressBuffer Buffer;
   ResourceTypeInfo RTI(llvm::TargetExtType::get(
@@ -97,11 +96,12 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   ResourceBindingInfo RBI(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GlobalVariable *GV = RBI.createSymbol(M, RTI.createElementStruct(), "Buffer");
   std::pair<uint32_t, uint32_t> Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000000bU);
   EXPECT_EQ(Props.second, 0U);
   MDTuple *MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 11, 0, nullptr));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "Buffer", 0, 0, 1, 11, 0, nullptr));
 
   // RWByteAddressBuffer BufferOut : register(u3, space2);
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -115,12 +115,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/1, /*Space=*/2, /*LowerBound=*/3, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "BufferOut");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000100bU);
   EXPECT_EQ(Props.second, 0U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(1, DummyGV, "", 2, 3, 1, 11, false, false, false,
-                             nullptr));
+  EXPECT_MDEQ(MD, TestMD.get(1, GV, "BufferOut", 2, 3, 1, 11, false, false,
+                             false, nullptr));
 
   // struct BufType0 { int i; float f; double d; };
   // StructuredBuffer<BufType0> Buffer0 : register(t0);
@@ -137,12 +138,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "Buffer0");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000030cU);
   EXPECT_EQ(Props.second, 0x00000010U);
   MD = RBI.getAsMetadata(M, RTI);
   EXPECT_MDEQ(MD,
-              TestMD.get(0, DummyGV, "", 0, 0, 1, 12, 0, TestMD.get(1, 16)));
+              TestMD.get(0, GV, "Buffer0", 0, 0, 1, 12, 0, TestMD.get(1, 16)));
 
   // StructuredBuffer<float3> Buffer1 : register(t1);
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -156,12 +158,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/1, /*Space=*/0, /*LowerBound=*/1, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "Buffer1");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000000cU);
   EXPECT_EQ(Props.second, 0x0000000cU);
   MD = RBI.getAsMetadata(M, RTI);
   EXPECT_MDEQ(MD,
-              TestMD.get(1, DummyGV, "", 0, 1, 1, 12, 0, TestMD.get(1, 12)));
+              TestMD.get(1, GV, "Buffer1", 0, 1, 1, 12, 0, TestMD.get(1, 12)));
 
   // Texture2D<float4> ColorMapTexture : register(t2);
   RTI = ResourceTypeInfo(
@@ -177,11 +180,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/2, /*Space=*/0, /*LowerBound=*/2, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "ColorMapTexture");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x00000002U);
   EXPECT_EQ(Props.second, 0x00000409U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(2, DummyGV, "", 0, 2, 1, 2, 0, TestMD.get(0, 9)));
+  EXPECT_MDEQ(MD, TestMD.get(2, GV, "ColorMapTexture", 0, 2, 1, 2, 0,
+                             TestMD.get(0, 9)));
 
   // Texture2DMS<float, 8> DepthBuffer : register(t0);
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -199,11 +204,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "DepthBuffer");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x00000003U);
   EXPECT_EQ(Props.second, 0x00080109U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 3, 8, TestMD.get(0, 9)));
+  EXPECT_MDEQ(
+      MD, TestMD.get(0, GV, "DepthBuffer", 0, 0, 1, 3, 8, TestMD.get(0, 9)));
 
   // FeedbackTexture2D<SAMPLER_FEEDBACK_MIN_MIP> feedbackMinMip;
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -218,12 +225,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "feedbackMinMip");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x00001011U);
   EXPECT_EQ(Props.second, 0U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 17, false, false, false,
-                             TestMD.get(2, 0)));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "feedbackMinMip", 0, 0, 1, 17, false, false,
+                             false, TestMD.get(2, 0)));
 
   // FeedbackTexture2DArray<SAMPLER_FEEDBACK_MIP_REGION_USED> feedbackMipRegion;
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -238,12 +246,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "feedbackMipRegion");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x00001012U);
   EXPECT_EQ(Props.second, 0x00000001U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 18, false, false, false,
-                             TestMD.get(2, 1)));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "feedbackMipRegion", 0, 0, 1, 18, false,
+                             false, false, TestMD.get(2, 1)));
 
   // globallycoherent RWTexture2D<int2> OutputTexture : register(u0, space2);
   RTI = ResourceTypeInfo(
@@ -262,12 +271,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/2, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "OutputTexture");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x00005002U);
   EXPECT_EQ(Props.second, 0x00000204U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 2, 0, 1, 2, true, false, false,
-                             TestMD.get(0, 4)));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "OutputTexture", 2, 0, 1, 2, true, false,
+                             false, TestMD.get(0, 4)));
 
   // RasterizerOrderedBuffer<float4> ROB;
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -285,11 +295,12 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "ROB");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000300aU);
   EXPECT_EQ(Props.second, 0x00000409U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 10, false, false, true,
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "ROB", 0, 0, 1, 10, false, false, true,
                              TestMD.get(0, 9)));
 
   // RWStructuredBuffer<ParticleMotion> g_OutputBuffer : register(u2);
@@ -311,12 +322,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/2, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "g_OutputBuffer");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000920cU);
   EXPECT_EQ(Props.second, 0x00000014U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 2, 1, 12, false, true, false,
-                             TestMD.get(1, 20)));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "g_OutputBuffer", 0, 2, 1, 12, false, true,
+                             false, TestMD.get(1, 20)));
 
   // RWTexture2DMSArray<uint, 8> g_rw_t2dmsa;
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -337,12 +349,13 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "g_rw_t2dmsa");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x00001008U);
   EXPECT_EQ(Props.second, 0x00080105U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 8, false, false, false,
-                             TestMD.get(0, 5)));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "g_rw_t2dmsa", 0, 0, 1, 8, false, false,
+                             false, TestMD.get(0, 5)));
 
   // cbuffer cb0 { float4 g_X; float4 g_Y; }
   StructType *CBufType0 =
@@ -356,11 +369,12 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000000dU);
   EXPECT_EQ(Props.second, 0x00000020U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 32, nullptr));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "", 0, 0, 1, 32, nullptr));
 
   // SamplerState ColorMapSampler : register(s0);
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
@@ -373,11 +387,12 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "ColorMapSampler");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000000eU);
   EXPECT_EQ(Props.second, 0U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 0, nullptr));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "ColorMapSampler", 0, 0, 1, 0, nullptr));
 
   RTI = ResourceTypeInfo(llvm::TargetExtType::get(
       Context, "dx.Sampler", {},
@@ -389,9 +404,10 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   RBI = ResourceBindingInfo(
       /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
       RTI.getHandleTy());
+  GV = RBI.createSymbol(M, RTI.createElementStruct(), "CmpSampler");
   Props = RBI.getAnnotateProps(M, RTI);
   EXPECT_EQ(Props.first, 0x0000800eU);
   EXPECT_EQ(Props.second, 0U);
   MD = RBI.getAsMetadata(M, RTI);
-  EXPECT_MDEQ(MD, TestMD.get(0, DummyGV, "", 0, 0, 1, 1, nullptr));
+  EXPECT_MDEQ(MD, TestMD.get(0, GV, "CmpSampler", 0, 0, 1, 1, nullptr));
 }

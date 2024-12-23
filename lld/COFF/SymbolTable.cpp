@@ -116,6 +116,7 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
+    file->lazy = false;
     file->symtab.addFile(file);
     break;
   }
