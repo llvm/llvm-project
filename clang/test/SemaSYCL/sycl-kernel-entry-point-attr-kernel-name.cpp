@@ -85,3 +85,18 @@ struct B15;
 // expected-note@+1  {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(B15)]] void bad15_1();
 [[clang::sycl_kernel_entry_point(B15)]] void bad15_2();
+
+struct B16_1;
+struct B16_2;
+// expected-error@+4 {{'sycl_kernel_entry_point' kernel name argument does not match prior declaration: 'B16_2' vs 'B16_1'}}
+// expected-note@+1  {{'bad16' declared here}}
+[[clang::sycl_kernel_entry_point(B16_1)]] void bad16();
+void bad16(); // The attribute from the previous declaration is inherited.
+[[clang::sycl_kernel_entry_point(B16_2)]] void bad16();
+
+template<int>
+struct B17 {
+  // expected-error@+1 {{'int' is not a valid SYCL kernel name type; a class type is required}}
+  [[clang::sycl_kernel_entry_point(int)]]
+  static void bad_17();
+};

@@ -245,7 +245,7 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
 void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   // Ensure that all attributes present on the declaration are consistent
   // and warn about any redundant ones.
-  const SYCLKernelEntryPointAttr *SKEPAttr = nullptr;
+  SYCLKernelEntryPointAttr *SKEPAttr = nullptr;
   for (auto SAI = FD->specific_attr_begin<SYCLKernelEntryPointAttr>();
        SAI != FD->specific_attr_end<SYCLKernelEntryPointAttr>(); ++SAI) {
     if (!SKEPAttr) {
@@ -257,6 +257,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
       Diag(SAI->getLocation(), diag::err_sycl_entry_point_invalid_redeclaration)
           << SAI->getKernelName() << SKEPAttr->getKernelName();
       Diag(SKEPAttr->getLocation(), diag::note_previous_attribute);
+      SAI->setInvalidAttr();
     } else {
       Diag(SAI->getLocation(),
            diag::warn_sycl_entry_point_redundant_declaration);
@@ -266,23 +267,24 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
 
   // Ensure the kernel name type is valid.
-  if (!SKEPAttr->getKernelName()->isDependentType()) {
-    CheckSYCLKernelName(SemaRef, SKEPAttr->getLocation(),
-                        SKEPAttr->getKernelName());
-  }
+  if (!SKEPAttr->getKernelName()->isDependentType() &&
+      CheckSYCLKernelName(SemaRef, SKEPAttr->getLocation(),
+                          SKEPAttr->getKernelName()))
+    SKEPAttr->setInvalidAttr();
 
   // Ensure that an attribute present on the previous declaration
   // matches the one on this declaration.
   FunctionDecl *PrevFD = FD->getPreviousDecl();
   if (PrevFD && !PrevFD->isInvalidDecl()) {
     const auto *PrevSKEPAttr = PrevFD->getAttr<SYCLKernelEntryPointAttr>();
-    if (PrevSKEPAttr) {
+    if (PrevSKEPAttr && !PrevSKEPAttr->isInvalidAttr()) {
       if (!getASTContext().hasSameType(SKEPAttr->getKernelName(),
                                        PrevSKEPAttr->getKernelName())) {
         Diag(SKEPAttr->getLocation(),
              diag::err_sycl_entry_point_invalid_redeclaration)
             << SKEPAttr->getKernelName() << PrevSKEPAttr->getKernelName();
         Diag(PrevSKEPAttr->getLocation(), diag::note_previous_decl) << PrevFD;
+        SKEPAttr->setInvalidAttr();
       }
     }
   }
@@ -291,29 +293,36 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
     if (!MD->isStatic()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << /*non-static member function*/ 0;
+      SKEPAttr->setInvalidAttr();
     }
   }
   if (FD->isVariadic()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
         << /*variadic function*/ 1;
+    SKEPAttr->setInvalidAttr();
   }
   if (FD->isConsteval()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
         << /*consteval function*/ 5;
+    SKEPAttr->setInvalidAttr();
   } else if (FD->isConstexpr()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
         << /*constexpr function*/ 4;
+    SKEPAttr->setInvalidAttr();
   }
   if (FD->isNoReturn()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
         << /*noreturn function*/ 6;
+    SKEPAttr->setInvalidAttr();
   }
 
   if (!FD->getReturnType()->isVoidType()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_return_type);
+    SKEPAttr->setInvalidAttr();
   }
 
-  if (!FD->isInvalidDecl() && !FD->isTemplated()) {
+  if (!FD->isInvalidDecl() && !FD->isTemplated() &&
+      !SKEPAttr->isInvalidAttr()) {
     const SYCLKernelInfo *SKI =
         getASTContext().findSYCLKernelInfo(SKEPAttr->getKernelName());
     if (SKI) {
@@ -323,6 +332,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
         Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
         Diag(SKI->getKernelEntryPointDecl()->getLocation(),
              diag::note_previous_declaration);
+        SKEPAttr->setInvalidAttr();
       }
     } else {
       getASTContext().registerSYCLEntryPointFunction(FD);

@@ -2924,7 +2924,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
 
   AttrVec &NewAttributes = New->getAttrs();
   for (unsigned I = 0, E = NewAttributes.size(); I != E;) {
-    const Attr *NewAttribute = NewAttributes[I];
+    Attr *NewAttribute = NewAttributes[I];
 
     if (isa<AliasAttr>(NewAttribute) || isa<IFuncAttr>(NewAttribute)) {
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(New)) {
@@ -3026,6 +3026,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       S.Diag(NewAttribute->getLocation(),
              diag::err_sycl_entry_point_after_definition);
       S.Diag(Def->getLocation(), diag::note_previous_definition);
+      cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;
       continue;
     }
@@ -15991,18 +15992,20 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   // Diagnose invalid SYCL kernel entry point function declarations.
   if (FD && !FD->isInvalidDecl() && !FD->isTemplated() &&
       FD->hasAttr<SYCLKernelEntryPointAttr>()) {
+    SYCLKernelEntryPointAttr *SKEPAttr =
+        FD->getAttr<SYCLKernelEntryPointAttr>();
     if (FD->isDeleted()) {
-      Diag(FD->getAttr<SYCLKernelEntryPointAttr>()->getLocation(),
-           diag::err_sycl_entry_point_invalid)
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << /*deleted function*/ 2;
+      SKEPAttr->setInvalidAttr();
     } else if (FD->isDefaulted()) {
-      Diag(FD->getAttr<SYCLKernelEntryPointAttr>()->getLocation(),
-           diag::err_sycl_entry_point_invalid)
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << /*defaulted function*/ 3;
+      SKEPAttr->setInvalidAttr();
     } else if (FSI->isCoroutine()) {
-      Diag(FD->getAttr<SYCLKernelEntryPointAttr>()->getLocation(),
-           diag::err_sycl_entry_point_invalid)
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << /*coroutine*/ 7;
+      SKEPAttr->setInvalidAttr();
     }
   }
 

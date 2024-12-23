@@ -1134,7 +1134,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   // the presence of a sycl_kernel_entry_point attribute, register it so that
   // associated metadata is recreated.
   if (FD->hasAttr<SYCLKernelEntryPointAttr>()) {
-    const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+    auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
     ASTContext &C = Reader.getContext();
     const SYCLKernelInfo *SKI = C.findSYCLKernelInfo(SKEPAttr->getKernelName());
     if (SKI) {
@@ -1142,6 +1142,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
         Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
         Reader.Diag(SKI->getKernelEntryPointDecl()->getLocation(),
                     diag::note_previous_declaration);
+        SKEPAttr->setInvalidAttr();
       }
     } else {
       C.registerSYCLEntryPointFunction(FD);
