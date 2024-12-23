@@ -6,14 +6,12 @@ target triple = "nvptx64-nvidia-cuda"
 define float @fabs_free(i32 %in) {
 ; CHECK-LABEL: fabs_free(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .f32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [fabs_free_param_0];
-; CHECK-NEXT:    and.b32 %r2, %r1, 2147483647;
-; CHECK-NEXT:    mov.b32 %f1, %r2;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f1;
+; CHECK-NEXT:    ld.param.f32 %f1, [fabs_free_param_0];
+; CHECK-NEXT:    abs.f32 %f2, %f1;
+; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %b = bitcast i32 %in to float
   %f = call float @llvm.fabs.f32(float %b)
@@ -23,14 +21,12 @@ define float @fabs_free(i32 %in) {
 define float @fneg_free(i32 %in) {
 ; CHECK-LABEL: fneg_free(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .f32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [fneg_free_param_0];
-; CHECK-NEXT:    xor.b32 %r2, %r1, -2147483648;
-; CHECK-NEXT:    mov.b32 %f1, %r2;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f1;
+; CHECK-NEXT:    ld.param.f32 %f1, [fneg_free_param_0];
+; CHECK-NEXT:    neg.f32 %f2, %f1;
+; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %b = bitcast i32 %in to float
   %f = fneg float %b
