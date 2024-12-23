@@ -1688,6 +1688,9 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
+  /// Return the ID of the intrinsic.
+  Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
+
   /// Return the scalar return type of the intrinsic.
   Type *getResultType() const { return ResultTy; }
 
@@ -2839,12 +2842,12 @@ class VPPredInstPHIRecipe : public VPSingleDefRecipe {
 public:
   /// Construct a VPPredInstPHIRecipe given \p PredInst whose value needs a phi
   /// nodes after merging back from a Branch-on-Mask.
-  VPPredInstPHIRecipe(VPValue *PredV)
-      : VPSingleDefRecipe(VPDef::VPPredInstPHISC, PredV) {}
+  VPPredInstPHIRecipe(VPValue *PredV, DebugLoc DL)
+      : VPSingleDefRecipe(VPDef::VPPredInstPHISC, PredV, DL) {}
   ~VPPredInstPHIRecipe() override = default;
 
   VPPredInstPHIRecipe *clone() override {
-    return new VPPredInstPHIRecipe(getOperand(0));
+    return new VPPredInstPHIRecipe(getOperand(0), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPredInstPHISC)
@@ -3207,11 +3210,6 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
-
-  /// Check if the induction described by \p Kind, /p Start and \p Step is
-  /// canonical, i.e.  has the same start and step (of 1) as the canonical IV.
-  bool isCanonical(InductionDescriptor::InductionKind Kind, VPValue *Start,
-                   VPValue *Step) const;
 
   /// Return the cost of this VPCanonicalIVPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3813,13 +3811,6 @@ class VPlan {
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
 public:
-  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
-  /// with \p ScalarHeader wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
-      : VPlan(Entry, ScalarHeader) {
-    TripCount = TC;
-  }
-
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3828,6 +3819,18 @@ public:
     assert(ScalarHeader->getNumSuccessors() == 0 &&
            "scalar header must be a leaf node");
   }
+
+  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
+  /// with \p ScalarHeader wrapping the original header of the scalar loop.
+  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
+      : VPlan(Entry, ScalarHeader) {
+    TripCount = TC;
+  }
+
+  /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
+  /// original preheader and scalar header of \p L, to be used as entry and
+  /// scalar header blocks of the new VPlan.
+  VPlan(Loop *L);
 
   ~VPlan();
 

@@ -105,7 +105,7 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
-                                     NoSchedModel,
+                                     MIPSP8700Model,
                                      [Feature64Bit,
                                       FeatureStdExtI,
                                       FeatureStdExtM,
@@ -321,7 +321,6 @@ def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
                                                   [TuneNoSinkSplatOperands,
                                                    TuneVXRMPipelineFlush])>;
 
-
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       !listconcat(RVA22U64Features,
                                       [FeatureStdExtV,
@@ -454,7 +453,7 @@ def SYNTACORE_SCR7 : RISCVProcessorModel<"syntacore-scr7",
                                               [TuneNoDefaultUnroll, TunePostRAScheduler]>;
 
 def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
-                                                 NoSchedModel,
+                                                 TTAscalonD8Model,
                                                  !listconcat(RVA23S64Features,
                                                  [FeatureStdExtSmaia,
                                                   FeatureStdExtSsaia,

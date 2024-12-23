@@ -135,9 +135,6 @@ ExegesisRISCVTarget::ExegesisRISCVTarget()
     : ExegesisTarget(ArrayRef<CpuAndPfmCounters>{},
                      RISCV_MC::isOpcodeAvailable) {}
 
-#define GET_REGISTER_MATCHER
-#include "RISCVGenAsmMatcher.inc"
-
 bool ExegesisRISCVTarget::matchesArch(Triple::ArchType Arch) const {
   return Arch == Triple::riscv32 || Arch == Triple::riscv64;
 }

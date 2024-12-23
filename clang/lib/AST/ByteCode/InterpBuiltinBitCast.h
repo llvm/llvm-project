@@ -33,6 +33,10 @@ bool DoBitCastPtr(InterpState &S, CodePtr OpPC, const Pointer &FromPtr,
                   Pointer &ToPtr, size_t Size);
 bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
                          BitcastBuffer &Buffer, bool ReturnOnUninit);
+
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &SrcPtr,
+              const Pointer &DestPtr, Bits Size);
+
 } // namespace interp
 } // namespace clang
 

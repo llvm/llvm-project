@@ -18,11 +18,11 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 
 /// Allocate a descriptor in managed.
-Descriptor *RTDECL(CUFAllocDesciptor)(
+Descriptor *RTDECL(CUFAllocDescriptor)(
     std::size_t, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Deallocate a descriptor allocated in managed or unified memory.
-void RTDECL(CUFFreeDesciptor)(
+void RTDECL(CUFFreeDescriptor)(
     Descriptor *, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Retrieve the device pointer from the host one.

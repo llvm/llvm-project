@@ -172,29 +172,27 @@
 // CHECK-SYSROOT: {{ld(\.exe)?}}"
 // CHECK-SYSROOT-SAME: "--sysroot=mysdk"
 
-// Test that "." is always added to library search paths. This is long-standing
-// behavior, unique to PlayStation toolchains.
-
-// RUN: %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LDOT %s
-
-// CHECK-LDOT: {{ld(\.exe)?}}"
-// CHECK-LDOT-SAME: "-L."
-
-// Test that <sdk-root>/target/lib is added to library search paths, if it
-// exists and no --sysroot is specified. Also confirm that CRT objects are
-// found there.
+// Test implicit library search paths are supplied to the linker, after any
+// search paths specified by the user. <sdk-root>/target/lib is implicitly
+// added if it exists and no --sysroot is specified. CRT objects are found
+// there. "." is always implicitly added to library search paths. This is
+// long-standing behavior, unique to PlayStation toolchains.
 
 // RUN: rm -rf %t.dir && mkdir %t.dir
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
 
 // CHECK-NO-TARGETLIB: {{ld(\.exe)?}}"
+// CHECK-NO-TARGETLIB-SAME: "-Luser"
 // CHECK-NO-TARGETLIB-NOT: "-L{{.*[/\\]}}target/lib"
+// CHECK-NO-TARGETLIB-SAME: "-L."
 
 // RUN: mkdir -p %t.dir/target/lib
 // RUN: touch %t.dir/target/lib/crti.o
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
 
 // CHECK-TARGETLIB: {{ld(\.exe)?}}"
+// CHECK-TARGETLIB-SAME: "-Luser"
 // CHECK-TARGETLIB-SAME: "-L{{.*[/\\]}}target/lib"
+// CHECK-TARGETLIB-SAME: "-L."
 // CHECK-TARGETLIB-SAME: "{{.*[/\\]}}target{{/|\\\\}}lib{{/|\\\\}}crti.o"

@@ -271,6 +271,7 @@ public:
                          GloballyCoherent, HasCounter) {}
 
   TargetExtType *getHandleTy() const { return HandleTy; }
+  StructType *createElementStruct();
 
   // Conditions to check before accessing specific views.
   bool isUAV() const;
@@ -329,28 +330,31 @@ public:
 private:
   ResourceBinding Binding;
   TargetExtType *HandleTy;
+  GlobalVariable *Symbol = nullptr;
 
 public:
   ResourceBindingInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-                      uint32_t Size, TargetExtType *HandleTy)
-      : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy) {}
+                      uint32_t Size, TargetExtType *HandleTy,
+                      GlobalVariable *Symbol = nullptr)
+      : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
+        Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.RecordID = ID; }
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const {
-    // TODO: Get the name from the symbol once we include one here.
-    return "";
-  }
+  const StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
+  bool hasSymbol() const { return Symbol; }
+  GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
   MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   std::pair<uint32_t, uint32_t>
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceBindingInfo &RHS) const {
-    return std::tie(Binding, HandleTy) == std::tie(RHS.Binding, RHS.HandleTy);
+    return std::tie(Binding, HandleTy, Symbol) ==
+           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol);
   }
   bool operator!=(const ResourceBindingInfo &RHS) const {
     return !(*this == RHS);

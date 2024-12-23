@@ -463,18 +463,19 @@ let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
   // Contiguous truncating store from quadword (single vector).
-  def SVST1UWQ      : MInst<"svst1wq[_{d}]", "vPcd", "iUif",  [IsStore], MemEltTyInt32, "aarch64_sve_st1wq">;
-  def SVST1UWQ_VNUM : MInst<"svst1wq_vnum[_{d}]", "vPcld", "iUif", [IsStore], MemEltTyInt32, "aarch64_sve_st1wq">;
+  def SVST1UWQ      : MInst<"svst1wq[_{d}]", "vPpd", "iUif",  [IsStore], MemEltTyInt32, "aarch64_sve_st1wq">;
+  def SVST1UWQ_VNUM : MInst<"svst1wq_vnum[_{d}]", "vPpld", "iUif", [IsStore], MemEltTyInt32, "aarch64_sve_st1wq">;
 
-  def SVST1UDQ      : MInst<"svst1dq[_{d}]", "vPcd", "lUld",  [IsStore], MemEltTyInt64, "aarch64_sve_st1dq">;
-  def SVST1UDQ_VNUM : MInst<"svst1dq_vnum[_{d}]", "vPcld", "lUld", [IsStore], MemEltTyInt64, "aarch64_sve_st1dq">;
+  def SVST1UDQ      : MInst<"svst1dq[_{d}]", "vPpd", "lUld",  [IsStore], MemEltTyInt64, "aarch64_sve_st1dq">;
+  def SVST1UDQ_VNUM : MInst<"svst1dq_vnum[_{d}]", "vPpld", "lUld", [IsStore], MemEltTyInt64, "aarch64_sve_st1dq">;
 
   // Store one vector (vector base + scalar offset)
   def SVST1Q_SCATTER_U64BASE_OFFSET : MInst<"svst1q_scatter[_{2}base]_offset[_{d}]",  "vPgld", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
   def SVST1Q_SCATTER_U64BASE : MInst<"svst1q_scatter[_{2}base][_{d}]",  "vPgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
 
   // Store one vector (scalar base + vector offset)
-  def SVST1Q_SCATTER_U64OFFSET : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPpgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
+  def SVST1Q_SCATTER_OFFSETS_U : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPpgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
+  def SVST1Q_SCATTER_OFFSETS_S : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPp#d", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
 
   // Store N vectors into N-element structure (scalar base)
   defm SVST2Q : StructStore<"svst2q[_{d}]", "vPc2", "aarch64_sve_st2q">;
@@ -488,6 +489,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
 
   // Scatter store quadwords (scalar base + vector index)
   def SVST1Q_SCATTER_INDICES_U : MInst<"svst1q_scatter_[{3}]index[_{d}]", "vPpgd", "sUsiUilUlbhfd", [IsScatterStore], MemEltTyDefault, "aarch64_sve_st1q_scatter_index">;
+  def SVST1Q_SCATTER_INDICES_S : MInst<"svst1q_scatter_[{3}]index[_{d}]", "vPp#d", "sUsiUilUlbhfd", [IsScatterStore], MemEltTyDefault, "aarch64_sve_st1q_scatter_index">;
 
   // Scatter store quadwords (vector base + scalar index)
   def SVST1Q_SCATTER_INDEX_S   : MInst<"svst1q_scatter[_{2}base]_index[_{d}]", "vPgld", "sUsiUilUlbhfd", [IsScatterStore], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
