@@ -1279,10 +1279,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // |    for.body <---- (md2)
   // |_______|  |______|
   if (Instruction *TI = BB->getTerminator())
-    if (TI->hasMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata())
       for (BasicBlock *Pred : predecessors(BB))
         if (Instruction *PredTI = Pred->getTerminator())
-          if (PredTI->hasMetadata(LLVMContext::MD_loop))
+          if (PredTI->hasNonDebugLocLoopMetadata())
             return false;
 
   if (BBKillable)
@@ -1345,12 +1345,15 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
-  // If the unconditional branch we replaced contains llvm.loop metadata, we
-  // add the metadata to the branch instructions in the predecessors.
+  // If the unconditional branch we replaced contains non-debug llvm.loop
+  // metadata, we add the metadata to the branch instructions in the
+  // predecessors.
   if (Instruction *TI = BB->getTerminator())
-    if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata()) {
+      MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop);
       for (BasicBlock *Pred : predecessors(BB))
         Pred->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
+    }
 
   if (BBKillable) {
     // Everything that jumped to BB now goes to Succ.
