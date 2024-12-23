@@ -171,6 +171,10 @@ void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
                         MachineOptimizationRemarkEmitter &MORE,
                         MachineOptimizationRemarkMissed &R);
 
+/// Returns the inverse opcode of \p MinMaxOpc , which is a generic min/max
+/// opcode like G_SMIN.
+unsigned getInverseGMinMaxOpcode(unsigned MinMaxOpc);
+
 /// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
 std::optional<APInt> getIConstantVRegVal(Register VReg,
                                          const MachineRegisterInfo &MRI);

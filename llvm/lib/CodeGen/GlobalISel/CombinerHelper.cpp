@@ -7062,6 +7062,42 @@ bool CombinerHelper::matchSelectIMinMax(const MachineOperand &MO,
   }
 }
 
+// (neg (min/max x, (neg x))) --> (max/min x, (neg x))
+bool CombinerHelper::matchSimplifyNegMinMax(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SUB);
+  Register DestReg = MI.getOperand(0).getReg();
+  LLT DestTy = MRI.getType(DestReg);
+  if (!isLegal({TargetOpcode::G_SUB, {DestTy}}))
+    return false;
+
+  // GISel doesn't have m_Deferred at this moment, so we have to
+  // match this pattern in two phases.
+  Register X, Y;
+  Register Sub0;
+  if (mi_match(DestReg, MRI,
+               m_Neg(m_OneUse(m_any_of(
+                   m_GSMin(m_Reg(X), m_Reg(Y)), m_GSMax(m_Reg(X), m_Reg(Y)),
+                   m_CommutativeBinOp(TargetOpcode::G_UMIN, m_Reg(X), m_Reg(Y)),
+                   m_CommutativeBinOp(TargetOpcode::G_UMAX, m_Reg(X),
+                                      m_Reg(Y)))))) &&
+      (mi_match(Y, MRI, m_all_of(m_Neg(m_SpecificReg(X)), m_Reg(Sub0))) ||
+       mi_match(X, MRI, m_all_of(m_Neg(m_SpecificReg(Y)), m_Reg(Sub0))))) {
+    MachineInstr *MinMaxMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+    MachineInstr *Sub0MI = MRI.getVRegDef(Sub0);
+    X = Sub0MI->getOperand(2).getReg();
+    unsigned NewOpc = getInverseGMinMaxOpcode(MinMaxMI->getOpcode());
+    if (isLegal({NewOpc, {DestTy}})) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildInstr(NewOpc, {DestReg}, {X, Sub0});
+      };
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) const {
   GSelect *Select = cast<GSelect>(&MI);
 
