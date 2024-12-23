@@ -2355,7 +2355,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               // N.B. Except for XCOFF, we don't walk the relocations in the
               // relocatable case yet.
               std::vector<const SectionSymbolsTy *> TargetSectionSymbols;
-              bool AbsoluteFirst = false;
               if (!Obj.isRelocatableObject()) {
                 auto It = llvm::partition_point(
                     SectionAddresses,
@@ -2369,7 +2368,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   if (It->first != TargetSecAddr) {
                     if (!FoundSymbols) {
                       TargetSecAddr = It->first;
-                      AbsoluteFirst = true;
                     } else {
                       break;
                     }
@@ -2381,10 +2379,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               } else {
                 TargetSectionSymbols.push_back(&Symbols);
               }
-              if (AbsoluteFirst)
-                TargetSectionSymbols.insert(TargetSectionSymbols.begin(), &AbsoluteSymbols);
-              else
-                TargetSectionSymbols.push_back(&AbsoluteSymbols);
+              TargetSectionSymbols.push_back(&AbsoluteSymbols);
 
               // Find the last symbol in the first candidate section whose
               // offset is less than or equal to the target. If there are no
