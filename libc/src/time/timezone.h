@@ -43,7 +43,7 @@ typedef struct {
     unsigned char *tz;
 } tzset;
 
-tzset *get_tzset();
+tzset *get_tzset(int fd);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
