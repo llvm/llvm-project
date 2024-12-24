@@ -133,8 +133,11 @@ define i32 @mul_i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV32-NEXT:    vslidedown.vi v10, v9, 2
 ; RV32-NEXT:    vmul.vv v9, v9, v10
 ; RV32-NEXT:    vrgather.vi v10, v8, 1
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vrgather.vi v10, v9, 1
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vmul.vv v9, v9, v10
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vmv.x.s a1, v9
@@ -149,8 +152,11 @@ define i32 @mul_i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV64-NEXT:    vslidedown.vi v10, v9, 2
 ; RV64-NEXT:    vmul.vv v9, v9, v10
 ; RV64-NEXT:    vrgather.vi v10, v8, 1
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vrgather.vi v10, v9, 1
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vmul.vv v9, v9, v10
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    vmv.x.s a1, v9
