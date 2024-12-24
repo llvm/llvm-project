@@ -13,9 +13,12 @@
 #include <__algorithm/ranges_find_if.h>
 #include <__assert>
 #include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
+#include <__concepts/common_reference_with.h>
 #include <__concepts/copyable.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
+#include <__concepts/swappable.h>
 #include <__config>
 #include <__functional/bind_back.h>
 #include <__functional/invoke.h>
@@ -26,6 +29,7 @@
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/incrementable_traits.h>
 #include <__iterator/next.h>
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
@@ -35,12 +39,14 @@
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
+#include <__ranges/size.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_nothrow_convertible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/maybe_const.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
