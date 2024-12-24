@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_SIZE_H
-#define _LIBCPP___RANGES_SIZE_H
+#ifndef _LIBCPP___CXX03___RANGES_SIZE_H
+#define _LIBCPP___CXX03___RANGES_SIZE_H
 
 #include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__concepts/class_or_enum.h>
@@ -134,4 +134,4 @@ inline constexpr auto ssize = __ssize::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_SIZE_H
+#endif // _LIBCPP___CXX03___RANGES_SIZE_H

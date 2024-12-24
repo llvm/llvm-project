@@ -55,7 +55,9 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fdefault_double_8,
                             options::OPT_flarge_sizes,
                             options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files});
+                            options::OPT_fhermetic_module_files,
+                            options::OPT_frealloc_lhs,
+                            options::OPT_fno_realloc_lhs});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -120,7 +122,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
-                   options::OPT_funderscoring, options::OPT_fno_underscoring});
+                   options::OPT_funderscoring, options::OPT_fno_underscoring,
+                   options::OPT_funsigned, options::OPT_fno_unsigned});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
@@ -148,7 +151,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
-                            options::OPT_flang_experimental_integer_overflow,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -200,6 +202,26 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+  }
+}
+
+void Flang::AddLoongArch64TargetArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  // Currently, flang only support `-mabi=lp64d` in LoongArch64.
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V != "lp64d") {
+      D.Diag(diag::err_drv_argument_not_allowed_with) << "-mabi" << V;
+    }
+  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mannotate_tablejump,
+                                     options::OPT_mno_annotate_tablejump)) {
+    if (A->getOption().matches(options::OPT_mannotate_tablejump)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-loongarch-annotate-tablejump");
+    }
   }
 }
 
@@ -416,6 +438,7 @@ void Flang::addTargetOptions(const ArgList &Args,
     break;
   case llvm::Triple::loongarch64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddLoongArch64TargetArgs(Args, CmdArgs);
     break;
   }
 
@@ -763,6 +786,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     addPreprocessingOptions(Args, CmdArgs);
 
   addFortranDialectOptions(Args, CmdArgs);
+
+  // 'flang -E' always produces output that is suitable for use as fixed form
+  // Fortran. However it is only valid free form source if the original is also
+  // free form.
+  if (InputType == types::TY_PP_Fortran &&
+      !Args.getLastArg(options::OPT_ffixed_form, options::OPT_ffree_form))
+    CmdArgs.push_back("-ffixed-form");
 
   handleColorDiagnosticsArgs(D, Args, CmdArgs);
 

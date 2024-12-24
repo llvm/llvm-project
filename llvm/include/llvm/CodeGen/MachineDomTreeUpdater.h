@@ -69,5 +69,12 @@ extern template void
 GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
                       MachinePostDominatorTree>::recalculate(MachineFunction
                                                                  &MF);
+
+extern template void GenericDomTreeUpdater<
+    MachineDomTreeUpdater, MachineDominatorTree,
+    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/true>();
+extern template void GenericDomTreeUpdater<
+    MachineDomTreeUpdater, MachineDominatorTree,
+    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/false>();
 } // namespace llvm
 #endif // LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H

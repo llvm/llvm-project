@@ -1314,10 +1314,10 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
       }
       if (ScalableDstTy->getElementType() == FixedSrcTy->getElementType()) {
         auto *Load = CGF.Builder.CreateLoad(Src);
-        auto *UndefVec = llvm::UndefValue::get(ScalableDstTy);
+        auto *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
         auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
-            ScalableDstTy, UndefVec, Load, Zero, "cast.scalable");
+            ScalableDstTy, PoisonVec, Load, Zero, "cast.scalable");
         if (ScalableDstTy != Ty)
           Result = CGF.Builder.CreateBitCast(Result, Ty);
         return Result;
@@ -4379,7 +4379,7 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
       llvm::PHINode *phiToUse = CGF.Builder.CreatePHI(valueToUse->getType(), 2,
                                                       "icr.to-use");
       phiToUse->addIncoming(valueToUse, copyBB);
-      phiToUse->addIncoming(llvm::UndefValue::get(valueToUse->getType()),
+      phiToUse->addIncoming(llvm::PoisonValue::get(valueToUse->getType()),
                             originBB);
       valueToUse = phiToUse;
     }
@@ -4529,7 +4529,7 @@ void CodeGenFunction::EmitCallArgs(
       ArgTypes.assign(MD->param_type_begin() + ParamsToSkip,
                       MD->param_type_end());
     } else {
-      const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
+      const auto *FPT = cast<const FunctionProtoType *>(Prototype.P);
       IsVariadic = FPT->isVariadic();
       ExplicitCC = FPT->getExtInfo().getCC();
       ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,
@@ -4725,14 +4725,16 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return emitWritebackArg(*this, args, CRE);
   }
 
-  assert(type->isReferenceType() == E->isGLValue() &&
-         "reference binding to unmaterialized r-value!");
-
   // Add writeback for HLSLOutParamExpr.
+  // Needs to be before the assert below because HLSLOutArgExpr is an LValue
+  // and is not a reference.
   if (const HLSLOutArgExpr *OE = dyn_cast<HLSLOutArgExpr>(E)) {
     EmitHLSLOutArgExpr(OE, args, type);
     return;
   }
+
+  assert(type->isReferenceType() == E->isGLValue() &&
+         "reference binding to unmaterialized r-value!");
 
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);
@@ -5111,9 +5113,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   // Some architectures (such as x86-64) have the ABI changed based on
   // attribute-target/features. Give them a chance to diagnose.
-  CGM.getTargetCodeGenInfo().checkFunctionCallABI(
-      CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl),
-      dyn_cast_or_null<FunctionDecl>(TargetDecl), CallArgs, RetTy);
+  const FunctionDecl *CallerDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  const FunctionDecl *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  CGM.getTargetCodeGenInfo().checkFunctionCallABI(CGM, Loc, CallerDecl,
+                                                  CalleeDecl, CallArgs, RetTy);
 
   // 1. Set up the arguments.
 
@@ -5321,6 +5324,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           IRCallArgs[FirstIRArg] = Val;
           break;
         }
+      } else if (I->getType()->isArrayParameterType()) {
+        // Don't produce a temporary for ArrayParameterType arguments.
+        // ArrayParameterType arguments are only created from
+        // HLSL_ArrayRValue casts and HLSLOutArgExpr expressions, both
+        // of which create temporaries already. This allows us to just use the
+        // scalar for the decayed array pointer as the argument directly.
+        IRCallArgs[FirstIRArg] = I->getKnownRValue().getScalarVal();
+        break;
       }
 
       // For non-aggregate args and aggregate args meeting conditions above
@@ -5688,7 +5699,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoInline);
 
   // Add call-site always_inline attribute if exists.
-  if (InAlwaysInlineAttributedStmt)
+  // Note: This corresponds to the [[clang::always_inline]] statement attribute.
+  if (InAlwaysInlineAttributedStmt &&
+      !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
+          CallerDecl, CalleeDecl))
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
@@ -5704,7 +5718,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // FIXME: should this really take priority over __try, below?
   if (CurCodeDecl && CurCodeDecl->hasAttr<FlattenAttr>() &&
       !InNoInlineAttributedStmt &&
-      !(TargetDecl && TargetDecl->hasAttr<NoInlineAttr>())) {
+      !(TargetDecl && TargetDecl->hasAttr<NoInlineAttr>()) &&
+      !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
+          CallerDecl, CalleeDecl)) {
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
   }

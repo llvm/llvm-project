@@ -277,6 +277,20 @@ public:
         E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);
   }
 
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const {
+    const TargetMachine &TM = getTLI()->getTargetMachine();
+
+    const FeatureBitset &CallerBits =
+        TM.getSubtargetImpl(*Caller)->getFeatureBits();
+    const FeatureBitset &CalleeBits =
+        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+    // Inline a callee if its target-features are a subset of the callers
+    // target-features.
+    return (CallerBits & CalleeBits) == CalleeBits;
+  }
+
   bool hasBranchDivergence(const Function *F = nullptr) { return false; }
 
   bool isSourceOfDivergence(const Value *V) { return false; }
@@ -766,7 +780,8 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *InTy,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind) {
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -774,6 +789,7 @@ public:
     auto *Ty = cast<FixedVectorType>(InTy);
 
     assert(DemandedElts.getBitWidth() == Ty->getNumElements() &&
+           (VL.empty() || VL.size() == Ty->getNumElements()) &&
            "Vector size mismatch");
 
     InstructionCost Cost = 0;
@@ -781,9 +797,11 @@ public:
     for (int i = 0, e = Ty->getNumElements(); i < e; ++i) {
       if (!DemandedElts[i])
         continue;
-      if (Insert)
+      if (Insert) {
+        Value *InsertedVal = VL.empty() ? nullptr : VL[i];
         Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, Ty,
-                                            CostKind, i, nullptr, nullptr);
+                                            CostKind, i, nullptr, InsertedVal);
+      }
       if (Extract)
         Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
                                             CostKind, i, nullptr, nullptr);
@@ -801,9 +819,14 @@ public:
     return false;
   }
 
-  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              int ScalarOpdIdx) const {
-    return ScalarOpdIdx == -1;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const {
+    return OpdIdx == -1;
+  }
+
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) const {
+    return RetIdx == 0;
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
@@ -1618,6 +1641,21 @@ public:
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
         }
+        if (VPCastIntrinsic::isVPCast(ICA.getID())) {
+          return thisT()->getCastInstrCost(
+              *FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
+              TTI::CastContextHint::None, CostKind);
+        }
+        if (VPCmpIntrinsic::isVPCmp(ICA.getID())) {
+          // We can only handle vp_cmp intrinsics with underlying instructions.
+          if (ICA.getInst()) {
+            assert(FOp);
+            auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
+            return thisT()->getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0],
+                                               ICA.getReturnType(),
+                                               UI->getPredicate(), CostKind);
+          }
+        }
       }
 
       std::optional<Intrinsic::ID> FID =
@@ -1902,6 +1940,8 @@ public:
 
       return Cost;
     }
+    case Intrinsic::experimental_vector_match:
+      return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
     }
 
     // Assume that we need to scalarize this intrinsic.)
@@ -2157,6 +2197,35 @@ public:
     case Intrinsic::vector_reduce_fminimum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::experimental_vector_match: {
+      auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
+      auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+      unsigned SearchSize = NeedleTy->getNumElements();
+
+      // If we're not expanding the intrinsic then we assume this is cheap to
+      // implement.
+      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
+      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
+        return getTypeLegalizationCost(RetTy).first;
+
+      // Approximate the cost based on the expansion code in
+      // SelectionDAGBuilder.
+      InstructionCost Cost = 0;
+      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
+                                          CostKind, 1, nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
+                                          CostKind, 0, nullptr, nullptr);
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, std::nullopt,
+                                      CostKind, 0, nullptr);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost *= SearchSize;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      return Cost;
+    }
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;

@@ -457,7 +457,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
   if (!V)
     return;
 
-  uint64_t NumberKind = V->getValue().getLimitedValue();
+  uint64_t NumberKind = V->getValue()->getLimitedValue();
   std::optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
 
   // FIXME: In some cases we can emit an error.

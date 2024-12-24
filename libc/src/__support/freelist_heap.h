@@ -53,7 +53,7 @@ private:
 
   void *allocate_impl(size_t alignment, size_t size);
 
-  span<cpp::byte> block_to_span(Block<> *block) {
+  span<cpp::byte> block_to_span(Block *block) {
     return span<cpp::byte>(block->usable_space(), block->inner_size());
   }
 
@@ -75,8 +75,8 @@ private:
 
 LIBC_INLINE void FreeListHeap::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
-  auto result = Block<>::init(region());
-  Block<> *block = *result;
+  auto result = Block::init(region());
+  Block *block = *result;
   free_store.set_range({0, cpp::bit_ceil(block->inner_size())});
   free_store.insert(block);
   is_initialized = true;
@@ -93,17 +93,17 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
 
   // TODO: usable_space should always be aligned to max_align_t.
   if (alignment > alignof(max_align_t) ||
-      (Block<>::BLOCK_OVERHEAD % alignof(max_align_t) != 0)) {
+      (Block::BLOCK_OVERHEAD % alignof(max_align_t) != 0)) {
     // TODO: This bound isn't precisely calculated yet. It assumes one extra
-    // Block<>::ALIGNMENT to accomodate the possibility for padding block
+    // Block::ALIGNMENT to accomodate the possibility for padding block
     // overhead. (alignment - 1) ensures that there is an aligned point
     // somewhere in usable_space, but this isn't tight either, since
     // usable_space is also already somewhat aligned.
-    if (add_overflow(size, (alignment - 1) + Block<>::ALIGNMENT, request_size))
+    if (add_overflow(size, (alignment - 1) + Block::ALIGNMENT, request_size))
       return nullptr;
   }
 
-  Block<> *block = free_store.remove_best_fit(request_size);
+  Block *block = free_store.remove_best_fit(request_size);
   if (!block)
     return nullptr;
 
@@ -111,7 +111,7 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
               "block should always be large enough to allocate at the correct "
               "alignment");
 
-  auto block_info = Block<>::allocate(block, alignment, size);
+  auto block_info = Block::allocate(block, alignment, size);
   if (block_info.next)
     free_store.insert(block_info.next);
   if (block_info.prev)
@@ -143,14 +143,14 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
 
   LIBC_ASSERT(is_valid_ptr(bytes) && "Invalid pointer");
 
-  Block<> *block = Block<>::from_usable_space(bytes);
+  Block *block = Block::from_usable_space(bytes);
   LIBC_ASSERT(block->next() && "sentinel last block cannot be freed");
   LIBC_ASSERT(block->used() && "double free");
   block->mark_free();
 
   // Can we combine with the left or right blocks?
-  Block<> *prev_free = block->prev_free();
-  Block<> *next = block->next();
+  Block *prev_free = block->prev_free();
+  Block *next = block->next();
 
   if (prev_free != nullptr) {
     // Remove from free store and merge.
@@ -183,7 +183,7 @@ LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
   if (!is_valid_ptr(bytes))
     return nullptr;
 
-  Block<> *block = Block<>::from_usable_space(bytes);
+  Block *block = Block::from_usable_space(bytes);
   if (!block->used())
     return nullptr;
   size_t old_size = block->inner_size();

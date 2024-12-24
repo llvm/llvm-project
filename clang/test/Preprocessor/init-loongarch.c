@@ -25,7 +25,7 @@
 // LA32-NEXT: #define __ATOMIC_SEQ_CST 5
 // LA32: #define __BIGGEST_ALIGNMENT__ 16
 // LA32: #define __BITINT_MAXWIDTH__ 128
-// LA32: #define __BOOL_WIDTH__ 8
+// LA32: #define __BOOL_WIDTH__ 1
 // LA32: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // LA32: #define __CHAR16_TYPE__ unsigned short
 // LA32: #define __CHAR32_TYPE__ unsigned int
@@ -346,7 +346,7 @@
 // LA64-NEXT: #define __ATOMIC_SEQ_CST 5
 // LA64: #define __BIGGEST_ALIGNMENT__ 16
 // LA64: #define __BITINT_MAXWIDTH__ 128
-// LA64: #define __BOOL_WIDTH__ 8
+// LA64: #define __BOOL_WIDTH__ 1
 // LA64: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // LA64: #define __CHAR16_TYPE__ unsigned short
 // LA64: #define __CHAR32_TYPE__ unsigned int
@@ -798,7 +798,7 @@
 // LA64-FPU0-LP64S-NOT: #define __loongarch_single_float
 // LA64-FPU0-LP64S: #define __loongarch_soft_float 1
 
-/// Check __loongarch_arch{_tune/_frecipe/_lam_bh/_ld_seq_sa}.
+/// Check __loongarch_arch{_tune/_frecipe/_lam_bh/_lamcas/_ld_seq_sa/_div32}.
 
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
@@ -823,11 +823,11 @@
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 | \
-// RUN:   FileCheck --match-full-lines  --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LD-SEQ-SA -DARCH=la64v1.1 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines  --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LAMCAS,LD-SEQ-SA,DIV32 -DARCH=la64v1.1 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -frecipe | \
-// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAM-BH,LD-SEQ-SA -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAM-BH,LAMCAS,LD-SEQ-SA,DIV32 -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -lsx | \
-// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LD-SEQ-SA -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LAMCAS,LD-SEQ-SA,DIV32 -DARCH=loongarch64 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +frecipe | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE -DARCH=loongarch64 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx -Xclang -target-feature -Xclang +frecipe | \
@@ -835,33 +835,51 @@
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang +lam-bh | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAM-BH -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -lam-bh | \
-// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LD-SEQ-SA -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAMCAS,LD-SEQ-SA,DIV32 -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lam-bh | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAM-BH -DARCH=loongarch64 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx -Xclang -target-feature -Xclang +lam-bh | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAM-BH -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang +lamcas | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAMCAS -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -lamcas | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LD-SEQ-SA,DIV32 -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lamcas | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAMCAS -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx -Xclang -target-feature -Xclang +lamcas | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LAMCAS -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang +ld-seq-sa | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LD-SEQ-SA -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -ld-seq-sa | \
-// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LAMCAS,DIV32 -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +ld-seq-sa | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LD-SEQ-SA -DARCH=loongarch64 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx -Xclang -target-feature -Xclang +ld-seq-sa | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,LD-SEQ-SA -DARCH=la64v1.0 -DTUNE=loongarch64 %s
-// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang +frecipe -Xclang -target-feature -Xclang +lam-bh  -Xclang -target-feature -Xclang +ld-seq-sa | \
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang +div32 | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,DIV32 -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.1 -Xclang -target-feature -Xclang -div32| \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LAMCAS,LD-SEQ-SA -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +div32 | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,DIV32 -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -Xclang -target-feature -Xclang +lsx -Xclang -target-feature -Xclang +div32 | \
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,DIV32 -DARCH=la64v1.0 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la64v1.0 -Xclang -target-feature -Xclang +frecipe -Xclang -target-feature -Xclang +lam-bh  -Xclang -target-feature -Xclang +lamcas -Xclang -target-feature -Xclang +ld-seq-sa -Xclang -target-feature -Xclang +div32 | \
 // RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE -DARCH=la64v1.1 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la664 | \
-// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LD-SEQ-SA -DARCH=la664 -DTUNE=la664 %s
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LAMCAS,LD-SEQ-SA,DIV32 -DARCH=la664 -DTUNE=la664 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -mtune=la664 | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=la664 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -mtune=la664 | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=la664 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la664 -mtune=loongarch64 | \
-// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LD-SEQ-SA -DARCH=la664 -DTUNE=loongarch64 %s
+// RUN:   FileCheck --match-full-lines --check-prefixes=ARCH-TUNE,FRECIPE,LAM-BH,LAMCAS,LD-SEQ-SA,DIV32 -DARCH=la664 -DTUNE=loongarch64 %s
 
 // ARCH-TUNE: #define __loongarch_arch "[[ARCH]]"
+// DIV32: #define __loongarch_div32 1
 // FRECIPE: #define __loongarch_frecipe 1
 // LAM-BH: #define __loongarch_lam_bh 1
+// LAMCAS: #define __loongarch_lamcas 1
 // LD-SEQ-SA: #define __loongarch_ld_seq_sa 1
 // ARCH-TUNE: #define __loongarch_tune "[[TUNE]]"
 

@@ -615,6 +615,7 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, ptr %ptr, i32 sig
 ; CHECK-NEXT:    slli a4, a4, 3
 ; CHECK-NEXT:    sub sp, sp, a4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    addi a4, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill

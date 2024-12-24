@@ -554,31 +554,38 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
+  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
   if (!BaseOps1.empty() && !BaseOps2.empty()) {
     const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
     const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
     if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
       return false;
+
+    const SIMachineFunctionInfo *MFI =
+        FirstLdSt.getMF()->getInfo<SIMachineFunctionInfo>();
+    MaxMemoryClusterDWords = MFI->getMaxMemoryClusterDWords();
   } else if (!BaseOps1.empty() || !BaseOps2.empty()) {
     // If only one base op is empty, they do not have the same base ptr
     return false;
   }
 
   // In order to avoid register pressure, on an average, the number of DWORDS
-  // loaded together by all clustered mem ops should not exceed 8. This is an
-  // empirical value based on certain observations and performance related
-  // experiments.
+  // loaded together by all clustered mem ops should not exceed
+  // MaxMemoryClusterDWords. This is an empirical value based on certain
+  // observations and performance related experiments.
   // The good thing about this heuristic is - it avoids clustering of too many
   // sub-word loads, and also avoids clustering of wide loads. Below is the
-  // brief summary of how the heuristic behaves for various `LoadSize`.
+  // brief summary of how the heuristic behaves for various `LoadSize` when
+  // MaxMemoryClusterDWords is 8.
+  //
   // (1) 1 <= LoadSize <= 4: cluster at max 8 mem ops
   // (2) 5 <= LoadSize <= 8: cluster at max 4 mem ops
   // (3) 9 <= LoadSize <= 12: cluster at max 2 mem ops
   // (4) 13 <= LoadSize <= 16: cluster at max 2 mem ops
   // (5) LoadSize >= 17: do not cluster
   const unsigned LoadSize = NumBytes / ClusterSize;
-  const unsigned NumDWORDs = ((LoadSize + 3) / 4) * ClusterSize;
-  return NumDWORDs <= 8;
+  const unsigned NumDWords = ((LoadSize + 3) / 4) * ClusterSize;
+  return NumDWords <= MaxMemoryClusterDWords;
 }
 
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
@@ -4468,7 +4475,11 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
          !hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
-         !hasModifiersSet(MI, AMDGPU::OpName::byte_sel);
+         !hasModifiersSet(MI, AMDGPU::OpName::byte_sel) &&
+         // TODO: Can we avoid checking bound_ctrl/fi here?
+         // They are only used by permlane*_swap special case.
+         !hasModifiersSet(MI, AMDGPU::OpName::bound_ctrl) &&
+         !hasModifiersSet(MI, AMDGPU::OpName::fi);
 }
 
 // Set VCC operand with all flags from \p Orig, except for setting it as
@@ -4767,11 +4778,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (ST.needsAlignedVGPRs()) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
-        const TargetRegisterClass *SubRC =
-            RI.getSubRegisterClass(RC, MO.getSubReg());
-        RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
-        if (RC)
-          RC = SubRC;
+        if (const TargetRegisterClass *SubRC =
+                RI.getSubRegisterClass(RC, MO.getSubReg())) {
+          RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
+          if (RC)
+            RC = SubRC;
+        }
       }
 
       // Check that this is the aligned version of the class.
@@ -7699,8 +7711,8 @@ void SIInstrInfo::lowerSelect(SIInstrWorklist &Worklist, MachineInstr &Inst,
       // Insert a trivial select instead of creating a copy, because a copy from
       // SCC would semantically mean just copying a single bit, but we may need
       // the result to be a vector condition mask that needs preserving.
-      unsigned Opcode = (ST.getWavefrontSize() == 64) ? AMDGPU::S_CSELECT_B64
-                                                      : AMDGPU::S_CSELECT_B32;
+      unsigned Opcode =
+          ST.isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
       auto NewSelect =
           BuildMI(MBB, MII, DL, get(Opcode), NewCondReg).addImm(-1).addImm(0);
       NewSelect->getOperand(3).setIsUndef(Cond.isUndef());
@@ -8712,7 +8724,7 @@ uint64_t SIInstrInfo::getScratchRsrcWords23() const {
   }
 
   // IndexStride = 64 / 32.
-  uint64_t IndexStride = ST.getWavefrontSize() == 64 ? 3 : 2;
+  uint64_t IndexStride = ST.isWave64() ? 3 : 2;
   Rsrc23 |= IndexStride << AMDGPU::RSRC_INDEX_STRIDE_SHIFT;
 
   // If TID_ENABLE is set, DATA_FORMAT specifies stride bits [14:17].
@@ -9280,6 +9292,7 @@ static bool isRenamedInGFX9(int Opcode) {
     GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUB_U32)
   //
   case AMDGPU::V_DIV_FIXUP_F16_gfx9_e64:
+  case AMDGPU::V_DIV_FIXUP_F16_gfx9_fake16_e64:
   case AMDGPU::V_FMA_F16_gfx9_e64:
   case AMDGPU::V_INTERP_P2_F16:
   case AMDGPU::V_MAD_F16_e64:
