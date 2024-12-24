@@ -35,22 +35,21 @@ concept HasShiftLeftIt = requires(Iter iter, Sent sent, N n) { std::ranges::shif
 static_assert(HasShiftLeftIt<int*>);
 static_assert(HasShiftLeftIt<int*, sentinel_wrapper<int*>>);
 static_assert(HasShiftLeftIt<int*, sized_sentinel<int*>>);
+static_assert(!HasShiftLeftIt<int*, int*, InvalidDifferenceT>);
 
 static_assert(!HasShiftLeftIt<ForwardIteratorNotDerivedFrom>);
 static_assert(!HasShiftLeftIt<PermutableNotForwardIterator>);
 static_assert(!HasShiftLeftIt<PermutableNotSwappable>);
 
-static_assert(!HasShiftLeftIt<int*, int*, InvalidDifferenceT>);
-
 template <class Range, class N = std::ranges::range_difference_t<Range>>
 concept HasShiftLeftR = requires(Range range, N n) { std::ranges::shift_left(range, n); };
 
 static_assert(HasShiftLeftR<UncheckedRange<int*>>);
+static_assert(!HasShiftLeftR<UncheckedRange<int*>, InvalidDifferenceT>);
+
 static_assert(!HasShiftLeftR<ForwardRangeNotDerivedFrom>);
 static_assert(!HasShiftLeftR<PermutableRangeNotForwardIterator>);
 static_assert(!HasShiftLeftR<PermutableRangeNotSwappable>);
-
-static_assert(!HasShiftLeftR<UncheckedRange<int*>, InvalidDifferenceT>);
 
 template <class Iter, class Sent>
 constexpr void test_iter_sent() {
