@@ -1264,7 +1264,8 @@ VPlan *VPlan::duplicate() {
          "TripCount must have been added to Old2NewVPValues");
   NewPlan->TripCount = Old2NewVPValues[TripCount];
 
-  for (unsigned I = CreatedBlockSize; I != CreatedBlocks.size(); ++I)
+  // Transfer cloned blocks to new VPlan.
+  for (unsigned I : seq<unsigned>(CreatedBlockSize, CreatedBlocks.size()))
     NewPlan->CreatedBlocks.push_back(CreatedBlocks[I]);
   CreatedBlocks.truncate(CreatedBlockSize);
 

@@ -3714,8 +3714,7 @@ public:
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
-  ~VPRegionBlock() override {
-  }
+  ~VPRegionBlock() override {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -3841,6 +3840,8 @@ class VPlan {
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
+  /// Blocks allocated and owned by the VPlan. They will be deleted once the
+  /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
 
 public:
@@ -4060,6 +4061,9 @@ public:
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
 
+  /// Create a new VPBasicBlock with \p Name and containing \p Recipe if
+  /// present. The returned block is owned by the VPlan and deleted once the
+  /// VPlan is destroyed.
   VPBasicBlock *createVPBasicBlock(const Twine &Name,
                                    VPRecipeBase *Recipe = nullptr) {
     auto *VPB = new VPBasicBlock(Name, Recipe);
@@ -4067,6 +4071,9 @@ public:
     return VPB;
   }
 
+  /// Create a new VPRegionBlock with \p Entry, \p Exiting and \p Name. If \p
+  /// IsReplicator is true, the region is a replicate region. The returned block
+  /// is owned by the VPlan and deleted once the VPlan is destroyed.
   VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                                      const std::string &Name = "",
                                      bool IsReplicator = false) {
@@ -4075,6 +4082,10 @@ public:
     return VPB;
   }
 
+  /// Create a new VPRegionBlock with \p Name and entry and exiting blocks set
+  /// to nullptr. If \p IsReplicator is true, the region is a replicate region.
+  /// The returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
   VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
                                      bool IsReplicator = false) {
     auto *VPB = new VPRegionBlock(Name, IsReplicator);
@@ -4084,6 +4095,8 @@ public:
 
   /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
   /// instructions in \p IRBB, except its terminator which is managed in VPlan.
+  /// The returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
   VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
 };
 
