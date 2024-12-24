@@ -1642,7 +1642,7 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CAST ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(Opcode) << " ";
+  O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
