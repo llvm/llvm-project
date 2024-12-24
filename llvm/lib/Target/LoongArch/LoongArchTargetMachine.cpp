@@ -38,6 +38,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
+  initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
 }
 
