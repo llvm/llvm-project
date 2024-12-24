@@ -558,8 +558,7 @@ TEST_P(ASTMatchersTest, DeclRefExpr) {
 
 TEST_P(ASTMatchersTest, DependentScopeDeclRefExpr) {
   if (!GetParam().isCXX() || GetParam().hasDelayedTemplateParsing()) {
-    // FIXME: Add a test for `dependentScopeDeclRefExpr()` that does not depend
-    // on C++.
+    // FIXME: Fix this test to work with delayed template parsing.
     return;
   }
 
