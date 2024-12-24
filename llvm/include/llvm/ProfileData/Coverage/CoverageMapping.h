@@ -890,12 +890,12 @@ class CoverageData {
   std::vector<CountedRegion> BranchRegions;
   std::vector<MCDCRecord> MCDCRecords;
 
-  bool SingleByteCoverage;
+  bool SingleByteCoverage = false;
 
 public:
-  CoverageData() = delete;
+  CoverageData() = default;
 
-  CoverageData(bool Single, StringRef Filename = StringRef())
+  CoverageData(bool Single, StringRef Filename)
       : Filename(Filename), SingleByteCoverage(Single) {}
 
   /// Get the name of the file this data covers.
@@ -935,9 +935,9 @@ class CoverageMapping {
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
 
-  bool SingleByteCoverage;
+  std::optional<bool> SingleByteCoverage;
 
-  CoverageMapping(bool Single) : SingleByteCoverage(Single) {}
+  CoverageMapping() = default;
 
   // Load coverage records from readers.
   static Error loadFromReaders(
@@ -981,7 +981,7 @@ public:
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);
 
-  bool getSingleByteCoverage() const { return SingleByteCoverage; }
+  // bool getSingleByteCoverage() const { return SingleByteCoverage; }
 
   /// The number of functions that couldn't have their profiles mapped.
   ///

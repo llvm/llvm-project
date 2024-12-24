@@ -932,6 +932,9 @@ Error CoverageMapping::loadFunctionRecord(
 Error CoverageMapping::loadFromReaders(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage) {
+  assert(!Coverage.SingleByteCoverage ||
+         *Coverage.SingleByteCoverage == ProfileReader.hasSingleByteCoverage());
+  Coverage.SingleByteCoverage = ProfileReader.hasSingleByteCoverage();
   for (const auto &CoverageReader : CoverageReaders) {
     for (auto RecordOrErr : *CoverageReader) {
       if (Error E = RecordOrErr.takeError())
@@ -947,8 +950,7 @@ Error CoverageMapping::loadFromReaders(
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     IndexedInstrProfReader &ProfileReader) {
-  auto Coverage = std::unique_ptr<CoverageMapping>(
-      new CoverageMapping(ProfileReader.hasSingleByteCoverage()));
+  auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   if (Error E = loadFromReaders(CoverageReaders, ProfileReader, *Coverage))
     return std::move(E);
   return std::move(Coverage);
@@ -1010,8 +1012,7 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   if (Error E = ProfileReaderOrErr.takeError())
     return createFileError(ProfileFilename, std::move(E));
   auto ProfileReader = std::move(ProfileReaderOrErr.get());
-  auto Coverage = std::unique_ptr<CoverageMapping>(
-      new CoverageMapping(ProfileReader->hasSingleByteCoverage()));
+  auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   bool DataFound = false;
 
   auto GetArch = [&](size_t Idx) {
@@ -1388,7 +1389,8 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
 }
 
 CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
-  CoverageData FileCoverage(SingleByteCoverage, Filename);
+  assert(SingleByteCoverage);
+  CoverageData FileCoverage(*SingleByteCoverage, Filename);
   std::vector<CountedRegion> Regions;
 
   // Look up the function records in the given file. Due to hash collisions on
@@ -1450,9 +1452,10 @@ CoverageData
 CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
   auto MainFileID = findMainViewFileID(Function);
   if (!MainFileID)
-    return CoverageData(SingleByteCoverage);
+    return CoverageData();
 
-  CoverageData FunctionCoverage(SingleByteCoverage,
+  assert(SingleByteCoverage);
+  CoverageData FunctionCoverage(*SingleByteCoverage,
                                 Function.Filenames[*MainFileID]);
   std::vector<CountedRegion> Regions;
   for (const auto &CR : Function.CountedRegions)
@@ -1480,8 +1483,9 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
 
 CoverageData CoverageMapping::getCoverageForExpansion(
     const ExpansionRecord &Expansion) const {
+  assert(SingleByteCoverage);
   CoverageData ExpansionCoverage(
-      SingleByteCoverage, Expansion.Function.Filenames[Expansion.FileID]);
+      *SingleByteCoverage, Expansion.Function.Filenames[Expansion.FileID]);
   std::vector<CountedRegion> Regions;
   for (const auto &CR : Expansion.Function.CountedRegions)
     if (CR.FileID == Expansion.FileID) {
