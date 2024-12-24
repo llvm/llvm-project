@@ -1284,6 +1284,9 @@ OpenMP Support
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
 - Added support for allocator-modifier in 'allocate' clause.
+- Changed the OpenMP DeviceRTL to use 'generic' IR. The
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
+  always build support for AMDGPU and NVPTX targets.
 
 Improvements
 ^^^^^^^^^^^^

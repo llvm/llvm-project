@@ -65,36 +65,36 @@ else()
   add_definitions(-DTARGET_NAME=AMDGPU)
 endif()
 
-   list(APPEND HOSTRPC_ARCHS "amdgcn")
-   add_library(amdgcn_hostexec_services STATIC 
-      services/amdgcn_hostexec.cpp 
-      services/execute_service.cpp 
-      services/devsanitizer.cpp 
-      services/amdgcn_urilocator.cpp
-      ${HOSTEXEC_EXTRA_SOURCE}
-   )
-   target_include_directories(
-      amdgcn_hostexec_services
-      PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/services
-      ${LIBOMPTARGET_INCLUDE_DIR}
-   )
-   target_include_directories(
-      amdgcn_hostexec_services
-      PUBLIC
-      ${HSA_INCLUDE}
-      target_link_libraries(amdgcn_hostexec_services ${HOSTEXEC_DEP_LIBRARIES})
-   )
+list(APPEND HOSTRPC_ARCHS "amdgpu")
+add_library(amdgpu_hostexec_services STATIC 
+  services/amdgpu_hostexec.cpp 
+  services/execute_service.cpp 
+  services/devsanitizer.cpp 
+  services/amdgpu_urilocator.cpp
+  ${HOSTEXEC_EXTRA_SOURCE}
+)
+target_include_directories(
+  amdgpu_hostexec_services
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/services
+  ${LIBOMPTARGET_INCLUDE_DIR}
+)
+target_include_directories(
+  amdgpu_hostexec_services
+  PUBLIC
+  ${HSA_INCLUDE}
+  target_link_libraries(amdgpu_hostexec_services ${HOSTEXEC_DEP_LIBRARIES})
+)
 
-   add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
-   set_property(TARGET amdgcn_hostexec_services PROPERTY POSITION_INDEPENDENT_CODE ON)
+add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
+set_property(TARGET amdgpu_hostexec_services PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-   option(LIBOMPTARGET_BUILD_DEVICE_FORTRT "Build device fortran IO runtime to use hostexec" OFF)
-   if (LIBOMPTARGET_BUILD_DEVICE_FORTRT)
-     add_compile_definitions(_HOSTEXEC_BUILD_DEVICE_FORTRT)
-     target_link_libraries(amdgcn_hostexec_services FortranDecimal -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
-     target_link_libraries(amdgcn_hostexec_services FortranRuntime -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
-   endif()
+option(LIBOMPTARGET_BUILD_DEVICE_FORTRT "Build device fortran IO runtime to use hostexec" OFF)
+if (LIBOMPTARGET_BUILD_DEVICE_FORTRT)
+ add_compile_definitions(_HOSTEXEC_BUILD_DEVICE_FORTRT)
+ target_link_libraries(amdgpu_hostexec_services FortranDecimal -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+ target_link_libraries(amdgpu_hostexec_services FortranRuntime -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+endif()
 
 if (LIBOMPTARGET_DEP_CUDA_FOUND)
    list(APPEND HOSTRPC_ARCHS "nvptx")
@@ -126,30 +126,6 @@ else()
   return()
 endif()
 
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx950 gfx1010 gfx1012 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103 gfx1150 gfx1151 gfx1152 gfx1153 gfx1200 gfx1201
-gfx9-generic gfx9-4-generic gfx10-1-generic gfx10-3-generic gfx11-generic gfx12-generic )
-if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
-  set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
-endif()
-
-set(all_capabilities 35 37 50 52 53 60 61 62 70 72 75 80 86 89 90)
-set(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES ${all_capabilities} CACHE STRING
-  "List of CUDA Compute Capabilities to be used to compile the NVPTX DeviceRTL.")
-string(TOLOWER ${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES} LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES)
-if (LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "all")
-  set(nvptx_sm_list ${all_capabilities})
-elseif(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "auto")
-  if (NOT LIBOMPTARGET_DEP_CUDA_FOUND)
-    libomptarget_error_say("[NVPTX] Cannot auto detect compute capability as CUDA not found.")
-  endif()
-  set(nvptx_sm_list ${LIBOMPTARGET_DEP_CUDA_ARCH})
-else()
-  string(REPLACE "," ";" nvptx_sm_list "${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES}")
-endif()
-foreach(sm ${nvptx_sm_list})
-   list(APPEND nvptx_mcpus "sm_${sm}")
-endforeach()
-
 set(ocl_atomics_cl_filename ${CMAKE_CURRENT_SOURCE_DIR}/src/oclAtomics.cl)
 set(invoke_cpp_file_name ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec_invoke.cpp)
 set(hostexec_stubs_filename ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec_stubs.cpp)
@@ -157,16 +133,14 @@ set(h_file           ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec.h)
 set(internal_h_file  ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec_internal.h)
 
 foreach(archname ${HOSTRPC_ARCHS})
-   if (${archname} STREQUAL "amdgcn")
+   if (${archname} STREQUAL "amdgpu")
       set(triple "amdgcn-amd-amdhsa")
-      set(mcpus ${amdgpu_mcpus})
    endif()
    if (${archname} STREQUAL "nvptx")
       set(triple "nvptx64-nvidia-cuda")
-      set(mcpus ${nvptx_mcpus})
    endif()
 
-   if (${archname} STREQUAL "amdgcn")
+   if (${archname} STREQUAL "amdgpu")
       set(opencl_cmd ${CLANG_TOOL}
        -fvisibility=default
        -c -emit-llvm -nogpulib -nogpuinc
@@ -183,87 +157,85 @@ foreach(archname ${HOSTRPC_ARCHS})
       DEPENDS ${ocl_atomics_cl_filename})
    endif()
 
-   foreach(mcpu ${mcpus})
-      if (${archname} STREQUAL "amdgcn")
-        find_package(AMDDeviceLibs REQUIRED CONFIG
-                     HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
-                           ${CMAKE_BINARY_DIR}/../rocm-device-libs-prefix/src/rocm-device-libs-build
-                           ${CMAKE_INSTALL_PREFIX}
-                     PATHS /opt/rocm
-        )
-        get_target_property(ocml_path ocml IMPORTED_LOCATION)
-        get_target_property(ockl_path ockl IMPORTED_LOCATION)
+    if (${archname} STREQUAL "amdgpu")
+      find_package(AMDDeviceLibs REQUIRED CONFIG
+                   HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+                         ${CMAKE_BINARY_DIR}/../rocm-device-libs-prefix/src/rocm-device-libs-build
+                         ${CMAKE_INSTALL_PREFIX}
+                   PATHS /opt/rocm
+      )
+      get_target_property(ocml_path ocml IMPORTED_LOCATION)
+      get_target_property(ockl_path ockl IMPORTED_LOCATION)
 
-        set(openmp_device_args
-            -I../../runtime/src  # to pickup omp.h, we may need a dependency
-            -I${CMAKE_CURRENT_SOURCE_DIR}/../DeviceRTL/include # pickup Platform.h
-            -O${optimization_level}
-            -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable
-            -std=c++17 -fvisibility=hidden -nogpuinc
-            -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
-            -Xclang -mcode-object-version=none
-            -Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}
-            -Xclang -mlink-builtin-bitcode -Xclang ${ockl_path}
-            -Wno-linker-warnings # Silence the empty host compilation.
-            -c -emit-llvm --offload-device-only -nogpulib)
-      elseif(${archname} STREQUAL "nvptx")
-         set(openmp_device_args 
-	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
-        -I${CMAKE_CURRENT_SOURCE_DIR}/../DeviceRTL/include # pickup Platform.h
-	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
-	      -std=c++17 -fvisibility=hidden 
-	      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
-	      --cuda-feature=+ptx61,+${mcpu} -nogpuinc
-	      -c -emit-llvm --offload-device-only -nocudalib -nogpulib 
-	      -Wno-unknown-cuda-version)
-      endif()
+      set(openmp_device_args
+          -I../../runtime/src  # to pickup omp.h, we may need a dependency
+          -I${CMAKE_CURRENT_SOURCE_DIR}/../DeviceRTL/include # pickup Platform.h
+          -O${optimization_level}
+          -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable
+          -std=c++17 -fvisibility=hidden -nogpuinc
+          -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=
+          -Xclang -mcode-object-version=none
+          -Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}
+          -Xclang -mlink-builtin-bitcode -Xclang ${ockl_path}
+          -Wno-linker-warnings # Silence the empty host compilation.
+          -c -emit-llvm --offload-device-only -nogpulib)
+    elseif(${archname} STREQUAL "nvptx")
+       set(openmp_device_args 
+      -I../../runtime/src  # to pickup omp.h, we may need a dependency
+      -I${CMAKE_CURRENT_SOURCE_DIR}/../DeviceRTL/include # pickup Platform.h
+      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
+      -std=c++17 -fvisibility=hidden 
+      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=
+      --cuda-feature=+ptx61 -nogpuinc
+      -c -emit-llvm --offload-device-only -nocudalib -nogpulib 
+      -Wno-unknown-cuda-version)
+    endif()
 
-      # FIXME: considre combining these two source files into singlce compiler
-      #        maybe if we can get rid of compilation for opencl atomics
-      set(stubs_bc_filename "hostexec-stubs-${mcpu}.bc")
-      add_custom_target(${stubs_bc_filename}
-         COMMAND ${CLANG_TOOL} ${openmp_device_args} ${hostexec_stubs_filename} -o ${stubs_bc_filename}
-         DEPENDS ${hostexec_stubs_filename} ${h_file} ${internal_h_file}
-         COMMENT "Built file ${stubs_bc_filename}")
+    # FIXME: considre combining these two source files into singlce compiler
+    #        maybe if we can get rid of compilation for opencl atomics
+    set(stubs_bc_filename "hostexec-stubs-${archname}.bc")
+    add_custom_target(${stubs_bc_filename}
+       COMMAND ${CLANG_TOOL} ${openmp_device_args} ${hostexec_stubs_filename} -o ${stubs_bc_filename}
+       DEPENDS ${hostexec_stubs_filename} ${h_file} ${internal_h_file}
+       COMMENT "Built file ${stubs_bc_filename}")
 
-      set(hostexec_invoke_cpp_bc "hostexec-invoke-${mcpu}.bc")
-      add_custom_target(${hostexec_invoke_cpp_bc}
-         COMMAND ${CLANG_TOOL} ${openmp_device_args} ${invoke_cpp_file_name} -o ${hostexec_invoke_cpp_bc}
-	 DEPENDS ${invoke_cpp_file_name}
-         COMMENT "Building bc file for hostexec_invoke: ${hostexec_invoke_cpp_bc}")
+    set(hostexec_invoke_cpp_bc "hostexec-invoke-${archname}.bc")
+    add_custom_target(${hostexec_invoke_cpp_bc}
+       COMMAND ${CLANG_TOOL} ${openmp_device_args} ${invoke_cpp_file_name} -o ${hostexec_invoke_cpp_bc}
+ DEPENDS ${invoke_cpp_file_name}
+       COMMENT "Building bc file for hostexec_invoke: ${hostexec_invoke_cpp_bc}")
 
-      if (NOT ${archname} STREQUAL "amdgcn")
-          # for nvptx we dont need ocl_atomics
-         set(ocl_atomics_cl_bc "")
-      endif()
+    if (NOT ${archname} STREQUAL "amdgpu")
+        # for nvptx we dont need ocl_atomics
+       set(ocl_atomics_cl_bc "")
+    endif()
 
-      set(libhostexec-bc "libhostexec-${mcpu}.bc")
-      set(libhostexec-bc-preprep "libhostexec-${mcpu}-preprep.bc")
-      add_custom_target(${libhostexec-bc-preprep}
-         COMMAND ${LINK_TOOL} ${stubs_bc_filename} ${hostexec_invoke_cpp_bc} ${ocl_atomics_cl_bc} -o ${libhostexec-bc-preprep}
-	 DEPENDS ${stubs_bc_filename} ${hostexec_invoke_cpp_bc}
-         COMMENT "Building hostexec file ${libhostexec-bc-preprep}")
-      add_dependencies(${libhostexec-bc-preprep} ${stubs_bc_filename})
-      add_dependencies(${libhostexec-bc-preprep} ${hostexec_invoke_cpp_bc})
+    set(libhostexec-bc "libhostexec-${archname}.bc")
+    set(libhostexec-bc-preprep "libhostexec-${archname}-preprep.bc")
+    add_custom_target(${libhostexec-bc-preprep}
+       COMMAND ${LINK_TOOL} ${stubs_bc_filename} ${hostexec_invoke_cpp_bc} ${ocl_atomics_cl_bc} -o ${libhostexec-bc-preprep}
+ DEPENDS ${stubs_bc_filename} ${hostexec_invoke_cpp_bc}
+       COMMENT "Building hostexec file ${libhostexec-bc-preprep}")
+    add_dependencies(${libhostexec-bc-preprep} ${stubs_bc_filename})
+    add_dependencies(${libhostexec-bc-preprep} ${hostexec_invoke_cpp_bc})
 
-      # Run the prep tool on the library to replace internal attribute with linkonce_odr for dm_alloc only.
-      add_custom_target(${libhostexec-bc}
-        COMMAND ${PREP_TOOL} -dm ${libhostexec-bc-preprep}
-                      -o ${libhostexec-bc}
-        DEPENDS ${libhostexec-bc-preprep}
-        COMMENT "Running ${PREP_TOOL} for ${libhostexec-bc}")
-      add_dependencies(${libhostexec-bc} prep-libomptarget-bc)
-      if (${archname} STREQUAL "amdgcn")
-         add_dependencies(${libhostexec-bc} ${ocl_atomics_cl_bc})
-      endif()
+    # Run the prep tool on the library to replace internal attribute with linkonce_odr for dm_alloc only.
+    add_custom_target(${libhostexec-bc}
+      COMMAND ${PREP_TOOL} -dm ${libhostexec-bc-preprep}
+                    -o ${libhostexec-bc}
+      DEPENDS ${libhostexec-bc-preprep}
+      COMMENT "Running ${PREP_TOOL} for ${libhostexec-bc}")
+    add_dependencies(${libhostexec-bc} prep-libomptarget-bc)
+    if (${archname} STREQUAL "amdgpu")
+       add_dependencies(${libhostexec-bc} ${ocl_atomics_cl_bc})
+    endif()
 
-      if (${archname} STREQUAL "amdgcn")
-         add_dependencies(amdgcn_hostexec_services ${libhostexec-bc})
-      endif()
-      if (${archname} STREQUAL "nvptx")
-         add_dependencies(nvptx_hostexec_services ${libhostexec-bc})
-      endif()
-   endforeach() # end for each mcpu
+    if (${archname} STREQUAL "amdgpu")
+       add_dependencies(amdgpu_hostexec_services ${libhostexec-bc})
+    endif()
+    if (${archname} STREQUAL "nvptx")
+       add_dependencies(nvptx_hostexec_services ${libhostexec-bc})
+    endif()
 endforeach() # end foreach archs
 
 install(FILES ${h_file} DESTINATION lib/clang/${LLVM_VERSION_MAJOR}/include)

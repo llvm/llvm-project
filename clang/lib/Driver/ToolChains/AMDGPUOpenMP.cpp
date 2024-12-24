@@ -252,7 +252,7 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // the look-up of the libomptarget bc lib to happen and if not present
   // where it is expected it means we are using the build tree compiler
   // not the installed compiler.
-  std::string LibDeviceName = "/libomptarget-amdgpu-" + GPUArch.str() + ".bc";
+  std::string LibDeviceName = "/libomptarget-amdgpu.bc";
 
   if (!Args.hasArg(options::OPT_nogpulib)) {
     // Check if libomptarget device bitcode can be found in a LIBRARY_PATH dir
@@ -279,7 +279,7 @@ const char *amdgpu::dlr::getLinkCommandArgs(
         BCLibs.push_back(Args.MakeArgString(bc_file_lib));
       else
         TC.getDriver().Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
-          << "libomptarget-amdgpu-" + GPUArch.str() + ".bc";
+          << "libomptarget-amdgpu.bc";
     }
 
     if (!AsanRTL.empty()) {
@@ -398,7 +398,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   StringRef GPUArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-  assert(!GPUArch.empty() && "Must have an explicit GPU arch.");
 
   assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
          "Only OpenMP offloading kinds are supported.");

@@ -36,7 +36,7 @@ target_sources(omptarget.rtl.amdgpu PRIVATE src/rtl.cpp)
 target_include_directories(omptarget.rtl.amdgpu PRIVATE
                            ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 target_link_libraries(omptarget.rtl.amdgpu PRIVATE
-                      -Wl,--whole-archive amdgcn_hostexec_services -Wl,--no-whole-archive)
+                      -Wl,--whole-archive amdgpu_hostexec_services -Wl,--no-whole-archive)
 
 if (LLVM_LINK_LLVM_DYLIB)
   set(llvm_libs LLVM)

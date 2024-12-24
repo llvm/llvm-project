@@ -29,3 +29,6 @@ Non-comprehensive list of changes in this release
   <https://github.com/llvm/llvm-project/blob/main/offload/test/libc/host_call.c>`_.
 - Fixed the implementation of ``omp_get_wtime`` for AMDGPU targets.
 - Added vendor agnostic OMPT callback support for OpenMP-based device offload.
+- Changed the OpenMP DeviceRTL to use 'generic' IR. The
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
+  always build support for AMDGPU and NVPTX targets.

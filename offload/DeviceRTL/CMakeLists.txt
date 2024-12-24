@@ -42,50 +42,6 @@ set(devicertl_base_directory ${CMAKE_CURRENT_SOURCE_DIR})
 set(include_directory ${devicertl_base_directory}/include)
 set(source_directory ${devicertl_base_directory}/src)
 
-set(all_capabilities 35 37 50 52 53 60 61 62 70 72 75 80 86 89 87 90)
-set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803"
-                             "gfx9-generic;gfx900;gfx902;gfx906;gfx908"
-                             "gfx90a;gfx90c"
-                             "gfx9-4-generic;gfx940;gfx941;gfx942;gfx950"
-                             "gfx10-1-generic;gfx1010;gfx1012"
-                             "gfx10-3-generic;gfx1030;gfx1031;gfx1032;gfx1033"
-                             "gfx1034;gfx1035;gfx1036"
-                             "gfx11-generic;gfx1100;gfx1101;gfx1102;gfx1103"
-                             "gfx1150;gfx1151;gfx1152;gfx1153"
-                             "gfx12-generic;gfx1200;gfx1201")
-set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-                            "sm_70;sm_72;sm_75;sm_80;sm_86;sm_87;sm_89;sm_90")
-set(all_gpu_architectures
-    "${all_amdgpu_architectures};${all_nvptx_architectures}")
-
-# AMD internal build scripts use LIBOMPTARGET_AMDGCN_GFXLIST
-if(DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${LIBOMPTARGET_AMDGCN_GFXLIST} CACHE STRING
-      "List of device architectures to be used to compile the OpenMP DeviceRTL.")
-else()
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES "all" CACHE STRING
-      "List of device architectures to be used to compile the OpenMP DeviceRTL.")
-endif()
-
-if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${all_gpu_architectures})
-elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "amdgpu")
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${all_amdgpu_architectures})
-elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "nvptx")
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${all_nvptx_architectures})
-elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto" OR
-       LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "native")
-  if(NOT LIBOMPTARGET_NVPTX_ARCH AND NOT LIBOMPTARGET_AMDGPU_ARCH)
-    message(FATAL_ERROR
-      "Could not find 'amdgpu-arch' and 'nvptx-arch' tools required for 'auto'")
-  elseif(NOT LIBOMPTARGET_FOUND_NVIDIA_GPU AND NOT LIBOMPTARGET_FOUND_AMDGPU_GPU)
-    message(FATAL_ERROR "No AMD or NVIDIA GPU found on the system when using 'auto'")
-  endif()
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES
-      "${LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST};${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}")
-endif()
-list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
-
 set(include_files
   ${include_directory}/Allocator.h
   ${include_directory}/Configuration.h
@@ -170,20 +126,21 @@ endif()
 
 # first create an object target
 add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
-function(compileDeviceRTLLibrary target_cpu target_name target_triple)
+function(compileDeviceRTLLibrary target_name target_triple)
   set(target_bc_flags ${ARGN})
 
   set(bc_files "")
   foreach(src ${src_files})
     get_filename_component(infile ${src} ABSOLUTE)
     get_filename_component(outfile ${src} NAME)
-    set(outfile "${outfile}-${target_cpu}.bc")
-    set(depfile "${outfile}.d")
+    set(outfile "${outfile}-${target_name}.bc")
+    set(depfile "${outfile}-${target_name}.d")
 
     add_custom_target(${outfile}
       COMMAND ${CLANG_TOOL}
       ${bc_flags}
-      --offload-arch=${target_cpu}
+      -fopenmp-targets=${target_triple}
+      -Xopenmp-target=${target_triple} -march=
       ${target_bc_flags}
       -MD -MF ${depfile}
       ${infile} -o ${outfile}
@@ -194,7 +151,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
     if(${outfile} MATCHES "State.cpp")
       # Run the prep tool on the library to replace internal attribute with linkonce_odr for dm_alloc only.
-      set(outfile_prep "${outfile}-${target_cpu}-prep.bc")
+      set(outfile_prep "${outfile}-${target_name}-prep.bc")
       add_custom_target(${outfile_prep}
           COMMAND ${PREP_TOOL} -dm ${outfile}
                           -o ${outfile_prep}
@@ -220,21 +177,21 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   if("${target_name}" STREQUAL "amdgpu")
     if(OPENMP_STANDALONE_BUILD)
       list(APPEND extra_bc_files
-        ${CMAKE_BINARY_DIR}/hostexec/libhostexec-${target_cpu}.bc
+        ${CMAKE_BINARY_DIR}/hostexec/libhostexec-${target_name}.bc
       )
     else()
       list(APPEND extra_bc_files
-        ${CMAKE_BINARY_DIR}/offload/hostexec/libhostexec-${target_cpu}.bc
+        ${CMAKE_BINARY_DIR}/offload/hostexec/libhostexec-${target_name}.bc
       )
     endif()
-    add_custom_target(libhostexec-${target_cpu}
+    add_custom_target(libhostexec-${target_name}
       DEPENDS ${extra_bc_files}
     )
-    add_dependencies(libhostexec-${target_cpu} libhostexec-${target_cpu}.bc)
-    set(extra_depends libhostexec-${target_cpu})
+    add_dependencies(libhostexec-${target_name} libhostexec-${target_name}.bc)
+    set(extra_depends libhostexec-${target_name})
   endif()
 
-  set(bclib_name "libomptarget-${target_name}-${target_cpu}.bc")
+  set(bclib_name "libomptarget-${target_name}.bc")
 
   # Link to a bitcode library.
   add_custom_target(linked_${bclib_name}
@@ -293,9 +250,9 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     add_dependencies(${bclib_name} prep-libomptarget-bc)
   endif()
 
-  add_dependencies(omptarget.devicertl.all_objs embedded_${target_name}-${target_cpu})
+  add_dependencies(omptarget.devicertl.all_objs embedded_${target_name})
 
-  set(bclib_target_name "omptarget-${target_name}-${target_cpu}-bc")
+  set(bclib_target_name "omptarget-${target_name}-bc")
   add_custom_target(${bclib_target_name} ALL)
   add_dependencies(${bclib_target_name} ${bclib_name})
 
@@ -321,7 +278,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   # Package the bitcode in the bitcode and embed it in an ELF for the static library
   add_custom_target(packaged_${bclib_name}
       COMMAND ${PACKAGER_TOOL} -o ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
-        "--image=file=${CMAKE_CURRENT_BINARY_DIR}/opt_${bclib_name},${target_feature},triple=${target_triple},arch=${target_cpu},kind=openmp"
+        "--image=file=${CMAKE_CURRENT_BINARY_DIR}/opt_${bclib_name},${target_feature},triple=${target_triple},arch=generic,kind=openmp"
       COMMENT "Packaging LLVM offloading binary ${bclib_name}.out"
   )
   add_dependencies(packaged_${bclib_name} opt_${bclib_name})
@@ -329,18 +286,18 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     add_dependencies(packaged_${bclib_name} clang-offload-packager)
   endif()
 
-  set(output_name "${CMAKE_CURRENT_BINARY_DIR}/devicertl-${target_name}-${target_cpu}.o")
-  add_custom_target(embedded_${target_name}-${target_cpu}
+  set(output_name "${CMAKE_CURRENT_BINARY_DIR}/devicertl-${target_name}.o")
+  add_custom_target(embedded_${target_name}
     COMMAND ${CLANG_TOOL} --std=c++17 -c -nostdlib
             -Xclang -fembed-offload-object=${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
             -o ${output_name}
             ${source_directory}/Stub.cpp
     DEPENDS ${source_directory}/Stub.cpp
     BYPRODUCTS ${output_name}
-    COMMENT "Embedding LLVM offloading binary in devicertl-${target_name}-${target_cpu}.o"
+    COMMENT "Embedding LLVM offloading binary in devicertl-${target_name}.o"
     VERBATIM
   )
-  add_dependencies(embedded_${target_name}-${target_cpu} packaged_${bclib_name})
+  add_dependencies(embedded_${target_name} packaged_${bclib_name})
   if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
     add_dependencies(${output_name} clang)
   endif()
@@ -349,10 +306,11 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${output_name})
 
   if (CMAKE_EXPORT_COMPILE_COMMANDS)
-    set(ide_target_name omptarget-ide-${target_name}-${target_cpu})
+    set(ide_target_name omptarget-ide-${target_name})
     add_library(${ide_target_name} STATIC EXCLUDE_FROM_ALL ${src_files})
     target_compile_options(${ide_target_name} PRIVATE
-      -fopenmp --offload-arch=${target_cpu} -fopenmp-cuda-mode
+      -fopenmp -fopenmp-cuda-mode
+      -fopenmp-targets=${target_triple} -Xopenmp-target=${target_triple} -march=
       -mllvm -openmp-opt-disable
       -foffload-lto -fvisibility=hidden --offload-device-only
       -nocudalib -nogpulib -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
@@ -371,32 +329,25 @@ endfunction()
 # Generate a Bitcode library for all the gpu architectures the user requested.
 add_custom_target(omptarget.devicertl.nvptx)
 add_custom_target(omptarget.devicertl.amdgpu)
-foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
-  if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
-    find_package(AMDDeviceLibs REQUIRED CONFIG
-                 HINTS ${CMAKE_INSTALL_PREFIX} 
-                       ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
-                 PATHS /opt/rocm
-    )
-    
-    # Link in the ROCm Device Libraries once the other files have been linked.
-    get_target_property(ocml_path ocml IMPORTED_LOCATION)
-    get_target_property(ockl_path ockl IMPORTED_LOCATION)
+find_package(AMDDeviceLibs REQUIRED CONFIG
+             HINTS ${CMAKE_INSTALL_PREFIX} 
+                   ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+             PATHS /opt/rocm
+)
 
-    set(amd_options -Xclang -mcode-object-version=none
-                    -Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}
-                    -Xclang -mlink-builtin-bitcode -Xclang ${ockl_path}
-                    -Wno-linker-warnings # Silence the empty host compilation.
-                    -Xclang -mcode-object-version=none
-    )
+# Link in the ROCm Device Libraries once the other files have been linked.
+get_target_property(ocml_path ocml IMPORTED_LOCATION)
+get_target_property(ockl_path ockl IMPORTED_LOCATION)
 
-    compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa ${amd_options})
-  elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
-  else()
-    message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
-  endif()
-endforeach()
+set(amd_options -Xclang -mcode-object-version=none
+                -Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}
+                -Xclang -mlink-builtin-bitcode -Xclang ${ockl_path}
+                -Wno-linker-warnings # Silence the empty host compilation.
+                -Xclang -mcode-object-version=none
+)
+
+compileDeviceRTLLibrary(amdgpu amdgcn-amd-amdhsa ${amd_options})
+compileDeviceRTLLibrary(nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
 
 # Archive all the object files generated above into a static library
 add_library(omptarget.devicertl STATIC)

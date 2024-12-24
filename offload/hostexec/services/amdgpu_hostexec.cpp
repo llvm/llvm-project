@@ -14,8 +14,8 @@
 #include "../src/hostexec_internal.h"
 #include "execute_service.h"
 #include "urilocator.h"
-#include <cassert>
 #include <atomic>
+#include <cassert>
 #include <cstring>
 #include <functional>
 #include <iostream>
