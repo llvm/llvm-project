@@ -216,6 +216,12 @@ public:
   bool hasV75OpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V75;
   }
+  bool hasV79Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V79;
+  }
+  bool hasV79OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V79;
+  }
 
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
