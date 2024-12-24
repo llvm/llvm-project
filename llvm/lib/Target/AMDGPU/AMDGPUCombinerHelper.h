@@ -15,13 +15,22 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCOMBINERHELPER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCOMBINERHELPER_H
 
+#include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 
 namespace llvm {
 class AMDGPUCombinerHelper : public CombinerHelper {
+protected:
+  const GCNSubtarget &STI;
+  const SIInstrInfo &TII;
+
 public:
   using CombinerHelper::CombinerHelper;
+  AMDGPUCombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
+                       bool IsPreLegalize, GISelKnownBits *KB,
+                       MachineDominatorTree *MDT, const LegalizerInfo *LI,
+                       const GCNSubtarget &STI);
 
   bool matchFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo);
   void applyFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo);

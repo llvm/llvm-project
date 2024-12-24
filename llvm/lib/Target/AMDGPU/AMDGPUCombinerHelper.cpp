@@ -17,6 +17,13 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+AMDGPUCombinerHelper::AMDGPUCombinerHelper(
+    GISelChangeObserver &Observer, MachineIRBuilder &B, bool IsPreLegalize,
+    GISelKnownBits *KB, MachineDominatorTree *MDT, const LegalizerInfo *LI,
+    const GCNSubtarget &STI)
+    : CombinerHelper(Observer, B, IsPreLegalize, KB, MDT, LI), STI(STI),
+      TII(*STI.getInstrInfo()) {}
+
 LLVM_READNONE
 static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
@@ -481,11 +488,9 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
       return false;
 
     // For f32, only non-inline constants should be transformed.
-    const SIInstrInfo *TII =
-        (MI.getMF()->getSubtarget<GCNSubtarget>()).getInstrInfo();
     if (ScalarDestTy == LLT::float32() &&
-        TII->isInlineConstant(SelectTrueCst->Value) &&
-        TII->isInlineConstant(SelectFalseCst->Value))
+        TII.isInlineConstant(SelectTrueCst->Value) &&
+        TII.isInlineConstant(SelectFalseCst->Value))
       return false;
 
     int SelectTrueVal = SelectTrueCst->Value.getExactLog2Abs();
