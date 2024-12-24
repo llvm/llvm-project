@@ -171,7 +171,7 @@ void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
                         MachineOptimizationRemarkEmitter &MORE,
                         MachineOptimizationRemarkMissed &R);
 
-/// Returns the inverse opcode of \p MinMaxOpc , which is a generic min/max
+/// Returns the inverse opcode of \p MinMaxOpc, which is a generic min/max
 /// opcode like G_SMIN.
 unsigned getInverseGMinMaxOpcode(unsigned MinMaxOpc);
 
