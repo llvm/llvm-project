@@ -20,12 +20,14 @@
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang::tooling;
@@ -36,6 +38,11 @@ static cl::desc desc(StringRef description) { return {description.ltrim()}; }
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
+static cl::extrahelp ClangTidyParameterFileHelp(R"(
+Parameters files:
+  A large number of options or source files can be passed as parameter files
+  by use '@parameter-file' in the command line.
+)");
 static cl::extrahelp ClangTidyHelp(R"(
 Configuration files:
   clang-tidy attempts to read configuration for each source file from a
@@ -571,6 +578,21 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
 
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
+  SmallVector<const char *> Args{argv, argv + argc};
+
+  // expand parameters file to argc and argv.
+  llvm::BumpPtrAllocator Alloc;
+  llvm::cl::TokenizerCallback Tokenizer =
+      llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+          ? llvm::cl::TokenizeWindowsCommandLine
+          : llvm::cl::TokenizeGNUCommandLine;
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
+    llvm::WithColor::error() << llvm::toString(std::move(Err)) << "\n";
+    return 1;
+  }
+  argc = static_cast<int>(Args.size());
+  argv = Args.data();
 
   // Enable help for -load option, if plugins are enabled.
   if (cl::Option *LoadOpt = cl::getRegisteredOptions().lookup("load"))
