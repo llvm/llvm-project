@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-tzset *get_tzset() {
+tzset *get_tzset(int fd) {
   static ttinfo ttinfo;
   static tzset result;
 
@@ -33,14 +33,7 @@ tzset *get_tzset() {
   uint32_t tzh_typecnt;
   uint32_t tzh_charcnt;
 
-  int fd;
   size_t bytes;
-
-  fd = open("/etc/localtime", O_RDONLY);
-  if (fd < 0) {
-    close(fd);
-    return nullptr;
-  }
 
   bytes = read(fd, hdr, sizeof(hdr));
   // TODO: Remove the number of bytes to check
