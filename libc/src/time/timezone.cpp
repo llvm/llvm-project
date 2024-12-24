@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
 tzset *get_tzset(int fd) {
-  static ttinfo ttinfo;
+  ttinfo ttinfo;
   static tzset result;
 
   unsigned char hdr[TIMEZONE_HDR_SIZE * 10];
@@ -131,6 +131,7 @@ tzset *get_tzset(int fd) {
                           (int64_t)hdr[start + i * 8 + 7];
   }
   result.tzh_timecnt_transitions = ptr_tzh_timecnt_transitions;
+  result.tzh_timecnt_number_transitions = chunk + 1;
 
   start = TIMEZONE_HDR_SIZE + product + tzh_timecnt * 8;
   end = tzh_timecnt_end;
@@ -174,9 +175,9 @@ tzset *get_tzset(int fd) {
   int64_t *ptr_offsets;
   size_t index;
 
-  int64_t tt_utoff[6];
-  uint8_t tt_isdst[6];
-  uint8_t tt_desigidx[6];
+  static int64_t tt_utoff[6];
+  static uint8_t tt_isdst[6];
+  static uint8_t tt_desigidx[6];
 
   int64_t *ptr_tt_utoff;
   uint8_t *ptr_tt_isdst;

@@ -40,6 +40,7 @@ typedef struct {
     // additional fields
     int64_t *tzh_timecnt_transitions;
     int64_t *tzh_timecnt_indices;
+    size_t tzh_timecnt_number_transitions;
     unsigned char *tz;
 } tzset;
 
