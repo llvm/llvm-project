@@ -359,6 +359,7 @@ intermediate LLVM representation.
    SupportLibrary
    TableGen/index
    TableGenFundamentals
+   Telemetry
    Vectorizers
    WritingAnLLVMPass
    WritingAnLLVMNewPMPass
@@ -580,3 +581,6 @@ Additional Topics
 
 :doc:`Sandbox IR <SandboxIR>`
    This document describes the design and usage of Sandbox IR, a transactional layer over LLVM IR.
+
+:doc:`Telemetry`
+   This document describes the Telemetry framework in LLVM.
