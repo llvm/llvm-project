@@ -127,10 +127,17 @@ public:
   /// is much faster for lookups.
   ///
   /// \param Addr A virtual address from the orignal object file to lookup.
+  ///
+  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
+  /// present.
+  ///
   /// \returns An expected LookupResult that contains only the information
   /// needed for the current address, or an error object that indicates reason
   /// for failing to lookup the address.
-  llvm::Expected<LookupResult> lookup(uint64_t Addr) const;
+  llvm::Expected<LookupResult>
+  lookup(uint64_t Addr,
+         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
 
   /// Lookup all merged functions for a given address.
   ///
@@ -139,6 +146,7 @@ public:
   /// with the primary LookupResult.
   ///
   /// \param Addr The address to lookup.
+  ///
   /// \returns A vector of LookupResult objects, where the first element is the
   /// primary result, followed by results for any merged functions
   llvm::Expected<std::vector<LookupResult>> lookupAll(uint64_t Addr) const;

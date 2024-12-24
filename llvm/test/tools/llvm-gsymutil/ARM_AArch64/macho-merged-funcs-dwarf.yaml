@@ -69,9 +69,9 @@
 # RUN: llvm-gsymutil --verify %t.keep.gSYM --address 0x248 | FileCheck --check-prefix=CHECK-NORMAL-LOOKUP %s
  
 # CHECK-MERGED-LOOKUP: Found 3 functions at address 0x0000000000000248:
-# CHECK-MERGED-LOOKUP:    0x0000000000000248: my_func_01 @ /tmp/test_gsym_yaml/out/file_01.cpp:5
-# CHECK-MERGED-LOOKUP:    0x0000000000000248: my_func_02 @ /tmp/test_gsym_yaml/out/file_02.cpp:5
-# CHECK-MERGED-LOOKUP:    0x0000000000000248: my_func_03 @ /tmp/test_gsym_yaml/out/file_03.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT:       0x0000000000000248: my_func_02 @ /tmp/test_gsym_yaml/out/file_02.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_01 @ /tmp/test_gsym_yaml/out/file_01.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_03 @ /tmp/test_gsym_yaml/out/file_03.cpp:5
  
 # CHECK-NORMAL-LOOKUP: 0x0000000000000248: my_func_01 @ /tmp/test_gsym_yaml/out/file_01.cpp:5
 

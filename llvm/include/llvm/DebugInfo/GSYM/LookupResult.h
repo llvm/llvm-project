@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataExtractor.h"
 #include <inttypes.h>
 #include <vector>
 
@@ -51,17 +50,6 @@ struct LookupResult {
   /// array, and the concrete function will appear at the end of the array.
   SourceLocations Locations;
   std::string getSourceFile(uint32_t Index) const;
-
-  /// Optional DataExtractor containing the merged functions data.
-  /// This is only populated during lookups if merged function information
-  /// was present. This is an optimization to avoid parsing the
-  /// MergedFunctionsInfo data unless needed.
-  std::optional<DataExtractor> MergedFunctionsData;
-
-  /// The binary data used to decode the FunctionInfo from which this
-  /// LookupResult was created. This can be used to re-decode the entire
-  /// FunctionInfo if desired.
-  std::optional<DataExtractor> FunctionInfoData;
 };
 
 inline bool operator==(const LookupResult &LHS, const LookupResult &RHS) {
