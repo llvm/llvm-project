@@ -256,7 +256,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
-        checkInReduction(op, result);
         checkPriority(op, result);
         checkUntied(op, result);
       })
@@ -1748,6 +1747,48 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
     // translate the body of the task:
     builder.restoreIP(codegenIP);
+    if (taskOp.getInReductionSyms()) {
+      llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+      builder.restoreIP(codegenIP);
+      uint32_t SrcLocStrSize;
+      llvm::LLVMContext &Context = builder.getContext();
+      llvm::Constant *SrcLocStr =
+          moduleTranslation.getOpenMPBuilder()->getOrCreateSrcLocStr(
+              ompLoc, SrcLocStrSize);
+      llvm::Value *Ident =
+          moduleTranslation.getOpenMPBuilder()->getOrCreateIdent(SrcLocStr,
+                                                                 SrcLocStrSize);
+      llvm::Value *ThreadID =
+          moduleTranslation.getOpenMPBuilder()->getOrCreateThreadID(Ident);
+      MutableArrayRef<BlockArgument> reductionArgs =
+          taskOp.getRegion().getArguments();
+      llvm::Value *tg =
+          llvm::ConstantPointerNull::get(llvm::PointerType::get(Context, 0));
+
+      // Check whether in_reduction is enclosed in a taskgroup
+      // and pass the taskgroup_id enclosing the task
+      auto op = taskOp->getParentOfType<omp::TaskgroupOp>();
+      if (op && moduleTranslation.lookupCall(op)) {
+        tg = moduleTranslation.lookupCall(op);
+      }
+      // Call back function for emitTaskReductionGetThdata
+      auto emitTaskReductionGetThdata = [&](llvm::Value *OrigVal) {
+        llvm::Value *args[] = {ThreadID, tg, OrigVal};
+        // Emit the runtime call
+        llvm::Function *ReductionGetFn =
+            moduleTranslation.getOpenMPBuilder()->getOrCreateRuntimeFunctionPtr(
+                llvm::omp::OMPRTL___kmpc_task_reduction_get_th_data);
+        return builder.CreateCall(ReductionGetFn, args);
+      };
+      std::size_t index = 0;
+      for (mlir::Value inReductionVar : taskOp.getInReductionVars()) {
+        llvm::Value *Result = emitTaskReductionGetThdata(
+            moduleTranslation.lookupValue(inReductionVar));
+        moduleTranslation.mapValue(reductionArgs[index], Result);
+        index++;
+      }
+    }
+
     auto continuationBlockOrError = convertOmpOpRegions(
         taskOp.getRegion(), "omp.task.region", builder, moduleTranslation);
     if (failed(handleError(continuationBlockOrError, *taskOp)))
