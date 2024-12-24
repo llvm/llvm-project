@@ -22,7 +22,7 @@ define void @select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, ptr noal
 ; FAST-NEXT:     WIDEN ir<[[LD2:%.+]]> = load vp<[[PTR2]]>
 ; FAST-NEXT:     WIDEN ir<[[FCMP:%.+]]> = fcmp ogt ir<[[LD1]]>, ir<[[LD2]]>
 ; FAST-NEXT:     WIDEN ir<[[FADD:%.+]]> = fadd reassoc nnan ninf nsz arcp contract afn ir<[[LD1]]>, ir<1.000000e+01>
-; FAST-NEXT:     WIDEN-SELECT ir<[[SELECT:%.+]]> = select ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>
+; FAST-NEXT:     WIDEN-SELECT ir<[[SELECT:%.+]]> = select reassoc nnan ninf nsz arcp contract afn ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>
 ; FAST-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds nuw ir<%a>, vp<[[ST]]>
 ; FAST-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer ir<[[GEP3]]>
 ; FAST-NEXT:     WIDEN store vp<[[PTR3]]>, ir<[[SELECT]]>

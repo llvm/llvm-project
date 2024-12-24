@@ -31,7 +31,7 @@ define void @select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, ptr noal
 ; FAST-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP10]], align 4
 ; FAST-NEXT:    [[TMP11:%.*]] = fcmp fast ogt <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; FAST-NEXT:    [[TMP12:%.*]] = fadd fast <vscale x 4 x float> [[WIDE_LOAD]], splat (float 1.000000e+01)
-; FAST-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[WIDE_LOAD1]]
+; FAST-NEXT:    [[TMP13:%.*]] = select fast <vscale x 4 x i1> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[WIDE_LOAD1]]
 ; FAST-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP6]]
 ; FAST-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw float, ptr [[TMP14]], i32 0
 ; FAST-NEXT:    store <vscale x 4 x float> [[TMP13]], ptr [[TMP15]], align 4
