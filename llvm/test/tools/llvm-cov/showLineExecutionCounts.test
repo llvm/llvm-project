@@ -44,3 +44,10 @@
 // HTML-INDEX: 72.73% (8/11)
 // HTML-INDEX: <tr class='light-row-bold'>
 // HTML-INDEX: Totals
+
+// Single byte
+// RUN: yaml2obj %S/Inputs/showLineExecutionCounts-single.yaml -o %t.o
+// RUN: llvm-profdata merge %S/Inputs/showLineExecutionCounts-single.proftext -o %t.profdata
+
+// RUN: llvm-cov show %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=1 -DC16K2=1 -DC16K1=1 %S/Inputs/showLineExecutionCounts.cpp
+// RUN: llvm-cov show %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs -name=main | FileCheck -check-prefixes=TEXT,FILTER -D#C=1 -DC16K2=1 -DC16K1=1 %S/Inputs/showLineExecutionCounts.cpp

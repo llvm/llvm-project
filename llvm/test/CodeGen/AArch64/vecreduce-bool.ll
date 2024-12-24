@@ -833,7 +833,7 @@ define i32 @reduce_xor_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
