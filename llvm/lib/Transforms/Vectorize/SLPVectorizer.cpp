@@ -5635,8 +5635,11 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
-      if (V1 == V2 || (V1->getNumUses() == 0 && V2->getNumUses() == 0) ||
-          isa<PoisonValue>(V1) || isa<PoisonValue>(V2))
+      if (V1 == V2 || (V1->getNumUses() == 0 && V2->getNumUses() == 0))
+        return false;
+      if (isa<PoisonValue>(V1))
+        return true;
+      if (isa<PoisonValue>(V2))
         return false;
       if (V1->getNumUses() < V2->getNumUses())
         return true;
@@ -21733,9 +21736,6 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
         V2->getValueOperand()->getType()->getScalarSizeInBits())
       return false;
     // UndefValues are compatible with all other values.
-    if (isa<UndefValue>(V->getValueOperand()) ||
-        isa<UndefValue>(V2->getValueOperand()))
-      return false;
     if (auto *I1 = dyn_cast<Instruction>(V->getValueOperand()))
       if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
         DomTreeNodeBase<llvm::BasicBlock> *NodeI1 =
@@ -21749,14 +21749,8 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
                "Different nodes should have different DFS numbers");
         if (NodeI1 != NodeI2)
           return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
-        InstructionsState S = getSameOpcode({I1, I2}, *TLI);
-        if (S.getOpcode())
-          return false;
         return I1->getOpcode() < I2->getOpcode();
       }
-    if (isa<Constant>(V->getValueOperand()) &&
-        isa<Constant>(V2->getValueOperand()))
-      return false;
     return V->getValueOperand()->getValueID() <
            V2->getValueOperand()->getValueID();
   };
