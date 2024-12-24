@@ -18,12 +18,13 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-Descriptor *RTDEF(CUFAllocDesciptor)(
+Descriptor *RTDEF(CUFAllocDescriptor)(
     std::size_t sizeInBytes, const char *sourceFile, int sourceLine) {
-  return reinterpret_cast<Descriptor *>(CUFAllocManaged(sizeInBytes));
+  return reinterpret_cast<Descriptor *>(
+      CUFAllocManaged(sizeInBytes, kCudaNoStream));
 }
 
-void RTDEF(CUFFreeDesciptor)(
+void RTDEF(CUFFreeDescriptor)(
     Descriptor *desc, const char *sourceFile, int sourceLine) {
   CUFFreeManaged(reinterpret_cast<void *>(desc));
 }

@@ -16,14 +16,14 @@ namespace llvm {
 /// A helper function for converting Scalar types to vector types. If
 /// the incoming type is void, we return void. If the EC represents a
 /// scalar, we return the scalar type.
-inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
+inline Type *toVectorTy(Type *Scalar, ElementCount EC) {
   if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
     return Scalar;
   return VectorType::get(Scalar, EC);
 }
 
-inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
-  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
+inline Type *toVectorTy(Type *Scalar, unsigned VF) {
+  return toVectorTy(Scalar, ElementCount::getFixed(VF));
 }
 
 /// A helper for converting structs of scalar types to structs of vector types.
@@ -41,7 +41,7 @@ Type *toScalarizedStructTy(StructType *StructTy);
 bool isVectorizedStructTy(StructType *StructTy);
 
 /// A helper for converting to vectorized types. For scalar types, this is
-/// equivalent to calling `ToVectorTy`. For struct types, this returns a new
+/// equivalent to calling `toVectorTy`. For struct types, this returns a new
 /// struct where each element type has been widened to a vector type.
 /// Note:
 ///   - If the incoming type is void, we return void
@@ -50,7 +50,7 @@ bool isVectorizedStructTy(StructType *StructTy);
 inline Type *toVectorizedTy(Type *Ty, ElementCount EC) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
     return toVectorizedStructTy(StructTy, EC);
-  return ToVectorTy(Ty, EC);
+  return toVectorTy(Ty, EC);
 }
 
 /// A helper for converting vectorized types to scalarized (non-vector) types.
