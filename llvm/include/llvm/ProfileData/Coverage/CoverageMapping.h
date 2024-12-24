@@ -981,8 +981,6 @@ public:
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);
 
-  // bool getSingleByteCoverage() const { return SingleByteCoverage; }
-
   /// The number of functions that couldn't have their profiles mapped.
   ///
   /// This is a count of functions whose profile is out of date or otherwise
