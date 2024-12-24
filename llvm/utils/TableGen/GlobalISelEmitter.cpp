@@ -419,6 +419,9 @@ private:
   Error importLeafNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
                                const TreePatternNode &N) const;
 
+  Error importXFormNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                                const TreePatternNode &N) const;
+
   Expected<action_iterator>
   importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
                             BuildMIAction &DstMIBuilder,
@@ -1319,6 +1322,41 @@ Error GlobalISelEmitter::importLeafNodeRenderer(
   return failedImport("unrecognized node " + to_string(N));
 }
 
+// Equivalent of MatcherGen::EmitResultSDNodeXFormAsOperand.
+Error GlobalISelEmitter::importXFormNodeRenderer(
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N) const {
+  const Record *XFormRec = N.getOperator();
+  auto I = SDNodeXFormEquivs.find(XFormRec);
+  if (I == SDNodeXFormEquivs.end())
+    return failedImport("SDNodeXForm " + XFormRec->getName() +
+                        " does not have GISel equivalent");
+
+  // TODO: Fail to import if GISDNodeXForm does not have RendererFn.
+  //   This currently results in a fatal error in emitRenderOpcodes.
+  const Record *XFormEquivRec = I->second;
+
+  // The node to apply the transformation function to.
+  // FIXME: The node may not have a name and may be a leaf. It should be
+  //   rendered first, like any other nodes. This may or may not require
+  //   introducing a temporary register, and we can't tell that without
+  //   inspecting the node (possibly recursively). This is a general drawback
+  //   of appending renderers directly to BuildMIAction.
+  const TreePatternNode &Node = N.getChild(0);
+  StringRef NodeName = Node.getName();
+
+  const Record *XFormOpc = CGP.getSDNodeTransform(XFormRec).first;
+  if (XFormOpc->getName() == "timm") {
+    // If this is a TargetConstant, there won't be a corresponding
+    // instruction to transform. Instead, this will refer directly to an
+    // operand in an instruction's operand list.
+    MIBuilder.addRenderer<CustomOperandRenderer>(*XFormEquivRec, NodeName);
+  } else {
+    MIBuilder.addRenderer<CustomRenderer>(*XFormEquivRec, NodeName);
+  }
+
+  return Error::success();
+}
+
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
     const TreePatternNode &Dst) const {
@@ -1335,24 +1373,9 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
   }
 
   if (Dst.getOperator()->isSubClassOf("SDNodeXForm")) {
-    auto &Child = Dst.getChild(0);
-    auto I = SDNodeXFormEquivs.find(Dst.getOperator());
-    if (I != SDNodeXFormEquivs.end()) {
-      const Record *XFormOpc = Dst.getOperator()->getValueAsDef("Opcode");
-      if (XFormOpc->getName() == "timm") {
-        // If this is a TargetConstant, there won't be a corresponding
-        // instruction to transform. Instead, this will refer directly to an
-        // operand in an instruction's operand list.
-        DstMIBuilder.addRenderer<CustomOperandRenderer>(*I->second,
-                                                        Child.getName());
-      } else {
-        DstMIBuilder.addRenderer<CustomRenderer>(*I->second, Child.getName());
-      }
-
-      return InsertPt;
-    }
-    return failedImport("SDNodeXForm " + Child.getName() +
-                        " has no custom renderer");
+    if (Error Err = importXFormNodeRenderer(Rule, DstMIBuilder, Dst))
+      return Err;
+    return InsertPt;
   }
 
   if (Dst.getOperator()->isSubClassOf("Instruction")) {
