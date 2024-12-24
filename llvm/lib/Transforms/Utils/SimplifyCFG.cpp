@@ -3515,7 +3515,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 ///     %cmp = icmp ult %x, %y
 ///     br i1 %cmp, label %EndBB, label %ThenBB
 ///   ThenBB:
-///     br label BB2
+///     br label %EndBB
 ///   EndBB:
 ///     %phi = phi i1 [ true, %ThenBB ], [ false, %BB ], [ false, %OtherBB ]
 ///     ...
@@ -3525,12 +3525,12 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 /// \code
 ///   BB:
 ///     %cmp = icmp ult %x, %y
-///     %sel = select i1 %cmp, i1 true, i1 false
+///     %sel = select i1 %cmp, i1 false, i1 true
 ///     br label %EndBB
 ///   ThenBB:
-///     br label BB2
+///     br label %EndBB
 ///   EndBB:
-///     %phi = phi i1 [ %sel, %ThenBB ], [ false, %BB ], [ false, %OtherBB ]
+///     %phi = phi i1 [ true, %ThenBB ], [ %sel, %BB ], [ false, %OtherBB ]
 ///     ...
 /// \endcode
 /// \returns true if the branch edge is removed.
@@ -3593,6 +3593,7 @@ static bool speculativelyExecuteEmptyBB(BranchInst *BI, bool Invert,
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Delete, BB, ThenBB}});
 
+  ++NumSpeculations;
   return true;
 }
 
