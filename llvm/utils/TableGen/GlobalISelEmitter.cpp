@@ -416,6 +416,9 @@ private:
   Error importNamedNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
                                 const TreePatternNode &N) const;
 
+  Error importLeafNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                               const TreePatternNode &N) const;
+
   Expected<action_iterator>
   importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
                             BuildMIAction &DstMIBuilder,
@@ -1287,6 +1290,35 @@ Error GlobalISelEmitter::importNamedNodeRenderer(
   return failedImport("unsupported node " + to_string(N));
 }
 
+// Equivalent of MatcherGen::EmitResultLeafAsOperand.
+Error GlobalISelEmitter::importLeafNodeRenderer(
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N) const {
+  if (const auto *II = dyn_cast<IntInit>(N.getLeafValue())) {
+    MIBuilder.addRenderer<ImmRenderer>(II->getValue());
+    return Error::success();
+  }
+
+  if (const auto *DI = dyn_cast<DefInit>(N.getLeafValue())) {
+    const Record *R = DI->getDef();
+
+    if (R->isSubClassOf("Register")) {
+      MIBuilder.addRenderer<AddRegisterRenderer>(Target, R);
+      return Error::success();
+    }
+
+    if (R->isSubClassOf("SubRegIndex")) {
+      const CodeGenSubRegIndex *SubRegIndex = CGRegs.getSubRegIdx(R);
+      MIBuilder.addRenderer<ImmRenderer>(SubRegIndex->EnumValue);
+      return Error::success();
+    }
+
+    // There are also RegisterClass / RegisterOperand operands of REG_SEQUENCE /
+    // COPY_TO_REGCLASS, but these instructions are currently handled elsewhere.
+  }
+
+  return failedImport("unrecognized node " + to_string(N));
+}
+
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
     const TreePatternNode &Dst) const {
@@ -1296,76 +1328,52 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     return InsertPt;
   }
 
-  if (!Dst.isLeaf()) {
-    if (Dst.getOperator()->isSubClassOf("SDNodeXForm")) {
-      auto &Child = Dst.getChild(0);
-      auto I = SDNodeXFormEquivs.find(Dst.getOperator());
-      if (I != SDNodeXFormEquivs.end()) {
-        const Record *XFormOpc = Dst.getOperator()->getValueAsDef("Opcode");
-        if (XFormOpc->getName() == "timm") {
-          // If this is a TargetConstant, there won't be a corresponding
-          // instruction to transform. Instead, this will refer directly to an
-          // operand in an instruction's operand list.
-          DstMIBuilder.addRenderer<CustomOperandRenderer>(*I->second,
-                                                          Child.getName());
-        } else {
-          DstMIBuilder.addRenderer<CustomRenderer>(*I->second, Child.getName());
-        }
-
-        return InsertPt;
-      }
-      return failedImport("SDNodeXForm " + Child.getName() +
-                          " has no custom renderer");
-    }
-
-    if (Dst.getOperator()->isSubClassOf("Instruction")) {
-      auto OpTy = getInstResultType(Dst, Target);
-      if (!OpTy)
-        return OpTy.takeError();
-
-      unsigned TempRegID = Rule.allocateTempRegID();
-      InsertPt =
-          Rule.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
-      DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
-
-      auto InsertPtOrError = createAndImportSubInstructionRenderer(
-          ++InsertPt, Rule, Dst, TempRegID);
-      if (auto Error = InsertPtOrError.takeError())
-        return std::move(Error);
-      return InsertPtOrError.get();
-    }
-
-    // Should not reach here.
-    return failedImport("unrecognized node " + llvm::to_string(Dst));
-  }
-
-  // It could be a specific immediate in which case we should just check for
-  // that immediate.
-  if (const IntInit *ChildIntInit = dyn_cast<IntInit>(Dst.getLeafValue())) {
-    DstMIBuilder.addRenderer<ImmRenderer>(ChildIntInit->getValue());
+  if (Dst.isLeaf()) {
+    if (Error Err = importLeafNodeRenderer(Rule, DstMIBuilder, Dst))
+      return Err;
     return InsertPt;
   }
 
-  // Otherwise, we're looking for a bog-standard RegisterClass operand.
-  if (auto *ChildDefInit = dyn_cast<DefInit>(Dst.getLeafValue())) {
-    auto *ChildRec = ChildDefInit->getDef();
+  if (Dst.getOperator()->isSubClassOf("SDNodeXForm")) {
+    auto &Child = Dst.getChild(0);
+    auto I = SDNodeXFormEquivs.find(Dst.getOperator());
+    if (I != SDNodeXFormEquivs.end()) {
+      const Record *XFormOpc = Dst.getOperator()->getValueAsDef("Opcode");
+      if (XFormOpc->getName() == "timm") {
+        // If this is a TargetConstant, there won't be a corresponding
+        // instruction to transform. Instead, this will refer directly to an
+        // operand in an instruction's operand list.
+        DstMIBuilder.addRenderer<CustomOperandRenderer>(*I->second,
+                                                        Child.getName());
+      } else {
+        DstMIBuilder.addRenderer<CustomRenderer>(*I->second, Child.getName());
+      }
 
-    if (ChildRec->isSubClassOf("Register")) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(Target, ChildRec);
       return InsertPt;
     }
-
-    if (ChildRec->isSubClassOf("SubRegIndex")) {
-      CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(ChildRec);
-      DstMIBuilder.addRenderer<ImmRenderer>(SubIdx->EnumValue);
-      return InsertPt;
-    }
-
-    return failedImport(
-        "Dst pattern child def is an unsupported tablegen class");
+    return failedImport("SDNodeXForm " + Child.getName() +
+                        " has no custom renderer");
   }
 
-  return failedImport("Dst pattern child is an unsupported kind");
+  if (Dst.getOperator()->isSubClassOf("Instruction")) {
+    auto OpTy = getInstResultType(Dst, Target);
+    if (!OpTy)
+      return OpTy.takeError();
+
+    unsigned TempRegID = Rule.allocateTempRegID();
+    InsertPt =
+        Rule.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+    DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
+
+    auto InsertPtOrError =
+        createAndImportSubInstructionRenderer(++InsertPt, Rule, Dst, TempRegID);
+    if (auto Error = InsertPtOrError.takeError())
+      return std::move(Error);
+    return InsertPtOrError.get();
+  }
+
+  // Should not reach here.
+  return failedImport("unrecognized node " + llvm::to_string(Dst));
 }
 
 /// Generates code that builds the resulting instruction(s) from the destination
