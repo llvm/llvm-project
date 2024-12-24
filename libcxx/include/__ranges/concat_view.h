@@ -12,9 +12,9 @@
 
 #include <__algorithm/ranges_find_if.h>
 #include <__assert>
+#include <__concepts/common_reference_with.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
-#include <__concepts/common_reference_with.h>
 #include <__concepts/copyable.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
@@ -26,10 +26,10 @@
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
+#include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/incrementable_traits.h>
 #include <__iterator/next.h>
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
@@ -38,15 +38,15 @@
 #include <__ranges/movable_box.h>
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
-#include <__ranges/view_interface.h>
 #include <__ranges/size.h>
+#include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_nothrow_convertible.h>
 #include <__type_traits/is_object.h>
-#include <__type_traits/maybe_const.h>
 #include <__type_traits/make_unsigned.h>
+#include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
@@ -608,8 +608,9 @@ namespace views {
 namespace __concat {
 struct __fn {
   template <class... _Views>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... views) const noexcept(
-      noexcept(concat_view(std::forward<_Views>(views)...))) -> decltype(concat_view(std::forward<_Views>(views)...)) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... views) const
+      noexcept(noexcept(concat_view(std::forward<_Views>(views)...)))
+          -> decltype(concat_view(std::forward<_Views>(views)...)) {
     return concat_view(std::forward<_Views>(views)...);
   }
 };
