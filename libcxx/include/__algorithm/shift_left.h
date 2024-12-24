@@ -13,7 +13,9 @@
 #include <__algorithm/move.h>
 #include <__assert>
 #include <__config>
+#include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__utility/move.h>
 #include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
