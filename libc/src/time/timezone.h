@@ -23,6 +23,9 @@ typedef struct {
     int64_t *tt_utoff;
     uint8_t *tt_isdst;
     uint8_t *tt_desigidx;
+
+    // additional fields
+    int64_t *offsets;
 } ttinfo;
 
 typedef struct {
@@ -33,9 +36,14 @@ typedef struct {
     uint64_t tzh_typecnt;
     uint64_t tzh_charcnt;
     ttinfo *ttinfo;
+
+    // additional fields
+    int64_t *tzh_timecnt_transitions;
+    int64_t *tzh_timecnt_indices;
+    unsigned char *tz;
 } tzset;
 
-tzset *get_tzset(char *timezone);
+tzset *get_tzset();
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
