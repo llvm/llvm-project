@@ -8871,7 +8871,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       return true;
 
     if (llvm::none_of(RD->friends(), [&](const FriendDecl *F) {
-          if (NamedDecl* Ffd = F->getFriendDecl())
+          if (NamedDecl *Ffd = F->getFriendDecl())
             return FD->getCanonicalDecl() == Ffd->getCanonicalDecl();
           return false;
         })) {
