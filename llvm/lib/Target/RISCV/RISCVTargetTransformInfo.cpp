@@ -398,6 +398,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       LegalVT = getTypeLegalizationCost(
                     FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
                     .second;
+      // Number of destination vectors after legalization:
       NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
     }
     if (NumOfDests.isValid() && NumOfDests > 1 &&
@@ -410,7 +411,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       unsigned LegalVTSize = LegalVT.getStoreSize();
       // Number of source vectors after legalization:
       unsigned NumOfSrcs = divideCeil(VecTySize, LegalVTSize);
-      // Number of destination vectors after legalization:
 
       auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(),
                                               LegalVT.getVectorNumElements());
