@@ -20008,11 +20008,10 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   return !(FlagMask & Val) || (AllowMask && !(FlagMask & ~Val));
 }
 
-bool Sema::ComputeBestEnumProperties(ASTContext &Context, bool isPacked,
-                                     unsigned NumNegativeBits,
-                                     unsigned NumPositiveBits,
-                                     QualType &BestType,
-                                     QualType &BestPromotionType) {
+bool Sema::ComputeBestEnumTypes(ASTContext &Context, bool isPacked,
+                                unsigned NumNegativeBits,
+                                unsigned NumPositiveBits, QualType &BestType,
+                                QualType &BestPromotionType) {
   unsigned IntWidth = Context.getTargetInfo().getIntWidth();
   unsigned CharWidth = Context.getTargetInfo().getCharWidth();
   unsigned ShortWidth = Context.getTargetInfo().getShortWidth();
@@ -20181,8 +20180,8 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     BestWidth = Context.getIntWidth(BestType);
   } else {
     bool EnumTooLarge =
-        ComputeBestEnumProperties(Context, Packed, NumNegativeBits,
-                                  NumPositiveBits, BestType, BestPromotionType);
+        ComputeBestEnumTypes(Context, Packed, NumNegativeBits, NumPositiveBits,
+                             BestType, BestPromotionType);
     BestWidth = Context.getIntWidth(BestType);
     if (EnumTooLarge)
       Diag(Enum->getLocation(), diag::ext_enum_too_large);
