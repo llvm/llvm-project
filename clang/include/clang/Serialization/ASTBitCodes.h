@@ -724,15 +724,20 @@ enum ASTRecordTypes {
   /// Record code for vtables to emit.
   VTABLES_TO_EMIT = 70,
 
-  /// Record code for the FunctionDecl to lambdas mapping. These lambdas have to
-  /// be loaded right after the function they belong to. It is required to have
-  /// canonical declaration for the lambda class from the same module as
-  /// enclosing function.
-  FUNCTION_DECL_TO_LAMBDAS_MAP = 71,
+  /// Record code for related declarations that have to be deserialized together
+  /// from the same module.
+  RELATED_DECLS_MAP = 71,
 
   /// Record code for Sema's vector of functions/blocks with effects to
   /// be verified.
   DECLS_WITH_EFFECTS_TO_VERIFY = 72,
+
+  /// Record code for updated specialization
+  UPDATE_SPECIALIZATION = 73,
+
+  CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
+
+  CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION = 75,
 };
 
 /// Record types used within a source manager block.
@@ -1502,6 +1507,12 @@ enum DeclCode {
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
 
+  // A decls specilization record.
+  DECL_SPECIALIZATIONS,
+
+  // A decls specilization record.
+  DECL_PARTIAL_SPECIALIZATIONS,
+
   DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
 };
 
@@ -2006,6 +2017,13 @@ enum StmtCode {
   STMT_OPENACC_LOOP_CONSTRUCT,
   STMT_OPENACC_COMBINED_CONSTRUCT,
   EXPR_OPENACC_ASTERISK_SIZE,
+  STMT_OPENACC_DATA_CONSTRUCT,
+  STMT_OPENACC_ENTER_DATA_CONSTRUCT,
+  STMT_OPENACC_EXIT_DATA_CONSTRUCT,
+  STMT_OPENACC_HOST_DATA_CONSTRUCT,
+  STMT_OPENACC_WAIT_CONSTRUCT,
+  STMT_OPENACC_INIT_CONSTRUCT,
+  STMT_OPENACC_SHUTDOWN_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,

@@ -79,7 +79,9 @@ public:
   }
 
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     StackOffset Offset, bool EmitCFI, unsigned CFIIndex) const;
+                     MachineFunction &MF, uint64_t Offset,
+                     uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
+                     uint64_t ProbeSize) const;
 
 protected:
   const RISCVSubtarget &STI;
@@ -88,9 +90,6 @@ protected:
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
-  void adjustStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                         int64_t Amount, MachineInstr::MIFlag Flag) const;
   void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,
                                    bool HasFP) const;
@@ -105,6 +104,9 @@ private:
 
   std::pair<int64_t, Align>
   assignRVVStackObjectOffsets(MachineFunction &MF) const;
+  // Replace a StackProbe stub (if any) with the actual probe code inline
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologueMBB) const override;
 };
 } // namespace llvm
 #endif

@@ -5,50 +5,49 @@
 define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; ARMV6-LABEL: mulodi_test:
 ; ARMV6:       @ %bb.0: @ %start
-; ARMV6-NEXT:    push {r4, r5, r6, lr}
-; ARMV6-NEXT:    umull r12, lr, r3, r0
-; ARMV6-NEXT:    mov r6, #0
-; ARMV6-NEXT:    umull r4, r5, r1, r2
-; ARMV6-NEXT:    umull r0, r2, r0, r2
-; ARMV6-NEXT:    add r4, r4, r12
-; ARMV6-NEXT:    adds r12, r2, r4
-; ARMV6-NEXT:    adc r2, r6, #0
+; ARMV6-NEXT:    push {r4, r5, r11, lr}
+; ARMV6-NEXT:    umull r12, lr, r1, r2
+; ARMV6-NEXT:    umull r4, r5, r3, r0
+; ARMV6-NEXT:    cmp lr, #0
+; ARMV6-NEXT:    movne lr, #1
 ; ARMV6-NEXT:    cmp r3, #0
 ; ARMV6-NEXT:    movne r3, #1
 ; ARMV6-NEXT:    cmp r1, #0
+; ARMV6-NEXT:    umull r0, r2, r0, r2
 ; ARMV6-NEXT:    movne r1, #1
-; ARMV6-NEXT:    cmp r5, #0
 ; ARMV6-NEXT:    and r1, r1, r3
-; ARMV6-NEXT:    movne r5, #1
-; ARMV6-NEXT:    cmp lr, #0
-; ARMV6-NEXT:    orr r1, r1, r5
-; ARMV6-NEXT:    movne lr, #1
+; ARMV6-NEXT:    cmp r5, #0
 ; ARMV6-NEXT:    orr r1, r1, lr
-; ARMV6-NEXT:    orr r2, r1, r2
-; ARMV6-NEXT:    mov r1, r12
-; ARMV6-NEXT:    pop {r4, r5, r6, pc}
+; ARMV6-NEXT:    movne r5, #1
+; ARMV6-NEXT:    orr r3, r1, r5
+; ARMV6-NEXT:    add r1, r12, r4
+; ARMV6-NEXT:    adds r1, r2, r1
+; ARMV6-NEXT:    mov r5, #0
+; ARMV6-NEXT:    adc r2, r5, #0
+; ARMV6-NEXT:    orr r2, r3, r2
+; ARMV6-NEXT:    pop {r4, r5, r11, pc}
 ;
 ; ARMV7-LABEL: mulodi_test:
 ; ARMV7:       @ %bb.0: @ %start
 ; ARMV7-NEXT:    push {r4, r5, r11, lr}
-; ARMV7-NEXT:    umull r12, lr, r1, r2
+; ARMV7-NEXT:    umull r12, lr, r3, r0
 ; ARMV7-NEXT:    cmp r3, #0
-; ARMV7-NEXT:    umull r4, r5, r3, r0
 ; ARMV7-NEXT:    movwne r3, #1
 ; ARMV7-NEXT:    cmp r1, #0
+; ARMV7-NEXT:    umull r0, r4, r0, r2
+; ARMV7-NEXT:    umull r2, r5, r1, r2
 ; ARMV7-NEXT:    movwne r1, #1
-; ARMV7-NEXT:    umull r0, r2, r0, r2
-; ARMV7-NEXT:    cmp lr, #0
 ; ARMV7-NEXT:    and r1, r1, r3
-; ARMV7-NEXT:    movwne lr, #1
 ; ARMV7-NEXT:    cmp r5, #0
-; ARMV7-NEXT:    orr r1, r1, lr
 ; ARMV7-NEXT:    movwne r5, #1
-; ARMV7-NEXT:    orr r3, r1, r5
-; ARMV7-NEXT:    add r1, r12, r4
-; ARMV7-NEXT:    mov r5, #0
-; ARMV7-NEXT:    adds r1, r2, r1
-; ARMV7-NEXT:    adc r2, r5, #0
+; ARMV7-NEXT:    cmp lr, #0
+; ARMV7-NEXT:    orr r1, r1, r5
+; ARMV7-NEXT:    movwne lr, #1
+; ARMV7-NEXT:    orr r3, r1, lr
+; ARMV7-NEXT:    add r1, r2, r12
+; ARMV7-NEXT:    mov r2, #0
+; ARMV7-NEXT:    adds r1, r4, r1
+; ARMV7-NEXT:    adc r2, r2, #0
 ; ARMV7-NEXT:    orr r2, r3, r2
 ; ARMV7-NEXT:    pop {r4, r5, r11, pc}
 start:

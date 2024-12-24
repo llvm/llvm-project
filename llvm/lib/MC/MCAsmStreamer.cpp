@@ -55,6 +55,8 @@ class MCAsmStreamer final : public MCStreamer {
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
 
+  bool EmittedSectionDirective = false;
+
   bool IsVerboseAsm = false;
   bool ShowInst = false;
   bool UseDwarfDirectory = false;
@@ -160,7 +162,8 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Section, uint32_t Subsection) override;
+  void switchSection(MCSection *Section, uint32_t Subsection) override;
+  bool popSection() override;
 
   void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,
                               bool KeepOriginalSym) override;
@@ -532,14 +535,27 @@ void MCAsmStreamer::emitExplicitComments() {
   ExplicitCommentToEmit.clear();
 }
 
-void MCAsmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  if (MCTargetStreamer *TS = getTargetStreamer()) {
-    TS->changeSection(getCurrentSection().first, Section, Subsection, OS);
-  } else {
-    Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
-                                  Subsection);
+void MCAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
+  MCSectionSubPair Cur = getCurrentSection();
+  if (!EmittedSectionDirective ||
+      MCSectionSubPair(Section, Subsection) != Cur) {
+    EmittedSectionDirective = true;
+    if (MCTargetStreamer *TS = getTargetStreamer()) {
+      TS->changeSection(Cur.first, Section, Subsection, OS);
+    } else {
+      Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
+                                    Subsection);
+    }
   }
-  MCStreamer::changeSection(Section, Subsection);
+  MCStreamer::switchSection(Section, Subsection);
+}
+
+bool MCAsmStreamer::popSection() {
+  if (!MCStreamer::popSection())
+    return false;
+  auto [Sec, Subsec] = getCurrentSection();
+  Sec->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS, Subsec);
+  return true;
 }
 
 void MCAsmStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
@@ -2428,10 +2444,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
-  assert(getCurrentSectionOnly() &&
-         "Cannot emit contents before setting section!");
-
-  if (!MAI->usesDwarfFileAndLocDirectives())
+  if (!MAI->usesDwarfFileAndLocDirectives() && CurFrag)
     // Now that a machine instruction has been assembled into this section, make
     // a line entry for any .loc directive that has been seen.
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
@@ -2546,7 +2559,7 @@ void MCAsmStreamer::finishImpl() {
   if (!Tables.empty()) {
     assert(Tables.size() == 1 && "asm output only supports one line table");
     if (auto *Label = Tables.begin()->second.getLabel()) {
-      switchSection(getContext().getObjectFileInfo()->getDwarfLineSection());
+      switchSection(getContext().getObjectFileInfo()->getDwarfLineSection(), 0);
       emitLabel(Label);
     }
   }

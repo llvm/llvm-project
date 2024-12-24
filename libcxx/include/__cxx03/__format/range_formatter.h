@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_RANGE_FORMATTER_H
-#define _LIBCPP___FORMAT_RANGE_FORMATTER_H
+#ifndef _LIBCPP___CXX03___FORMAT_RANGE_FORMATTER_H
+#define _LIBCPP___CXX03___FORMAT_RANGE_FORMATTER_H
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -261,4 +261,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_RANGE_FORMATTER_H
+#endif // _LIBCPP___CXX03___FORMAT_RANGE_FORMATTER_H

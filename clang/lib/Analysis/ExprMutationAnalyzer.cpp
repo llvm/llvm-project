@@ -55,25 +55,13 @@ static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
   // This is matched by `IgnoreDerivedToBase(canResolveToExpr(InnerMatcher))`
   // below.
   const auto ConditionalOperatorM = [Target](const Expr *E) {
-    if (const auto *OP = dyn_cast<ConditionalOperator>(E)) {
-      if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canExprResolveTo(TE, Target))
-          return true;
-      if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canExprResolveTo(FE, Target))
-          return true;
-    }
-    return false;
-  };
-
-  const auto ElvisOperator = [Target](const Expr *E) {
-    if (const auto *OP = dyn_cast<BinaryConditionalOperator>(E)) {
-      if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canExprResolveTo(TE, Target))
-          return true;
-      if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canExprResolveTo(FE, Target))
-          return true;
+    if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+      const auto *TE = CO->getTrueExpr()->IgnoreParens();
+      if (TE && canExprResolveTo(TE, Target))
+        return true;
+      const auto *FE = CO->getFalseExpr()->IgnoreParens();
+      if (FE && canExprResolveTo(FE, Target))
+        return true;
     }
     return false;
   };
@@ -81,8 +69,7 @@ static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
   const Expr *SourceExprP = Source->IgnoreParens();
   return IgnoreDerivedToBase(SourceExprP,
                              [&](const Expr *E) {
-                               return E == Target || ConditionalOperatorM(E) ||
-                                      ElvisOperator(E);
+                               return E == Target || ConditionalOperatorM(E);
                              }) ||
          EvalCommaExpr(SourceExprP, [&](const Expr *E) {
            return IgnoreDerivedToBase(

@@ -1271,7 +1271,8 @@ def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
 
-def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+let PrintMethod = "printBitOp3" in
+def BitOp3 : NamedIntOperand<"bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
@@ -1535,6 +1536,7 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
+def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1546,6 +1548,7 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
+def PackedF32InputMods : PackedFPInputMods<PackedF32InputModsMatchClass>;
 
 def MFMALdScaleModifierOp : TImmLeaf<i32, [{
   return isUInt<2>(Imm);
@@ -1696,7 +1699,10 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
-  RegisterOperand ret = !cond(!eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
+                              !eq(VT.Size, 512) : VOPDstOperand<VReg_512>,
+                              !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
                               !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
                               !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
@@ -1752,7 +1758,9 @@ class getSOPSrcForVT<ValueType VT> {
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
-  !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+  !cond(!eq(VT.Size, 512) : RegisterOperand<VReg_512>,
+        !eq(VT.Size, 192) : RegisterOperand<VReg_192>,
+        !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
@@ -1772,23 +1780,27 @@ class getSDWASrcForVT <ValueType VT> {
 // given VT.
 class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   RegisterOperand ret =
-  !cond(!eq(VT, f64)      : VSrc_f64,
-        !eq(VT, f32)      : VSrc_f32,
-        !eq(VT, f16)      : !if(IsTrue16, VSrcT_f16, VSrc_f16),
-        !eq(VT, bf16)     : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
-        !eq(VT, i16)      : !if(IsTrue16, VSrcT_b16, VSrc_b16),
-        !eq(VT, i1)       : SSrc_i1,
-        !eq(VT, v2f32)    : VSrc_v2f32,
-        !eq(VT, v2i32)    : VSrc_v2b32,
-        !eq(VT, v2f16)    : VSrc_v2f16,
-        !eq(VT, v2bf16)   : VSrc_v2bf16,
-        !eq(VT, v2i16)    : VSrc_v2b16,
-        !eq(VT, v4f16)    : AVSrc_64,
-        !eq(VT, v4bf16)   : AVSrc_64,
-        !eq(VT.Size, 128) : VRegSrc_128,
-        !eq(VT.Size, 96)  : VRegSrc_96,
-        !eq(VT.Size, 64)  : VSrc_b64,
-        1                 : VSrc_b32);
+  !cond(!eq(VT, f64)       : VSrc_f64,
+        !eq(VT, f32)       : VSrc_f32,
+        !eq(VT, f16)       : !if(IsTrue16, VSrcT_f16, VSrc_f16),
+        !eq(VT, bf16)      : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
+        !eq(VT, i16)       : !if(IsTrue16, VSrcT_b16, VSrc_b16),
+        !eq(VT, i1)        : SSrc_i1,
+        !eq(VT, v2f32)     : VSrc_v2f32,
+        !eq(VT, v2i32)     : VSrc_v2b32,
+        !eq(VT, v2f16)     : VSrc_v2f16,
+        !eq(VT, v2bf16)    : VSrc_v2bf16,
+        !eq(VT, v2i16)     : VSrc_v2b16,
+        !eq(VT, v4f16)     : AVSrc_64,
+        !eq(VT, v4bf16)    : AVSrc_64,
+        !eq(VT.Size, 1024) : VRegSrc_1024,
+        !eq(VT.Size, 512)  : VRegSrc_512,
+        !eq(VT.Size, 256)  : VRegSrc_256,
+        !eq(VT.Size, 192)  : VRegSrc_192,
+        !eq(VT.Size, 128)  : VRegSrc_128,
+        !eq(VT.Size, 96)   : VRegSrc_96,
+        !eq(VT.Size, 64)   : VSrc_b64,
+        1                  : VSrc_b32);
 }
 
 // Returns the vreg register class to use for sources of VOP3 instructions for the
@@ -2555,6 +2567,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
   field bit HasFP8DstByteSel = 0;
+  field bit HasFP4DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -2828,6 +2841,28 @@ def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=
 def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
 def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
+def VOP_V32F32_V6I32_F32 : VOPProfile <[v32f32, v6i32, f32, untyped]>;
+def VOP_V32F16_V6I32_F32 : VOPProfile <[v32f16, v6i32, f32, untyped]>;
+def VOP_V32BF16_V6I32_F32 : VOPProfile <[v32bf16, v6i32, f32, untyped]>;
+def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
+def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
+def VOP_V6I32_V16F32_V16F32_F32 : VOPProfile<[v6i32, v16f32, v16f32, f32]>;
+def VOP_V2F16_I32_F32 : VOPProfile<[v2f16, i32, f32, untyped]>;
+def VOP_V2I16_F32_F32_F32 : VOPProfile<[v2i16, f32, f32, f32]>;
+def VOP_V2I16_V2F16_F32 : VOPProfile<[v2i16, v2f16, f32, untyped]>;
+def VOP_V2I16_V2BF16_F32 : VOPProfile<[v2i16, v2bf16, f32, untyped]>;
+def VOP_I32_F32_F32_F32 : VOPProfile<[i32, f32, f32, f32]>;
+def VOP_I32_V2F16_F32_F32 : VOPProfile<[i32, v2f16, f32, f32]>;
+def VOP_I32_V2BF16_F32_F32: VOPProfile<[i32, v2bf16, f32, f32]>;
+def VOP_BF16_F32_I32 : VOPProfile<[bf16, f32, i32, untyped]>;
+def VOP_F16_F32_I32 : VOPProfile<[f16, f32, i32, untyped]>;
+def VOP_I32_BF16_I32_F32 : VOPProfile<[i32, bf16, i32, f32]>;
+def VOP_I32_F16_I32_F32 : VOPProfile<[i32, f16, i32, f32]>;
+def VOP_I32_F32_I32_F32 : VOPProfile<[i32, f32, i32, f32]>;
+
+def VOP_V6I32_V32BF16_I32_F32 : VOPProfile<[v6i32, v32bf16, i32, f32]>;
+def VOP_V6I32_V32F16_I32_F32 : VOPProfile<[v6i32, v32f16, i32, f32]>;
+def VOP_V6I32_V32F32_I32_F32 : VOPProfile<[v6i32, v32f32, i32, f32]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
@@ -2843,6 +2878,7 @@ def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
 def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 def VOP_I64_I64_I32_I64 : VOPProfile <[i64, i64, i32, i64]>;
 def VOP_V4I32_I64_I32_V4I32 : VOPProfile <[v4i32, i64, i32, v4i32]>;
+def VOP_I16_I32_I32_I32 : VOPProfile <[i16, i32, i32, i32]>;
 
 def VOP_F32_V2F16_V2F16_F32 : VOPProfile <[f32, v2f16, v2f16, f32]>;
 def VOP_I32_V2I16_V2I16_I32 : VOPProfile <[i32, v2i16, v2i16, i32]>;
@@ -3177,6 +3213,15 @@ def getMFMAEarlyClobberOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
+// Map from an mfma using VGPRs to one using AGPRs.
+def getMFMASrcCVDstAGPROp : InstrMapping {
+  let FilterClass = "MFMATable";
+  let RowFields = ["AGPROp"];
+  let ColFields = ["MFMAKind"];
+  let KeyCol = ["VGPR"];
+  let ValueCols = [["AGPR"]];
+}
+
 // Maps an v_cmp instruction to its v_cmpx equivalent.
 def getVCMPXOpFromVCMP : InstrMapping {
   let FilterClass = "VCMPVCMPXTable";
@@ -3196,13 +3241,22 @@ def getMFMA_F8F6F4_WithSize : GenericTable {
   let PrimaryKeyName = "getMFMA_F8F6F4_InstWithNumRegs" ;
 }
 
-def FP8DstByteSelTable : GenericTable {
+def isMFMA_F8F6F4Table : GenericTable {
+  let FilterClass = "MFMA_F8F6F4_WithSizeTable";
+  let CppTypeName = "MFMA_F8F6F4_Info";
+//  let Fields = [ "Opcode" ];
+  let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
+  let PrimaryKey = [ "Opcode" ];
+  let PrimaryKeyName = "isMFMA_F8F6F4" ;
+}
+
+def FP4FP8DstByteSelTable : GenericTable {
   let FilterClass = "VOP3_Pseudo";
-  let CppTypeName = "FP8DstByteSelInfo";
-  let Fields = ["Opcode", "HasFP8DstByteSel"];
+  let CppTypeName = "FP4FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel", "HasFP4DstByteSel"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getFP8DstByteSelHelper";
+  let PrimaryKeyName = "getFP4FP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

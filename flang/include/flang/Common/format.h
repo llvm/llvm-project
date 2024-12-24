@@ -10,7 +10,7 @@
 #define FORTRAN_COMMON_FORMAT_H_
 
 #include "enum-set.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Common/Fortran-consts.h"
 #include <cstring>
 
 // Define a FormatValidator class template to validate a format expression
