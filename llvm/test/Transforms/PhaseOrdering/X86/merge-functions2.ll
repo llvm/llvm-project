@@ -7,16 +7,13 @@ target triple = "x86_64-apple-macosx12.0.0"
 define i32 @f(i32 noundef %x) {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @f(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 8
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[SW_EPILOG:.*]]
-; CHECK:       [[SWITCH_LOOKUP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[X]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw [8 x i32], ptr @switch.table.g, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    br label %[[SW_EPILOG]]
-; CHECK:       [[SW_EPILOG]]:
-; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i8 -43, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[SWITCH_DOWNSHIFT]], 1
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext nneg i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[X_ADDR_0:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_TRUNCATEDINT_CAST]], i32 0
 ; CHECK-NEXT:    ret i32 [[X_ADDR_0]]
 ;
 entry:

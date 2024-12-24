@@ -5,8 +5,8 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 ;.
-; CHECK: @switch.table.switch_to_lookup_i64 = private unnamed_addr constant [3 x i8] c"\03\01\02", align 1
-; CHECK: @switch.table.switch_to_lookup_i128 = private unnamed_addr constant [3 x i8] c"\03\01\02", align 1
+; CHECK: @switch.table.switch.truncated.switch_to_lookup_i64 = private unnamed_addr constant [3 x i2] [i2 -1, i2 1, i2 -2], align 1
+; CHECK: @switch.table.switch.truncated.switch_to_lookup_i128 = private unnamed_addr constant [3 x i2] [i2 -1, i2 1, i2 -2], align 1
 ;.
 define i8 @switch_to_lookup_i64(i64 %x){
 ; CHECK-LABEL: @switch_to_lookup_i64(
@@ -17,8 +17,9 @@ define i8 @switch_to_lookup_i64(i64 %x){
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i8 [ [[SWITCH_LOAD:%.*]], [[SWITCH_LOOKUP]] ], [ 10, [[START:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i8], ptr @switch.table.switch_to_lookup_i64, i32 0, i64 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD]] = load i8, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i2], ptr @switch.table.switch.truncated.switch_to_lookup_i64, i32 0, i64 [[X]]
+; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i2, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_LOAD]] = zext i2 [[SWITCH_LOAD1]] to i8
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 ; INLINE-LABEL: @switch_to_lookup_i64(
@@ -61,8 +62,9 @@ define i8 @switch_to_lookup_i128(i128 %x){
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i8 [ [[SWITCH_LOAD:%.*]], [[SWITCH_LOOKUP]] ], [ 10, [[START:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i8], ptr @switch.table.switch_to_lookup_i128, i32 0, i128 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD]] = load i8, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i2], ptr @switch.table.switch.truncated.switch_to_lookup_i128, i32 0, i128 [[X]]
+; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i2, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_LOAD]] = zext i2 [[SWITCH_LOAD1]] to i8
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 ; INLINE-LABEL: @switch_to_lookup_i128(

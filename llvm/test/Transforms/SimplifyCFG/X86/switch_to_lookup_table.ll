@@ -27,18 +27,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.char = private unnamed_addr constant [9 x i8] c"7{\00\FF\1B>\01!T", align 1
 ; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000], align 4
 ; CHECK: @switch.table.foostring = private unnamed_addr constant [4 x ptr] [ptr @.str, ptr @.str1, ptr @.str2, ptr @.str3], align 8
-; CHECK: @switch.table.earlyreturncrash = private unnamed_addr constant [4 x i32] [i32 42, i32 9, i32 88, i32 5], align 4
-; CHECK: @switch.table.earlyreturncrash.1 = private unnamed_addr constant [4 x i32] [i32 3, i32 4, i32 1, i32 5], align 4
-; CHECK: @switch.table.large = private unnamed_addr constant [199 x i32] [i32 1, i32 4, i32 9, i32 16, i32 25, i32 36, i32 49, i32 64, i32 81, i32 100, i32 121, i32 144, i32 169, i32 196, i32 225, i32 256, i32 289, i32 342, i32 361, i32 400, i32 441, i32 484, i32 529, i32 576, i32 625, i32 676, i32 729, i32 784, i32 841, i32 900, i32 961, i32 1024, i32 1089, i32 1156, i32 1260, i32 1296, i32 1369, i32 1444, i32 1521, i32 1600, i32 1681, i32 1764, i32 1849, i32 1980, i32 2025, i32 2116, i32 2209, i32 2304, i32 2401, i32 2500, i32 2601, i32 2704, i32 2809, i32 2970, i32 3025, i32 3136, i32 3249, i32 3364, i32 3481, i32 3600, i32 3721, i32 3844, i32 3969, i32 4096, i32 4225, i32 4356, i32 4489, i32 4624, i32 4761, i32 4900, i32 5112, i32 5184, i32 5329, i32 5476, i32 5625, i32 5776, i32 5929, i32 6084, i32 6241, i32 6400, i32 6561, i32 6724, i32 6889, i32 7056, i32 7225, i32 7396, i32 7569, i32 7744, i32 7921, i32 8100, i32 8281, i32 8464, i32 8649, i32 8836, i32 9025, i32 9216, i32 9409, i32 9604, i32 9801, i32 10000, i32 10201, i32 10404, i32 10609, i32 10816, i32 11025, i32 11236, i32 11449, i32 11664, i32 11881, i32 12100, i32 12321, i32 12544, i32 12769, i32 12996, i32 13225, i32 13456, i32 13689, i32 13924, i32 14161, i32 14400, i32 14641, i32 14884, i32 15129, i32 15376, i32 15625, i32 15876, i32 16129, i32 16384, i32 16641, i32 16900, i32 17161, i32 17424, i32 17689, i32 17956, i32 18225, i32 18496, i32 18769, i32 19044, i32 19321, i32 19600, i32 19881, i32 20164, i32 20449, i32 20736, i32 21025, i32 21316, i32 21609, i32 21904, i32 22201, i32 22500, i32 22801, i32 23104, i32 23409, i32 23716, i32 24025, i32 24336, i32 24649, i32 24964, i32 25281, i32 25600, i32 25921, i32 26244, i32 26569, i32 26896, i32 27225, i32 27556, i32 27889, i32 28224, i32 28561, i32 28900, i32 29241, i32 29584, i32 29929, i32 30276, i32 30625, i32 30976, i32 31329, i32 31684, i32 32041, i32 32400, i32 32761, i32 33124, i32 33489, i32 33856, i32 34225, i32 34596, i32 34969, i32 35344, i32 35721, i32 36100, i32 36481, i32 36864, i32 37249, i32 37636, i32 38025, i32 38416, i32 38809, i32 39204, i32 39601], align 4
+; CHECK: @switch.table.switch.truncated.large = private unnamed_addr constant [199 x i16] [i16 1, i16 4, i16 9, i16 16, i16 25, i16 36, i16 49, i16 64, i16 81, i16 100, i16 121, i16 144, i16 169, i16 196, i16 225, i16 256, i16 289, i16 342, i16 361, i16 400, i16 441, i16 484, i16 529, i16 576, i16 625, i16 676, i16 729, i16 784, i16 841, i16 900, i16 961, i16 1024, i16 1089, i16 1156, i16 1260, i16 1296, i16 1369, i16 1444, i16 1521, i16 1600, i16 1681, i16 1764, i16 1849, i16 1980, i16 2025, i16 2116, i16 2209, i16 2304, i16 2401, i16 2500, i16 2601, i16 2704, i16 2809, i16 2970, i16 3025, i16 3136, i16 3249, i16 3364, i16 3481, i16 3600, i16 3721, i16 3844, i16 3969, i16 4096, i16 4225, i16 4356, i16 4489, i16 4624, i16 4761, i16 4900, i16 5112, i16 5184, i16 5329, i16 5476, i16 5625, i16 5776, i16 5929, i16 6084, i16 6241, i16 6400, i16 6561, i16 6724, i16 6889, i16 7056, i16 7225, i16 7396, i16 7569, i16 7744, i16 7921, i16 8100, i16 8281, i16 8464, i16 8649, i16 8836, i16 9025, i16 9216, i16 9409, i16 9604, i16 9801, i16 10000, i16 10201, i16 10404, i16 10609, i16 10816, i16 11025, i16 11236, i16 11449, i16 11664, i16 11881, i16 12100, i16 12321, i16 12544, i16 12769, i16 12996, i16 13225, i16 13456, i16 13689, i16 13924, i16 14161, i16 14400, i16 14641, i16 14884, i16 15129, i16 15376, i16 15625, i16 15876, i16 16129, i16 16384, i16 16641, i16 16900, i16 17161, i16 17424, i16 17689, i16 17956, i16 18225, i16 18496, i16 18769, i16 19044, i16 19321, i16 19600, i16 19881, i16 20164, i16 20449, i16 20736, i16 21025, i16 21316, i16 21609, i16 21904, i16 22201, i16 22500, i16 22801, i16 23104, i16 23409, i16 23716, i16 24025, i16 24336, i16 24649, i16 24964, i16 25281, i16 25600, i16 25921, i16 26244, i16 26569, i16 26896, i16 27225, i16 27556, i16 27889, i16 28224, i16 28561, i16 28900, i16 29241, i16 29584, i16 29929, i16 30276, i16 30625, i16 30976, i16 31329, i16 31684, i16 32041, i16 32400, i16 32761, i16 -32412, i16 -32047, i16 -31680, i16 -31311, i16 -30940, i16 -30567, i16 -30192, i16 -29815, i16 -29436, i16 -29055, i16 -28672, i16 -28287, i16 -27900, i16 -27511, i16 -27120, i16 -26727, i16 -26332, i16 -25935], align 2
 ; CHECK: @switch.table.cprop = private unnamed_addr constant [7 x i32] [i32 5, i32 42, i32 126, i32 -452, i32 128, i32 6, i32 7], align 4
 ; CHECK: @switch.table.unreachable_case = private unnamed_addr constant [9 x i32] [i32 0, i32 0, i32 0, i32 2, i32 -1, i32 1, i32 1, i32 1, i32 1], align 4
-; CHECK: @switch.table.unreachable_default = private unnamed_addr constant [4 x i32] [i32 42, i32 52, i32 1, i32 2], align 4
 ; CHECK: @switch.table.nodefaultnoholes = private unnamed_addr constant [4 x i32] [i32 55, i32 123, i32 0, i32 -1], align 4
 ; CHECK: @switch.table.nodefaultwithholes = private unnamed_addr constant [6 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 55, i32 -1], align 4
-; CHECK: @switch.table.threecases = private unnamed_addr constant [3 x i32] [i32 10, i32 7, i32 5], align 4
-; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 1, i32 1], align 4
-; CHECK: @switch.table.signed_overflow1 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 1111, i32 2222], align 4
-; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 2222, i32 2222], align 4
 ;.
 define i32 @f(i32 %c) {
 ; CHECK-LABEL: @f(
@@ -218,14 +211,19 @@ define i32 @earlyreturncrash(i32 %x)  {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 4
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[SW_EPILOG:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.earlyreturncrash, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    [[SWITCH_GEP1:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.earlyreturncrash.1, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD2:%.*]] = load i32, ptr [[SWITCH_GEP1]], align 4
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i32 [[X]], 8
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 89655594, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i8 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT1:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 4
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT2:%.*]] = lshr i16 20803, [[SWITCH_SHIFTAMT1]]
+; CHECK-NEXT:    [[SWITCH_MASKED3:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT2]] to i4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST4:%.*]] = zext i4 [[SWITCH_MASKED3]] to i32
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ [[SWITCH_LOAD2]], [[SWITCH_LOOKUP]] ], [ 10, [[ENTRY]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[SWITCH_TRUNCATEDINT_CAST]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ [[SWITCH_TRUNCATEDINT_CAST4]], [[SWITCH_LOOKUP]] ], [ 10, [[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[A_0]]
 ;
 entry:
@@ -401,11 +399,12 @@ define i32 @large(i32 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 199
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [199 x i32], ptr @switch.table.large, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [199 x i16], ptr @switch.table.switch.truncated.large, i32 0, i32 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i16, ptr [[SWITCH_GEP]], align 2
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i16 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SWITCH_TRUNCATEDINT_CAST]], [[SWITCH_LOOKUP]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -917,9 +916,11 @@ return:
 define i32 @unreachable_default(i32 %x)  {
 ; CHECK-LABEL: @unreachable_default(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.unreachable_default, i32 0, i32 [[X:%.*]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 33633322, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i8 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_CAST]]
 ;
 entry:
   switch i32 %x, label %default [
@@ -1098,13 +1099,12 @@ define i32 @threecases(i32 %c) {
 ; CHECK-LABEL: @threecases(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[C:%.*]], 3
-; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
-; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr @switch.table.threecases, i32 0, i32 [[C]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[C]] to i12
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i12 [[SWITCH_CAST]], 4
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i12 1402, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i12 [[SWITCH_DOWNSHIFT]] to i4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i4 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_TRUNCATEDINT_CAST]], i32 3
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
@@ -1557,14 +1557,12 @@ define i32 @covered_switch_with_bit_tests(i3) {
 ; CHECK-NEXT:    [[SWITCH_MASKINDEX:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i8
 ; CHECK-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i8 -61, [[SWITCH_MASKINDEX]]
 ; CHECK-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i8 [[SWITCH_SHIFTED]] to i1
-; CHECK-NEXT:    br i1 [[SWITCH_LOBIT]], label [[SWITCH_LOOKUP:%.*]], label [[L6:%.*]]
-; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i4
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.covered_switch_with_bit_tests, i32 0, i4 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    br label [[L6]]
-; CHECK:       l6:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i16
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 2
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 23210, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i2
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i2 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[SWITCH_LOBIT]], i32 [[SWITCH_TRUNCATEDINT_CAST]], i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -1712,10 +1710,12 @@ define i32 @signed_overflow1(i8 %n) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
-; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.signed_overflow1, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i64 [[SWITCH_CAST]], 16
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i64 625442170250988805, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i64 [[SWITCH_DOWNSHIFT]] to i16
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i16 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_CAST]]
 ;
 start:
   %trunc = trunc i8 %n to i2
@@ -1748,10 +1748,12 @@ define i32 @signed_overflow2(i8 %n) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
-; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.signed_overflow2, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i64 [[SWITCH_CAST]], 16
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i64 625446941959654661, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i64 [[SWITCH_DOWNSHIFT]] to i16
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i16 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_CAST]]
 ;
 start:
   %trunc = trunc i8 %n to i2
@@ -2183,4 +2185,102 @@ sw.default:                                       ; preds = %entry
 return:                                           ; preds = %sw.default, %entry, %entry, %entry
   %retval.0 = phi { i8, i8 } [ undef, %entry ], [ undef, %entry ], [ undef, %entry ], [ %1, %sw.default ]
   ret { i8, i8 } %retval.0
+}
+
+define i32 @truncatedint_shift_mask(i32 %c) {
+; CHECK-LABEL: @truncatedint_shift_mask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[C:%.*]] to i16
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 4
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -16523, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i4 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_SHIFT:%.*]] = shl nuw nsw i32 [[SWITCH_TRUNCATEDINT_CAST]], 3
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_MASK:%.*]] = or i32 [[SWITCH_TRUNCATEDINT_SHIFT]], 33538
+; CHECK-NEXT:    ret i32 [[SWITCH_TRUNCATEDINT_MASK]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %bb3
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+
+return:
+  %x = phi i32 [ u0x832A, %bb0 ], [ u0x833A, %bb1 ], [ u0x837A, %bb2 ], [ u0x835A, %bb3 ]
+  ret i32 %x
+}
+
+define i32 @truncatedint_shift_nsw(i32 %c) {
+; CHECK-LABEL: @truncatedint_shift_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[C:%.*]] to i20
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i20 [[SWITCH_CAST]], 4
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i20 -424142, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i20 [[SWITCH_DOWNSHIFT]] to i4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i4 [[SWITCH_MASKED]] to i32
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_SHIFT:%.*]] = shl nuw nsw i32 [[SWITCH_TRUNCATEDINT_CAST]], 12
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = or i32 [[SWITCH_TRUNCATEDINT_SHIFT]], 291
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %bb3
+  i32 4, label %bb4
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+bb4: br label %return
+
+return:
+  %x = phi i32 [ u0x2123, %bb0 ], [ u0x3123, %bb1 ], [ u0x7123, %bb2 ], [ u0x8123, %bb3 ], [ u0x9123, %bb4 ]
+  ret i32 %x
+}
+
+; Same as @truncatedint_shift_nsw, but the return type is i16 so the NSW flag shouldn't be set on shl
+define i16 @truncatedint_shift_not_nsw(i32 %c) {
+; CHECK-LABEL: @truncatedint_shift_not_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[C:%.*]] to i20
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i20 [[SWITCH_CAST]], 4
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i20 -424142, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i20 [[SWITCH_DOWNSHIFT]] to i4
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_CAST:%.*]] = zext i4 [[SWITCH_MASKED]] to i16
+; CHECK-NEXT:    [[SWITCH_TRUNCATEDINT_SHIFT:%.*]] = shl nuw i16 [[SWITCH_TRUNCATEDINT_CAST]], 12
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = or i16 [[SWITCH_TRUNCATEDINT_SHIFT]], 291
+; CHECK-NEXT:    ret i16 [[SWITCH_LOAD]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %bb3
+  i32 4, label %bb4
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+bb4: br label %return
+
+return:
+  %x = phi i16 [ u0x2123, %bb0 ], [ u0x3123, %bb1 ], [ u0x7123, %bb2 ], [ u0x8123, %bb3 ], [ u0x9123, %bb4 ]
+  ret i16 %x
 }
