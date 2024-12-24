@@ -1576,11 +1576,9 @@ Currently, only the following parameter attributes are defined:
 ``negated``
     The function parameter marked with this attribute is negated from
     its opposite number by the frontend like Clang. The middle end or
-    backend should convert it back if possible. For example, `c-a*b`
-    is different with `c+(-a)*b`. Since we have only `fmuladd`,
-    this attribute on `a` is to mark that we are working on `c-a*b`.
-    So that we can convert `c+(-a)*b` to `fmsub` instruction
-    or `fmul`/`fsub`.
+    backend should convert it back if possible. For example if -(a*b)
+    is converted to (-a)*b, the arg0 of `fmul` instruction should be
+    marked with `negated` attribute.
 
 ``alignstack(<n>)``
     This indicates the alignment that should be considered by the backend when
