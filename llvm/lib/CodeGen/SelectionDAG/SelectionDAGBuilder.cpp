@@ -8360,28 +8360,10 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     // Break fmuladd into fmul and fadd.
     if (TM.Options.AllowFPOpFusion == FPOpFusion::Strict ||
         !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
-      auto PrevNode = FPI.getPrevNode();
-      bool convertToFMULSUB = false;
-      if (PrevNode && PrevNode->getOpcode() == Instruction::FNeg) {
-        if (PrevNode->getName() == FPI.getOperand(0)->getName() &&
-            FPI.getAttributes().getParamAttrs(0).hasAttribute(
-                Attribute::Negated)) {
-          Opers[1] = DAG.getNode(ISD::FNEG, sdl, VT, Opers[1]).getValue(0);
-          convertToFMULSUB = true;
-        } else if (PrevNode->getName() == FPI.getOperand(1)->getName() &&
-                   FPI.getAttributes().getParamAttrs(1).hasAttribute(
-                       Attribute::Negated)) {
-          Opers[2] = DAG.getNode(ISD::FNEG, sdl, VT, Opers[2]).getValue(0);
-          convertToFMULSUB = true;
-        }
-      }
       Opers.pop_back();
       SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers, Flags);
       pushOutChain(Mul, EB);
-      if (convertToFMULSUB)
-        Opcode = ISD::STRICT_FSUB;
-      else
-        Opcode = ISD::STRICT_FADD;
+      Opcode = ISD::STRICT_FADD;
       Opers.clear();
       Opers.push_back(Mul.getValue(1));
       Opers.push_back(Mul.getValue(0));
