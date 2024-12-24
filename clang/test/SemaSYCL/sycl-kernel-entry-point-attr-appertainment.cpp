@@ -78,7 +78,7 @@ struct S6 {
   static void ok6();
 };
 
-// Dependent friend function.
+// Dependent hidden friend definition.
 template<typename KNT>
 struct S7 {
   [[clang::sycl_kernel_entry_point(KNT)]]
@@ -88,24 +88,35 @@ void test_ok7() {
   ok7(S7<KN<7>>{});
 }
 
+// Non-dependent hidden friend definition.
+struct S8Base {};
+template<typename>
+struct S8 : S8Base {
+  [[clang::sycl_kernel_entry_point(KN<8>)]]
+  friend void ok8(const S8Base&) {}
+};
+void test_ok8() {
+  ok8(S8<int>{});
+}
+
 // The sycl_kernel_entry_point attribute must match across declarations and
 // cannot be added for the first time after a definition.
-[[clang::sycl_kernel_entry_point(KN<8>)]]
-void ok8();
-[[clang::sycl_kernel_entry_point(KN<8>)]]
-void ok8();
 [[clang::sycl_kernel_entry_point(KN<9>)]]
 void ok9();
-void ok9() {}
-void ok10();
+[[clang::sycl_kernel_entry_point(KN<9>)]]
+void ok9();
 [[clang::sycl_kernel_entry_point(KN<10>)]]
+void ok10();
 void ok10() {}
+void ok11();
+[[clang::sycl_kernel_entry_point(KN<11>)]]
+void ok11() {}
 
 using VOID = void;
-[[clang::sycl_kernel_entry_point(KN<11>)]]
-VOID ok11();
 [[clang::sycl_kernel_entry_point(KN<12>)]]
-const void ok12();
+VOID ok12();
+[[clang::sycl_kernel_entry_point(KN<13>)]]
+const void ok13();
 
 
 ////////////////////////////////////////////////////////////////////////////////

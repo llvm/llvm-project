@@ -98,5 +98,21 @@ template<int>
 struct B17 {
   // expected-error@+1 {{'int' is not a valid SYCL kernel name type; a non-union class type is required}}
   [[clang::sycl_kernel_entry_point(int)]]
-  static void bad_17();
+  static void bad17();
 };
+
+template<int>
+struct B18 {
+  // expected-error@+1 {{'int' is not a valid SYCL kernel name type; a non-union class type is required}}
+  [[clang::sycl_kernel_entry_point(int)]]
+  friend void bad18() {}
+};
+
+template<typename KNT>
+struct B19 {
+  // expected-error@+1 {{'int' is not a valid SYCL kernel name type; a non-union class type is required}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  friend void bad19() {}
+};
+// expected-note@+1 {{in instantiation of template class 'B19<int>' requested here}}
+B19<int> b19;
