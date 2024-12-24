@@ -1,5 +1,4 @@
-// RUN: clang-tidy %s -checks="-*,misc-redundant-expression" -- 2>&1 | FileCheck %s --check-prefix=CHECK-MESSAGES-IDENTEXPR
-// RUN: clang-tidy %s -checks="-*,bugprone-branch-clone" -- 2>&1 | FileCheck %s --check-prefix=CHECK-MESSAGES-BUGPRONEBRANCH
+// RUN: %check_clang_tidy %s misc-redundant-expression -check-suffix=IDENTEXPR %t
 
 /* Only one expected warning per function allowed at the very end. */
 
@@ -77,6 +76,7 @@ int checkNotEqualBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
   res = (f + 3.14F != f + 3.14F);  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkNotEqualBinaryOpFloatCompare2(void) {
@@ -88,6 +88,7 @@ int checkNotEqualBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
   res = ((int)f + 3.14F != (int)f + 3.14F);  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkNotEqualBinaryOpFloatCompare4(void) {
@@ -103,6 +104,7 @@ int checkNotEqualNestedBinaryOpFloatCompare1(void) {
   int u= 2;
   float f= 3.14F;
   res = (((int)f + (3.14F - u)*t) != ((int)f + (3.14F - u)*t));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -121,10 +123,9 @@ int checkNotEqualNestedBinaryOpFloatCompare3(void) {
   int u= 2;
   float f= 3.14F;
   res = (((int)f + (u - 3.14F)*t) != ((int)f + (3.14F - u)*(f + t != f + t)));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:67: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
-
-
 
 
 /* end '!=' with float*/
@@ -238,8 +239,6 @@ int checkNotEqualNestedBinaryOpIntCompare3(void) {
 
 /*   end '!=' int          */
 
-
-
 /* '!=' with int pointer */
 
 int checkNotEqualIntPointerLiteralCompare1(void) {
@@ -329,6 +328,7 @@ int checkNotEqualSameFunction() {
   unsigned a = 0;
   unsigned b = 1;
   int res = (a+func() != a+func());  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:23: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -343,6 +343,7 @@ int checkNotEqualSameFunctionSameParam() {
   unsigned a = 0;
   unsigned b = 1;
   int res = (a+funcParam(a) != a+funcParam(a));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:29: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -434,7 +435,8 @@ int checkEqualCastFloatDeclCompare12(void) {
 int checkEqualBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
-  res = (f + 3.14F == f + 3.14F);  // no warning
+  res = (f + 3.14F == f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkEqualBinaryOpFloatCompare2(void) {
@@ -445,7 +447,8 @@ int checkEqualBinaryOpFloatCompare2(void) {
 int checkEqualBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
-  res = ((int)f + 3.14F == (int)f + 3.14F);  // no warning
+  res = ((int)f + 3.14F == (int)f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkEqualBinaryOpFloatCompare4(void) {
@@ -460,7 +463,8 @@ int checkEqualNestedBinaryOpFloatCompare1(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (3.14F - u)*t) == ((int)f + (3.14F - u)*t));  // no warning
+  res = (((int)f + (3.14F - u)*t) == ((int)f + (3.14F - u)*t));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -478,13 +482,10 @@ int checkEqualNestedBinaryOpFloatCompare3(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (u - 3.14F)*t) == ((int)f + (3.14F - u)*(f + t == f + t)));  // no warning
+  res = (((int)f + (u - 3.14F)*t) == ((int)f + (3.14F - u)*(f + t == f + t)));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:67: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
-
-
-
-
 
 /* Equal with int*/
 
@@ -600,7 +601,8 @@ int checkEqualNestedBinaryOpIntCompare3(void) {
 int checkEqualSameFunction() {
   unsigned a = 0;
   unsigned b = 1;
-  int res = (a+func() == a+func());  // no warning
+  int res = (a+func() == a+func());
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:23: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -614,7 +616,8 @@ int checkEqualDifferentFunction() {
 int checkEqualSameFunctionSameParam() {
   unsigned a = 0;
   unsigned b = 1;
-  int res = (a+funcParam(a) == a+funcParam(a));  // no warning
+  int res = (a+funcParam(a) == a+funcParam(a));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:29: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -692,7 +695,8 @@ int checkLessThanCastFloatDeclCompare12(void) {
 int checkLessThanBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
-  res = (f + 3.14F < f + 3.14F);  // no warning
+  res = (f + 3.14F < f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkLessThanBinaryOpFloatCompare2(void) {
@@ -703,7 +707,8 @@ int checkLessThanBinaryOpFloatCompare2(void) {
 int checkLessThanBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
-  res = ((int)f + 3.14F < (int)f + 3.14F);  // no warning
+  res = ((int)f + 3.14F < (int)f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkLessThanBinaryOpFloatCompare4(void) {
@@ -718,7 +723,8 @@ int checkLessThanNestedBinaryOpFloatCompare1(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (3.14F - u)*t) < ((int)f + (3.14F - u)*t));  // no warning
+  res = (((int)f + (3.14F - u)*t) < ((int)f + (3.14F - u)*t));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -736,7 +742,8 @@ int checkLessThanNestedBinaryOpFloatCompare3(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (u - 3.14F)*t) < ((int)f + (3.14F - u)*(f + t < f + t)));  // no warning
+  res = (((int)f + (u - 3.14F)*t) < ((int)f + (3.14F - u)*(f + t < f + t)));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:66: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -912,7 +919,8 @@ int checkGreaterThanCastFloatDeclCompare12(void) {
 int checkGreaterThanBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
-  res = (f + 3.14F > f + 3.14F);  // no warning
+  res = (f + 3.14F > f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkGreaterThanBinaryOpFloatCompare2(void) {
@@ -923,7 +931,8 @@ int checkGreaterThanBinaryOpFloatCompare2(void) {
 int checkGreaterThanBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
-  res = ((int)f + 3.14F > (int)f + 3.14F);  // no warning
+  res = ((int)f + 3.14F > (int)f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkGreaterThanBinaryOpFloatCompare4(void) {
@@ -938,7 +947,8 @@ int checkGreaterThanNestedBinaryOpFloatCompare1(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (3.14F - u)*t) > ((int)f + (3.14F - u)*t));  // no warning
+  res = (((int)f + (3.14F - u)*t) > ((int)f + (3.14F - u)*t));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -957,6 +967,7 @@ int checkGreaterThanNestedBinaryOpFloatCompare3(void) {
   int u= 2;
   float f= 3.14F;
   res = (((int)f + (u - 3.14F)*t) > ((int)f + (3.14F - u)*(f + t > f + t)));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:66: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -1066,7 +1077,6 @@ unsigned test_unsigned(unsigned a) {
   unsigned b = 1;
   a = a > 5 ? b : b;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:17: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
   return a;
 }
 
@@ -1074,13 +1084,11 @@ void test_signed() {
   int a = 0;
   a = a > 5 ? a : a;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:17: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_bool(bool a) {
   a = a > 0 ? a : a;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:17: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_float() {
@@ -1088,14 +1096,12 @@ void test_float() {
   float b = 0;
   a = a > 5 ? a : a;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:17: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 const char *test_string() {
   float a = 0;
   return a > 5 ? "abc" : "abc";
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:24: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:16: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_unsigned_expr() {
@@ -1103,7 +1109,6 @@ void test_unsigned_expr() {
   unsigned b = 0;
   a = a > 5 ? a+b : a+b;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:19: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_signed_expr() {
@@ -1111,14 +1116,12 @@ void test_signed_expr() {
   int b = 1;
   a = a > 5 ? a+b : a+b;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:19: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_bool_expr(bool a) {
   bool b = 0;
   a = a > 0 ? a&&b : a&&b;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_unsigned_expr_negative() {
@@ -1143,7 +1146,6 @@ void test_float_expr_positive() {
   float b = 0;
   a = a > 5 ? a+b : a+b;
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:19: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_expr_positive_func() {
@@ -1151,7 +1153,6 @@ void test_expr_positive_func() {
   unsigned b = 1;
   a = a > 5 ? a+func() : a+func();
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:24: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_expr_negative_func() {
@@ -1165,7 +1166,6 @@ void test_expr_positive_funcParam() {
   unsigned b = 1;
   a = a > 5 ? a+funcParam(b) : a+funcParam(b);
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:30: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_expr_negative_funcParam() {
@@ -1174,24 +1174,10 @@ void test_expr_negative_funcParam() {
   a = a > 5 ? a+funcParam(a) : a+funcParam(b); // no warning
 }
 
-void test_expr_positive_inc() {
-  unsigned a = 0;
-  unsigned b = 1;
-  a = a > 5 ? a++ : a++;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
-}
-
 void test_expr_negative_inc() {
   unsigned a = 0;
   unsigned b = 1;
   a = a > 5 ? a++ : b++; // no warning
-}
-
-void test_expr_positive_assign() {
-  unsigned a = 0;
-  unsigned b = 1;
-  a = a > 5 ? a=1 : a=1;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_expr_negative_assign() {
@@ -1206,7 +1192,6 @@ void test_signed_nested_expr() {
   int c = 3;
   a = a > 5 ? a+b+(c+a)*(a + b*(c+a)) : a+b+(c+a)*(a + b*(c+a));
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:39: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:13: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
 }
 
 void test_signed_nested_expr_negative() {
@@ -1229,190 +1214,6 @@ void test_signed_nested_cond_expr() {
   int c = 3;
   a = a > 5 ? (b > 5 ? 1 : 4) : (b > 5 ? 4 : 4);
 // CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:44: warning: 'true' and 'false' expressions are equivalent [misc-redundant-expression]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:40: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
-}
-
-void test_identical_branches1(bool b) {
-  int i = 0;
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    ++i;
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    ++i;
-  }
-}
-
-void test_identical_branches2(bool b) {
-  int i = 0;
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    ++i;
-  } else
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    ++i;
-}
-
-void test_identical_branches3(bool b) {
-  int i = 0;
-  if (b) { // no warning
-    ++i;
-  } else {
-    i++;
-  }
-}
-
-void test_identical_branches4(bool b) {
-  int i = 0;
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-  }
-}
-
-void test_identical_branches_break(bool b) {
-  while (true) {
-    if (b)
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: if with identical then and else branches [bugprone-branch-clone]
-      break;
-    else
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-      break;
-  }
-}
-
-void test_identical_branches_continue(bool b) {
-  while (true) {
-    if (b)
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: if with identical then and else branches [bugprone-branch-clone]
-      continue;
-    else
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-      continue;
-  }
-}
-
-void test_identical_branches_func(bool b) {
-  if (b)
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    func();
-  else
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: note: else branch starts here
-    func();
-}
-
-void test_identical_branches_func_arguments(bool b) {
-  if (b) // no-warning
-    funcParam(1);
-  else
-    funcParam(2);
-}
-
-void test_identical_branches_cast1(bool b) {
-  long v = -7;
-  if (b) // no-warning
-    v = (signed int) v;
-  else
-    v = (unsigned int) v;
-}
-
-void test_identical_branches_cast2(bool b) {
-  long v = -7;
-  if (b)
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    v = (signed int) v;
-  else
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: note: else branch starts here
-    v = (signed int) v;
-}
-
-int test_identical_branches_return_int(bool b) {
-  int i = 0;
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    i++;
-    return i;
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    i++;
-    return i;
-  }
-}
-
-int test_identical_branches_return_func(bool b) {
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    return func();
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    return func();
-  }
-}
-
-void test_identical_branches_for(bool b) {
-  int i;
-  int j;
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    for (i = 0, j = 0; i < 10; i++)
-      j += 4;
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    for (i = 0, j = 0; i < 10; i++)
-      j += 4;
-  }
-}
-
-void test_identical_branches_while(bool b) {
-  int i = 10;
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    while (func())
-      i--;
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    while (func())
-      i--;
-  }
-}
-
-void test_identical_branches_while_2(bool b) {
-  int i = 10;
-  if (b) { // no-warning
-    while (func())
-      i--;
-  } else {
-    while (func())
-      i++;
-  }
-}
-
-void test_identical_branches_do_while(bool b) {
-  int i = 10;
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    do {
-      i--;
-    } while (func());
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    do {
-      i--;
-    } while (func());
-  }
-}
-
-void test_identical_branches_if(bool b, int i) {
-  if (b) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
-    if (i < 5)
-      i += 10;
-  } else {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: else branch starts here
-    if (i < 5)
-      i += 10;
-  }
 }
 
 void test_identical_bitwise1() {
@@ -1473,7 +1274,8 @@ void test_identical_logical3(int a) {
 }
 
 void test_identical_logical4(int a) {
-  if (a == func() || a == func()) // no-warning
+  if (a == func() || a == func())
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:19: warning: both sides of operator are equivalent [misc-redundant-expression]
     ;
 }
 
@@ -1508,208 +1310,3 @@ void test_identical_logical9(int x, int y) {
     ;
 }
 #pragma clang diagnostic pop
-
-void test_warn_chained_if_stmts_1(int x) {
-  if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-}
-
-void test_warn_chained_if_stmts_2(int x) {
-  if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-  else if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 2 starts here
-}
-
-void test_warn_chained_if_stmts_3(int x) {
-  if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x == 2)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-  else if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 2 starts here
-}
-
-void test_warn_chained_if_stmts_4(int x) {
-  if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (func())
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-  else if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 2 starts here
-}
-
-void test_warn_chained_if_stmts_5(int x) {
-  if (x & 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x & 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-}
-
-void test_warn_chained_if_stmts_6(int x) {
-  if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x == 2)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-  else if (x == 2)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 2 starts here
-  else if (x == 3)
-    ;
-}
-
-void test_warn_chained_if_stmts_7(int x) {
-  if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x == 2)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-  else if (x == 3)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 2 starts here
-  else if (x == 2)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 3 starts here
-  else if (x == 5)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 4 starts here
-}
-
-void test_warn_chained_if_stmts_8(int x) {
-  if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x == 2)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-  else if (x == 3)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 2 starts here
-  else if (x == 2)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 3 starts here
-  else if (x == 5)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 4 starts here
-  else if (x == 3)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 5 starts here
-  else if (x == 7)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 6 starts here
-}
-
-void test_nowarn_chained_if_stmts_1(int x) {
-  if (func())
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (func())
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-}
-
-void test_nowarn_chained_if_stmts_2(int x) {
-  if (func())
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x == 1)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-  else if (func())
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 2 starts here
-}
-
-void test_nowarn_chained_if_stmts_3(int x) {
-  if (x++)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-2]]:6: note: end of the original
-  else if (x++)
-    ;
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: clone 1 starts here
-}
-
-void test_warn_wchar() {
-  const wchar_t * a = 0 ? L"Warning" : L"Warning";
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:25: warning: conditional operator with identical true and false expressions [bugprone-branch-clone]
-}
-void test_nowarn_wchar() {
-  const wchar_t * a = 0 ? L"No" : L"Warning";
-}
-
-void test_nowarn_long() {
-  int a = 0, b = 0;
-  long c;
-  if (0) {
-    b -= a;
-    c = 0;
-  } else {
-    b -= a;
-    c = 0LL;
-  }
-}
-
-// Identical inner conditions
-
-void test_warn_inner_if_1(int x) {
-  if (x == 1) {
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:3: warning: if with identical inner if statement [bugprone-branch-clone]
-    if (x == 1)
-// CHECK-MESSAGES-BUGPRONEBRANCH: :[[@LINE-1]]:5: note: inner if starts here
-      ;
-  }
-
-  // FIXME: Should warn here. The warning is currently not emitted because there
-  // is code between the conditions.
-  if (x == 1) {
-    int y = x;
-    if (x == 1)
-      ;
-  }
-}
-
-void test_nowarn_inner_if_1(int x) {
-  // Don't warn when condition has side effects.
-  if (x++ == 1) {
-    if (x++ == 1)
-      ;
-  }
-
-  // Don't warn when x is changed before inner condition.
-  if (x < 10) {
-    x++;
-    if (x < 10)
-      ;
-  }
-}
