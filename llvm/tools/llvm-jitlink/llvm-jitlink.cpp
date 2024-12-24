@@ -91,10 +91,6 @@ static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
                                         cl::desc("input files"),
                                         cl::cat(JITLinkCategory));
 
-static cl::opt<size_t> MaterializationThreads(
-    "num-threads", cl::desc("Number of materialization threads to use"),
-    cl::init(std::numeric_limits<size_t>::max()), cl::cat(JITLinkCategory));
-
 static cl::list<std::string>
     LibrarySearchPaths("L",
                        cl::desc("Add dir to the list of library search paths"),
@@ -404,7 +400,6 @@ bool lazyLinkingRequested() {
 }
 
 static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
-  std::lock_guard<std::mutex> Lock(S.M);
 
   // If this graph is part of the test harness there's nothing to do.
   if (S.HarnessFiles.empty() || S.HarnessFiles.count(G.getName()))
@@ -455,11 +450,7 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
   return Error::success();
 }
 
-static void dumpSectionContents(raw_ostream &OS, Session &S, LinkGraph &G) {
-  std::lock_guard<std::mutex> Lock(S.M);
-
-  outs() << "Relocated section contents for " << G.getName() << ":\n";
-
+static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
   constexpr orc::ExecutorAddrDiff DumpWidth = 16;
   static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
 
@@ -851,7 +842,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
     S.CreateMemoryManager = createSharedMemoryManager;
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
@@ -993,16 +984,10 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
     auto PageSize = sys::Process::getPageSize();
     if (!PageSize)
       return PageSize.takeError();
-    std::unique_ptr<TaskDispatcher> Dispatcher;
-    if (MaterializationThreads == 0)
-      Dispatcher = std::make_unique<InPlaceTaskDispatcher>();
-    else
-      Dispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>(
-          MaterializationThreads);
-
     EPC = std::make_unique<SelfExecutorProcessControl>(
-        std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
-        std::move(TT), *PageSize, createInProcessMemoryManager());
+        std::make_shared<SymbolStringPool>(),
+        std::make_unique<InPlaceTaskDispatcher>(), std::move(TT), *PageSize,
+        createInProcessMemoryManager());
   }
 
   Error Err = Error::success();
@@ -1236,7 +1221,6 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
 
   if (ShowGraphsRegex)
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
-      std::lock_guard<std::mutex> Lock(M);
       // Print graph if ShowLinkGraphs is specified-but-empty, or if
       // it contains the given graph.
       if (ShowGraphsRegex->match(G.getName())) {
@@ -1255,8 +1239,9 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
 
   if (ShowRelocatedSectionContents)
-    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
-      dumpSectionContents(outs(), *this, G);
+    PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
+      outs() << "Relocated section contents for " << G.getName() << ":\n";
+      dumpSectionContents(outs(), G);
       return Error::success();
     });
 
@@ -1626,31 +1611,6 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
                << "(did you mean to use -noexec ?)";
       }
     }
-  }
-
-  if (MaterializationThreads == std::numeric_limits<size_t>::max()) {
-    if (auto HC = std::thread::hardware_concurrency())
-      MaterializationThreads = HC;
-    else {
-      errs() << "Warning: std::thread::hardware_concurrency() returned 0, "
-                "defaulting to -threads=1.\n";
-      MaterializationThreads = 1;
-    }
-  }
-
-  if (!!OutOfProcessExecutor.getNumOccurrences() ||
-      !!OutOfProcessExecutorConnect.getNumOccurrences()) {
-    if (NoExec)
-      return make_error<StringError>("-noexec cannot be used with " +
-                                         OutOfProcessExecutor.ArgStr + " or " +
-                                         OutOfProcessExecutorConnect.ArgStr,
-                                     inconvertibleErrorCode());
-
-    if (MaterializationThreads == 0)
-      return make_error<StringError>("-threads=0 cannot be used with " +
-                                         OutOfProcessExecutor.ArgStr + " or " +
-                                         OutOfProcessExecutorConnect.ArgStr,
-                                     inconvertibleErrorCode());
   }
 
   // Only one of -oop-executor and -oop-executor-connect can be used.
