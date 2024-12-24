@@ -29,4 +29,8 @@
 #define LIBC_TARGET_OS_IS_FUCHSIA
 #endif
 
+#if defined(__UEFI__)
+#define LIBC_TARGET_OS_IS_UEFI
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_OS_H

@@ -29,6 +29,16 @@ void File::reset() {
   }
 }
 
+size_t File::read(void *data, size_t len) {
+  (void)data;
+  (void)len;
+  if (needsReset())
+    reset();
+
+  // TODO: decode keys from simple text input
+  return 0;
+}
+
 size_t File::write(const void *data, size_t data_len) {
   if (needsReset())
     reset();
