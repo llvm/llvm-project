@@ -38,8 +38,8 @@
 #include <fcntl.h> /* values for fchmodat */
 #include <time.h>
 
-// since Linux 4.5 and FreeBSD 13
-#if defined(__linux__) || defined(__FreeBSD__)
+// since Linux 4.5 and FreeBSD 13, but the Linux libc wrapper is only provided by glibc and musl
+#if (defined(__linux__) && (defined(__GLIBC__) || _LIBCPP_HAS_MUSL_LIBC)) || defined(__FreeBSD__)
 #  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
 #endif
 #if __has_include(<sys/sendfile.h>)
@@ -54,8 +54,9 @@
 
 // sendfile and copy_file_range need to fall back
 // to the fstream implementation for special files
-#if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE) || defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) ||                     \
-    defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
+#if (defined(_LIBCPP_FILESYSTEM_USE_SENDFILE) || defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) ||                    \
+     defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)) &&                                                                       \
+    _LIBCPP_HAS_LOCALIZATION
 #  include <fstream>
 #  define _LIBCPP_FILESYSTEM_NEED_FSTREAM
 #endif
@@ -316,7 +317,12 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
   ec.clear();
 #  endif
 
+#  if defined(_LIBCPP_FILESYSTEM_NEED_FSTREAM)
   return copy_file_impl_fstream(read_fd, write_fd, ec);
+#  else
+  // since iostreams are unavailable in the no-locale build, just fail after a failed sendfile
+  return false;
+#  endif
 }
 #elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
 bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
