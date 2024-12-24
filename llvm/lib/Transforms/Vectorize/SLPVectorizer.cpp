@@ -702,7 +702,8 @@ static SmallBitVector isUndefVector(const Value *V,
 /// TODO: Can we split off and reuse the shuffle mask detection from
 /// ShuffleVectorInst/getShuffleCost?
 static std::optional<TargetTransformInfo::ShuffleKind>
-isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
+isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
+                     AssumptionCache *AC) {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
@@ -719,14 +720,14 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
 
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(VL, [](Value *V) {
+  bool HasNonUndefVec = any_of(VL, [&](Value *V) {
     auto *EE = dyn_cast<ExtractElementInst>(V);
     if (!EE)
       return false;
     Value *Vec = EE->getVectorOperand();
     if (isa<UndefValue>(Vec))
       return false;
-    return isGuaranteedNotToBePoison(Vec);
+    return isGuaranteedNotToBePoison(Vec, AC);
   });
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
@@ -11875,7 +11876,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
             TE->Scalars.size() < Limit ||
             ((TE->getOpcode() == Instruction::ExtractElement ||
               all_of(TE->Scalars, IsaPred<ExtractElementInst, UndefValue>)) &&
-             isFixedVectorShuffle(TE->Scalars, Mask)) ||
+             isFixedVectorShuffle(TE->Scalars, Mask, AC)) ||
             (TE->getOpcode() == Instruction::Load && !TE->isAltShuffle()) ||
             any_of(TE->Scalars, IsaPred<LoadInst>));
   };
@@ -12940,7 +12941,7 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   // Check that gather of extractelements can be represented as just a
   // shuffle of a single/two vectors the scalars are extracted from.
   std::optional<TTI::ShuffleKind> Res =
-      isFixedVectorShuffle(GatheredExtracts, Mask);
+      isFixedVectorShuffle(GatheredExtracts, Mask, AC);
   if (!Res || all_of(Mask, [](int Idx) { return Idx == PoisonMaskElem; })) {
     // TODO: try to check other subsets if possible.
     // Restore the original VL if attempt was not successful.
@@ -14828,7 +14829,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       // non-poisonous, or by freezing the incoming scalar value first.
       auto *It = find_if(Scalars, [this, E](Value *V) {
         return !isa<UndefValue>(V) &&
-               (getTreeEntry(V) || isGuaranteedNotToBePoison(V) ||
+               (getTreeEntry(V) || isGuaranteedNotToBePoison(V, AC) ||
                 (E->UserTreeIndices.size() == 1 &&
                  any_of(V->uses(), [E](const Use &U) {
                    // Check if the value already used in the same operation in
@@ -14900,11 +14901,11 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
       if (Vec2) {
         IsUsedInExpr = false;
-        IsNonPoisoned &=
-            isGuaranteedNotToBePoison(Vec1) && isGuaranteedNotToBePoison(Vec2);
+        IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1, AC) &&
+                         isGuaranteedNotToBePoison(Vec2, AC);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
-        bool IsNotPoisonedVec = isGuaranteedNotToBePoison(Vec1);
+        bool IsNotPoisonedVec = isGuaranteedNotToBePoison(Vec1, AC);
         IsUsedInExpr &= FindReusedSplat(
             ExtractMask,
             cast<FixedVectorType>(Vec1->getType())->getNumElements(), 0,
@@ -14935,7 +14936,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         if (TEs.size() == 1) {
           bool IsNotPoisonedVec =
               TEs.front()->VectorizedValue
-                  ? isGuaranteedNotToBePoison(TEs.front()->VectorizedValue)
+                  ? isGuaranteedNotToBePoison(TEs.front()->VectorizedValue, AC)
                   : true;
           IsUsedInExpr &=
               FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I,
@@ -14947,8 +14948,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
           if (TEs.front()->VectorizedValue && TEs.back()->VectorizedValue)
             IsNonPoisoned &=
-                isGuaranteedNotToBePoison(TEs.front()->VectorizedValue) &&
-                isGuaranteedNotToBePoison(TEs.back()->VectorizedValue);
+                isGuaranteedNotToBePoison(TEs.front()->VectorizedValue, AC) &&
+                isGuaranteedNotToBePoison(TEs.back()->VectorizedValue, AC);
         }
       }
     }
@@ -15283,7 +15284,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       }
       if (!IsIdentity || NumElts != NumScalars) {
         Value *V2 = nullptr;
-        bool IsVNonPoisonous = isGuaranteedNotToBePoison(V) && !isConstant(V);
+        bool IsVNonPoisonous =
+            !isConstant(V) && isGuaranteedNotToBePoison(V, AC);
         SmallVector<int> InsertMask(Mask);
         if (NumElts != NumScalars && Offset == 0) {
           // Follow all insert element instructions from the current buildvector
@@ -19638,7 +19640,7 @@ public:
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
-                     const TargetLibraryInfo &TLI) {
+                     const TargetLibraryInfo &TLI, AssumptionCache *AC) {
     const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
@@ -19695,7 +19697,7 @@ public:
 
           if (auto It = ReducedValsToOps.find(VectorizedTree);
               It == ReducedValsToOps.end() ||
-              isGuaranteedNotToBePoison(VectorizedTree) ||
+              isGuaranteedNotToBePoison(VectorizedTree, AC) ||
               any_of(It->getSecond(), [&](Instruction *I) {
                 return isBoolLogicOp(I) &&
                        getRdxOperand(I, 0) == VectorizedTree;
@@ -19703,7 +19705,7 @@ public:
             ;
           } else if (auto It = ReducedValsToOps.find(Res);
                      It == ReducedValsToOps.end() ||
-                     isGuaranteedNotToBePoison(Res) ||
+                     isGuaranteedNotToBePoison(Res, AC) ||
                      any_of(It->getSecond(), [&](Instruction *I) {
                        return isBoolLogicOp(I) && getRdxOperand(I, 0) == Res;
                      })) {
@@ -19795,7 +19797,7 @@ public:
           TrackedToOrig.try_emplace(RdxVal, RV);
         }
         SmallVector<int> Mask;
-        if (isFixedVectorShuffle(CommonCandidates, Mask)) {
+        if (isFixedVectorShuffle(CommonCandidates, Mask, AC)) {
           ++I;
           Candidates.swap(CommonCandidates);
           ShuffledExtracts = true;
@@ -20110,7 +20112,7 @@ public:
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
         // frozen.
-        if (AnyBoolLogicOp && !isGuaranteedNotToBePoison(VectorizedRoot))
+        if (AnyBoolLogicOp && !isGuaranteedNotToBePoison(VectorizedRoot, AC))
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         // Emit code to correctly handle reused reduced values, if required.
@@ -20217,13 +20219,13 @@ public:
                                                    bool InitStep) {
         if (!AnyBoolLogicOp)
           return;
-        if (isBoolLogicOp(RedOp1) &&
-            ((!InitStep && LHS == VectorizedTree) ||
-             getRdxOperand(RedOp1, 0) == LHS || isGuaranteedNotToBePoison(LHS)))
+        if (isBoolLogicOp(RedOp1) && ((!InitStep && LHS == VectorizedTree) ||
+                                      getRdxOperand(RedOp1, 0) == LHS ||
+                                      isGuaranteedNotToBePoison(LHS, AC)))
           return;
         if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
                                       getRdxOperand(RedOp2, 0) == RHS ||
-                                      isGuaranteedNotToBePoison(RHS))) {
+                                      isGuaranteedNotToBePoison(RHS, AC))) {
           std::swap(LHS, RHS);
           return;
         }
@@ -20871,7 +20873,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
-    return HorRdx.tryToReduce(R, *DL, TTI, *TLI);
+    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
   };
   auto TryAppendToPostponedInsts = [&](Instruction *FutureSeed) {
     if (TryOperandsAsNewSeeds && FutureSeed == Root) {
@@ -20977,8 +20979,8 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts, R) ||
-      (llvm::all_of(BuildVectorOpds, IsaPred<ExtractElementInst, UndefValue>) &&
-       isFixedVectorShuffle(BuildVectorOpds, Mask)))
+      (all_of(BuildVectorOpds, IsaPred<ExtractElementInst, UndefValue>) &&
+       isFixedVectorShuffle(BuildVectorOpds, Mask, AC)))
     return false;
 
   if (MaxVFOnly && BuildVectorInsts.size() == 2) {
