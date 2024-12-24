@@ -40,6 +40,35 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   const GCNSubtarget *ST;
   MachineFrameInfo *MFI;
 
+  static constexpr int NO_STACK_SLOT = INT_MAX;
+
+  unsigned NumSpillSlots;
+
+  IndexedMap<int, VirtReg2IndexFunctor> Virt2StackSlotMap;
+
+  unsigned createSpillSlot(const TargetRegisterClass *RC) {
+    unsigned Size = TRI->getSpillSize(*RC);
+    Align Alignment = TRI->getSpillAlign(*RC);
+    // TODO: See VirtRegMap::createSpillSlot - if we need to bother with
+    // TRI->canRealignStack(*MF) ?
+    int SS = MFI->CreateSpillStackObject(Size, Alignment);
+    ++NumSpillSlots;
+    return SS;
+  }
+
+  int assignVirt2StackSlot(Register virtReg) {
+    assert(virtReg.isVirtual());
+    assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
+           "attempt to assign stack slot to already spilled register");
+    const TargetRegisterClass *RC = MRI->getRegClass(virtReg);
+    return Virt2StackSlotMap[virtReg] = createSpillSlot(RC);
+  }
+
+  int getStackSlot(Register virtReg) const {
+    assert(virtReg.isVirtual());
+    return Virt2StackSlotMap[virtReg.id()];
+  }
+
   TimerGroup *TG;
   Timer *T1;
   Timer *T2;
@@ -77,11 +106,7 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
 
   void init(MachineFunction &MF, bool IsVGPRs) {
     IsVGPRsPass = IsVGPRs;
-    ST = &MF.getSubtarget<GCNSubtarget>();
-    MRI = &MF.getRegInfo();
-    MFI = &MF.getFrameInfo();
-    TRI = ST->getRegisterInfo();
-    TII = ST->getInstrInfo();
+  
     TG = new TimerGroup("SSA SPiller Timing", "Time Spent in different parts of the SSA Spiller");
     T1 = new Timer("General time", "ProcessFunction", *TG);
     T2 = new Timer("Limit", "Time spent in limit()", *TG);
@@ -150,13 +175,14 @@ public:
 
   AMDGPUSSASpiller(const LiveIntervals &LIS, MachineLoopInfo &LI,
                    MachineDominatorTree &MDT, AMDGPUNextUseAnalysis::Result &NU)
-      : LIS(LIS), LI(LI), MDT(MDT), NU(NU) {}
-      ~AMDGPUSSASpiller() {
-        delete TG;
-        delete T2;
-        delete T3;
-        delete T4;
-        //delete TG;
+      : LIS(LIS), LI(LI), MDT(MDT), NU(NU),
+        NumSpillSlots(0), Virt2StackSlotMap(NO_STACK_SLOT) {}
+  ~AMDGPUSSASpiller() {
+    delete TG;
+    delete T2;
+    delete T3;
+    delete T4;
+    // delete TG;
       }
   bool run(MachineFunction &MF);
 };
@@ -423,8 +449,7 @@ void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsertBefore,
                                     Register VReg) {
   const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
-  int FI = MFI->CreateSpillStackObject(TRI->getRegSizeInBits(*RC),
-                                       TRI->getSpillAlign(*RC));
+  int FI = getStackSlot(VReg);
   TII->loadRegFromStackSlot(MBB, InsertBefore, VReg, FI,
                             RC, TRI, VReg);
 }
@@ -433,10 +458,9 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator InsertBefore,
                                    Register VReg) {
   const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
-  int FI = MFI->CreateSpillStackObject(TRI->getRegSizeInBits(*RC),
-                                       TRI->getSpillAlign(*RC));
-  TII->storeRegToStackSlot(MBB, InsertBefore, VReg, true, FI,
-                            RC, TRI, VReg);
+  int FI = assignVirt2StackSlot(VReg); 
+  TII->storeRegToStackSlot(MBB, InsertBefore, VReg, true,
+                                                FI, RC, TRI, VReg);
 }
 
 unsigned AMDGPUSSASpiller::getLoopMaxRP(MachineLoop *L) {
@@ -512,10 +536,18 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
 }
 
 bool AMDGPUSSASpiller::run(MachineFunction &MF) {
+  ST = &MF.getSubtarget<GCNSubtarget>();
+  MRI = &MF.getRegInfo();
+  MFI = &MF.getFrameInfo();
+  TRI = ST->getRegisterInfo();
+  TII = ST->getInstrInfo();
+
+  Virt2StackSlotMap.resize(MRI->getNumVirtRegs());
+
   init(MF, false);
   processFunction(MF);
   init(MF, true);
-  
+
   processFunction(MF);
   TG->print(llvm::errs());
   return false;
