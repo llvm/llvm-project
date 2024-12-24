@@ -131,7 +131,7 @@ public:
     // Do nothing.
   }
 
-  void verifyCounterMap() {
+  void verifyCounterMap() const {
     // Do nothing.
   }
 
