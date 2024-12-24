@@ -252,7 +252,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   // Ensure that all attributes present on the declaration are consistent
   // and warn about any redundant ones.
   SYCLKernelEntryPointAttr *SKEPAttr = nullptr;
-  for (auto* SAI : FD->specific_attrs<SYCLKernelEntryPointAttr>()) {
+  for (auto *SAI : FD->specific_attrs<SYCLKernelEntryPointAttr>()) {
     if (!SKEPAttr) {
       SKEPAttr = SAI;
       continue;
