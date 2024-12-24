@@ -114,10 +114,11 @@ endfunction()
 #   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
+#   PYTHON_BINDINGS_LIBRARY: Either pybind11 or nanobind.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
@@ -126,15 +127,20 @@ function(declare_mlir_python_extension name)
   endif()
   set(_install_destination "src/python/${name}")
 
+  if(NOT ARG_PYTHON_BINDINGS_LIBRARY)
+    set(ARG_PYTHON_BINDINGS_LIBRARY "pybind11")
+  endif()
+
   add_library(${name} INTERFACE)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY"
     mlir_python_SOURCES_TYPE extension
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
+    mlir_python_BINDINGS_LIBRARY "${ARG_PYTHON_BINDINGS_LIBRARY}"
   )
 
   # Set the interface source and link_libs properties of the target
@@ -223,12 +229,14 @@ function(add_mlir_python_modules name)
     elseif(_source_type STREQUAL "extension")
       # Native CPP extension.
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
+      get_target_property(_bindings_library ${sources_target} mlir_python_BINDINGS_LIBRARY)
       # Transform relative source to based on root dir.
       set(_extension_target "${modules_target}.extension.${_module_name}.dso")
       add_mlir_python_extension(${_extension_target} "${_module_name}"
         INSTALL_COMPONENT ${modules_target}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+        PYTHON_BINDINGS_LIBRARY ${_bindings_library}
         LINK_LIBS PRIVATE
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
@@ -634,7 +642,7 @@ endfunction()
 function(add_mlir_python_extension libname extname)
   cmake_parse_arguments(ARG
   ""
-  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY"
+  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;PYTHON_BINDINGS_LIBRARY"
   "SOURCES;LINK_LIBS"
   ${ARGN})
   if(ARG_UNPARSED_ARGUMENTS)
@@ -644,9 +652,28 @@ function(add_mlir_python_extension libname extname)
   # The actual extension library produces a shared-object or DLL and has
   # sources that must be compiled in accordance with pybind11 needs (RTTI and
   # exceptions).
-  pybind11_add_module(${libname}
-    ${ARG_SOURCES}
-  )
+  if(NOT DEFINED ARG_PYTHON_BINDINGS_LIBRARY OR ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "pybind11")
+    pybind11_add_module(${libname}
+      ${ARG_SOURCES}
+    )
+  elseif(ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "nanobind")
+    nanobind_add_module(${libname}
+      NB_DOMAIN mlir
+      ${ARG_SOURCES}
+    )
+
+    if (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
+      # Avoids warnings from upstream nanobind.
+      target_compile_options(nanobind-static
+        PRIVATE
+          -Wno-cast-qual
+          -Wno-zero-length-array
+          -Wno-nested-anon-types
+          -Wno-c++98-compat-extra-semi
+          -Wno-covered-switch-default
+      )
+    endif()
+  endif()
 
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by pybind11 are disabled.

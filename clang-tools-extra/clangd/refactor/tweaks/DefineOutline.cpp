@@ -467,18 +467,9 @@ public:
       }
     }
 
-    // For function templates, the same limitations as for class templates
-    // apply.
-    if (const TemplateParameterList *Params =
-            MD->getDescribedTemplateParams()) {
-      // FIXME: Is this really needed? It inhibits application on
-      //        e.g. std::enable_if.
-      for (NamedDecl *P : *Params) {
-        if (!P->getIdentifier())
-          return false;
-      }
+    // Function templates must be defined in the same file.
+    if (MD->getDescribedTemplate())
       SameFile = true;
-    }
 
     // The refactoring is meaningless for unnamed classes and namespaces,
     // unless we're outlining in the same file

@@ -11,14 +11,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define ptr @f0() {
 ; CHECK-LABEL: @f0(
-; CHECK-NEXT:    ret ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @vt, i64 16)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw inrange(-16, 8) (i8, ptr @vt, i64 16)
 ;
   ret ptr getelementptr (ptr, ptr getelementptr inbounds inrange(-8, 16) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 1)
 }
 
 define ptr @f1() {
 ; CHECK-LABEL: @f1(
-; CHECK-NEXT:    ret ptr getelementptr inbounds inrange(-8, 0) (i8, ptr @vt, i64 16)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw inrange(-8, 0) (i8, ptr @vt, i64 16)
 ;
   ret ptr getelementptr (ptr, ptr getelementptr inbounds inrange(0, 8) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 1)
 }

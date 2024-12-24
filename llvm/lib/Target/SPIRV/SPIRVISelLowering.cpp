@@ -111,8 +111,8 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                             SPIRVGlobalRegistry &GR, MachineInstr &I,
                             Register OpReg, unsigned OpIdx,
                             SPIRVType *NewPtrType) {
-  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MachineIRBuilder MIB(I);
+  Register NewReg = createVirtualRegister(NewPtrType, &GR, MRI, MIB.getMF());
   bool Res = MIB.buildInstr(SPIRV::OpBitcast)
                  .addDef(NewReg)
                  .addUse(GR.getSPIRVTypeID(NewPtrType))
@@ -121,8 +121,6 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                                    *STI.getRegBankInfo());
   if (!Res)
     report_fatal_error("insert validation bitcast: cannot constrain all uses");
-  MRI->setRegClass(NewReg, &SPIRV::iIDRegClass);
-  GR.assignSPIRVTypeToVReg(NewPtrType, NewReg, MIB.getMF());
   I.getOperand(OpIdx).setReg(NewReg);
 }
 
@@ -396,6 +394,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       case SPIRV::OpGenericCastToPtr:
         validateAccessChain(STI, MRI, GR, MI);
         break;
+      case SPIRV::OpPtrAccessChain:
       case SPIRV::OpInBoundsPtrAccessChain:
         if (MI.getNumOperands() == 4)
           validateAccessChain(STI, MRI, GR, MI);

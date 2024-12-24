@@ -18,13 +18,13 @@ using LIBC_NAMESPACE::cpp::optional;
 
 TEST(LlvmLibcFreeList, FreeList) {
   byte mem[1024];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *block1 = *maybeBlock;
+  Block *block1 = *maybeBlock;
 
   maybeBlock = block1->split(128);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *block2 = *maybeBlock;
+  Block *block2 = *maybeBlock;
 
   maybeBlock = block2->split(128);
   ASSERT_TRUE(maybeBlock.has_value());

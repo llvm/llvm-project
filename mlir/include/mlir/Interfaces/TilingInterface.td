@@ -66,7 +66,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*desc=*/[{
           Returns a list of iterator types that describe the number of loops.
         }],
-        /*retType=*/"::mlir::SmallVector<utils::IteratorType>",
+        /*retType=*/"::mlir::SmallVector<::mlir::utils::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",
         /*args=*/(ins),
         /*methodBody=*/"",
@@ -353,8 +353,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*methodName=*/"generateScalarImplementation",
         /*args=*/(ins
             "::mlir::OpBuilder &":$b,
-            "Location ":$loc,
-            "ValueRange ":$ivs),
+            "::mlir::Location ":$loc,
+            "::mlir::ValueRange ":$ivs),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();

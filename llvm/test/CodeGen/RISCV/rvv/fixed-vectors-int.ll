@@ -1100,15 +1100,17 @@ define void @mulhu_v8i16(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vsetivli zero, 7, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 1
 ; CHECK-NEXT:    li a1, 33
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    lui a1, %hi(.LCPI66_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI66_0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v11, 3
 ; CHECK-NEXT:    vle16.v v12, (a1)
 ; CHECK-NEXT:    vmerge.vim v11, v11, 2, v0
-; CHECK-NEXT:    vmv.v.i v13, 0
+; CHECK-NEXT:    vmv1r.v v13, v9
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v9, v10, 6
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
