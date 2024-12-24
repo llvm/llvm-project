@@ -226,7 +226,7 @@ public:
     if (name.symbol->test(Symbol::Flag::OmpThreadprivate)) {
       // OpenMP 5.2: 5.2 threadprivate directive restriction
       context_.Say(name.source,
-          "A THREADPRIVATE variable `%s` cannot appear in a UNTIED TASK region"_err_en_US,
+          "A THREADPRIVATE variable `%s` cannot appear in an UNTIED TASK region"_err_en_US,
           name.source);
     }
     return true;
