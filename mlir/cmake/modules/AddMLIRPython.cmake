@@ -661,6 +661,18 @@ function(add_mlir_python_extension libname extname)
       NB_DOMAIN mlir
       ${ARG_SOURCES}
     )
+
+    if (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
+      # Avoids warnings from upstream nanobind.
+      target_compile_options(nanobind-static
+        PRIVATE
+          -Wno-cast-qual
+          -Wno-zero-length-array
+          -Wno-nested-anon-types
+          -Wno-c++98-compat-extra-semi
+          -Wno-covered-switch-default
+      )
+    endif()
   endif()
 
   # The extension itself must be compiled with RTTI and exceptions enabled.

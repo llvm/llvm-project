@@ -29,8 +29,7 @@ public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     spirv::populateSPIRVGLCanonicalizationPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

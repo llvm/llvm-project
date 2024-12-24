@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -S | FileCheck %s -check-prefix DEBUGLOC
-; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -S --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DEBUGLOC
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S | FileCheck %s -check-prefix DEBUGLOC
+; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DEBUGLOC
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test makes sure we don't duplicate the loop vectorizer's metadata
@@ -54,6 +54,60 @@ exit:
   ret void
 }
 
+define void @predicated_phi_dbg(i64 %n, ptr %x) {
+; DEBUGLOC-LABEL: define void @predicated_phi_dbg(
+; DEBUGLOC: pred.udiv.continue{{.+}}:
+; DEBUGLOC-NEXT:   = phi <4 x i64> {{.+}}, !dbg [[PREDPHILOC:![0-9]+]]
+;
+; DEBUGLOC: for.body:
+; DEBUGLOC:   %tmp4 = udiv i64 %n, %i, !dbg [[PREDPHILOC]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %cmp = icmp ult i64 %i, 5
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %tmp4 = udiv i64 %n, %i
+  br label %for.inc
+
+for.inc:
+  %d = phi i64 [ 0, %for.body ], [ %tmp4, %if.then ]
+  %idx = getelementptr i64, ptr %x, i64 %i
+  store i64 %d, ptr %idx
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
+; DEBUGLOC-LABEL: define void @scalar_cast_dbg(
+; DEBUGLOC:   = trunc i64 %index to i32, !dbg [[CASTLOC:![0-9]+]]
+;
+; DEBUGLOC: loop:
+; DEBUGLOC-NOT:   %trunc.iv = trunc i64 %iv to i32, !dbg [[CASTLOC]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %trunc.iv = trunc i64 %iv to i32
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %trunc.iv
+  store i32 %trunc.iv, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %k
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
 
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
