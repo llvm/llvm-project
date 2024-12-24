@@ -4120,6 +4120,10 @@ static Value* buildFMulAdd(llvm::Instruction *MulOp, Value *Addend,
         CGF.CGM.getIntrinsic(llvm::Intrinsic::experimental_constrained_fmuladd,
                              Addend->getType()),
         {MulOp0, MulOp1, Addend});
+    if (negMul)
+      dyn_cast<llvm::CallBase>(FMulAdd)->addParamAttr(0, llvm::Attribute::Negated);
+    if (negAdd)
+      dyn_cast<llvm::CallBase>(FMulAdd)->addParamAttr(2, llvm::Attribute::Negated);
   } else {
     FMulAdd = Builder.CreateCall(
         CGF.CGM.getIntrinsic(llvm::Intrinsic::fmuladd, Addend->getType()),
