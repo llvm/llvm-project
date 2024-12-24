@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -366,12 +367,16 @@ private:
 
   uint64_t TotalSize = 0;
 
+  std::optional<uint64_t> MaxSectionOffset;
+
 public:
   ~BinaryWriter() {}
   Error finalize() override;
   Error write() override;
-  BinaryWriter(Object &Obj, raw_ostream &Out, const CommonConfig &Config)
-      : Writer(Obj, Out), GapFill(Config.GapFill), PadTo(Config.PadTo) {}
+  BinaryWriter(Object &Obj, raw_ostream &Out, const CommonConfig &Config,
+               const ELFConfig &ELFConfig)
+      : Writer(Obj, Out), GapFill(Config.GapFill), PadTo(Config.PadTo),
+        MaxSectionOffset(ELFConfig.MaxSectionOffset) {}
 };
 
 // A base class for writing ascii hex formats such as srec and ihex.

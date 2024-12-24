@@ -1,0 +1,23 @@
+# RUN: yaml2obj %s --docnum=1 -o %t
+# RUN: not llvm-objcopy -O binary %t %t2 --max-section-offset=15 2>&1 | FileCheck -DFILE=%t %s --check-prefix=INVALID-COPY
+# RUN: llvm-objcopy -O binary %t %t2 --max-section-offset=16
+
+# INVALID-COPY: error: '[[FILE]]': writing section .high_addr at offset 0x10 greater than max offset 0xf specified by --max-section-offset
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0
+    Content:         "10"
+  - Name:            .high_addr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10
+    Content:         "10"

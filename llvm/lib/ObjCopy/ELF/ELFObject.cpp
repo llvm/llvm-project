@@ -2741,6 +2741,15 @@ Error BinaryWriter::finalize() {
     if (Sec.Type != SHT_NOBITS && Sec.Size > 0) {
       Sec.Offset = Sec.Addr - MinAddr;
       TotalSize = std::max(TotalSize, Sec.Offset + Sec.Size);
+
+      if (MaxSectionOffset && Sec.Offset > *MaxSectionOffset) {
+        return createStringError(
+            errc::file_too_large,
+            "writing section " + Sec.Name + " at offset 0x" +
+                Twine::utohexstr(Sec.Offset) + " greater than max offset 0x" +
+                Twine::utohexstr(*MaxSectionOffset) +
+                " specified by --max-section-offset");
+      }
     }
 
   Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);
