@@ -422,6 +422,10 @@ private:
   Error importXFormNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
                                 const TreePatternNode &N) const;
 
+  Error importInstructionNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                                      const TreePatternNode &N,
+                                      action_iterator &InsertPt) const;
+
   Expected<action_iterator>
   importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
                             BuildMIAction &DstMIBuilder,
@@ -1357,6 +1361,30 @@ Error GlobalISelEmitter::importXFormNodeRenderer(
   return Error::success();
 }
 
+// Equivalent of MatcherGen::EmitResultInstructionAsOperand.
+Error GlobalISelEmitter::importInstructionNodeRenderer(
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N,
+    action_iterator &InsertPt) const {
+  Expected<LLTCodeGen> OpTy = getInstResultType(N, Target);
+  if (!OpTy)
+    return OpTy.takeError();
+
+  // TODO: See the comment in importXFormNodeRenderer. We rely on the node
+  //   requiring a temporary register, which prevents us from using this
+  //   function on the root of the destination DAG.
+  unsigned TempRegID = M.allocateTempRegID();
+  InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+  MIBuilder.addRenderer<TempRegRenderer>(TempRegID);
+
+  auto InsertPtOrError =
+      createAndImportSubInstructionRenderer(++InsertPt, M, N, TempRegID);
+  if (!InsertPtOrError)
+    return InsertPtOrError.takeError();
+
+  InsertPt = *InsertPtOrError;
+  return Error::success();
+}
+
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
     const TreePatternNode &Dst) const {
@@ -1379,20 +1407,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
   }
 
   if (Dst.getOperator()->isSubClassOf("Instruction")) {
-    auto OpTy = getInstResultType(Dst, Target);
-    if (!OpTy)
-      return OpTy.takeError();
-
-    unsigned TempRegID = Rule.allocateTempRegID();
-    InsertPt =
-        Rule.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
-    DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
-
-    auto InsertPtOrError =
-        createAndImportSubInstructionRenderer(++InsertPt, Rule, Dst, TempRegID);
-    if (auto Error = InsertPtOrError.takeError())
-      return std::move(Error);
-    return InsertPtOrError.get();
+    if (Error Err =
+            importInstructionNodeRenderer(Rule, DstMIBuilder, Dst, InsertPt))
+      return Err;
+    return InsertPt;
   }
 
   // Should not reach here.
