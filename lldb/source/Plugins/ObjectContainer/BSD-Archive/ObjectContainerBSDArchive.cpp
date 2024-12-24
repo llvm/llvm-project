@@ -8,7 +8,7 @@
 
 #include "ObjectContainerBSDArchive.h"
 
-#if defined(_WIN32) || defined(__ANDROID__)
+#if defined(_WIN32) || defined(__ANDROID__) || defined(_AIX)
 // Defines from ar, missing on Windows
 #define SARMAG 8
 #define ARFMAG "`\n"
@@ -81,10 +81,10 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
 
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer =
       llvm::MemoryBuffer::getMemBuffer(
-            llvm::StringRef((const char *)data.GetDataStart(),
-                            data.GetByteSize()),
-            llvm::StringRef(),
-            /*RequiresNullTerminator=*/false);
+          llvm::StringRef((const char *)data.GetDataStart(),
+                          data.GetByteSize()),
+          llvm::StringRef(),
+          /*RequiresNullTerminator=*/false);
 
   auto exp_ar = llvm::object::Archive::create(mem_buffer->getMemBufferRef());
   if (!exp_ar) {
@@ -95,7 +95,7 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
 
   llvm::Error iter_err = llvm::Error::success();
   Object obj;
-  for (const auto &child: llvm_archive->children(iter_err)) {
+  for (const auto &child : llvm_archive->children(iter_err)) {
     obj.Clear();
     auto exp_name = child.getName();
     if (exp_name) {
@@ -111,7 +111,9 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
       obj.modification_time =
           std::chrono::duration_cast<std::chrono::seconds>(
               std::chrono::time_point_cast<std::chrono::seconds>(
-                    exp_mtime.get()).time_since_epoch()).count();
+                  exp_mtime.get())
+                  .time_since_epoch())
+              .count();
     } else {
       LLDB_LOG_ERROR(l, exp_mtime.takeError(),
                      "failed to get archive object time: {0}");
@@ -331,21 +333,21 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
 ArchiveType
 ObjectContainerBSDArchive::MagicBytesMatch(const DataExtractor &data) {
   uint32_t offset = 0;
-  const char *armag = (const char *)data.PeekData(offset,
-                                                  sizeof(ar_hdr) + SARMAG);
+  const char *armag =
+      (const char *)data.PeekData(offset, sizeof(ar_hdr) + SARMAG);
   if (armag == nullptr)
     return ArchiveType::Invalid;
   ArchiveType result = ArchiveType::Invalid;
   if (strncmp(armag, ArchiveMagic, SARMAG) == 0)
-      result = ArchiveType::Archive;
+    result = ArchiveType::Archive;
   else if (strncmp(armag, ThinArchiveMagic, SARMAG) == 0)
-      result = ArchiveType::ThinArchive;
+    result = ArchiveType::ThinArchive;
   else
-      return ArchiveType::Invalid;
+    return ArchiveType::Invalid;
 
   armag += offsetof(struct ar_hdr, ar_fmag) + SARMAG;
   if (strncmp(armag, ARFMAG, 2) == 0)
-      return result;
+    return result;
   return ArchiveType::Invalid;
 }
 
@@ -443,7 +445,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
     return 0;
 
   const size_t initial_count = specs.GetSize();
-  llvm::sys::TimePoint<> file_mod_time = FileSystem::Instance().GetModificationTime(file);
+  llvm::sys::TimePoint<> file_mod_time =
+      FileSystem::Instance().GetModificationTime(file);
   Archive::shared_ptr archive_sp(
       Archive::FindCachedArchive(file, ArchSpec(), file_mod_time, file_offset));
   bool set_archive_arch = false;
