@@ -69,10 +69,6 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_sys "darwin")
   endif()
 
-  if(target_sys STREQUAL "unknown")
-    list(GET triple_comps 2 target_sys)
-  endif()
-
   # Setting OS name for GPU architectures.
   list(GET triple_comps -1 gpu_target_sys)
   if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda")
