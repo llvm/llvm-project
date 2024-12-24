@@ -1,6 +1,7 @@
 ;; Test callsite context graph generation for simple call graph with
 ;; two memprof contexts and no inlining, where one callsite required for
-;; cloning is missing (e.g. unmatched).
+;; cloning is missing (e.g. unmatched). Use this to test aggressive hinting
+;; threshold.
 ;;
 ;; Original code looks like:
 ;;
@@ -29,6 +30,30 @@
 ; RUN:	-o %t.out 2>&1 | FileCheck %s --implicit-check-not "call in clone _Z3foov" \
 ; RUN:  --check-prefix=SIZESUNHINTED
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --implicit-check-not "\"memprof\"=\"cold\""
+
+;; Check that we do hint with a sufficient -memprof-cloning-cold-threshold.
+; RUN: opt -thinlto-bc -memprof-report-hinted-sizes %s >%t.o
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:	-supports-hot-cold-new \
+; RUN:	-r=%t.o,main,plx \
+; RUN:	-r=%t.o,_Znam, \
+; RUN:	-memprof-report-hinted-sizes -memprof-cloning-cold-threshold=80 \
+; RUN:	-pass-remarks=memprof-context-disambiguation -save-temps \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=REMARKSHINTED \
+; RUN:  --check-prefix=SIZESHINTED
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IRHINTED
+
+;; Check again that we hint with a sufficient -memprof-cloning-cold-threshold,
+;; even if we don't specify -memprof-report-hinted-sizes.
+; RUN: opt -thinlto-bc -memprof-report-hinted-sizes %s >%t.o
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:	-supports-hot-cold-new \
+; RUN:	-r=%t.o,main,plx \
+; RUN:	-r=%t.o,_Znam, \
+; RUN:	-memprof-cloning-cold-threshold=80 \
+; RUN:	-pass-remarks=memprof-context-disambiguation -save-temps \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=REMARKSHINTED
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IRHINTED
 
 source_filename = "memprof-missing-callsite.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -68,3 +93,11 @@ attributes #0 = { noinline optnone }
 ; SIZESUNHINTED: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning
 ; SIZESUNHINTED: Cold full allocation context 456 with total size 200 is NotColdCold after cloning
 ; SIZESUNHINTED: Cold full allocation context 789 with total size 300 is NotColdCold after cloning
+
+; SIZESHINTED: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning marked Cold due to cold byte percent
+; SIZESHINTED: Cold full allocation context 456 with total size 200 is NotColdCold after cloning marked Cold due to cold byte percent
+; SIZESHINTED: Cold full allocation context 789 with total size 300 is NotColdCold after cloning marked Cold due to cold byte percent
+
+; REMARKSHINTED: call in clone _Z3foov marked with memprof allocation attribute cold
+
+; IRHINTED: "memprof"="cold"

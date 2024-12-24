@@ -1620,9 +1620,7 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
-  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const {
-    return PGO.getIsCounterPair(S);
-  }
+  auto getIsCounterPair(const Stmt *S) const { return PGO.getIsCounterPair(S); }
 
   void markStmtAsUsed(bool Skipped, const Stmt *S) {
     PGO.markStmtAsUsed(Skipped, S);

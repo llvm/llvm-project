@@ -32,6 +32,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/io-api-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
@@ -298,9 +299,10 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = converter.getCurrentLocation();
   mlir::Type refTy = fir::ReferenceType::get(mlir::NoneType::get(context));
   std::string suffix = ".nonTbpDefinedIoTable";
-  std::string tableMangleName = definedIoProcMap.empty()
-                                    ? "default" + suffix
-                                    : converter.mangleName(suffix);
+  std::string tableMangleName =
+      definedIoProcMap.empty()
+          ? fir::NameUniquer::doGenerated("default" + suffix)
+          : converter.mangleName(suffix);
   if (auto table = builder.getNamedGlobal(tableMangleName))
     return builder.createConvert(
         loc, refTy,

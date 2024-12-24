@@ -934,29 +934,17 @@ struct CounterCoverageMappingBuilder
   ///
   /// This should only be called on statements that have a dedicated counter.
   Counter getRegionCounter(const Stmt *S) {
-    return Counter::getCounter(CounterMap[S].first);
+    return Counter::getCounter(CounterMap[S].Executed);
   }
 
-  std::pair<Counter, Counter> getBranchCounterPair(const Stmt *S,
-                                                   Counter ParentCnt) {
-    auto &TheMap = CounterMap[S];
-    auto ExecCnt = Counter::getCounter(TheMap.first);
-    auto SkipExpr = Builder.subtract(ParentCnt, ExecCnt);
+  struct BranchCounterPair {
+    Counter Executed;
+    Counter Skipped;
+  };
 
-    if (!llvm::EnableSingleByteCoverage || !SkipExpr.isExpression()) {
-      assert(
-          !TheMap.getIsCounterPair().second &&
-          "SkipCnt shouldn't be allocated but refer to an existing counter.");
-      return {ExecCnt, SkipExpr};
-    }
-
-    // Assign second if second is not assigned yet.
-    if (!TheMap.getIsCounterPair().second)
-      TheMap.second = NextCounterNum++;
-
-    Counter SkipCnt = Counter::getCounter(TheMap.second);
-    MapToExpand[SkipCnt] = SkipExpr;
-    return {ExecCnt, SkipCnt};
+  BranchCounterPair getBranchCounterPair(const Stmt *S, Counter ParentCnt) {
+    Counter ExecCnt = getRegionCounter(S);
+    return {ExecCnt, Builder.subtract(ParentCnt, ExecCnt)};
   }
 
   /// Returns {TrueCnt,FalseCnt} for "implicit default".
@@ -1644,7 +1632,7 @@ struct CounterCoverageMappingBuilder
             : addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
     auto [ExecCount, ExitCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S), Counter::getZero())
+             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
              : getBranchCounterPair(S, CondCount));
     if (!llvm::EnableSingleByteCoverage) {
       assert(ExecCount.isZero() || ExecCount == BodyCount);
@@ -1701,7 +1689,7 @@ struct CounterCoverageMappingBuilder
                             : addCounters(BackedgeCount, BC.ContinueCount);
     auto [ExecCount, ExitCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S), Counter::getZero())
+             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
              : getBranchCounterPair(S, CondCount));
     if (!llvm::EnableSingleByteCoverage) {
       assert(ExecCount.isZero() || ExecCount == BodyCount);
@@ -1769,7 +1757,7 @@ struct CounterCoverageMappingBuilder
                   IncrementBC.ContinueCount);
     auto [ExecCount, ExitCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S), Counter::getZero())
+             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
              : getBranchCounterPair(S, CondCount));
     if (!llvm::EnableSingleByteCoverage) {
       assert(ExecCount.isZero() || ExecCount == BodyCount);
@@ -2076,9 +2064,9 @@ struct CounterCoverageMappingBuilder
     Counter ParentCount = getRegion().getCounter();
     auto [ThenCount, ElseCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S->getThen()),
-                              (S->getElse() ? getRegionCounter(S->getElse())
-                                            : Counter::getZero()))
+             ? BranchCounterPair{getRegionCounter(S->getThen()),
+                                 (S->getElse() ? getRegionCounter(S->getElse())
+                                               : Counter::getZero())}
              : getBranchCounterPair(S, ParentCount));
 
     // Emitting a counter for the condition makes it easier to interpret the
@@ -2151,8 +2139,8 @@ struct CounterCoverageMappingBuilder
     Counter ParentCount = getRegion().getCounter();
     auto [TrueCount, FalseCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(E->getTrueExpr()),
-                              getRegionCounter(E->getFalseExpr()))
+             ? BranchCounterPair{getRegionCounter(E->getTrueExpr()),
+                                 getRegionCounter(E->getFalseExpr())}
              : getBranchCounterPair(E, ParentCount));
     Counter OutCount;
 
