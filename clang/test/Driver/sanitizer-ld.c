@@ -591,12 +591,12 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX %s
 // CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
-// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
 // CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-NOT: libclang_rt.ubsan
-// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX: "-lstdc++"
-// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX: "-lpthread"
-// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX: "-lresolv"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "-lstdc++"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "-lpthread"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "-lresolv"
 
 // RUN: %clangxx -fsanitize=memory,undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
