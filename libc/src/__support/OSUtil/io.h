@@ -24,7 +24,7 @@
 #elif defined(__ELF__)
 // TODO: Ideally we would have LIBC_TARGET_OS_IS_BAREMETAL.
 #include "baremetal/io.h"
-#elif defined(__uefi__)
+#elif defined(__UEFI__)
 #include "uefi/io.h"
 #endif
 
