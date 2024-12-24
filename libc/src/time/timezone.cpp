@@ -160,7 +160,7 @@ tzset *get_tzset() {
   ptr_tz = tz;
   j = 0;
   for (i = tzh_leapcnt_end; i < (size_t)tzh_charcnt_end + 1; ++i) {
-      if (i == (size_t)tzh_charcnt_end) {
+      if (i == (size_t)tzh_charcnt_end - 1) {
           tz[j] = '\0';
           break;
       }
