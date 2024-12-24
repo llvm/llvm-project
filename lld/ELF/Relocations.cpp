@@ -1316,22 +1316,10 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   if (ctx.arg.emachine == EM_MIPS)
     return handleMipsTlsRelocation(ctx, type, sym, *sec, offset, addend, expr);
 
-  // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
-  // generate TLSDESC dynamic relocation for the dynamic linker to handle.
-  if (ctx.arg.emachine == EM_LOONGARCH &&
-      oneof<RE_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_PC,
-            R_TLSDESC_CALL>(expr)) {
-    if (expr != R_TLSDESC_CALL) {
-      sym.setFlags(NEEDS_TLSDESC);
-      sec->addReloc({expr, type, offset, addend, &sym});
-    }
-    return 1;
-  }
-
   bool isRISCV = ctx.arg.emachine == EM_RISCV;
 
   if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_TLSDESC_GOTPLT>(expr) &&
+            R_TLSDESC_GOTPLT, RE_LOONGARCH_TLSDESC_PAGE_PC>(expr) &&
       ctx.arg.shared) {
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
     // set NEEDS_TLSDESC on the label.
@@ -1350,7 +1338,10 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_LOONGARCH &&
+      ctx.arg.emachine != EM_HEXAGON &&
+      !(ctx.arg.emachine == EM_LOONGARCH &&
+        expr != RE_LOONGARCH_TLSDESC_PAGE_PC && expr != R_TLSDESC &&
+        expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
 
@@ -1401,7 +1392,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
 
   if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
-            RE_LOONGARCH_TLSGD_PAGE_PC>(expr)) {
+            RE_LOONGARCH_TLSGD_PAGE_PC, RE_LOONGARCH_TLSDESC_PAGE_PC>(expr)) {
     if (!execOptimize) {
       sym.setFlags(NEEDS_TLSGD);
       sec->addReloc({expr, type, offset, addend, &sym});

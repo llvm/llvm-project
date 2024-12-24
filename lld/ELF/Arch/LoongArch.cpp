@@ -39,7 +39,15 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   bool relaxOnce(int pass) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   void finalizeRelax(int passes) const override;
+
+private:
+  void tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val,
+                   bool isExtreme) const;
+  void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val,
+                   bool isExtreme) const;
 };
 } // end anonymous namespace
 
@@ -53,9 +61,15 @@ enum Op {
   ADDI_W = 0x02800000,
   ADDI_D = 0x02c00000,
   ANDI = 0x03400000,
+  ORI = 0x03800000,
+  LU12I_W = 0x14000000,
+  LU32I_D = 0x16000000,
+  LU52I_D = 0x03000000,
+  PCALAU12I = 0x1a000000,
   PCADDU12I = 0x1c000000,
   LD_W = 0x28800000,
   LD_D = 0x28c00000,
+  LDX_D = 0x380c0000,
   JIRL = 0x4c000000,
 };
 
@@ -63,6 +77,7 @@ enum Reg {
   R_ZERO = 0,
   R_RA = 1,
   R_TP = 2,
+  R_A0 = 4,
   R_T0 = 12,
   R_T1 = 13,
   R_T2 = 14,
@@ -130,6 +145,10 @@ static uint32_t insn(uint32_t op, uint32_t d, uint32_t j, uint32_t k) {
 static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
   return begin == 63 ? v >> end : (v & ((1ULL << (begin + 1)) - 1)) >> end;
 }
+
+static uint32_t getD5(uint64_t v) { return extractBits(v, 4, 0); }
+
+static uint32_t getJ5(uint64_t v) { return extractBits(v, 9, 5); }
 
 static uint32_t setD5k16(uint32_t insn, uint32_t imm) {
   uint32_t immLo = extractBits(imm, 15, 0);
@@ -810,6 +829,255 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     Fatal(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
+}
+
+// Convert TLSDESC GD/LD to IE.
+// The code sequence obtained in the normal or medium code model is as follows:
+//  * pcalau12i $a0, %ie_pc_hi20(sym_ie)
+//  * ld.[wd]   $a0, $a0, %ie_pc_lo12(sym_ie)
+//
+// The code sequence obtained in the extreme code model is as follows:
+//  * pcalau12i $a0, %ie_pc_hi20(sym_ie_large)
+//  * addi.d    $a1, $r0, %ie_pc_lo12(sym_ie_large)
+//  * lu32i.d   $a1, %ie64_pc_lo20(sym_ie_large)
+//  * lu52i.d   $a1, $a1, %ie64_pc_hi12(sym_ie_large)
+//  * ldx.d     $a0, $a0, $a1
+//
+//  The optimization for tlsdescToIe and tlsdescToLe in the extreme code model
+//  always preserves the preceding code sequence and converts the last
+//  instructions to NOP, while the optimization for the normal or medium code
+//  models of tlsdescToIe and tlsdescToLe do the oppsite. This is because, in
+//  the extreme code model, tlsdescToIe requires a temporary register $a1, and
+//  the preceding unoptimized tls.desc code sequence contains this temporary
+//  register, eliminating additional bookkeeping.
+void LoongArch::tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val,
+                            bool isExtreme) const {
+  if (isExtreme) { // extreme
+    const uint32_t currInsn = read32le(loc);
+    switch (rel.type) {
+    case R_LARCH_TLS_DESC_PC_HI20:
+      write32le(loc, insn(PCALAU12I, R_A0, 0, 0)); // pcalau12i $a0, %ie_pc_hi20
+      relocateNoSym(loc, R_LARCH_TLS_IE_PC_HI20, val);
+      break;
+    case R_LARCH_TLS_DESC_PC_LO12:
+      write32le(loc, insn(ADDI_D, getD5(currInsn), R_ZERO,
+                          0)); // addi.d $a1, $r0, %ie_pc_lo12
+      relocateNoSym(loc, R_LARCH_TLS_IE_PC_LO12, val);
+      break;
+    case R_LARCH_TLS_DESC64_PC_LO20:
+      write32le(loc, insn(LU32I_D, getD5(currInsn), 0,
+                          0)); // lu32i.d $a1, %ie64_pc_lo20
+      relocateNoSym(loc, R_LARCH_TLS_IE64_PC_LO20, val);
+      break;
+    case R_LARCH_TLS_DESC64_PC_HI12:
+      write32le(loc, insn(LU52I_D, getD5(currInsn), getJ5(currInsn),
+                          0)); // lu52i.d $a1, $a1, %ie64_pc_hi12
+      relocateNoSym(loc, R_LARCH_TLS_IE64_PC_HI12, val);
+      write32le(loc + 4, insn(LDX_D, R_A0, R_A0,
+                              getD5(currInsn))); // ldx.d $a0, $a0, $a1
+      break;
+    case R_LARCH_TLS_DESC_LD:
+    case R_LARCH_TLS_DESC_CALL:
+      write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      break;
+    default:
+      llvm_unreachable("unsupported relocation for TLSDESC to IE");
+    }
+  } else { // normal or medium
+    switch (rel.type) {
+    case R_LARCH_TLS_DESC_PC_HI20:
+    case R_LARCH_TLS_DESC_PC_LO12:
+    case R_LARCH_TLS_DESC_PCREL20_S2:
+      write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      break;
+    case R_LARCH_TLS_DESC_LD:
+      write32le(loc, insn(PCALAU12I, R_A0, 0, 0)); // pcalau12i $a0, %ie_pc_hi20
+      relocateNoSym(loc, R_LARCH_TLS_IE_PC_HI20, val);
+      break;
+    case R_LARCH_TLS_DESC_CALL:
+      write32le(loc, insn(ctx.arg.is64 ? LD_D : LD_W, R_A0, R_A0,
+                          0)); // ld.[wd] $a0, $a0, %ie_pc_lo12
+      relocateNoSym(loc, R_LARCH_TLS_IE_PC_LO12, val);
+      break;
+    default:
+      llvm_unreachable("unsupported relocation for TLSDESC to IE");
+    }
+  }
+}
+
+// Convert TLSDESC GD/LD to LE.
+// The code sequence obtained in the normal or medium code model is as follows:
+//  * lu12i.w $a0, %le_hi20(sym_le)  # le_hi20 != 0
+//  * ori $a0 $a0, %le_lo12(sym_le)
+//
+// The code sequence obtained in extreme code model is as follows:
+//  * lu12i.w $a0, %le_hi20(sym_le_large)
+//  * ori     $a0, $a0, %le_lo12(sym_le_large)
+//  * lu32i.d $a0, %le64_lo20(sym_le_large)
+//  * lu52i.d $a0, $a0, %le64_hi20(sym_le_large)
+//
+// Note: In the extreme code model, it is possible for the generated code
+// sequence to include NOPs at both beginning and the end. Likely,
+//  * nop; ori $a0, $r0, %le_lo12; nop; nop
+// This occurs because the four instructions are used to assemble each part of a
+// 64-bit value independently, without affecting each other. Therefore, to
+// obtain an efficient code sequence, NOPs are used as much as possible.
+// Additionally, the extreme code model does not participate in relaxation
+// optimization.
+void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val,
+                            bool isExtreme) const {
+  if (isExtreme) { // extreme
+    switch (rel.type) {
+    case R_LARCH_TLS_DESC_PC_HI20:
+      if (uint32_t hi20 = extractBits(val, 31, 12))
+        write32le(loc,
+                  insn(LU12I_W, R_A0, hi20, 0)); // lu12i.w $a0, $a0, %le_hi20
+      else
+        write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      break;
+    case R_LARCH_TLS_DESC_PC_LO12:
+      if (extractBits(val, 31, 12))
+        write32le(loc,
+                  insn(ORI, R_A0, R_A0, lo12(val))); // ori $a0, $a0, %le_lo12
+      else
+        write32le(loc,
+                  insn(ORI, R_A0, R_ZERO, lo12(val))); // ori $a0, $r0, %le_lo12
+      break;
+    case R_LARCH_TLS_DESC64_PC_LO20:
+      // If val[31] is 1, lu12i.w will set $a0[51-32]. So, clear it.
+      if (uint32_t lo20 = extractBits(val, 51, 32) || extractBits(val, 31, 31))
+        write32le(loc, insn(LU32I_D, R_A0, lo20, 0)); // lu32i.d $a0, %le64_lo20
+      else
+        write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      break;
+    case R_LARCH_TLS_DESC64_PC_HI12:
+      // If val[31] is 1, lu12i.w will set $a0[63-52]. So, clear it.
+      if (uint32_t hi12 =
+              extractBits(val, 63, 52) || extractBits(val, 31, 31)) {
+        write32le(loc, insn(LU52I_D, R_A0, R_A0,
+                            hi12)); // lu52i.d $a0, $a0, %le64_hi20
+        // Due to add.d does not include relocation, an additional NOP needs to
+        // be generated.
+        write32le(loc + 4, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      } else {
+        write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0));     // nop
+        write32le(loc + 4, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      }
+      break;
+    case R_LARCH_TLS_DESC_LD:
+    case R_LARCH_TLS_DESC_CALL:
+      write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      break;
+    default:
+      llvm_unreachable("unsupported relocation for TLSDESC to LE");
+    }
+  } else { // normal or medium
+    switch (rel.type) {
+    case R_LARCH_TLS_DESC_PC_HI20:
+    case R_LARCH_TLS_DESC_PC_LO12:
+    case R_LARCH_TLS_DESC_PCREL20_S2:
+      write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      break;
+    case R_LARCH_TLS_DESC_LD:
+      if (isUInt<12>(val))
+        write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+      else if (isInt<32>(val))
+        write32le(loc, insn(LU12I_W, R_A0, extractBits(val, 31, 12),
+                            0)); // lu12i.w $a0, %le_hi20
+      else
+        Err(ctx) << val
+                 << " exceeds the range of medium code model in tlsdescToLe";
+      break;
+    case R_LARCH_TLS_DESC_CALL:
+      if (isUInt<12>(val))
+        write32le(loc, insn(ORI, R_A0, R_ZERO, val)); // ori $a0, $r0, %le_lo12
+      else if (isInt<32>(val))
+        write32le(loc,
+                  insn(ORI, R_A0, R_A0, lo12(val))); // ori $a0, $a0, %le_lo12
+      else
+        Err(ctx) << val
+                 << " exceeds the range of medium code model in tlsdescToLe";
+      break;
+    default:
+      llvm_unreachable("unsupported relocation for TLSDESC to LE");
+    }
+  }
+}
+
+// During GD_TO_IE, the converted code sequence always includes an instruction
+// related to the Lo12 relocation (ld.[wd] or addi.d). To obtain correct val in
+// `getRelocTargetVA`, expr of this instruction should be adjusted to
+// R_RELAX_TLS_GD_TO_IE_ABS, while expr of other valid instructions (not NOP)
+// should be adjusted to RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC.
+// See the comment in tlsdescToIe for detailed information.
+//
+// Specifically, in the normal or medium code model, the instruction with
+// relocation R_LARCH_TLS_DESC_CALL is the candidate of Lo12 relocation. And in
+// the extreme code model, the instruction with R_LARCH_TLS_DESC_PC_LO12 is the
+// candidate. Meanwhile, in the normal or medium code model, the instruction
+// with R_LARCH_TLS_DESC_PC_LO12 will always be converted to NOP. Similarly, in
+// the extreme code model, the instruction with R_LARCH_TLS_DESC_CALL will be
+// converted to NOP. Therefore, the adjustment of the expr here is safe.
+RelExpr LoongArch::adjustTlsExpr(RelType type, RelExpr expr) const {
+  if (expr == R_RELAX_TLS_GD_TO_IE) {
+    if (type != R_LARCH_TLS_DESC_PC_LO12 && type != R_LARCH_TLS_DESC_CALL)
+      return RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC;
+    return R_RELAX_TLS_GD_TO_IE_ABS;
+  }
+  return expr;
+}
+
+void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  const unsigned bits = ctx.arg.is64 ? 64 : 32;
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
+  bool isExtreme = false;
+  const ArrayRef<Relocation> relocs = sec.relocs();
+  for (size_t i = 0, size = relocs.size(); i != size; ++i) {
+    const Relocation &rel = relocs[i];
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
+
+    switch (rel.expr) {
+    case R_RELAX_HINT:
+      continue;
+    case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
+      if (rel.type == R_LARCH_TLS_DESC_PC_HI20) {
+        // The relocation sequence in the extreme code model is as follows:
+        //
+        //  * i   -- R_LARCH_TLS_DESC_PC_HI20
+        //  * i+1 -- R_LARCH_TLS_DESC_PC_LO12
+        //  * i+2 -- R_LARCH_TLS_DESC64_PC_LO20
+        //  * i+3 -- R_LARCH_TLS_DESC64_PC_HI12
+        isExtreme =
+            (i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20);
+      }
+      [[fallthrough]];
+    case R_RELAX_TLS_GD_TO_IE_ABS:
+      tlsdescToIe(loc, rel, val, isExtreme);
+      continue;
+    case R_RELAX_TLS_GD_TO_LE:
+      if (rel.type == R_LARCH_TLS_DESC_PC_HI20) {
+        // The relocation sequence in the extreme code model is as follows:
+        //
+        //  * i   -- R_LARCH_TLS_DESC_PC_HI20
+        //  * i+1 -- R_LARCH_TLS_DESC_PC_LO12
+        //  * i+2 -- R_LARCH_TLS_DESC64_PC_LO20
+        //  * i+3 -- R_LARCH_TLS_DESC64_PC_HI12
+        isExtreme =
+            (i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20);
+      }
+      tlsdescToLe(loc, rel, val, isExtreme);
+      continue;
+    default:
+      break;
+    }
+    relocate(loc, rel, val);
+  }
 }
 
 // When relaxing just R_LARCH_ALIGN, relocDeltas is usually changed only once in
