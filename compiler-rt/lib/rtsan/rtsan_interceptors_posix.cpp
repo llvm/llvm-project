@@ -297,6 +297,23 @@ INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
   return REAL(fdopen)(fd, mode);
 }
 
+#if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
+INTERCEPTOR(FILE *, open_memstream, char **buf, size_t *size) {
+  __rtsan_notify_intercepted_call("open_memstream");
+  return REAL(open_memstream)(buf, size);
+}
+
+INTERCEPTOR(FILE *, fmemopen, void *buf, size_t size, const char *mode) {
+  __rtsan_notify_intercepted_call("fmemopen");
+  return REAL(fmemopen)(buf, size, mode);
+}
+#define RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM INTERCEPT_FUNCTION(open_memstream)
+#define RTSAN_MAYBE_INTERCEPT_FMEMOPEN INTERCEPT_FUNCTION(fmemopen)
+#else
+#define RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM
+#define RTSAN_MAYBE_INTERCEPT_FMEMOPEN
+#endif
+
 INTERCEPTOR(int, puts, const char *s) {
   __rtsan_notify_intercepted_call("puts");
   return REAL(puts)(s);
@@ -807,6 +824,17 @@ INTERCEPTOR(int, epoll_pwait, int epfd, struct epoll_event *events,
 #define RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT
 #endif // SANITIZER_INTERCEPT_EPOLL
 
+#if SANITIZER_INTERCEPT_PPOLL
+INTERCEPTOR(int, ppoll, struct pollfd *fds, nfds_t n, const struct timespec *ts,
+            const sigset_t *set) {
+  __rtsan_notify_intercepted_call("ppoll");
+  return REAL(ppoll)(fds, n, ts, set);
+}
+#define RTSAN_MAYBE_INTERCEPT_PPOLL INTERCEPT_FUNCTION(ppoll)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PPOLL
+#endif
+
 #if SANITIZER_INTERCEPT_KQUEUE
 INTERCEPTOR(int, kqueue, void) {
   __rtsan_notify_intercepted_call("kqueue");
@@ -944,6 +972,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(fputs);
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
+  RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM;
+  RTSAN_MAYBE_INTERCEPT_FMEMOPEN;
   INTERCEPT_FUNCTION(lseek);
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
@@ -1000,6 +1030,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_EPOLL_CTL;
   RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
   RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
+  RTSAN_MAYBE_INTERCEPT_PPOLL;
   RTSAN_MAYBE_INTERCEPT_KQUEUE;
   RTSAN_MAYBE_INTERCEPT_KEVENT;
   RTSAN_MAYBE_INTERCEPT_KEVENT64;

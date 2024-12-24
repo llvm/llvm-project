@@ -901,9 +901,8 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     // Create a bigger, nul-padded array with the same length, SrcLen,
     // as the original string.
     SrcStr.resize(N, '\0');
-    Src = B.CreateGlobalString(
-        SrcStr, "str", /*AddressSpace=*/DL.getDefaultGlobalsAddressSpace(),
-        /*M=*/nullptr, /*AddNull=*/false);
+    Src = B.CreateGlobalString(SrcStr, "str", /*AddressSpace=*/0,
+                               /*M=*/nullptr, /*AddNull=*/false);
   }
 
   // st{p,r}ncpy(D, S, N) -> memcpy(align 1 D, align 1 S, N) when both
@@ -1707,8 +1706,7 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
-    return copyFlags(*CI, emitMalloc(CI->getArgOperand(0)->getType(),
-                                     CI->getArgOperand(1), B, DL, TLI));
+    return copyFlags(*CI, emitMalloc(CI->getArgOperand(1), B, DL, TLI));
 
   return nullptr;
 }
@@ -1743,124 +1741,122 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znwm:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
                             LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
-          CI->getArgOperand(2), B, TLI,
-          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
     break;
   case LibFunc_size_returning_new:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdSizeReturningNew(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
-          LibFunc_size_returning_new_hot_cold, HotCold);
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdSizeReturningNew(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
-          LibFunc_size_returning_new_hot_cold, HotCold);
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
     break;
   case LibFunc_size_returning_new_aligned:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdSizeReturningNewAligned(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
-          CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (OptimizeExistingHotColdNew)
       return emitHotColdSizeReturningNewAligned(
-          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
-          CI->getArgOperand(1), B, TLI,
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
@@ -3332,8 +3328,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     // printf("%s", str"\n") --> puts(str)
     if (OperandStr.back() == '\n') {
       OperandStr = OperandStr.drop_back();
-      Value *GV = B.CreateGlobalString(OperandStr, "str",
-                                       DL.getDefaultGlobalsAddressSpace());
+      Value *GV = B.CreateGlobalString(OperandStr, "str");
       return copyFlags(*CI, emitPutS(GV, B, TLI));
     }
     return nullptr;
@@ -3345,8 +3340,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
-    Value *GV = B.CreateGlobalString(FormatStr, "str",
-                                     DL.getDefaultGlobalsAddressSpace());
+    Value *GV = B.CreateGlobalString(FormatStr, "str");
     return copyFlags(*CI, emitPutS(GV, B, TLI));
   }
 
