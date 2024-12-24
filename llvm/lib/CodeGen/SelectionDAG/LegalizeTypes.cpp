@@ -916,7 +916,7 @@ SDValue DAGTypeLegalizer::PackBitcastInRegister(SDNode *N) const {
   EVT FromVT = N->getOperand(0)->getValueType(0);
   EVT ToVT = N->getValueType(0);
 
-  if (!FromVT.isVector() || !ToVT.isInteger())
+  if (!FromVT.isVector() || !ToVT.isScalarInteger())
     return SDValue();
 
   SDLoc DL(N);
@@ -953,7 +953,7 @@ SDValue DAGTypeLegalizer::UnpackBitcastInRegister(SDNode *N) const {
   EVT FromVT = N->getOperand(0)->getValueType(0);
   EVT ToVT = N->getValueType(0);
 
-  if (!FromVT.isInteger() || !ToVT.isVector())
+  if (!FromVT.isScalarInteger() || !ToVT.isVector())
     return SDValue();
 
   SDLoc DL(N);
