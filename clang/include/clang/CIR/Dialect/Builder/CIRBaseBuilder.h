@@ -9,7 +9,11 @@
 #ifndef LLVM_CLANG_CIR_DIALECT_BUILDER_CIRBASEBUILDER_H
 #define LLVM_CLANG_CIR_DIALECT_BUILDER_CIRBASEBUILDER_H
 
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Types.h"
 
 namespace cir {
 
@@ -25,6 +29,13 @@ public:
 
   cir::PointerType getVoidPtrTy() {
     return getPointerTo(cir::VoidType::get(getContext()));
+  }
+
+  mlir::TypedAttr getConstPtrAttr(mlir::Type t, int64_t v) {
+    auto val =
+        mlir::IntegerAttr::get(mlir::IntegerType::get(t.getContext(), 64), v);
+    return cir::ConstPtrAttr::get(getContext(), mlir::cast<cir::PointerType>(t),
+                                  val);
   }
 };
 
