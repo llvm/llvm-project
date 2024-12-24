@@ -52,6 +52,7 @@ private:
 
   bool isIllegalVectorType(QualType Ty) const;
 
+  bool passAsAggregateType(QualType Ty) const;
   bool passAsPureScalableType(QualType Ty, unsigned &NV, unsigned &NP,
                               SmallVectorImpl<llvm::Type *> &CoerceToSeq) const;
 
@@ -337,6 +338,10 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
   NSRN += NVec;
   NPRN += NPred;
 
+  // Handle SVE vector tuples.
+  if (Ty->isSVESizelessBuiltinType())
+    return ABIArgInfo::getDirect();
+
   llvm::Type *UnpaddedCoerceToType =
       UnpaddedCoerceToSeq.size() == 1
           ? UnpaddedCoerceToSeq[0]
@@ -362,7 +367,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty, NSRN, NPRN);
 
-  if (!isAggregateTypeForABI(Ty)) {
+  if (!passAsAggregateType(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
@@ -417,7 +422,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // elsewhere for GNU compatibility.
   uint64_t Size = getContext().getTypeSize(Ty);
   bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
-  if (IsEmpty || Size == 0) {
+  if (!Ty->isSVESizelessBuiltinType() && (IsEmpty || Size == 0)) {
     if (!getContext().getLangOpts().CPlusPlus || isDarwinPCS())
       return ABIArgInfo::getIgnore();
 
@@ -504,7 +509,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 128)
     return getNaturalAlignIndirect(RetTy);
 
-  if (!isAggregateTypeForABI(RetTy)) {
+  if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
       RetTy = EnumTy->getDecl()->getIntegerType();
@@ -519,7 +524,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   }
 
   uint64_t Size = getContext().getTypeSize(RetTy);
-  if (isEmptyRecord(getContext(), RetTy, true) || Size == 0)
+  if (!RetTy->isSVESizelessBuiltinType() &&
+      (isEmptyRecord(getContext(), RetTy, true) || Size == 0))
     return ABIArgInfo::getIgnore();
 
   const Type *Base = nullptr;
@@ -654,6 +660,15 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
+bool AArch64ABIInfo::passAsAggregateType(QualType Ty) const {
+  if (Kind == AArch64ABIKind::AAPCS && Ty->isSVESizelessBuiltinType()) {
+    const auto *BT = Ty->getAs<BuiltinType>();
+    return !BT->isSVECount() &&
+           getContext().getBuiltinVectorTypeInfo(BT).NumVectors > 1;
+  }
+  return isAggregateTypeForABI(Ty);
+}
+
 // Check if a type needs to be passed in registers as a Pure Scalable Type (as
 // defined by AAPCS64). Return the number of data vectors and the number of
 // predicate vectors in the type, into `NVec` and `NPred`, respectively. Upon
@@ -719,37 +734,38 @@ bool AArch64ABIInfo::passAsPureScalableType(
     return true;
   }
 
-  const auto *VT = Ty->getAs<VectorType>();
-  if (!VT)
-    return false;
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
+      ++NPred;
+      if (CoerceToSeq.size() + 1 > 12)
+        return false;
+      CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+      return true;
+    }
 
-  if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
-    ++NPred;
-    if (CoerceToSeq.size() + 1 > 12)
-      return false;
-    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
-    return true;
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
+      ++NVec;
+      if (CoerceToSeq.size() + 1 > 12)
+        return false;
+      CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+      return true;
+    }
+
+    return false;
   }
 
-  if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
-    ++NVec;
-    if (CoerceToSeq.size() + 1 > 12)
-      return false;
-    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
-    return true;
-  }
-
-  if (!VT->isBuiltinType())
+  if (!Ty->isBuiltinType())
     return false;
 
-  switch (cast<BuiltinType>(VT)->getKind()) {
+  bool isPredicate;
+  switch (Ty->getAs<BuiltinType>()->getKind()) {
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
-    ++NVec;                                                                    \
+    isPredicate = false;                                                       \
     break;
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
-    ++NPred;                                                                   \
+    isPredicate = true;                                                        \
     break;
 #define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -761,6 +777,10 @@ bool AArch64ABIInfo::passAsPureScalableType(
       getContext().getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
   assert(Info.NumVectors > 0 && Info.NumVectors <= 4 &&
          "Expected 1, 2, 3 or 4 vectors!");
+  if (isPredicate)
+    NPred += Info.NumVectors;
+  else
+    NVec += Info.NumVectors;
   auto VTy = llvm::ScalableVectorType::get(CGT.ConvertType(Info.ElementType),
                                            Info.EC.getKnownMinValue());
 

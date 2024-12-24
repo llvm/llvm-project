@@ -2290,7 +2290,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   if (getIsCounterPair(S.getCond()).second) {
     auto *ImplicitDefaultBlock = createBasicBlock("sw.false");
     EmitBlock(ImplicitDefaultBlock);
-    incrementProfileCounter(true, S.getCond());
+    incrementProfileCounter(UseSkipPath, S.getCond());
     Builder.CreateBr(SwitchInsn->getDefaultDest());
     SwitchInsn->setDefaultDest(ImplicitDefaultBlock);
   }

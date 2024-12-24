@@ -220,6 +220,55 @@ define void @test_store(bfloat %a, ptr %b) {
   ret void
 }
 
+define void @test_truncstore32(float %a, ptr %b) {
+; CHECK-NOFP-LABEL: test_truncstore32:
+; CHECK-NOFP:       @ %bb.0:
+; CHECK-NOFP-NEXT:    .save {r4, lr}
+; CHECK-NOFP-NEXT:    push {r4, lr}
+; CHECK-NOFP-NEXT:    mov r4, r1
+; CHECK-NOFP-NEXT:    bl __truncsfbf2
+; CHECK-NOFP-NEXT:    strh r0, [r4]
+; CHECK-NOFP-NEXT:    pop {r4, pc}
+;
+; CHECK-FP-LABEL: test_truncstore32:
+; CHECK-FP:       @ %bb.0:
+; CHECK-FP-NEXT:    .save {r4, lr}
+; CHECK-FP-NEXT:    push {r4, lr}
+; CHECK-FP-NEXT:    mov r4, r0
+; CHECK-FP-NEXT:    bl __truncsfbf2
+; CHECK-FP-NEXT:    vmov r0, s0
+; CHECK-FP-NEXT:    strh r0, [r4]
+; CHECK-FP-NEXT:    pop {r4, pc}
+  %r = fptrunc float %a to bfloat
+  store bfloat %r, ptr %b
+  ret void
+}
+
+define void @test_truncstore64(double %a, ptr %b) {
+; CHECK-NOFP-LABEL: test_truncstore64:
+; CHECK-NOFP:       @ %bb.0:
+; CHECK-NOFP-NEXT:    .save {r4, lr}
+; CHECK-NOFP-NEXT:    push {r4, lr}
+; CHECK-NOFP-NEXT:    mov r4, r2
+; CHECK-NOFP-NEXT:    bl __truncdfbf2
+; CHECK-NOFP-NEXT:    strh r0, [r4]
+; CHECK-NOFP-NEXT:    pop {r4, pc}
+;
+; CHECK-FP-LABEL: test_truncstore64:
+; CHECK-FP:       @ %bb.0:
+; CHECK-FP-NEXT:    .save {r4, lr}
+; CHECK-FP-NEXT:    push {r4, lr}
+; CHECK-FP-NEXT:    mov r4, r0
+; CHECK-FP-NEXT:    vmov r0, r1, d0
+; CHECK-FP-NEXT:    bl __aeabi_d2f
+; CHECK-FP-NEXT:    lsrs r0, r0, #16
+; CHECK-FP-NEXT:    strh r0, [r4]
+; CHECK-FP-NEXT:    pop {r4, pc}
+  %r = fptrunc double %a to bfloat
+  store bfloat %r, ptr %b
+  ret void
+}
+
 define bfloat @test_load(ptr %a) {
 ; CHECK-NOFP-LABEL: test_load:
 ; CHECK-NOFP:       @ %bb.0:
@@ -233,6 +282,48 @@ define bfloat @test_load(ptr %a) {
 ; CHECK-FP-NEXT:    bx lr
   %r = load bfloat, ptr %a
   ret bfloat %r
+}
+
+define float @test_loadext32(ptr %a) {
+; CHECK-NOFP-LABEL: test_loadext32:
+; CHECK-NOFP:       @ %bb.0:
+; CHECK-NOFP-NEXT:    ldrh r0, [r0]
+; CHECK-NOFP-NEXT:    lsls r0, r0, #16
+; CHECK-NOFP-NEXT:    bx lr
+;
+; CHECK-FP-LABEL: test_loadext32:
+; CHECK-FP:       @ %bb.0:
+; CHECK-FP-NEXT:    ldrh r0, [r0]
+; CHECK-FP-NEXT:    lsls r0, r0, #16
+; CHECK-FP-NEXT:    vmov s0, r0
+; CHECK-FP-NEXT:    bx lr
+  %r = load bfloat, ptr %a
+  %d = fpext bfloat %r to float
+  ret float %d
+}
+
+define double @test_loadext64(ptr %a) {
+; CHECK-NOFP-LABEL: test_loadext64:
+; CHECK-NOFP:       @ %bb.0:
+; CHECK-NOFP-NEXT:    .save {r7, lr}
+; CHECK-NOFP-NEXT:    push {r7, lr}
+; CHECK-NOFP-NEXT:    ldrh r0, [r0]
+; CHECK-NOFP-NEXT:    lsls r0, r0, #16
+; CHECK-NOFP-NEXT:    bl __aeabi_f2d
+; CHECK-NOFP-NEXT:    pop {r7, pc}
+;
+; CHECK-FP-LABEL: test_loadext64:
+; CHECK-FP:       @ %bb.0:
+; CHECK-FP-NEXT:    .save {r7, lr}
+; CHECK-FP-NEXT:    push {r7, lr}
+; CHECK-FP-NEXT:    ldrh r0, [r0]
+; CHECK-FP-NEXT:    lsls r0, r0, #16
+; CHECK-FP-NEXT:    bl __aeabi_f2d
+; CHECK-FP-NEXT:    vmov d0, r0, r1
+; CHECK-FP-NEXT:    pop {r7, pc}
+  %r = load bfloat, ptr %a
+  %d = fpext bfloat %r to double
+  ret double %d
 }
 
 declare bfloat @test_callee(bfloat %a, bfloat %b)
@@ -867,8 +958,8 @@ define void @test_fccmp(bfloat %in, ptr %out) {
 ; CHECK-FP-LABEL: test_fccmp:
 ; CHECK-FP:       @ %bb.0:
 ; CHECK-FP-NEXT:    vmov r1, s0
-; CHECK-FP-NEXT:    vldr s0, .LCPI30_0
-; CHECK-FP-NEXT:    vldr s4, .LCPI30_1
+; CHECK-FP-NEXT:    vldr s0, .LCPI34_0
+; CHECK-FP-NEXT:    vldr s4, .LCPI34_1
 ; CHECK-FP-NEXT:    lsls r2, r1, #16
 ; CHECK-FP-NEXT:    vmov s2, r2
 ; CHECK-FP-NEXT:    mov.w r2, #17664
@@ -882,9 +973,9 @@ define void @test_fccmp(bfloat %in, ptr %out) {
 ; CHECK-FP-NEXT:    bx lr
 ; CHECK-FP-NEXT:    .p2align 2
 ; CHECK-FP-NEXT:  @ %bb.1:
-; CHECK-FP-NEXT:  .LCPI30_0:
+; CHECK-FP-NEXT:  .LCPI34_0:
 ; CHECK-FP-NEXT:    .long 0x45000000 @ float 2048
-; CHECK-FP-NEXT:  .LCPI30_1:
+; CHECK-FP-NEXT:  .LCPI34_1:
 ; CHECK-FP-NEXT:    .long 0x48000000 @ float 131072
   %cmp1 = fcmp ogt bfloat %in, 0xR4800
   %cmp2 = fcmp olt bfloat %in, 0xR4500
@@ -941,14 +1032,14 @@ define bfloat @test_phi(ptr %p1) {
 ; CHECK-NOFP-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NOFP-NEXT:    ldrh r6, [r0]
 ; CHECK-NOFP-NEXT:    mov r4, r0
-; CHECK-NOFP-NEXT:  .LBB32_1: @ %loop
+; CHECK-NOFP-NEXT:  .LBB36_1: @ %loop
 ; CHECK-NOFP-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NOFP-NEXT:    mov r0, r4
 ; CHECK-NOFP-NEXT:    mov r5, r6
 ; CHECK-NOFP-NEXT:    ldrh r6, [r4]
 ; CHECK-NOFP-NEXT:    bl test_dummy
 ; CHECK-NOFP-NEXT:    lsls r0, r0, #31
-; CHECK-NOFP-NEXT:    bne .LBB32_1
+; CHECK-NOFP-NEXT:    bne .LBB36_1
 ; CHECK-NOFP-NEXT:  @ %bb.2: @ %return
 ; CHECK-NOFP-NEXT:    mov r0, r5
 ; CHECK-NOFP-NEXT:    pop {r4, r5, r6, pc}
@@ -962,7 +1053,7 @@ define bfloat @test_phi(ptr %p1) {
 ; CHECK-FP-NEXT:    mov r4, r0
 ; CHECK-FP-NEXT:    ldrh r0, [r0]
 ; CHECK-FP-NEXT:    vmov s18, r0
-; CHECK-FP-NEXT:  .LBB32_1: @ %loop
+; CHECK-FP-NEXT:  .LBB36_1: @ %loop
 ; CHECK-FP-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-FP-NEXT:    ldrh r0, [r4]
 ; CHECK-FP-NEXT:    vmov.f32 s16, s18
@@ -970,7 +1061,7 @@ define bfloat @test_phi(ptr %p1) {
 ; CHECK-FP-NEXT:    mov r0, r4
 ; CHECK-FP-NEXT:    bl test_dummy
 ; CHECK-FP-NEXT:    lsls r0, r0, #31
-; CHECK-FP-NEXT:    bne .LBB32_1
+; CHECK-FP-NEXT:    bne .LBB36_1
 ; CHECK-FP-NEXT:  @ %bb.2: @ %return
 ; CHECK-FP-NEXT:    vmov.f32 s0, s16
 ; CHECK-FP-NEXT:    vpop {d8, d9}

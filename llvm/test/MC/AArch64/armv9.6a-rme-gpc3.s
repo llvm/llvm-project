@@ -5,8 +5,7 @@
   mrs x3, GPCBW_EL3
   msr GPCBW_EL3, x4
 
-# CHECK:      	.text
-# CHECK-NEXT: .func:
+# CHECK:      .func:
 # CHECK-NEXT: 	apas	x0                              // encoding: [0x1f,0x70,0x0e,0xd5]
 # CHECK-NEXT: 	mrs	x3, GPCBW_EL3                   // encoding: [0xa3,0x21,0x3e,0xd5]
 # CHECK-NEXT: 	msr	GPCBW_EL3, x4                   // encoding: [0xa4,0x21,0x1e,0xd5]
