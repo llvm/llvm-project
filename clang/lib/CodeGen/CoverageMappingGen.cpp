@@ -938,8 +938,12 @@ struct CounterCoverageMappingBuilder
     return Counter::getCounter(CounterMap[S]);
   }
 
-  std::pair<Counter, Counter> getBranchCounterPair(const Stmt *S,
-                                                   Counter ParentCnt) {
+  struct BranchCounterPair {
+    Counter Executed;
+    Counter Skipped;
+  };
+
+  BranchCounterPair getBranchCounterPair(const Stmt *S, Counter ParentCnt) {
     Counter ExecCnt = getRegionCounter(S);
     return {ExecCnt, Builder.subtract(ParentCnt, ExecCnt)};
   }
@@ -1617,7 +1621,7 @@ struct CounterCoverageMappingBuilder
             : addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
     auto [ExecCount, ExitCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S), Counter::getZero())
+             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
              : getBranchCounterPair(S, CondCount));
     if (!llvm::EnableSingleByteCoverage) {
       assert(ExecCount.isZero() || ExecCount == BodyCount);
@@ -1674,7 +1678,7 @@ struct CounterCoverageMappingBuilder
                             : addCounters(BackedgeCount, BC.ContinueCount);
     auto [ExecCount, ExitCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S), Counter::getZero())
+             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
              : getBranchCounterPair(S, CondCount));
     if (!llvm::EnableSingleByteCoverage) {
       assert(ExecCount.isZero() || ExecCount == BodyCount);
@@ -1742,7 +1746,7 @@ struct CounterCoverageMappingBuilder
                   IncrementBC.ContinueCount);
     auto [ExecCount, ExitCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S), Counter::getZero())
+             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
              : getBranchCounterPair(S, CondCount));
     if (!llvm::EnableSingleByteCoverage) {
       assert(ExecCount.isZero() || ExecCount == BodyCount);
@@ -2049,9 +2053,9 @@ struct CounterCoverageMappingBuilder
     Counter ParentCount = getRegion().getCounter();
     auto [ThenCount, ElseCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(S->getThen()),
-                              (S->getElse() ? getRegionCounter(S->getElse())
-                                            : Counter::getZero()))
+             ? BranchCounterPair{getRegionCounter(S->getThen()),
+                                 (S->getElse() ? getRegionCounter(S->getElse())
+                                               : Counter::getZero())}
              : getBranchCounterPair(S, ParentCount));
 
     // Emitting a counter for the condition makes it easier to interpret the
@@ -2124,8 +2128,8 @@ struct CounterCoverageMappingBuilder
     Counter ParentCount = getRegion().getCounter();
     auto [TrueCount, FalseCount] =
         (llvm::EnableSingleByteCoverage
-             ? std::make_pair(getRegionCounter(E->getTrueExpr()),
-                              getRegionCounter(E->getFalseExpr()))
+             ? BranchCounterPair{getRegionCounter(E->getTrueExpr()),
+                                 getRegionCounter(E->getFalseExpr())}
              : getBranchCounterPair(E, ParentCount));
     Counter OutCount;
 
