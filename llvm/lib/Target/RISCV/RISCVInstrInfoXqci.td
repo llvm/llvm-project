@@ -21,6 +21,13 @@ def uimm5nonzero : RISCVOp<XLenVT>,
   let OperandType = "OPERAND_UIMM5_NONZERO";
 }
 
+def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
+  [{return (Imm > 3) && isUInt<5>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<5, "GT3">;
+  let DecoderMethod = "decodeUImmOperand<5>";
+  let OperandType = "OPERAND_UIMM5_GT3";
+}
+
 def uimm11 : RISCVUImmLeafOp<11>;
 
 //===----------------------------------------------------------------------===//
@@ -183,6 +190,37 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_NORMEU : QCIRVInstR<0b1001, "qc.normeu">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcia, IsRV32], DecoderNamespace = "Xqcia"
+
+let Predicates = [HasVendorXqciac, IsRV32], DecoderNamespace = "Xqciac" in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def QC_C_MULADDI : RVInst16CL<0b001, 0b10, (outs GPRC:$rd_wb),
+                               (ins GPRC:$rd, GPRC:$rs1, uimm5:$uimm),
+                               "qc.c.muladdi", "$rd, $rs1, $uimm"> {
+    let Constraints = "$rd = $rd_wb";
+    bits<5> uimm;
+
+    let Inst{12-10} = uimm{3-1};
+    let Inst{6} = uimm{0};
+    let Inst{5} = uimm{4};
+  }
+
+  def QC_MULADDI : RVInstI<0b110, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+                           (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12),
+                           "qc.muladdi", "$rd, $rs1, $imm12"> {
+    let Constraints = "$rd = $rd_wb";
+  }
+
+  def QC_SHLADD : RVInstRBase<0b011, OPC_CUSTOM_0, (outs GPR:$rd),
+                              (ins GPRMem:$rs1, GPRNoX0:$rs2, uimm5gt3:$shamt),
+                              "qc.shladd", "$rd, $rs1, $rs2, $shamt"> {
+    bits<5> shamt;
+
+    let Inst{31-30} = 0b01;
+    let Inst{29-25} = shamt;
+  }
+
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // Predicates = [HasVendorXqciac, IsRV32], DecoderNamespace = "Xqciac"
 
 let Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics" in {
   def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">;
