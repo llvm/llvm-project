@@ -14,7 +14,6 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/XCOFF.h"

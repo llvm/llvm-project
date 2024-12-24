@@ -99,6 +99,7 @@ public:
   ~RunImpl() = default;
 
   Status Poll();
+  int StartPoll(std::optional<MainLoopPosix::TimePoint> point);
   void ProcessReadEvents();
 
 private:
@@ -159,6 +160,22 @@ MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
   read_fds.reserve(loop.m_read_fds.size());
 }
 
+int MainLoopPosix::RunImpl::StartPoll(
+    std::optional<MainLoopPosix::TimePoint> point) {
+#if HAVE_PPOLL
+      return ppoll(read_fds.data(), read_fds.size(), ToTimeSpec(point),
+               /*sigmask=*/nullptr);
+#else
+  using namespace std::chrono;
+  int timeout = -1;
+  if (point) {
+    nanoseconds dur = std::max(*point - steady_clock::now(), nanoseconds(0));
+    timeout = ceil<milliseconds>(dur).count();
+  }
+  return poll(read_fds.data(), read_fds.size(), timeout);
+#endif
+}
+
 Status MainLoopPosix::RunImpl::Poll() {
   read_fds.clear();
 
@@ -169,24 +186,10 @@ Status MainLoopPosix::RunImpl::Poll() {
     pfd.revents = 0;
     read_fds.push_back(pfd);
   }
+  int ready = StartPoll(loop.GetNextWakeupTime());
 
-#if defined(_AIX)
-  sigset_t origmask;
-  int timeout;
-
-  timeout = -1;
-  pthread_sigmask(SIG_SETMASK, nullptr, &origmask);
-  int ready = poll(read_fds.data(), read_fds.size(), timeout);
-  pthread_sigmask(SIG_SETMASK, &origmask, nullptr);
   if (ready == -1 && errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
-#else
-  if (ppoll(read_fds.data(), read_fds.size(),
-            ToTimeSpec(loop.GetNextWakeupTime()),
-            /*sigmask=*/nullptr) == -1 &&
-      errno != EINTR)
-    return Status(errno, eErrorTypePOSIX);
-#endif
 
   return Status();
 }
@@ -291,16 +294,6 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   UNUSED_IF_ASSERT_DISABLED(ret);
   assert(ret == 0 && "sigaction failed");
 
-#if HAVE_SYS_EVENT_H
-  struct kevent ev;
-  EV_SET(&ev, signo, EVFILT_SIGNAL, EV_ADD, 0, 0, 0);
-  ret = kevent(m_kqueue, &ev, 1, nullptr, 0, nullptr);
-  assert(ret == 0);
-#endif
-
-  // If we're using kqueue, the signal needs to be unblocked in order to
-  // receive it. If using pselect/ppoll, we need to block it, and later unblock
-  // it as a part of the system call.
   ret = pthread_sigmask(SIG_UNBLOCK, &new_action.sa_mask, &old_set);
   assert(ret == 0 && "pthread_sigmask failed");
   info.was_blocked = sigismember(&old_set, signo);

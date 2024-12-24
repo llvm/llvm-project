@@ -89,8 +89,9 @@ Status DomainSocket::Connect(llvm::StringRef name) {
   m_socket = CreateSocket(kDomain, kType, 0, error);
   if (error.Fail())
     return error;
-  if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
-        (struct sockaddr *)&saddr_un, saddr_un_len) < 0)
+   if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
+                                  (struct sockaddr *)&saddr_un,
+                                  saddr_un_len) < 0)
     SetLastError(error);
 
   return error;

@@ -197,7 +197,7 @@ struct ForkLaunchInfo {
 #else
     if (ptrace(PT_TRACE_ME, 0, nullptr, 0) == -1)
 #endif
-        ExitWithError(error_fd, "ptrace");
+      ExitWithError(error_fd, "ptrace");
   }
 
   // Execute.  We should never return...
