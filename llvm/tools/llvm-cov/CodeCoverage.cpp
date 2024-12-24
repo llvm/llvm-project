@@ -1023,11 +1023,6 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   cl::alias ShowOutputDirectoryA("o", cl::desc("Alias for --output-dir"),
                                  cl::aliasopt(ShowOutputDirectory));
 
-  cl::opt<bool> BinaryCounters(
-      "binary-counters", cl::Optional,
-      cl::desc("Show 1/0 instead of actual counter values."),
-      cl::cat(ViewCategory));
-
   cl::opt<uint32_t> TabSize(
       "tab-size", cl::init(2),
       cl::desc(
@@ -1105,7 +1100,6 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowDirectoryCoverage = ShowDirectoryCoverage;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
-  ViewOpts.BinaryCounters = BinaryCounters;
   ViewOpts.TabSize = TabSize;
   ViewOpts.ProjectTitle = ProjectTitle;
 

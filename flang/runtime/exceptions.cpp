@@ -81,6 +81,27 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
 // on some systems, e.g. Solaris, so omit object size comparison for now.
 // TODO: consider femode_t object size comparison once its more mature.
 
+// Check if the processor has the ability to control whether to halt or
+// continue execution when a given exception is raised.
+bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
+#if (defined(__arm__) || defined(__aarch64__)) && !defined(_WIN32)
+  except = RTNAME(MapException)(except);
+  int currentSet = fegetexcept(), flipSet, ok;
+  if (currentSet & except) {
+    ok = fedisableexcept(except);
+    flipSet = fegetexcept();
+    ok |= feenableexcept(except);
+  } else {
+    ok = feenableexcept(except);
+    flipSet = fegetexcept();
+    ok |= fedisableexcept(except);
+  }
+  return ok != -1 && currentSet != flipSet;
+#else
+  return false;
+#endif
+}
+
 bool RTNAME(GetUnderflowMode)(void) {
 #if __x86_64__
   // The MXCSR Flush to Zero flag is the negation of the ieee_get_underflow_mode

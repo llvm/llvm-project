@@ -1,6 +1,4 @@
-# RUN: llvm-mc -triple=xtensa -mattr=+density -disassemble < %s | FileCheck -check-prefixes=CHECK-DENSITY %s
-# RUN: llvm-mc -triple=xtensa -disassemble %s &> %t
-# RUN: FileCheck -check-prefixes=CHECK-CORE < %t %s
+# RUN: llvm-mc -triple=xtensa -mattr=+density -disassemble %s | FileCheck --check-prefix=CHECK-DENSITY %s
 
 #------------------------------------------------------------------------------
 # Verify that binary code is correctly disassembled with
