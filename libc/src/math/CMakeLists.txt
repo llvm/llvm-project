@@ -501,6 +501,7 @@ add_math_entrypoint_object(sqrtf128)
 
 add_math_entrypoint_object(tan)
 add_math_entrypoint_object(tanf)
+add_math_entrypoint_object(tanf16)
 
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)

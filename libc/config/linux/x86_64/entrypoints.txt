@@ -718,6 +718,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.sinhf16
     libc.src.math.sinpif16
     libc.src.math.sqrtf16
+    libc.src.math.tanf16
     libc.src.math.tanhf16
     libc.src.math.tanpif16
     libc.src.math.totalorderf16

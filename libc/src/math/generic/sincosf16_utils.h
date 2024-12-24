@@ -63,10 +63,11 @@ LIBC_INLINE int32_t range_reduction_sincospif16(float x, float &y) {
 // further intermediate computation.
 LIBC_INLINE int32_t range_reduction_sincosf16(float x, float &y) {
   double prod = x * 0x1.45f306dc9c883p3;
-  double kf = fputil::nearest_integer(prod);
-  y = static_cast<float>(prod - kf);
+  double kd = fputil::nearest_integer(prod);
 
-  return static_cast<int32_t>(kf);
+  y = static_cast<float>(prod - kd);
+
+  return static_cast<int32_t>(kd);
 }
 
 static LIBC_INLINE void sincosf16_poly_eval(int32_t k, float y, float &sin_k,
