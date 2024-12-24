@@ -1643,16 +1643,10 @@ struct CounterCoverageMappingBuilder
 
     // Go back to handle the condition.
     Counter CondCount =
-        llvm::EnableSingleByteCoverage
-            ? getRegionCounter(S->getCond())
-            : addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
-    auto [ExecCount, ExitCount] =
-        (llvm::EnableSingleByteCoverage
-             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
-             : getBranchCounterPair(S, CondCount));
-    if (!llvm::EnableSingleByteCoverage) {
-      assert(ExecCount.isZero() || ExecCount == BodyCount);
-    }
+        addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
+    auto [ExecCount, ExitCount] = getBranchCounterPair(S, CondCount);
+    assert(ExecCount.isZero() || ExecCount == BodyCount);
+
     propagateCounts(CondCount, S->getCond());
     adjustForOutOfOrderTraversal(getEnd(S));
 
@@ -1690,16 +1684,10 @@ struct CounterCoverageMappingBuilder
     bool BodyHasTerminateStmt = HasTerminateStmt;
     HasTerminateStmt = false;
 
-    Counter CondCount = llvm::EnableSingleByteCoverage
-                            ? getRegionCounter(S->getCond())
-                            : addCounters(BackedgeCount, BC.ContinueCount);
-    auto [ExecCount, ExitCount] =
-        (llvm::EnableSingleByteCoverage
-             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
-             : getBranchCounterPair(S, CondCount));
-    if (!llvm::EnableSingleByteCoverage) {
-      assert(ExecCount.isZero() || ExecCount == BodyCount);
-    }
+    Counter CondCount = addCounters(BackedgeCount, BC.ContinueCount);
+    auto [ExecCount, ExitCount] = getBranchCounterPair(S, CondCount);
+    assert(ExecCount.isZero() || ExecCount == BodyCount);
+
     propagateCounts(CondCount, S->getCond());
 
     Counter OutCount = addCounters(BC.BreakCount, ExitCount);
@@ -1745,19 +1733,11 @@ struct CounterCoverageMappingBuilder
     }
 
     // Go back to handle the condition.
-    Counter CondCount =
-        llvm::EnableSingleByteCoverage
-            ? getRegionCounter(S->getCond())
-            : addCounters(
-                  addCounters(ParentCount, BackedgeCount, BodyBC.ContinueCount),
-                  IncrementBC.ContinueCount);
-    auto [ExecCount, ExitCount] =
-        (llvm::EnableSingleByteCoverage
-             ? BranchCounterPair{getRegionCounter(S), Counter::getZero()}
-             : getBranchCounterPair(S, CondCount));
-    if (!llvm::EnableSingleByteCoverage) {
-      assert(ExecCount.isZero() || ExecCount == BodyCount);
-    }
+    Counter CondCount = addCounters(
+        addCounters(ParentCount, BackedgeCount, BodyBC.ContinueCount),
+        IncrementBC.ContinueCount);
+    auto [ExecCount, ExitCount] = getBranchCounterPair(S, CondCount);
+    assert(ExecCount.isZero() || ExecCount == BodyCount);
 
     if (const Expr *Cond = S->getCond()) {
       propagateCounts(CondCount, Cond);
@@ -2039,12 +2019,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(S->getCond());
 
     Counter ParentCount = getRegion().getCounter();
-    auto [ThenCount, ElseCount] =
-        (llvm::EnableSingleByteCoverage
-             ? BranchCounterPair{getRegionCounter(S->getThen()),
-                                 (S->getElse() ? getRegionCounter(S->getElse())
-                                               : Counter::getZero())}
-             : getBranchCounterPair(S, ParentCount));
+    auto [ThenCount, ElseCount] = getBranchCounterPair(S, ParentCount);
 
     // Emitting a counter for the condition makes it easier to interpret the
     // counter for the body when looking at the coverage.
@@ -2108,11 +2083,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(E);
 
     Counter ParentCount = getRegion().getCounter();
-    auto [TrueCount, FalseCount] =
-        (llvm::EnableSingleByteCoverage
-             ? BranchCounterPair{getRegionCounter(E->getTrueExpr()),
-                                 getRegionCounter(E->getFalseExpr())}
-             : getBranchCounterPair(E, ParentCount));
+    auto [TrueCount, FalseCount] = getBranchCounterPair(E, ParentCount);
     Counter OutCount;
 
     if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(E)) {

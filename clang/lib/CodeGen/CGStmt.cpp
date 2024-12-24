@@ -860,7 +860,8 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     // If the skipped block has no labels in it, just emit the executed block.
     // This avoids emitting dead code and simplifies the CFG substantially.
     if (S.isConstexpr() || !ContainsLabel(Skipped)) {
-      incrementProfileCounter(!CondConstant, &S, true);
+      incrementProfileCounter(CondConstant ? UseExecPath : UseSkipPath, &S,
+                              /*UseBoth=*/true);
       if (Executed) {
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
@@ -910,7 +911,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
   // Emit the 'then' code.
   EmitBlock(ThenBlock);
-  incrementProfileCounter(false, &S);
+  incrementProfileCounter(UseExecPath, &S);
   {
     RunCleanupsScope ThenScope(*this);
     EmitStmt(S.getThen());
@@ -926,7 +927,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
     // Add a counter to else block unless it has CounterExpr.
     if (HasSkip.second)
-      incrementProfileCounter(true, &S);
+      incrementProfileCounter(UseSkipPath, &S);
     {
       RunCleanupsScope ElseScope(*this);
       EmitStmt(Else);
@@ -938,7 +939,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
   } else if (HasSkip.second) {
     EmitBlock(ElseBlock);
-    incrementProfileCounter(true, &S);
+    incrementProfileCounter(UseSkipPath, &S);
     EmitBranch(ContBlock);
   }
 
@@ -1069,7 +1070,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
-      incrementProfileCounter(true, &S);
+      incrementProfileCounter(UseSkipPath, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
   } else if (const Attr *A = Stmt::getLikelihoodAttr(S.getBody())) {
@@ -1087,7 +1088,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   {
     RunCleanupsScope BodyScope(*this);
     EmitBlock(LoopBody);
-    incrementProfileCounter(false, &S);
+    incrementProfileCounter(UseExecPath, &S);
     EmitStmt(S.getBody());
   }
 
@@ -1179,7 +1180,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 
   if (LoopFalse != LoopExit.getBlock()) {
     EmitBlock(LoopFalse);
-    incrementProfileCounter(true, &S, true);
+    incrementProfileCounter(UseSkipPath, &S, /*UseBoth=*/true);
   }
 
   // Emit the exit block.
@@ -1272,7 +1273,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
-      incrementProfileCounter(true, &S);
+      incrementProfileCounter(UseSkipPath, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
 
@@ -1283,7 +1284,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     PGO.markStmtAsUsed(true, &S);
   }
 
-  incrementProfileCounter(false, &S);
+  incrementProfileCounter(UseExecPath, &S);
 
   {
     // Create a separate cleanup scope for the body, in case it is not
@@ -1366,12 +1367,12 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   if (ExitBlock != LoopExit.getBlock()) {
     EmitBlock(ExitBlock);
-    incrementProfileCounter(true, &S);
+    incrementProfileCounter(UseSkipPath, &S);
     EmitBranchThroughCleanup(LoopExit);
   }
 
   EmitBlock(ForBody);
-  incrementProfileCounter(false, &S);
+  incrementProfileCounter(UseExecPath, &S);
 
   // Create a block for the increment. In case of a 'continue', we jump there.
   JumpDest Continue = getJumpDestInCurrentScope("for.inc");

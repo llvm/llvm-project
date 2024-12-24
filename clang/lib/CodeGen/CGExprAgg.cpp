@@ -1289,7 +1289,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
-  CGF.incrementProfileCounter(false, E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   Visit(E->getTrueExpr());
   eval.end(CGF);
 
@@ -1304,7 +1304,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  CGF.incrementProfileCounter(true, E);
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   Visit(E->getFalseExpr());
   eval.end(CGF);
 
