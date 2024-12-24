@@ -13,13 +13,13 @@
 #include <__algorithm/shift_left.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/distance.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/permutable.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/subrange.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,9 +28,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 23
-
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER >= 23
 
 namespace ranges {
 namespace __shift_left {
@@ -47,11 +47,16 @@ struct __fn {
     requires permutable<iterator_t<_Range>>
   _LIBCPP_HIDE_FROM_ABI static constexpr borrowed_subrange_t<_Range>
   operator()(_Range&& __range, range_difference_t<_Range> __n) {
+    if constexpr (sized_range<_Range>) {
+      if (__n >= ranges::distance(__range)) {
+        return {ranges::begin(__range), ranges::begin(__range)};
+      }
+    }
+
     auto __ret = std::__shift_left<_RangeAlgPolicy>(ranges::begin(__range), ranges::end(__range), std::move(__n));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 };
-
 } // namespace __shift_left
 
 inline namespace __cpo {
@@ -59,9 +64,9 @@ inline constexpr auto shift_left = __shift_left::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-_LIBCPP_END_NAMESPACE_STD
-
 #endif // _LIBCPP_STD_VER >= 23
+
+_LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
