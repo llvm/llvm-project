@@ -5278,7 +5278,9 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     // If the dead side doesn't have labels we need, just emit the Live part.
     if (!CGF.ContainsLabel(dead)) {
-      CGF.incrementProfileCounter(!CondExprBool, E, true);
+      CGF.incrementProfileCounter(CondExprBool ? CGF.UseExecPath
+                                               : CGF.UseSkipPath,
+                                  E, /*UseBoth=*/true);
       Value *Result = Visit(live);
       CGF.markStmtMaybeUsed(dead);
 
@@ -5391,7 +5393,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
 
-  CGF.incrementProfileCounter(false, E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   eval.begin(CGF);
   Value *LHS = Visit(lhsExpr);
   eval.end(CGF);
@@ -5407,7 +5409,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
 
-  CGF.incrementProfileCounter(true, E);
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   eval.begin(CGF);
   Value *RHS = Visit(rhsExpr);
   eval.end(CGF);
