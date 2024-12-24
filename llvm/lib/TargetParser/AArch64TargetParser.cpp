@@ -295,8 +295,8 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
       disable(Dep.Later);
 }
 
-void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
-  LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << CPU.Name << ")\n");
+void AArch64::ExtensionSet::addCPUFeatures(const CpuInfo &CPU) {
+  LLVM_DEBUG(llvm::dbgs() << "addCPUFeatures(" << CPU.Name << ")\n");
   BaseArch = &CPU.Arch;
 
   AArch64::ExtensionBitset CPUExtensions = CPU.getImpliedExtensions();
@@ -305,9 +305,17 @@ void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
       enable(E.ID);
 }
 
-void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
-  LLVM_DEBUG(llvm::dbgs() << "addArchDefaults(" << Arch.Name << ")\n");
+void AArch64::ExtensionSet::addArchFeatures(const ArchInfo &Arch) {
+  LLVM_DEBUG(llvm::dbgs() << "addArchFeatures(" << Arch.Name << ")\n");
   BaseArch = &Arch;
+
+  for (const auto &E : Extensions)
+    if (Arch.ImpliedExts.test(E.ID))
+      enable(E.ID);
+}
+
+void AArch64::ExtensionSet::addArchDefaultFeatures(const ArchInfo &Arch) {
+  LLVM_DEBUG(llvm::dbgs() << "addArchDefaultFeatures(" << Arch.Name << ")\n");
 
   for (const auto &E : Extensions)
     if (Arch.DefaultExts.test(E.ID))

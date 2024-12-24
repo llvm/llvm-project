@@ -823,29 +823,28 @@ def HasV8_0aOps : Architecture64<8, 0, "a", "v8a",
   [FeatureEL2VMSA, FeatureEL3],
   [FeatureFPARMv8, FeatureNEON]>;
 def HasV8_1aOps : Architecture64<8, 1, "a", "v8.1a",
-  [HasV8_0aOps, FeatureCRC, FeatureLSE, FeatureRDM, FeaturePAN, FeatureLOR,
-   FeatureVH],
+  [HasV8_0aOps, FeatureCRC, FeatureLSE, FeaturePAN, FeatureLOR, FeatureVH],
   !listconcat(HasV8_0aOps.DefaultExts, [FeatureCRC, FeatureLSE, FeatureRDM])>;
 def HasV8_2aOps : Architecture64<8, 2, "a", "v8.2a",
   [HasV8_1aOps, FeaturePsUAO, FeaturePAN_RWV, FeatureRAS, FeatureCCPP],
   !listconcat(HasV8_1aOps.DefaultExts, [FeatureRAS])>;
 def HasV8_3aOps : Architecture64<8, 3, "a", "v8.3a",
-  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureComplxNum],
+  [HasV8_2aOps, FeatureRCPC, FeaturePAuth],
   !listconcat(HasV8_2aOps.DefaultExts, [FeatureComplxNum, FeatureJS,
     FeaturePAuth, FeatureRCPC,  FeatureCCIDX])>;
 def HasV8_4aOps : Architecture64<8, 4, "a", "v8.4a",
-  [HasV8_3aOps, FeatureDotProd, FeatureNV, FeatureMPAM, FeatureDIT,
-    FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI, FeatureFlagM,
-    FeatureRCPC_IMMO, FeatureLSE2],
+  [HasV8_3aOps, FeatureNV, FeatureMPAM, FeatureDIT, FeatureTRACEV8_4,
+    FeatureAM, FeatureSEL2, FeatureTLB_RMI, FeatureFlagM, FeatureRCPC_IMMO,
+    FeatureLSE2],
   !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd, FeatureDIT, FeatureFlagM])>;
 def HasV8_5aOps : Architecture64<8, 5, "a", "v8.5a",
-  [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
+  [HasV8_4aOps, FeatureAltFPCmp, FeatureSpecRestrict,
     FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
     FeatureBranchTargetId],
-  !listconcat(HasV8_4aOps.DefaultExts, [FeaturePredRes, FeatureSSBS, FeatureBranchTargetId, FeatureSB])>;
+  !listconcat(HasV8_4aOps.DefaultExts, [FeatureFRInt3264, FeaturePredRes, FeatureSSBS, FeatureBranchTargetId, FeatureSB])>;
 def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
-  [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
-    FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
+  [HasV8_5aOps, FeatureAMVS, FeatureFineGrainedTraps,
+    FeatureEnhancedCounterVirtualization],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
   [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX, FeatureSPE_EEF],

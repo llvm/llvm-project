@@ -101,7 +101,9 @@ struct ArchInfo {
   StringRef Name;        // Name as supplied to -march e.g. "armv8.1-a"
   StringRef ArchFeature; // Name as supplied to -target-feature, e.g. "+v8a"
   AArch64::ExtensionBitset
-      DefaultExts; // bitfield of default extensions ArchExtKind
+      ImpliedExts; // bitfield of implied extensions ArchExtKind
+  AArch64::ExtensionBitset
+      DefaultExts; // bitfield of default-enabled extensions ArchExtKind
 
   bool operator==(const ArchInfo &Other) const {
     return this->Name == Other.Name;
@@ -189,13 +191,19 @@ struct ExtensionSet {
   // arcitecture versions.
   void disable(ArchExtKind E);
 
-  // Add default extensions for the given CPU. Records the base architecture,
+  // Add implied extensions for the given CPU. Records the base architecture,
   // to later resolve dependencies which depend on it.
-  void addCPUDefaults(const CpuInfo &CPU);
+  void addCPUFeatures(const CpuInfo &CPU);
 
-  // Add default extensions for the given architecture version. Records the
+  // Add implied extensions for the given architecture version. Records the
   // base architecture, to later resolve dependencies which depend on it.
-  void addArchDefaults(const ArchInfo &Arch);
+  void addArchFeatures(const ArchInfo &Arch);
+
+  // Add default-enabled extensions for the given architecture version.
+  // Similar to addArchFeatures, additionally enabling features that aren't
+  // implied (because they're required by the base architecture), but are
+  // nonetheless enabled by default when explicitly asking for the given arch.
+  void addArchDefaultFeatures(const ArchInfo &Arch);
 
   // Add or remove a feature based on a modifier string. The string must be of
   // the form "<name>" to enable a feature or "no<name>" to disable it. This

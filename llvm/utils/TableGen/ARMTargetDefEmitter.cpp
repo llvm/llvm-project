@@ -239,7 +239,19 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     const auto TargetFeatureName = Rec->getValueAsString("Name");
     OS << "  \"+" << TargetFeatureName << "\",\n";
 
-    // Construct the list of default extensions
+    // Construct the list of implied extensions, out of the list of implied
+    // Subtarget Features.
+    std::set<Record *> ImpliedFeats;
+    for (auto *F : Rec->getValueAsListOfDefs("Implies"))
+      CollectImpliedFeatures(ImpliedFeats, F);
+
+    OS << "  (AArch64::ExtensionBitset({";
+    for (auto *F : ImpliedFeats)
+      if (auto AEK = F->getValueAsOptionalString("ArchExtKindSpelling"))
+        OS << "AArch64::" << AEK->upper() << ", ";
+    OS << "})),\n";
+
+    // Construct the list of default-enabled extensions
     OS << "  (AArch64::ExtensionBitset({";
     for (auto *E : Rec->getValueAsListOfDefs("DefaultExts")) {
       OS << "AArch64::" << E->getValueAsString("ArchExtKindSpelling").upper()
