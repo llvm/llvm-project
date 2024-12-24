@@ -451,6 +451,7 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     std::function<void(MachineIRBuilder &)> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_FMUL);
   assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
+  assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());
 
   Register Dst = MI.getOperand(0).getReg();
   LLT DestTy = MRI.getType(Dst);
@@ -501,14 +502,13 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
                               Builder.buildConstant(IntDestTy, SelectTrueVal),
                               Builder.buildConstant(IntDestTy, SelectFalseVal));
 
+      Register XReg = MI.getOperand(1).getReg();
       if (SelectTrueCst->Value.isNegative()) {
-        auto NegX = Builder.buildFNeg(
-            DestTy, MI.getOperand(1).getReg(),
-            MRI.getVRegDef(MI.getOperand(1).getReg())->getFlags());
+        auto NegX =
+            Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
         Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
       } else {
-        Builder.buildFLdexp(Dst, MI.getOperand(1).getReg(), NewSel,
-                            MI.getFlags());
+        Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
       }
     };
 
