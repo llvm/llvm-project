@@ -592,7 +592,7 @@ namespace {
     bool matchVPTERNLOG(SDNode *Root, SDNode *ParentA, SDNode *ParentB,
                         SDNode *ParentC, SDValue A, SDValue B, SDValue C,
                         uint8_t Imm);
-    bool tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc, SDValue Mask);
+    bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
     bool tryMatchBitSelect(SDNode *N);
 
     MachineSDNode *emitPCMPISTR(unsigned ROpc, unsigned MOpc, bool MayFoldLoad,
@@ -4898,10 +4898,10 @@ VPTESTM_CASE(v32i16, WZ##SUFFIX)
 #undef VPTESTM_CASE
 }
 
-// Try to create VPTESTM or KMOV instruction. If InMask is not null, it will be
-// used to form a masked operation.
-bool X86DAGToDAGISel::tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc,
-                                       SDValue InMask) {
+// Try to create VPTESTM instruction. If InMask is not null, it will be used
+// to form a masked operation.
+bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
+                                 SDValue InMask) {
   assert(Subtarget->hasAVX512() && "Expected AVX512!");
   assert(Setcc.getSimpleValueType().getVectorElementType() == MVT::i1 &&
          "Unexpected VT!");
@@ -4976,69 +4976,12 @@ bool X86DAGToDAGISel::tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc,
     return tryFoldBroadcast(Root, P, L, Base, Scale, Index, Disp, Segment);
   };
 
-  auto canUseKMOV = [&]() {
-    if (Src0.getOpcode() != X86ISD::VBROADCAST &&
-        Src0.getOpcode() != X86ISD::VBROADCAST_LOAD)
-      return false;
-
-    if (Src1.getOpcode() != ISD::LOAD ||
-        Src1.getOperand(1).getOpcode() != X86ISD::Wrapper ||
-        Src1.getOperand(1).getOperand(0).getOpcode() != ISD::TargetConstantPool)
-      return false;
-
-    const auto *ConstPool =
-        dyn_cast<ConstantPoolSDNode>(Src1.getOperand(1).getOperand(0));
-    if (!ConstPool)
-      return false;
-
-    const auto *ConstVec = ConstPool->getConstVal();
-    const auto *ConstVecType = dyn_cast<FixedVectorType>(ConstVec->getType());
-    if (!ConstVecType)
-      return false;
-
-    for (unsigned I = 0, E = ConstVecType->getNumElements(); I != E; ++I) {
-      const auto *Element = ConstVec->getAggregateElement(I);
-      if (llvm::isa<llvm::UndefValue>(Element)) {
-        for (unsigned J = I + 1; J != E; ++J) {
-          if (!llvm::isa<llvm::UndefValue>(ConstVec->getAggregateElement(J)))
-            return false;
-        }
-        return I != 0;
-      }
-
-      if (Element->getUniqueInteger() != 1 << I)
-        return false;
-    }
-
-    return true;
-  };
-
   // We can only fold loads if the sources are unique.
   bool CanFoldLoads = Src0 != Src1;
 
   bool FoldedLoad = false;
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
-  SDLoc dl(Root);
-  bool IsTestN = CC == ISD::SETEQ;
-  MachineSDNode *CNode;
-  MVT ResVT = Setcc.getSimpleValueType();
   if (CanFoldLoads) {
-    if (canUseKMOV()) {
-      auto Op = Src0.getOpcode() == X86ISD::VBROADCAST ? Src0.getOperand(0)
-                                                       : Src0.getOperand(1);
-      if (Op.getSimpleValueType() == MVT::i8)
-        Op = SDValue(CurDAG->getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Op));
-      CNode = CurDAG->getMachineNode(
-          ResVT.getVectorNumElements() <= 8 ? X86::KMOVBkr : X86::KMOVWkr, dl,
-          ResVT, Op);
-      if (IsTestN)
-        CNode = CurDAG->getMachineNode(
-            ResVT.getVectorNumElements() <= 8 ? X86::KNOTBkk : X86::KNOTWkk, dl,
-            ResVT, SDValue(CNode, 0));
-      ReplaceUses(SDValue(Root, 0), SDValue(CNode, 0));
-      CurDAG->RemoveDeadNode(Root);
-      return true;
-    }
     FoldedLoad = tryFoldLoadOrBCast(Root, N0.getNode(), Src1, Tmp0, Tmp1, Tmp2,
                                     Tmp3, Tmp4);
     if (!FoldedLoad) {
@@ -5054,6 +4997,9 @@ bool X86DAGToDAGISel::tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc,
 
   bool IsMasked = InMask.getNode() != nullptr;
 
+  SDLoc dl(Root);
+
+  MVT ResVT = Setcc.getSimpleValueType();
   MVT MaskVT = ResVT;
   if (Widen) {
     // Widen the inputs using insert_subreg or copy_to_regclass.
@@ -5078,9 +5024,11 @@ bool X86DAGToDAGISel::tryVPTESTMOrKMOV(SDNode *Root, SDValue Setcc,
     }
   }
 
+  bool IsTestN = CC == ISD::SETEQ;
   unsigned Opc = getVPTESTMOpc(CmpVT, IsTestN, FoldedLoad, FoldedBCast,
                                IsMasked);
 
+  MachineSDNode *CNode;
   if (FoldedLoad) {
     SDVTList VTs = CurDAG->getVTList(MaskVT, MVT::Other);
 
@@ -5519,10 +5467,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue N0 = Node->getOperand(0);
       SDValue N1 = Node->getOperand(1);
       if (N0.getOpcode() == ISD::SETCC && N0.hasOneUse() &&
-          tryVPTESTMOrKMOV(Node, N0, N1))
+          tryVPTESTM(Node, N0, N1))
         return;
       if (N1.getOpcode() == ISD::SETCC && N1.hasOneUse() &&
-          tryVPTESTMOrKMOV(Node, N1, N0))
+          tryVPTESTM(Node, N1, N0))
         return;
     }
 
@@ -6446,7 +6394,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::SETCC: {
-    if (NVT.isVector() && tryVPTESTMOrKMOV(Node, SDValue(Node, 0), SDValue()))
+    if (NVT.isVector() && tryVPTESTM(Node, SDValue(Node, 0), SDValue()))
       return;
 
     break;
