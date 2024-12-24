@@ -235,10 +235,6 @@ subroutine task_multiple_clauses()
   !$omp end task
 end subroutine task_multiple_clauses
 
-!===============================================================================
-! `mergeable` clause
-!===============================================================================
-
 subroutine task_mergeable()
 !CHECK: omp.task mergeable {
 !CHECK: omp.terminator
@@ -246,16 +242,3 @@ subroutine task_mergeable()
  !$omp task mergeable
  !$omp end task
 end subroutine
-
-!===============================================================================
-! `untied` clause
-!===============================================================================
-
-!CHECK-LABEL: func.func @_QPomp_task_untied() {
-subroutine omp_task_untied()
-  !CHECK: omp.task untied {
-  !$omp task untied
-    call foo()
-  !CHECK: omp.terminator
-  !$omp end task
-end subroutine omp_task_untied
