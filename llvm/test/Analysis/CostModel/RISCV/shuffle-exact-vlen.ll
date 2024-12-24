@@ -552,44 +552,84 @@ define void @shuffle2() vscale_range(2,2) {
 
 
 define void @multipart() vscale_range(2,2) {
+; RV32-LABEL: 'multipart'
+; RV32-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16a = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16b = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16c = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %v16d = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32a = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v32a4 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v32idrev = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 31, i32 30, i32 29, i32 28>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v32many = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v32many2 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 1, i32 4, i32 8, i32 12, i32 17, i32 20, i32 24, i32 28, i32 2, i32 6, i32 11, i32 14, i32 18, i32 22, i32 27, i32 30>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v323 = shufflevector <3 x i32> poison, <3 x i32> poison, <3 x i32> <i32 2, i32 3, i32 0>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64a = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64b = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
+; RV32-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v64ab = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v64d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 4, i32 4>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64a = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64b = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> zeroinitializer
+; RV32-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %f64ab = shufflevector <4 x double> poison, <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; RV64-LABEL: 'multipart'
+; RV64-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16a = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16b = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16c = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %v16d = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32a = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v32a4 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v32idrev = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 31, i32 30, i32 29, i32 28>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v32many = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v32many2 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 1, i32 4, i32 8, i32 12, i32 17, i32 20, i32 24, i32 28, i32 2, i32 6, i32 11, i32 14, i32 18, i32 22, i32 27, i32 30>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v323 = shufflevector <3 x i32> poison, <3 x i32> poison, <3 x i32> <i32 2, i32 3, i32 0>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64a = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64b = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
+; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64ab = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %v64d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 4, i32 4>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64a = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64b = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> zeroinitializer
+; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %f64ab = shufflevector <4 x double> poison, <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
 ; CHECK-LABEL: 'multipart'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16a = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16b = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16c = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16d = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16b = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v16c = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v16d = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32a = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32a4 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v32idrev = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 31, i32 30, i32 29, i32 28>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v32many = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %v32many2 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 1, i32 4, i32 8, i32 12, i32 17, i32 20, i32 24, i32 28, i32 2, i32 6, i32 11, i32 14, i32 18, i32 22, i32 27, i32 30>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v323 = shufflevector <3 x i32> poison, <3 x i32> poison, <3 x i32> <i32 2, i32 3, i32 0>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64a = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64a = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64b = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v64ab = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v64d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 4, i32 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f64a = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64ab = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 4, i32 4>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64a = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64b = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %f64ab = shufflevector <4 x double> poison, <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64ab = shufflevector <4 x double> poison, <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SIZE-LABEL: 'multipart'
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16a = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16b = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16c = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16d = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16b = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v16c = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v16d = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32a = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32a4 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v32idrev = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 31, i32 30, i32 29, i32 28>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v32many = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %v32many2 = shufflevector <16 x i32> poison, <16 x i32> poison, <16 x i32> <i32 1, i32 4, i32 8, i32 12, i32 17, i32 20, i32 24, i32 28, i32 2, i32 6, i32 11, i32 14, i32 18, i32 22, i32 27, i32 30>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v323 = shufflevector <3 x i32> poison, <3 x i32> poison, <3 x i32> <i32 2, i32 3, i32 0>
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64a = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64a = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64b = shufflevector <2 x i64> poison, <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v64ab = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v64d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 4, i32 4>
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f64a = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64ab = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 4, i32 4>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64a = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64b = shufflevector <2 x double> poison, <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %f64ab = shufflevector <4 x double> poison, <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64ab = shufflevector <4 x double> poison, <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v16a = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
