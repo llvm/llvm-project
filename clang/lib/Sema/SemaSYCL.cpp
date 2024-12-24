@@ -301,11 +301,23 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
       SKEPAttr->setInvalidAttr();
     }
   }
+
   if (FD->isVariadic()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
         << /*variadic function*/ 1;
     SKEPAttr->setInvalidAttr();
   }
+
+  if (FD->isDefaulted()) {
+    Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+        << /*defaulted function*/ 3;
+    SKEPAttr->setInvalidAttr();
+  } else if (FD->isDeleted()) {
+    Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+        << /*deleted function*/ 2;
+    SKEPAttr->setInvalidAttr();
+  }
+
   if (FD->isConsteval()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
         << /*consteval function*/ 5;
@@ -315,13 +327,19 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
         << /*constexpr function*/ 4;
     SKEPAttr->setInvalidAttr();
   }
+
   if (FD->isNoReturn()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
         << /*function declared with the 'noreturn' attribute*/ 6;
     SKEPAttr->setInvalidAttr();
   }
 
-  if (!FD->getReturnType()->isVoidType()) {
+  if (FD->getReturnType()->isUndeducedType()) {
+    Diag(SKEPAttr->getLocation(),
+         diag::err_sycl_entry_point_deduced_return_type);
+    SKEPAttr->setInvalidAttr();
+  } else if (!FD->getReturnType()->isDependentType() &&
+      !FD->getReturnType()->isVoidType()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_return_type);
     SKEPAttr->setInvalidAttr();
   }

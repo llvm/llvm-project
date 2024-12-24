@@ -12431,6 +12431,9 @@ def err_sycl_entry_point_after_definition : Error<
 def err_sycl_entry_point_return_type : Error<
   "'sycl_kernel_entry_point' attribute only applies to functions with a"
   " 'void' return type">;
+def err_sycl_entry_point_deduced_return_type : Error<
+  "'sycl_kernel_entry_point' attribute only applies to functions with a"
+  " non-deduced 'void' return type">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "

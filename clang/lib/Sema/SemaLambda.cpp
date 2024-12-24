@@ -24,6 +24,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -1948,6 +1949,10 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
+
+  if (LSI.CallOperator->hasAttr<SYCLKernelEntryPointAttr>())
+    SYCL().CheckSYCLEntryPointFunctionDecl(LSI.CallOperator);
+
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
 
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-device -verify %s
 
 // These tests validate appertainment for the sycl_kernel_entry_point attribute.
 
@@ -117,6 +118,17 @@ using VOID = void;
 VOID ok12();
 [[clang::sycl_kernel_entry_point(KN<13>)]]
 const void ok13();
+
+#if __cplusplus >= 202302L
+auto ok14 = [] [[clang::sycl_kernel_entry_point(KN<14>)]] static -> void {};
+#endif
+
+template<typename KNT, typename T>
+struct S15 {
+  // Don't diagnose a dependent return type as a non-void type.
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  static T ok15();
+};
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -264,3 +276,73 @@ consteval void bad25() {}
 __attribute__((target("avx"))) void bad27();
 [[clang::sycl_kernel_entry_point(BADKN<27>)]]
 __attribute__((target("sse4.2"))) void bad27();
+
+template<typename KNT>
+struct B28 {
+  // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a deleted function}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  friend void bad28() = delete;
+};
+
+#if __cplusplus >= 202002L
+template<typename KNT, typename T>
+struct B29 {
+  // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a defaulted function}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  friend T operator==(B29, B29) = default;
+};
+#endif
+
+#if __cplusplus >= 202002L
+template<typename KNT>
+struct B30 {
+  // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a coroutine}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  friend void bad30() { co_return; }
+};
+#endif
+
+template<typename KNT>
+struct B31 {
+  // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a variadic function}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  friend void bad31(...) {}
+};
+
+template<typename KNT>
+struct B32 {
+  // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a constexpr function}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  friend constexpr void bad32() {}
+};
+
+#if __cplusplus >= 202002L
+template<typename KNT>
+struct B33 {
+  // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a consteval function}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  friend consteval void bad33() {}
+};
+#endif
+
+template<typename KNT>
+struct B34 {
+  // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a function declared with the 'noreturn' attribute}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  [[noreturn]] friend void bad34() {}
+};
+
+#if __cplusplus >= 202302L
+// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a non-static member function}}
+auto bad35 = [] [[clang::sycl_kernel_entry_point(BADKN<35>)]] -> void {};
+#endif
+
+#if __cplusplus >= 202302L
+// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions with a non-deduced 'void' return type}}
+auto bad36 = [] [[clang::sycl_kernel_entry_point(BADKN<36>)]] static {};
+#endif
+
+#if __cplusplus >= 202302L
+// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a coroutine}}
+auto bad37 = [] [[clang::sycl_kernel_entry_point(BADKN<37>)]] static -> void { co_return; };
+#endif
