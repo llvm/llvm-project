@@ -714,3 +714,29 @@ llvm.func @nvvm_breakpoint() {
   nvvm.breakpoint
   llvm.return
 }
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_fence_aligned
+llvm.func @nvvm_wgmma_fence_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.fence.sync.aligned()
+  nvvm.wgmma.fence.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_commit_group_aligned
+llvm.func @nvvm_wgmma_commit_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+  nvvm.wgmma.commit.group.sync.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_wait_group_aligned
+llvm.func @nvvm_wgmma_wait_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 0)
+  nvvm.wgmma.wait.group.sync.aligned 0
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 20)
+  nvvm.wgmma.wait.group.sync.aligned 20
+  llvm.return
+}

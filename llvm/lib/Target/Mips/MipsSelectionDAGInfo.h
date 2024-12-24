@@ -16,6 +16,8 @@ namespace llvm {
 class MipsSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   ~MipsSelectionDAGInfo() override;
+
+  bool isTargetMemoryOpcode(unsigned Opcode) const override;
 };
 
 } // namespace llvm

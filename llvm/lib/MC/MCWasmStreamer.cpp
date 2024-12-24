@@ -196,7 +196,7 @@ void MCWasmStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixups[I]);
   }
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCWasmStreamer::finishImpl() {
