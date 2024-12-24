@@ -260,7 +260,6 @@ else()
       STATIC
       ARCHS ${ASAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTAsan_cxx
-                  RTUbsan_cxx
       CFLAGS ${ASAN_CFLAGS}
       DEFS ${ASAN_COMMON_DEFINITIONS}
       PARENT_TARGET asan)
@@ -319,7 +318,6 @@ else()
               # add_dependencies(clang_rt.asan-dynamic-${arch} clang_rt.asan-dynamic-${arch}-version-list)
               # generates an order-only dependency in ninja.
               RTAsan_dynamic_version_script_dummy
-              RTUbsan_cxx
               ${ASAN_DYNAMIC_WEAK_INTERCEPTION}
       CFLAGS ${ASAN_DYNAMIC_CFLAGS}
       LINK_FLAGS ${ASAN_DYNAMIC_LINK_FLAGS}
