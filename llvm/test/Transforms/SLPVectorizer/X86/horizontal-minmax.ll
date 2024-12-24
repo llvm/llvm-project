@@ -976,12 +976,11 @@ define i32 @maxi8_wrong_parent(i32) {
 ; SSE4-NEXT:    br label [[PP:%.*]]
 ; SSE4:       pp:
 ; SSE4-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
-; SSE4-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
-; SSE4-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP7]], i64 0)
-; SSE4-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP5]], <2 x i32> [[TMP2]], i64 2)
-; SSE4-NEXT:    [[RDX_OP:%.*]] = icmp sgt <4 x i32> [[TMP4]], [[TMP6]]
-; SSE4-NEXT:    [[RDX_OP1:%.*]] = select <4 x i1> [[RDX_OP]], <4 x i32> [[TMP4]], <4 x i32> [[TMP6]]
-; SSE4-NEXT:    [[OP_RDX7:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[RDX_OP1]])
+; SSE4-NEXT:    [[TMP8:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
+; SSE4-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP4]], i64 0)
+; SSE4-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP8]], i64 4)
+; SSE4-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP6]], <2 x i32> [[TMP2]], i64 6)
+; SSE4-NEXT:    [[OP_RDX7:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP7]])
 ; SSE4-NEXT:    ret i32 [[OP_RDX7]]
 ;
 ; AVX-LABEL: @maxi8_wrong_parent(

@@ -257,11 +257,10 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBlockUtils::connectBlocks(VPBB2, VPBB4);
     VPBlockUtils::connectBlocks(VPBB3, VPBB4);
 
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(VPBB4, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB1);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
 
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, VPBB2->getPlan());
@@ -280,11 +279,10 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBasicBlock *VPBB1 = new VPBasicBlock();
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB1);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
 
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, R1->getPlan());
@@ -313,11 +311,10 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBlockUtils::connectBlocks(R1, VPBB2);
     VPBlockUtils::connectBlocks(R2, VPBB2);
 
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(R2, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB1);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
 
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, R1->getPlan());
@@ -360,11 +357,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB2, FromIterator[1]);
 
     // Use Plan to properly clean up created blocks.
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(VPBB4, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB1);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
   }
 
   {
@@ -463,11 +459,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R1, FromIterator[7]);
 
     // Use Plan to properly clean up created blocks.
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(R2, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB0);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
   }
 
   {
@@ -549,11 +544,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[9]);
 
     // Use Plan to properly clean up created blocks.
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB1);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
   }
 
   {
@@ -600,11 +594,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[4]);
 
     // Use Plan to properly clean up created blocks.
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB1);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
   }
 
   {
@@ -695,11 +688,10 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[3]);
 
     // Use Plan to properly clean up created blocks.
-    auto TC = std::make_unique<VPValue>();
     VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
     VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
     VPBlockUtils::connectBlocks(VPPH, VPBB1);
-    VPlan Plan(VPPH, &*TC, ScalarHeaderVPBB);
+    VPlan Plan(VPPH, ScalarHeaderVPBB);
   }
   delete ScalarHeader;
 }
@@ -1295,7 +1287,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
   {
     VPValue Op1;
-    VPPredInstPHIRecipe Recipe(&Op1);
+    VPPredInstPHIRecipe Recipe(&Op1, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());

@@ -133,6 +133,12 @@ struct Instruction {
   // aliasing Use and Def registers.
   bool hasAliasingRegisters(const BitVector &ForbiddenRegisters) const;
 
+  // Whether this instruction is self aliasing through some registers.
+  // Repeating this instruction may execute sequentially by picking aliasing
+  // Def and Not Memory Use registers. It may also execute in parallel by
+  // picking non aliasing Def and Not Memory Use registers.
+  bool hasAliasingNotMemoryRegisters(const BitVector &ForbiddenRegisters) const;
+
   // Whether this instruction's registers alias with OtherInstr's registers.
   bool hasAliasingRegistersThrough(const Instruction &OtherInstr,
                                    const BitVector &ForbiddenRegisters) const;
@@ -160,12 +166,15 @@ struct Instruction {
   const BitVector &ImplUseRegs; // The set of aliased implicit use registers.
   const BitVector &AllDefRegs;  // The set of all aliased def registers.
   const BitVector &AllUseRegs;  // The set of all aliased use registers.
+  // The set of all aliased not memory use registers.
+  const BitVector &NonMemoryRegs;
+
 private:
   Instruction(const MCInstrDesc *Description, StringRef Name,
               SmallVector<Operand, 8> Operands,
               SmallVector<Variable, 4> Variables, const BitVector *ImplDefRegs,
               const BitVector *ImplUseRegs, const BitVector *AllDefRegs,
-              const BitVector *AllUseRegs);
+              const BitVector *AllUseRegs, const BitVector *NonMemoryRegs);
 };
 
 // Instructions are expensive to instantiate. This class provides a cache of

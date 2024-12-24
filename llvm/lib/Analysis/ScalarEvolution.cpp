@@ -14978,6 +14978,11 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
       Flags != SCEVWrapPredicate::IncrementNUSW)
     return false;
 
+  const SCEV *Start = AR->getStart();
+  const SCEV *OpStart = Op->AR->getStart();
+  if (Start->getType()->isPointerTy() != OpStart->getType()->isPointerTy())
+    return false;
+
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
   if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))
@@ -14990,8 +14995,6 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   OpStep = SE.getNoopOrZeroExtend(OpStep, WiderTy);
 
   bool IsNUW = Flags == SCEVWrapPredicate::IncrementNUSW;
-  const SCEV *OpStart = Op->AR->getStart();
-  const SCEV *Start = AR->getStart();
   OpStart = IsNUW ? SE.getNoopOrZeroExtend(OpStart, WiderTy)
                   : SE.getNoopOrSignExtend(OpStart, WiderTy);
   Start = IsNUW ? SE.getNoopOrZeroExtend(Start, WiderTy)
@@ -15078,8 +15081,19 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N, ScalarEvolution &SE) {
   }
 
   // Only add predicate if it is not already implied by this union predicate.
-  if (!implies(N, SE))
-    Preds.push_back(N);
+  if (implies(N, SE))
+    return;
+
+  // Build a new vector containing the current predicates, except the ones that
+  // are implied by the new predicate N.
+  SmallVector<const SCEVPredicate *> PrunedPreds;
+  for (auto *P : Preds) {
+    if (N->implies(P, SE))
+      continue;
+    PrunedPreds.push_back(P);
+  }
+  Preds = std::move(PrunedPreds);
+  Preds.push_back(N);
 }
 
 PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
@@ -15750,6 +15764,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // predecessors that can be found that have unique successors leading to the
   // original header.
   // TODO: share this logic with isLoopEntryGuardedByCond.
+  unsigned NumCollectedConditions = 0;
   std::pair<const BasicBlock *, const BasicBlock *> Pair(Pred, Block);
   for (; Pair.first;
        Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
@@ -15761,10 +15776,11 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
     Terms.emplace_back(LoopEntryPredicate->getCondition(),
                        LoopEntryPredicate->getSuccessor(0) == Pair.second);
+    NumCollectedConditions++;
 
     // If we are recursively collecting guards stop after 2
-    // predecessors to limit compile-time impact for now.
-    if (Depth > 0 && Terms.size() == 2)
+    // conditions to limit compile-time impact for now.
+    if (Depth > 0 && NumCollectedConditions == 2)
       break;
   }
   // Finally, if we stopped climbing the predecessor chain because

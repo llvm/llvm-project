@@ -109,7 +109,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[CMP_N17:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC10]]
 ; AVX2-NEXT:    br i1 [[CMP_N17]], label [[EXIT]], label [[BB12_PREHEADER1]]
 ; AVX2:       bb12.preheader:
-; AVX2-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AVX2-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AVX2-NEXT:    br label [[BB13:%.*]]
 ; AVX2:       bb12:
 ; AVX2-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[PTR2_PH]], [[BB12_PREHEADER1]] ]

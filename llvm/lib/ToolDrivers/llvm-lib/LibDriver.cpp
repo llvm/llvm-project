@@ -516,8 +516,14 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   std::reverse(Members.begin(), Members.end());
 
   bool Thin = Args.hasArg(OPT_llvmlibthin);
+
+  auto Symtab = Args.hasFlag(OPT_llvmlibindex, OPT_llvmlibindex_no,
+                             /*default=*/true)
+                    ? SymtabWritingMode::NormalSymtab
+                    : SymtabWritingMode::NoSymtab;
+
   if (Error E = writeArchive(
-          OutputPath, Members, SymtabWritingMode::NormalSymtab,
+          OutputPath, Members, Symtab,
           Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
           /*Deterministic=*/true, Thin, nullptr, COFF::isArm64EC(LibMachine))) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
