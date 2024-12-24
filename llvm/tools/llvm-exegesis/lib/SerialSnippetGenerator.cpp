@@ -113,18 +113,18 @@ static void appendCodeTemplates(const LLVMState &State,
 
       // TODO: now it is not checked if load writes the whole register.
 
-      auto DefOpIt = find_if(I.Operands, [](Operand const &op) {
-        return op.isDef() && op.isReg();
+      auto DefOpIt = find_if(I.Operands, [](Operand const &Op) {
+        return Op.isDef() && Op.isReg();
       });
 
       if (DefOpIt == I.Operands.end())
         return;
 
       const Operand &DefOp = *DefOpIt;
-      auto &ET = State.getExegesisTarget();
-      auto ScratchMemoryRegister = ET.getScratchMemoryRegister(
+      const ExegesisTarget &ET = State.getExegesisTarget();
+      unsigned ScratchMemoryRegister = ET.getScratchMemoryRegister(
           State.getTargetMachine().getTargetTriple());
-      auto &RegClass =
+      const llvm::MCRegisterClass &RegClass =
           State.getTargetMachine().getMCRegisterInfo()->getRegClass(
               DefOp.getExplicitOperandInfo().RegClass);
 
@@ -138,13 +138,10 @@ static void appendCodeTemplates(const LLVMState &State,
 
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;
-      if (CT.ScratchSpacePointerInReg == 0)
-        CT.ScratchSpacePointerInReg = ScratchMemoryRegister;
+      CT.ScratchSpacePointerInReg = ScratchMemoryRegister;
 
       CT.Info = std::string(ExecutionClassDescription);
       CT.Instructions.push_back(std::move(Variant));
-      CT.PreinitScratchMemory.emplace_back(ScratchMemoryRegister,
-                                           /* Offset */ 0);
       CodeTemplates.push_back(std::move(CT));
     }
 
