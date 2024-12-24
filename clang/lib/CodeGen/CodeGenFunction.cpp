@@ -1373,7 +1373,7 @@ void CodeGenFunction::EmitBlockWithFallThrough(llvm::BasicBlock *BB,
   }
   EmitBlock(BB);
   uint64_t CurrentCount = getCurrentProfileCount();
-  incrementProfileCounter(false, S);
+  incrementProfileCounter(UseExecPath, S);
   setCurrentProfileCount(getCurrentProfileCount() + CurrentCount);
   if (SkipCountBB)
     EmitBlock(SkipCountBB);
@@ -1827,7 +1827,7 @@ void CodeGenFunction::EmitBranchToCounterBlock(
 
   if (SkipIncrBlock) {
     EmitBlock(SkipIncrBlock);
-    incrementProfileCounter(true, CntrStmt);
+    incrementProfileCounter(UseSkipPath, CntrStmt);
     EmitBranch(SkipNextBlock);
   }
 
@@ -1835,7 +1835,7 @@ void CodeGenFunction::EmitBranchToCounterBlock(
   EmitBlock(CounterIncrBlock);
 
   // Increment corresponding counter; if index not provided, use Cond as index.
-  incrementProfileCounter(false, CntrStmt);
+  incrementProfileCounter(UseExecPath, CntrStmt);
 
   // Go to the next block.
   EmitBranch(NextBlock);
@@ -1903,13 +1903,13 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
                              LH == Stmt::LH_Unlikely ? Stmt::LH_None : LH);
         if (HasSkip.second) {
           EmitBlock(LHSFalse);
-          incrementProfileCounter(true, CondBOp);
+          incrementProfileCounter(UseSkipPath, CondBOp);
           EmitBranch(FalseBlock);
         }
         EmitBlock(LHSTrue);
       }
 
-      incrementProfileCounter(false, CondBOp);
+      incrementProfileCounter(UseExecPath, CondBOp);
       setCurrentProfileCount(getProfileCount(CondBOp->getRHS()));
 
       // Any temporaries created here are conditional.
@@ -1969,13 +1969,13 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
                              LH == Stmt::LH_Likely ? Stmt::LH_None : LH);
         if (HasSkip.second) {
           EmitBlock(LHSTrue);
-          incrementProfileCounter(true, CondBOp);
+          incrementProfileCounter(UseSkipPath, CondBOp);
           EmitBranch(TrueBlock);
         }
         EmitBlock(LHSFalse);
       }
 
-      incrementProfileCounter(false, CondBOp);
+      incrementProfileCounter(UseExecPath, CondBOp);
       setCurrentProfileCount(getProfileCount(CondBOp->getRHS()));
 
       // Any temporaries created here are conditional.
@@ -2033,7 +2033,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
     cond.begin(*this);
     EmitBlock(LHSBlock);
-    incrementProfileCounter(false, CondOp);
+    incrementProfileCounter(UseExecPath, CondOp);
     {
       ApplyDebugLocation DL(*this, Cond);
       EmitBranchOnBoolExpr(CondOp->getLHS(), TrueBlock, FalseBlock,
@@ -2043,7 +2043,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
     cond.begin(*this);
     EmitBlock(RHSBlock);
-    incrementProfileCounter(true, CondOp);
+    incrementProfileCounter(UseSkipPath, CondOp);
     EmitBranchOnBoolExpr(CondOp->getRHS(), TrueBlock, FalseBlock,
                          TrueCount - LHSScaledTrueCount, LH, CondOp);
     cond.end(*this);

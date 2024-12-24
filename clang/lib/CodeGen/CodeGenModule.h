@@ -102,23 +102,48 @@ enum ForDefinition_t : bool {
   ForDefinition = true
 };
 
-class CounterPair : public std::pair<uint32_t, uint32_t> {
-private:
-  static constexpr uint32_t None = (1u << 31); /// None is set
-
+/// The Counter with an optional additional Counter for
+/// branches. `Skipped` counter can be calculated with `Executed` and
+/// a common Counter (like `Parent`) as `(Parent-Executed)`.
+///
+/// In SingleByte mode, Counters are binary. Subtraction is not
+/// applicable (but addition is capable). In this case, both
+/// `Executed` and `Skipped` counters are required.  `Skipped` is
+/// `None` by default. It is allocated in the coverage mapping.
+///
+/// There might be cases that `Parent` could be induced with
+/// `(Executed+Skipped)`. This is not always applicable.
+class CounterPair {
 public:
-  static constexpr uint32_t Mask = None - 1;
+  /// Optional value.
+  class ValueOpt {
+  private:
+    static constexpr uint32_t None = (1u << 31); /// None is allocated.
+    static constexpr uint32_t Mask = None - 1;
 
-public:
-  CounterPair(unsigned Val = 0) {
-    assert(!(Val & ~Mask));
-    first = Val;
-    second = None;
-  }
+    uint32_t Val;
 
-  std::pair<bool, bool> getIsCounterPair() const {
-    return {!(first & None), !(second & None)};
-  }
+  public:
+    ValueOpt() : Val(None) {}
+
+    ValueOpt(unsigned InitVal) {
+      assert(!(InitVal & ~Mask));
+      Val = InitVal;
+    }
+
+    bool hasValue() const { return !(Val & None); }
+
+    operator uint32_t() const { return Val; }
+  };
+
+  ValueOpt Executed;
+  ValueOpt Skipped; /// May be None.
+
+  /// Initialized with Skipped=None.
+  CounterPair(unsigned Val) : Executed(Val) {}
+
+  // FIXME: Should work with {None, None}
+  CounterPair() : Executed(0) {}
 };
 
 struct OrderGlobalInitsOrStermFinalizers {

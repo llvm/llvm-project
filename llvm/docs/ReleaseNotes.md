@@ -353,7 +353,7 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* LLDB now now supports inline diagnostics for the expression evaluator and command line parser.
+* LLDB now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
   ```

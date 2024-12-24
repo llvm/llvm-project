@@ -1430,7 +1430,7 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
   GreedyRewriteConfig config;
   config.listener = this;
   config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  return applyOpPatternsAndFold(ops, patterns.value(), config);
+  return applyOpPatternsGreedily(ops, patterns.value(), config);
 }
 
 void SliceTrackingListener::notifyOperationInserted(

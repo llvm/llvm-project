@@ -1049,13 +1049,10 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
   // Scan max(FalseCnt) and update NumRegionCounters.
   unsigned MaxNumCounters = NumRegionCounters;
   for (const auto [_, V] : *RegionCounterMap) {
-    auto HasCounters = V.getIsCounterPair();
-    assert((!HasCounters.first ||
-            MaxNumCounters > (V.first & CounterPair::Mask)) &&
+    assert((!V.Executed.hasValue() || MaxNumCounters > V.Executed) &&
            "TrueCnt should not be reassigned");
-    if (HasCounters.second)
-      MaxNumCounters =
-          std::max(MaxNumCounters, (V.second & CounterPair::Mask) + 1);
+    if (V.Skipped.hasValue())
+      MaxNumCounters = std::max(MaxNumCounters, V.Skipped + 1);
   }
   NumRegionCounters = MaxNumCounters;
 
@@ -1108,9 +1105,14 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
 }
 
 std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
-  if (!RegionCounterMap || RegionCounterMap->count(S) == 0)
+  if (!RegionCounterMap)
     return {false, false};
-  return (*RegionCounterMap)[S].getIsCounterPair();
+
+  auto I = RegionCounterMap->find(S);
+  if (I == RegionCounterMap->end())
+    return {false, false};
+
+  return {I->second.Executed.hasValue(), I->second.Skipped.hasValue()};
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
@@ -1121,15 +1123,14 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
 
   unsigned Counter;
   auto &TheMap = (*RegionCounterMap)[S];
-  auto IsCounter = TheMap.getIsCounterPair();
   if (!UseSkipPath) {
-    if (!IsCounter.first)
+    if (!TheMap.Executed.hasValue())
       return;
-    Counter = (TheMap.first & CounterPair::Mask);
+    Counter = TheMap.Executed;
   } else {
-    if (!IsCounter.second)
+    if (!TheMap.Skipped.hasValue())
       return;
-    Counter = (TheMap.second & CounterPair::Mask);
+    Counter = TheMap.Skipped;
   }
 
   if (!Builder.GetInsertBlock())

@@ -4982,7 +4982,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   bool LHSCondVal;
   if (CGF.ConstantFoldsToSimpleInteger(E->getLHS(), LHSCondVal)) {
     if (LHSCondVal) { // If we have 1 && X, just emit X.
-      CGF.incrementProfileCounter(false, E, true);
+      CGF.incrementProfileCounter(CGF.UseExecPath, E, /*UseBoth=*/true);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
       if (CGF.MCDCLogOpStack.empty())
@@ -5005,11 +5005,11 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("land.rhscnt");
         Builder.CreateCondBr(RHSCond, RHSBlockCnt, RHSSkip);
         CGF.EmitBlock(RHSBlockCnt);
-        CGF.incrementProfileCounter(false, E->getRHS());
+        CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
         CGF.EmitBranch(FBlock);
         if (HasRHSSkip.second) {
           CGF.EmitBlock(RHSSkip);
-          CGF.incrementProfileCounter(true, E->getRHS());
+          CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
         }
         CGF.EmitBlock(FBlock);
       } else
@@ -5028,7 +5028,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
     if (!CGF.ContainsLabel(E->getRHS())) {
       CGF.markStmtAsUsed(false, E);
       if (HasLHSSkip.second)
-        CGF.incrementProfileCounter(true, E);
+        CGF.incrementProfileCounter(CGF.UseSkipPath, E);
 
       CGF.markStmtMaybeUsed(E->getRHS());
 
@@ -5056,7 +5056,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
 
   if (HasLHSSkip.second) {
     CGF.EmitBlock(LHSFalseBlock);
-    CGF.incrementProfileCounter(true, E);
+    CGF.incrementProfileCounter(CGF.UseSkipPath, E);
     CGF.EmitBranch(ContBlock);
   }
 
@@ -5071,7 +5071,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  CGF.incrementProfileCounter(false, E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
   eval.end(CGF);
 
@@ -5090,12 +5090,12 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
         (HasRHSSkip.second ? CGF.createBasicBlock("land.rhsskip") : ContBlock);
     Builder.CreateCondBr(RHSCond, RHSBlockCnt, RHSBlockSkip);
     CGF.EmitBlock(RHSBlockCnt);
-    CGF.incrementProfileCounter(false, E->getRHS());
+    CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
     CGF.EmitBranch(ContBlock);
     PN->addIncoming(RHSCond, RHSBlockCnt);
     if (HasRHSSkip.second) {
       CGF.EmitBlock(RHSBlockSkip);
-      CGF.incrementProfileCounter(true, E->getRHS());
+      CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
       CGF.EmitBranch(ContBlock);
       ContIncoming = RHSBlockSkip;
     }
@@ -5157,7 +5157,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   bool LHSCondVal;
   if (CGF.ConstantFoldsToSimpleInteger(E->getLHS(), LHSCondVal)) {
     if (!LHSCondVal) { // If we have 0 || X, just emit X.
-      CGF.incrementProfileCounter(false, E, true);
+      CGF.incrementProfileCounter(CGF.UseExecPath, E, /*UseBoth=*/true);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
       if (CGF.MCDCLogOpStack.empty())
@@ -5180,11 +5180,11 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("lor.rhscnt");
         Builder.CreateCondBr(RHSCond, RHSSkip, RHSBlockCnt);
         CGF.EmitBlock(RHSBlockCnt);
-        CGF.incrementProfileCounter(false, E->getRHS());
+        CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
         CGF.EmitBranch(FBlock);
         if (HasRHSSkip.second) {
           CGF.EmitBlock(RHSSkip);
-          CGF.incrementProfileCounter(true, E->getRHS());
+          CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
         }
         CGF.EmitBlock(FBlock);
       } else
@@ -5203,7 +5203,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
     if (!CGF.ContainsLabel(E->getRHS())) {
       CGF.markStmtAsUsed(false, E);
       if (HasLHSSkip.second)
-        CGF.incrementProfileCounter(true, E);
+        CGF.incrementProfileCounter(CGF.UseSkipPath, E);
 
       CGF.markStmtMaybeUsed(E->getRHS());
 
@@ -5231,7 +5231,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
 
   if (HasLHSSkip.second) {
     CGF.EmitBlock(LHSTrueBlock);
-    CGF.incrementProfileCounter(true, E);
+    CGF.incrementProfileCounter(CGF.UseSkipPath, E);
     CGF.EmitBranch(ContBlock);
   }
 
@@ -5248,7 +5248,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
 
   // Emit the RHS condition as a bool value.
   CGF.EmitBlock(RHSBlock);
-  CGF.incrementProfileCounter(false, E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
   eval.end(CGF);
@@ -5268,12 +5268,12 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
         (HasRHSSkip.second ? CGF.createBasicBlock("lor.rhsskip") : ContBlock);
     Builder.CreateCondBr(RHSCond, RHSTrueBlock, RHSBlockCnt);
     CGF.EmitBlock(RHSBlockCnt);
-    CGF.incrementProfileCounter(false, E->getRHS());
+    CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
     CGF.EmitBranch(ContBlock);
     PN->addIncoming(RHSCond, RHSBlockCnt);
     if (HasRHSSkip.second) {
       CGF.EmitBlock(RHSTrueBlock);
-      CGF.incrementProfileCounter(true, E->getRHS());
+      CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
       CGF.EmitBranch(ContBlock);
       ContIncoming = RHSTrueBlock;
     }
@@ -5341,7 +5341,9 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     // If the dead side doesn't have labels we need, just emit the Live part.
     if (!CGF.ContainsLabel(dead)) {
-      CGF.incrementProfileCounter(!CondExprBool, E, true);
+      CGF.incrementProfileCounter(CondExprBool ? CGF.UseExecPath
+                                               : CGF.UseSkipPath,
+                                  E, /*UseBoth=*/true);
       Value *Result = Visit(live);
       CGF.markStmtMaybeUsed(dead);
 
@@ -5454,7 +5456,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
 
-  CGF.incrementProfileCounter(false, E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   eval.begin(CGF);
   Value *LHS = Visit(lhsExpr);
   eval.end(CGF);
@@ -5470,7 +5472,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
 
-  CGF.incrementProfileCounter(true, E);
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   eval.begin(CGF);
   Value *RHS = Visit(rhsExpr);
   eval.end(CGF);
