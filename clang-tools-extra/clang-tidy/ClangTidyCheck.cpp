@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyCheck.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/YAMLParser.h"
 #include <optional>
+#include <string>
 
 namespace clang::tidy {
 
@@ -62,16 +62,29 @@ ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
   return std::nullopt;
 }
 
+static const llvm::StringSet<> DeprecatedGlobalOptions{
+    "StrictMode",
+    "IgnoreMacros",
+};
+
 static ClangTidyOptions::OptionMap::const_iterator
 findPriorityOption(const ClangTidyOptions::OptionMap &Options,
                    StringRef NamePrefix, StringRef LocalName,
-                   llvm::StringSet<> *Collector) {
+                   ClangTidyContext *Context) {
+  llvm::StringSet<> *Collector = Context->getOptionsCollector();
   if (Collector) {
     Collector->insert((NamePrefix + LocalName).str());
     Collector->insert(LocalName);
   }
   auto IterLocal = Options.find((NamePrefix + LocalName).str());
   auto IterGlobal = Options.find(LocalName);
+  // FIXME: temporary solution for deprecation warnings, should be removed
+  // after 22.x.
+  if (IterGlobal != Options.end() &&
+      DeprecatedGlobalOptions.contains(LocalName))
+    Context->configurationDiag(
+        "deprecation global option '%0', please use '%1%0'.")
+        << LocalName << NamePrefix;
   if (IterLocal == Options.end())
     return IterGlobal;
   if (IterGlobal == Options.end())
@@ -83,8 +96,7 @@ findPriorityOption(const ClangTidyOptions::OptionMap &Options,
 
 std::optional<StringRef>
 ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName) const {
-  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName,
-                                 Context->getOptionsCollector());
+  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName, Context);
   if (Iter != CheckOptions.end())
     return StringRef(Iter->getValue().Value);
   return std::nullopt;
@@ -117,8 +129,7 @@ ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName) const {
 template <>
 std::optional<bool>
 ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName) const {
-  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName,
-                                 Context->getOptionsCollector());
+  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName, Context);
   if (Iter != CheckOptions.end()) {
     if (auto Result = getAsBool(Iter->getValue().Value, Iter->getKey()))
       return Result;
@@ -157,10 +168,9 @@ std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
     bool IgnoreCase) const {
   if (!CheckGlobal && Context->getOptionsCollector())
     Context->getOptionsCollector()->insert((NamePrefix + LocalName).str());
-  auto Iter = CheckGlobal
-                  ? findPriorityOption(CheckOptions, NamePrefix, LocalName,
-                                       Context->getOptionsCollector())
-                  : CheckOptions.find((NamePrefix + LocalName).str());
+  auto Iter = CheckGlobal ? findPriorityOption(CheckOptions, NamePrefix,
+                                               LocalName, Context)
+                          : CheckOptions.find((NamePrefix + LocalName).str());
   if (Iter == CheckOptions.end())
     return std::nullopt;
 
