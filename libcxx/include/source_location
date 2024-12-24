@@ -25,8 +25,9 @@ namespace std {
 }
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/source_location>
+#else
 #  include <__config>
 #  include <cstdint>
 #  include <version>
@@ -84,6 +85,6 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SOURCE_LOCATION

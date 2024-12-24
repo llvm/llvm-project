@@ -18,6 +18,14 @@ class CIRBaseBuilderTy : public mlir::OpBuilder {
 public:
   CIRBaseBuilderTy(mlir::MLIRContext &mlirContext)
       : mlir::OpBuilder(&mlirContext) {}
+
+  cir::PointerType getPointerTo(mlir::Type ty) {
+    return cir::PointerType::get(getContext(), ty);
+  }
+
+  cir::PointerType getVoidPtrTy() {
+    return getPointerTo(cir::VoidType::get(getContext()));
+  }
 };
 
 } // namespace cir

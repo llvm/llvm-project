@@ -527,8 +527,9 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/functional>
+#else
 #  include <__config>
 
 #  include <__functional/binary_function.h>
@@ -596,6 +597,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    include <utility>
 #    include <vector>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FUNCTIONAL
