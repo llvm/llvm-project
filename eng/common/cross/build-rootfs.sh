@@ -422,7 +422,7 @@ case "$__AlpineVersion" in
         elif [[ "$__AlpineArch" == "riscv64" ]]; then
             __AlpineLlvmLibsLookup=1
             __AlpineVersion=edge # minimum version with APKINDEX.tar.gz (packages archive)
-        elif [[ -n "$__AlpineVersion" ]]; then
+        elif [[ -n "$__AlpineMajorVersion" ]]; then
             # use whichever alpine version is provided and select the latest toolchain libs
             __AlpineLlvmLibsLookup=1
         else

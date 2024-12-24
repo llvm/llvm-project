@@ -1,19 +1,49 @@
 parameters:
-  # Enable cleanup tasks for MicroBuild
+  # Enable install tasks for MicroBuild
   enableMicrobuild: false
-  # Enable cleanup tasks for MicroBuild on Mac and Linux
+  # Enable install tasks for MicroBuild on Mac and Linux
   # Will be ignored if 'enableMicrobuild' is false or 'Agent.Os' is 'Windows_NT'
   enableMicrobuildForMacAndLinux: false
+  # Location of the MicroBuild output folder
+  microBuildOutputFolder: '$(Agent.TempDirectory)'
   continueOnError: false
 
 steps:
   - ${{ if eq(parameters.enableMicrobuild, 'true') }}:
-    # Remove Python downgrade with https://github.com/dotnet/arcade/issues/15151
-    - ${{ if and(eq(parameters.enableMicrobuildForMacAndLinux, 'true'), ne(variables['Agent.Os'], 'Windows_NT')) }}:
+    - ${{ if eq(parameters.enableMicrobuildForMacAndLinux, 'true') }}:
+      # Install Python 3.12.x on when Python > 3.12.x is installed - https://github.com/dotnet/source-build/issues/4802
+      - script: |
+          version=$(python3 --version | awk '{print $2}')
+          major=$(echo $version | cut -d. -f1)
+          minor=$(echo $version | cut -d. -f2)
+
+          installPython=false
+          if [ "$major" -gt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -gt 12 ]; }; then
+            installPython=true
+          fi
+
+          echo "Python version: $version."
+          echo "Install Python 3.12.x: $installPython."
+          echo "##vso[task.setvariable variable=installPython;isOutput=true]$installPython"
+        name: InstallPython
+        displayName: 'Determine Python installation'
+        condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'))
+
       - task: UsePythonVersion@0
-        displayName: 'Use Python 3.11.x'
         inputs:
-          versionSpec: '3.11.x'
+          versionSpec: '3.12.x'
+        displayName: 'Use Python 3.12.x'
+        condition: and(succeeded(), eq(variables['InstallPython.installPython'], 'true'), ne(variables['Agent.Os'], 'Windows_NT'))
+
+      # Needed to download the MicroBuild plugin nupkgs on Mac and Linux when nuget.exe is unavailable
+      - task: UseDotNet@2
+        displayName: Install .NET 8.0 SDK for MicroBuild Plugin
+        inputs:
+          packageType: sdk
+          version: 8.0.x
+          installationPath: ${{ parameters.microBuildOutputFolder }}/dotnet
+          workingDirectory: ${{ parameters.microBuildOutputFolder }}
+        condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'))
 
     - task: MicroBuildSigningPlugin@4
       displayName: Install MicroBuild plugin
@@ -25,7 +55,7 @@ steps:
           azureSubscription: 'MicroBuild Signing Task (DevDiv)'
       env:
         TeamName: $(_TeamName)
-        MicroBuildOutputFolderOverride: '$(Agent.TempDirectory)'
+        MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       continueOnError: ${{ parameters.continueOnError }}
       condition: and(
