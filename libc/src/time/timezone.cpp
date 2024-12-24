@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <fcntl.h>
-#include <unistd.h>
 #include <stdio.h> // TODO: Remove all printf functions
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "src/__support/common.h"
 #include "src/time/timezone.h"
@@ -38,8 +38,8 @@ tzset *get_tzset(int fd) {
   bytes = read(fd, hdr, sizeof(hdr));
   // TODO: Remove the number of bytes to check
   if (bytes != 379) {
-      close(fd);
-      return nullptr;
+    close(fd);
+    return nullptr;
   }
 
   size_t i;
@@ -82,13 +82,8 @@ tzset *get_tzset(int fd) {
 
   int64_t product;
 
-  product = (tzh_timecnt * 5)
-      + (tzh_typecnt * 6)
-      + (tzh_leapcnt * 8)
-      + tzh_charcnt
-      + tzh_ttisstdcnt
-      + tzh_ttisutcnt
-      + TIMEZONE_HDR_SIZE;
+  product = (tzh_timecnt * 5) + (tzh_typecnt * 6) + (tzh_leapcnt * 8) +
+            tzh_charcnt + tzh_ttisstdcnt + tzh_ttisutcnt + TIMEZONE_HDR_SIZE;
 
   int64_t tzh_timecnt_length;
   int64_t tzh_typecnt_length;
@@ -121,14 +116,15 @@ tzset *get_tzset(int fd) {
 
   ptr_tzh_timecnt_transitions = tzh_timecnt_transitions;
   for (i = 0; i < chunk; ++i) {
-    *(ptr_tzh_timecnt_transitions + i) = ((int64_t)hdr[start + i * 8] << 56) |
-                          ((int64_t)hdr[start + i * 8 + 1] << 48) |
-                          ((int64_t)hdr[start + i * 8 + 2] << 40) |
-                          ((int64_t)hdr[start + i * 8 + 3] << 32) |
-                          ((int64_t)hdr[start + i * 8 + 4] << 24) |
-                          ((int64_t)hdr[start + i * 8 + 5] << 16) |
-                          ((int64_t)hdr[start + i * 8 + 6] << 8) |
-                          (int64_t)hdr[start + i * 8 + 7];
+    *(ptr_tzh_timecnt_transitions + i) =
+        ((int64_t)hdr[start + i * 8] << 56) |
+        ((int64_t)hdr[start + i * 8 + 1] << 48) |
+        ((int64_t)hdr[start + i * 8 + 2] << 40) |
+        ((int64_t)hdr[start + i * 8 + 3] << 32) |
+        ((int64_t)hdr[start + i * 8 + 4] << 24) |
+        ((int64_t)hdr[start + i * 8 + 5] << 16) |
+        ((int64_t)hdr[start + i * 8 + 6] << 8) |
+        (int64_t)hdr[start + i * 8 + 7];
   }
   result.tzh_timecnt_transitions = ptr_tzh_timecnt_transitions;
   result.tzh_timecnt_number_transitions = chunk + 1;
@@ -143,8 +139,8 @@ tzset *get_tzset(int fd) {
   ptr_tzh_timecnt_indices = tzh_timecnt_indices;
   j = 0;
   for (i = start; i < end; ++i) {
-      tzh_timecnt_indices[j] = hdr[i];
-      j += 1;
+    tzh_timecnt_indices[j] = hdr[i];
+    j += 1;
   }
   result.tzh_timecnt_indices = ptr_tzh_timecnt_indices;
 
@@ -154,20 +150,20 @@ tzset *get_tzset(int fd) {
   ptr_tz = tz;
   j = 0;
   for (i = tzh_leapcnt_end; i < (size_t)tzh_charcnt_end + 1; ++i) {
-      if (i == (size_t)tzh_charcnt_end - 1) {
-          tz[j] = '\0';
-          break;
-      }
+    if (i == (size_t)tzh_charcnt_end - 1) {
+      tz[j] = '\0';
+      break;
+    }
 
-      if (hdr[i] == '\0') {
-          tz[j] = 0x3B;
-          j += 1;
-          continue;
-      }
-
-      tz[j] = hdr[i];
-
+    if (hdr[i] == '\0') {
+      tz[j] = 0x3B;
       j += 1;
+      continue;
+    }
+
+    tz[j] = hdr[i];
+
+    j += 1;
   }
   result.tz = ptr_tz;
 
@@ -190,16 +186,17 @@ tzset *get_tzset(int fd) {
 
   index = 0;
   for (size_t i = tzh_timecnt_end; i < (size_t)tzh_typecnt_end; i += 6) {
-      unsigned char *tmp;
+    unsigned char *tmp;
 
-      tmp = &hdr[i];
-      *(ptr_offsets + index) = tmp[5];
+    tmp = &hdr[i];
+    *(ptr_offsets + index) = tmp[5];
 
-      *(ptr_tt_utoff + index) = tmp[0] << 24 | tmp[1] << 16 | tmp[2] << 8 | tmp[3];
-      *(ptr_tt_isdst + index) = tmp[4];
-      *(ptr_tt_desigidx + index) = (uint8_t)index;
+    *(ptr_tt_utoff + index) =
+        tmp[0] << 24 | tmp[1] << 16 | tmp[2] << 8 | tmp[3];
+    *(ptr_tt_isdst + index) = tmp[4];
+    *(ptr_tt_desigidx + index) = (uint8_t)index;
 
-      index += 1;
+    index += 1;
   }
 
   ttinfo.offsets = ptr_offsets;

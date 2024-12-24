@@ -20,28 +20,28 @@ namespace timezone {
 #define TIMEZONE_HDR_SIZE 44
 
 typedef struct {
-    int64_t *tt_utoff;
-    uint8_t *tt_isdst;
-    uint8_t *tt_desigidx;
+  int64_t *tt_utoff;
+  uint8_t *tt_isdst;
+  uint8_t *tt_desigidx;
 
-    // additional fields
-    int64_t *offsets;
+  // additional fields
+  int64_t *offsets;
 } ttinfo;
 
 typedef struct {
-    uint64_t tzh_ttisutcnt;
-    uint64_t tzh_ttisstdcnt;
-    uint64_t tzh_leapcnt;
-    uint64_t tzh_timecnt;
-    uint64_t tzh_typecnt;
-    uint64_t tzh_charcnt;
-    ttinfo *ttinfo;
+  uint64_t tzh_ttisutcnt;
+  uint64_t tzh_ttisstdcnt;
+  uint64_t tzh_leapcnt;
+  uint64_t tzh_timecnt;
+  uint64_t tzh_typecnt;
+  uint64_t tzh_charcnt;
+  ttinfo *ttinfo;
 
-    // additional fields
-    int64_t *tzh_timecnt_transitions;
-    int64_t *tzh_timecnt_indices;
-    size_t tzh_timecnt_number_transitions;
-    unsigned char *tz;
+  // additional fields
+  int64_t *tzh_timecnt_transitions;
+  int64_t *tzh_timecnt_indices;
+  size_t tzh_timecnt_number_transitions;
+  unsigned char *tz;
 } tzset;
 
 tzset *get_tzset(int fd);
