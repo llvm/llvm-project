@@ -1268,6 +1268,14 @@ void OmpStructureChecker::Leave(const parser::OpenMPAssumesConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPBeginAssumesConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assumes);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPBeginAssumesConstruct &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);

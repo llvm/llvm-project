@@ -85,6 +85,8 @@ public:
   void Leave(const parser::OpenMPAssumeConstruct &);
   void Enter(const parser::OpenMPAssumesConstruct &);
   void Leave(const parser::OpenMPAssumesConstruct &);
+  void Enter(const parser::OpenMPBeginAssumesConstruct &);
+  void Leave(const parser::OpenMPBeginAssumesConstruct &);
   void Enter(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OmpBeginBlockDirective &);

@@ -2115,10 +2115,10 @@ public:
                   },
         x.u);
   }
-  void Unparse(const OmpDirectiveNameModifier &x) {
-    Word(llvm::omp::getOpenMPDirectiveName(x.v));
+  void Unparse(const llvm::omp::Directive &x) {
+    Word(llvm::omp::getOpenMPDirectiveName(x));
   }
-  void Unparse(const OmpDirectiveNameEntry &x) {
+  void Unparse(const OmpDirectiveNameModifier &x) {
     Word(llvm::omp::getOpenMPDirectiveName(x.v));
   }
   void Unparse(const OmpIteratorSpecifier &x) {
@@ -2648,6 +2648,18 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OmpBeginAssumesDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP BEGIN ASSUMES");
+    Walk(std::get<OmpClauseList>(x.t), ", ");
+    Put("\n");
+    EndOpenMP();
+  }
+  void Unparse(const OmpEndAssumesDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP END ASSUMES\n");
+    EndOpenMP();
+  }
   void Unparse(const OmpCriticalDirective &x) {
     BeginOpenMP();
     Word("!$OMP CRITICAL");
@@ -2699,7 +2711,13 @@ public:
     Walk(std::get<std::optional<OmpReductionInitializerClause>>(x.t));
     EndOpenMP();
   }
-
+  bool Pre(const OpenMPAssumesConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP ASSUMES ");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPDeclareMapperConstruct &z) {
     BeginOpenMP();
     Word("!$OMP DECLARE MAPPER (");
