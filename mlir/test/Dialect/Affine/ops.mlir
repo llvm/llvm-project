@@ -324,3 +324,32 @@ module attributes {gpu.container_module} {
 // CHECK:             affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
 // CHECK:             }
 // CHECK:             gpu.return
+
+// -----
+
+// CHECK-LABEL: @gpu_launch_affine
+
+module {
+  func.func @gpu_launch_affine() {
+    %c1 = arith.constant 1 : index
+    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) 
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1) {
+      %thread_id_x = gpu.thread_id  x
+      %c128 = arith.constant 128 : index
+      affine.for %arg12 = %thread_id_x to %c128 step 8 {
+      }
+      gpu.terminator
+    }
+    return
+  }
+}
+
+// CHECK-NEXT:  %[[VAL_0:.*]] = arith.constant 1 : index
+// CHECK-NEXT:   gpu.launch blocks(%[[VAL_1:.*]], %[[VAL_2:.*]], %[[VAL_3:.*]]) in (%[[VAL_4:.*]] = %[[VAL_0]], %[[VAL_5:.*]] = %[[VAL_0]], %[[VAL_6:.*]] = %[[VAL_0]]) threads(%[[VAL_7:.*]], %[[VAL_8:.*]], %[[VAL_9:.*]]) in (%[[VAL_10:.*]] = %[[VAL_0]], %[[VAL_11:.*]] = %[[VAL_0]], %[[VAL_12:.*]] = %[[VAL_0]]) {
+// CHECK-NEXT:     %[[VAL_13:.*]] = gpu.thread_id  x
+// CHECK-NEXT:     %[[VAL_14:.*]] = arith.constant 128 : index
+// CHECK-NEXT:     affine.for %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_14]] step 8 {
+// CHECK-NEXT:     }
+// CHECK-NEXT:     gpu.terminator
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return
