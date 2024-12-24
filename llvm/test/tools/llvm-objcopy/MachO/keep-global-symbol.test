@@ -63,7 +63,7 @@ FileHeader:
   cputype:         0x100000C
   cpusubtype:      0x0
   filetype:        0x2
-  ncmds:           4
+  ncmds:           3
   sizeofcmds:      328
   flags:           0x200085
   reserved:        0x0
@@ -99,7 +99,7 @@ LoadCommands:
     vmaddr:          4294971392
     vmsize:          4096
     fileoff:         4096
-    filesize:        174
+    filesize:        94
     maxprot:         1
     initprot:        1
     nsects:          0
@@ -110,26 +110,6 @@ LoadCommands:
     nsyms:           5
     stroff:          4176
     strsize:         94
-  - cmd:             LC_DYSYMTAB
-    cmdsize:         80
-    ilocalsym:       0
-    nlocalsym:       1
-    iextdefsym:      1
-    nextdefsym:      1
-    iundefsym:       1
-    nundefsym:       1
-    tocoff:          0
-    ntoc:            0
-    modtaboff:       0
-    nmodtab:         0
-    extrefsymoff:    0
-    nextrefsyms:     0
-    indirectsymoff:  0
-    nindirectsyms:   0
-    extreloff:       0
-    nextrel:         0
-    locreloff:       0
-    nlocrel:         0
 LinkEditData:
   NameList:
     - n_strx:          2
