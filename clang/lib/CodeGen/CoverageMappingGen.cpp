@@ -935,7 +935,7 @@ struct CounterCoverageMappingBuilder
   ///
   /// This should only be called on statements that have a dedicated counter.
   Counter getRegionCounter(const Stmt *S) {
-    return Counter::getCounter(CounterMap[S].first);
+    return Counter::getCounter(CounterMap[S].Executed);
   }
 
   /// Push a region onto the stack.
