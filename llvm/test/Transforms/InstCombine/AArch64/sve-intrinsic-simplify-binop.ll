@@ -9,7 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 4 x i32> @commute_constant_to_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @commute_constant_to_rhs(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 303), <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> splat (i32 303))
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 303), <vscale x 4 x i32> %a)
@@ -29,8 +29,8 @@ define <vscale x 4 x i32> @cannot_commute_constant_to_rhs(<vscale x 4 x i1> %pg,
 
 define <vscale x 4 x i32> @idempotent_mul(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @idempotent_mul(
-; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[R:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 4 x i32> %r
@@ -39,7 +39,7 @@ define <vscale x 4 x i32> @idempotent_mul(<vscale x 4 x i1> %pg, <vscale x 4 x i
 define <vscale x 4 x i32> @idempotent_mul_ops_reverse(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @idempotent_mul_ops_reverse(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> splat (i32 1)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> %a)
@@ -48,8 +48,8 @@ define <vscale x 4 x i32> @idempotent_mul_ops_reverse(<vscale x 4 x i1> %pg, <vs
 
 define <vscale x 4 x i32> @idempotent_mul_u(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @idempotent_mul_u(
-; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[R:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 4 x i32> %r
@@ -58,8 +58,7 @@ define <vscale x 4 x i32> @idempotent_mul_u(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 4 x i32> @idempotent_mul_u_ops_reverse(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @idempotent_mul_u_ops_reverse(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> [[A]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> %a)
   ret <vscale x 4 x i32> %r
@@ -72,8 +71,7 @@ define <vscale x 4 x i32> @constant_mul_after_striping_inactive_lanes(<vscale x 
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul_after_striping_inactive_lanes(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A_DUP:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i1> [[PG]], i32 3)
-; CHECK-NEXT:    [[B_DUP:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[B]], <vscale x 4 x i1> [[PG]], i32 2)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A_DUP]], <vscale x 4 x i32> [[B_DUP]])
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 6), <vscale x 4 x i32> [[A_DUP]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %a.dup = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, i32 3)
@@ -86,10 +84,7 @@ define <vscale x 4 x i32> @constant_mul_after_striping_inactive_lanes(<vscale x 
 define <vscale x 4 x i32> @constant_mul_u_after_striping_inactive_lanes(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul_u_after_striping_inactive_lanes(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_DUP:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i1> [[PG]], i32 3)
-; CHECK-NEXT:    [[B_DUP:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[B]], <vscale x 4 x i1> [[PG]], i32 2)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A_DUP]], <vscale x 4 x i32> [[B_DUP]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 6)
 ;
   %a.dup = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, i32 3)
   %b.dup = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> %pg, i32 2)
@@ -104,7 +99,7 @@ define <vscale x 4 x i32> @constant_mul_u_after_striping_inactive_lanes(<vscale 
 define <vscale x 4 x float> @constant_fmul(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @constant_fmul(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4f32(<vscale x 4 x i1> [[PG]], <vscale x 4 x float> splat (float 7.000000e+00), <vscale x 4 x float> splat (float 6.000000e+00))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x float> splat (float 4.200000e+01), <vscale x 4 x float> splat (float 7.000000e+00)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[R]]
 ;
   %r = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> splat (float 7.0), <vscale x 4 x float> splat (float 6.0))
@@ -114,8 +109,7 @@ define <vscale x 4 x float> @constant_fmul(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x float> @constant_fmul_u(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @constant_fmul_u(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> [[PG]], <vscale x 4 x float> splat (float 7.000000e+00), <vscale x 4 x float> splat (float 6.000000e+00))
-; CHECK-NEXT:    ret <vscale x 4 x float> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 4.200000e+01)
 ;
   %r = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> splat (float 7.0), <vscale x 4 x float> splat (float 6.0))
   ret <vscale x 4 x float> %r
@@ -124,7 +118,7 @@ define <vscale x 4 x float> @constant_fmul_u(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x i32> @constant_mul(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 7), <vscale x 4 x i32> splat (i32 3))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 21), <vscale x 4 x i32> splat (i32 7)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 7), <vscale x 4 x i32> splat (i32 3))
@@ -134,8 +128,7 @@ define <vscale x 4 x i32> @constant_mul(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x i32> @constant_mul_u(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul_u(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 7), <vscale x 4 x i32> splat (i32 3))
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 21)
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 7), <vscale x 4 x i32> splat (i32 3))
   ret <vscale x 4 x i32> %r

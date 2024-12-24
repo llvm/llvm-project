@@ -6,8 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; Idempotent muls -- should compile to just a ret.
 define <vscale x 8 x i16> @idempotent_mul_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @idempotent_mul_i16(
-; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x i16> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x i16> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[A]]
 ;
   %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 1)
   %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %1)
@@ -16,8 +16,8 @@ define <vscale x 8 x i16> @idempotent_mul_i16(<vscale x 8 x i1> %pg, <vscale x 8
 
 define <vscale x 4 x i32> @idempotent_mul_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @idempotent_mul_i32(
-; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
   %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %1)
@@ -26,8 +26,8 @@ define <vscale x 4 x i32> @idempotent_mul_i32(<vscale x 4 x i1> %pg, <vscale x 4
 
 define <vscale x 2 x i64> @idempotent_mul_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @idempotent_mul_i64(
-; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
+; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x i64> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[A]]
 ;
   %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 1)
   %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %1)
@@ -37,7 +37,7 @@ define <vscale x 2 x i64> @idempotent_mul_i64(<vscale x 2 x i1> %pg, <vscale x 2
 define <vscale x 2 x i64> @idempotent_mul_different_argument_order(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @idempotent_mul_different_argument_order(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 1), <vscale x 2 x i64> [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 2 x i1> [[PG]], <vscale x 2 x i64> [[A]], <vscale x 2 x i64> splat (i64 1)
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 1)
@@ -48,8 +48,8 @@ define <vscale x 2 x i64> @idempotent_mul_different_argument_order(<vscale x 2 x
 
 define <vscale x 8 x i16> @idempotent_mul_with_predicated_dup(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @idempotent_mul_with_predicated_dup(
-; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x i16> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x i16> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[A]]
 ;
   %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, i16 1)
   %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %1)
