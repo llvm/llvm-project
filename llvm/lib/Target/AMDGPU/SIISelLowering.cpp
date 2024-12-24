@@ -4017,8 +4017,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 }
 
 // This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
-// except for stack growth direction(default: downwards, AMDGPU: upwards) and
-// applying the wave size scale to the increment amount.
+// except for:
+// 1. stack growth direction(default: downwards, AMDGPU: upwards), and
+// 2. scale size where, scale = wave-reduction(alloca-size) * wave-size
 SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
                                                       SelectionDAG &DAG) const {
   const MachineFunction &MF = DAG.getMachineFunction();
@@ -4026,20 +4027,16 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
 
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
-  SDValue Tmp1 = Op;
-  SDValue Tmp2 = Op.getValue(1);
-  SDValue Tmp3 = Op.getOperand(2);
-  SDValue Chain = Tmp1.getOperand(0);
-
+  SDValue Chain = Op.getOperand(0);
   Register SPReg = Info->getStackPtrOffsetReg();
 
   // Chain the dynamic stack allocation so that it doesn't modify the stack
   // pointer when other instructions are using the stack.
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
-  SDValue Size = Tmp2.getOperand(1);
+  SDValue Size = Op.getValue(1).getOperand(1);
   SDValue BaseAddr = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  Align Alignment = cast<ConstantSDNode>(Tmp3)->getAlignValue();
+  Align Alignment = cast<ConstantSDNode>(Op.getOperand(2))->getAlignValue();
 
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
   assert(TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
@@ -4057,30 +4054,41 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
                            DAG.getSignedConstant(-ScaledAlignment, dl, VT));
   }
 
-  SDValue ScaledSize = DAG.getNode(
-      ISD::SHL, dl, VT, Size,
-      DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
-
-  SDValue NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
+  SDValue NewSP;
+  if (isa<ConstantSDNode>(Op.getOperand(1))) {
+    // for constant sized alloca, scale alloca size by wave-size
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  } else {
+    // for dynamic sized alloca, perform wave-wide reduction to get max of
+    // alloca size(divergent) and then scale it by wave-size
+    SDValue WaveReduction =
+        DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
+    Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
+                       Size, DAG.getConstant(0, dl, MVT::i32));
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP =
+        DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
+    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
+                        NewSP);
+  }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
-  Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
+  SDValue CallSeqEnd = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
-  return DAG.getMergeValues({BaseAddr, Tmp2}, dl);
+  return DAG.getMergeValues({BaseAddr, CallSeqEnd}, dl);
 }
 
 SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  // We only handle constant sizes here to allow non-entry block, static sized
-  // allocas. A truly dynamic value is more difficult to support because we
-  // don't know if the size value is uniform or not. If the size isn't uniform,
-  // we would need to do a wave reduction to get the maximum size to know how
-  // much to increment the uniform stack pointer.
-  SDValue Size = Op.getOperand(1);
-  if (isa<ConstantSDNode>(Size))
-    return lowerDYNAMIC_STACKALLOCImpl(Op, DAG); // Use "generic" expansion.
-
-  return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
+  return lowerDYNAMIC_STACKALLOCImpl(Op, DAG); // Use "generic" expansion.
 }
 
 SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {
