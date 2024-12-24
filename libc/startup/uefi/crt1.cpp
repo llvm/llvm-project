@@ -12,6 +12,39 @@
 #include "include/llvm-libc-types/EFI_SYSTEM_TABLE.h"
 #include "src/__support/macros/config.h"
 
+namespace LIBC_NAMESPACE_DECL {
+
+using InitCallback = void(void);
+using FiniCallback = void(void);
+extern "C" InitCallback *__CTOR_LIST__[];
+extern "C" FiniCallback *__DTOR_LIST__[];
+
+static void call_init_array_callbacks() {
+  unsigned long nptrs = (unsigned long)__CTOR_LIST__[0];
+  unsigned long i;
+
+  if (nptrs == (unsigned long)-1) {
+    for (nptrs = 0; __CTOR_LIST__[nptrs + 1] != 0; nptrs++)
+      ;
+  }
+
+  for (i = nptrs; i >= 1; i--) {
+    __CTOR_LIST__[i]();
+  }
+}
+
+static void call_fini_array_callbacks() {
+  unsigned long nptrs = 0;
+
+  for (nptrs = 0; __DTOR_LIST__[nptrs + 1] != 0; nptrs++)
+    ;
+
+  for (unsigned long i = nptrs; i >= 1; i--) {
+    __DTOR_LIST__[i]();
+  }
+}
+} // namespace LIBC_NAMESPACE_DECL
+
 EFI_HANDLE efi_image_handle;
 EFI_SYSTEM_TABLE *efi_system_table;
 
@@ -22,7 +55,11 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle,
   efi_image_handle = ImageHandle;
   efi_system_table = SystemTable;
 
+  LIBC_NAMESPACE::call_init_array_callbacks();
+
   main(0, NULL, NULL);
+
+  LIBC_NAMESPACE::call_fini_array_callbacks();
   // TODO: convert the return value of main to EFI_STATUS
   return 0; // TODO: EFI_SUCCESS
 }
