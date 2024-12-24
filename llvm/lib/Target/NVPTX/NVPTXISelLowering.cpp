@@ -862,6 +862,16 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
 
+  // Lower bf16 add/mul/sub as fma when it avoids promotion
+  for (const auto &Op : {ISD::FADD, ISD::FMUL, ISD::FSUB}) {
+    for (const auto &VT : {MVT::bf16, MVT::v2bf16}) {
+      if (getOperationAction(Op, VT) != Legal &&
+          getOperationAction(ISD::FMA, VT) == Legal) {
+        setOperationAction(Op, VT, Custom);
+      }
+    }
+  }
+
   // f16/f16x2 neg was introduced in PTX 60, SM_53.
   const bool IsFP16FP16x2NegAvailable = STI.getSmVersion() >= 53 &&
                                         STI.getPTXVersion() >= 60 &&
@@ -2498,6 +2508,62 @@ SDValue NVPTXTargetLowering::LowerFROUND64(SDValue Op,
   return DAG.getNode(ISD::SELECT, SL, VT, IsLarge, A, RoundedA);
 }
 
+static SDValue PromoteBinOpToF32(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = MVT::f32;
+  if (VT.isVector()) {
+    NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
+  }
+  SDLoc DL(N);
+  SDValue Tmp0 = DAG.getFPExtendOrRound(N->getOperand(0), DL, NVT);
+  SDValue Tmp1 = DAG.getFPExtendOrRound(N->getOperand(1), DL, NVT);
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, NVT, Tmp0, Tmp1, N->getFlags());
+  return DAG.getFPExtendOrRound(Res, DL, VT);
+}
+
+SDValue NVPTXTargetLowering::LowerFADD(SDValue Op, SelectionDAG &DAG) const {
+  // No fma.ftz for bf16, so fall back to promotion
+  if (useF32FTZ(DAG.getMachineFunction())) {
+    return PromoteBinOpToF32(Op.getNode(), DAG);
+  }
+
+  // FADD(a, b) -> FMA(a, 1.0, b)
+  SDLoc DL(Op);
+  auto VT = Op.getValueType();
+  auto One = DAG.getConstantFP(1.0, DL, VT);
+  SmallVector<SDValue, 3> Operands{Op->getOperand(0), One, Op->getOperand(1)};
+  return DAG.getNode(ISD::FMA, DL, VT, Operands);
+}
+
+SDValue NVPTXTargetLowering::LowerFSUB(SDValue Op, SelectionDAG &DAG) const {
+  // No fma.ftz for bf16, so fall back to promotion
+  if (useF32FTZ(DAG.getMachineFunction())) {
+    return PromoteBinOpToF32(Op.getNode(), DAG);
+  }
+
+  // FSUB(a, b) -> FMA(b, -1.0, a)
+  SDLoc DL(Op);
+  auto VT = Op.getValueType();
+  auto NegOne = DAG.getConstantFP(-1.0, DL, VT);
+  SmallVector<SDValue, 3> Operands{Op->getOperand(1), NegOne,
+                                   Op->getOperand(0)};
+  return DAG.getNode(ISD::FMA, DL, VT, Operands);
+}
+
+SDValue NVPTXTargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
+  // No fma.ftz for bf16, so fall back to promotion
+  if (useF32FTZ(DAG.getMachineFunction())) {
+    return PromoteBinOpToF32(Op.getNode(), DAG);
+  }
+
+  // FMUL(a, b) -> FMA(a, b, 0.0)
+  SDLoc DL(Op);
+  auto VT = Op.getValueType();
+  auto Zero = DAG.getConstantFP(0.0, DL, VT);
+  SmallVector<SDValue, 3> Operands{Op->getOperand(0), Op->getOperand(1), Zero};
+  return DAG.getNode(ISD::FMA, DL, VT, Operands);
+}
+
 SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
                                             SelectionDAG &DAG) const {
   assert(STI.getSmVersion() < 90 || STI.getPTXVersion() < 78);
@@ -2689,6 +2755,13 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::CopyToReg:
     return LowerCopyToReg_128(Op, DAG);
+  case ISD::FADD:
+    return LowerFADD(Op, DAG);
+  case ISD::FSUB:
+    return LowerFSUB(Op, DAG);
+  case ISD::FMUL:
+    return LowerFMUL(Op, DAG);
+
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
