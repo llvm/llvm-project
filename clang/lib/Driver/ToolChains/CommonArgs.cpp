@@ -1705,8 +1705,6 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("ubsan_minimal");
     } else {
       StaticRuntimes.push_back("ubsan_standalone");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
   if (SanArgs.needsSafeStackRt()) {
@@ -1716,11 +1714,13 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
     if (SanArgs.needsCfiRt())
       StaticRuntimes.push_back("cfi");
-    if (SanArgs.needsCfiDiagRt()) {
+    if (SanArgs.needsCfiDiagRt())
       StaticRuntimes.push_back("cfi_diag");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("ubsan_standalone_cxx");
-    }
+  }
+  if (SanArgs.linkCXXRuntimes() && !SanArgs.requiresMinimalRuntime() &&
+      ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) ||
+       SanArgs.needsCfiDiagRt())) {
+    StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
   if (SanArgs.needsStatsRt()) {
     NonWholeStaticRuntimes.push_back("stats");
