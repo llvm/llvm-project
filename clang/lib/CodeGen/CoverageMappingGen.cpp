@@ -943,8 +943,27 @@ struct CounterCoverageMappingBuilder
   };
 
   BranchCounterPair getBranchCounterPair(const Stmt *S, Counter ParentCnt) {
-    Counter ExecCnt = getRegionCounter(S);
-    return {ExecCnt, Builder.subtract(ParentCnt, ExecCnt)};
+    auto &TheMap = CounterMap[S];
+    auto ExecCnt = Counter::getCounter(TheMap.Executed);
+    BranchCounterPair Counters = {ExecCnt,
+                                  Builder.subtract(ParentCnt, ExecCnt)};
+
+    if (!llvm::EnableSingleByteCoverage || !Counters.Skipped.isExpression()) {
+      assert(
+          !TheMap.Skipped.hasValue() &&
+          "SkipCnt shouldn't be allocated but refer to an existing counter.");
+      return Counters;
+    }
+
+    // Assign second if second is not assigned yet.
+    if (!TheMap.Skipped.hasValue())
+      TheMap.Skipped = NextCounterNum++;
+
+    // Replace an expression (ParentCnt - ExecCnt) with SkipCnt.
+    Counter SkipCnt = Counter::getCounter(TheMap.Skipped);
+    MapToExpand[SkipCnt] = Counters.Skipped;
+    Counters.Skipped = SkipCnt;
+    return Counters;
   }
 
   /// Returns {TrueCnt,FalseCnt} for "implicit default".
@@ -953,8 +972,9 @@ struct CounterCoverageMappingBuilder
   getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
                                       Counter CaseCountSum) {
     if (llvm::EnableSingleByteCoverage)
+      // Allocate the new Counter since `subtract(Parent - Sum)` is unavailable.
       return {Counter::getZero(), // Folded
-              Counter::getCounter(CounterMap[Cond].second = NextCounterNum++)};
+              Counter::getCounter(CounterMap[Cond].Skipped = NextCounterNum++)};
 
     // Simplify is skipped while building the counters above: it can get
     // really slow on top of switches with thousands of cases. Instead,
