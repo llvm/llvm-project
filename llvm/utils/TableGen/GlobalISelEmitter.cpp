@@ -426,10 +426,10 @@ private:
                                       const TreePatternNode &N,
                                       action_iterator &InsertPt) const;
 
-  Expected<action_iterator>
-  importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
-                            BuildMIAction &DstMIBuilder,
-                            const TreePatternNode &Dst) const;
+  Error importNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                           const TreePatternNode &N,
+                           action_iterator &InsertPt) const;
+
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
                                       const DAGDefaultOperand &DefaultOp) const;
@@ -1385,36 +1385,25 @@ Error GlobalISelEmitter::importInstructionNodeRenderer(
   return Error::success();
 }
 
-Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
-    action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &Dst) const {
-  if (Dst.hasName()) {
-    if (Error Err = importNamedNodeRenderer(Rule, DstMIBuilder, Dst))
-      return Err;
-    return InsertPt;
-  }
+// Equivalent of MatcherGen::EmitResultOperand.
+Error GlobalISelEmitter::importNodeRenderer(RuleMatcher &M,
+                                            BuildMIAction &MIBuilder,
+                                            const TreePatternNode &N,
+                                            action_iterator &InsertPt) const {
+  if (N.hasName())
+    return importNamedNodeRenderer(M, MIBuilder, N);
 
-  if (Dst.isLeaf()) {
-    if (Error Err = importLeafNodeRenderer(Rule, DstMIBuilder, Dst))
-      return Err;
-    return InsertPt;
-  }
+  if (N.isLeaf())
+    return importLeafNodeRenderer(M, MIBuilder, N);
 
-  if (Dst.getOperator()->isSubClassOf("SDNodeXForm")) {
-    if (Error Err = importXFormNodeRenderer(Rule, DstMIBuilder, Dst))
-      return Err;
-    return InsertPt;
-  }
+  if (N.getOperator()->isSubClassOf("SDNodeXForm"))
+    return importXFormNodeRenderer(M, MIBuilder, N);
 
-  if (Dst.getOperator()->isSubClassOf("Instruction")) {
-    if (Error Err =
-            importInstructionNodeRenderer(Rule, DstMIBuilder, Dst, InsertPt))
-      return Err;
-    return InsertPt;
-  }
+  if (N.getOperator()->isSubClassOf("Instruction"))
+    return importInstructionNodeRenderer(M, MIBuilder, N, InsertPt);
 
   // Should not reach here.
-  return failedImport("unrecognized node " + llvm::to_string(Dst));
+  return failedImport("unrecognized node " + llvm::to_string(N));
 }
 
 /// Generates code that builds the resulting instruction(s) from the destination
@@ -1668,11 +1657,9 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
               dyn_cast<DefInit>(SubRegChild.getLeafValue())) {
         CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
 
-        auto InsertPtOrError =
-            importExplicitUseRenderer(InsertPt, M, DstMIBuilder, ValChild);
-        if (auto Error = InsertPtOrError.takeError())
-          return std::move(Error);
-        InsertPt = InsertPtOrError.get();
+        if (Error Err = importNodeRenderer(M, DstMIBuilder, ValChild, InsertPt))
+          return Err;
+
         DstMIBuilder.addRenderer<SubRegIndexRenderer>(SubIdx);
       }
     }
@@ -1737,11 +1724,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       continue;
     }
 
-    auto InsertPtOrError = importExplicitUseRenderer(InsertPt, M, DstMIBuilder,
-                                                     Dst.getChild(Child));
-    if (auto Error = InsertPtOrError.takeError())
-      return std::move(Error);
-    InsertPt = InsertPtOrError.get();
+    if (Error Err =
+            importNodeRenderer(M, DstMIBuilder, Dst.getChild(Child), InsertPt))
+      return Err;
+
     ++Child;
   }
 
