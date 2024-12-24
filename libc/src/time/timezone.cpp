@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-tzset *get_tzset(char *timezone) {
+tzset *get_tzset() {
   static ttinfo ttinfo;
   static tzset result;
 
@@ -86,6 +86,134 @@ tzset *get_tzset(char *timezone) {
   if (reserved != 0) {
     return nullptr;
   }
+
+  int64_t product;
+
+  product = (tzh_timecnt * 5)
+      + (tzh_typecnt * 6)
+      + (tzh_leapcnt * 8)
+      + tzh_charcnt
+      + tzh_ttisstdcnt
+      + tzh_ttisutcnt
+      + TIMEZONE_HDR_SIZE;
+
+  int64_t tzh_timecnt_length;
+  int64_t tzh_typecnt_length;
+  int64_t tzh_leapcnt_length;
+  int64_t tzh_charcnt_length;
+  int64_t tzh_timecnt_end;
+  int64_t tzh_typecnt_end;
+  int64_t tzh_leapcnt_end;
+  int64_t tzh_charcnt_end;
+
+  tzh_timecnt_length = tzh_timecnt * 9;
+  tzh_typecnt_length = tzh_typecnt * 6;
+  tzh_leapcnt_length = tzh_leapcnt * 12;
+  tzh_charcnt_length = tzh_charcnt;
+  tzh_timecnt_end = TIMEZONE_HDR_SIZE + product + tzh_timecnt_length;
+  tzh_typecnt_end = tzh_timecnt_end + tzh_typecnt_length;
+  tzh_leapcnt_end = tzh_typecnt_end + tzh_leapcnt_length;
+  tzh_charcnt_end = tzh_leapcnt_end + tzh_charcnt_length;
+
+  size_t start;
+  size_t end;
+  size_t chunk;
+
+  start = TIMEZONE_HDR_SIZE + product;
+  end = (TIMEZONE_HDR_SIZE + product + (tzh_timecnt * 8));
+  chunk = (end - start) / 8;
+
+  int64_t tzh_timecnt_transitions[chunk + 1];
+  int64_t *ptr_tzh_timecnt_transitions;
+
+  ptr_tzh_timecnt_transitions = tzh_timecnt_transitions;
+  for (i = 0; i < chunk; ++i) {
+    *(ptr_tzh_timecnt_transitions + i) = ((int64_t)hdr[start + i * 8] << 56) |
+                          ((int64_t)hdr[start + i * 8 + 1] << 48) |
+                          ((int64_t)hdr[start + i * 8 + 2] << 40) |
+                          ((int64_t)hdr[start + i * 8 + 3] << 32) |
+                          ((int64_t)hdr[start + i * 8 + 4] << 24) |
+                          ((int64_t)hdr[start + i * 8 + 5] << 16) |
+                          ((int64_t)hdr[start + i * 8 + 6] << 8) |
+                          (int64_t)hdr[start + i * 8 + 7];
+  }
+  result.tzh_timecnt_transitions = ptr_tzh_timecnt_transitions;
+
+  start = TIMEZONE_HDR_SIZE + product + tzh_timecnt * 8;
+  end = tzh_timecnt_end;
+
+  int64_t tzh_timecnt_indices[end - start];
+  int64_t *ptr_tzh_timecnt_indices;
+  size_t j;
+
+  ptr_tzh_timecnt_indices = tzh_timecnt_indices;
+  j = 0;
+  for (i = start; i < end; ++i) {
+      tzh_timecnt_indices[j] = hdr[i];
+      j += 1;
+  }
+  result.tzh_timecnt_indices = ptr_tzh_timecnt_indices;
+
+  unsigned char tz[tzh_charcnt_end - tzh_leapcnt_end];
+  unsigned char *ptr_tz;
+
+  ptr_tz = tz;
+  j = 0;
+  for (i = tzh_leapcnt_end; i < (size_t)tzh_charcnt_end + 1; ++i) {
+      if (i == (size_t)tzh_charcnt_end) {
+          tz[j] = '\0';
+          break;
+      }
+
+      if (hdr[i] == '\0') {
+          tz[j] = 0x3B;
+          j += 1;
+          continue;
+      }
+
+      tz[j] = hdr[i];
+
+      j += 1;
+  }
+  result.tz = ptr_tz;
+
+  int64_t offsets[6];
+  int64_t *ptr_offsets;
+  size_t index;
+
+  int64_t tt_utoff[6];
+  uint8_t tt_isdst[6];
+  uint8_t tt_desigidx[6];
+
+  int64_t *ptr_tt_utoff;
+  uint8_t *ptr_tt_isdst;
+  uint8_t *ptr_tt_desigidx;
+
+  ptr_offsets = offsets;
+  ptr_tt_utoff = tt_utoff;
+  ptr_tt_isdst = tt_isdst;
+  ptr_tt_desigidx = tt_desigidx;
+
+  index = 0;
+  for (size_t i = tzh_timecnt_end; i < (size_t)tzh_typecnt_end; i += 6) {
+      unsigned char *tmp;
+
+      tmp = &hdr[i];
+      *(ptr_offsets + index) = tmp[5];
+
+      *(ptr_tt_utoff + index) = tmp[0] << 24 | tmp[1] << 16 | tmp[2] << 8 | tmp[3];
+      *(ptr_tt_isdst + index) = tmp[4];
+      *(ptr_tt_desigidx + index) = (uint8_t)index;
+
+      index += 1;
+  }
+
+  ttinfo.offsets = ptr_offsets;
+  ttinfo.tt_utoff = ptr_tt_utoff;
+  ttinfo.tt_isdst = ptr_tt_isdst;
+  ttinfo.tt_desigidx = ptr_tt_desigidx;
+
+  result.ttinfo = &ttinfo;
 
   close(fd);
 
