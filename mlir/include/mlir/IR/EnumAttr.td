@@ -10,6 +10,7 @@
 #define ENUMATTR_TD
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/Properties.td"
 
 //===----------------------------------------------------------------------===//
 // Enum attribute kinds
@@ -415,6 +416,65 @@ class EnumAttr<Dialect dialect, EnumAttrInfo enumInfo, string name = "",
   // The default assembly format for enum attributes. Selected to best work with
   // operation assembly formats.
   let assemblyFormat = "$value";
+}
+
+class _enumPropPred<string underlyingType, list<EnumAttrCaseInfo> cases> {
+  Pred ret = Or<!foreach(c, cases,
+   CPred<c.value # " == static_cast<" # underlyingType # ">($_self))">)>;
+}
+class _bitEnumPropPred<string underlyingType, list<EnumAttrCaseInfo> cases> {
+  Pred ret = CPred<"0 == (static_cast<"# underlyingType # ">($_self) & ~("
+    # !foldl(0, cases, acc, c, !or(acc, c.value)) # "))">;
+}
+
+/// A property backed by a C++ enum, analogous to `EnumAttr`.
+///
+/// When converted to an attribute or stored in bitcode, the enum is
+/// converted to its underlying integer type.
+class EnumProp<EnumAttrInfo enumInfo, string defaultCase = ""> :
+    Property<enumInfo.cppNamespace # "::" # enumInfo.className, enumInfo.summary> {
+  let description = enumInfo.description;
+
+  EnumAttrInfo enumAttrInfo = enumInfo;
+
+  let convertFromAttribute =
+    enumInfo.underlyingType # " intStorage;" # [{
+    if (failed(convertFromAttribute(intStorage, $_attr, $_diag)))
+      return ::mlir::failure();
+    $_storage = static_cast<}] # storageType # [{>(intStorage);
+    return ::mlir::success();
+  }];
+  let convertToAttribute = [{
+    return convertToAttribute($_ctxt, static_cast<}] # enumInfo.underlyingType # [{>($_storage));
+  }];
+
+  // The bytecode reader always wants things as uint64_t, so use that
+  // no matter what the underlying type is.
+  let writeToMlirBytecode = [{
+   $_writer.writeVarInt(static_cast<uint64_t>($_storage));
+  }];
+  let readFromMlirBytecode = [{
+    uint64_t val;
+    if (failed($_reader.readVarInt(val)))
+      return ::mlir::failure();
+    $_storage = static_cast<}] # storageType # [{>(val);
+  }];
+
+  let predicate =
+    !if(!isa<BitEnumAttr>(enumInfo),
+      _bitEnumPropPred<enumInfo.underlyingType, enumInfo.enumerants>.ret,
+      _enumPropPred<enumInfo.underlyingType, enumInfo.enumerants>.ret);
+
+  let optionalParser = [{
+    auto value = ::mlir::FieldParser<std::optional<}] # storageType # [{>>::parse($_parser);
+    if (::mlir::failed(value))
+      return ::mlir::failure();
+    if (!value->has_value())
+      return std::nullopt;
+    $_storage = **value;
+  }];
+
+  let defaultValue = !if(!ne(defaultCase, ""), storageType # "::" # defaultCase, "");
 }
 
 class _symbolToValue<EnumAttrInfo enumAttrInfo, string case> {

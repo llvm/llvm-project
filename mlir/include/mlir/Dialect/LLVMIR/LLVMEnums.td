@@ -504,6 +504,9 @@ def LLVM_IntegerOverflowFlagsAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def LLVM_IntegerOverflowFlagsProp :
+    EnumProp<IntegerOverflowFlags, "none">;
+
 //===----------------------------------------------------------------------===//
 // FastmathFlags
 //===----------------------------------------------------------------------===//

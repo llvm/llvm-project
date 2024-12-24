@@ -49,6 +49,96 @@ Attribute mlir::convertToAttribute(MLIRContext *ctx, int32_t storage) {
 }
 
 LogicalResult
+mlir::convertFromAttribute(int16_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getSExtValue();
+  return success();
+}
+Attribute mlir::convertToAttribute(MLIRContext *ctx, int16_t storage) {
+  return IntegerAttr::get(IntegerType::get(ctx, 16), storage);
+}
+
+LogicalResult
+mlir::convertFromAttribute(int8_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getSExtValue();
+  return success();
+}
+Attribute mlir::convertToAttribute(MLIRContext *ctx, int8_t storage) {
+  return IntegerAttr::get(IntegerType::get(ctx, 8), storage);
+}
+
+LogicalResult
+mlir::convertFromAttribute(uint64_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getZExtValue();
+  return success();
+}
+Attribute mlir::convertToAttribute(MLIRContext *ctx, uint64_t storage) {
+  return IntegerAttr::get(IntegerType::get(ctx, 64), storage);
+}
+
+LogicalResult
+mlir::convertFromAttribute(uint32_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getZExtValue();
+  return success();
+}
+Attribute mlir::convertToAttribute(MLIRContext *ctx, uint32_t storage) {
+  return IntegerAttr::get(IntegerType::get(ctx, 32), storage);
+}
+
+LogicalResult
+mlir::convertFromAttribute(uint16_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getZExtValue();
+  return success();
+}
+Attribute mlir::convertToAttribute(MLIRContext *ctx, uint16_t storage) {
+  return IntegerAttr::get(IntegerType::get(ctx, 16), storage);
+}
+
+LogicalResult
+mlir::convertFromAttribute(uint8_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getZExtValue();
+  return success();
+}
+Attribute mlir::convertToAttribute(MLIRContext *ctx, uint8_t storage) {
+  return IntegerAttr::get(IntegerType::get(ctx, 8), storage);
+}
+
+LogicalResult
 mlir::convertFromAttribute(std::string &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<StringAttr>(attr);
