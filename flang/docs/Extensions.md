@@ -141,6 +141,18 @@ end
   This interpretation has usability advantages and is what six other
   Fortran compilers do, but is not conforming now that J3 approved an
   "interp" in June 2024 to the contrary.
+* Arm has processors that allow a user to control what happens when an
+  arithmetic exception is signaled, as well as processors that do not
+  have this capability. An Arm executable will run on either type of
+  processor, so it is effectively unknown at compile time whether or
+  not this support will be available at runtime. The standard requires
+  that a call to intrinsic module procedure `IEEE_SUPPORT_HALTING` with
+  a constant argument has a compile time constant result in `constant
+  expression` and `specification expression` contexts. In compilations
+  where this information is not known at compile time, f18 generates code
+  to determine the absence or presence of this capability at runtime.
+  A call to `IEEE_SUPPORT_HALTING` in contexts that the standard requires
+  to be constant will generate a compilation error.
 
 ## Extensions, deletions, and legacy features supported by default
 

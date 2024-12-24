@@ -1186,9 +1186,14 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
 }
 
 std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
-  if (!RegionCounterMap || RegionCounterMap->count(S) == 0)
+  if (!RegionCounterMap)
     return {false, false};
-  return (*RegionCounterMap)[S].getIsCounterPair();
+
+  auto I = RegionCounterMap->find(S);
+  if (I == RegionCounterMap->end())
+    return {false, false};
+
+  return {I->second.Executed.hasValue(), I->second.Skipped.hasValue()};
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
@@ -1196,7 +1201,7 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
   if (!RegionCounterMap || !Builder.GetInsertBlock())
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S].first;
+  unsigned Counter = (*RegionCounterMap)[S].Executed;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
