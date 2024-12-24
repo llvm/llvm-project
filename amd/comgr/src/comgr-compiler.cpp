@@ -688,10 +688,10 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
-  if (!C) {
-    return C->containsError() ? AMD_COMGR_STATUS_ERROR
-                              : AMD_COMGR_STATUS_SUCCESS;
+  if (!C || C->containsError()) {
+    return AMD_COMGR_STATUS_ERROR;
   }
+
   for (auto &Job : C->getJobs()) {
     auto Arguments = Job.getArguments();
     SmallVector<const char *, 128> Argv;
