@@ -370,16 +370,19 @@ struct CountedRegion : public CounterMappingRegion {
   uint64_t FalseExecutionCount;
   bool TrueFolded;
   bool FalseFolded;
-
-  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount)
-      : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true) {}
+  bool HasSingleByteCoverage;
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
-                uint64_t FalseExecutionCount)
+                bool HasSingleByteCoverage)
+      : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
+        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true),
+        HasSingleByteCoverage(HasSingleByteCoverage) {}
+
+  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
+                uint64_t FalseExecutionCount, bool HasSingleByteCoverage)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
         FalseExecutionCount(FalseExecutionCount), TrueFolded(false),
-        FalseFolded(false) {}
+        FalseFolded(false), HasSingleByteCoverage(HasSingleByteCoverage) {}
 };
 
 /// MCDC Record grouping all information together.
@@ -722,9 +725,10 @@ struct FunctionRecord {
   }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
-                  uint64_t FalseCount) {
+                  uint64_t FalseCount, bool HasSingleByteCoverage) {
     if (Region.isBranch()) {
-      CountedBranchRegions.emplace_back(Region, Count, FalseCount);
+      CountedBranchRegions.emplace_back(Region, Count, FalseCount,
+                                        HasSingleByteCoverage);
       // If either counter is hard-coded to zero, then this region represents a
       // constant-folded branch.
       CountedBranchRegions.back().TrueFolded = Region.Count.isZero();
@@ -733,7 +737,8 @@ struct FunctionRecord {
     }
     if (CountedRegions.empty())
       ExecutionCount = Count;
-    CountedRegions.emplace_back(Region, Count, FalseCount);
+    CountedRegions.emplace_back(Region, Count, FalseCount,
+                                HasSingleByteCoverage);
   }
 };
 
@@ -896,18 +901,13 @@ class CoverageData {
   std::vector<CountedRegion> BranchRegions;
   std::vector<MCDCRecord> MCDCRecords;
 
-  bool SingleByteCoverage;
-
 public:
-  CoverageData() = delete;
+  CoverageData() = default;
 
-  CoverageData(bool Single, StringRef Filename = StringRef())
-      : Filename(Filename), SingleByteCoverage(Single) {}
+  CoverageData(StringRef Filename) : Filename(Filename) {}
 
   /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
-
-  bool getSingleByteCoverage() const { return SingleByteCoverage; }
 
   /// Get an iterator over the coverage segments for this object. The segments
   /// are guaranteed to be uniqued and sorted by location.
@@ -941,9 +941,7 @@ class CoverageMapping {
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
 
-  bool SingleByteCoverage;
-
-  CoverageMapping(bool Single) : SingleByteCoverage(Single) {}
+  CoverageMapping() = default;
 
   // Load coverage records from readers.
   static Error loadFromReaders(
@@ -986,8 +984,6 @@ public:
        StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);
-
-  bool getSingleByteCoverage() const { return SingleByteCoverage; }
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
