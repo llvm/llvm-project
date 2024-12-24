@@ -864,7 +864,8 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     // If the skipped block has no labels in it, just emit the executed block.
     // This avoids emitting dead code and simplifies the CFG substantially.
     if (S.isConstexpr() || !ContainsLabel(Skipped)) {
-      incrementProfileCounter(!CondConstant, &S, true);
+      incrementProfileCounter(CondConstant ? UseExecPath : UseSkipPath, &S,
+                              /*UseBoth=*/true);
       if (Executed) {
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
@@ -914,7 +915,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
   // Emit the 'then' code.
   EmitBlock(ThenBlock);
-  incrementProfileCounter(false, &S);
+  incrementProfileCounter(UseExecPath, &S);
   {
     RunCleanupsScope ThenScope(*this);
     EmitStmt(S.getThen());
@@ -930,7 +931,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
     // Add a counter to else block unless it has CounterExpr.
     if (HasSkip.second)
-      incrementProfileCounter(true, &S);
+      incrementProfileCounter(UseSkipPath, &S);
     {
       RunCleanupsScope ElseScope(*this);
       EmitStmt(Else);
@@ -942,7 +943,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
   } else if (HasSkip.second) {
     EmitBlock(ElseBlock);
-    incrementProfileCounter(true, &S);
+    incrementProfileCounter(UseSkipPath, &S);
     EmitBranch(ContBlock);
   }
 
