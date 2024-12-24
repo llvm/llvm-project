@@ -1230,6 +1230,11 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
       return Error::success();
     });
 
+  PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) {
+    std::lock_guard<std::mutex> Lock(M);
+    ++ActiveLinks;
+    return Error::success();
+  });
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
 
@@ -1242,6 +1247,13 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
 
   if (AddSelfRelocations)
     PassConfig.PostPrunePasses.push_back(addSelfRelocations);
+
+  PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
+    std::lock_guard<std::mutex> Lock(M);
+    if (--ActiveLinks == 0)
+      ActiveLinksCV.notify_all();
+    return Error::success();
+  });
 }
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
@@ -2313,6 +2325,8 @@ getTargetInfo(const Triple &TT,
 static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   if (CheckFiles.empty())
     return Error::success();
+
+  S.waitForFilesLinkedFromEntryPointFile();
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
