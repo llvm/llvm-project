@@ -1,3 +1,4 @@
+! REQUIRES: openmp_runtime
 ! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 !
 ! OpenMP 5.2: 5.2 threadprivate directive restriction
