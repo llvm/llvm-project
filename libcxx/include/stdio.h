@@ -106,10 +106,6 @@ void perror(const char* s);
 #  ifndef _LIBCPP_STDIO_H
 #    define _LIBCPP_STDIO_H
 
-#    if __has_include_next(<stdio.h>)
-#      include_next <stdio.h>
-#    endif
-
 #    ifdef __cplusplus
 
 #      undef getc
@@ -120,7 +116,7 @@ void perror(const char* s);
 #      undef putchar
 #      undef getchar
 
-#    endif
-#  endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#    endif // __cplusplus
+#  endif   // _LIBCPP_STDIO_H
 
-#endif // _LIBCPP_STDIO_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

@@ -5104,7 +5104,6 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   SDValue V1 = SVN->getOperand(0);
   SDValue V2 = SVN->getOperand(1);
   ArrayRef<int> Mask = SVN->getMask();
-  unsigned NumElts = VT.getVectorNumElements();
 
   // If we don't know exact data layout, not much we can do.  If this
   // is already m1 or smaller, no point in splitting further.
@@ -5121,58 +5120,70 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
 
   MVT ElemVT = VT.getVectorElementType();
   unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
-  unsigned VRegsPerSrc = NumElts / ElemsPerVReg;
-
-  SmallVector<std::pair<int, SmallVector<int>>>
-    OutMasks(VRegsPerSrc, {-1, {}});
-
-  // Check if our mask can be done as a 1-to-1 mapping from source
-  // to destination registers in the group without needing to
-  // write each destination more than once.
-  for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx++) {
-    int DstVecIdx = DstIdx / ElemsPerVReg;
-    int DstSubIdx = DstIdx % ElemsPerVReg;
-    int SrcIdx = Mask[DstIdx];
-    if (SrcIdx < 0 || (unsigned)SrcIdx >= 2 * NumElts)
-      continue;
-    int SrcVecIdx = SrcIdx / ElemsPerVReg;
-    int SrcSubIdx = SrcIdx % ElemsPerVReg;
-    if (OutMasks[DstVecIdx].first == -1)
-      OutMasks[DstVecIdx].first = SrcVecIdx;
-    if (OutMasks[DstVecIdx].first != SrcVecIdx)
-      // Note: This case could easily be handled by keeping track of a chain
-      // of source values and generating two element shuffles below.  This is
-      // less an implementation question, and more a profitability one.
-      return SDValue();
-
-    OutMasks[DstVecIdx].second.resize(ElemsPerVReg, -1);
-    OutMasks[DstVecIdx].second[DstSubIdx] = SrcSubIdx;
-  }
 
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
   MVT OneRegVT = MVT::getVectorVT(ElemVT, ElemsPerVReg);
   MVT M1VT = getContainerForFixedLengthVector(DAG, OneRegVT, Subtarget);
   assert(M1VT == getLMUL1VT(M1VT));
   unsigned NumOpElts = M1VT.getVectorMinNumElements();
-  SDValue Vec = DAG.getUNDEF(ContainerVT);
+  unsigned NormalizedVF = ContainerVT.getVectorMinNumElements();
+  unsigned NumOfSrcRegs = NormalizedVF / NumOpElts;
+  unsigned NumOfDestRegs = NormalizedVF / NumOpElts;
   // The following semantically builds up a fixed length concat_vector
   // of the component shuffle_vectors.  We eagerly lower to scalable here
   // to avoid DAG combining it back to a large shuffle_vector again.
   V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
   V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
-  for (unsigned DstVecIdx = 0 ; DstVecIdx < OutMasks.size(); DstVecIdx++) {
-    auto &[SrcVecIdx, SrcSubMask] = OutMasks[DstVecIdx];
-    if (SrcVecIdx == -1)
+  SmallVector<SDValue> SubRegs(NumOfDestRegs);
+  unsigned RegCnt = 0;
+  unsigned PrevCnt = 0;
+  processShuffleMasks(
+      Mask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs,
+      [&]() {
+        PrevCnt = RegCnt;
+        ++RegCnt;
+      },
+      [&, &DAG = DAG](ArrayRef<int> SrcSubMask, unsigned SrcVecIdx,
+                      unsigned DstVecIdx) {
+        SDValue SrcVec = SrcVecIdx >= NumOfSrcRegs ? V2 : V1;
+        unsigned ExtractIdx = (SrcVecIdx % NumOfSrcRegs) * NumOpElts;
+        SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, SrcVec,
+                                     DAG.getVectorIdxConstant(ExtractIdx, DL));
+        SubVec = convertFromScalableVector(OneRegVT, SubVec, DAG, Subtarget);
+        SubVec = DAG.getVectorShuffle(OneRegVT, DL, SubVec, SubVec, SrcSubMask);
+        SubRegs[RegCnt] = convertToScalableVector(M1VT, SubVec, DAG, Subtarget);
+        PrevCnt = RegCnt;
+        ++RegCnt;
+      },
+      [&, &DAG = DAG](ArrayRef<int> SrcSubMask, unsigned Idx1, unsigned Idx2) {
+        if (PrevCnt + 1 == RegCnt)
+          ++RegCnt;
+        SDValue SubVec1 = SubRegs[PrevCnt + 1];
+        if (!SubVec1) {
+          SDValue SrcVec = Idx1 >= NumOfSrcRegs ? V2 : V1;
+          unsigned ExtractIdx = (Idx1 % NumOfSrcRegs) * NumOpElts;
+          SubVec1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, SrcVec,
+                                DAG.getVectorIdxConstant(ExtractIdx, DL));
+        }
+        SubVec1 = convertFromScalableVector(OneRegVT, SubVec1, DAG, Subtarget);
+        SDValue SrcVec = Idx2 >= NumOfSrcRegs ? V2 : V1;
+        unsigned ExtractIdx = (Idx2 % NumOfSrcRegs) * NumOpElts;
+        SDValue SubVec2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, SrcVec,
+                                      DAG.getVectorIdxConstant(ExtractIdx, DL));
+        SubVec2 = convertFromScalableVector(OneRegVT, SubVec2, DAG, Subtarget);
+        SubVec1 =
+            DAG.getVectorShuffle(OneRegVT, DL, SubVec1, SubVec2, SrcSubMask);
+        SubVec1 = convertToScalableVector(M1VT, SubVec1, DAG, Subtarget);
+        SubRegs[PrevCnt + 1] = SubVec1;
+      });
+  assert(RegCnt == NumOfDestRegs && "Whole vector must be processed");
+  SDValue Vec = DAG.getUNDEF(ContainerVT);
+  for (auto [I, V] : enumerate(SubRegs)) {
+    if (!V)
       continue;
-    unsigned ExtractIdx = (SrcVecIdx % VRegsPerSrc) * NumOpElts;
-    SDValue SrcVec = (unsigned)SrcVecIdx >= VRegsPerSrc ? V2 : V1;
-    SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, SrcVec,
-                                 DAG.getVectorIdxConstant(ExtractIdx, DL));
-    SubVec = convertFromScalableVector(OneRegVT, SubVec, DAG, Subtarget);
-    SubVec = DAG.getVectorShuffle(OneRegVT, DL, SubVec, SubVec, SrcSubMask);
-    SubVec = convertToScalableVector(M1VT, SubVec, DAG, Subtarget);
-    unsigned InsertIdx = DstVecIdx * NumOpElts;
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Vec, SubVec,
+    unsigned InsertIdx = I * NumOpElts;
+
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Vec, V,
                       DAG.getVectorIdxConstant(InsertIdx, DL));
   }
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);

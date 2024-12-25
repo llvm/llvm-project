@@ -1005,6 +1005,12 @@ Arm and AArch64 Support
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
 
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+  For AArch64:
+
+  * FUJITSU-MONAKA (fujitsu-monaka)
+
 Android Support
 ^^^^^^^^^^^^^^^
 
@@ -1250,6 +1256,9 @@ OpenMP Support
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
 - Added support for allocator-modifier in 'allocate' clause.
+- Changed the OpenMP DeviceRTL to use 'generic' IR. The
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
+  always build support for AMDGPU and NVPTX targets.
 
 Improvements
 ^^^^^^^^^^^^
