@@ -147,31 +147,23 @@
 # IE64-RELA-NEXT: 0x00030558 00000000 00000000 00000000 00000000 .
 
 #--- a.s
-.macro add dst, src1, src2
-.ifdef ELF32
-add.w \dst, \src1, \src2
-.else
-add.d \dst, \src1, \src2
-.endif
-.endm
-
 la.tls.desc $a0, $t0, a
-add $a1, $a0, $tp
+add.d $a1, $a0, $tp
 
 la.tls.desc $a0, $t0, b
-add $a2, $a0, $tp
+add.d $a2, $a0, $tp
 
 la.tls.desc $a0, $t0, c
-add $a3, $a0, $tp
+add.d $a3, $a0, $tp
 
 la.tls.desc $a0, $t0, d
-add $a4, $a0, $tp
+add.d $a4, $a0, $tp
 
 la.tls.desc $a0, $t0, e
-add $a5, $a0, $tp
+add.d $a5, $a0, $tp
 
 la.tls.desc $a0, $t0, f
-add $a6, $a0, $tp
+add.d $a6, $a0, $tp
 
 .section .tbss,"awT",@nobits
 .globl a
