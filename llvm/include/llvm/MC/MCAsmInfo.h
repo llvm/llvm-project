@@ -386,10 +386,6 @@ protected:
   /// default.
   bool EnableDwarfFileDirectoryDefault = true;
 
-  /// True if the target needs the DWARF section length in the header (if any)
-  /// of the DWARF section in the assembly file. Defaults to true.
-  bool DwarfSectionSizeRequired = true;
-
   /// True if dwarf register numbers are printed instead of symbolic register
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
