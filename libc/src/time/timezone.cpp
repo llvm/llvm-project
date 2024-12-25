@@ -179,17 +179,19 @@ tzset *get_tzset(int fd, size_t filesize) {
     j += 1;
   }
 
-  int64_t offsets[8];
+  chunk = ((tzh_typecnt_end - tzh_timecnt_end) / 6) - 1;
+
+  int64_t offsets[8 * chunk];
   int64_t *ptr_offsets;
   size_t index;
 
-  static int64_t tt_utoff[2];
-  static uint8_t tt_isdst[1];
-  static uint8_t tt_desigidx[1];
+  int64_t tt_utoff[2 * chunk];
+  unsigned char tt_isdst[chunk];
+  unsigned char tt_desigidx[chunk];
 
   int64_t *ptr_tt_utoff;
-  uint8_t *ptr_tt_isdst;
-  uint8_t *ptr_tt_desigidx;
+  unsigned char *ptr_tt_isdst;
+  unsigned char *ptr_tt_desigidx;
 
   ptr_offsets = offsets;
   ptr_tt_utoff = tt_utoff;
@@ -202,11 +204,12 @@ tzset *get_tzset(int fd, size_t filesize) {
 
     tmp = &hdr[i];
     *(ptr_offsets + index) = tmp[5];
-
     *(ptr_tt_utoff + index) =
         tmp[0] << 24 | tmp[1] << 16 | tmp[2] << 8 | tmp[3];
-    *(ptr_tt_isdst + index) = tmp[4];
-    *(ptr_tt_desigidx + index) = (uint8_t)index;
+    *(ptr_tt_utoff + index) =
+        tmp[0] << 24 | tmp[1] << 16 | tmp[2] << 8 | tmp[3];
+    *(tt_isdst + index) = tmp[4];
+    *(ptr_tt_desigidx + index) = (unsigned char)index;
 
     index += 1;
   }
