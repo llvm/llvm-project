@@ -162,8 +162,6 @@ struct Configuration {
   bool dll = false;
   StringRef implib;
   bool noimplib = false;
-  std::vector<Export> exports;
-  bool hadExplicitExports;
   std::set<std::string> delayLoads;
   std::map<std::string, int> dllOrder;
   Symbol *delayLoadHelper = nullptr;
