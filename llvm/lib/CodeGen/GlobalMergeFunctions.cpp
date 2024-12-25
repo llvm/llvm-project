@@ -68,7 +68,7 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
   } else {
     // The target of the arc-attached call must be a constant and cannot be
     // parameterized.
-    if (CI->isOperandBundleOfType(llvm::LLVMContext::OB_clang_arc_attachedcall,
+    if (CI->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
                                   OpIdx))
       return false;
   }
