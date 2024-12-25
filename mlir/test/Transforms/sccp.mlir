@@ -251,11 +251,7 @@ func.func @op_with_region() -> (i32) {
 func.func @no_crash_with_different_source_type() {
   // CHECK: llvm.mlir.constant(0 : index) : i64
   %0 = llvm.mlir.constant(0 : index) : i64
-  llvm.br ^b1(%0 : i64)
-^b1(%1: i64):  
-  llvm.br ^b2
-^b2: 
   // CHECK: vector.broadcast %[[CST:.*]] : i64 to vector<128xi64>
-  %2 = vector.broadcast %1 : i64 to vector<128xi64>
+  %1 = vector.broadcast %0 : i64 to vector<128xi64>
   llvm.return
 }
