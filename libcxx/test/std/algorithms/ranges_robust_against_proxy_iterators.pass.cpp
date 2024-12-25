@@ -165,9 +165,6 @@ constexpr void run_tests() {
   test(std::ranges::remove_if, in, unary_pred);
   test(std::ranges::reverse, in);
   test_mid(std::ranges::rotate, in, mid);
-#if TEST_STD_VER >= 23
-  test(std::ranges::shift_left, in, count);
-#endif
   if (!std::is_constant_evaluated()) // `shuffle` isn't `constexpr`.
     test(std::ranges::shuffle, in, rand_gen());
   if (!std::is_constant_evaluated()) {
@@ -194,7 +191,9 @@ constexpr void run_tests() {
   test(std::ranges::sort_heap, in);
   test(std::ranges::prev_permutation, in);
   test(std::ranges::next_permutation, in);
-
+#if TEST_STD_VER >= 23
+  test(std::ranges::shift_left, in, count);
+#endif
   // The algorithms that work on uninitialized memory have constraints that prevent proxy iterators from being used with
   // them.
 }
