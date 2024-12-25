@@ -673,6 +673,7 @@ function(add_libc_hermetic test_name)
       libc.src.string.memset
       libc.src.strings.bcmp
       libc.src.strings.bzero
+      libc.src.stdlib.atexit
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -743,6 +744,11 @@ function(add_libc_hermetic test_name)
     endif()
   endforeach()
 
+  if(LIBC_TARGET_OS_IS_UEFI)
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} "-Wl,/lldmingw")
+  endif()
+
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
@@ -778,7 +784,7 @@ function(add_libc_hermetic test_name)
                    ${fq_deps_list})
   # TODO: currently the dependency chain is broken such that getauxval cannot properly
   # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT LIBC_TARGET_OS_IS_UEFI)
     target_link_libraries(
       ${fq_build_target_name}
       PRIVATE

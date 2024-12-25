@@ -41,6 +41,8 @@
 #include "src/__support/threads/linux/mutex.h"
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/__support/threads/gpu/mutex.h"
+#elif defined(__UEFI__)
+#include "src/__support/threads/uefi/mutex.h"
 #endif // __linux__
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H

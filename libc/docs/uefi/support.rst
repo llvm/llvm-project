@@ -198,7 +198,6 @@ qsort_r        |check|
 strtod         |check|
 strtof         |check|
 strtol         |check|
-strtold        |check|
 strtoll        |check|
 strtoul        |check|
 strtoull       |check|

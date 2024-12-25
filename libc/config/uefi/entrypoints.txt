@@ -172,6 +172,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.atoi
     libc.src.stdlib.atol
     libc.src.stdlib.atoll
+    libc.src.stdlib.atexit
     libc.src.stdlib.bsearch
     libc.src.stdlib.calloc
     libc.src.stdlib.div
@@ -188,7 +189,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
-    libc.src.stdlib.strtold
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull

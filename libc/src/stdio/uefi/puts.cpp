@@ -14,7 +14,11 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
-  return (int)stdout.write(reinterpret_cast<const void *>(str), strlen(str));
+  int rc = (int)stdout.write(reinterpret_cast<const void *>(str), strlen(str));
+  if (rc < 1)
+    return rc;
+
+  return (int)stdout.write("\r\n", 2);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

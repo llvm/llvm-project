@@ -44,8 +44,11 @@ size_t File::write(const void *data, size_t data_len) {
     reset();
 
   if (handle_type == FileHandleSimpleTextOutput) {
-    handle.simple_text_output->OutputString(
-        handle.simple_text_output, reinterpret_cast<const char16_t *>(data));
+    for (size_t i = 0; i < data_len; i++) {
+      char16_t e[2] = {((const char *)data)[i], 0};
+      handle.simple_text_output->OutputString(
+          handle.simple_text_output, reinterpret_cast<const char16_t *>(&e));
+    }
     return data_len;
   }
   return 0;

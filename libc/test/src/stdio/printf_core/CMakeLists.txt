@@ -1,3 +1,7 @@
+if(LIBC_TARGET_OS_IS_UEFI)
+  return()
+endif()
+
 add_libc_unittest(
   parser_test
   SUITE

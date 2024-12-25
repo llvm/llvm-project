@@ -92,7 +92,11 @@ add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(dirent)
 add_subdirectory(locale)
-add_subdirectory(setjmp)
+
+if(NOT LIBC_TARGET_OS_IS_UEFI)
+  add_subdirectory(setjmp)
+endif()
+
 add_subdirectory(signal)
 add_subdirectory(spawn)
 

@@ -1,3 +1,7 @@
+if(LIBC_TARGET_OS_IS_UEFI)
+  return()
+endif()
+
 add_custom_target(libc-math-smoke-tests)
 add_dependencies(libc-math-unittests libc-math-smoke-tests)
 

@@ -116,21 +116,22 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-add_libc_test(
-  str_to_float_test
-  SUITE
-    libc-support-tests
-  SRCS
-    str_to_float_test.cpp
-    str_to_double_test.cpp
-    str_to_long_double_test.cpp
-  DEPENDS
-    libc.src.__support.integer_literals
-    libc.src.__support.str_to_float
-    libc.src.__support.uint128
-    libc.src.errno.errno
-)
-
+if(NOT LIBC_TARGET_OS_IS_UEFI)
+  add_libc_test(
+    str_to_float_test
+    SUITE
+      libc-support-tests
+    SRCS
+      str_to_float_test.cpp
+      str_to_double_test.cpp
+      str_to_long_double_test.cpp
+    DEPENDS
+      libc.src.__support.integer_literals
+      libc.src.__support.str_to_float
+      libc.src.__support.uint128
+      libc.src.errno.errno
+  )
+endif()
 
 add_libc_test(
   str_to_integer_test
@@ -159,22 +160,24 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-add_libc_test(
-  arg_list_test
-  SUITE
-    libc-support-tests
-  SRCS
-    arg_list_test.cpp
-  DEPENDS
-    libc.src.__support.arg_list
-    libc.src.__support.macros.properties.os
-)
+if(NOT LIBC_TARGET_OS_IS_UEFI)
+  add_libc_test(
+    arg_list_test
+    SUITE
+      libc-support-tests
+    SRCS
+      arg_list_test.cpp
+    DEPENDS
+      libc.src.__support.arg_list
+      libc.src.__support.macros.properties.os
+  )
+endif()
 
 # TODO: clang-cl generates calls into runtime library functions to
 # handle 128-bit integer arithmetics and conversions which are not yet
 # available on Windows. Re-enable 128-bit integer support on Windows once
 # these functions are ready.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_TARGET_OS_IS_WINDOWS)
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_TARGET_OS_IS_WINDOWS AND NOT LIBC_TARGET_OS_IS_UEFI)
   add_libc_test(
     big_int_test
     SUITE

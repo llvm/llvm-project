@@ -22,14 +22,20 @@ ssize_t read_from_stdin(char *buf, size_t size) {
 
 void write_to_stdout(cpp::string_view msg) {
   // TODO: use mbstowcs once implemented
-  efi_system_table->ConOut->OutputString(
-      efi_system_table->ConOut, reinterpret_cast<const char16_t *>(msg.data()));
+  for (size_t i = 0; i < msg.size(); i++) {
+    char16_t e[2] = {msg[i], 0};
+    efi_system_table->ConOut->OutputString(
+        efi_system_table->ConOut, reinterpret_cast<const char16_t *>(&e));
+  }
 }
 
 void write_to_stderr(cpp::string_view msg) {
   // TODO: use mbstowcs once implemented
-  efi_system_table->StdErr->OutputString(
-      efi_system_table->StdErr, reinterpret_cast<const char16_t *>(msg.data()));
+  for (size_t i = 0; i < msg.size(); i++) {
+    char16_t e[2] = {msg[i], 0};
+    efi_system_table->StdErr->OutputString(
+        efi_system_table->StdErr, reinterpret_cast<const char16_t *>(&e));
+  }
 }
 
 } // namespace LIBC_NAMESPACE_DECL

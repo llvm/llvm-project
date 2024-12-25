@@ -1,4 +1,4 @@
-if(LIBC_TARGET_OS_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_UEFI)
   return()
 endif()
 

@@ -113,38 +113,40 @@ add_libc_test(
     libc.src.__support.FPUtil.sqrt
 )
 
-add_libc_test(
-  exphk_test
-  SUITE
-    libc-stdfix-tests
-  HDRS
-    ExpTest.h
-  SRCS
-    exphk_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
-  DEPENDS
-    libc.src.stdfix.exphk
-    libc.src.math.exp
-    libc.src.__support.CPP.bit
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.FPUtil.basic_operations
-)
+if(NOT LIBC_TARGET_OS_IS_UEFI)
+  add_libc_test(
+    exphk_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      ExpTest.h
+    SRCS
+      exphk_test.cpp
+    COMPILE_OPTIONS
+      ${libc_opt_high_flag}
+    DEPENDS
+      libc.src.stdfix.exphk
+      libc.src.math.exp
+      libc.src.__support.CPP.bit
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.FPUtil.basic_operations
+  )
 
-add_libc_test(
-  expk_test
-  SUITE
-    libc-stdfix-tests
-  HDRS
-    ExpTest.h
-  SRCS
-    expk_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
-  DEPENDS
-    libc.src.stdfix.expk
-    libc.src.math.exp
-    libc.src.__support.CPP.bit
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.FPUtil.basic_operations
-)
+  add_libc_test(
+    expk_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      ExpTest.h
+    SRCS
+      expk_test.cpp
+    COMPILE_OPTIONS
+      ${libc_opt_high_flag}
+    DEPENDS
+      libc.src.stdfix.expk
+      libc.src.math.exp
+      libc.src.__support.CPP.bit
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.FPUtil.basic_operations
+  )
+endif()
