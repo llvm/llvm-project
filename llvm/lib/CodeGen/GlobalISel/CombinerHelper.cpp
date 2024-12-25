@@ -6823,6 +6823,23 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
     };
     return true;
   }
+
+  // select Cond, 0, Pow2 --> (zext (!Cond)) << log2(Pow2)
+  if (FalseValue.isPowerOf2() && TrueValue.isZero()) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.setInstrAndDebugLoc(*Select);
+      Register Not = MRI.createGenericVirtualRegister(CondTy);
+      B.buildNot(Not, Cond);
+      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
+      B.buildZExtOrTrunc(Inner, Not);
+      // The shift amount must be scalar.
+      LLT ShiftTy = TrueTy.isVector() ? TrueTy.getElementType() : TrueTy;
+      auto ShAmtC = B.buildConstant(ShiftTy, FalseValue.exactLogBase2());
+      B.buildShl(Dest, Inner, ShAmtC, Flags);
+    };
+    return true;
+  }
+
   // select Cond, -1, C --> or (sext Cond), C
   if (TrueValue.isAllOnes()) {
     MatchInfo = [=](MachineIRBuilder &B) {
