@@ -1026,10 +1026,12 @@ const char *DICompileUnit::nameTableKindString(DebugNameTableKind NTK) {
 DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
                            unsigned ScopeLine, unsigned VirtualIndex,
                            int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags,
+                           std::optional<ShortBacktraceAttr> ShortBacktrace,
                            ArrayRef<Metadata *> Ops)
     : DILocalScope(C, DISubprogramKind, Storage, dwarf::DW_TAG_subprogram, Ops),
       Line(Line), ScopeLine(ScopeLine), VirtualIndex(VirtualIndex),
-      ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags) {
+      ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags),
+      ShortBacktrace(ShortBacktrace) {
   static_assert(dwarf::DW_VIRTUALITY_max < 4, "Virtuality out of range");
 }
 DISubprogram::DISPFlags
@@ -1128,7 +1130,8 @@ DISubprogram *DISubprogram::getImpl(
     LLVMContext &Context, Metadata *Scope, MDString *Name,
     MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
     unsigned ScopeLine, Metadata *ContainingType, unsigned VirtualIndex,
-    int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
+    int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags,
+    std::optional<ShortBacktraceAttr> ShortBacktrace, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
     Metadata *ThrownTypes, Metadata *Annotations, MDString *TargetFuncName,
     StorageType Storage, bool ShouldCreate) {
@@ -1160,10 +1163,10 @@ DISubprogram *DISubprogram::getImpl(
       }
     }
   }
-  DEFINE_GETIMPL_STORE_N(
-      DISubprogram,
-      (Line, ScopeLine, VirtualIndex, ThisAdjustment, Flags, SPFlags), Ops,
-      Ops.size());
+  DEFINE_GETIMPL_STORE_N(DISubprogram,
+                         (Line, ScopeLine, VirtualIndex, ThisAdjustment, Flags,
+                          SPFlags, ShortBacktrace),
+                         Ops, Ops.size());
 }
 
 bool DISubprogram::describes(const Function *F) const {

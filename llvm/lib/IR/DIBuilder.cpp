@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include <optional>
@@ -863,6 +864,7 @@ DISubprogram *DIBuilder::createFunction(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
     unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
+    std::optional<ShortBacktraceAttr> ShortBacktrace,
     DITemplateParameterArray TParams, DISubprogram *Decl,
     DITypeArray ThrownTypes, DINodeArray Annotations,
     StringRef TargetFuncName) {
@@ -870,8 +872,8 @@ DISubprogram *DIBuilder::createFunction(
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
-      SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
-      ThrownTypes, Annotations, TargetFuncName);
+      SPFlags, ShortBacktrace, IsDefinition ? CUNode : nullptr, TParams, Decl,
+      nullptr, ThrownTypes, Annotations, TargetFuncName);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);
@@ -883,14 +885,15 @@ DISubprogram *DIBuilder::createTempFunctionFwdDecl(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
     unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
+    std::optional<ShortBacktraceAttr> ShortBacktrace,
     DITemplateParameterArray TParams, DISubprogram *Decl,
     DITypeArray ThrownTypes) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
-  return DISubprogram::getTemporary(VMContext, getNonCompileUnitScope(Context),
-                                    Name, LinkageName, File, LineNo, Ty,
-                                    ScopeLine, nullptr, 0, 0, Flags, SPFlags,
-                                    IsDefinition ? CUNode : nullptr, TParams,
-                                    Decl, nullptr, ThrownTypes)
+  return DISubprogram::getTemporary(
+             VMContext, getNonCompileUnitScope(Context), Name, LinkageName,
+             File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags, SPFlags,
+             ShortBacktrace, IsDefinition ? CUNode : nullptr, TParams, Decl,
+             nullptr, ThrownTypes)
       .release();
 }
 
@@ -898,8 +901,9 @@ DISubprogram *DIBuilder::createMethod(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
     unsigned LineNo, DISubroutineType *Ty, unsigned VIndex, int ThisAdjustment,
     DIType *VTableHolder, DINode::DIFlags Flags,
-    DISubprogram::DISPFlags SPFlags, DITemplateParameterArray TParams,
-    DITypeArray ThrownTypes) {
+    DISubprogram::DISPFlags SPFlags,
+    std::optional<ShortBacktraceAttr> ShortBacktrace,
+    DITemplateParameterArray TParams, DITypeArray ThrownTypes) {
   assert(getNonCompileUnitScope(Context) &&
          "Methods should have both a Context and a context that isn't "
          "the compile unit.");
@@ -908,8 +912,8 @@ DISubprogram *DIBuilder::createMethod(
   auto *SP = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
       LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex, ThisAdjustment,
-      Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
-      nullptr, ThrownTypes);
+      Flags, SPFlags, ShortBacktrace, IsDefinition ? CUNode : nullptr, TParams,
+      nullptr, nullptr, ThrownTypes);
 
   if (IsDefinition)
     AllSubprograms.push_back(SP);

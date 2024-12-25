@@ -2334,6 +2334,10 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printInt("thisAdjustment", N->getThisAdjustment());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printDISPFlags("spFlags", N->getSPFlags());
+  if (N->getShortBacktrace().has_value())
+    Printer.printInt("shortBacktrace",
+                     static_cast<signed>(N->getShortBacktrace().value()),
+                     /* ShouldSkipZero */ false);
   Printer.printMetadata("unit", N->getRawUnit());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printMetadata("declaration", N->getRawDeclaration());

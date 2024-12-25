@@ -5630,9 +5630,9 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
 ///                     isDefinition: true, scopeLine: 8, containingType: !3,
 ///                     virtuality: DW_VIRTUALTIY_pure_virtual,
 ///                     virtualIndex: 10, thisAdjustment: 4, flags: 11,
-///                     spFlags: 10, isOptimized: false, templateParams: !4,
-///                     declaration: !5, retainedNodes: !6, thrownTypes: !7,
-///                     annotations: !8)
+///                     spFlags: 10, shortBacktrace: 0, isOptimized: false,
+///                     templateParams: !4, declaration: !5, retainedNodes: !6,
+///                     thrownTypes: !7, annotations: !8)
 bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   auto Loc = Lex.getLoc();
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
@@ -5658,9 +5658,29 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(retainedNodes, MDField, );                                          \
   OPTIONAL(thrownTypes, MDField, );                                            \
   OPTIONAL(annotations, MDField, );                                            \
+  OPTIONAL(shortBacktrace, MDSignedField, (-1, -1, 2));                        \
   OPTIONAL(targetFuncName, MDStringField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
+
+  std::optional<ShortBacktraceAttr> parsedShortBacktrace;
+  switch (shortBacktrace.Val) {
+  case -1:
+    parsedShortBacktrace = std::nullopt;
+    break;
+  case 0:
+    parsedShortBacktrace = ShortBacktraceAttr::SkipFrame;
+    break;
+  case 1:
+    parsedShortBacktrace = ShortBacktraceAttr::StartShortBacktrace;
+    break;
+  case 2:
+    parsedShortBacktrace = ShortBacktraceAttr::EndShortBacktrace;
+    break;
+  default:
+    llvm_unreachable(
+        "shortBacktrace debuginfo attribute must be in range [-1, 2]");
+  }
 
   // An explicit spFlags field takes precedence over individual fields in
   // older IR versions.
@@ -5676,9 +5696,9 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
       DISubprogram,
       (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
-       thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
-       declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
-       targetFuncName.Val));
+       thisAdjustment.Val, flags.Val, SPFlags, parsedShortBacktrace, unit.Val,
+       templateParams.Val, declaration.Val, retainedNodes.Val, thrownTypes.Val,
+       annotations.Val, targetFuncName.Val));
   return false;
 }
 

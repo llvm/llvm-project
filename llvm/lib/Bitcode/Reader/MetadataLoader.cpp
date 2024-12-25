@@ -1881,10 +1881,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
          Flags,                                   // flags
          SPFlags,                                 // SPFlags
-         HasUnit ? CUorFn : nullptr,              // unit
-         getMDOrNull(Record[13 + OffsetB]),       // templateParams
-         getMDOrNull(Record[14 + OffsetB]),       // declaration
-         getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
+         // TODO: parse this from the record
+         std::nullopt,                      // shortBacktrace
+         HasUnit ? CUorFn : nullptr,        // unit
+         getMDOrNull(Record[13 + OffsetB]), // templateParams
+         getMDOrNull(Record[14 + OffsetB]), // declaration
+         getMDOrNull(Record[15 + OffsetB]), // retainedNodes
          HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
                         : nullptr, // thrownTypes
          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])

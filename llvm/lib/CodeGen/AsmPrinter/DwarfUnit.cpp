@@ -1320,6 +1320,11 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SkipSPSourceLocation)
     addSourceLine(SPDie, SP);
 
+  if (SP->getShortBacktrace().has_value()) {
+    addUInt(SPDie, dwarf::DW_AT_LLVM_short_backtrace, dwarf::DW_FORM_data1,
+            static_cast<uint64_t>(*SP->getShortBacktrace()));
+  }
+
   // Skip the rest of the attributes under -gmlt to save space.
   if (SkipSPAttributes)
     return;

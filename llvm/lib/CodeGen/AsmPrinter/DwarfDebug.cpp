@@ -2552,6 +2552,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram
   // is still needed as we need its source location.
   if (!TheCU.getCUNode()->getDebugInfoForProfiling() &&
+      !SP->getShortBacktrace().has_value() &&
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     for (const auto &R : Asm->MBBSectionRanges)
