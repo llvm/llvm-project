@@ -95,6 +95,30 @@ private:
                             Block &BlockToFix) {
     using Base = ELFLinkGraphBuilder<ELFT>;
 
+    uint32_t Type = Rel.getType(false);
+    // We do not implement linker relaxation for jitlink now, except what is
+    // required for alignment (see below).
+    if (Type == ELF::R_LARCH_RELAX)
+      return Error::success();
+
+    int64_t Addend = Rel.r_addend;
+    if (Type == ELF::R_LARCH_ALIGN) {
+      uint64_t Alignment = PowerOf2Ceil(Addend);
+      // FIXME: Implement support for ensuring alignment together with linker
+      // relaxation. Addend is always 28 in the most common case when
+      // interpreting C++ code in clang-repl.
+      if (Alignment > 32)
+        return make_error<JITLinkError>(
+            formatv("Unsupported relocation R_LARCH_ALIGN with alignment {0} "
+                    "larger than 32 (addend: {1})",
+                    Alignment, Addend));
+      return Error::success();
+    }
+
+    Expected<loongarch::EdgeKind_loongarch> Kind = getRelocationKind(Type);
+    if (!Kind)
+      return Kind.takeError();
+
     uint32_t SymbolIndex = Rel.getSymbol(false);
     auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
     if (!ObjSymbol)
@@ -109,12 +133,6 @@ private:
                   Base::GraphSymbols.size()),
           inconvertibleErrorCode());
 
-    uint32_t Type = Rel.getType(false);
-    Expected<loongarch::EdgeKind_loongarch> Kind = getRelocationKind(Type);
-    if (!Kind)
-      return Kind.takeError();
-
-    int64_t Addend = Rel.r_addend;
     auto FixupAddress = orc::ExecutorAddr(FixupSect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
     Edge GE(*Kind, Offset, *GraphSymbol, Addend);
