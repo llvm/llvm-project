@@ -27,11 +27,6 @@ if(MLIR_STANDALONE_BUILD)
 
   include_directories(${LLVM_INCLUDE_DIRS})
 
-  set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
-  if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
-    add_subdirectory(${UNITTEST_DIR} third-party/unittest)
-  endif()
-
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
     "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
@@ -227,7 +222,7 @@ if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_custom_target(MLIRUnitTests)
   set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR/Tests")
-  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
+  if (TARGET llvm_gtest)
     add_subdirectory(unittests)
   else()
     message(WARNING "gtest not found, unittests will not be available")
