@@ -404,9 +404,10 @@ private:
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode &Dst) const;
 
-  Expected<action_iterator> importExplicitDefRenderers(
-      action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-      const TreePatternNode &Dst, unsigned Start = 0) const;
+  Expected<action_iterator>
+  importExplicitDefRenderers(action_iterator InsertPt, RuleMatcher &M,
+                             BuildMIAction &DstMIBuilder,
+                             const TreePatternNode &Dst, bool IsRoot) const;
 
   Expected<action_iterator>
   importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
@@ -1375,7 +1376,8 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
   }
 
-  if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst)
+  if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst,
+                                              /*IsRoot=*/true)
                        .takeError())
     return std::move(Error);
 
@@ -1404,8 +1406,8 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true);
 
   // Handle additional (ignored) results.
-  InsertPtOrError = importExplicitDefRenderers(std::prev(*InsertPtOrError), M,
-                                               DstMIBuilder, Dst, /*Start=*/1);
+  InsertPtOrError = importExplicitDefRenderers(
+      std::prev(*InsertPtOrError), M, DstMIBuilder, Dst, /*IsRoot=*/false);
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
 
@@ -1446,16 +1448,16 @@ GlobalISelEmitter::createInstructionRenderer(action_iterator InsertPt,
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &Dst, unsigned Start) const {
+    const TreePatternNode &Dst, bool IsRoot) const {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
 
   // Process explicit defs. The caller may have already handled the first def.
-  for (unsigned I = Start, E = DstI->Operands.NumDefs; I != E; ++I) {
+  for (unsigned I = IsRoot ? 0 : 1, E = DstI->Operands.NumDefs; I != E; ++I) {
     const CGIOperandList::OperandInfo &OpInfo = DstI->Operands[I];
     std::string OpName = getMangledRootDefName(OpInfo.Name);
 
     // If the def is used in the source DAG, forward it.
-    if (M.hasOperand(OpName)) {
+    if (IsRoot && M.hasOperand(OpName)) {
       // CopyRenderer saves a StringRef, so cannot pass OpName itself -
       // let's use a string with an appropriate lifetime.
       StringRef PermanentRef = M.getOperandMatcher(OpName).getSymbolicName();

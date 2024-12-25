@@ -12,10 +12,11 @@ def I2 : I<(outs GPR32:$other_name, GPR32:$same_name), (ins GPR32:$rs), []>;
 def : Pat<(abs i32:$x), (I1 (I2 $x))>;
 
 // CHECK-LABEL: // (abs:{ *:[i32] } i32:{ *:[i32] }:$x)  =>  (I1:{ *:[i32] } (I2:{ *:[i32] }:{ *:[i32] } ?:{ *:[i32] }:$x))
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::I2),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // DstI[same_name]
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // x
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::I1),
