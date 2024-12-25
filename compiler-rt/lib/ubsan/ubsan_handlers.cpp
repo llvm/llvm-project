@@ -911,7 +911,7 @@ WIN_WEAK_ALIAS(__ubsan_handle_cfi_bad_type, __ubsan_handle_cfi_bad_type_default)
 #endif
 SANITIZER_WEAK_ATTRIBUTE
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
-                                 bool ValidVtable, ReportOptions Opts){
+                                 bool ValidVtable, ReportOptions Opts) {
   Die();
 }
 
