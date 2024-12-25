@@ -117,7 +117,8 @@ struct CleanupList {
 
 /// Return true iff at least one value in `values` is live, given the liveness
 /// information in `la`.
-static bool hasLive(ValueRange values, const DenseSet<Value> &deletionSet, RunLivenessAnalysis &la) {
+static bool hasLive(ValueRange values, const DenseSet<Value> &deletionSet,
+                    RunLivenessAnalysis &la) {
   for (Value value : values) {
     if (deletionSet.contains(value))
       continue;
@@ -131,7 +132,9 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &deletionSet, RunLi
 
 /// Return a BitVector of size `values.size()` where its i-th bit is 1 iff the
 /// i-th value in `values` is live, given the liveness information in `la`.
-static BitVector markLives(ValueRange values, const DenseSet<Value> &deletionSet, RunLivenessAnalysis &la) {
+static BitVector markLives(ValueRange values,
+                           const DenseSet<Value> &deletionSet,
+                           RunLivenessAnalysis &la) {
   BitVector lives(values.size(), true);
 
   for (auto [index, value] : llvm::enumerate(values)) {
@@ -155,14 +158,17 @@ static BitVector markLives(ValueRange values, const DenseSet<Value> &deletionSet
 }
 
 // DeletionSet is used to track the Values that are scheduled for removal
-void updateDeletionSet(DenseSet<Value> &deletionSet, ValueRange range, const BitVector &nonLive) {
+void updateDeletionSet(DenseSet<Value> &deletionSet, ValueRange range,
+                       const BitVector &nonLive) {
   for (auto [index, result] : llvm::enumerate(range)) {
-    if (!nonLive[index]) continue;
+    if (!nonLive[index])
+      continue;
     deletionSet.insert(result);
   }
 }
 
-void updateDeletionSet(DenseSet<Value> &deletionSet, Operation *op, const BitVector &nonLive) {
+void updateDeletionSet(DenseSet<Value> &deletionSet, Operation *op,
+                       const BitVector &nonLive) {
   updateDeletionSet(deletionSet, op->getResults(), nonLive);
 }
 
@@ -225,7 +231,8 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 /// It is assumed that `op` is simple. Here, a simple op is one which isn't a
 /// function-like op, a call-like op, a region branch op, a branch op, a region
 /// branch terminator op, or return-like.
-static void cleanSimpleOp(CleanupList &cl, DenseSet<Value> &deletionSet, Operation *op, RunLivenessAnalysis &la) {
+static void cleanSimpleOp(CleanupList &cl, DenseSet<Value> &deletionSet,
+                          Operation *op, RunLivenessAnalysis &la) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), deletionSet, la))
     return;
 
@@ -604,12 +611,14 @@ static void cleanRegionBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
   // Do (2.c).
   for (Region &region : regionBranchOp->getRegions()) {
     Operation *terminator = region.front().getTerminator();
-    cl.operands.push_back({terminator, terminatorOperandsToKeep[terminator].flip()});
+    cl.operands.push_back(
+        {terminator, terminatorOperandsToKeep[terminator].flip()});
   }
 
   // Do (3) and (4).
   BitVector resultsToRemove = resultsToKeep.flip();
-  updateDeletionSet(deletionSet, regionBranchOp.getOperation(), resultsToRemove);
+  updateDeletionSet(deletionSet, regionBranchOp.getOperation(),
+                    resultsToRemove);
   cl.results.push_back({regionBranchOp.getOperation(), resultsToRemove});
 }
 
@@ -640,51 +649,58 @@ static void cleanBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
     }
 
     // Do (3)
-    BitVector successorNonLive = markLives(operandValues, deletionSet, la).flip();
-    updateDeletionSet(deletionSet, successorBlock->getArguments(), successorNonLive);
+    BitVector successorNonLive =
+        markLives(operandValues, deletionSet, la).flip();
+    updateDeletionSet(deletionSet, successorBlock->getArguments(),
+                      successorNonLive);
     cl.blocks.push_back({successorBlock, successorNonLive});
     cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
   }
 }
 
 void cleanup(CleanupList &cl) {
-  for (auto &op: cl.operations) {
+  for (auto &op : cl.operations) {
     op->dropAllUses();
     op->erase();
   }
 
-  for (auto &v: cl.values) {
+  for (auto &v : cl.values) {
     v.dropAllUses();
   }
 
-  for (auto &f: cl.functions) {
+  for (auto &f : cl.functions) {
     f.funcOp.eraseArguments(f.nonLiveArgs);
     f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  for (auto &o: cl.operands) {
-    o.op->eraseOperands(o.nonLiveOperands);  }
+  for (auto &o : cl.operands) {
+    o.op->eraseOperands(o.nonLiveOperands);
+  }
 
-  for (auto &r: cl.results) {
+  for (auto &r : cl.results) {
     dropUsesAndEraseResults(r.op, r.nonLiveResults);
   }
 
-  for (auto &b: cl.blocks) {
+  for (auto &b : cl.blocks) {
     // blocks that are accessed via multiple codepaths processed once
-    if (b.b->getNumArguments() != b.nonLiveArgs.size()) continue;
+    if (b.b->getNumArguments() != b.nonLiveArgs.size())
+      continue;
     for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
-      if (!b.nonLiveArgs[i]) continue;
+      if (!b.nonLiveArgs[i])
+        continue;
       b.b->getArgument(i).dropAllUses();
       b.b->eraseArgument(i);
     }
   }
-  for (auto &op: cl.successorOperands) {
+  for (auto &op : cl.successorOperands) {
     SuccessorOperands successorOperands =
-            op.branch.getSuccessorOperands(op.index);
+        op.branch.getSuccessorOperands(op.index);
     // blocks that are accessed via multiple codepaths processed once
-    if (successorOperands.size() != op.nonLiveOperands.size()) continue;
+    if (successorOperands.size() != op.nonLiveOperands.size())
+      continue;
     for (int i = successorOperands.size() - 1; i >= 0; --i) {
-      if (!op.nonLiveOperands[i]) continue;
+      if (!op.nonLiveOperands[i])
+        continue;
       successorOperands.erase(i);
     }
   }
