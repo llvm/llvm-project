@@ -8,90 +8,66 @@
 
 #include "std_stream.h"
 #include <__locale>
-#include <new>
-#include <string>
-
-#define _str(s) #s
-#define str(s) _str(s)
-#define _LIBCPP_ABI_NAMESPACE_STR str(_LIBCPP_ABI_NAMESPACE)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-alignas(istream) _LIBCPP_EXPORTED_FROM_ABI char cin[sizeof(istream)]
-#if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?cin@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_istream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
-#endif
-        ;
-alignas(__stdinbuf<char>) static char __cin[sizeof(__stdinbuf<char>)];
 static mbstate_t mb_cin;
-
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-alignas(wistream) _LIBCPP_EXPORTED_FROM_ABI char wcin[sizeof(wistream)]
-#  if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?wcin@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_istream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
-#  endif
-        ;
-alignas(__stdinbuf<wchar_t>) static char __wcin[sizeof(__stdinbuf<wchar_t>)];
-static mbstate_t mb_wcin;
-#endif // _LIBCPP_HAS_WIDE_CHARACTERS
-
-alignas(ostream) _LIBCPP_EXPORTED_FROM_ABI char cout[sizeof(ostream)]
-#if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?cout@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
-#endif
-        ;
-alignas(__stdoutbuf<char>) static char __cout[sizeof(__stdoutbuf<char>)];
 static mbstate_t mb_cout;
-
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-alignas(wostream) _LIBCPP_EXPORTED_FROM_ABI char wcout[sizeof(wostream)]
-#  if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?wcout@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
-#  endif
-        ;
-alignas(__stdoutbuf<wchar_t>) static char __wcout[sizeof(__stdoutbuf<wchar_t>)];
-static mbstate_t mb_wcout;
-#endif // _LIBCPP_HAS_WIDE_CHARACTERS
-
-alignas(ostream) _LIBCPP_EXPORTED_FROM_ABI char cerr[sizeof(ostream)]
-#if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?cerr@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
-#endif
-        ;
-alignas(__stdoutbuf<char>) static char __cerr[sizeof(__stdoutbuf<char>)];
 static mbstate_t mb_cerr;
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-alignas(wostream) _LIBCPP_EXPORTED_FROM_ABI char wcerr[sizeof(wostream)]
-#  if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?wcerr@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
-#  endif
-        ;
-alignas(__stdoutbuf<wchar_t>) static char __wcerr[sizeof(__stdoutbuf<wchar_t>)];
+static mbstate_t mb_wcin;
+static mbstate_t mb_wcout;
 static mbstate_t mb_wcerr;
-#endif // _LIBCPP_HAS_WIDE_CHARACTERS
-
-alignas(ostream) _LIBCPP_EXPORTED_FROM_ABI char clog[sizeof(ostream)]
-#if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?clog@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
 #endif
-        ;
+
+#if __has_cpp_attribute(clang::no_destroy)
+template <class T>
+using no_destroy_t = T;
+
+#  define STREAM_ATTRS [[clang::no_destroy]] _LIBCPP_INIT_PRIORITY_MAX
+#else
+template <class T>
+using no_destroy_t = __no_destroy<T>;
+
+#  define STREAM_ATTRS _LIBCPP_INIT_PRIORITY_MAX
+#endif
+
+auto&& unwrap(auto& val) { return val; }
+
+template <class T>
+auto&& unwrap(__no_destroy<T>& val) {
+  return val.__get();
+}
+
+# 43 __FILE__ 3 // FIXME: Remove this (and the one below) once https://llvm.org/PR121108 is fixed.
+
+STREAM_ATTRS static no_destroy_t<__stdinbuf<char>> cin_stdbuf(stdin, &mb_cin);
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI no_destroy_t<istream> cin(&unwrap(cin_stdbuf));
+
+STREAM_ATTRS static no_destroy_t<__stdoutbuf<char>> cout_stdbuf(stdout, &mb_cout);
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI no_destroy_t<ostream> cout(&unwrap(cout_stdbuf));
+
+STREAM_ATTRS static no_destroy_t<__stdoutbuf<char>> cerr_stdbuf(stderr, &mb_cerr);
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI no_destroy_t<ostream> cerr(&unwrap(cerr_stdbuf));
+
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI no_destroy_t<ostream> clog(&unwrap(cerr_stdbuf));
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-alignas(wostream) _LIBCPP_EXPORTED_FROM_ABI char wclog[sizeof(wostream)]
-#  if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-    __asm__("?wclog@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR
-            "@std@@@12@A")
-#  endif
-        ;
+STREAM_ATTRS static __stdinbuf<wchar_t> wcin_stdbuf(stdin, &mb_wcin);
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI wistream wcin(&unwrap(wcin_stdbuf));
+
+STREAM_ATTRS static no_destroy_t<__stdoutbuf<wchar_t>> wcout_stdbuf(stdout, &mb_wcout);
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI no_destroy_t<wostream> wcout(&unwrap(wcout_stdbuf));
+
+STREAM_ATTRS static no_destroy_t<__stdoutbuf<wchar_t>> wcerr_stdbuf(stderr, &mb_wcerr);
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI no_destroy_t<wostream> wcerr(&unwrap(wcerr_stdbuf));
+
+STREAM_ATTRS _LIBCPP_EXPORTED_FROM_ABI no_destroy_t<wostream> wclog(&unwrap(wcerr_stdbuf));
+
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+# 70 __FILE__ 1
 
 // Pretend we're inside a system header so the compiler doesn't flag the use of the init_priority
 // attribute with a value that's reserved for the implementation (we're the implementation).
@@ -124,37 +100,24 @@ public:
 DoIOSInit::DoIOSInit() {
   force_locale_initialization();
 
-  istream* cin_ptr  = ::new (cin) istream(::new (__cin) __stdinbuf<char>(stdin, &mb_cin));
-  ostream* cout_ptr = ::new (cout) ostream(::new (__cout) __stdoutbuf<char>(stdout, &mb_cout));
-  ostream* cerr_ptr = ::new (cerr) ostream(::new (__cerr) __stdoutbuf<char>(stderr, &mb_cerr));
-  ::new (clog) ostream(cerr_ptr->rdbuf());
-  cin_ptr->tie(cout_ptr);
-  std::unitbuf(*cerr_ptr);
-  cerr_ptr->tie(cout_ptr);
+  unwrap(cin).tie(&unwrap(cout));
+  std::unitbuf(unwrap(cerr));
+  unwrap(cerr).tie(&unwrap(cout));
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-  wistream* wcin_ptr  = ::new (wcin) wistream(::new (__wcin) __stdinbuf<wchar_t>(stdin, &mb_wcin));
-  wostream* wcout_ptr = ::new (wcout) wostream(::new (__wcout) __stdoutbuf<wchar_t>(stdout, &mb_wcout));
-  wostream* wcerr_ptr = ::new (wcerr) wostream(::new (__wcerr) __stdoutbuf<wchar_t>(stderr, &mb_wcerr));
-  ::new (wclog) wostream(wcerr_ptr->rdbuf());
-
-  wcin_ptr->tie(wcout_ptr);
-  std::unitbuf(*wcerr_ptr);
-  wcerr_ptr->tie(wcout_ptr);
+  unwrap(wcin).tie(&unwrap(wcout));
+  std::unitbuf(unwrap(wcerr));
+  unwrap(wcerr).tie(&unwrap(wcout));
 #endif
 }
 
 DoIOSInit::~DoIOSInit() {
-  ostream* cout_ptr = reinterpret_cast<ostream*>(cout);
-  cout_ptr->flush();
-  ostream* clog_ptr = reinterpret_cast<ostream*>(clog);
-  clog_ptr->flush();
+  unwrap(cout).flush();
+  unwrap(clog).flush();
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-  wostream* wcout_ptr = reinterpret_cast<wostream*>(wcout);
-  wcout_ptr->flush();
-  wostream* wclog_ptr = reinterpret_cast<wostream*>(wclog);
-  wclog_ptr->flush();
+  unwrap(wcout).flush();
+  unwrap(wclog).flush();
 #endif
 }
 
