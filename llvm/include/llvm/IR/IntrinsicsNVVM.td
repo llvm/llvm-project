@@ -793,51 +793,51 @@ let TargetPrefix = "nvvm" in {
 
   def int_nvvm_div_approx_ftz_f : ClangBuiltin<"__nvvm_div_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_approx_f : ClangBuiltin<"__nvvm_div_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_div_rn_ftz_f : ClangBuiltin<"__nvvm_div_rn_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_rn_f : ClangBuiltin<"__nvvm_div_rn_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_div_rz_ftz_f : ClangBuiltin<"__nvvm_div_rz_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_rz_f : ClangBuiltin<"__nvvm_div_rz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_div_rm_ftz_f : ClangBuiltin<"__nvvm_div_rm_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_rm_f : ClangBuiltin<"__nvvm_div_rm_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_div_rp_ftz_f : ClangBuiltin<"__nvvm_div_rp_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_rp_f : ClangBuiltin<"__nvvm_div_rp_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_div_rn_d : ClangBuiltin<"__nvvm_div_rn_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_rz_d : ClangBuiltin<"__nvvm_div_rz_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_rm_d : ClangBuiltin<"__nvvm_div_rm_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_div_rp_d : ClangBuiltin<"__nvvm_div_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
-        [IntrNoMem]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_div_full : ClangBuiltin<"__nvvm_div_full">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
@@ -908,10 +908,10 @@ let TargetPrefix = "nvvm" in {
   foreach unary = ["abs", "neg"] in {
     def int_nvvm_ # unary # _bf16 :
       ClangBuiltin<!strconcat("__nvvm_", unary, "_bf16")>,
-      DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty], [IntrNoMem, IntrSpeculatable]>;
     def int_nvvm_ # unary # _bf16x2 :
       ClangBuiltin<!strconcat("__nvvm_", unary, "_bf16x2")>,
-      DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrSpeculatable]>;
   }
 
 //
@@ -955,36 +955,36 @@ let TargetPrefix = "nvvm" in {
 //
 
   def int_nvvm_ex2_approx_ftz_f : ClangBuiltin<"__nvvm_ex2_approx_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ex2_approx_f : ClangBuiltin<"__nvvm_ex2_approx_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ex2_approx_d : ClangBuiltin<"__nvvm_ex2_approx_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ex2_approx_f16 :
-      DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ex2_approx_f16x2 :
-      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_lg2_approx_ftz_f : ClangBuiltin<"__nvvm_lg2_approx_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_lg2_approx_f : ClangBuiltin<"__nvvm_lg2_approx_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_lg2_approx_d : ClangBuiltin<"__nvvm_lg2_approx_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Sin  Cos
 //
 
   def int_nvvm_sin_approx_ftz_f : ClangBuiltin<"__nvvm_sin_approx_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sin_approx_f : ClangBuiltin<"__nvvm_sin_approx_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_cos_approx_ftz_f : ClangBuiltin<"__nvvm_cos_approx_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_cos_approx_f : ClangBuiltin<"__nvvm_cos_approx_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Fma
@@ -1040,84 +1040,84 @@ let TargetPrefix = "nvvm" in {
 //
 
   def int_nvvm_rcp_rn_ftz_f : ClangBuiltin<"__nvvm_rcp_rn_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rn_f : ClangBuiltin<"__nvvm_rcp_rn_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rz_ftz_f : ClangBuiltin<"__nvvm_rcp_rz_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rz_f : ClangBuiltin<"__nvvm_rcp_rz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rm_ftz_f : ClangBuiltin<"__nvvm_rcp_rm_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rm_f : ClangBuiltin<"__nvvm_rcp_rm_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rp_ftz_f : ClangBuiltin<"__nvvm_rcp_rp_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rp_f : ClangBuiltin<"__nvvm_rcp_rp_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_rcp_rn_d : ClangBuiltin<"__nvvm_rcp_rn_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rz_d : ClangBuiltin<"__nvvm_rcp_rz_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rm_d : ClangBuiltin<"__nvvm_rcp_rm_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_rp_d : ClangBuiltin<"__nvvm_rcp_rp_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_rcp_approx_ftz_f : ClangBuiltin<"__nvvm_rcp_approx_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rcp_approx_ftz_d : ClangBuiltin<"__nvvm_rcp_approx_ftz_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Sqrt
 //
 
   def int_nvvm_sqrt_f : ClangBuiltin<"__nvvm_sqrt_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rn_ftz_f : ClangBuiltin<"__nvvm_sqrt_rn_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rn_f : ClangBuiltin<"__nvvm_sqrt_rn_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rz_ftz_f : ClangBuiltin<"__nvvm_sqrt_rz_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rz_f : ClangBuiltin<"__nvvm_sqrt_rz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rm_ftz_f : ClangBuiltin<"__nvvm_sqrt_rm_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rm_f : ClangBuiltin<"__nvvm_sqrt_rm_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rp_ftz_f : ClangBuiltin<"__nvvm_sqrt_rp_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rp_f : ClangBuiltin<"__nvvm_sqrt_rp_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_approx_ftz_f : ClangBuiltin<"__nvvm_sqrt_approx_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_approx_f : ClangBuiltin<"__nvvm_sqrt_approx_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_sqrt_rn_d : ClangBuiltin<"__nvvm_sqrt_rn_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rz_d : ClangBuiltin<"__nvvm_sqrt_rz_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rm_d : ClangBuiltin<"__nvvm_sqrt_rm_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_sqrt_rp_d : ClangBuiltin<"__nvvm_sqrt_rp_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Rsqrt
 //
 
   def int_nvvm_rsqrt_approx_ftz_f : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rsqrt_approx_ftz_d : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rsqrt_approx_f : ClangBuiltin<"__nvvm_rsqrt_approx_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_rsqrt_approx_d : ClangBuiltin<"__nvvm_rsqrt_approx_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Add
@@ -1410,34 +1410,34 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_ff2bf16x2_rn : ClangBuiltin<"__nvvm_ff2bf16x2_rn">,
-       Intrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+       DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ff2bf16x2_rn_relu : ClangBuiltin<"__nvvm_ff2bf16x2_rn_relu">,
-      Intrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ff2bf16x2_rz : ClangBuiltin<"__nvvm_ff2bf16x2_rz">,
-      Intrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ff2bf16x2_rz_relu : ClangBuiltin<"__nvvm_ff2bf16x2_rz_relu">,
-      Intrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_ff2f16x2_rn : ClangBuiltin<"__nvvm_ff2f16x2_rn">,
-      Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ff2f16x2_rn_relu : ClangBuiltin<"__nvvm_ff2f16x2_rn_relu">,
-      Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ff2f16x2_rz : ClangBuiltin<"__nvvm_ff2f16x2_rz">,
-      Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_ff2f16x2_rz_relu : ClangBuiltin<"__nvvm_ff2f16x2_rz_relu">,
-      Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_f2bf16_rn : ClangBuiltin<"__nvvm_f2bf16_rn">,
-      Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_f2bf16_rn_relu : ClangBuiltin<"__nvvm_f2bf16_rn_relu">,
-      Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_f2bf16_rz : ClangBuiltin<"__nvvm_f2bf16_rz">,
-      Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
   def int_nvvm_f2bf16_rz_relu : ClangBuiltin<"__nvvm_f2bf16_rz_relu">,
-       Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+       DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_f2tf32_rna : ClangBuiltin<"__nvvm_f2tf32_rna">,
-      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
   def int_nvvm_ff_to_e4m3x2_rn : ClangBuiltin<"__nvvm_ff_to_e4m3x2_rn">,
       Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
