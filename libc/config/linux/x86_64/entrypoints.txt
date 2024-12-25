@@ -739,10 +739,10 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # complex.h C23 _Complex _Float128 entrypoints
-    # libc.src.complex.crealf128
-    # libc.src.complex.cimagf128
-    # libc.src.complex.conjf128
-    # libc.src.complex.cprojf128
+    libc.src.complex.crealf128
+    libc.src.complex.cimagf128
+    libc.src.complex.conjf128
+    libc.src.complex.cprojf128
     
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
