@@ -1021,6 +1021,7 @@ and uses them to build a simple application ``simple-tool``.
 
   cmake_minimum_required(VERSION 3.20.0)
   project(SimpleProject)
+  include(AddLLVM)
 
   find_package(LLVM REQUIRED CONFIG)
 
@@ -1036,15 +1037,9 @@ and uses them to build a simple application ``simple-tool``.
   separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
   add_definitions(${LLVM_DEFINITIONS_LIST})
 
-  # Now build our tools
-  add_executable(simple-tool tool.cpp)
-
-  # Find the libraries that correspond to the LLVM components
-  # that we wish to use
-  llvm_map_components_to_libnames(llvm_libs support core irreader)
-
-  # Link against LLVM libraries
-  target_link_libraries(simple-tool ${llvm_libs})
+  
+  # now build and link your tool with the llvm 
+  add_llvm_executable(simple-tool tool.cpp)
 
 The ``find_package(...)`` directive when used in CONFIG mode (as in the above
 example) will look for the ``LLVMConfig.cmake`` file in various locations (see
