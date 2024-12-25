@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_STOP_CALLBACK_H
-#define _LIBCPP___STOP_TOKEN_STOP_CALLBACK_H
+#ifndef _LIBCPP___CXX03___STOP_TOKEN_STOP_CALLBACK_H
+#define _LIBCPP___CXX03___STOP_TOKEN_STOP_CALLBACK_H
 
 #include <__cxx03/__concepts/constructible.h>
 #include <__cxx03/__concepts/destructible.h>
@@ -99,4 +99,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP___CXX03___STOP_TOKEN_STOP_CALLBACK_H

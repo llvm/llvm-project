@@ -216,11 +216,11 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     }
 
     if (host_port->port == 0) {
-      socklen_t sa_len = address.GetLength();
-      if (getsockname(fd, &address.sockaddr(), &sa_len) == 0)
-        host_port->port = address.GetPort();
+      socklen_t sa_len = listen_address.GetLength();
+      if (getsockname(fd, &listen_address.sockaddr(), &sa_len) == 0)
+        host_port->port = listen_address.GetPort();
     }
-    m_listen_sockets[fd] = address;
+    m_listen_sockets[fd] = listen_address;
   }
 
   if (m_listen_sockets.empty()) {

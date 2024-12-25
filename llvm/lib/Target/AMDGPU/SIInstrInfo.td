@@ -1271,7 +1271,8 @@ def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
 
-def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+let PrintMethod = "printBitOp3" in
+def BitOp3 : NamedIntOperand<"bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
@@ -2566,6 +2567,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
   field bit HasFP8DstByteSel = 0;
+  field bit HasFP4DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -3248,13 +3250,13 @@ def isMFMA_F8F6F4Table : GenericTable {
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
-def FP8DstByteSelTable : GenericTable {
+def FP4FP8DstByteSelTable : GenericTable {
   let FilterClass = "VOP3_Pseudo";
-  let CppTypeName = "FP8DstByteSelInfo";
-  let Fields = ["Opcode", "HasFP8DstByteSel"];
+  let CppTypeName = "FP4FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel", "HasFP4DstByteSel"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getFP8DstByteSelHelper";
+  let PrimaryKeyName = "getFP4FP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

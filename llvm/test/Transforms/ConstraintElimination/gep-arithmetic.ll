@@ -702,8 +702,7 @@ define i1 @test_nuw(ptr %p, i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[X]]
 ; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[Y]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt ptr [[GEP_X]], [[GEP_Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp ugt i64 %x, %y
   call void @llvm.assume(i1 %cmp1)
@@ -720,8 +719,7 @@ define i1 @test_nuw_nested(ptr %p, i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[X]]
 ; CHECK-NEXT:    [[GEP_X1:%.*]] = getelementptr nuw i8, ptr [[GEP_X]], i64 1
 ; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[Y]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt ptr [[GEP_X1]], [[GEP_Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp ugt i64 %x, %y
   call void @llvm.assume(i1 %cmp1)

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_INVERT_IF_H
-#define _LIBCPP___BIT_INVERT_IF_H
+#ifndef _LIBCPP___CXX03___BIT_INVERT_IF_H
+#define _LIBCPP___CXX03___BIT_INVERT_IF_H
 
 #include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
@@ -27,4 +27,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __invert_if(_Tp __v) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_INVERT_IF_H
+#endif // _LIBCPP___CXX03___BIT_INVERT_IF_H

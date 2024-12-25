@@ -1289,7 +1289,7 @@ static Instruction *foldAddToAshr(BinaryOperator &Add) {
   // Note that, by the time we end up here, if possible, ugt has been
   // canonicalized into eq.
   const APInt *MaskC, *MaskCCmp;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (!match(Add.getOperand(1),
              m_SExt(m_ICmp(Pred, m_And(m_Specific(X), m_APInt(MaskC)),
                            m_APInt(MaskCCmp)))))
@@ -1382,7 +1382,7 @@ Instruction *InstCombinerImpl::
   // `select` itself may be appropriately extended, look past that.
   SkipExtInMagic(Select);
 
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   const APInt *Thr;
   Value *SignExtendingValue, *Zero;
   bool ShouldSignext;
@@ -1654,7 +1654,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
 
   // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
-  ICmpInst::Predicate LTPred, GTPred;
+  CmpPredicate LTPred, GTPred;
   if (match(&I,
             m_c_Add(m_SExt(m_c_ICmp(LTPred, m_Value(A), m_Value(B))),
                     m_ZExt(m_c_ICmp(GTPred, m_Deferred(A), m_Deferred(B))))) &&
@@ -1841,7 +1841,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // -->
   // BW - ctlz(A - 1, false)
   const APInt *XorC;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(&I,
             m_c_Add(
                 m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
@@ -2092,28 +2092,31 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
 
   // To avoid duplicating the offset arithmetic, rewrite the GEP to use the
   // computed offset. This may erase the original GEP, so be sure to cache the
-  // inbounds flag before emitting the offset.
+  // nowrap flags before emitting the offset.
   // TODO: We should probably do this even if there is only one GEP.
   bool RewriteGEPs = GEP2 != nullptr;
 
   // Emit the offset of the GEP and an intptr_t.
-  bool GEP1IsInBounds = GEP1->isInBounds();
+  GEPNoWrapFlags GEP1NW = GEP1->getNoWrapFlags();
   Value *Result = EmitGEPOffset(GEP1, RewriteGEPs);
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
   if (auto *I = dyn_cast<Instruction>(Result))
-    if (IsNUW && !GEP2 && !Swapped && GEP1IsInBounds &&
+    if (IsNUW && !GEP2 && !Swapped && GEP1NW.isInBounds() &&
         I->getOpcode() == Instruction::Mul)
       I->setHasNoUnsignedWrap();
 
   // If we have a 2nd GEP of the same base pointer, subtract the offsets.
   // If both GEPs are inbounds, then the subtract does not have signed overflow.
+  // If both GEPs are nuw and the original sub is nuw, the new sub is also nuw.
   if (GEP2) {
-    bool GEP2IsInBounds = GEP2->isInBounds();
+    GEPNoWrapFlags GEP2NW = GEP2->getNoWrapFlags();
     Value *Offset = EmitGEPOffset(GEP2, RewriteGEPs);
-    Result = Builder.CreateSub(Result, Offset, "gepdiff", /* NUW */ false,
-                               GEP1IsInBounds && GEP2IsInBounds);
+    Result = Builder.CreateSub(Result, Offset, "gepdiff",
+                               IsNUW && GEP1NW.hasNoUnsignedWrap() &&
+                                   GEP2NW.hasNoUnsignedWrap(),
+                               GEP1NW.isInBounds() && GEP2NW.isInBounds());
   }
 
   // If we have p - gep(p, ...)  then we have to negate the result.
@@ -2276,6 +2279,16 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   Value *X, *Y;
   if (match(Op0, m_OneUse(m_Add(m_Value(X), m_AllOnes()))))
     return BinaryOperator::CreateAdd(Builder.CreateNot(Op1), X);
+
+  // if (C1 & C2) == C2 then (X & C1) - (X & C2) -> X & (C1 ^ C2)
+  Constant *C1, *C2;
+  if (match(Op0, m_And(m_Value(X), m_ImmConstant(C1))) &&
+      match(Op1, m_And(m_Specific(X), m_ImmConstant(C2)))) {
+    Value *AndC = ConstantFoldBinaryInstruction(Instruction::And, C1, C2);
+    if (C2->isElementWiseEqual(AndC))
+      return BinaryOperator::CreateAnd(
+          X, ConstantFoldBinaryInstruction(Instruction::Xor, C1, C2));
+  }
 
   // Reassociate sub/add sequences to create more add instructions and
   // reduce dependency chains:

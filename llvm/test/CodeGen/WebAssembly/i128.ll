@@ -63,31 +63,29 @@ define i128 @mul128(i128 %x, i128 %y) {
 ; CHECK:         .functype mul128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push4=, __stack_pointer
-; CHECK-NEXT:    i32.const $push5=, 16
-; CHECK-NEXT:    i32.sub $push9=, $pop4, $pop5
-; CHECK-NEXT:    local.tee $push8=, 5, $pop9
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    local.get $push10=, 4
-; CHECK-NEXT:    call __multi3, $pop14, $pop13, $pop12, $pop11, $pop10
+; CHECK-NEXT:    global.get $push2=, __stack_pointer
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.sub $push7=, $pop2, $pop3
+; CHECK-NEXT:    local.tee $push6=, 5, $pop7
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    local.get $push8=, 4
+; CHECK-NEXT:    call __multi3, $pop12, $pop11, $pop10, $pop9, $pop8
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push0=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop0
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push0=, 8
-; CHECK-NEXT:    i32.add $push1=, $pop15, $pop0
-; CHECK-NEXT:    i64.load $push2=, 0($pop1)
-; CHECK-NEXT:    i64.store 8($pop16), $pop2
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push1=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop1
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push3=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop3
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.add $push7=, $pop19, $pop6
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.add $push5=, $pop17, $pop4
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
 ; CHECK-NEXT:    return
   %a = mul i128 %x, %y
   ret i128 %a
@@ -98,31 +96,29 @@ define i128 @sdiv128(i128 %x, i128 %y) {
 ; CHECK:         .functype sdiv128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push4=, __stack_pointer
-; CHECK-NEXT:    i32.const $push5=, 16
-; CHECK-NEXT:    i32.sub $push9=, $pop4, $pop5
-; CHECK-NEXT:    local.tee $push8=, 5, $pop9
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    local.get $push10=, 4
-; CHECK-NEXT:    call __divti3, $pop14, $pop13, $pop12, $pop11, $pop10
+; CHECK-NEXT:    global.get $push2=, __stack_pointer
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.sub  $push7=, $pop2, $pop3
+; CHECK-NEXT:    local.tee $push6=, 5, $pop7
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    local.get $push8=, 4
+; CHECK-NEXT:    call __divti3, $pop12, $pop11, $pop10, $pop9, $pop8
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push0=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop0
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push0=, 8
-; CHECK-NEXT:    i32.add $push1=, $pop15, $pop0
-; CHECK-NEXT:    i64.load $push2=, 0($pop1)
-; CHECK-NEXT:    i64.store 8($pop16), $pop2
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push1=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop1
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push3=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop3
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.add $push7=, $pop19, $pop6
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.add  $push5=, $pop17, $pop4
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
 ; CHECK-NEXT:    return
   %a = sdiv i128 %x, %y
   ret i128 %a
@@ -133,31 +129,29 @@ define i128 @udiv128(i128 %x, i128 %y) {
 ; CHECK:         .functype udiv128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push4=, __stack_pointer
-; CHECK-NEXT:    i32.const $push5=, 16
-; CHECK-NEXT:    i32.sub $push9=, $pop4, $pop5
-; CHECK-NEXT:    local.tee $push8=, 5, $pop9
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    local.get $push10=, 4
-; CHECK-NEXT:    call __udivti3, $pop14, $pop13, $pop12, $pop11, $pop10
+; CHECK-NEXT:    global.get $push2=, __stack_pointer
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.sub  $push7=, $pop2, $pop3
+; CHECK-NEXT:    local.tee $push6=, 5, $pop7
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    local.get $push8=, 4
+; CHECK-NEXT:    call __udivti3, $pop12, $pop11, $pop10, $pop9, $pop8
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push0=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop0
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push0=, 8
-; CHECK-NEXT:    i32.add $push1=, $pop15, $pop0
-; CHECK-NEXT:    i64.load $push2=, 0($pop1)
-; CHECK-NEXT:    i64.store 8($pop16), $pop2
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push1=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop1
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push3=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop3
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.add $push7=, $pop19, $pop6
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.add  $push5=, $pop17, $pop4
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
 ; CHECK-NEXT:    return
   %a = udiv i128 %x, %y
   ret i128 %a
@@ -168,31 +162,29 @@ define i128 @srem128(i128 %x, i128 %y) {
 ; CHECK:         .functype srem128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push4=, __stack_pointer
-; CHECK-NEXT:    i32.const $push5=, 16
-; CHECK-NEXT:    i32.sub $push9=, $pop4, $pop5
-; CHECK-NEXT:    local.tee $push8=, 5, $pop9
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    local.get $push10=, 4
-; CHECK-NEXT:    call __modti3, $pop14, $pop13, $pop12, $pop11, $pop10
+; CHECK-NEXT:    global.get $push2=, __stack_pointer
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.sub  $push7=, $pop2, $pop3
+; CHECK-NEXT:    local.tee $push6=, 5, $pop7
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    local.get $push8=, 4
+; CHECK-NEXT:    call __modti3, $pop12, $pop11, $pop10, $pop9, $pop8
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push0=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop0
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push0=, 8
-; CHECK-NEXT:    i32.add $push1=, $pop15, $pop0
-; CHECK-NEXT:    i64.load $push2=, 0($pop1)
-; CHECK-NEXT:    i64.store 8($pop16), $pop2
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push1=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop1
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push3=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop3
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.add $push7=, $pop19, $pop6
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.add  $push5=, $pop17, $pop4
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
 ; CHECK-NEXT:    return
   %a = srem i128 %x, %y
   ret i128 %a
@@ -203,31 +195,29 @@ define i128 @urem128(i128 %x, i128 %y) {
 ; CHECK:         .functype urem128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push4=, __stack_pointer
-; CHECK-NEXT:    i32.const $push5=, 16
-; CHECK-NEXT:    i32.sub $push9=, $pop4, $pop5
-; CHECK-NEXT:    local.tee $push8=, 5, $pop9
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    local.get $push10=, 4
-; CHECK-NEXT:    call __umodti3, $pop14, $pop13, $pop12, $pop11, $pop10
+; CHECK-NEXT:    global.get $push2=, __stack_pointer
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.sub  $push7=, $pop2, $pop3
+; CHECK-NEXT:    local.tee $push6=, 5, $pop7
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    local.get $push8=, 4
+; CHECK-NEXT:    call __umodti3, $pop12, $pop11, $pop10, $pop9, $pop8
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push0=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop0
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push0=, 8
-; CHECK-NEXT:    i32.add $push1=, $pop15, $pop0
-; CHECK-NEXT:    i64.load $push2=, 0($pop1)
-; CHECK-NEXT:    i64.store 8($pop16), $pop2
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push1=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop1
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push3=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop3
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.add $push7=, $pop19, $pop6
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.add  $push5=, $pop17, $pop4
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
 ; CHECK-NEXT:    return
   %a = urem i128 %x, %y
   ret i128 %a
@@ -295,31 +285,29 @@ define i128 @shl128(i128 %x, i128 %y) {
 ; CHECK:         .functype shl128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push5=, __stack_pointer
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.sub $push10=, $pop5, $pop6
-; CHECK-NEXT:    local.tee $push9=, 5, $pop10
-; CHECK-NEXT:    global.set __stack_pointer, $pop9
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop11
-; CHECK-NEXT:    call __ashlti3, $pop14, $pop13, $pop12, $pop0
+; CHECK-NEXT:    global.get $push3=, __stack_pointer
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.sub  $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, 5, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop9
+; CHECK-NEXT:    call __ashlti3, $pop12, $pop11, $pop10, $pop0
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push1=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop1
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push1=, 8
-; CHECK-NEXT:    i32.add $push2=, $pop15, $pop1
-; CHECK-NEXT:    i64.load $push3=, 0($pop2)
-; CHECK-NEXT:    i64.store 8($pop16), $pop3
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push2=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop2
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push4=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop4
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push7=, 16
-; CHECK-NEXT:    i32.add $push8=, $pop19, $pop7
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.add  $push6=, $pop17, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
 ; CHECK-NEXT:    return
   %a = shl i128 %x, %y
   ret i128 %a
@@ -330,31 +318,29 @@ define i128 @shr128(i128 %x, i128 %y) {
 ; CHECK:         .functype shr128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push5=, __stack_pointer
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.sub $push10=, $pop5, $pop6
-; CHECK-NEXT:    local.tee $push9=, 5, $pop10
-; CHECK-NEXT:    global.set __stack_pointer, $pop9
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop11
-; CHECK-NEXT:    call __lshrti3, $pop14, $pop13, $pop12, $pop0
+; CHECK-NEXT:    global.get $push3=, __stack_pointer
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.sub  $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, 5, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop9
+; CHECK-NEXT:    call __lshrti3, $pop12, $pop11, $pop10, $pop0
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push1=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop1
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push1=, 8
-; CHECK-NEXT:    i32.add $push2=, $pop15, $pop1
-; CHECK-NEXT:    i64.load $push3=, 0($pop2)
-; CHECK-NEXT:    i64.store 8($pop16), $pop3
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push2=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop2
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push4=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop4
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push7=, 16
-; CHECK-NEXT:    i32.add $push8=, $pop19, $pop7
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.add  $push6=, $pop17, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
 ; CHECK-NEXT:    return
   %a = lshr i128 %x, %y
   ret i128 %a
@@ -365,31 +351,29 @@ define i128 @sar128(i128 %x, i128 %y) {
 ; CHECK:         .functype sar128 (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push5=, __stack_pointer
-; CHECK-NEXT:    i32.const $push6=, 16
-; CHECK-NEXT:    i32.sub $push10=, $pop5, $pop6
-; CHECK-NEXT:    local.tee $push9=, 5, $pop10
-; CHECK-NEXT:    global.set __stack_pointer, $pop9
-; CHECK-NEXT:    local.get $push14=, 5
-; CHECK-NEXT:    local.get $push13=, 1
-; CHECK-NEXT:    local.get $push12=, 2
-; CHECK-NEXT:    local.get $push11=, 3
-; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop11
-; CHECK-NEXT:    call __ashrti3, $pop14, $pop13, $pop12, $pop0
+; CHECK-NEXT:    global.get $push3=, __stack_pointer
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.sub  $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, 5, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop9
+; CHECK-NEXT:    call __ashrti3, $pop12, $pop11, $pop10, $pop0
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push1=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop1
 ; CHECK-NEXT:    local.get $push16=, 0
 ; CHECK-NEXT:    local.get $push15=, 5
-; CHECK-NEXT:    i32.const $push1=, 8
-; CHECK-NEXT:    i32.add $push2=, $pop15, $pop1
-; CHECK-NEXT:    i64.load $push3=, 0($pop2)
-; CHECK-NEXT:    i64.store 8($pop16), $pop3
-; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    i64.load $push2=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop2
 ; CHECK-NEXT:    local.get $push17=, 5
-; CHECK-NEXT:    i64.load $push4=, 0($pop17)
-; CHECK-NEXT:    i64.store 0($pop18), $pop4
-; CHECK-NEXT:    local.get $push19=, 5
-; CHECK-NEXT:    i32.const $push7=, 16
-; CHECK-NEXT:    i32.add $push8=, $pop19, $pop7
-; CHECK-NEXT:    global.set __stack_pointer, $pop8
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.add  $push6=, $pop17, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
 ; CHECK-NEXT:    return
   %a = ashr i128 %x, %y
   ret i128 %a
@@ -529,51 +513,45 @@ define i128 @rotl(i128 %x, i128 %y) {
 ; CHECK:         .functype rotl (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push11=, __stack_pointer
-; CHECK-NEXT:    i32.const $push12=, 32
-; CHECK-NEXT:    i32.sub $push23=, $pop11, $pop12
-; CHECK-NEXT:    local.tee $push22=, 5, $pop23
-; CHECK-NEXT:    global.set __stack_pointer, $pop22
-; CHECK-NEXT:    local.get $push24=, 5
-; CHECK-NEXT:    i32.const $push17=, 16
-; CHECK-NEXT:    i32.add $push18=, $pop24, $pop17
-; CHECK-NEXT:    local.get $push27=, 1
-; CHECK-NEXT:    local.get $push26=, 2
-; CHECK-NEXT:    local.get $push25=, 3
-; CHECK-NEXT:    i32.wrap_i64 $push21=, $pop25
-; CHECK-NEXT:    local.tee $push20=, 6, $pop21
-; CHECK-NEXT:    call __ashlti3, $pop18, $pop27, $pop26, $pop20
-; CHECK-NEXT:    local.get $push31=, 5
-; CHECK-NEXT:    local.get $push30=, 1
-; CHECK-NEXT:    local.get $push29=, 2
+; CHECK-NEXT:    global.get $push8=, __stack_pointer
+; CHECK-NEXT:    i32.const $push9=, 32
+; CHECK-NEXT:    i32.sub  $push17=, $pop8, $pop9
+; CHECK-NEXT:    local.tee $push16=, 5, $pop17
+; CHECK-NEXT:    global.set __stack_pointer, $pop16
+; CHECK-NEXT:    local.get $push18=, 5
+; CHECK-NEXT:    i32.const $push12=, 16
+; CHECK-NEXT:    i32.add  $push13=, $pop18, $pop12
+; CHECK-NEXT:    local.get $push21=, 1
+; CHECK-NEXT:    local.get $push20=, 2
+; CHECK-NEXT:    local.get $push19=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push15=, $pop19
+; CHECK-NEXT:    local.tee $push14=, 6, $pop15
+; CHECK-NEXT:    call __ashlti3, $pop13, $pop21, $pop20, $pop14
+; CHECK-NEXT:    local.get $push25=, 5
+; CHECK-NEXT:    local.get $push24=, 1
+; CHECK-NEXT:    local.get $push23=, 2
 ; CHECK-NEXT:    i32.const $push0=, 128
-; CHECK-NEXT:    local.get $push28=, 6
-; CHECK-NEXT:    i32.sub $push1=, $pop0, $pop28
-; CHECK-NEXT:    call __lshrti3, $pop31, $pop30, $pop29, $pop1
-; CHECK-NEXT:    local.get $push34=, 0
+; CHECK-NEXT:    local.get $push22=, 6
+; CHECK-NEXT:    i32.sub  $push1=, $pop0, $pop22
+; CHECK-NEXT:    call __lshrti3, $pop25, $pop24, $pop23, $pop1
+; CHECK-NEXT:    local.get $push28=, 0
+; CHECK-NEXT:    local.get $push26=, 5
+; CHECK-NEXT:    i64.load $push2=, 24($pop26)
+; CHECK-NEXT:    local.get $push27=, 5
+; CHECK-NEXT:    i64.load $push3=, 8($pop27)
+; CHECK-NEXT:    i64.or   $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.store 8($pop28), $pop4
+; CHECK-NEXT:    local.get $push31=, 0
+; CHECK-NEXT:    local.get $push29=, 5
+; CHECK-NEXT:    i64.load $push5=, 16($pop29)
+; CHECK-NEXT:    local.get $push30=, 5
+; CHECK-NEXT:    i64.load $push6=, 0($pop30)
+; CHECK-NEXT:    i64.or   $push7=, $pop5, $pop6
+; CHECK-NEXT:    i64.store 0($pop31), $pop7
 ; CHECK-NEXT:    local.get $push32=, 5
-; CHECK-NEXT:    i32.const $push15=, 16
-; CHECK-NEXT:    i32.add $push16=, $pop32, $pop15
-; CHECK-NEXT:    i32.const $push2=, 8
-; CHECK-NEXT:    i32.add $push3=, $pop16, $pop2
-; CHECK-NEXT:    i64.load $push4=, 0($pop3)
-; CHECK-NEXT:    local.get $push33=, 5
-; CHECK-NEXT:    i32.const $push19=, 8
-; CHECK-NEXT:    i32.add $push5=, $pop33, $pop19
-; CHECK-NEXT:    i64.load $push6=, 0($pop5)
-; CHECK-NEXT:    i64.or $push7=, $pop4, $pop6
-; CHECK-NEXT:    i64.store 8($pop34), $pop7
-; CHECK-NEXT:    local.get $push37=, 0
-; CHECK-NEXT:    local.get $push35=, 5
-; CHECK-NEXT:    i64.load $push8=, 16($pop35)
-; CHECK-NEXT:    local.get $push36=, 5
-; CHECK-NEXT:    i64.load $push9=, 0($pop36)
-; CHECK-NEXT:    i64.or $push10=, $pop8, $pop9
-; CHECK-NEXT:    i64.store 0($pop37), $pop10
-; CHECK-NEXT:    local.get $push38=, 5
-; CHECK-NEXT:    i32.const $push13=, 32
-; CHECK-NEXT:    i32.add $push14=, $pop38, $pop13
-; CHECK-NEXT:    global.set __stack_pointer, $pop14
+; CHECK-NEXT:    i32.const $push10=, 32
+; CHECK-NEXT:    i32.add  $push11=, $pop32, $pop10
+; CHECK-NEXT:    global.set __stack_pointer, $pop11
 ; CHECK-NEXT:    return
   %z = sub i128 128, %y
   %b = shl i128 %x, %y
@@ -587,53 +565,47 @@ define i128 @masked_rotl(i128 %x, i128 %y) {
 ; CHECK:         .functype masked_rotl (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push13=, __stack_pointer
-; CHECK-NEXT:    i32.const $push14=, 32
-; CHECK-NEXT:    i32.sub $push25=, $pop13, $pop14
-; CHECK-NEXT:    local.tee $push24=, 5, $pop25
-; CHECK-NEXT:    global.set __stack_pointer, $pop24
-; CHECK-NEXT:    local.get $push26=, 5
-; CHECK-NEXT:    i32.const $push19=, 16
-; CHECK-NEXT:    i32.add $push20=, $pop26, $pop19
-; CHECK-NEXT:    local.get $push29=, 1
-; CHECK-NEXT:    local.get $push28=, 2
-; CHECK-NEXT:    local.get $push27=, 3
-; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop27
+; CHECK-NEXT:    global.get $push10=, __stack_pointer
+; CHECK-NEXT:    i32.const $push11=, 32
+; CHECK-NEXT:    i32.sub  $push19=, $pop10, $pop11
+; CHECK-NEXT:    local.tee $push18=, 5, $pop19
+; CHECK-NEXT:    global.set __stack_pointer, $pop18
+; CHECK-NEXT:    local.get $push20=, 5
+; CHECK-NEXT:    i32.const $push14=, 16
+; CHECK-NEXT:    i32.add  $push15=, $pop20, $pop14
+; CHECK-NEXT:    local.get $push23=, 1
+; CHECK-NEXT:    local.get $push22=, 2
+; CHECK-NEXT:    local.get $push21=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop21
 ; CHECK-NEXT:    i32.const $push1=, 127
-; CHECK-NEXT:    i32.and $push23=, $pop0, $pop1
-; CHECK-NEXT:    local.tee $push22=, 6, $pop23
-; CHECK-NEXT:    call __ashlti3, $pop20, $pop29, $pop28, $pop22
-; CHECK-NEXT:    local.get $push33=, 5
-; CHECK-NEXT:    local.get $push32=, 1
-; CHECK-NEXT:    local.get $push31=, 2
+; CHECK-NEXT:    i32.and  $push17=, $pop0, $pop1
+; CHECK-NEXT:    local.tee $push16=, 6, $pop17
+; CHECK-NEXT:    call __ashlti3, $pop15, $pop23, $pop22, $pop16
+; CHECK-NEXT:    local.get $push27=, 5
+; CHECK-NEXT:    local.get $push26=, 1
+; CHECK-NEXT:    local.get $push25=, 2
 ; CHECK-NEXT:    i32.const $push2=, 128
-; CHECK-NEXT:    local.get $push30=, 6
-; CHECK-NEXT:    i32.sub $push3=, $pop2, $pop30
-; CHECK-NEXT:    call __lshrti3, $pop33, $pop32, $pop31, $pop3
-; CHECK-NEXT:    local.get $push36=, 0
+; CHECK-NEXT:    local.get $push24=, 6
+; CHECK-NEXT:    i32.sub  $push3=, $pop2, $pop24
+; CHECK-NEXT:    call __lshrti3, $pop27, $pop26, $pop25, $pop3
+; CHECK-NEXT:    local.get $push30=, 0
+; CHECK-NEXT:    local.get $push28=, 5
+; CHECK-NEXT:    i64.load $push4=, 24($pop28)
+; CHECK-NEXT:    local.get $push29=, 5
+; CHECK-NEXT:    i64.load $push5=, 8($pop29)
+; CHECK-NEXT:    i64.or   $push6=, $pop4, $pop5
+; CHECK-NEXT:    i64.store 8($pop30), $pop6
+; CHECK-NEXT:    local.get $push33=, 0
+; CHECK-NEXT:    local.get $push31=, 5
+; CHECK-NEXT:    i64.load $push7=, 16($pop31)
+; CHECK-NEXT:    local.get $push32=, 5
+; CHECK-NEXT:    i64.load $push8=, 0($pop32)
+; CHECK-NEXT:    i64.or   $push9=, $pop7, $pop8
+; CHECK-NEXT:    i64.store 0($pop33), $pop9
 ; CHECK-NEXT:    local.get $push34=, 5
-; CHECK-NEXT:    i32.const $push17=, 16
-; CHECK-NEXT:    i32.add $push18=, $pop34, $pop17
-; CHECK-NEXT:    i32.const $push4=, 8
-; CHECK-NEXT:    i32.add $push5=, $pop18, $pop4
-; CHECK-NEXT:    i64.load $push6=, 0($pop5)
-; CHECK-NEXT:    local.get $push35=, 5
-; CHECK-NEXT:    i32.const $push21=, 8
-; CHECK-NEXT:    i32.add $push7=, $pop35, $pop21
-; CHECK-NEXT:    i64.load $push8=, 0($pop7)
-; CHECK-NEXT:    i64.or $push9=, $pop6, $pop8
-; CHECK-NEXT:    i64.store 8($pop36), $pop9
-; CHECK-NEXT:    local.get $push39=, 0
-; CHECK-NEXT:    local.get $push37=, 5
-; CHECK-NEXT:    i64.load $push10=, 16($pop37)
-; CHECK-NEXT:    local.get $push38=, 5
-; CHECK-NEXT:    i64.load $push11=, 0($pop38)
-; CHECK-NEXT:    i64.or $push12=, $pop10, $pop11
-; CHECK-NEXT:    i64.store 0($pop39), $pop12
-; CHECK-NEXT:    local.get $push40=, 5
-; CHECK-NEXT:    i32.const $push15=, 32
-; CHECK-NEXT:    i32.add $push16=, $pop40, $pop15
-; CHECK-NEXT:    global.set __stack_pointer, $pop16
+; CHECK-NEXT:    i32.const $push12=, 32
+; CHECK-NEXT:    i32.add  $push13=, $pop34, $pop12
+; CHECK-NEXT:    global.set __stack_pointer, $pop13
 ; CHECK-NEXT:    return
   %a = and i128 %y, 127
   %z = sub i128 128, %a
@@ -648,51 +620,45 @@ define i128 @rotr(i128 %x, i128 %y) {
 ; CHECK:         .functype rotr (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push11=, __stack_pointer
-; CHECK-NEXT:    i32.const $push12=, 32
-; CHECK-NEXT:    i32.sub $push23=, $pop11, $pop12
-; CHECK-NEXT:    local.tee $push22=, 5, $pop23
-; CHECK-NEXT:    global.set __stack_pointer, $pop22
-; CHECK-NEXT:    local.get $push24=, 5
-; CHECK-NEXT:    i32.const $push17=, 16
-; CHECK-NEXT:    i32.add $push18=, $pop24, $pop17
-; CHECK-NEXT:    local.get $push27=, 1
-; CHECK-NEXT:    local.get $push26=, 2
-; CHECK-NEXT:    local.get $push25=, 3
-; CHECK-NEXT:    i32.wrap_i64 $push21=, $pop25
-; CHECK-NEXT:    local.tee $push20=, 6, $pop21
-; CHECK-NEXT:    call __lshrti3, $pop18, $pop27, $pop26, $pop20
-; CHECK-NEXT:    local.get $push31=, 5
-; CHECK-NEXT:    local.get $push30=, 1
-; CHECK-NEXT:    local.get $push29=, 2
+; CHECK-NEXT:    global.get $push8=, __stack_pointer
+; CHECK-NEXT:    i32.const $push9=, 32
+; CHECK-NEXT:    i32.sub  $push17=, $pop8, $pop9
+; CHECK-NEXT:    local.tee $push16=, 5, $pop17
+; CHECK-NEXT:    global.set __stack_pointer, $pop16
+; CHECK-NEXT:    local.get $push18=, 5
+; CHECK-NEXT:    i32.const $push12=, 16
+; CHECK-NEXT:    i32.add  $push13=, $pop18, $pop12
+; CHECK-NEXT:    local.get $push21=, 1
+; CHECK-NEXT:    local.get $push20=, 2
+; CHECK-NEXT:    local.get $push19=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push15=, $pop19
+; CHECK-NEXT:    local.tee $push14=, 6, $pop15
+; CHECK-NEXT:    call __lshrti3, $pop13, $pop21, $pop20, $pop14
+; CHECK-NEXT:    local.get $push25=, 5
+; CHECK-NEXT:    local.get $push24=, 1
+; CHECK-NEXT:    local.get $push23=, 2
 ; CHECK-NEXT:    i32.const $push0=, 128
-; CHECK-NEXT:    local.get $push28=, 6
-; CHECK-NEXT:    i32.sub $push1=, $pop0, $pop28
-; CHECK-NEXT:    call __ashlti3, $pop31, $pop30, $pop29, $pop1
-; CHECK-NEXT:    local.get $push34=, 0
+; CHECK-NEXT:    local.get $push22=, 6
+; CHECK-NEXT:    i32.sub  $push1=, $pop0, $pop22
+; CHECK-NEXT:    call __ashlti3, $pop25, $pop24, $pop23, $pop1
+; CHECK-NEXT:    local.get $push28=, 0
+; CHECK-NEXT:    local.get $push26=, 5
+; CHECK-NEXT:    i64.load $push2=, 24($pop26)
+; CHECK-NEXT:    local.get $push27=, 5
+; CHECK-NEXT:    i64.load $push3=, 8($pop27)
+; CHECK-NEXT:    i64.or   $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.store 8($pop28), $pop4
+; CHECK-NEXT:    local.get $push31=, 0
+; CHECK-NEXT:    local.get $push29=, 5
+; CHECK-NEXT:    i64.load $push5=, 16($pop29)
+; CHECK-NEXT:    local.get $push30=, 5
+; CHECK-NEXT:    i64.load $push6=, 0($pop30)
+; CHECK-NEXT:    i64.or   $push7=, $pop5, $pop6
+; CHECK-NEXT:    i64.store 0($pop31), $pop7
 ; CHECK-NEXT:    local.get $push32=, 5
-; CHECK-NEXT:    i32.const $push15=, 16
-; CHECK-NEXT:    i32.add $push16=, $pop32, $pop15
-; CHECK-NEXT:    i32.const $push2=, 8
-; CHECK-NEXT:    i32.add $push3=, $pop16, $pop2
-; CHECK-NEXT:    i64.load $push4=, 0($pop3)
-; CHECK-NEXT:    local.get $push33=, 5
-; CHECK-NEXT:    i32.const $push19=, 8
-; CHECK-NEXT:    i32.add $push5=, $pop33, $pop19
-; CHECK-NEXT:    i64.load $push6=, 0($pop5)
-; CHECK-NEXT:    i64.or $push7=, $pop4, $pop6
-; CHECK-NEXT:    i64.store 8($pop34), $pop7
-; CHECK-NEXT:    local.get $push37=, 0
-; CHECK-NEXT:    local.get $push35=, 5
-; CHECK-NEXT:    i64.load $push8=, 16($pop35)
-; CHECK-NEXT:    local.get $push36=, 5
-; CHECK-NEXT:    i64.load $push9=, 0($pop36)
-; CHECK-NEXT:    i64.or $push10=, $pop8, $pop9
-; CHECK-NEXT:    i64.store 0($pop37), $pop10
-; CHECK-NEXT:    local.get $push38=, 5
-; CHECK-NEXT:    i32.const $push13=, 32
-; CHECK-NEXT:    i32.add $push14=, $pop38, $pop13
-; CHECK-NEXT:    global.set __stack_pointer, $pop14
+; CHECK-NEXT:    i32.const $push10=, 32
+; CHECK-NEXT:    i32.add  $push11=, $pop32, $pop10
+; CHECK-NEXT:    global.set __stack_pointer, $pop11
 ; CHECK-NEXT:    return
   %z = sub i128 128, %y
   %b = lshr i128 %x, %y
@@ -706,53 +672,47 @@ define i128 @masked_rotr(i128 %x, i128 %y) {
 ; CHECK:         .functype masked_rotr (i32, i64, i64, i64, i64) -> ()
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push13=, __stack_pointer
-; CHECK-NEXT:    i32.const $push14=, 32
-; CHECK-NEXT:    i32.sub $push25=, $pop13, $pop14
-; CHECK-NEXT:    local.tee $push24=, 5, $pop25
-; CHECK-NEXT:    global.set __stack_pointer, $pop24
-; CHECK-NEXT:    local.get $push26=, 5
-; CHECK-NEXT:    i32.const $push19=, 16
-; CHECK-NEXT:    i32.add $push20=, $pop26, $pop19
-; CHECK-NEXT:    local.get $push29=, 1
-; CHECK-NEXT:    local.get $push28=, 2
-; CHECK-NEXT:    local.get $push27=, 3
-; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop27
+; CHECK-NEXT:    global.get $push10=, __stack_pointer
+; CHECK-NEXT:    i32.const $push11=, 32
+; CHECK-NEXT:    i32.sub  $push19=, $pop10, $pop11
+; CHECK-NEXT:    local.tee $push18=, 5, $pop19
+; CHECK-NEXT:    global.set __stack_pointer, $pop18
+; CHECK-NEXT:    local.get $push20=, 5
+; CHECK-NEXT:    i32.const $push14=, 16
+; CHECK-NEXT:    i32.add  $push15=, $pop20, $pop14
+; CHECK-NEXT:    local.get $push23=, 1
+; CHECK-NEXT:    local.get $push22=, 2
+; CHECK-NEXT:    local.get $push21=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop21
 ; CHECK-NEXT:    i32.const $push1=, 127
-; CHECK-NEXT:    i32.and $push23=, $pop0, $pop1
-; CHECK-NEXT:    local.tee $push22=, 6, $pop23
-; CHECK-NEXT:    call __lshrti3, $pop20, $pop29, $pop28, $pop22
-; CHECK-NEXT:    local.get $push33=, 5
-; CHECK-NEXT:    local.get $push32=, 1
-; CHECK-NEXT:    local.get $push31=, 2
+; CHECK-NEXT:    i32.and  $push17=, $pop0, $pop1
+; CHECK-NEXT:    local.tee $push16=, 6, $pop17
+; CHECK-NEXT:    call __lshrti3, $pop15, $pop23, $pop22, $pop16
+; CHECK-NEXT:    local.get $push27=, 5
+; CHECK-NEXT:    local.get $push26=, 1
+; CHECK-NEXT:    local.get $push25=, 2
 ; CHECK-NEXT:    i32.const $push2=, 128
-; CHECK-NEXT:    local.get $push30=, 6
-; CHECK-NEXT:    i32.sub $push3=, $pop2, $pop30
-; CHECK-NEXT:    call __ashlti3, $pop33, $pop32, $pop31, $pop3
-; CHECK-NEXT:    local.get $push36=, 0
+; CHECK-NEXT:    local.get $push24=, 6
+; CHECK-NEXT:    i32.sub  $push3=, $pop2, $pop24
+; CHECK-NEXT:    call __ashlti3, $pop27, $pop26, $pop25, $pop3
+; CHECK-NEXT:    local.get $push30=, 0
+; CHECK-NEXT:    local.get $push28=, 5
+; CHECK-NEXT:    i64.load $push4=, 24($pop28)
+; CHECK-NEXT:    local.get $push29=, 5
+; CHECK-NEXT:    i64.load $push5=, 8($pop29)
+; CHECK-NEXT:    i64.or   $push6=, $pop4, $pop5
+; CHECK-NEXT:    i64.store 8($pop30), $pop6
+; CHECK-NEXT:    local.get $push33=, 0
+; CHECK-NEXT:    local.get $push31=, 5
+; CHECK-NEXT:    i64.load $push7=, 16($pop31)
+; CHECK-NEXT:    local.get $push32=, 5
+; CHECK-NEXT:    i64.load $push8=, 0($pop32)
+; CHECK-NEXT:    i64.or   $push9=, $pop7, $pop8
+; CHECK-NEXT:    i64.store 0($pop33), $pop9
 ; CHECK-NEXT:    local.get $push34=, 5
-; CHECK-NEXT:    i32.const $push17=, 16
-; CHECK-NEXT:    i32.add $push18=, $pop34, $pop17
-; CHECK-NEXT:    i32.const $push4=, 8
-; CHECK-NEXT:    i32.add $push5=, $pop18, $pop4
-; CHECK-NEXT:    i64.load $push6=, 0($pop5)
-; CHECK-NEXT:    local.get $push35=, 5
-; CHECK-NEXT:    i32.const $push21=, 8
-; CHECK-NEXT:    i32.add $push7=, $pop35, $pop21
-; CHECK-NEXT:    i64.load $push8=, 0($pop7)
-; CHECK-NEXT:    i64.or $push9=, $pop6, $pop8
-; CHECK-NEXT:    i64.store 8($pop36), $pop9
-; CHECK-NEXT:    local.get $push39=, 0
-; CHECK-NEXT:    local.get $push37=, 5
-; CHECK-NEXT:    i64.load $push10=, 16($pop37)
-; CHECK-NEXT:    local.get $push38=, 5
-; CHECK-NEXT:    i64.load $push11=, 0($pop38)
-; CHECK-NEXT:    i64.or $push12=, $pop10, $pop11
-; CHECK-NEXT:    i64.store 0($pop39), $pop12
-; CHECK-NEXT:    local.get $push40=, 5
-; CHECK-NEXT:    i32.const $push15=, 32
-; CHECK-NEXT:    i32.add $push16=, $pop40, $pop15
-; CHECK-NEXT:    global.set __stack_pointer, $pop16
+; CHECK-NEXT:    i32.const $push12=, 32
+; CHECK-NEXT:    i32.add  $push13=, $pop34, $pop12
+; CHECK-NEXT:    global.set __stack_pointer, $pop13
 ; CHECK-NEXT:    return
   %a = and i128 %y, 127
   %z = sub i128 128, %a

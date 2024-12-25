@@ -1,4 +1,4 @@
-; RUN: llc -march=arc < %s | FileCheck %s
+; RUN: llc -mtriple=arc < %s | FileCheck %s
 
 target triple = "arc"
 

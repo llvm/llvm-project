@@ -916,21 +916,30 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
   if (SIInstrInfo::isSDWA(MI)) {
     // Type 1: SDWA with dst_sel != DWORD
     if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
-      if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
-        return nullptr;
-  } else {
-    // Type 2 && Type 3: (VOP3 which write the hi bits) || (FP8DstSelInst
-    // with op_sel[3:2] != 0)
-    if (!AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel) ||
-        !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
-              SISrcMods::DST_OP_SEL ||
-          (AMDGPU::isFP8DstSelInst(Opcode) &&
-           (TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm() &
-            SISrcMods::OP_SEL_0))))
-      return nullptr;
+      if (DstSel->getImm() != AMDGPU::SDWA::DWORD)
+        return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
   }
 
-  return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+  AMDGPU::FPType IsFP4OrFP8ConvOpc = AMDGPU::getFPDstSelType(Opcode);
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel)) {
+    // Type 2: VOP3 which write the hi bits
+    if (TII->getNamedImmOperand(MI, AMDGPU::OpName::src0_modifiers) &
+        SISrcMods::DST_OP_SEL)
+      return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+
+    // Type 3: FP8DstSelInst with op_sel[3:2] != 0)
+    if (IsFP4OrFP8ConvOpc == AMDGPU::FPType::FP8 &&
+        (TII->getNamedImmOperand(MI, AMDGPU::OpName::src2_modifiers) &
+         SISrcMods::OP_SEL_0))
+      return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+  }
+
+  // Special case: nop is required for all the opsel values for fp4 sr variant
+  // cvt scale instructions
+  if (IsFP4OrFP8ConvOpc == AMDGPU::FPType::FP4)
+    return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+
+  return nullptr;
 }
 
 /// Checks whether the provided \p MI "consumes" the operand with a Dest sel

@@ -16,6 +16,11 @@ if config.host_arch == "x86_64h" and config.target_arch == "x86_64":
     host_arch_compatible = True
 if host_arch_compatible:
     config.available_features.add("host-arch-compatible")
+
+# If the target OS hasn't been set then assume host.
+if not config.target_os:
+    config.target_os = config.host_os
+
 config.test_target_is_host_executable = (
     config.target_os == config.host_os and host_arch_compatible
 )

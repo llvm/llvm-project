@@ -221,7 +221,15 @@ use omp_lib
 
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
+  !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
+  do i = 1, N
+     a = 3.14
+  enddo
+
+  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
+  !$omp do ordered(1-1) linear(a)
   do i = 1, N
      a = 3.14
   enddo

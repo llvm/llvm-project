@@ -53,6 +53,23 @@ define i1 @extract_fcmp_v4f32_const_splat_rhs(<4 x float> %a) {
   ret i1 %ext
 }
 
+; Tests the code in ExpandIntRes_SETCC
+define i128 @extract_icmp_v1i128(ptr %p) {
+; CHECK-LABEL: extract_icmp_v1i128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp x9, x8, [x0]
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %load = load <1 x i128>, ptr %p, align 16
+  %cmp = icmp eq <1 x i128> %load, zeroinitializer
+  %sext = sext <1 x i1> %cmp to <1 x i128>
+  %res = extractelement <1 x i128> %sext, i32 0
+  ret i128 %res
+}
+
 define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-LABEL: vector_loop_with_icmp:
 ; CHECK:       // %bb.0: // %entry
@@ -62,31 +79,31 @@ define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    add x8, x0, #4
 ; CHECK-NEXT:    mov w10, #1 // =0x1
-; CHECK-NEXT:    b .LBB4_2
-; CHECK-NEXT:  .LBB4_1: // %pred.store.continue6
-; CHECK-NEXT:    // in Loop: Header=BB4_2 Depth=1
+; CHECK-NEXT:    b .LBB5_2
+; CHECK-NEXT:  .LBB5_1: // %pred.store.continue6
+; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    subs x9, x9, #2
 ; CHECK-NEXT:    add x8, x8, #8
-; CHECK-NEXT:    b.eq .LBB4_6
-; CHECK-NEXT:  .LBB4_2: // %vector.body
+; CHECK-NEXT:    b.eq .LBB5_6
+; CHECK-NEXT:  .LBB5_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fmov x11, d0
 ; CHECK-NEXT:    cmp x11, #14
-; CHECK-NEXT:    b.hi .LBB4_4
+; CHECK-NEXT:    b.hi .LBB5_4
 ; CHECK-NEXT:  // %bb.3: // %pred.store.if
-; CHECK-NEXT:    // in Loop: Header=BB4_2 Depth=1
+; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    stur w10, [x8, #-4]
-; CHECK-NEXT:  .LBB4_4: // %pred.store.continue
-; CHECK-NEXT:    // in Loop: Header=BB4_2 Depth=1
+; CHECK-NEXT:  .LBB5_4: // %pred.store.continue
+; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    mov x11, v0.d[1]
 ; CHECK-NEXT:    cmp x11, #14
-; CHECK-NEXT:    b.hi .LBB4_1
+; CHECK-NEXT:    b.hi .LBB5_1
 ; CHECK-NEXT:  // %bb.5: // %pred.store.if5
-; CHECK-NEXT:    // in Loop: Header=BB4_2 Depth=1
+; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    b .LBB4_1
-; CHECK-NEXT:  .LBB4_6: // %for.cond.cleanup
+; CHECK-NEXT:    b .LBB5_1
+; CHECK-NEXT:  .LBB5_6: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -146,9 +163,9 @@ define i1 @extract_icmp_v4i32_splat_rhs_mul_use(<4 x i32> %a, ptr %p) {
 ; CHECK-LABEL: extract_icmp_v4i32_splat_rhs_mul_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #235
-; CHECK-NEXT:    adrp x9, .LCPI6_0
+; CHECK-NEXT:    adrp x9, .LCPI7_0
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI6_0]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    xtn v1.4h, v0.4s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
@@ -184,3 +201,4 @@ define i1 @extract_icmp_v4i32_splat_rhs_unknown_idx(<4 x i32> %a, i32 %c) {
   %ext = extractelement <4 x i1> %icmp, i32 %c
   ret i1 %ext
 }
+

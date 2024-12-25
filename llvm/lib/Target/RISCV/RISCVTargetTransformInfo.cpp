@@ -1980,6 +1980,34 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
 
+  // When the vector needs to split into multiple register groups and the index
+  // exceeds single vector register group, we need to insert/extract the element
+  // via stack.
+  if (LT.first > 1 &&
+      ((Index == -1U) || (Index >= LT.second.getVectorMinNumElements() &&
+                          LT.second.isScalableVector()))) {
+    Type *ScalarType = Val->getScalarType();
+    Align VecAlign = DL.getPrefTypeAlign(Val);
+    Align SclAlign = DL.getPrefTypeAlign(ScalarType);
+    // Extra addi for unknown index.
+    InstructionCost IdxCost = Index == -1U ? 1 : 0;
+
+    // Store all split vectors into stack and load the target element.
+    if (Opcode == Instruction::ExtractElement)
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+             getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
+                             CostKind) +
+             IdxCost;
+
+    // Store all split vectors into stack and store the target element and load
+    // vectors back.
+    return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Load, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
+                           CostKind) +
+           IdxCost;
+  }
+
   // Extract i64 in the target that has XLEN=32 need more instruction.
   if (Val->getScalarType()->isIntegerTy() &&
       ST->getXLen() < Val->getScalarSizeInBits()) {
@@ -2253,7 +2281,6 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Runtime = true;
   UP.UnrollRemainder = true;
   UP.UnrollAndJam = true;
-  UP.UnrollAndJamInnerLoopThreshold = 60;
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
@@ -2419,6 +2446,8 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   switch (II->getIntrinsicID()) {
   case Intrinsic::fma:
   case Intrinsic::vp_fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::vp_fmuladd:
     return Operand == 0 || Operand == 1;
   case Intrinsic::vp_shl:
   case Intrinsic::vp_lshr:

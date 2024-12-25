@@ -13,7 +13,7 @@ subroutine sb1(a, x, y, z)
   integer :: a
   integer :: x(:)
   integer :: y(:)
-  integer :: z(:)
+  integer, allocatable :: z(:)
   !$omp parallel workshare
   z = a * x + y
   !$omp end parallel workshare
@@ -43,7 +43,7 @@ end subroutine
 
 ! FIR:  func.func @_QPsb1
 ! FIR:    omp.parallel {
-! FIR:      omp.single copyprivate(%9 -> @_workshare_copy_i32 : !fir.ref<i32>, %10 -> @_workshare_copy_heap_Uxi32 : !fir.ref<!fir.heap<!fir.array<?xi32>>>) {
+! FIR:      omp.single copyprivate(%{{[a-z0-9]+}} -> @_workshare_copy_i32 : !fir.ref<i32>, %{{[a-z0-9]+}} -> @_workshare_copy_heap_Uxi32 : !fir.ref<!fir.heap<!fir.array<?xi32>>>) {
 ! FIR:        fir.allocmem
 ! FIR:      omp.wsloop {
 ! FIR:        omp.loop_nest

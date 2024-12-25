@@ -9657,7 +9657,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportConflictTypeAliasTemplate) {
 AST_MATCHER(ClassTemplateSpecializationDecl, hasInstantiatedFromMember) {
   if (auto Instantiate = Node.getInstantiatedFrom()) {
     if (auto *FromPartialSpecialization =
-            Instantiate.get<ClassTemplatePartialSpecializationDecl *>()) {
+            cast<ClassTemplatePartialSpecializationDecl *>(Instantiate)) {
       return nullptr != FromPartialSpecialization->getInstantiatedFromMember();
     }
   }

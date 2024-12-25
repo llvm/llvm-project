@@ -15,18 +15,8 @@
 
 #include "Loader.h"
 
-#if defined(__has_include)
-#if __has_include("hsa/hsa.h")
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
-#elif __has_include("hsa.h")
-#include "hsa.h"
-#include "hsa_ext_amd.h"
-#endif
-#else
-#include "hsa/hsa.h"
-#include "hsa/hsa_ext_amd.h"
-#endif
 
 #include "llvm/Frontend/Offloading/Utility.h"
 
