@@ -131,6 +131,8 @@ Changes to the AArch64 Backend
 * Assembler/disassembler support has been added for Armv9.6-A (2024)
   architecture extensions.
 
+* Added support for the FUJITSU-MONAKA CPU.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
