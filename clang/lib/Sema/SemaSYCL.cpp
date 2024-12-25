@@ -339,7 +339,7 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
          diag::err_sycl_entry_point_deduced_return_type);
     SKEPAttr->setInvalidAttr();
   } else if (!FD->getReturnType()->isDependentType() &&
-      !FD->getReturnType()->isVoidType()) {
+             !FD->getReturnType()->isVoidType()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_return_type);
     SKEPAttr->setInvalidAttr();
   }
