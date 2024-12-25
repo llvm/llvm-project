@@ -17,28 +17,37 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_iterators.h"
+#include "type_algorithms.h"
 
-#if TEST_STD_VER > 17
-constexpr bool test_swap_constexpr()
-{
+template <class Iter1>
+struct Test {
+  template <class Iter2>
+  TEST_CONSTEXPR_CXX20 void operator()() {
     int i = 1;
     int j = 2;
-    std::iter_swap(&i, &j);
-    return i == 2 && j == 1;
+    std::iter_swap(Iter1(&i), Iter2(&j));
+    assert(i == 2 && j == 1);
+  }
+};
+
+struct TestIterators {
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    types::for_each(types::forward_iterator_list<int*>(), Test<Iter>());
+  }
+};
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::forward_iterator_list<int*>(), TestIterators());
+  return true;
 }
-#endif // TEST_STD_VER > 17
 
-int main(int, char**)
-{
-    int i = 1;
-    int j = 2;
-    std::iter_swap(&i, &j);
-    assert(i == 2);
-    assert(j == 1);
-
-#if TEST_STD_VER > 17
-    static_assert(test_swap_constexpr());
-#endif // TEST_STD_VER > 17
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
 
   return 0;
 }
