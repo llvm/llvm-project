@@ -13,6 +13,7 @@
     ret void
   }
 
+  attributes #0 = { minsize }
 ...
 ---
 name:            foo
