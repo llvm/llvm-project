@@ -1598,6 +1598,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &NonWholeStaticRuntimes,
                          SmallVectorImpl<StringRef> &HelperStaticRuntimes,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
+  assert(!TC.getTriple().isOSDarwin() && "it's not used by Darwin");
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
@@ -1718,7 +1719,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("cfi_diag");
   }
   if (SanArgs.linkCXXRuntimes() && !SanArgs.requiresMinimalRuntime() &&
-      ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) ||
+      ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanCXXRt()) ||
        SanArgs.needsCfiDiagRt())) {
     StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
