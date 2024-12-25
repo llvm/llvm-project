@@ -1531,7 +1531,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   // Check if the environment version is valid except wasm case.
   llvm::Triple Triple = TC.getTriple();
-  if (!Triple.isWasm()) {
+  if (!Triple.isWasm() && Triple.getEnvironment() != llvm::Triple::LLVM) {
     StringRef TripleVersionName = Triple.getEnvironmentVersionString();
     StringRef TripleObjectFormat =
         Triple.getObjectFormatTypeName(Triple.getObjectFormat());

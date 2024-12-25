@@ -29,3 +29,13 @@
 // RUN:   FileCheck --check-prefix=CHECK-WASM1 %s
 
 // CHECK-WASM1: "-triple" "wasm32-unknown-wasi-pthread"
+
+// RUN: %clang --target=aarch64-unknown-linux-llvm -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-AARCH64-LLVM %s
+
+// CHECK-AARCH64-LLVM: "-triple" "aarch64-unknown-linux-llvm"
+
+// RUN: %clang --target=x86_64-unknown-linux-llvm -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-X86-64-LLVM %s
+
+// CHECK-X86-64-LLVM: "-triple" "x86_64-unknown-linux-llvm"
