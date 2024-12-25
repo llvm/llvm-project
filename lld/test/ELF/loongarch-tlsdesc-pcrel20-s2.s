@@ -14,14 +14,15 @@
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o rel.64.so -z rel
 # RUN: llvm-readobj -r -x .got rel.64.so | FileCheck --check-prefix=GD64-REL %s
 
-## FIXME: The transition frome TLSDESC to IE/LE has not yet been implemented.
-## Keep the dynamic relocations and hand them over to dynamic linker.
+## Transition from TLSDESC to IE/LE.
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.o -o a.64.le
-# RUN: llvm-readobj -r -x .got a.64.le | FileCheck --check-prefix=LE64-RELA %s
+# RUN: llvm-readelf -r a.64.le | FileCheck --check-prefix=NOREL %s
+# RUN: llvm-objdump --no-show-raw-insn -h -d a.64.le | FileCheck %s --check-prefix=LE64
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.so -o a.64.ie
 # RUN: llvm-readobj -r -x .got a.64.ie | FileCheck --check-prefix=IE64-RELA %s
+# RUN: llvm-objdump --no-show-raw-insn -h -d a.64.ie | FileCheck %s --check-prefix=IE64
 
 ## 32-bit code is mostly the same. We only test a few variants.
 
@@ -78,29 +79,59 @@
 # GD64-NEXT:          jirl $ra, $ra, 0
 # GD64-NEXT:          add.d $a4, $a0, $tp
 
-# LE64-RELA:      .rela.dyn {
-# LE64-RELA-NEXT:   0x30268 R_LARCH_TLS_DESC64 - 0x8
-# LE64-RELA-NEXT:   0x30278 R_LARCH_TLS_DESC64 - 0x800
-# LE64-RELA-NEXT:   0x30288 R_LARCH_TLS_DESC64 - 0x1000
-# LE64-RELA-NEXT:   0x30298 R_LARCH_TLS_DESC64 - 0x7FF
-# LE64-RELA-NEXT: }
-# LE64-RELA:      Hex dump of section '.got':
-# LE64-RELA-NEXT: 0x00030268 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030278 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030288 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030298 00000000 00000000 00000000 00000000 .
+# NOREL: no relocations
+
+# LE64-LABEL: <.text>:
+## st_value(a) = 8
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 8
+# LE64-NEXT:         add.d   $a1, $a0, $tp
+## st_value(b) = 2047
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 2047
+# LE64-NEXT:         add.d   $a2, $a0, $tp
+## st_value(c) = 2048
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 2048
+# LE64-NEXT:         add.d   $a3, $a0, $tp
+## st_value(d) = 4096
+# LE64-NEXT:         nop
+# LE64-NEXT:         lu12i.w $a0, 1
+# LE64-NEXT:         ori     $a0, $a0, 0
+# LE64-NEXT:         add.d   $a4, $a0, $tp
 
 # IE64-RELA:      .rela.dyn {
-# IE64-RELA-NEXT:   0x30418 R_LARCH_TLS_DESC64 - 0x8
-# IE64-RELA-NEXT:   0x30448 R_LARCH_TLS_DESC64 - 0x7FF
-# IE64-RELA-NEXT:   0x30428 R_LARCH_TLS_DESC64 c 0x0
-# IE64-RELA-NEXT:   0x30438 R_LARCH_TLS_DESC64 d 0x0
+# IE64-RELA-NEXT:   0x303E8 R_LARCH_TLS_TPREL64 c 0x0
+# IE64-RELA-NEXT:   0x303F0 R_LARCH_TLS_TPREL64 d 0x0
 # IE64-RELA-NEXT: }
 # IE64-RELA:      Hex dump of section '.got':
-# IE64-RELA-NEXT: 0x00030418 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030428 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030438 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030448 00000000 00000000 00000000 00000000 .
+# IE64-RELA-NEXT: 0x000303e8 00000000 00000000 00000000 00000000 .
+
+# IE64:       .got     00000010 00000000000303e8
+
+## a and b are optimized to use LE. c and d are optimized to IE.
+# IE64-LABEL: <.text>:
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         ori     $a0, $zero, 8
+# IE64-NEXT:         add.d   $a1, $a0, $tp
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         ori     $a0, $zero, 2047
+# IE64-NEXT:         add.d   $a2, $a0, $tp
+## &.got[c]-. = 0x303e8 - 0x202ec: 0x10 pages, page offset 0x3e8
+# IE64-NEXT:         nop
+# IE64-NEXT:  202ec: pcalau12i $a0, 16
+# IE64-NEXT:         ld.d      $a0, $a0, 1000
+# IE64-NEXT:         add.d   $a3, $a0, $tp
+## &.got[d]-. = 0x303e8+8 - 0x202fc: 0x10 pages, page offset 0x3f0
+# IE64-NEXT:         nop
+# IE64-NEXT:  202fc: pcalau12i $a0, 16
+# IE64-NEXT:         ld.d      $a0, $a0, 1008
+# IE64-NEXT:         add.d   $a4, $a0, $tp
 
 # GD32-REL:      .rel.dyn {
 # GD32-REL-NEXT:    0x202A4 R_LARCH_TLS_DESC32 -

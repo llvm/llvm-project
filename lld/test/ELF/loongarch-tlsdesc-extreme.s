@@ -11,14 +11,15 @@
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o rel.64.so -z rel
 # RUN: llvm-readobj -r -x .got rel.64.so | FileCheck --check-prefix=GD64-REL %s
 
-## FIXME: The transition frome TLSDESC to IE/LE has not yet been implemented.
-## Keep the dynamic relocations and hand them over to dynamic linker.
+## Transition from TLSDESC to IE/LE.
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.o -o a.64.le
-# RUN: llvm-readobj -r -x .got a.64.le | FileCheck --check-prefix=LE64-RELA %s
+# RUN: llvm-readelf -r a.64.le | FileCheck --check-prefix=NOREL %s
+# RUN: llvm-objdump --no-show-raw-insn -h -d a.64.le | FileCheck %s --check-prefix=LE64
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.so -o a.64.ie
 # RUN: llvm-readobj -r -x .got a.64.ie | FileCheck --check-prefix=IE64-RELA %s
+# RUN: llvm-objdump --no-show-raw-insn -h -d a.64.ie | FileCheck %s --check-prefix=IE64
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x20568 R_LARCH_TLS_DESC64 - 0x1000
@@ -114,37 +115,132 @@
 # GD64-NEXT:          jirl $ra, $ra, 0
 # GD64-NEXT:          add.d $a6, $a0, $tp
 
-# LE64-RELA:      .rela.dyn {
-# LE64-RELA-NEXT:   0x30318 R_LARCH_TLS_DESC64 - 0x8
-# LE64-RELA-NEXT:   0x30328 R_LARCH_TLS_DESC64 - 0x7FFFFFFF
-# LE64-RELA-NEXT:   0x30338 R_LARCH_TLS_DESC64 - 0x80000000
-# LE64-RELA-NEXT:   0x30348 R_LARCH_TLS_DESC64 - 0x100000000
-# LE64-RELA-NEXT:   0x30358 R_LARCH_TLS_DESC64 - 0x10000000000000
-# LE64-RELA-NEXT:   0x30368 R_LARCH_TLS_DESC64 - 0x1000
-# LE64-RELA-NEXT: }
-# LE64-RELA:      Hex dump of section '.got':
-# LE64-RELA-NEXT: 0x00030318 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030328 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030338 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030348 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030358 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030368 00000000 00000000 00000000 00000000 .
+# NOREL: no relocations
+
+# LE64-LABEL: <.text>:
+## st_value(a) = 8
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 8
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         add.d   $a1, $a0, $tp
+## st_value(b) = 0x1000
+# LE64-NEXT:         lu12i.w $a0, 1
+# LE64-NEXT:         ori     $a0, $a0, 0
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         add.d   $a2, $a0, $tp
+## st_value(c) = 0x7fffffff
+# LE64-NEXT:         lu12i.w $a0, 524287
+# LE64-NEXT:         ori	   $a0, $a0, 4095
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         add.d   $a3, $a0, $tp
+## st_value(d) = 0x8000,0000
+# LE64-NEXT:         lu12i.w $a0, -524288
+# LE64-NEXT:         ori	   $a0, $a0, 0
+# LE64-NEXT:         lu32i.d $a0, 1
+# LE64-NEXT:         lu52i.d $a0, $a0, 1
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         add.d   $a4, $a0, $tp
+## st_value(e) = 0x1,0000,0000
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori	   $a0, $zero, 0
+# LE64-NEXT:         lu32i.d $a0, 1
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         add.d   $a5, $a0, $tp
+## st_value(f) = 0x10,0000,0000,0000
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 0
+# LE64-NEXT:         nop
+# LE64-NEXT:         lu52i.d $a0, $a0, 1
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         add.d   $a6, $a0, $tp
 
 # IE64-RELA:      .rela.dyn {
-# IE64-RELA-NEXT:   0x30508 R_LARCH_TLS_DESC64 - 0x8
-# IE64-RELA-NEXT:   0x30558 R_LARCH_TLS_DESC64 - 0x1000
-# IE64-RELA-NEXT:   0x30518 R_LARCH_TLS_DESC64 c 0x0
-# IE64-RELA-NEXT:   0x30528 R_LARCH_TLS_DESC64 d 0x0
-# IE64-RELA-NEXT:   0x30538 R_LARCH_TLS_DESC64 e 0x0
-# IE64-RELA-NEXT:   0x30548 R_LARCH_TLS_DESC64 f 0x0
+# IE64-RELA-NEXT:   0x304D8 R_LARCH_TLS_TPREL64 c 0x0
+# IE64-RELA-NEXT:   0x304E0 R_LARCH_TLS_TPREL64 d 0x0
+# IE64-RELA-NEXT:   0x304E8 R_LARCH_TLS_TPREL64 e 0x0
+# IE64-RELA-NEXT:   0x304F0 R_LARCH_TLS_TPREL64 f 0x0
 # IE64-RELA-NEXT: }
 # IE64-RELA:      Hex dump of section '.got':
-# IE64-RELA-NEXT: 0x00030508 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030518 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030528 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030538 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030548 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030558 00000000 00000000 00000000 00000000 .
+# IE64-RELA-NEXT: 0x000304d8 00000000 00000000 00000000 00000000 .
+# IE64-RELA-NEXT: 0x000304e8 00000000 00000000 00000000 00000000 .
+
+# IE64:       .got     00000020 00000000000304d8
+
+## a and b are optimized to use LE. c, d, e and f are optimized to IE.
+# IE64-LABEL: <.text>:
+## st_value(a) = 8
+# IE64-NEXT:         nop
+# IE64-NEXT:         ori     $a0, $zero, 8
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         add.d   $a1, $a0, $tp
+## st_value(b) = 0x1000
+# IE64-NEXT:         lu12i.w $a0, 1
+# IE64-NEXT:         ori     $a0, $a0, 0
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         add.d   $a2, $a0, $tp
+## &.got[c]-. = 0x304d8 - 0x20378: 0x10 pages, page offset 0x4d8
+# IE64-NEXT:  20378: pcalau12i $a0, 16
+# IE64-NEXT:         addi.d    $t0, $zero, 1240
+# IE64-NEXT:         lu32i.d	 $t0, 0
+# IE64-NEXT:         lu52i.d	 $t0, $t0, 0
+# IE64-NEXT:         ldx.d     $a0, $a0, $t0
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         add.d   $a3, $a0, $tp
+## &.got[d]-. = 0x304d8+8 - 0x20398: 0x10 pages, page offset 0x4e0
+# IE64-NEXT:  20398: pcalau12i $a0, 16
+# IE64-NEXT:         addi.d    $t0, $zero, 1248
+# IE64-NEXT:         lu32i.d	 $t0, 0
+# IE64-NEXT:         lu52i.d	 $t0, $t0, 0
+# IE64-NEXT:         ldx.d     $a0, $a0, $t0
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         add.d   $a4, $a0, $tp
+## &.got[e]-. = 0x304d8+16 - 0x203b8: 0x10 pages, page offset 0x4e8
+# IE64-NEXT:  203b8: pcalau12i $a0, 16
+# IE64-NEXT:         addi.d    $t0, $zero, 1256
+# IE64-NEXT:         lu32i.d	 $t0, 0
+# IE64-NEXT:         lu52i.d	 $t0, $t0, 0
+# IE64-NEXT:         ldx.d     $a0, $a0, $t0
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         add.d   $a5, $a0, $tp
+## &.got[f]-. = 0x304d8+32 - 0x203e8: 0x10 pages, page offset 0x4f0
+# IE64-NEXT:  203d8: pcalau12i $a0, 16
+# IE64-NEXT:         addi.d    $t0, $zero, 1264
+# IE64-NEXT:         lu32i.d	 $t0, 0
+# IE64-NEXT:         lu52i.d	 $t0, $t0, 0
+# IE64-NEXT:         ldx.d     $a0, $a0, $t0
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         add.d   $a6, $a0, $tp
 
 #--- a.s
 la.tls.desc $a0, $t0, a
