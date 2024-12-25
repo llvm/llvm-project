@@ -512,7 +512,7 @@ function(add_mlir_python_common_capi_library name)
   )
   add_dependencies(${name} ${_header_sources_target})
 
-  if(MSVC)
+  if(WIN32)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
   set_target_properties(${name} PROPERTIES
@@ -649,6 +649,15 @@ function(add_mlir_python_extension libname extname)
     message(FATAL_ERROR "Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
 
+  # The extension itself must be compiled with RTTI and exceptions enabled.
+  # Also, some warning classes triggered by pybind11 are disabled.
+  set(eh_rtti_enable)
+  if (MSVC)
+    set(eh_rtti_enable /EHsc /GR)
+  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
+    set(eh_rtti_enable -frtti -fexceptions)
+  endif ()
+
   # The actual extension library produces a shared-object or DLL and has
   # sources that must be compiled in accordance with pybind11 needs (RTTI and
   # exceptions).
@@ -671,18 +680,11 @@ function(add_mlir_python_extension libname extname)
           -Wno-nested-anon-types
           -Wno-c++98-compat-extra-semi
           -Wno-covered-switch-default
+          ${eh_rtti_enable}
       )
     endif()
   endif()
 
-  # The extension itself must be compiled with RTTI and exceptions enabled.
-  # Also, some warning classes triggered by pybind11 are disabled.
-  set(eh_rtti_enable)
-  if (MSVC)
-    set(eh_rtti_enable /EHsc /GR)
-  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    set(eh_rtti_enable -frtti -fexceptions)
-  endif ()
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
   # Configure the output to match python expectations.
