@@ -1204,6 +1204,11 @@ public:
   /// Get instruction size specified via annotation.
   std::optional<uint32_t> getSize(const MCInst &Inst) const;
 
+  /// Get target-specific instruction size.
+  virtual std::optional<uint32_t> getInstructionSize(const MCInst &Inst) const {
+    return std::nullopt;
+  }
+
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
