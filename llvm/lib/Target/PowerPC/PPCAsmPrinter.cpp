@@ -2230,10 +2230,6 @@ void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
 
 void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
                                    MCSymbol *GVSym) const {
-
-  assert(MAI->hasVisibilityOnlyWithLinkage() &&
-         "AIX's linkage directives take a visibility setting.");
-
   MCSymbolAttr LinkageAttr = MCSA_Invalid;
   switch (GV->getLinkage()) {
   case GlobalValue::ExternalLinkage:
@@ -3251,7 +3247,7 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
   // Do streamer related finalization for DWARF.
-  if (!MAI->usesDwarfFileAndLocDirectives() && hasDebugInfo())
+  if (hasDebugInfo())
     OutStreamer->doFinalizationAtSectionEnd(
         OutStreamer->getContext().getObjectFileInfo()->getTextSection());
 
