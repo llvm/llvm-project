@@ -41,10 +41,10 @@ typedef struct {
   int64_t *tzh_timecnt_transitions;
   int64_t *tzh_timecnt_indices;
   size_t tzh_timecnt_number_transitions;
-  unsigned char *tz;
+  int64_t *tz;
 } tzset;
 
-tzset *get_tzset(int fd);
+tzset *get_tzset(int fd, size_t filesize);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL

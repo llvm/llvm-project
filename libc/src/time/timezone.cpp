@@ -17,11 +17,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-tzset *get_tzset(int fd) {
+tzset *get_tzset(int fd, size_t filesize) {
   ttinfo ttinfo;
   static tzset result;
-
-  unsigned char hdr[TIMEZONE_HDR_SIZE * 10];
 
   int64_t magic;
   unsigned char version;
@@ -33,20 +31,34 @@ tzset *get_tzset(int fd) {
   uint32_t tzh_typecnt;
   uint32_t tzh_charcnt;
 
-  size_t bytes;
+  size_t i;
+  __uint128_t tmp;
 
-  bytes = read(fd, hdr, sizeof(hdr));
-  // TODO: Remove the number of bytes to check
-  if (bytes != 379) {
+  unsigned char hdr[filesize];
+
+  size_t t = 0;
+  while (t < sizeof(hdr)) {
+      size_t r = read(fd, hdr + t, sizeof(hdr) - t);
+
+      if (r < 0) {
+          close(fd);
+          return nullptr;
+      }
+
+      if (r == 0) {
+          break;
+      }
+
+      t += r;
+  }
+
+  if (t != sizeof(hdr)) {
     close(fd);
     return nullptr;
   }
 
-  size_t i;
-  __uint128_t tmp;
-
-  // these locations in timezone files are defined in documentation
-  // for `tzfile`
+  // these locations are defined in documentation
+  // for `tzfile` and should be 44 bytes
   magic = (hdr[0] << 24) | (hdr[1] << 16) | (hdr[2] << 8) | hdr[3];
   version = hdr[4];
   for (i = 5; i < 21; i++) {
@@ -111,7 +123,7 @@ tzset *get_tzset(int fd) {
   end = (TIMEZONE_HDR_SIZE + product + (tzh_timecnt * 8));
   chunk = (end - start) / 8;
 
-  int64_t tzh_timecnt_transitions[chunk + 1];
+  int64_t tzh_timecnt_transitions[chunk];
   int64_t *ptr_tzh_timecnt_transitions;
 
   ptr_tzh_timecnt_transitions = tzh_timecnt_transitions;
@@ -144,12 +156,13 @@ tzset *get_tzset(int fd) {
   }
   result.tzh_timecnt_indices = ptr_tzh_timecnt_indices;
 
-  unsigned char tz[tzh_charcnt_end - tzh_leapcnt_end];
-  unsigned char *ptr_tz;
+  int64_t tz[tzh_charcnt_end - tzh_leapcnt_end - 1];
+  int64_t *ptr_tz;
 
   ptr_tz = tz;
+  result.tz = ptr_tz;
   j = 0;
-  for (i = tzh_leapcnt_end; i < (size_t)tzh_charcnt_end + 1; ++i) {
+  for (i = tzh_leapcnt_end; i < (size_t)tzh_charcnt_end - 1; ++i) {
     if (i == (size_t)tzh_charcnt_end - 1) {
       tz[j] = '\0';
       break;
@@ -165,15 +178,14 @@ tzset *get_tzset(int fd) {
 
     j += 1;
   }
-  result.tz = ptr_tz;
 
-  int64_t offsets[6];
+  int64_t offsets[8];
   int64_t *ptr_offsets;
   size_t index;
 
-  static int64_t tt_utoff[6];
-  static uint8_t tt_isdst[6];
-  static uint8_t tt_desigidx[6];
+  static int64_t tt_utoff[2];
+  static uint8_t tt_isdst[1];
+  static uint8_t tt_desigidx[1];
 
   int64_t *ptr_tt_utoff;
   uint8_t *ptr_tt_isdst;
