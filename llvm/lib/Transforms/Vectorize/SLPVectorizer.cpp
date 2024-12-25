@@ -821,16 +821,17 @@ public:
 
   /// The main/alternate opcodes for the list of instructions.
   unsigned getOpcode() const {
-    assert(MainOp && "InstructionsState is invalid.");
-    return MainOp->getOpcode();
+    assert(valid() && "InstructionsState is invalid.");
+    return getMainOp()->getOpcode();
   }
 
   unsigned getAltOpcode() const {
-    return AltOp ? AltOp->getOpcode() : 0;
+    assert(valid() && "InstructionsState is invalid.");
+    return getAltOp()->getOpcode();
   }
 
   /// Some of the instructions in the list have alternate opcodes.
-  bool isAltShuffle() const { return AltOp != MainOp; }
+  bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
   bool isOpcodeOrAlt(Instruction *I) const {
     unsigned CheckedOpcode = I->getOpcode();
@@ -838,7 +839,7 @@ public:
   }
 
   /// Checks if the current state is valid, i.e. has non-null MainOp
-  bool valid() const { return MainOp; }
+  bool valid() const { return getMainOp() && getAltOp(); }
 
   explicit operator bool() const { return valid(); }
 
@@ -8146,14 +8147,14 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Don't handle scalable vectors
-  if (auto *EE = dyn_cast_if_present<ExtractElementInst>(S.getMainOp()))
-    if (isa<ScalableVectorType>(EE->getVectorOperandType())) {
-      LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
-      if (TryToFindDuplicates(S))
-        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
-                     ReuseShuffleIndices);
-      return;
-    }
+  if (auto *EE = dyn_cast_if_present<ExtractElementInst>(S.getMainOp());
+      EE && isa<ScalableVectorType>(EE->getVectorOperandType())) {
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
+    if (TryToFindDuplicates(S))
+      newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
+                   ReuseShuffleIndices);
+    return;
+  }
 
   // Don't handle vectors.
   if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
@@ -15061,7 +15062,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   auto *VecTy = getWidenedType(ScalarTy, E->Scalars.size());
   if (E->isGather()) {
     // Set insert point for non-reduction initial nodes.
-    if (E->getMainOp() != nullptr && E->Idx == 0 && !UserIgnoreList)
+    if (E->getMainOp() && E->Idx == 0 && !UserIgnoreList)
       setInsertPointAfterBundle(E);
     Value *Vec = createBuildVector(E, ScalarTy, PostponedPHIs);
     E->VectorizedValue = Vec;
