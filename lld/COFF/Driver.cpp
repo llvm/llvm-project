@@ -175,6 +175,15 @@ llvm::Triple::ArchType LinkerDriver::getArch() {
   return getMachineArchType(ctx.config.machine);
 }
 
+std::vector<Chunk *> LinkerDriver::getChunks() const {
+  std::vector<Chunk *> res;
+  for (ObjFile *file : ctx.objFileInstances) {
+    ArrayRef<Chunk *> v = file->getChunks();
+    res.insert(res.end(), v.begin(), v.end());
+  }
+  return res;
+}
+
 static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
     return true;
@@ -1092,7 +1101,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
 
   // Get a list of all comdat sections for error checking.
   DenseSet<StringRef> set;
-  for (Chunk *c : ctx.symtab.getChunks())
+  for (Chunk *c : ctx.driver.getChunks())
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
         set.insert(sec->sym->getName());
