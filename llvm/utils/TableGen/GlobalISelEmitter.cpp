@@ -992,27 +992,24 @@ Error GlobalISelEmitter::importChildMatcher(
 
   // Check MBB's before the type check since they are not a known type.
   if (!SrcChild.isLeaf()) {
-    if (SrcChild.getOperator()->isSubClassOf("SDNode")) {
-      auto &ChildSDNI = CGP.getSDNodeInfo(SrcChild.getOperator());
-      if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
-        OM.addPredicate<MBBOperandMatcher>();
-        return Error::success();
-      }
-      if (SrcChild.getOperator()->getName() == "timm") {
-        OM.addPredicate<ImmOperandMatcher>();
+    if (SrcChild.getOperator()->getName() == "bb") {
+      OM.addPredicate<MBBOperandMatcher>();
+      return Error::success();
+    }
+    if (SrcChild.getOperator()->getName() == "timm") {
+      OM.addPredicate<ImmOperandMatcher>();
 
-        // Add predicates, if any
-        for (const TreePredicateCall &Call : SrcChild.getPredicateCalls()) {
-          const TreePredicateFn &Predicate = Call.Fn;
+      // Add predicates, if any
+      for (const TreePredicateCall &Call : SrcChild.getPredicateCalls()) {
+        const TreePredicateFn &Predicate = Call.Fn;
 
-          // Only handle immediate patterns for now
-          if (Predicate.isImmediatePattern()) {
-            OM.addPredicate<OperandImmPredicateMatcher>(Predicate);
-          }
+        // Only handle immediate patterns for now
+        if (Predicate.isImmediatePattern()) {
+          OM.addPredicate<OperandImmPredicateMatcher>(Predicate);
         }
-
-        return Error::success();
       }
+
+      return Error::success();
     }
   } else if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild.getLeafValue())) {
     auto *ChildRec = ChildDefInit->getDef();
@@ -1228,12 +1225,9 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
 
     // We accept 'bb' here. It's an operator because BasicBlockSDNode isn't
     // inline, but in MI it's just another operand.
-    if (Dst.getOperator()->isSubClassOf("SDNode")) {
-      auto &ChildSDNI = CGP.getSDNodeInfo(Dst.getOperator());
-      if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
-        DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
-        return InsertPt;
-      }
+    if (Dst.getOperator()->getName() == "bb") {
+      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
+      return InsertPt;
     }
 
     // Similarly, imm is an operator in TreePatternNode's view but must be
