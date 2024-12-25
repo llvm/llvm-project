@@ -98,6 +98,9 @@ protected:
   /// part of .global, .weak, .extern, and .comm. Default is false.
   bool HasVisibilityOnlyWithLinkage = false;
 
+  // True if using the HLASM dialect on z/OS.
+  bool IsHLASM = false;
+
   /// This is the maximum possible length of an instruction, which is needed to
   /// compute the size of an inline asm.  Defaults to 4.
   unsigned MaxInstLength = 4;
@@ -110,14 +113,6 @@ protected:
   /// the current PC.  Defaults to false.
   bool DollarIsPC = false;
 
-  /// Allow '.' token, when not referencing an identifier or constant, to refer
-  /// to the current PC. Defaults to true.
-  bool DotIsPC = true;
-
-  /// Whether the '*' token refers to the current PC. This is used for the
-  /// HLASM dialect.
-  bool StarIsPC = false;
-
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
   const char *SeparatorString;
@@ -125,10 +120,6 @@ protected:
   /// This indicates the comment string used by the assembler.  Defaults to
   /// "#"
   StringRef CommentString;
-
-  /// This indicates whether the comment string is only accepted as a comment
-  /// at the beginning of statements. Defaults to false.
-  bool RestrictCommentStringToStartOfStatement = false;
 
   /// This indicates whether to allow additional "comment strings" to be lexed
   /// as a comment. Setting this attribute to true, will ensure that C-style
@@ -138,15 +129,8 @@ protected:
   /// Default is true.
   bool AllowAdditionalComments = true;
 
-  /// Should we emit the '\t' as the starting indentation marker for GNU inline
-  /// asm statements. Defaults to true.
-  bool EmitGNUAsmStartIndentationMarker = true;
-
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
-
-  /// Emit labels in purely upper case. Defaults to false.
-  bool EmitLabelsInUpperCase = false;
 
   // Print the EH begin symbol with an assignment. Defaults to false.
   bool UseAssignmentForEHBegin = false;
@@ -208,13 +192,6 @@ protected:
   /// comment, setting this option will have no effect, and the string will
   /// still be lexed as a comment.
   bool AllowAtAtStartOfIdentifier = false;
-
-  /// This is true if the assembler allows the "#" character at the start of
-  /// a string to be lexed as an AsmToken::Identifier.
-  /// If the AsmLexer determines that the string can be lexed as a possible
-  /// comment, setting this option will have no effect, and the string will
-  /// still be lexed as a comment.
-  bool AllowHashAtStartOfIdentifier = false;
 
   /// If this is true, symbol names with invalid characters will be printed in
   /// quotes.
@@ -590,6 +567,7 @@ public:
 
   // Accessors.
 
+  bool isHLASM() const { return IsHLASM; }
   bool isMachO() const { return HasSubsectionsViaSymbols; }
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
@@ -605,23 +583,14 @@ public:
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
-  bool getDotIsPC() const { return DotIsPC; }
-  bool getStarIsPC() const { return StarIsPC; }
   const char *getSeparatorString() const { return SeparatorString; }
 
   unsigned getCommentColumn() const { return CommentColumn; }
   void setCommentColumn(unsigned Col) { CommentColumn = Col; }
 
   StringRef getCommentString() const { return CommentString; }
-  bool getRestrictCommentStringToStartOfStatement() const {
-    return RestrictCommentStringToStartOfStatement;
-  }
   bool shouldAllowAdditionalComments() const { return AllowAdditionalComments; }
-  bool getEmitGNUAsmStartIndentationMarker() const {
-    return EmitGNUAsmStartIndentationMarker;
-  }
   const char *getLabelSuffix() const { return LabelSuffix; }
-  bool shouldEmitLabelsInUpperCase() const { return EmitLabelsInUpperCase; }
 
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
@@ -654,9 +623,6 @@ public:
   }
   bool doesAllowDollarAtStartOfIdentifier() const {
     return AllowDollarAtStartOfIdentifier;
-  }
-  bool doesAllowHashAtStartOfIdentifier() const {
-    return AllowHashAtStartOfIdentifier;
   }
   bool supportsNameQuoting() const { return SupportsQuotedNames; }
 
