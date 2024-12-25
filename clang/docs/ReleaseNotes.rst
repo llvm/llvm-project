@@ -1248,6 +1248,8 @@ Sanitizers
   by the compiler (for example,
   ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
+- ``-fsanitize=vptr`` is not included into ``-fsanitize=undefined``.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
