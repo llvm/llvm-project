@@ -315,6 +315,20 @@ def srl_16 : PatFrag<
   (ops node:$src0), (srl_oneuse node:$src0, (i32 16))
 >;
 
+def clamp_s16_u8 : PatFrag<
+  (ops node:$src),
+  (i16 (AMDGPUsmed3 $src, (i16 0), (i16 255)))
+>;
+
+def conc_lo_u8_i16 : PatFrags<
+    (ops node:$src0, node:$src1),
+    [
+        (or
+            (and (i16 $src0), (i16 255)),
+            (shl (i16 $src1), (i16 8))
+        )
+    ]
+>;
 
 def hi_i16_elt : PatFrag<
   (ops node:$src0), (i16 (trunc (i32 (srl_16 node:$src0))))
