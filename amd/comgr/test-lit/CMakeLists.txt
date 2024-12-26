@@ -1,3 +1,13 @@
+function(cannonicalize_cmake_boolean var)
+    if(${var})
+        set(${var} 1 PARENT_SCOPE)
+    else()
+        set(${var} 0 PARENT_SCOPE)
+    endif()
+endfunction()
+
+cannonicalize_cmake_boolean(COMGR_DISABLE_SPIRV)
+
 configure_file(lit.site.cfg.py.in lit.site.cfg.py @ONLY)
 
 if (NOT DEFINED LLVM_LIT_PATH)

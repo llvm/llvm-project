@@ -1,3 +1,4 @@
+// REQUIRES: comgr-has-spirv
 // COM: Enable this test once changes from amdspirv docker land
 
 // COM: Generate a spirv-targeted LLVM IR file from an OpenCL kernel
