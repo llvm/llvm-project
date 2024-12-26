@@ -224,6 +224,32 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   auto MIBAddCst = B.buildAdd(s64, MIBCst, Copies[0]);
   auto MIBUnmerge = B.buildUnmerge({s32, s32}, B.buildConstant(s64, 42));
 
+  // Match min/max, and make sure they're commutative.
+  auto SMin = B.buildSMin(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(SMin.getReg(0), *MRI,
+                       m_GSMin(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
+  auto SMax = B.buildSMax(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(SMax.getReg(0), *MRI,
+                       m_GSMax(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
+  auto UMin = B.buildUMin(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(UMin.getReg(0), *MRI,
+                       m_GUMin(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
+  auto UMax = B.buildUMax(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(UMax.getReg(0), *MRI,
+                       m_GUMax(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
+
   // m_BinOp with opcode.
   // Match binary instruction, opcode and its non-commutative operands.
   match = mi_match(MIBAddCst, *MRI,
@@ -575,6 +601,11 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   LLT s64 = LLT::scalar(64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   Register Reg = MIBAdd.getReg(0);
+
+  // Extract the type.
+  LLT Ty;
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_GAdd(m_Type(Ty), m_Reg())));
+  EXPECT_EQ(Ty, s64);
 
   // Only one use of Reg.
   B.buildCast(LLT::pointer(0, 32), MIBAdd);
