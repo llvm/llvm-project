@@ -338,7 +338,7 @@ def clamp_v2i16_u8 : PatFrags<
   (ops node:$src),
   [
     (v2i16 (smax (smin $src, (build_vector (i16 255), (i16 255))), (build_vector (i16 0), (i16 0)))),
-    (v2i16 (smin (smax $src, (build_vector (i16 255), (i16 255))), (build_vector (i16 0), (i16 0))))
+    (v2i16 (smin (smax $src, (build_vector (i16 0), (i16 0))), (build_vector (i16 255), (i16 255))))
   ]
 >;
 
