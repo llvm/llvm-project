@@ -576,6 +576,11 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   Register Reg = MIBAdd.getReg(0);
 
+  // Extract the type.
+  LLT Ty;
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_GAdd(m_Type(Ty), m_Reg())));
+  EXPECT_EQ(Ty, s64);
+
   // Only one use of Reg.
   B.buildCast(LLT::pointer(0, 32), MIBAdd);
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
