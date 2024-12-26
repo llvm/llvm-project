@@ -413,10 +413,24 @@ private:
   importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
                              BuildMIAction &DstMIBuilder,
                              const TreePatternNode &Dst) const;
-  Expected<action_iterator>
-  importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
-                            BuildMIAction &DstMIBuilder,
-                            const TreePatternNode &Dst) const;
+
+  Error importNamedNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                                const TreePatternNode &N) const;
+
+  Error importLeafNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                               const TreePatternNode &N) const;
+
+  Error importXFormNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                                const TreePatternNode &N) const;
+
+  Error importInstructionNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                                      const TreePatternNode &N,
+                                      action_iterator &InsertPt) const;
+
+  Error importNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
+                           const TreePatternNode &N,
+                           action_iterator &InsertPt) const;
+
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
                                       const DAGDefaultOperand &DefaultOp) const;
@@ -1190,159 +1204,207 @@ Error GlobalISelEmitter::importChildMatcher(
   return failedImport("Src pattern child is an unsupported kind");
 }
 
-Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
-    action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
-    const TreePatternNode &Dst) const {
+// Equivalent of MatcherGen::EmitResultOfNamedOperand.
+Error GlobalISelEmitter::importNamedNodeRenderer(
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N) const {
+  StringRef NodeName = N.getName();
 
-  const auto &SubOperand = Rule.getComplexSubOperand(Dst.getName());
-  if (SubOperand) {
-    DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
-        *std::get<0>(*SubOperand), Dst.getName(), std::get<1>(*SubOperand),
-        std::get<2>(*SubOperand));
-    return InsertPt;
+  if (auto SubOperand = M.getComplexSubOperand(NodeName)) {
+    auto [ComplexPatternRec, RendererID, SubOperandIdx] = *SubOperand;
+    MIBuilder.addRenderer<RenderComplexPatternOperand>(
+        *ComplexPatternRec, NodeName, RendererID, SubOperandIdx);
+    return Error::success();
   }
 
-  if (!Dst.isLeaf()) {
-    if (Dst.getOperator()->isSubClassOf("SDNodeXForm")) {
-      auto &Child = Dst.getChild(0);
-      auto I = SDNodeXFormEquivs.find(Dst.getOperator());
-      if (I != SDNodeXFormEquivs.end()) {
-        const Record *XFormOpc = Dst.getOperator()->getValueAsDef("Opcode");
-        if (XFormOpc->getName() == "timm") {
-          // If this is a TargetConstant, there won't be a corresponding
-          // instruction to transform. Instead, this will refer directly to an
-          // operand in an instruction's operand list.
-          DstMIBuilder.addRenderer<CustomOperandRenderer>(*I->second,
-                                                          Child.getName());
-        } else {
-          DstMIBuilder.addRenderer<CustomRenderer>(*I->second, Child.getName());
-        }
+  if (!N.isLeaf()) {
+    StringRef OperatorName = N.getOperator()->getName();
 
-        return InsertPt;
-      }
-      return failedImport("SDNodeXForm " + Child.getName() +
-                          " has no custom renderer");
+    if (OperatorName == "imm") {
+      MIBuilder.addRenderer<CopyConstantAsImmRenderer>(NodeName);
+      return Error::success();
     }
 
-    // We accept 'bb' here. It's an operator because BasicBlockSDNode isn't
-    // inline, but in MI it's just another operand.
-    if (Dst.getOperator()->getName() == "bb") {
-      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
-      return InsertPt;
+    if (OperatorName == "fpimm") {
+      MIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(NodeName);
+      return Error::success();
     }
 
-    // Similarly, imm is an operator in TreePatternNode's view but must be
-    // rendered as operands.
-    // FIXME: The target should be able to choose sign-extended when appropriate
-    //        (e.g. on Mips).
-    if (Dst.getOperator()->getName() == "timm") {
-      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
-      return InsertPt;
-    }
-    if (Dst.getOperator()->getName() == "tframeindex") {
-      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
-      return InsertPt;
-    }
-    if (Dst.getOperator()->getName() == "imm") {
-      DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(Dst.getName());
-      return InsertPt;
-    }
-    if (Dst.getOperator()->getName() == "fpimm") {
-      DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(Dst.getName());
-      return InsertPt;
+    // TODO: 'imm' and 'fpimm' are the only nodes that need special treatment.
+    //   Remove this check and add CopyRenderer unconditionally for other nodes.
+    if (OperatorName == "bb" || OperatorName == "timm" ||
+        OperatorName == "tframeindex") {
+      MIBuilder.addRenderer<CopyRenderer>(NodeName);
+      return Error::success();
     }
 
-    if (Dst.getOperator()->isSubClassOf("Instruction")) {
-      auto OpTy = getInstResultType(Dst, Target);
-      if (!OpTy)
-        return OpTy.takeError();
-
-      unsigned TempRegID = Rule.allocateTempRegID();
-      InsertPt =
-          Rule.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
-      DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
-
-      auto InsertPtOrError = createAndImportSubInstructionRenderer(
-          ++InsertPt, Rule, Dst, TempRegID);
-      if (auto Error = InsertPtOrError.takeError())
-        return std::move(Error);
-      return InsertPtOrError.get();
-    }
-
-    return failedImport("Dst pattern child isn't a leaf node or an MBB" +
-                        llvm::to_string(Dst));
+    return failedImport("node has unsupported operator " + to_string(N));
   }
 
-  // It could be a specific immediate in which case we should just check for
-  // that immediate.
-  if (const IntInit *ChildIntInit = dyn_cast<IntInit>(Dst.getLeafValue())) {
-    DstMIBuilder.addRenderer<ImmRenderer>(ChildIntInit->getValue());
-    return InsertPt;
-  }
+  if (const auto *DI = dyn_cast<DefInit>(N.getLeafValue())) {
+    const Record *R = DI->getDef();
 
-  // Otherwise, we're looking for a bog-standard RegisterClass operand.
-  if (auto *ChildDefInit = dyn_cast<DefInit>(Dst.getLeafValue())) {
-    auto *ChildRec = ChildDefInit->getDef();
-
-    ArrayRef<TypeSetByHwMode> ChildTypes = Dst.getExtTypes();
-    if (ChildTypes.size() != 1)
-      return failedImport("Dst pattern child has multiple results");
+    if (N.getNumResults() != 1)
+      return failedImport("node does not have one result " + to_string(N));
 
     std::optional<LLTCodeGen> OpTyOrNone;
+    ArrayRef<TypeSetByHwMode> ChildTypes = N.getExtTypes();
     if (ChildTypes.front().isMachineValueType())
       OpTyOrNone = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
+
+    // TODO: Remove this check. Types in the destination DAG should not matter.
     if (!OpTyOrNone)
-      return failedImport("Dst operand has an unsupported type");
+      return failedImport("node has unsupported type " + to_string(N));
 
-    if (ChildRec->isSubClassOf("Register")) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(Target, ChildRec);
-      return InsertPt;
+    if (R->isSubClassOf("ComplexPattern")) {
+      auto I = ComplexPatternEquivs.find(R);
+      if (I == ComplexPatternEquivs.end())
+        return failedImport("ComplexPattern " + R->getName() +
+                            " does not have GISel equivalent");
+
+      const OperandMatcher &OM = M.getOperandMatcher(NodeName);
+      MIBuilder.addRenderer<RenderComplexPatternOperand>(
+          *I->second, NodeName, OM.getAllocatedTemporariesBaseID());
+      return Error::success();
     }
 
-    if (ChildRec->isSubClassOf("RegisterClass") ||
-        ChildRec->isSubClassOf("RegisterOperand") ||
-        ChildRec->isSubClassOf("ValueType")) {
-      if (ChildRec->isSubClassOf("RegisterOperand") &&
-          !ChildRec->isValueUnset("GIZeroRegister")) {
-        DstMIBuilder.addRenderer<CopyOrAddZeroRegRenderer>(
-            Dst.getName(), ChildRec->getValueAsDef("GIZeroRegister"));
-        return InsertPt;
-      }
-
-      DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
-      return InsertPt;
+    if (R->isSubClassOf("RegisterOperand") &&
+        !R->isValueUnset("GIZeroRegister")) {
+      MIBuilder.addRenderer<CopyOrAddZeroRegRenderer>(
+          NodeName, R->getValueAsDef("GIZeroRegister"));
+      return Error::success();
     }
 
-    if (ChildRec->isSubClassOf("SubRegIndex")) {
-      CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(ChildRec);
-      DstMIBuilder.addRenderer<ImmRenderer>(SubIdx->EnumValue);
-      return InsertPt;
+    // TODO: All special cases are handled above. Remove this check and add
+    //   CopyRenderer unconditionally.
+    if (R->isSubClassOf("RegisterClass") ||
+        R->isSubClassOf("RegisterOperand") || R->isSubClassOf("ValueType")) {
+      MIBuilder.addRenderer<CopyRenderer>(NodeName);
+      return Error::success();
     }
-
-    if (ChildRec->isSubClassOf("ComplexPattern")) {
-      const auto &ComplexPattern = ComplexPatternEquivs.find(ChildRec);
-      if (ComplexPattern == ComplexPatternEquivs.end())
-        return failedImport(
-            "SelectionDAG ComplexPattern not mapped to GlobalISel");
-
-      const OperandMatcher &OM = Rule.getOperandMatcher(Dst.getName());
-      DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
-          *ComplexPattern->second, Dst.getName(),
-          OM.getAllocatedTemporariesBaseID());
-      return InsertPt;
-    }
-
-    return failedImport(
-        "Dst pattern child def is an unsupported tablegen class");
   }
 
-  // Handle the case where the MVT/register class is omitted in the dest pattern
-  // but MVT exists in the source pattern.
-  if (isa<UnsetInit>(Dst.getLeafValue()) && Rule.hasOperand(Dst.getName())) {
-    DstMIBuilder.addRenderer<CopyRenderer>(Dst.getName());
-    return InsertPt;
+  // TODO: Change this to assert and move to the beginning of the function.
+  if (!M.hasOperand(NodeName))
+    return failedImport("could not find node $" + NodeName +
+                        " in the source DAG");
+
+  // TODO: Remove this check and add CopyRenderer unconditionally.
+  // TODO: Handle nodes with multiple results (provided they can reach here).
+  if (isa<UnsetInit>(N.getLeafValue())) {
+    MIBuilder.addRenderer<CopyRenderer>(NodeName);
+    return Error::success();
   }
-  return failedImport("Dst pattern child is an unsupported kind");
+
+  return failedImport("unsupported node " + to_string(N));
+}
+
+// Equivalent of MatcherGen::EmitResultLeafAsOperand.
+Error GlobalISelEmitter::importLeafNodeRenderer(
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N) const {
+  if (const auto *II = dyn_cast<IntInit>(N.getLeafValue())) {
+    MIBuilder.addRenderer<ImmRenderer>(II->getValue());
+    return Error::success();
+  }
+
+  if (const auto *DI = dyn_cast<DefInit>(N.getLeafValue())) {
+    const Record *R = DI->getDef();
+
+    if (R->isSubClassOf("Register")) {
+      MIBuilder.addRenderer<AddRegisterRenderer>(Target, R);
+      return Error::success();
+    }
+
+    if (R->isSubClassOf("SubRegIndex")) {
+      const CodeGenSubRegIndex *SubRegIndex = CGRegs.getSubRegIdx(R);
+      MIBuilder.addRenderer<ImmRenderer>(SubRegIndex->EnumValue);
+      return Error::success();
+    }
+
+    // There are also RegisterClass / RegisterOperand operands of REG_SEQUENCE /
+    // COPY_TO_REGCLASS, but these instructions are currently handled elsewhere.
+  }
+
+  return failedImport("unrecognized node " + to_string(N));
+}
+
+// Equivalent of MatcherGen::EmitResultSDNodeXFormAsOperand.
+Error GlobalISelEmitter::importXFormNodeRenderer(
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N) const {
+  const Record *XFormRec = N.getOperator();
+  auto I = SDNodeXFormEquivs.find(XFormRec);
+  if (I == SDNodeXFormEquivs.end())
+    return failedImport("SDNodeXForm " + XFormRec->getName() +
+                        " does not have GISel equivalent");
+
+  // TODO: Fail to import if GISDNodeXForm does not have RendererFn.
+  //   This currently results in a fatal error in emitRenderOpcodes.
+  const Record *XFormEquivRec = I->second;
+
+  // The node to apply the transformation function to.
+  // FIXME: The node may not have a name and may be a leaf. It should be
+  //   rendered first, like any other nodes. This may or may not require
+  //   introducing a temporary register, and we can't tell that without
+  //   inspecting the node (possibly recursively). This is a general drawback
+  //   of appending renderers directly to BuildMIAction.
+  const TreePatternNode &Node = N.getChild(0);
+  StringRef NodeName = Node.getName();
+
+  const Record *XFormOpc = CGP.getSDNodeTransform(XFormRec).first;
+  if (XFormOpc->getName() == "timm") {
+    // If this is a TargetConstant, there won't be a corresponding
+    // instruction to transform. Instead, this will refer directly to an
+    // operand in an instruction's operand list.
+    MIBuilder.addRenderer<CustomOperandRenderer>(*XFormEquivRec, NodeName);
+  } else {
+    MIBuilder.addRenderer<CustomRenderer>(*XFormEquivRec, NodeName);
+  }
+
+  return Error::success();
+}
+
+// Equivalent of MatcherGen::EmitResultInstructionAsOperand.
+Error GlobalISelEmitter::importInstructionNodeRenderer(
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N,
+    action_iterator &InsertPt) const {
+  Expected<LLTCodeGen> OpTy = getInstResultType(N, Target);
+  if (!OpTy)
+    return OpTy.takeError();
+
+  // TODO: See the comment in importXFormNodeRenderer. We rely on the node
+  //   requiring a temporary register, which prevents us from using this
+  //   function on the root of the destination DAG.
+  unsigned TempRegID = M.allocateTempRegID();
+  InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+  MIBuilder.addRenderer<TempRegRenderer>(TempRegID);
+
+  auto InsertPtOrError =
+      createAndImportSubInstructionRenderer(++InsertPt, M, N, TempRegID);
+  if (!InsertPtOrError)
+    return InsertPtOrError.takeError();
+
+  InsertPt = *InsertPtOrError;
+  return Error::success();
+}
+
+// Equivalent of MatcherGen::EmitResultOperand.
+Error GlobalISelEmitter::importNodeRenderer(RuleMatcher &M,
+                                            BuildMIAction &MIBuilder,
+                                            const TreePatternNode &N,
+                                            action_iterator &InsertPt) const {
+  if (N.hasName())
+    return importNamedNodeRenderer(M, MIBuilder, N);
+
+  if (N.isLeaf())
+    return importLeafNodeRenderer(M, MIBuilder, N);
+
+  if (N.getOperator()->isSubClassOf("SDNodeXForm"))
+    return importXFormNodeRenderer(M, MIBuilder, N);
+
+  if (N.getOperator()->isSubClassOf("Instruction"))
+    return importInstructionNodeRenderer(M, MIBuilder, N, InsertPt);
+
+  // Should not reach here.
+  return failedImport("unrecognized node " + llvm::to_string(N));
 }
 
 /// Generates code that builds the resulting instruction(s) from the destination
@@ -1597,11 +1659,9 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
               dyn_cast<DefInit>(SubRegChild.getLeafValue())) {
         CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
 
-        auto InsertPtOrError =
-            importExplicitUseRenderer(InsertPt, M, DstMIBuilder, ValChild);
-        if (auto Error = InsertPtOrError.takeError())
-          return std::move(Error);
-        InsertPt = InsertPtOrError.get();
+        if (Error Err = importNodeRenderer(M, DstMIBuilder, ValChild, InsertPt))
+          return Err;
+
         DstMIBuilder.addRenderer<SubRegIndexRenderer>(SubIdx);
       }
     }
@@ -1666,11 +1726,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       continue;
     }
 
-    auto InsertPtOrError = importExplicitUseRenderer(InsertPt, M, DstMIBuilder,
-                                                     Dst.getChild(Child));
-    if (auto Error = InsertPtOrError.takeError())
-      return std::move(Error);
-    InsertPt = InsertPtOrError.get();
+    if (Error Err =
+            importNodeRenderer(M, DstMIBuilder, Dst.getChild(Child), InsertPt))
+      return Err;
+
     ++Child;
   }
 
