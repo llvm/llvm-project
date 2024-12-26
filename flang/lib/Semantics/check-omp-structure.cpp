@@ -2749,17 +2749,17 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
           std::get<parser::OmpClause::Detach>(detachClause->u)};
       if (const auto *name{parser::Unwrap<parser::Name>(detach.v.v)}) {
         if (name->symbol) {
-          std::string eventHandleSymName{name->ToString()};
+          Symbol *eventHandleSym{name->symbol->GetUltimate()};
           auto checkVarAppearsInDataEnvClause = [&](const parser::OmpObjectList
                                                         &objs,
                                                     std::string clause) {
             for (const auto &obj : objs.v) {
               if (const parser::Name *objName{
                       parser::Unwrap<parser::Name>(obj)}) {
-                if (objName->ToString() == eventHandleSymName) {
+                if (objName->symbol->GetUltimate() == eventHandleSym) {
                   context_.Say(GetContext().clauseSource,
                       "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
-                      eventHandleSymName, clause);
+                      objName->source, clause);
                 }
               }
             }
