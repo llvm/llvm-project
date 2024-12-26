@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/errno/libc_errno.h"
-#include "src/time/asctime.h"
 #include "src/time/time_utils.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
@@ -17,12 +16,12 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
                                  int yday) {
   LIBC_NAMESPACE::tmhelper::testing::initialize_tm_data(
       tm_data, year, month, mday, hour, min, sec, wday, yday);
-  return LIBC_NAMESPACE::asctime(tm_data);
+  return asctime(tm_data);
 }
 
 TEST(LlvmLibcAsctime, Nullptr) {
   char *result;
-  result = LIBC_NAMESPACE::asctime(nullptr);
+  result = asctime(nullptr);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
