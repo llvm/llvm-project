@@ -99,7 +99,7 @@ public:
   ~RunImpl() = default;
 
   Status Poll();
-  int StartPoll(std::optional<MainLoopPosix::TimePoint> point);
+
   void ProcessReadEvents();
 
 private:
@@ -160,10 +160,10 @@ MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
   read_fds.reserve(loop.m_read_fds.size());
 }
 
-int MainLoopPosix::RunImpl::StartPoll(
-    std::optional<MainLoopPosix::TimePoint> point) {
+static int StartPoll(llvm::MutableArrayRef<struct pollfd> fds,
+                     std::optional<MainLoopPosix::TimePoint> point) {
 #if HAVE_PPOLL
-  return ppoll(read_fds.data(), read_fds.size(), ToTimeSpec(point),
+  return ppoll(fds.data(), fds.size(), ToTimeSpec(point),
                /*sigmask=*/nullptr);
 #else
   using namespace std::chrono;
@@ -172,7 +172,7 @@ int MainLoopPosix::RunImpl::StartPoll(
     nanoseconds dur = std::max(*point - steady_clock::now(), nanoseconds(0));
     timeout = ceil<milliseconds>(dur).count();
   }
-  return poll(read_fds.data(), read_fds.size(), timeout);
+  return poll(fds.data(), fds.size(), timeout);
 #endif
 }
 
@@ -186,7 +186,7 @@ Status MainLoopPosix::RunImpl::Poll() {
     pfd.revents = 0;
     read_fds.push_back(pfd);
   }
-  int ready = StartPoll(loop.GetNextWakeupTime());
+  int ready = StartPoll(read_fds, loop.GetNextWakeupTime());
 
   if (ready == -1 && errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
