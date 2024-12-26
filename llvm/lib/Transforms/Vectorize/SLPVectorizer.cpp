@@ -21879,11 +21879,6 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
                "Different nodes should have different DFS numbers");
         if (NodeI1 != NodeI2)
           return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
-<<<<<<< HEAD
-        if (getSameOpcode({I1, I2}, *TLI))
-          return false;
-=======
->>>>>>> origin/main
         return I1->getOpcode() < I2->getOpcode();
       }
     return V->getValueOperand()->getValueID() <
