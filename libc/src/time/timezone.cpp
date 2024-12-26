@@ -18,7 +18,6 @@ namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
 tzset *get_tzset(int fd, size_t filesize) {
-  ttinfo ttinfo;
   static tzset result;
 
   int64_t magic;
@@ -179,47 +178,33 @@ tzset *get_tzset(int fd, size_t filesize) {
     j += 1;
   }
 
-  chunk = ((tzh_typecnt_end - tzh_timecnt_end) / 6) - 1;
+  chunk = ((tzh_typecnt_end - tzh_timecnt_end) / 6);
+  ttinfo ttinfo[chunk];
 
-  int64_t offsets[8 * chunk];
-  int64_t *ptr_offsets;
-  size_t index;
-
-  int64_t tt_utoff[2 * chunk];
-  unsigned char tt_isdst[chunk];
-  unsigned char tt_desigidx[chunk];
-
-  int64_t *ptr_tt_utoff;
-  unsigned char *ptr_tt_isdst;
-  unsigned char *ptr_tt_desigidx;
-
-  ptr_offsets = offsets;
-  ptr_tt_utoff = tt_utoff;
-  ptr_tt_isdst = tt_isdst;
-  ptr_tt_desigidx = tt_desigidx;
-
-  index = 0;
+  size_t index = 0;
   for (size_t i = tzh_timecnt_end; i < (size_t)tzh_typecnt_end; i += 6) {
-    unsigned char *tmp;
+    int32_t tt_utoff = ((int32_t)hdr[i] << 24) | ((int32_t)hdr[i + 1] << 16) |
+                       ((int32_t)hdr[i + 2] << 8) | (int32_t)hdr[i + 3];
+    uint8_t tt_isdst = hdr[i + 4];
+    size_t tt_desigidx = hdr[i + 5];
 
-    tmp = &hdr[i];
-    *(ptr_offsets + index) = tmp[5];
-    *(ptr_tt_utoff + index) =
-        tmp[0] << 24 | tmp[1] << 16 | tmp[2] << 8 | tmp[3];
-    *(ptr_tt_utoff + index) =
-        tmp[0] << 24 | tmp[1] << 16 | tmp[2] << 8 | tmp[3];
-    *(tt_isdst + index) = tmp[4];
-    *(ptr_tt_desigidx + index) = (unsigned char)index;
+    size_t k = 0;
+    for (size_t j = 0; j < tt_desigidx; j++) {
+      if (tz[j] == ';') {
+        k++;
+      }
+    }
 
-    index += 1;
+    ttinfo[index].tt_utoff = tt_utoff;
+    ttinfo[index].tt_isdst = tt_isdst;
+    ttinfo[index].tt_desigidx = (int8_t)k;
+
+    ttinfo[index].size = &chunk;
+
+    index++;
   }
 
-  ttinfo.offsets = ptr_offsets;
-  ttinfo.tt_utoff = ptr_tt_utoff;
-  ttinfo.tt_isdst = ptr_tt_isdst;
-  ttinfo.tt_desigidx = ptr_tt_desigidx;
-
-  result.ttinfo = &ttinfo;
+  result.ttinfo = ttinfo;
 
   close(fd);
 
