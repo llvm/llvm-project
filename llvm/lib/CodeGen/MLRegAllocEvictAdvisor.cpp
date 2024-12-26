@@ -409,7 +409,8 @@ public:
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner) {
       if (InteractiveChannelBaseName.empty())
         Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
@@ -437,14 +438,6 @@ public:
   ReleaseModeEvictionAdvisorAnalysisLegacy()
       : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Release) {}
 
-  std::unique_ptr<RegAllocEvictionAdvisorProvider>&
-  getProvider() override {
-    auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-    auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-    Provider->setAnalyses(MBFI, Loops);
-    return Provider;
-  }
-
   void logRewardIfNeeded(const MachineFunction &MF,
                          llvm::function_ref<float()> GetReward) override {
     // No-op in release mode
@@ -465,9 +458,6 @@ public:
     AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
-
-private:
-  // std::unique_ptr<ReleaseModeEvictionAdvisorProvider> Provider;
 };
 
 // ===================================
@@ -583,7 +573,8 @@ public:
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
       return nullptr;
     if (Log)
@@ -617,14 +608,6 @@ public:
   void logRewardIfNeeded(const MachineFunction &MF,
                          llvm::function_ref<float()> GetReward) override {
     Provider->logRewardIfNeeded(MF, GetReward);
-  }
-
-  std::unique_ptr<RegAllocEvictionAdvisorProvider>&
-  getProvider() override {
-    auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-    auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-    Provider->setAnalyses(MBFI, Loops);
-    return Provider;
   }
 
   // support for isa<> and dyn_cast.

@@ -170,22 +170,13 @@ public:
                                  llvm::function_ref<float()> GetReward) {}
 
   virtual std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
-
-  /// We create this provider in doInitialization which doesn't have these
-  /// analyses. For NPM, we do have them in run(MachineFunction&)
-  virtual void setAnalyses(MachineBlockFrequencyInfo *MBFI,
-                           MachineLoopInfo *Loops) {
-    this->MBFI = MBFI;
-    this->Loops = Loops;
-  }
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) = 0;
 
   AdvisorMode getAdvisorMode() const { return Mode; }
 
 protected:
   LLVMContext &Ctx;
-  MachineBlockFrequencyInfo *MBFI;
-  MachineLoopInfo *Loops;
 
 private:
   const AdvisorMode Mode;
@@ -215,8 +206,10 @@ public:
   static char ID;
 
   /// Get an advisor for the given context (i.e. machine function, etc)
-  virtual std::unique_ptr<RegAllocEvictionAdvisorProvider>&
-  getProvider() = 0;
+  std::unique_ptr<RegAllocEvictionAdvisorProvider> &getProvider() {
+    return Provider;
+  }
+
   AdvisorMode getAdvisorMode() const { return Mode; }
   virtual void logRewardIfNeeded(const MachineFunction &MF,
                                  llvm::function_ref<float()> GetReward) {};

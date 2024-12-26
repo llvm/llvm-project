@@ -83,7 +83,8 @@ public:
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *, MachineLoopInfo *) override {
     return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
   }
 };
@@ -94,12 +95,6 @@ public:
   DefaultEvictionAdvisorAnalysisLegacy(bool NotAsRequested)
       : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Default),
         NotAsRequested(NotAsRequested) {}
-
-  std::unique_ptr<RegAllocEvictionAdvisorProvider>&
-  getProvider() override {
-    // MBFI and Loops not required here.
-    return Provider;
-  }
 
   bool doInitialization(Module &M) override {
     Provider.reset(
@@ -125,12 +120,12 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
     return;
   if (Mode == RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default)
     Provider.reset(
-        new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ false, Ctx));
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
   else
     initializeMLProvider(Mode, Ctx);
   if (!Provider)
     Provider.reset(
-        new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ true, Ctx));
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 }
 
 RegAllocEvictionAdvisorAnalysis::Result
@@ -138,9 +133,6 @@ RegAllocEvictionAdvisorAnalysis::run(MachineFunction &MF,
                                      MachineFunctionAnalysisManager &MFAM) {
   // Lazy initialization of the provider.
   initializeProvider(::Mode, MF.getFunction().getContext());
-  auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  auto *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  Provider->setAnalyses(MBFI, Loops);
   return Result{Provider.get()};
 }
 
