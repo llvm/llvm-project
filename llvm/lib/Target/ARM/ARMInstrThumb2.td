@@ -3300,6 +3300,7 @@ def : Thumb2DSPPat<(ARMSmlsldx rGPR:$Rn, rGPR:$Rm, rGPR:$RLo, rGPR:$RHi),
 //  Division Instructions.
 //  Signed and unsigned division on v7-M
 //
+let TwoOperandAliasConstraint = "$Rn = $Rd" in {
 def t2SDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
                  "sdiv", "\t$Rd, $Rn, $Rm",
                  [(set rGPR:$Rd, (sdiv rGPR:$Rn, rGPR:$Rm))]>,
@@ -3322,6 +3323,7 @@ def t2UDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
   let Inst{20} = 0b1;
   let Inst{15-12} = 0b1111;
   let Inst{7-4} = 0b1111;
+}
 }
 
 //===----------------------------------------------------------------------===//

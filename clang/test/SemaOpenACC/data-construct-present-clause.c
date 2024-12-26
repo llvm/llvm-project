@@ -52,7 +52,6 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc enter data copyin(LocalInt) present(LocalInt)
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'exit data' directive}}
 #pragma acc exit data copyout(LocalInt) present(LocalInt)
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented}}
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'host_data' directive}}
 #pragma acc host_data use_device(LocalInt) present(LocalInt)
   ;

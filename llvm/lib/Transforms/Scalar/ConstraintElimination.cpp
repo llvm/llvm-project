@@ -527,6 +527,13 @@ static Decomposition decompose(Value *V,
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
       return MergeResults(Op0, Op1, IsSigned);
 
+    if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
+      auto ResA = decompose(Op0, Preconditions, IsSigned, DL);
+      auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
+      ResA.sub(ResB);
+      return ResA;
+    }
+
     ConstantInt *CI;
     if (match(V, m_NSWMul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
       auto Result = decompose(Op0, Preconditions, IsSigned, DL);

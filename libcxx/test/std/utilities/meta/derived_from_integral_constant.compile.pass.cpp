@@ -79,7 +79,7 @@ static_assert(std::is_base_of<std::integral_constant<std::size_t, 0>, std::exten
 static_assert(std::is_base_of<std::true_type, std::is_same<int, int>>::value, "");
 static_assert(std::is_base_of<std::false_type, std::is_base_of<int, int>>::value, "");
 static_assert(std::is_base_of<std::true_type, std::is_convertible<int, int>>::value, "");
-#if TEST_STD_VER <= 20
+#if TEST_STD_VER <= 17
 static_assert(std::is_base_of<std::true_type, std::is_literal_type<int>>::value, "");
 #endif
 #if TEST_STD_VER >= 14
@@ -104,9 +104,13 @@ static_assert(std::is_base_of<std::false_type, std::is_unbounded_array<int>>::va
 static_assert(std::is_base_of<std::true_type, std::is_nothrow_convertible<int, int>>::value, "");
 #endif
 #if TEST_STD_VER >= 23
+#  if defined(__cpp_lib_is_implicit_lifetime) && __cpp_lib_is_implicit_lifetime >= 202302L
 static_assert(std::is_base_of<std::true_type, std::is_implicit_lifetime<int>>::value, "");
+#  endif
 static_assert(std::is_base_of<std::false_type, std::is_scoped_enum<int>>::value, "");
 #endif
 #if TEST_STD_VER >= 26
+#  if defined(__cpp_lib_is_virtual_base_of) && __cpp_lib_is_virtual_base_of >= 202406L
 static_assert(std::is_base_of<std::false_type, std::is_virtual_base_of<int, int>>::value, "");
+#  endif
 #endif

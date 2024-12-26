@@ -4,20 +4,27 @@
 
 void func() {
 
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
 #pragma acc exit data finalize
 
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
 #pragma acc exit data finalize finalize
 
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc exit data finalize invalid
 
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc exit data finalize invalid invalid finalize
 
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
 #pragma acc exit data wait finalize
 
+  // expected-error@+1{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
 #pragma acc host_data if_present
 
+  // expected-error@+1{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
 #pragma acc host_data if_present, if_present
 
   // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
@@ -443,13 +450,16 @@ void VarListClauses() {
 #pragma acc serial present_or_copy(HasMem.MemArr[3:])
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), self
+  // expected-error@+2 2{{OpenACC variable in 'use_device' clause is not a valid variable name or array name}}
+  // expected-error@+1{{expected ','}}
+#pragma acc host_data use_device(s.array[s.value] s.array[s.value :5] ), if_present
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value : 5]), self
+  // expected-error@+1{{OpenACC variable in 'use_device' clause is not a valid variable name or array name}}
+#pragma acc host_data use_device(s.array[s.value : 5]), if_present
+  for(int i = 0; i < 5;++i) {}
+
+#pragma acc host_data use_device(HasMem), if_present
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+1{{expected ','}}
@@ -510,22 +520,11 @@ void VarListClauses() {
 #pragma acc serial firstprivate(s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected ','}}
 #pragma acc exit data delete(s.array[s.value] s.array[s.value :5] ) async
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
 #pragma acc exit data delete(s.array[s.value : 5], s.value),async
-  for(int i = 0; i < 5;++i) {}
-
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-#pragma acc exit data use_device(s.array[s.value] s.array[s.value :5] ),async
-  for(int i = 0; i < 5;++i) {}
-
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-#pragma acc exit data use_device(s.array[s.value : 5], s.value), async
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+2{{expected ','}}
@@ -804,29 +803,21 @@ void IntExprParsing() {
 #pragma acc parallel num_workers(returns_int())
   {}
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected '('}}
 #pragma acc init device_num
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc init device_num()
 
-  // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc init device_num(invalid)
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc init device_num(5, 4)
 
-  // expected-warning@+2{{OpenACC clause 'device_num' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
 #pragma acc init device_num(5)
 
-  // expected-warning@+2{{OpenACC clause 'device_num' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
 #pragma acc init device_num(returns_int())
 
   // expected-error@+2{{expected '('}}

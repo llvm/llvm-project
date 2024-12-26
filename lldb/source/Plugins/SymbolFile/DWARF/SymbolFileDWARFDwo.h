@@ -70,7 +70,7 @@ public:
   SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref) override;
 
 protected:
-  DIEToTypePtr &GetDIEToType() override;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType() override;
 
   DIEToVariableSP &GetDIEToVariable() override;
 

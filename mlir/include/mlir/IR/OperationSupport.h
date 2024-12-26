@@ -249,12 +249,10 @@ public:
   ///  1. They can leave the operation alone and without changing the IR, and
   ///     return failure.
   ///  2. They can mutate the operation in place, without changing anything
-  ///  else
-  ///     in the IR.  In this case, return success.
+  ///     else in the IR. In this case, return success.
   ///  3. They can return a list of existing values that can be used instead
-  ///  of
-  ///     the operation.  In this case, fill in the results list and return
-  ///     success.  The caller will remove the operation and use those results
+  ///     of the operation. In this case, fill in the results list and return
+  ///     success. The caller will remove the operation and use those results
   ///     instead.
   ///
   /// This allows expression of some simple in-place canonicalizations (e.g.
@@ -1221,6 +1219,10 @@ public:
   /// Return if printer should use unique SSA IDs.
   bool shouldPrintUniqueSSAIDs() const;
 
+  /// Return if the printer should use NameLocs as prefixes when printing SSA
+  /// IDs
+  bool shouldUseNameLocAsPrefix() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1254,6 +1256,9 @@ private:
 
   /// Print unique SSA IDs for values, block arguments and naming conflicts
   bool printUniqueSSAIDsFlag : 1;
+
+  /// Print SSA IDs using NameLocs as prefixes
+  bool useNameLocAsPrefix : 1;
 };
 
 //===----------------------------------------------------------------------===//

@@ -35,6 +35,16 @@ AArch64TargetStreamer::AArch64TargetStreamer(MCStreamer &S)
 
 AArch64TargetStreamer::~AArch64TargetStreamer() = default;
 
+void AArch64TargetStreamer::emitAuthValue(const MCExpr *Expr,
+                                          uint16_t Discriminator,
+                                          AArch64PACKey::ID Key,
+                                          bool HasAddressDiversity) {
+  Streamer.emitValueImpl(AArch64AuthMCExpr::create(Expr, Discriminator, Key,
+                                                   HasAddressDiversity,
+                                                   Streamer.getContext()),
+                         8);
+}
+
 // The constant pool handling is shared by all AArch64TargetStreamer
 // implementations.
 const MCExpr *AArch64TargetStreamer::addConstantPoolEntry(const MCExpr *Expr,

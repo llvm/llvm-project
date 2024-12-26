@@ -200,8 +200,8 @@ void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   if (Funcs.size() < 2)
     return;
 
-  // Sort the function infos by address range first
-  llvm::sort(Funcs);
+  // Sort the function infos by address range first, preserving input order
+  llvm::stable_sort(Funcs);
   std::vector<FunctionInfo> TopLevelFuncs;
 
   // Add the first function info to the top level functions
