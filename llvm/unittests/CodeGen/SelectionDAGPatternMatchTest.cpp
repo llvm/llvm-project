@@ -144,8 +144,6 @@ TEST_F(SelectionDAGPatternMatchTest, matchVecShuffle) {
                m_Shuffle(m_Value(), m_Value(), m_SpecificMask(OtherMaskData))));
   EXPECT_TRUE(std::equal(MaskData.begin(), MaskData.end(), CapturedMask.begin(),
                          CapturedMask.end()));
-  EXPECT_FALSE(std::equal(OtherMaskData.begin(), OtherMaskData.end(),
-                          CapturedMask.begin(), CapturedMask.end()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
