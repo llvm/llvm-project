@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <stddef.h>
 #include "src/errno/libc_errno.h"
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
