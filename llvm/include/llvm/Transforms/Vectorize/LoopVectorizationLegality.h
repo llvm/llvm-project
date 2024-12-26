@@ -412,6 +412,12 @@ public:
     return getUncountableExitBlocks()[0];
   }
 
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding and safe to operate simultaneously.
+  std::optional<unsigned> getMaxStoreLoadForwardSafeVFPowerOf2() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeVF();
+  }
+
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
   bool isMaskRequired(const Instruction *I) const {

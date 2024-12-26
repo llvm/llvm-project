@@ -216,6 +216,12 @@ public:
     return MaxSafeVectorWidthInBits;
   }
 
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding and safe to operate simultaneously.
+  std::optional<uint64_t> getStoreLoadForwardSafeVF() const {
+    return MaxStoreLoadForwardSafeVF;
+  }
+
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
   bool shouldRetryWithRuntimeCheck() const {
@@ -303,6 +309,10 @@ private:
   /// The size of the element is taken from the memory access that is most
   /// restrictive.
   uint64_t MaxSafeVectorWidthInBits = -1U;
+
+  /// Maximum number of elements (power-of-2 and non-power-of-2), which do not
+  /// prevent store-load forwarding and safe to operate simultaneously.
+  std::optional<uint64_t> MaxStoreLoadForwardSafeVF;
 
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.

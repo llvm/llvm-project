@@ -21,7 +21,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found trip count: 0
 ; CHECK-NEXT:  LV: Found maximum trip count: 4294967295
 ; CHECK-NEXT:  LV: Scalable vectorization is available
-; CHECK-NEXT:  LV: The max safe fixed VF is: 67108864.
+; CHECK-NEXT:  LV: The max safe fixed VF is: 134217728.
 ; CHECK-NEXT:  LV: The max safe scalable VF is: vscale x 4294967295.
 ; CHECK-NEXT:  LV: Found uniform instruction: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Found uniform instruction: %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
@@ -268,7 +268,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found trip count: 0
 ; CHECK-NEXT:  LV: Found maximum trip count: 4294967295
 ; CHECK-NEXT:  LV: Scalable vectorization is available
-; CHECK-NEXT:  LV: The max safe fixed VF is: 67108864.
+; CHECK-NEXT:  LV: The max safe fixed VF is: 134217728.
 ; CHECK-NEXT:  LV: The max safe scalable VF is: vscale x 4294967295.
 ; CHECK-NEXT:  LV: Found uniform instruction: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Found uniform instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
