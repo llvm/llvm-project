@@ -1973,20 +1973,20 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       // data2 is used for priority
       //
       Type *Int32Ty = Builder.getInt32Ty();
-      Constant *zero = ConstantInt::get(Int32Ty, 0);
+      Constant *Zero = ConstantInt::get(Int32Ty, 0);
       // kmp_task_t* => { ptr }
       Type *TaskPtr = StructType::get(VoidPtr);
-      Value *taskGEP = Builder.CreateInBoundsGEP(
-          TaskPtr, TaskData, {zero, zero});
+      Value *TaskGEP = Builder.CreateInBoundsGEP(
+          TaskPtr, TaskData, {Zero, Zero});
       // kmp_task_t => { ptr, ptr, i32, ptr, ptr }
       Type *TaskStructType = StructType::get(
           VoidPtr, VoidPtr, Builder.getInt32Ty(), VoidPtr, VoidPtr);
       Value *PriorityData = Builder.CreateInBoundsGEP(
-          TaskStructType, taskGEP, {zero, ConstantInt::get(Int32Ty, 4)});
+          TaskStructType, TaskGEP, {Zero, ConstantInt::get(Int32Ty, 4)});
       // kmp_cmplrdata_t => { ptr, ptr }
       Type *CmplrStructType = StructType::get(VoidPtr, VoidPtr);
       Value *CmplrData = Builder.CreateInBoundsGEP(
-          CmplrStructType, PriorityData, {zero, zero});
+          CmplrStructType, PriorityData, {Zero, Zero});
       Builder.CreateStore(Priority, CmplrData);
     }
 
