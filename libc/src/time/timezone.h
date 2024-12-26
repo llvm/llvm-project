@@ -20,12 +20,13 @@ namespace timezone {
 #define TIMEZONE_HDR_SIZE 44
 
 typedef struct {
-  int64_t *tt_utoff;
-  uint8_t *tt_isdst;
-  uint8_t *tt_desigidx;
+  int64_t tt_utoff;
+  uint8_t tt_isdst;
+  uint8_t tt_desigidx;
 
   // additional fields
-  int64_t *offsets;
+  int64_t offsets;
+  size_t *size;
 } ttinfo;
 
 typedef struct {
