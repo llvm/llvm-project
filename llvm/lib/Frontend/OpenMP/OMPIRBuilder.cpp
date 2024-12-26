@@ -1973,18 +1973,21 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       // data2 is used for priority
       //
       Type *Int32Ty = Builder.getInt32Ty();
+      Constant *zero = ConstantInt::get(Int32Ty, 0);
       // kmp_task_t* => { ptr }
-      Type *taskPtr = StructType::get(VoidPtr);
+      Type *TaskPtr = StructType::get(VoidPtr);
       Value *taskGEP = Builder.CreateInBoundsGEP(
-          taskPtr, TaskData,
-          {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 0)});
+          TaskPtr, TaskData, {zero, zero});
       // kmp_task_t => { ptr, ptr, i32, ptr, ptr }
-      Type *taskStructType = StructType::get(
+      Type *TaskStructType = StructType::get(
           VoidPtr, VoidPtr, Builder.getInt32Ty(), VoidPtr, VoidPtr);
-      Value *priorityData = Builder.CreateInBoundsGEP(
-          taskStructType, taskGEP,
-          {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 4)});
-      Builder.CreateStore(Priority, priorityData);
+      Value *PriorityData = Builder.CreateInBoundsGEP(
+          TaskStructType, taskGEP, {zero, ConstantInt::get(Int32Ty, 4)});
+      // kmp_cmplrdata_t => { ptr, ptr }
+      Type *CmplrStructType = StructType::get(VoidPtr, VoidPtr);
+      Value *CmplrData = Builder.CreateInBoundsGEP(
+          CmplrStructType, PriorityData, {zero, zero});
+      Builder.CreateStore(Priority, CmplrData);
     }
 
     Value *DepArray = nullptr;
