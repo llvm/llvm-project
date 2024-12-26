@@ -1,6 +1,6 @@
 // Test sanitizers ld flags.
 
-// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not=\"/libclang_rt\"
+// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="/libclang_rt"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=address \
@@ -28,14 +28,14 @@
 //
 // CHECK-ASAN-NO-LINK-RUNTIME-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
 
-// RUN: %clang -fsanitize=address -fsanitize-link-runtime -### %s 2>&1 \
+// RUN: %clang -fsanitize=address -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=arm64e-apple-macosx -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-DARWIN
 //
-// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: /libclang_rt.asan_osx_dynamic.dylib
-// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: /libclang_rt.osx.a
+// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
+// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: /libclang_rt.osx.a"
 
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
