@@ -233,7 +233,7 @@ static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
                          "prefers tail-folding, don't attempt vectorization if "
                          "tail-folding fails.")));
 
-static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
+cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
     "force-tail-folding-style", cl::desc("Force the tail folding style"),
     cl::init(TailFoldingStyle::None),
     cl::values(
@@ -9313,7 +9313,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // ---------------------------------------------------------------------------
 
   // Adjust the recipes for any inloop reductions.
-  adjustRecipesForReductions(Plan, RecipeBuilder, Range);
+  adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+
+  // Transform recipes to abstract recipes if it is beneficial and clamp
+  // the range.
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM);
+  VPlanTransforms::convertToAbstractRecipes(*Plan, CostCtx, Range);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
@@ -9435,9 +9440,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 // with a boolean reduction phi node to check if the condition is true in any
 // iteration. The final value is selected by the final ComputeReductionResult.
 void LoopVectorizationPlanner::adjustRecipesForReductions(
-    VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, VFRange &Range) {
+    VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
-  ElementCount MinVF = Range.Start;
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoopRegion->getEntryBasicBlock();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
@@ -9555,30 +9559,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
-      VPReductionRecipe *RedRecipe;
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
-                            CM);
-      bool IsOrderedRed = CM.useOrderedReductions(RdxDesc);
-      // TODO: Remove EVL check when we support EVL version of
-      // VPExtendedReductionRecipe and VPMulAccumulateReductionRecipe.
-      if (ForceTailFoldingStyle == TailFoldingStyle::DataWithEVL) {
-        RedRecipe = new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink,
-                                          VecOp, CondOp, IsOrderedRed);
-      } else {
-        if (auto *MulAcc =
-                VPlanTransforms::tryToMatchAndCreateMulAccumulateReduction(
-                    RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
-                    IsOrderedRed, CostCtx, Range))
-          RedRecipe = MulAcc;
-        else if (auto *ExtRed =
-                     VPlanTransforms::tryToMatchAndCreateExtendedReduction(
-                         RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
-                         IsOrderedRed, CostCtx, Range))
-          RedRecipe = ExtRed;
-        else
-          RedRecipe = new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink,
-                                            VecOp, CondOp, IsOrderedRed);
-      }
+      VPReductionRecipe *RedRecipe =
+          new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink, VecOp,
+                                CondOp, CM.useOrderedReductions(RdxDesc));
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including

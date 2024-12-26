@@ -1578,7 +1578,7 @@ public:
         ResultTy(ResultTy) {}
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    bool IsNonNeg, DebugLoc DL)
+                    bool IsNonNeg, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, NonNegFlagsTy(IsNonNeg),
                             DL),
         Opcode(Opcode), ResultTy(ResultTy) {}
@@ -2643,8 +2643,8 @@ protected:
     }
   }
 
-  // For VPExtendedReductionRecipe.
-  // Note that IsNonNeg flag and the debug location are for extend instruction.
+  /// For VPExtendedReductionRecipe.
+  /// Note that IsNonNeg flag and the debug location are for extend instruction.
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, bool IsNonNeg, DebugLoc DL)
@@ -2656,8 +2656,8 @@ protected:
     }
   }
 
-  // For VPMulAccRecipe.
-  // Note that the NUW/NSW and DL are for mul instruction.
+  /// For VPMulAccumulateReductionRecipe.
+  /// Note that the NUW/NSW and DL are for mul instruction.
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, bool NUW, bool NSW, DebugLoc DL)
@@ -2797,22 +2797,19 @@ class VPExtendedReductionRecipe : public VPReductionRecipe {
   DebugLoc RedDL;
 
 public:
-  VPExtendedReductionRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
-                            VPValue *ChainOp, VPWidenCastRecipe *Ext,
-                            VPValue *CondOp, bool IsOrdered)
-      : VPReductionRecipe(VPDef::VPExtendedReductionSC, R,
-                          ArrayRef<VPValue *>({ChainOp, Ext->getOperand(0)}),
-                          CondOp, IsOrdered, Ext->isNonNeg(),
-                          Ext->getDebugLoc()),
-        ExtOp(Ext->getOpcode()), RedDL(RedI->getDebugLoc()) {}
+  VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
+      : VPReductionRecipe(VPDef::VPExtendedReductionSC,
+                          R->getRecurrenceDescriptor(),
+                          {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
+                          R->isOrdered(), Ext->isNonNeg(), Ext->getDebugLoc()),
+        ExtOp(Ext->getOpcode()), RedDL(R->getDebugLoc()) {}
 
-  /// Contructor for cloning VPExtendedReductionRecipe.
+  /// For cloning VPExtendedReductionRecipe.
   VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
       : VPReductionRecipe(
             VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceDescriptor(),
-            ArrayRef<VPValue *>({ExtRed->getChainOp(), ExtRed->getVecOp()}),
-            ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->isNonNeg(),
-            ExtRed->getExtDebugLoc()),
+            {ExtRed->getChainOp(), ExtRed->getVecOp()}, ExtRed->getCondOp(),
+            ExtRed->isOrdered(), ExtRed->isNonNeg(), ExtRed->getExtDebugLoc()),
         ExtOp(ExtRed->getExtOpcode()), RedDL(ExtRed->getRedDebugLoc()) {}
 
   ~VPExtendedReductionRecipe() override = default;
@@ -2843,15 +2840,16 @@ public:
     return getRecurrenceDescriptor().getRecurrenceType();
   }
 
+  /// Is the extend ZExt?
   bool isZExt() const { return getExtOpcode() == Instruction::ZExt; }
 
-  /// The Opcode of extend instruction.
+  /// The Opcode of extend recipe.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 
-  /// Return the debug location of the extend instruction.
+  /// Return the debug location of the extend recipe.
   DebugLoc getExtDebugLoc() const { return getDebugLoc(); }
 
-  /// Return the debug location of the reduction instruction.
+  /// Return the debug location of the reduction recipe.
   DebugLoc getRedDebugLoc() const { return RedDL; }
 };
 
@@ -2865,7 +2863,7 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   Instruction::CastOps ExtOp;
 
   /// Non-neg flag of the extend recipe.
-  bool IsNonNeg;
+  bool IsNonNeg = false;
 
   /// Debug location of extend recipes will be lowered to.
   DebugLoc Ext0DL;
@@ -2878,47 +2876,41 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   bool IsExtended = false;
 
 public:
-  VPMulAccumulateReductionRecipe(const RecurrenceDescriptor &R,
-                                 Instruction *RedI, VPValue *ChainOp,
-                                 VPValue *CondOp, bool IsOrdered,
-                                 VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+  VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
+                                 VPWidenCastRecipe *Ext0,
                                  VPWidenCastRecipe *Ext1)
-      : VPReductionRecipe(VPDef::VPMulAccumulateReductionSC, R,
-                          ArrayRef<VPValue *>({ChainOp, Ext0->getOperand(0),
-                                               Ext1->getOperand(0)}),
-                          CondOp, IsOrdered, Mul->hasNoUnsignedWrap(),
-                          Mul->hasNoSignedWrap(), Mul->getDebugLoc()),
+      : VPReductionRecipe(
+            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceDescriptor(),
+            {R->getChainOp(), Ext0->getOperand(0), Ext1->getOperand(0)},
+            R->getCondOp(), R->isOrdered(), Mul->hasNoUnsignedWrap(),
+            Mul->hasNoSignedWrap(), Mul->getDebugLoc()),
         ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()),
         Ext0DL(Ext0->getDebugLoc()), Ext1DL(Ext1->getDebugLoc()),
-        RedDL(RedI->getDebugLoc()) {
-    assert(R.getOpcode() == Instruction::Add &&
+        RedDL(R->getDebugLoc()) {
+    assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
     IsExtended = true;
   }
 
-  VPMulAccumulateReductionRecipe(const RecurrenceDescriptor &R,
-                                 Instruction *RedI, VPValue *ChainOp,
-                                 VPValue *CondOp, bool IsOrdered,
-                                 VPWidenRecipe *Mul)
-      : VPReductionRecipe(VPDef::VPMulAccumulateReductionSC, R,
-                          ArrayRef<VPValue *>({ChainOp, Mul->getOperand(0),
-                                               Mul->getOperand(1)}),
-                          CondOp, IsOrdered, Mul->hasNoUnsignedWrap(),
-                          Mul->hasNoSignedWrap(), Mul->getDebugLoc()),
-        RedDL(RedI->getDebugLoc()) {
-    assert(R.getOpcode() == Instruction::Add &&
+  VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul)
+      : VPReductionRecipe(
+            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceDescriptor(),
+            {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
+            R->getCondOp(), R->isOrdered(), Mul->hasNoUnsignedWrap(),
+            Mul->hasNoSignedWrap(), Mul->getDebugLoc()),
+        RedDL(R->getDebugLoc()) {
+    assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "
            "Add");
   }
 
-  /// Constructor for cloning VPMulAccumulateReductionRecipe.
+  /// For cloning VPMulAccumulateReductionRecipe.
   VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC,
             MulAcc->getRecurrenceDescriptor(),
-            ArrayRef<VPValue *>({MulAcc->getChainOp(), MulAcc->getVecOp0(),
-                                 MulAcc->getVecOp1()}),
+            {MulAcc->getChainOp(), MulAcc->getVecOp0(), MulAcc->getVecOp1()},
             MulAcc->getCondOp(), MulAcc->isOrdered(),
             MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
             MulAcc->getMulDebugLoc()),
@@ -2970,7 +2962,7 @@ public:
     return ExtOp == Instruction::CastOps::ZExt;
   }
 
-  /// Return the non negative flag for the ext instruction.
+  /// Return the non negative flag of the ext recipe.
   bool isNonNeg() const { return IsNonNeg; }
 
   /// Drop flags in this recipe.
@@ -2980,14 +2972,14 @@ public:
     this->IsNonNeg = false;
   }
 
-  /// Return debug location of mul instruction.
+  /// Return debug location of mul recipe.
   DebugLoc getMulDebugLoc() const { return getDebugLoc(); }
 
-  /// Return debug location of extend instructions.
+  /// Return debug location of extend recipe.
   DebugLoc getExt0DebugLoc() const { return Ext0DL; }
   DebugLoc getExt1DebugLoc() const { return Ext1DL; }
 
-  /// Return the debug location of reduction instruction.
+  /// Return the debug location of reduction recipe.
   DebugLoc getRedDebugLoc() const { return RedDL; }
 };
 

@@ -138,30 +138,12 @@ struct VPlanTransforms {
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
 
-  /// This function try to match following pattern to create
-  /// VPExtendedReductionRecipe and clamp the \p Range if it is beneficial and
-  /// valid. The created VPExtendedReductionRecipe will lower to concrete before
-  /// executeion.
-  ///   reduce(ext(...)).
-  static VPExtendedReductionRecipe *tryToMatchAndCreateExtendedReduction(
-      const RecurrenceDescriptor &RdxDesc, Instruction *CurrentLinkI,
-      VPValue *PreviousLink, VPValue *VecOp, VPValue *CondOp, bool IsOrderedRed,
-      VPCostContext &Ctx, VFRange &Range);
-
-  /// This function try to match following pattern to create
-  /// VPMulAccumulateReductionRecipe and clamp the \p Range if it is beneficial
-  /// and valid. The created VPMulAccumulateReduction will lower to concrete
-  /// before executeion.
-  ///   reduce.add(mul(...)),
-  ///   reduce.add(mul(ext(A), ext(B))),
-  ///   reduce.add(ext(mul(ext(A), ext(B)))).
-  static VPMulAccumulateReductionRecipe *
-  tryToMatchAndCreateMulAccumulateReduction(const RecurrenceDescriptor &RdxDesc,
-                                            Instruction *CurrentLinkI,
-                                            VPValue *PreviousLink,
-                                            VPValue *VecOp, VPValue *CondOp,
-                                            bool IsOrderedRed,
-                                            VPCostContext &Ctx, VFRange &Range);
+  /// This function convert initial recipes to the abstract recipes and clamp \p
+  /// Range based on cost model for following optimizations and cost
+  /// estimations. The converted abstract recipes will lower to concrete
+  /// recipies before codegen.
+  static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
+                                       VFRange &Range);
 };
 
 } // namespace llvm

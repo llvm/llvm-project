@@ -1523,27 +1523,6 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
     setFlags(CastOp);
 }
 
-/// Computes the CastContextHint for a recipe.
-static TTI::CastContextHint computeCCH(const VPRecipeBase *R, ElementCount VF) {
-  if (VF.isScalar())
-    return TTI::CastContextHint::Normal;
-  if (isa<VPInterleaveRecipe>(R))
-    return TTI::CastContextHint::Interleave;
-  if (const auto *ReplicateRecipe = dyn_cast<VPReplicateRecipe>(R))
-    return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
-                                           : TTI::CastContextHint::Normal;
-  const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
-  if (WidenMemoryRecipe == nullptr)
-    return TTI::CastContextHint::None;
-  if (!WidenMemoryRecipe->isConsecutive())
-    return TTI::CastContextHint::GatherScatter;
-  if (WidenMemoryRecipe->isReverse())
-    return TTI::CastContextHint::Reversed;
-  if (WidenMemoryRecipe->isMasked())
-    return TTI::CastContextHint::Masked;
-  return TTI::CastContextHint::Normal;
-}
-
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   // TODO: In some cases, VPWidenCastRecipes are created but not considered in
@@ -1551,6 +1530,26 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   // reduction in a smaller type.
   if (!getUnderlyingValue())
     return 0;
+  // Computes the CastContextHint from a recipes that may access memory.
+  auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
+    if (VF.isScalar())
+      return TTI::CastContextHint::Normal;
+    if (isa<VPInterleaveRecipe>(R))
+      return TTI::CastContextHint::Interleave;
+    if (const auto *ReplicateRecipe = dyn_cast<VPReplicateRecipe>(R))
+      return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
+                                             : TTI::CastContextHint::Normal;
+    const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
+    if (WidenMemoryRecipe == nullptr)
+      return TTI::CastContextHint::None;
+    if (!WidenMemoryRecipe->isConsecutive())
+      return TTI::CastContextHint::GatherScatter;
+    if (WidenMemoryRecipe->isReverse())
+      return TTI::CastContextHint::Reversed;
+    if (WidenMemoryRecipe->isMasked())
+      return TTI::CastContextHint::Masked;
+    return TTI::CastContextHint::Normal;
+  };
 
   VPValue *Operand = getOperand(0);
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
@@ -1558,7 +1557,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
       !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
     if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
-      CCH = computeCCH(StoreRecipe, VF);
+      CCH = ComputeCCH(StoreRecipe);
   }
   // For Z/Sext, get the context from the operand.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
@@ -1566,7 +1565,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
     if (Operand->isLiveIn())
       CCH = TTI::CastContextHint::Normal;
     else if (Operand->getDefiningRecipe())
-      CCH = computeCCH(Operand->getDefiningRecipe(), VF);
+      CCH = ComputeCCH(Operand->getDefiningRecipe());
   }
 
   auto *SrcTy =
