@@ -12,10 +12,12 @@
 #include "src/time/timezone.h"
 #include "test/UnitTest/Test.h"
 
+// TODO: remove this header file
 #include <string.h>
 
 extern char **environ;
 
+// TODO: rewrite this function and remove malloc
 void set_env_var(const char *env) {
   int i = 0;
   if (environ[i] != NULL) {
