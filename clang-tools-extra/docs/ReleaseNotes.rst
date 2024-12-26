@@ -174,8 +174,8 @@ Changes in existing checks
 - New unsafe functions checks :doc:`bugprone-unsafe-functions-check`
   <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp> were added to clang-tidy.
 
-- Improved :doc:`bugprone-unsafe-functions-check`
-  `<clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
   to unsafe functions check in clang-tidy.
 
 - Improved :doc:`bugprone-casting-through-void
