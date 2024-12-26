@@ -3299,12 +3299,24 @@ def : GCNPat <
 >;
 
 multiclass V_SAT_PK_Pat<Instruction inst> {
-    def: GCNPat<
-        (i16 (conc_lo_u8_i16 (clamp_s16_u8 i16:$lo), (clamp_s16_u8 i16:$hi))),
-        (inst
-            (V_LSHL_OR_B32_e64 VGPR_32:$hi, (S_MOV_B32 (i32 16)),
-            (V_AND_B32_e64 VGPR_32:$lo, (S_MOV_B32 (i32 0xFFFF)))))
-    >;
+  def: GCNPat<
+    (i16 (conc_lo_u8_i16 (clamp_s16_u8 i16:$lo), (clamp_s16_u8 i16:$hi))),
+    (inst
+      (V_LSHL_OR_B32_e64 VGPR_32:$hi, (S_MOV_B32 (i32 16)),
+      (V_AND_B32_e64 VGPR_32:$lo, (S_MOV_B32 (i32 0xFFFF)))))
+  >;
+
+  def: GCNPat<
+    (i16 (conc_lo_u8_i16 (clamp_s16_u8 i16:$lo), (smax i16:$hi, (i16 0)))),
+    (inst
+      (V_LSHL_OR_B32_e64 VGPR_32:$hi, (S_MOV_B32 (i32 16)),
+      (V_AND_B32_e64 VGPR_32:$lo, (S_MOV_B32 (i32 0xFFFF)))))
+  >;
+
+  def: GCNPat<
+    (i16 (conc_lo_v2i16_i16 (clamp_v2i16_u8 v2i16:$src))),
+    (inst VGPR_32:$src)
+  >;
 }
 
 let OtherPredicates = [NotHasTrue16BitInsts] in 
