@@ -1138,7 +1138,7 @@ public:
                                    Register SrcReg, bool isKill, int FrameIndex,
                                    const TargetRegisterClass *RC,
                                    const TargetRegisterInfo *TRI,
-                                   Register VReg) const {
+                                   Register VReg, unsigned SubRegIdx = 0) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
   }
@@ -1156,7 +1156,7 @@ public:
                                     Register DestReg, int FrameIndex,
                                     const TargetRegisterClass *RC,
                                     const TargetRegisterInfo *TRI,
-                                    Register VReg) const {
+                                    Register VReg, unsigned SubRegIdx = 0) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");
   }

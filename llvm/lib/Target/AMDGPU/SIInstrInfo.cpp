@@ -1717,7 +1717,7 @@ static unsigned getVectorRegSpillSaveOpcode(Register Reg,
 void SIInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg, unsigned SubRegIdx) const {
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
@@ -1763,11 +1763,11 @@ void SIInstrInfo::storeRegToStackSlot(
   MFI->setHasSpilledVGPRs();
 
   BuildMI(MBB, MI, DL, get(Opcode))
-    .addReg(SrcReg, getKillRegState(isKill)) // data
-    .addFrameIndex(FrameIndex)               // addr
-    .addReg(MFI->getStackPtrOffsetReg())     // scratch_offset
-    .addImm(0)                               // offset
-    .addMemOperand(MMO);
+      .addReg(SrcReg, getKillRegState(isKill), SubRegIdx) // data
+      .addFrameIndex(FrameIndex)                          // addr
+      .addReg(MFI->getStackPtrOffsetReg())                // scratch_offset
+      .addImm(0)                                          // offset
+      .addMemOperand(MMO);
 }
 
 static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
