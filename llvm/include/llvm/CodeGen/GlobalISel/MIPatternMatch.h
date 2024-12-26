@@ -538,15 +538,27 @@ m_GAShr(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, true>
 m_GSMax(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>(L, R);
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, true>(L, R);
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, true>
 m_GSMin(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>(L, R);
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_UMAX, true>
+m_GUMax(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_UMAX, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_UMIN, true>
+m_GUMin(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_UMIN, true>(L, R);
 }
 
 // Helper for unary instructions (G_[ZSA]EXT/G_TRUNC) etc
