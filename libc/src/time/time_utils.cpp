@@ -179,7 +179,7 @@ char *get_env_var(const char *var_name) {
 //
 // Compute the number of months from the remaining days. Finally, adjust years
 // to be 1900 and months to be from January.
-int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local) {
+int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   // Days in month starting from March in the year 2000.
   static const char daysInMonth[] = {31 /* Mar */, 30, 31, 30, 31, 31,
                                      30,           31, 30, 31, 31, 29};
@@ -264,66 +264,6 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local) {
   if (years > INT_MAX || years < INT_MIN)
     return time_utils::out_of_range();
 
-  int offset;
-  int dst;
-
-  offset = 0;
-  dst = is_dst(tm);
-  if (local) {
-      char *tz_filename = get_env_var("TZ");
-      if (tz_filename[0] == '\0') {
-          char localtime[15] = "/etc/localtime";
-          size_t i = 0;
-          while (localtime[i] != '\0') {
-              tz_filename[i] = localtime[i];
-              i++;
-          }
-      } else {
-          char tmp[64];
-          char prefix[21] = "/usr/share/zoneinfo/";
-          size_t i = 0;
-          while (prefix[i] != '\0') {
-              tmp[i] = prefix[i];
-              i++;
-          }
-
-          i = 0;
-          while (tz_filename[i] != '\0') {
-              tmp[i + 20] = tz_filename[i];
-              i++;
-          }
-
-          tz_filename = tmp;
-          while (tz_filename[i] != '\0') {
-              if (tz_filename[i] == (char)0xFFFFFFAA) {
-                  tz_filename[i] = '\0';
-              }
-              i++;
-          }
-      }
-
-      acquire_file(tz_filename);
-
-      size_t filesize;
-      filesize = static_cast<size_t>(lseek(fd, 0, SEEK_END));
-      if (filesize < 0) {
-          close(fd);
-          return 0;
-      }
-      lseek(fd, 0, 0);
-
-      timezone::tzset *ptr_tzset = timezone::get_tzset(fd, filesize);
-      if (ptr_tzset == nullptr) {
-          return time_utils::out_of_range();
-      }
-
-      for (size_t i = 0; i < *ptr_tzset->ttinfo->size; i++) {
-          if (dst == ptr_tzset->ttinfo[i].tt_isdst) {
-              offset = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
-          }
-      }
-  }
-
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.
   tm->tm_year = static_cast<int>(years + 2000 - time_constants::TIME_YEAR_BASE);
@@ -356,13 +296,79 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local) {
   if (local) {
       tm->tm_hour += offset;
       tm->tm_isdst = dst;
+  return 0;
+}
 
-      if (file_usage == 1) {
-          release_file(fd);
+struct tm *get_localtime(time_t *t_ptr) {
+  struct tm *tm;
+  int offset;
+  int dst;
+
+  tm = nullptr;
+  offset = 0;
+  dst = is_dst(tm);
+  update_from_seconds(*t_ptr, tm);
+  char *tz_filename = get_env_var("TZ");
+  if (tz_filename[0] == '\0') {
+    char localtime[15] = "/etc/localtime";
+    size_t i = 0;
+    while (localtime[i] != '\0') {
+      tz_filename[i] = localtime[i];
+      i++;
+    }
+  } else {
+    char tmp[64];
+    char prefix[21] = "/usr/share/zoneinfo/";
+    size_t i = 0;
+    while (prefix[i] != '\0') {
+      tmp[i] = prefix[i];
+      i++;
+    }
+
+    i = 0;
+    while (tz_filename[i] != '\0') {
+      tmp[i + 20] = tz_filename[i];
+      i++;
+    }
+
+    tz_filename = tmp;
+    while (tz_filename[i] != '\0') {
+      if (tz_filename[i] == (char)0xFFFFFFAA) {
+        tz_filename[i] = '\0';
       }
+      i++;
+    }
   }
 
-  return 0;
+  acquire_file(tz_filename);
+
+  size_t filesize;
+  filesize = static_cast<size_t>(lseek(fd, 0, SEEK_END));
+  if (filesize < 0) {
+    close(fd);
+    return nullptr;
+  }
+  lseek(fd, 0, 0);
+
+  timezone::tzset *ptr_tzset = timezone::get_tzset(fd, filesize);
+  if (ptr_tzset == nullptr) {
+    return nullptr;
+  }
+
+  for (size_t i = 0; i < *ptr_tzset->ttinfo->size; i++) {
+    if (dst == ptr_tzset->ttinfo[i].tt_isdst) {
+      offset = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
+    }
+  }
+
+  tm->tm_hour += offset;
+  tm->tm_isdst = dst;
+
+  if (file_usage == 1) {
+    release_file(fd);
+  }
+
+  return tm;
 }
 
 unsigned char is_dst(struct tm *tm) {
