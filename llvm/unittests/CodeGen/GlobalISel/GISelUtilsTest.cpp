@@ -435,6 +435,12 @@ TEST_F(AMDGPUGISelMITest, isConstantOrConstantSplatVectorFP) {
       "  %cst10:_(<4 x s32>) = G_CONCAT_VECTORS %cst4:_(<2 x s32>), %cst5:_(<2 "
       "x s32>)\n"
       "  %cst11:_(<4 x s32>) = G_CONCAT_VECTORS %cst7:_(<2 x s32>), %cst7:_(<2 "
+      "x s32>)\n"
+      "  %cst12:_(s32) = G_IMPLICIT_DEF \n"
+      "  %cst13:_(<2 x s32>) = G_BUILD_VECTOR %cst12(s32), %cst12(s32)\n"
+      "  %cst14:_(<2 x s32>) = G_BUILD_VECTOR %cst0(s32), %cst12(s32)\n"
+      "  %cst15:_(<4 x s32>) = G_CONCAT_VECTORS %cst4:_(<2 x s32>), "
+      "%cst14:_(<2 "
       "x s32>)\n";
 
   SmallVector<MachineInstr *, 16> MIList;
@@ -484,5 +490,17 @@ TEST_F(AMDGPUGISelMITest, isConstantOrConstantSplatVectorFP) {
 
   EXPECT_FALSE(
       isConstantOrConstantSplatVectorFP(*MIList[11], *MRI).has_value());
+
+  EXPECT_FALSE(
+      isConstantOrConstantSplatVectorFP(*MIList[12], *MRI).has_value());
+
+  EXPECT_FALSE(
+      isConstantOrConstantSplatVectorFP(*MIList[13], *MRI).has_value());
+
+  EXPECT_FALSE(
+      isConstantOrConstantSplatVectorFP(*MIList[14], *MRI).has_value());
+
+  EXPECT_FALSE(
+      isConstantOrConstantSplatVectorFP(*MIList[15], *MRI).has_value());
 }
 }
