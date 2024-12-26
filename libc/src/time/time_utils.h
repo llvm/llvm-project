@@ -24,6 +24,7 @@
 #include "src/errno/libc_errno.h"
 #include "time_constants.h"
 #include "src/time/mktime.h"
+#include "src/time/timezone.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
