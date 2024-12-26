@@ -125,14 +125,14 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 }
 
 volatile int file_usage = 0;
+volatile int fd = -1;
 
-void release_file(FILE *fp, char *timezone) {
-  (void)timezone;
+void release_file(int fd) {
   file_usage = 0;
-  fclose(fp);
+  close(fd);
 }
 
-void acquire_file(FILE *fp, char *timezone, size_t timezone_size) {
+void acquire_file(char *filename) {
   while (1) {
     if (file_usage == 0) {
       file_usage = 1;
@@ -140,9 +140,26 @@ void acquire_file(FILE *fp, char *timezone, size_t timezone_size) {
     }
   }
 
-  if (fgets(timezone, (int)timezone_size, fp) == NULL) {
-    release_file(fp, timezone);
+  if ((fd = open(filename, O_RDONLY)) < 0) {
+    release_file(fd);
   }
+}
+
+char *get_env_var(const char *var_name) {
+  for (char **env = environ; *env != NULL; ++env) {
+    char *env_var = *env;
+
+    int i = 0;
+    while (var_name[i] != '\0' && env_var[i] == var_name[i]) {
+      i++;
+    }
+
+    if (var_name[i] == '\0' && env_var[i] == '=') {
+      return env_var + i + 1;
+    }
+  }
+
+  return NULL;
 }
 
 // First, divide "total_seconds" by the number of seconds in a day to get the
@@ -247,27 +264,63 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   if (years > INT_MAX || years < INT_MIN)
     return time_utils::out_of_range();
 
-  char timezone[TimeConstants::TIMEZONE_SIZE];
-  char *env_tz = getenv("TZ");
-  FILE *fp = NULL;
-  if (env_tz) {
-    strncpy(timezone, env_tz, sizeof(timezone));
-    timezone[sizeof(timezone) - 1] = '\0';
+  char *tz_filename = get_env_var("TZ");
+  if (tz_filename[0] == '\0') {
+    char localtime[15] = "/etc/localtime";
+    size_t i = 0;
+    while (localtime[i] != '\0') {
+      tz_filename[i] = localtime[i];
+      i++;
+    }
   } else {
-    fp = fopen("/etc/localtime", "rb");
-    if (fp == NULL) {
-      return time_utils::out_of_range();
+    char tmp[64];
+    char prefix[21] = "/usr/share/zoneinfo/";
+    size_t i = 0;
+    while (prefix[i] != '\0') {
+      tmp[i] = prefix[i];
+      i++;
     }
 
-    acquire_file(fp, timezone, TimeConstants::TIMEZONE_SIZE);
+    i = 0;
+    while (tz_filename[i] != '\0') {
+      tmp[i + 20] = tz_filename[i];
+      i++;
+    }
+
+    tz_filename = tmp;
+    while (tz_filename[i] != '\0') {
+      if (tz_filename[i] == (char)0xFFFFFFAA) {
+        tz_filename[i] = '\0';
+      }
+      i++;
+    }
   }
 
-  if (fp != NULL && file_usage == 0) {
-    release_file(fp, timezone);
+  acquire_file(tz_filename);
+
+  size_t filesize;
+  int offset;
+  int dst;
+
+  offset = 0;
+  dst = is_dst(tm);
+  filesize = (size_t)lseek(fd, 0, SEEK_END);
+  if (filesize < 0) {
+    close(fd);
+    return 0;
+  }
+  lseek(fd, 0, 0);
+
+  timezone::tzset *ptr_tzset = timezone::get_tzset(fd, filesize);
+  if (ptr_tzset == nullptr) {
     return time_utils::out_of_range();
   }
 
-  int offset = timezone::get_timezone_offset(timezone);
+  for (size_t i = 0; i < *ptr_tzset->ttinfo->size; i++) {
+    if (dst == ptr_tzset->ttinfo[i].tt_isdst) {
+      offset = (int)ptr_tzset->ttinfo[i].tt_utoff / 3600;
+    }
+  }
 
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.
@@ -288,6 +341,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   tm->tm_isdst = 0;
       static_cast<int>(remainingSeconds % TimeConstants::SECONDS_PER_MIN);
 
+<<<<<<< HEAD
   set_dst(tm);
   if (tm->tm_isdst > 0) {
     tm->tm_hour += 1;
@@ -296,15 +350,28 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   if (offset != 0) {
     tm->tm_hour += offset;
   }
+||||||| parent of eea9a636a2e1 (use timezone implementation for localtime function implementation)
+  set_dst(tm);
+  if (tm->tm_isdst > 0 && offset != 0) {
+    tm->tm_hour += 1;
+  }
+
+  if (offset != 0) {
+    tm->tm_hour += offset;
+  }
+=======
+  tm->tm_hour += offset;
+  tm->tm_isdst = dst;
+>>>>>>> eea9a636a2e1 (use timezone implementation for localtime function implementation)
 
   if (file_usage == 1) {
-    release_file(fp, timezone);
+    release_file(fd);
   }
 
   return 0;
 }
 
-void set_dst(struct tm *tm) {
+unsigned char is_dst(struct tm *tm) {
   int dst;
   int sunday;
 
@@ -321,7 +388,7 @@ void set_dst(struct tm *tm) {
     dst = sunday <= 0;
   }
 
-  tm->tm_isdst = dst;
+  return (unsigned char)dst;
 }
 
 } // namespace time_utils
