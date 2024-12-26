@@ -169,10 +169,8 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
   branch clones by now detecting duplicate inner and outer if statements.
 
-- Added `ctime` and `localtime` to clang-tidy.
-
-- New unsafe functions checks :doc:`bugprone-unsafe-functions`
-  <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp> were added to clang-tidy.
+- New unsafe functions checks :doc:`bugprone-unsafe-functions
+  <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp>` were added to clang-tidy.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
