@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include <stddef.h>
+#include "src/errno/libc_errno.h"
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
