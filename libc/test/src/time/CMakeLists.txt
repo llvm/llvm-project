@@ -9,7 +9,7 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
-    timezone.h
+    libc.src.time.timezone.h
   CXX_STANDARD
     20
   DEPENDS
@@ -27,7 +27,7 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
-    timezone.h
+    libc.src.time.timezone.h
   CXX_STANDARD
     20
   DEPENDS
@@ -45,7 +45,7 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
-    timezone.h
+    libc.src.time.timezone.h
   CXX_STANDARD
     20
   DEPENDS
@@ -65,7 +65,7 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
-    timezone.h
+    libc.src.time.timezone.h
   CXX_STANDARD
     20
   DEPENDS
@@ -92,7 +92,7 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
-    timezone.h
+    libc.src.time.timezone.h
   CXX_STANDARD
     20
   DEPENDS
@@ -112,7 +112,7 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
-    timezone.h
+    libc.src.time.timezone.h
   CXX_STANDARD
     20
   DEPENDS
@@ -132,7 +132,7 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
-    timezone.h
+    libc.src.time.timezone.h
   CXX_STANDARD
     20
   DEPENDS
