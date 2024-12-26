@@ -57,7 +57,8 @@ public:
   }
 
   std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes *SI) override {
     assert(SI && "SlotIndexes result must be set");
     return std::make_unique<DefaultPriorityAdvisor>(MF, RA, SI);
   }
@@ -72,7 +73,8 @@ public:
   }
 
   std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes *SI) override {
     assert(SI && "SlotIndexes result must be set");
     return std::make_unique<DummyPriorityAdvisor>(MF, RA, SI);
   }
@@ -96,11 +98,6 @@ private:
     RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 
-  std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() override {
-    Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-    return Provider;
-  }
-
   bool doInitialization(Module &M) override {
     Provider.reset(
         new DefaultPriorityAdvisorProvider(NotAsRequested, M.getContext()));
@@ -108,7 +105,6 @@ private:
   }
 
   const bool NotAsRequested;
-  // std::unique_ptr<DefaultPriorityAdvisorProvider> Provider;
 };
 
 class DummyPriorityAdvisorAnalysis final
@@ -129,11 +125,6 @@ private:
     RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 
-  std::unique_ptr<RegAllocPriorityAdvisorProvider>&
-  getProvider() override {
-    Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-    return Provider;
-  }
   bool doInitialization(Module &M) override {
     Provider.reset(new DummyPriorityAdvisorProvider());
     return false;
@@ -164,8 +155,6 @@ RegAllocPriorityAdvisorAnalysis::run(MachineFunction &MF,
                                      MachineFunctionAnalysisManager &MFAM) {
   // Lazily initialize the provider.
   initializeProvider(MF.getFunction().getContext());
-  // On each run, update the analysis for the provider.
-  Provider->setAnalyses(&MFAM.getResult<SlotIndexesAnalysis>(MF));
   // The requiring analysis will construct the advisor.
   return Result{Provider.get()};
 }

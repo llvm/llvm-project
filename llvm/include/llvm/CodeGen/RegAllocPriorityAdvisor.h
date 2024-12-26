@@ -85,17 +85,13 @@ public:
   virtual ~RegAllocPriorityAdvisorProvider() = default;
 
   virtual void logRewardIfNeeded(const MachineFunction &MF,
-                                 llvm::function_ref<float()> GetReward) {};
+                                 function_ref<float()> GetReward) {};
 
   virtual std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
-
-  void setAnalyses(SlotIndexes *SI) { this->SI = SI; }
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes *SI) = 0;
 
   AdvisorMode getAdvisorMode() const { return Mode; }
-
-protected:
-  SlotIndexes *SI;
 
 private:
   const AdvisorMode Mode;
@@ -136,7 +132,7 @@ public:
   static char ID;
 
   /// Get an advisor for the given context (i.e. machine function, etc)
-  virtual std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() = 0;
+  RegAllocPriorityAdvisorProvider &getProvider() { return *Provider; }
   AdvisorMode getAdvisorMode() const { return Mode; }
   virtual void logRewardIfNeeded(const MachineFunction &MF,
                                  llvm::function_ref<float()> GetReward) {};

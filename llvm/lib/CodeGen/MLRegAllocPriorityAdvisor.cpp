@@ -127,7 +127,8 @@ public:
   ReleaseModePriorityAdvisorProvider()
       : RegAllocPriorityAdvisorProvider(AdvisorMode::Release) {}
   std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes *SI) override {
     if (!Runner) {
       if (InteractiveChannelBaseName.empty())
         Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
@@ -161,11 +162,6 @@ private:
     AU.setPreservesAll();
     AU.addRequired<SlotIndexesWrapperPass>();
     RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
-  }
-
-  std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() override {
-    Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-    return Provider;
   }
 
   bool doInitialization(Module &M) override {
@@ -262,7 +258,8 @@ public:
   }
 
   std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes *SI) override {
     if (!Runner)
       return nullptr;
     if (Log) {
@@ -306,11 +303,6 @@ private:
         M.getContext());
     return false;
     ;
-  }
-
-  std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() override {
-    Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-    return Provider;
   }
 };
 #endif //#ifdef LLVM_HAVE_TFLITE
