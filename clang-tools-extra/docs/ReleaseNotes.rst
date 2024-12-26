@@ -91,14 +91,12 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- Changed the :program:`check_clang_tidy.py` tool to use FileCheck's
-  ``--match-full-lines`` instead of ``strict-whitespace`` for ``CHECK-FIXES``
-  clauses. Added a ``--match-partial-fixes`` option to keep previous behavior on
-  specific tests. This may break tests for users with custom out-of-tree checks
-  who use :program:`check_clang_tidy.py` as-is.
+- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
+  the configuration options of the `Clang Static Analyzer Checks
+  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
 
-- Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
-  argument to treat warnings as errors.
+- Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
+  happening on certain platforms when interrupting the script.
 
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
