@@ -11,8 +11,8 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "stdint.h"
 #include "stddef.h"
+#include "stdint.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
