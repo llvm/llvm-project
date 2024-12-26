@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/time/timezone.h"
 #include "src/time/gmtime_r.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
