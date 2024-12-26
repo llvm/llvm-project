@@ -170,7 +170,7 @@ Changes in existing checks
   branch clones by now detecting duplicate inner and outer if statements.
 
 - New unsafe functions checks :doc:`bugprone-unsafe-functions
-  <clang-tidy/bugprone/UnsafeFunctionsCheck>` were added to clang-tidy.
+  <clang-tidy/checks/bugprone/unsafe-functions>` were added to clang-tidy.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
