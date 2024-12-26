@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-//
-// ScalarItin, SilverV65Itin and HVXItin contain some old itineraries
-// still used by a handful of instructions. Hopefully, we will be able
-// to get rid of them soon.
 def HexagonV75ItinList : DepScalarItinV75, ScalarItin,
                          DepHVXItinV75, HVXItin, PseudoItin {
   list<InstrItinData> ItinList =

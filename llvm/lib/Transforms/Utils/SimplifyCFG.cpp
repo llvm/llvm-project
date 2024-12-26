@@ -6540,8 +6540,8 @@ SwitchLookupTable::SwitchLookupTable(
     uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
     TableContents[Idx] = CaseRes;
 
-    if (CaseRes != SingleValue)
-      SingleValue = nullptr;
+    if (SingleValue && !isa<PoisonValue>(CaseRes) && CaseRes != SingleValue)
+      SingleValue = isa<PoisonValue>(SingleValue) ? CaseRes : nullptr;
   }
 
   // Fill in any holes in the table with the default result.
@@ -6554,7 +6554,10 @@ SwitchLookupTable::SwitchLookupTable(
         TableContents[I] = DefaultValue;
     }
 
-    if (DefaultValue != SingleValue)
+    // If the default value is poison, all the holes are poison.
+    bool DefaultValueIsPoison = isa<PoisonValue>(DefaultValue);
+
+    if (DefaultValue != SingleValue && !DefaultValueIsPoison)
       SingleValue = nullptr;
   }
 
@@ -6578,6 +6581,16 @@ SwitchLookupTable::SwitchLookupTable(
     // Check if there is the same distance between two consecutive values.
     for (uint64_t I = 0; I < TableSize; ++I) {
       ConstantInt *ConstVal = dyn_cast<ConstantInt>(TableContents[I]);
+
+      if (!ConstVal && isa<PoisonValue>(TableContents[I])) {
+        // This is an poison, so it's (probably) a lookup table hole.
+        // To prevent any regressions from before we switched to using poison as
+        // the default value, holes will fall back to using the first value.
+        // This can be removed once we add proper handling for poisons in lookup
+        // tables.
+        ConstVal = dyn_cast<ConstantInt>(Values[0].second);
+      }
+
       if (!ConstVal) {
         // This is an undef. We could deal with it, but undefs in lookup tables
         // are very seldom. It's probably not worth the additional complexity.
@@ -7012,8 +7025,8 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   // If the table has holes but the default destination doesn't produce any
   // constant results, the lookup table entries corresponding to the holes will
-  // contain undefined values.
-  bool AllHolesAreUndefined = TableHasHoles && !HasDefaultResults;
+  // contain poison.
+  bool AllHolesArePoison = TableHasHoles && !HasDefaultResults;
 
   // If the default destination doesn't produce a constant result but is still
   // reachable, and the lookup table has holes, we need to use a mask to
@@ -7021,7 +7034,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // to the default case.
   // The mask is unnecessary if the table has holes but the default destination
   // is unreachable, as in that case the holes must also be unreachable.
-  bool NeedMask = AllHolesAreUndefined && DefaultIsReachable;
+  bool NeedMask = AllHolesArePoison && DefaultIsReachable;
   if (NeedMask) {
     // As an extra penalty for the validity test we require more cases.
     if (SI->getNumCases() < 4) // FIXME: Find best threshold value (benchmark).
@@ -7166,9 +7179,11 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
+    Type *ResultType = ResultList.begin()->second->getType();
+
     // Use any value to fill the lookup table holes.
     Constant *DV =
-        AllHolesAreUndefined ? ResultLists[PHI][0].second : DefaultResults[PHI];
+        AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);
