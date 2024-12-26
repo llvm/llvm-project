@@ -17172,6 +17172,58 @@ static SDValue lowerV8I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   return lowerShuffleWithPERMV(DL, MVT::v8i64, Mask, V1, V2, Subtarget, DAG);
 }
 
+static SDValue lowerShuffleAsVSELECT(const SDLoc &DL,
+                                     ArrayRef<int> RepeatedMask, SDValue V1,
+                                     SDValue V2, SelectionDAG &DAG) {
+  if (V1.getOpcode() != ISD::BUILD_VECTOR &&
+      V2.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+  SDValue BuildVector;
+  if (V1.getOpcode() == ISD::BUILD_VECTOR) {
+    BuildVector = V1;
+    if (V2.getOpcode() != ISD::BITCAST)
+      return SDValue();
+  } else {
+    BuildVector = V2;
+    if (V1.getOpcode() != ISD::BITCAST)
+      return SDValue();
+  }
+  if (!ISD::isBuildVectorAllZeros(BuildVector.getNode()))
+    return SDValue();
+  APInt DestMask(16, 0);
+  for (unsigned i = 0; i < 16; ++i) {
+    SDValue Op = BuildVector->getOperand(i);
+    if (Op.isUndef())
+      DestMask.setBit(i);
+  }
+  if (DestMask.isZero())
+    return SDValue();
+
+  unsigned Imm8 = 0;
+  for (unsigned i = 0; i < 4; ++i) {
+    if (V1.getOpcode() != ISD::BUILD_VECTOR) {
+      if (RepeatedMask[i] >= 4) {
+        continue;
+      }
+    } else if (RepeatedMask[i] < 4) {
+      continue;
+    }
+    Imm8 += (RepeatedMask[i] % 4) << (2 * i);
+  }
+
+  SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, MVT::v16i1,
+                                DAG.getConstant(DestMask, DL, MVT::i16));
+
+  std::vector<SDValue> ZeroElements(16, DAG.getConstant(0, DL, MVT::i32));
+  SDValue Zeros = DAG.getBuildVector(MVT::v16i32, DL, ZeroElements);
+
+  return DAG.getNode(ISD::VSELECT, DL, MVT::v16i32, Bitcast,
+                     DAG.getNode(X86ISD::PSHUFD, DL, MVT::v16i32,
+                                 V1.getOpcode() != ISD::BUILD_VECTOR ? V1 : V2,
+                                 DAG.getTargetConstant(Imm8, DL, MVT::i8)),
+                     Zeros);
+}
+
 /// Handle lowering of 16-lane 32-bit integer shuffles.
 static SDValue lowerV16I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                   const APInt &Zeroable, SDValue V1, SDValue V2,
@@ -17216,6 +17268,9 @@ static SDValue lowerV16I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
     // Use dedicated unpack instructions for masks that match their pattern.
     if (SDValue V = lowerShuffleWithUNPCK(DL, MVT::v16i32, V1, V2, Mask, DAG))
+      return V;
+
+    if (SDValue V = lowerShuffleAsVSELECT(DL, RepeatedMask, V1, V2, DAG))
       return V;
   }
 
