@@ -1121,7 +1121,8 @@ struct LowerPackResult {
 
 /// Rewrite pack as pad + reshape + transpose.
 FailureOr<LowerPackResult> lowerPack(RewriterBase &rewriter,
-                                     tensor::PackOp packOp);
+                                     tensor::PackOp packOp,
+                                     bool lowerPadLikeWithInsertSlice = true);
 
 struct LowerUnPackOpResult {
   tensor::EmptyOp emptyOp;
@@ -1131,8 +1132,9 @@ struct LowerUnPackOpResult {
 };
 
 /// Rewrite pack as empty + transpose + reshape + extract_slice.
-FailureOr<LowerUnPackOpResult> lowerUnPack(RewriterBase &rewriter,
-                                           tensor::UnPackOp unPackOp);
+FailureOr<LowerUnPackOpResult>
+lowerUnPack(RewriterBase &rewriter, tensor::UnPackOp unPackOp,
+            bool lowerUnpadLikeWithExtractSlice = true);
 
 /// Struct to hold the result of a `pack` call.
 struct PackResult {
@@ -1503,8 +1505,8 @@ using OptimizeCopyFn =
 
 /// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
-struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
-  GeneralizePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
+struct DecomposePadOpPattern : public OpRewritePattern<tensor::PadOp> {
+  DecomposePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<tensor::PadOp>(context, benefit) {}
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override;
@@ -1519,7 +1521,7 @@ protected:
 ///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
 ///     tensor::InsertSliceOp ops.
 ///
-/// Required that all the outer dims of the input tensor::PackOp are 1.
+/// Requires that all the outer dims of the input tensor::PackOp are 1.
 ///
 /// Before:
 /// ```
@@ -1555,9 +1557,33 @@ struct DecomposeOuterUnitDimsPackOpPattern
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced extract_slice op
-/// + transpose op + insert_slice op, where the tensor::UnPackOp has outer dims
-/// being all 1s.
+/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced
+///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
+///
+/// Requires that all the outer dims of the input tensor::PackOp are 1.
+///
+/// Before:
+/// ```
+/// %packed = tensor.unpack %input
+///   inner_dims_pos = [1, 0]
+///   inner_tiles = [2, 8]
+///   into %output : tensor<1x1x2x8xf32> -> tensor<5x1xf32>
+/// ```
+///
+/// After:
+/// ```
+///   // Rank-reduced extract to obtain the tile
+///   %slice = tensor.extract_slice %arg0[0, 0, 0, 0] [1, 1, 2, 8] [1, 1, 1, 1]
+///     : tensor<1x1x2x8xf32> to tensor<2x8xf32>
+///   // EmptyOp + TransposeOp
+///   %init = tensor.empty() : tensor<8x2xf32>
+///   %transposed = linalg.transpose
+///     ins(%extracted_slice : tensor<2x8xf32>)
+///     outs(%0 : tensor<8x2xf32>) permutation = [1, 0]
+///   // Extract a slice matching the specified output size
+///   %result = tensor.extract_slice %transposed[0, 0] [5, 1] [1, 1]
+///     : tensor<8x2xf32> to tensor<5x1xf32>
+/// ```
 struct DecomposeOuterUnitDimsUnPackOpPattern
     : public OpRewritePattern<tensor::UnPackOp> {
   using OpRewritePattern<tensor::UnPackOp>::OpRewritePattern;
@@ -1687,6 +1713,10 @@ void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 /// tensor.pad, linalg.transpose, tensor.{insert|extract}_slice. Require all
 /// outer dims to be unit.
 void populateDecomposePackUnpackPatterns(RewritePatternSet &patterns);
+
+/// Populates patterns to decompose tensor.pad into e.g.
+/// tensor.empty, linalg.fill, tensor.insert_slice.
+void populateDecomposePadPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.

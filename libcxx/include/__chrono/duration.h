@@ -542,8 +542,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <type_traits>
-#endif
-
 #endif // _LIBCPP___CHRONO_DURATION_H

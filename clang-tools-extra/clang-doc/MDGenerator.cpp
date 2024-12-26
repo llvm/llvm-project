@@ -157,17 +157,17 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
   for (const auto &N : I.Params) {
     if (!First)
       Stream << ", ";
-    Stream << N.Type.Name + " " + N.Name;
+    Stream << N.Type.QualName + " " + N.Name;
     First = false;
   }
   writeHeader(I.Name, 3, OS);
   std::string Access = getAccessSpelling(I.Access).str();
   if (Access != "")
-    writeLine(genItalic(Access + " " + I.ReturnType.Type.Name + " " + I.Name +
-                        "(" + Stream.str() + ")"),
+    writeLine(genItalic(Access + " " + I.ReturnType.Type.QualName + " " +
+                        I.Name + "(" + Stream.str() + ")"),
               OS);
   else
-    writeLine(genItalic(I.ReturnType.Type.Name + " " + I.Name + "(" +
+    writeLine(genItalic(I.ReturnType.Type.QualName + " " + I.Name + "(" +
                         Stream.str() + ")"),
               OS);
   if (I.DefLoc)

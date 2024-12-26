@@ -43,3 +43,14 @@ bool cuf::isInCUDADeviceContext(mlir::Operation *op) {
   }
   return false;
 }
+
+bool cuf::isRegisteredDeviceGlobal(fir::GlobalOp op) {
+  if (op.getConstant())
+    return false;
+  auto attr = op.getDataAttr();
+  if (attr && (*attr == cuf::DataAttribute::Device ||
+               *attr == cuf::DataAttribute::Managed ||
+               *attr == cuf::DataAttribute::Constant))
+    return true;
+  return false;
+}

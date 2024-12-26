@@ -1497,7 +1497,7 @@ void ELFState<ELFT>::writeSectionContent(
           BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
       SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
       // Write all BBEntries in this BBRange.
-      if (!BBR.BBEntries)
+      if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
       for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
@@ -1796,8 +1796,30 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::NoteSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  if (!Section.Notes)
+  if (!Section.Notes || Section.Notes->empty())
     return;
+
+  unsigned Align;
+  switch (Section.AddressAlign) {
+  case 0:
+  case 4:
+    Align = 4;
+    break;
+  case 8:
+    Align = 8;
+    break;
+  default:
+    reportError(Section.Name + ": invalid alignment for a note section: 0x" +
+                Twine::utohexstr(Section.AddressAlign));
+    return;
+  }
+
+  if (CBA.getOffset() != alignTo(CBA.getOffset(), Align)) {
+    reportError(Section.Name + ": invalid offset of a note section: 0x" +
+                Twine::utohexstr(CBA.getOffset()) + ", should be aligned to " +
+                Twine(Align));
+    return;
+  }
 
   uint64_t Offset = CBA.tell();
   for (const ELFYAML::NoteEntry &NE : *Section.Notes) {
@@ -1820,14 +1842,15 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     if (!NE.Name.empty()) {
       CBA.write(NE.Name.data(), NE.Name.size());
       CBA.write('\0');
-      CBA.padToAlignment(4);
     }
 
     // Write description and padding.
     if (NE.Desc.binary_size() != 0) {
+      CBA.padToAlignment(Align);
       CBA.writeAsBinary(NE.Desc);
-      CBA.padToAlignment(4);
     }
+
+    CBA.padToAlignment(Align);
   }
 
   SHeader.sh_size = CBA.tell() - Offset;

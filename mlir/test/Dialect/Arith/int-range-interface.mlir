@@ -481,8 +481,8 @@ func.func @xori_i1() -> (i1, i1) {
 }
 
 // CHECK-LABEL: func @xori
-// TODO: xor folding is temporarily disabled
-// CHECK-NOT: arith.constant false
+// CHECK: %[[false:.*]] = arith.constant false
+// CHECK: return %[[false]]
 func.func @xori(%arg0 : i64, %arg1 : i64) -> i1 {
     %c0 = arith.constant 0 : i64
     %c7 = arith.constant 7 : i64

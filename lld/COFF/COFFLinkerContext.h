@@ -32,6 +32,27 @@ public:
   SymbolTable symtab;
   COFFOptTable optTable;
 
+  // A hybrid ARM64EC symbol table on ARM64X target.
+  std::optional<SymbolTable> hybridSymtab;
+
+  // Pointer to the ARM64EC symbol table: either symtab for an ARM64EC target or
+  // hybridSymtab for an ARM64X target.
+  SymbolTable *symtabEC = nullptr;
+
+  // Returns the appropriate symbol table for the specified machine type.
+  SymbolTable &getSymtab(llvm::COFF::MachineTypes machine) {
+    if (hybridSymtab && (machine == ARM64EC || machine == AMD64))
+      return *hybridSymtab;
+    return symtab;
+  }
+
+  // Invoke the specified callback for each symbol table.
+  void forEachSymtab(std::function<void(SymbolTable &symtab)> f) {
+    f(symtab);
+    if (hybridSymtab)
+      f(*hybridSymtab);
+  }
+
   std::vector<ObjFile *> objFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
   std::vector<ImportFile *> importFileInstances;
@@ -88,6 +109,8 @@ public:
   Timer diskCommitTimer;
 
   Configuration config;
+
+  DynamicRelocsChunk *dynamicRelocs = nullptr;
 };
 
 } // namespace lld::coff

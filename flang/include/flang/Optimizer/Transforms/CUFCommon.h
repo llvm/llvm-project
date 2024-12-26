@@ -9,6 +9,7 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_CUFCOMMON_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_CUFCOMMON_H_
 
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 
@@ -21,6 +22,7 @@ mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
                                             mlir::SymbolTable &symTab);
 
 bool isInCUDADeviceContext(mlir::Operation *op);
+bool isRegisteredDeviceGlobal(fir::GlobalOp op);
 
 } // namespace cuf
 

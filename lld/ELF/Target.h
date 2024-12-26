@@ -211,8 +211,8 @@ static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
 void processArmCmseSymbols(Ctx &);
 
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-uint8_t getMipsFpAbiFlag(Ctx &, uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
+uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
+                         uint8_t newFlag);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
@@ -292,7 +292,7 @@ inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
   if ((v & (n - 1)) != 0)
     Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
              << rel.type << ": 0x" << llvm::utohexstr(v)
-             << " is not aligned to " << Twine(n) << " bytes";
+             << " is not aligned to " << n << " bytes";
 }
 
 // Endianness-aware read/write.

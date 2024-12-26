@@ -9657,7 +9657,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportConflictTypeAliasTemplate) {
 AST_MATCHER(ClassTemplateSpecializationDecl, hasInstantiatedFromMember) {
   if (auto Instantiate = Node.getInstantiatedFrom()) {
     if (auto *FromPartialSpecialization =
-            Instantiate.get<ClassTemplatePartialSpecializationDecl *>()) {
+            cast<ClassTemplatePartialSpecializationDecl *>(Instantiate)) {
       return nullptr != FromPartialSpecialization->getInstantiatedFromMember();
     }
   }
@@ -10179,6 +10179,111 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
 
   testTemplateParmDeclCircularDependency<TemplateTemplateParmDecl>(
       FromD, FromDInherited);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ExistingUndeclaredImportDeclaredFriend) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+        template <class A, A>
+        struct foo;
+
+        template <class A>
+        struct X {
+          template <class A1, A1>
+          friend struct foo;
+        };
+      )",
+      Lang_CXX11);
+  Decl *FromTU = getTuDecl(
+      R"(
+        template <class A, A>
+        struct foo;
+
+        template <class A>
+        struct X {
+          template <class A1, A1>
+          friend struct foo;
+        };
+
+        X<int> x;
+      )",
+      Lang_CXX11);
+
+  auto *ToFr1 = FirstDeclMatcher<FriendDecl>().match(ToTU, friendDecl());
+  auto *ToFrD1 = ToFr1->getFriendDecl();
+
+  auto *FromFr1 = FirstDeclMatcher<FriendDecl>().match(FromTU, friendDecl());
+  auto *FromFr2 = LastDeclMatcher<FriendDecl>().match(FromTU, friendDecl());
+
+  auto *FromFrD1 = FromFr1->getFriendDecl();
+  auto *FromFrD2 = FromFr2->getFriendDecl();
+
+  auto *Ctx1 = cast<Decl>(FromFrD1->getDeclContext());
+  auto *Ctx2 = cast<Decl>(FromFrD2->getDeclContext());
+
+  ASSERT_EQ(Ctx1, Ctx2);
+  ASSERT_EQ(ToFrD1->getTemplateDepth(), 1u);
+  ASSERT_EQ(FromFrD2->getTemplateDepth(), 0u);
+  ASSERT_EQ(ToFrD1->getFriendObjectKind(), Decl::FOK_Undeclared);
+  ASSERT_EQ(FromFrD2->getFriendObjectKind(), Decl::FOK_Declared);
+
+  auto *ToFr2Imp = Import(FromFr2, Lang_CXX11);
+
+  EXPECT_TRUE(ToFr2Imp);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ExistingDeclaredImportUndeclaredFriend) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+        template <class A, A>
+        struct foo;
+
+        template <class A>
+        struct X {
+          template <class A1, A1>
+          friend struct foo;
+        };
+
+        X<int> x;
+      )",
+      Lang_CXX11);
+  Decl *FromTU = getTuDecl(
+      R"(
+        template <class A, A>
+        struct foo;
+
+        template <class A>
+        struct X {
+          template <class A1, A1>
+          friend struct foo;
+        };
+      )",
+      Lang_CXX11);
+
+  auto *ToFr1 = FirstDeclMatcher<FriendDecl>().match(ToTU, friendDecl());
+  auto *ToFr2 = LastDeclMatcher<FriendDecl>().match(ToTU, friendDecl());
+
+  auto *ToFrD1 = ToFr1->getFriendDecl();
+  auto *ToFrD2 = ToFr2->getFriendDecl();
+
+  auto *FromFr1 = FirstDeclMatcher<FriendDecl>().match(FromTU, friendDecl());
+  auto *FromFrD1 = FromFr1->getFriendDecl();
+
+  auto *Ctx1 = cast<Decl>(ToFrD1->getDeclContext());
+  auto *Ctx2 = cast<Decl>(ToFrD2->getDeclContext());
+
+  ASSERT_EQ(Ctx1, Ctx2);
+  ASSERT_EQ(FromFrD1->getTemplateDepth(), 1u);
+  ASSERT_EQ(ToFrD2->getTemplateDepth(), 0u);
+  ASSERT_EQ(FromFrD1->getFriendObjectKind(), Decl::FOK_Undeclared);
+  ASSERT_EQ(ToFrD2->getFriendObjectKind(), Decl::FOK_Declared);
+
+  auto *ToFr1Imp = Import(FromFr1, Lang_CXX11);
+
+  EXPECT_TRUE(ToFr1Imp);
+  EXPECT_EQ(ToFr1Imp, ToFr1);
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -281,6 +282,28 @@ ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
   Visitor.TraverseStmt(FD.getBody());
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&FD))
     Visitor.traverseConstructorInits(CtorDecl);
+
+  // If analyzing a lambda call operator, collect all captures of parameters (of
+  // the surrounding function). This collects them even if they are not
+  // referenced in the body of the lambda call operator. Non-parameter local
+  // variables that are captured are already collected into
+  // `ReferencedDecls.Locals` when traversing the call operator body, but we
+  // collect parameters here to avoid needing to check at each referencing node
+  // whether the parameter is a lambda capture from a surrounding function or is
+  // a parameter of the current function. If it becomes necessary to limit this
+  // set to the parameters actually referenced in the body, alternative
+  // optimizations can be implemented to minimize duplicative work.
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(&FD);
+      Method && isLambdaCallOperator(Method)) {
+    for (const auto &Capture : Method->getParent()->captures()) {
+      if (Capture.capturesVariable()) {
+        if (const auto *Param =
+                dyn_cast<ParmVarDecl>(Capture.getCapturedVar())) {
+          Result.LambdaCapturedParams.insert(Param);
+        }
+      }
+    }
+  }
 
   return Result;
 }

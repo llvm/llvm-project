@@ -149,9 +149,9 @@ protected:
 
   JITLinkMemoryManager &MemMgr;
   const JITLinkDylib *JD = nullptr;
+  ExecutionSession &ES;
 
 private:
-  ExecutionSession &ES;
   DebugObjectFlags Flags;
   FinalizedAlloc Alloc;
 };
@@ -234,7 +234,7 @@ static bool isDwarfSection(StringRef SectionName) {
 
 std::unique_ptr<WritableMemoryBuffer>
 ELFDebugObject::CopyBuffer(MemoryBufferRef Buffer, Error &Err) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   size_t Size = Buffer.getBufferSize();
   StringRef Name = Buffer.getBufferIdentifier();
   if (auto Copy = WritableMemoryBuffer::getNewUninitMemBuffer(Size, Name)) {
@@ -331,8 +331,9 @@ Expected<SimpleSegmentAlloc> ELFDebugObject::finalizeWorkingMemory() {
   size_t Size = Buffer->getBufferSize();
 
   // Allocate working memory for debug object in read-only segment.
-  auto Alloc = SimpleSegmentAlloc::Create(
-      MemMgr, JD, {{MemProt::Read, {Size, Align(PageSize)}}});
+  auto Alloc =
+      SimpleSegmentAlloc::Create(MemMgr, ES.getSymbolStringPool(), JD,
+                                 {{MemProt::Read, {Size, Align(PageSize)}}});
   if (!Alloc)
     return Alloc;
 

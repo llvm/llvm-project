@@ -116,6 +116,28 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   return Results;
 }
 
+/// Returns the full source range for the field declaration up to (not
+/// including) the trailing semicolumn, including potential macro invocations,
+/// e.g. `int a GUARDED_BY(mu);`.
+static SourceRange getFullFieldSourceRange(const FieldDecl &Field,
+                                           const ASTContext &Context) {
+  SourceRange Range = Field.getSourceRange();
+  SourceLocation End = Range.getEnd();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+  while (true) {
+    std::optional<Token> CurrentToken = Lexer::findNextToken(End, SM, LangOpts);
+
+    if (!CurrentToken || CurrentToken->is(tok::semi))
+      break;
+
+    if (CurrentToken->is(tok::eof))
+      return Range; // Something is wrong, return the original range.
+    End = CurrentToken->getLastLoc();
+  }
+  return SourceRange(Range.getBegin(), End);
+}
+
 /// Reorders fields in the definition of a struct/class.
 ///
 /// At the moment reordering of fields with
@@ -145,9 +167,10 @@ static bool reorderFieldsInDefinition(
     const auto FieldIndex = Field->getFieldIndex();
     if (FieldIndex == NewFieldsOrder[FieldIndex])
       continue;
-    addReplacement(Field->getSourceRange(),
-                   Fields[NewFieldsOrder[FieldIndex]]->getSourceRange(),
-                   Context, Replacements);
+    addReplacement(
+        getFullFieldSourceRange(*Field, Context),
+        getFullFieldSourceRange(*Fields[NewFieldsOrder[FieldIndex]], Context),
+        Context, Replacements);
   }
   return true;
 }

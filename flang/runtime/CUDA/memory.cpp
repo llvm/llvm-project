@@ -11,31 +11,12 @@
 #include "../terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
+#include "flang/Runtime/CUDA/memmove-function.h"
 #include "flang/Runtime/assign.h"
 
 #include "cuda_runtime.h"
 
 namespace Fortran::runtime::cuda {
-static void *MemmoveHostToDevice(
-    void *dst, const void *src, std::size_t count) {
-  // TODO: Use cudaMemcpyAsync when we have support for stream.
-  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyHostToDevice));
-  return dst;
-}
-
-static void *MemmoveDeviceToHost(
-    void *dst, const void *src, std::size_t count) {
-  // TODO: Use cudaMemcpyAsync when we have support for stream.
-  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToHost));
-  return dst;
-}
-
-static void *MemmoveDeviceToDevice(
-    void *dst, const void *src, std::size_t count) {
-  // TODO: Use cudaMemcpyAsync when we have support for stream.
-  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToDevice));
-  return dst;
-}
 
 extern "C" {
 

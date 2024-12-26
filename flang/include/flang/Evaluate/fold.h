@@ -89,8 +89,19 @@ constexpr std::optional<std::int64_t> ToInt64(
     return std::nullopt;
   }
 }
+template <int KIND>
+constexpr std::optional<std::int64_t> ToInt64(
+    const Expr<Type<TypeCategory::Unsigned, KIND>> &expr) {
+  if (auto scalar{
+          GetScalarConstantValue<Type<TypeCategory::Unsigned, KIND>>(expr)}) {
+    return scalar->ToInt64();
+  } else {
+    return std::nullopt;
+  }
+}
 
 std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &);
+std::optional<std::int64_t> ToInt64(const Expr<SomeUnsigned> &);
 std::optional<std::int64_t> ToInt64(const Expr<SomeType> &);
 std::optional<std::int64_t> ToInt64(const ActualArgument &);
 

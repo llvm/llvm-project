@@ -820,7 +820,8 @@ bool GCOVProfiler::emitProfileNotes(
       SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI,
                                    BFI);
 
-      CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
+      CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry=*/false,
+                               /*InstrumentLoopEntries=*/false, BPI, BFI);
 
       // getInstrBB can split basic blocks and push elements to AllEdges.
       for (size_t I : llvm::seq<size_t>(0, MST.numEdges())) {

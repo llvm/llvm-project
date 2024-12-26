@@ -964,7 +964,7 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
     (see [vector.transfer_read](../Vector/#vectortransfer_read-mlirvectortransferreadop)).
   }];
 
-  let results = (outs AnyVector:$result);
+  let results = (outs AnyVectorOfNonZeroRank:$result);
 
   let builders = [
     /// Builds an affine vector load op with the specified map and operands.
@@ -1031,7 +1031,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
     (see [vector.transfer_write](../Vector/#vectortransfer_write-mlirvectortransferwriteop)).
   }];
 
-  let arguments = (ins AnyVector:$value,
+  let arguments = (ins AnyVectorOfNonZeroRank:$value,
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$memref,
       Variadic<Index>:$indices,
@@ -1115,7 +1115,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$linear_index, "ValueRange":$dynamic_basis, "ArrayRef<int64_t>":$static_asis, CArg<"bool", "true">:$hasOuterBound)>,
+    OpBuilder<(ins "Value":$linear_index, "ValueRange":$dynamic_basis, "ArrayRef<int64_t>":$static_basis, CArg<"bool", "true">:$hasOuterBound)>,
     OpBuilder<(ins "Value":$linear_index, "ValueRange":$basis, CArg<"bool", "true">:$hasOuterBound)>,
     OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis, CArg<"bool", "true">:$hasOuterBound)>,
     OpBuilder<(ins "Value":$linear_index, "ArrayRef<int64_t>":$basis, CArg<"bool", "true">:$hasOuterBound)>
@@ -1193,7 +1193,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
   let arguments = (ins Variadic<Index>:$multi_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis,
-    UnitProperty:$disjoint);
+    UnitProp:$disjoint);
   let results = (outs Index:$linear_index);
 
   let assemblyFormat = [{

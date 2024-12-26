@@ -226,13 +226,13 @@ MainLoopPosix::~MainLoopPosix() {
 #endif
   m_read_fds.erase(m_interrupt_pipe.GetReadFileDescriptor());
   m_interrupt_pipe.Close();
-  assert(m_read_fds.size() == 0); 
+  assert(m_read_fds.size() == 0);
   assert(m_signals.size() == 0);
 }
 
 MainLoopPosix::ReadHandleUP
 MainLoopPosix::RegisterReadObject(const IOObjectSP &object_sp,
-                                 const Callback &callback, Status &error) {
+                                  const Callback &callback, Status &error) {
   if (!object_sp || !object_sp->IsValid()) {
     error = Status::FromErrorString("IO object is not valid.");
     return nullptr;

@@ -1,20 +1,16 @@
-; RUN: llc -march=hexagon --combiner-store-merging=false < %s | FileCheck %s
-; CHECK-NOT: memh
-; Check that store widening does not merge the two stores.
+; RUN: llc -mtriple=hexagon --combiner-store-merging=false -verify-machineinstrs < %s | FileCheck %s
+; CHECK: memh
+; Check that store widening merges the two adjacent stores.
 
-target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 
 %struct.type_t = type { i8, i8, [2 x i8] }
 
 define zeroext i8 @foo(ptr nocapture %p) nounwind {
 entry:
-  store i8 0, ptr %p, align 2, !tbaa !0
+  store i8 0, ptr %p, align 2
   %b = getelementptr inbounds %struct.type_t, ptr %p, i32 0, i32 1
-  %0 = load i8, ptr %b, align 1, !tbaa !0
-  store i8 0, ptr %b, align 1, !tbaa !0
+  %0 = load i8, ptr %b, align 1
+  store i8 0, ptr %b, align 1
   ret i8 %0
 }
-
-!0 = !{!"omnipotent char", !1}
-!1 = !{!"Simple C/C++ TBAA"}

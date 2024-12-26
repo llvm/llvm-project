@@ -219,6 +219,7 @@ public:
     OPW96,
     OPW128,
     OPW160,
+    OPW192,
     OPW256,
     OPW288,
     OPW320,

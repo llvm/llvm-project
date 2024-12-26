@@ -649,14 +649,15 @@ StmtNodeBuilder::~StmtNodeBuilder() {
 void BranchNodeBuilder::anchor() {}
 
 ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
-                                              bool branch,
+                                              bool Branch,
                                               ExplodedNode *NodePred) {
-  // If the branch has been marked infeasible we should not generate a node.
-  if (!isFeasible(branch))
+  const CFGBlock *Dst = Branch ? DstT : DstF;
+
+  if (!Dst)
     return nullptr;
 
-  ProgramPoint Loc = BlockEdge(C.getBlock(), branch ? DstT : DstF,
-                               NodePred->getLocationContext());
+  ProgramPoint Loc =
+      BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
   ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
   return Succ;
 }

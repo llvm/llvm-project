@@ -145,7 +145,9 @@ private:
   bool selectGlobalLoadLds(MachineInstr &MI) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
+  bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
   bool selectWaveAddress(MachineInstr &I) const;
+  bool selectBITOP3(MachineInstr &I) const;
   bool selectStackRestore(MachineInstr &MI) const;
   bool selectNamedBarrierInit(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
@@ -328,9 +330,40 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
 
   void renderOpSelTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_0_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_0_1(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_1_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_1_1(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderDstSelToOpSelXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
+
+  void renderSrcSelToOpSelXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_2_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderDstSelToOpSel3XFormXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
 
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;

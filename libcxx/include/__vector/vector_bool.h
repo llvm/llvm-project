@@ -390,18 +390,12 @@ private:
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __init_with_sentinel(_InputIterator __first, _Sentinel __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __first != __last; ++__first)
-        push_back(*__first);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      if (__begin_ != nullptr)
-        __storage_traits::deallocate(__alloc_, __begin_, __cap_);
-      throw;
-    }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
+
+    for (; __first != __last; ++__first)
+      push_back(*__first);
+
+    __guard.__complete();
   }
 
   template <class _Iterator, class _Sentinel>
@@ -1055,18 +1049,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::resize(size_type __
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::flip() _NOEXCEPT {
-  // do middle whole words
-  size_type __n         = __size_;
+  // Flip each storage word entirely, including the last potentially partial word.
+  // The unused bits in the last word are safe to flip as they won't be accessed.
   __storage_pointer __p = __begin_;
-  for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
+  for (size_type __n = __external_cap_to_internal(size()); __n != 0; ++__p, --__n)
     *__p = ~*__p;
-  // do last partial word
-  if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __storage_type __b = *__p & __m;
-    *__p &= ~__m;
-    *__p |= ~__b & __m;
-  }
 }
 
 template <class _Allocator>

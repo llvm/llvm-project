@@ -604,7 +604,7 @@ const char TestScheme::TestDir[] = "/clangd-test";
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
-                  AsyncTaskRunner *Tasks) {
+                  AsyncTaskRunner *Tasks, bool SupportContainedRefs) {
   static const trace::Metric RemoteIndexUsed("used_remote_index",
                                              trace::Metric::Value, "address");
   switch (External.Kind) {
@@ -620,8 +620,9 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
         External.Location);
     auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
     auto IndexLoadTask = [File = External.Location,
-                          PlaceHolder = NewIndex.get()] {
-      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true))
+                          PlaceHolder = NewIndex.get(), SupportContainedRefs] {
+      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true,
+                               SupportContainedRefs))
         PlaceHolder->reset(std::move(Idx));
     };
     if (Tasks) {
@@ -909,7 +910,12 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.BackgroundIndexPriority = BackgroundIndexPriority;
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
-  auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
+  auto PAI = createProjectAwareIndex(
+      [SupportContainedRefs = Opts.EnableOutgoingCalls](
+          const Config::ExternalIndexSpec &External, AsyncTaskRunner *Tasks) {
+        return loadExternalIndex(External, Tasks, SupportContainedRefs);
+      },
+      Sync);
   Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();

@@ -14,7 +14,7 @@ define i32 @test(ptr %ptr) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ptr nocapture readonly [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    [[PHI:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 4
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[PHI]], align 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -59,7 +59,7 @@ define void @test2(ptr %self, i64 %v, i64 %ix) {
 ; CHECK-SAME: ptr nocapture writeonly [[SELF:%.*]], i64 [[V:%.*]], i64 [[IX:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = shl i64 [[IX]], 3
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i8, ptr [[SELF]], i64 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds nuw i8, ptr [[SELF]], i64 [[SWITCH_TABLEIDX]]
 ; CHECK-NEXT:    store i64 [[V]], ptr [[GEP5]], align 8
 ; CHECK-NEXT:    ret void
 ;

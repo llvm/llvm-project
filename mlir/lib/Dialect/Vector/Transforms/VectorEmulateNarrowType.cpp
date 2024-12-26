@@ -128,34 +128,17 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                 return rewriter.create<vector::CreateMaskOp>(loc, newMaskType,
                                                              newMaskOperands);
               })
-          .Case<vector::ConstantMaskOp>([&](auto constantMaskOp)
-                                            -> std::optional<Operation *> {
-            ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
-            size_t numMaskOperands = maskDimSizes.size();
-            int64_t origIndex = maskDimSizes[numMaskOperands - 1];
-            int64_t startIndex = numFrontPadElems / numSrcElemsPerDest;
-            int64_t maskIndex = llvm::divideCeil(numFrontPadElems + origIndex,
-                                                 numSrcElemsPerDest);
-
-            // TODO: we only want the mask between [startIndex, maskIndex]
-            // to be true, the rest are false.
-            if (numFrontPadElems != 0 && maskDimSizes.size() > 1)
-              return std::nullopt;
-
-            SmallVector<int64_t> newMaskDimSizes(maskDimSizes.drop_back());
-            newMaskDimSizes.push_back(maskIndex);
-
-            if (numFrontPadElems == 0)
-              return rewriter.create<vector::ConstantMaskOp>(loc, newMaskType,
-                                                             newMaskDimSizes);
-
-            SmallVector<bool> newMaskValues;
-            for (int64_t i = 0; i < numDestElems; ++i)
-              newMaskValues.push_back(i >= startIndex && i < maskIndex);
-            auto newMask = DenseElementsAttr::get(newMaskType, newMaskValues);
-            return rewriter.create<arith::ConstantOp>(loc, newMaskType,
-                                                      newMask);
-          })
+          .Case<vector::ConstantMaskOp>(
+              [&](auto constantMaskOp) -> std::optional<Operation *> {
+                // Take the shape of mask, compress its trailing dimension:
+                SmallVector<int64_t> maskDimSizes(
+                    constantMaskOp.getMaskDimSizes());
+                int64_t &maskIndex = maskDimSizes.back();
+                maskIndex = llvm::divideCeil(numFrontPadElems + maskIndex,
+                                             numSrcElemsPerDest);
+                return rewriter.create<vector::ConstantMaskOp>(loc, newMaskType,
+                                                               maskDimSizes);
+              })
           .Case<arith::ConstantOp>([&](auto constantOp)
                                        -> std::optional<Operation *> {
             // TODO: Support multiple dimensions.
@@ -604,7 +587,6 @@ struct ConvertVectorMaskedLoad final
   LogicalResult
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
     // See #115653
     if (op.getVectorType().getRank() != 1)
       return rewriter.notifyMatchFailure(op,

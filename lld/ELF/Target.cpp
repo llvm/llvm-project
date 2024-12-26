@@ -84,7 +84,7 @@ void elf::setTarget(Ctx &ctx) {
   case EM_X86_64:
     return setX86_64TargetInfo(ctx);
   default:
-    Fatal(ctx) << "unsupported e_machine value: " << Twine(ctx.arg.emachine);
+    Fatal(ctx) << "unsupported e_machine value: " << ctx.arg.emachine;
   }
 }
 
@@ -106,10 +106,11 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
     if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
       std::string objLoc = isec->getLocation(loc - isecLoc);
       // Return object file location and source file location.
-      // TODO: Refactor getSrcMsg not to take a variable.
       Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
-      return {isec, objLoc + ": ",
-              isec->file ? isec->getSrcMsg(dummy, loc - isecLoc) : ""};
+      ELFSyncStream msg(ctx, DiagLevel::None);
+      if (isec->file)
+        msg << isec->getSrcMsg(dummy, loc - isecLoc);
+      return {isec, objLoc + ": ", std::string(msg.str())};
     }
   }
   return {};

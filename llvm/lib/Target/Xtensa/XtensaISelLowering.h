@@ -148,6 +148,12 @@ private:
 
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;

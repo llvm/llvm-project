@@ -43,6 +43,8 @@ public:
 
   lldb::SBAddress GetStartAddress();
 
+  LLDB_DEPRECATED_FIXME("Not compatible with discontinuous functions.",
+                        "GetRanges()")
   lldb::SBAddress GetEndAddress();
 
   lldb::SBAddressRangeList GetRanges();

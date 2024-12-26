@@ -488,8 +488,6 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     }
   }
 
-  OS << "#define __riscv_v_intrinsic_overloading 1\n";
-
   OS << "\n#ifdef __cplusplus\n";
   OS << "}\n";
   OS << "#endif // __cplusplus\n";

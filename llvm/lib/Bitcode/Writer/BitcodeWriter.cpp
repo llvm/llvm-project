@@ -60,6 +60,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRSymtab.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -83,6 +84,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::memprof;
 
 static cl::opt<unsigned>
     IndexThreshold("bitcode-mdindex-threshold", cl::Hidden, cl::init(25),
@@ -231,7 +233,8 @@ private:
       SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
       unsigned ValueID, unsigned FSCallsAbbrev, unsigned FSCallsProfileAbbrev,
       unsigned CallsiteAbbrev, unsigned AllocAbbrev, unsigned ContextIdAbbvId,
-      const Function &F);
+      const Function &F, DenseMap<CallStackId, LinearCallStackId> &CallStackPos,
+      CallStackId &CallStackCount);
   void writeModuleLevelReferences(const GlobalVariable &V,
                                   SmallVector<uint64_t, 64> &NameVals,
                                   unsigned FSModRefsAbbrev,
@@ -848,6 +851,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_HWADDRESS;
   case Attribute::SanitizeThread:
     return bitc::ATTR_KIND_SANITIZE_THREAD;
+  case Attribute::SanitizeType:
+    return bitc::ATTR_KIND_SANITIZE_TYPE;
   case Attribute::SanitizeMemory:
     return bitc::ATTR_KIND_SANITIZE_MEMORY;
   case Attribute::SanitizeNumericalStability:
@@ -4195,12 +4200,58 @@ static void writeTypeIdCompatibleVtableSummaryRecord(
   }
 }
 
+// Adds the allocation contexts to the CallStacks map. We simply use the
+// size at the time the context was added as the CallStackId. This works because
+// when we look up the call stacks later on we process the function summaries
+// and their allocation records in the same exact order.
+static void collectMemProfCallStacks(
+    FunctionSummary *FS, std::function<LinearFrameId(unsigned)> GetStackIndex,
+    MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> &CallStacks) {
+  // The interfaces in ProfileData/MemProf.h use a type alias for a stack frame
+  // id offset into the index of the full stack frames. The ModuleSummaryIndex
+  // currently uses unsigned. Make sure these stay in sync.
+  static_assert(std::is_same_v<LinearFrameId, unsigned>);
+  for (auto &AI : FS->allocs()) {
+    for (auto &MIB : AI.MIBs) {
+      SmallVector<unsigned> StackIdIndices;
+      StackIdIndices.reserve(MIB.StackIdIndices.size());
+      for (auto Id : MIB.StackIdIndices)
+        StackIdIndices.push_back(GetStackIndex(Id));
+      // The CallStackId is the size at the time this context was inserted.
+      CallStacks.insert({CallStacks.size(), StackIdIndices});
+    }
+  }
+}
+
+// Build the radix tree from the accumulated CallStacks, write out the resulting
+// linearized radix tree array, and return the map of call stack positions into
+// this array for use when writing the allocation records. The returned map is
+// indexed by a CallStackId which in this case is implicitly determined by the
+// order of function summaries and their allocation infos being written.
+static DenseMap<CallStackId, LinearCallStackId> writeMemoryProfileRadixTree(
+    MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> &&CallStacks,
+    BitstreamWriter &Stream, unsigned RadixAbbrev) {
+  assert(!CallStacks.empty());
+  DenseMap<unsigned, FrameStat> FrameHistogram =
+      computeFrameHistogram<LinearFrameId>(CallStacks);
+  CallStackRadixTreeBuilder<LinearFrameId> Builder;
+  // We don't need a MemProfFrameIndexes map as we have already converted the
+  // full stack id hash to a linear offset into the StackIds array.
+  Builder.build(std::move(CallStacks), /*MemProfFrameIndexes=*/nullptr,
+                FrameHistogram);
+  Stream.EmitRecord(bitc::FS_CONTEXT_RADIX_TREE_ARRAY, Builder.getRadixArray(),
+                    RadixAbbrev);
+  return Builder.takeCallStackPos();
+}
+
 static void writeFunctionHeapProfileRecords(
     BitstreamWriter &Stream, FunctionSummary *FS, unsigned CallsiteAbbrev,
     unsigned AllocAbbrev, unsigned ContextIdAbbvId, bool PerModule,
     std::function<unsigned(const ValueInfo &VI)> GetValueID,
     std::function<unsigned(unsigned)> GetStackIndex,
-    bool WriteContextSizeInfoIndex) {
+    bool WriteContextSizeInfoIndex,
+    DenseMap<CallStackId, LinearCallStackId> &CallStackPos,
+    CallStackId &CallStackCount) {
   SmallVector<uint64_t> Record;
 
   for (auto &CI : FS->callsites()) {
@@ -4234,9 +4285,9 @@ static void writeFunctionHeapProfileRecords(
       Record.push_back(AI.Versions.size());
     for (auto &MIB : AI.MIBs) {
       Record.push_back((uint8_t)MIB.AllocType);
-      Record.push_back(MIB.StackIdIndices.size());
-      for (auto Id : MIB.StackIdIndices)
-        Record.push_back(GetStackIndex(Id));
+      // Record the index into the radix tree array for this context.
+      assert(CallStackCount <= CallStackPos.size());
+      Record.push_back(CallStackPos[CallStackCount++]);
     }
     if (!PerModule) {
       for (auto V : AI.Versions)
@@ -4282,7 +4333,9 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
     unsigned ValueID, unsigned FSCallsRelBFAbbrev,
     unsigned FSCallsProfileAbbrev, unsigned CallsiteAbbrev,
-    unsigned AllocAbbrev, unsigned ContextIdAbbvId, const Function &F) {
+    unsigned AllocAbbrev, unsigned ContextIdAbbvId, const Function &F,
+    DenseMap<CallStackId, LinearCallStackId> &CallStackPos,
+    CallStackId &CallStackCount) {
   NameVals.push_back(ValueID);
 
   FunctionSummary *FS = cast<FunctionSummary>(Summary);
@@ -4297,7 +4350,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
       /*PerModule*/ true,
       /*GetValueId*/ [&](const ValueInfo &VI) { return getValueId(VI); },
       /*GetStackIndex*/ [&](unsigned I) { return I; },
-      /*WriteContextSizeInfoIndex*/ true);
+      /*WriteContextSizeInfoIndex*/ true, CallStackPos, CallStackCount);
 
   auto SpecialRefCnts = FS->specialRefCounts();
   NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
@@ -4530,11 +4583,53 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_ALLOC_INFO));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
-  // n x (alloc type, numstackids, numstackids x stackidindex)
+  // n x (alloc type, context radix tree index)
   // optional: nummib x (numcontext x total size)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_RADIX_TREE_ARRAY));
+  // n x entry
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned RadixAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  // First walk through all the functions and collect the allocation contexts in
+  // their associated summaries, for use in constructing a radix tree of
+  // contexts. Note that we need to do this in the same order as the functions
+  // are processed further below since the call stack positions in the resulting
+  // radix tree array are identified based on this order.
+  MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
+  for (const Function &F : M) {
+    // Summary emission does not support anonymous functions, they have to be
+    // renamed using the anonymous function renaming pass.
+    if (!F.hasName())
+      report_fatal_error("Unexpected anonymous function when writing summary");
+
+    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    if (!VI || VI.getSummaryList().empty()) {
+      // Only declarations should not have a summary (a declaration might
+      // however have a summary if the def was in module level asm).
+      assert(F.isDeclaration());
+      continue;
+    }
+    auto *Summary = VI.getSummaryList()[0].get();
+    FunctionSummary *FS = cast<FunctionSummary>(Summary);
+    collectMemProfCallStacks(
+        FS, /*GetStackIndex*/ [](unsigned I) { return I; }, CallStacks);
+  }
+  // Finalize the radix tree, write it out, and get the map of positions in the
+  // linearized tree array.
+  DenseMap<CallStackId, LinearCallStackId> CallStackPos;
+  if (!CallStacks.empty()) {
+    CallStackPos =
+        writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
+  }
+
+  // Keep track of the current index into the CallStackPos map.
+  CallStackId CallStackCount = 0;
 
   SmallVector<uint64_t, 64> NameVals;
   // Iterate over the list of functions instead of the Index to
@@ -4555,7 +4650,8 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     auto *Summary = VI.getSummaryList()[0].get();
     writePerModuleFunctionSummaryRecord(
         NameVals, Summary, VE.getValueID(&F), FSCallsRelBFAbbrev,
-        FSCallsProfileAbbrev, CallsiteAbbrev, AllocAbbrev, ContextIdAbbvId, F);
+        FSCallsProfileAbbrev, CallsiteAbbrev, AllocAbbrev, ContextIdAbbvId, F,
+        CallStackPos, CallStackCount);
   }
 
   // Capture references from GlobalVariable initializers, which are outside
@@ -4692,12 +4788,19 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_ALLOC_INFO));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // numver
-  // nummib x (alloc type, numstackids, numstackids x stackidindex),
+  // nummib x (alloc type, context radix tree index),
   // numver x version
   // optional: nummib x total size
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_RADIX_TREE_ARRAY));
+  // n x entry
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned RadixAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   auto shouldImportValueAsDecl = [&](GlobalValueSummary *GVS) -> bool {
     if (DecSummaries == nullptr)
@@ -4735,6 +4838,41 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
   };
 
+  // First walk through all the functions and collect the allocation contexts in
+  // their associated summaries, for use in constructing a radix tree of
+  // contexts. Note that we need to do this in the same order as the functions
+  // are processed further below since the call stack positions in the resulting
+  // radix tree array are identified based on this order.
+  MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
+  forEachSummary([&](GVInfo I, bool IsAliasee) {
+    GlobalValueSummary *S = I.second;
+    assert(S);
+    auto *FS = dyn_cast<FunctionSummary>(S);
+    if (!FS)
+      return;
+    collectMemProfCallStacks(
+        FS,
+        /*GetStackIndex*/
+        [&](unsigned I) {
+          // Get the corresponding index into the list of StackIds actually
+          // being written for this combined index (which may be a subset in
+          // the case of distributed indexes).
+          assert(StackIdIndicesToIndex.contains(I));
+          return StackIdIndicesToIndex[I];
+        },
+        CallStacks);
+  });
+  // Finalize the radix tree, write it out, and get the map of positions in the
+  // linearized tree array.
+  DenseMap<CallStackId, LinearCallStackId> CallStackPos;
+  if (!CallStacks.empty()) {
+    CallStackPos =
+        writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
+  }
+
+  // Keep track of the current index into the CallStackPos map.
+  CallStackId CallStackCount = 0;
+
   DenseSet<GlobalValue::GUID> DefOrUseGUIDs;
   forEachSummary([&](GVInfo I, bool IsAliasee) {
     GlobalValueSummary *S = I.second;
@@ -4764,7 +4902,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       NameVals.push_back(*ValueId);
       assert(ModuleIdMap.count(VS->modulePath()));
       NameVals.push_back(ModuleIdMap[VS->modulePath()]);
-      NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
+      NameVals.push_back(
+          getEncodedGVSummaryFlags(VS->flags(), shouldImportValueAsDecl(VS)));
       NameVals.push_back(getEncodedGVarFlags(VS->varflags()));
       for (auto &RI : VS->refs()) {
         auto RefValueId = getValueId(RI.getGUID());
@@ -4813,7 +4952,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
           assert(StackIdIndicesToIndex.contains(I));
           return StackIdIndicesToIndex[I];
         },
-        /*WriteContextSizeInfoIndex*/ false);
+        /*WriteContextSizeInfoIndex*/ false, CallStackPos, CallStackCount);
 
     NameVals.push_back(*ValueId);
     assert(ModuleIdMap.count(FS->modulePath()));

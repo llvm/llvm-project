@@ -16,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
 if (EMSCRIPTEN AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
   set(WASM_SRC Wasm.cpp)
   set(WASM_LINK lldWasm)
+  set(COMMON_LINK lldCommon)
 endif()
 
 add_clang_library(clangInterpreter
@@ -47,6 +48,7 @@ add_clang_library(clangInterpreter
   clangSema
   clangSerialization
   ${WASM_LINK}
+  ${COMMON_LINK}
   )
 
 if ((MINGW OR CYGWIN) AND BUILD_SHARED_LIBS)

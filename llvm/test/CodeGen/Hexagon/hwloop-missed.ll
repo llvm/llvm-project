@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-hwloop-preheader < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-hwloop-preheader < %s | FileCheck %s
 
 ; Generate hardware loops when we also need to add a new preheader.
 ; we should generate two hardware loops for this test case.

@@ -137,8 +137,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
-  unsigned multiVersionFeatureCost() const override;
+  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;

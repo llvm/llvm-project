@@ -126,9 +126,9 @@ static bool mustParallelizeOp(Operation *op) {
         //         omp.workshare.loop_wrapper {}
         //
         // Therefore, we skip if we encounter a nested omp.workshare.
-        if (isa<omp::WorkshareOp>(op))
+        if (isa<omp::WorkshareOp>(nested))
           return WalkResult::skip();
-        if (isa<omp::WorkshareLoopWrapperOp>(op))
+        if (isa<omp::WorkshareLoopWrapperOp>(nested))
           return WalkResult::interrupt();
         return WalkResult::advance();
       })
@@ -153,6 +153,7 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
 
   if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
     return decl;
+
   // create function
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::OpBuilder modBuilder(module.getBodyRegion());
@@ -161,6 +162,7 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
   mlir::func::FuncOp funcOp =
       modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
@@ -253,8 +255,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
               // Either we have already remapped it
               bool remapped = rootMapping.contains(opr);
               // Or it is available because it dominates `sr`
-              bool dominates =
-                  di.properlyDominates(opr.getDefiningOp(), &*sr.begin);
+              bool dominates = di.properlyDominates(opr, &*sr.begin);
               return remapped || dominates;
             })) {
           // Safe to parallelize operations which have all operands available in
@@ -405,7 +406,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
 
   if (sourceRegion.hasOneBlock()) {
     handleOneBlock(sourceRegion.front());
-  } else {
+  } else if (!sourceRegion.empty()) {
     auto &domTree = di.getDomTree(&sourceRegion);
     for (auto node : llvm::breadth_first(domTree.getRootNode())) {
       handleOneBlock(*node->getBlock());

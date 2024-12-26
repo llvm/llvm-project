@@ -19,14 +19,73 @@ func.func @simple_KCRSsr_to_KCRS(%arg0: tensor<1x1x1x1x8x32xf32>, %arg1: tensor<
 
 // -----
 
-func.func @simple_unpack_and_extract_slice(%input: tensor<1x1x8x2xf32>, %output: tensor<5x1xf32>) -> tensor<5x1xf32> {
+func.func @simple_unpack_static_tiles(%input: tensor<1x1x8x2xf32>, %output: tensor<5x1xf32>) -> tensor<5x1xf32> {
   %0 = tensor.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %output : tensor<1x1x8x2xf32> -> tensor<5x1xf32>
   return %0 : tensor<5x1xf32>
 }
-// CHECK-LABEL: func.func @simple_unpack_and_extract_slice
+// CHECK-LABEL: func.func @simple_unpack_static_tiles
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
 // CHECK:         %[[TILE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0] [1, 1, 8, 2] [1, 1, 1, 1]
+// CHECK-NOT:     linalg.transpose
+//                They have the same type, so the insert_slice op is folded
+//                away.
+// CHECK:         %[[SLICE:.+]] = tensor.extract_slice %[[TILE]][0, 0] [5, 1] [1, 1]
+// CHECK:         return %[[SLICE]]
+
+/// Same as example above, but with 1 dynamic tile size.
+
+func.func @simple_unpack_dynamic_tile(%input: tensor<1x1x?x2xf32>, %output: tensor<5x1xf32>, %tile_dim: index) -> tensor<5x1xf32> {
+  %0 = tensor.unpack %input inner_dims_pos = [0, 1] inner_tiles = [%tile_dim, 2] into %output : tensor<1x1x?x2xf32> -> tensor<5x1xf32>
+  return %0 : tensor<5x1xf32>
+}
+// CHECK-LABEL: func.func @simple_unpack_dynamic_tile
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[TILE_DIM:[a-zA-Z0-9]+]]
+// CHECK:         %[[TILE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0] [1, 1, %[[TILE_DIM]], 2] [1, 1, 1, 1]
+// CHECK-NOT:     linalg.transpose
+//                They have the same type, so the insert_slice op is folded
+//                away.
+// CHECK:         %[[SLICE:.+]] = tensor.extract_slice %[[TILE]][0, 0] [5, 1] [1, 1]
+// CHECK:         return %[[SLICE]]
+
+/// Same as example above, but with 1 dynamic tile size and a trasnpose
+
+func.func @simple_unpack_dynamic_tile_transpose(%src: tensor<1x1x2x?xf32>, %dest: tensor<5x1xf32>, %tile_dim: index) -> tensor<5x1xf32> {
+  %0 = tensor.unpack %src inner_dims_pos = [1, 0] inner_tiles = [2, %tile_dim] into %dest : tensor<1x1x2x?xf32> -> tensor<5x1xf32>
+  return %0 : tensor<5x1xf32>
+}
+// CHECK-LABEL:   func.func @simple_unpack_dynamic_tile_transpose
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[TILE_DIM:[a-zA-Z0-9]+]]
+// CHECK:           %[[TILE:.*]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0] [1, 1, 2, %[[TILE_DIM]]] [1, 1, 1, 1] : tensor<1x1x2x?xf32> to tensor<2x?xf32>
+// CHECK:           %[[EMPTY:.*]] = tensor.empty(%[[TILE_DIM]]) : tensor<?x2xf32>
+// CHECK:           %[[TRANSP:.*]] = linalg.transpose
+// CHECK-SAME:        ins(%[[TILE]] : tensor<2x?xf32>)
+// CHECK-SAME:        outs(%[[EMPTY]] : tensor<?x2xf32>)
+// CHECK-SAME:        permutation = [1, 0]
+// CHECK:           %[[SLICE:.*]] = tensor.extract_slice %[[TRANSP]][0, 0] [5, 1] [1, 1] : tensor<?x2xf32> to tensor<5x1xf32>
+// CHECK:           return %[[SLICE]] : tensor<5x1xf32>
+
+
+/// Same as example above, but with 1 scalable tile size.
+
+func.func @simple_unpack_scalable_tile(%input: tensor<1x1x?x2xf32>, %output: tensor<5x1xf32>) -> tensor<5x1xf32> {
+  %c8 = arith.constant 8 : index
+  %vscale = vector.vscale
+  %c8_vscale = arith.muli %vscale, %c8 : index
+  %0 = tensor.unpack %input inner_dims_pos = [0, 1] inner_tiles = [%c8_vscale, 2] into %output : tensor<1x1x?x2xf32> -> tensor<5x1xf32>
+  return %0 : tensor<5x1xf32>
+}
+// CHECK-LABEL: func.func @simple_unpack_scalable_tile
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[C8:.+]] = arith.constant 8 : index
+// CHECK-DAG:     %[[VS:.+]] = vector.vscale
+// CHECK:         %[[C8_VS:.+]] = arith.muli %[[VS]], %[[C8]] : index
+// CHECK:         %[[TILE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0] [1, 1, %[[C8_VS]], 2] [1, 1, 1, 1]
 // CHECK-NOT:     linalg.transpose
 //                They have the same type, so the insert_slice op is folded
 //                away.
