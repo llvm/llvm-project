@@ -269,6 +269,7 @@ IntegerAttr Builder::getIntegerAttr(Type type, int64_t value) {
   if (type.isIndex())
     return IntegerAttr::get(type, APInt(64, value));
   // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
   return IntegerAttr::get(type, APInt(type.getIntOrFloatBitWidth(), value,
                                       type.isSignedInteger(),
                                       /*implicitTrunc=*/true));
@@ -552,7 +553,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
       return cleanupFailure();
 
     // Ask the dialect to materialize a constant operation for this value.
-    Attribute attr = foldResult.get<Attribute>();
+    Attribute attr = cast<Attribute>(foldResult);
     auto *constOp = dialect->materializeConstant(cstBuilder, attr, expectedType,
                                                  op->getLoc());
     if (!constOp) {

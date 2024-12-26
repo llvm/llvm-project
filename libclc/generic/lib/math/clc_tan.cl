@@ -20,52 +20,55 @@
  * THE SOFTWARE.
  */
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
 
 #include "math.h"
 #include "sincos_helpers.h"
-#include "../clcmacro.h"
 #include "tables.h"
 
-_CLC_DEF _CLC_OVERLOAD float __clc_tan(float x)
-{
-    int ix = as_int(x);
-    int ax = ix & 0x7fffffff;
-    float dx = as_float(ax);
+_CLC_DEF _CLC_OVERLOAD float __clc_tan(float x) {
+  int ix = as_int(x);
+  int ax = ix & 0x7fffffff;
+  float dx = as_float(ax);
 
-    float r0, r1;
-    int regn = __clc_argReductionS(&r0, &r1, dx);
+  float r0, r1;
+  int regn = __clc_argReductionS(&r0, &r1, dx);
 
-    float t = __clc_tanf_piby4(r0 + r1, regn);
-    t = as_float(as_int(t) ^ (ix ^ ax));
+  float t = __clc_tanf_piby4(r0 + r1, regn);
+  t = as_float(as_int(t) ^ (ix ^ ax));
 
-    t = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : t;
-    //Take care of subnormals
-    t = (x == 0.0f) ? x : t;
-    return t;
+  t = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : t;
+  // Take care of subnormals
+  t = (x == 0.0f) ? x : t;
+  return t;
 }
 _CLC_UNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_tan, float);
 
 #ifdef cl_khr_fp64
 #include "sincosD_piby4.h"
 
-_CLC_DEF _CLC_OVERLOAD double __clc_tan(double x)
-{
-    double y = fabs(x);
+_CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
+  double y = __clc_fabs(x);
 
-    double r, rr;
-    int regn;
+  double r, rr;
+  int regn;
 
-    if (y < 0x1.0p+30)
-        __clc_remainder_piby2_medium(y, &r, &rr, &regn);
-    else
-        __clc_remainder_piby2_large(y, &r, &rr, &regn);
+  if (y < 0x1.0p+30)
+    __clc_remainder_piby2_medium(y, &r, &rr, &regn);
+  else
+    __clc_remainder_piby2_large(y, &r, &rr, &regn);
 
-    double2 tt = __clc_tan_piby4(r, rr);
+  double2 tt = __clc_tan_piby4(r, rr);
 
-    int2 t = as_int2(regn & 1 ? tt.y : tt.x);
-    t.hi ^= (x < 0.0) << 31;
+  int2 t = as_int2(regn & 1 ? tt.y : tt.x);
+  t.hi ^= (x < 0.0) << 31;
 
-    return isnan(x) || isinf(x) ? as_double(QNANBITPATT_DP64) : as_double(t);
+  return __clc_isnan(x) || __clc_isinf(x) ? as_double(QNANBITPATT_DP64)
+                                          : as_double(t);
 }
 _CLC_UNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_tan, double);
+
 #endif

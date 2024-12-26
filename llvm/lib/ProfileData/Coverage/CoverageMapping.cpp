@@ -503,7 +503,7 @@ public:
       const auto &BranchParams = B->getBranchParams();
       PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
-      Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
+      Folded[I++] = (B->Count.isZero() || B->FalseCount.isZero());
     }
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.
@@ -805,6 +805,7 @@ Error CoverageMapping::loadFunctionRecord(
   else
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
 
+  bool SingleByteCoverage = ProfileReader.hasSingleByteCoverage();
   CounterMappingContext Ctx(Record.Expressions);
 
   std::vector<uint64_t> Counts;
@@ -870,8 +871,10 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
-    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount,
-                        ProfileReader.hasSingleByteCoverage());
+    Function.pushRegion(
+        Region, (SingleByteCoverage && *ExecutionCount ? 1 : *ExecutionCount),
+        (SingleByteCoverage && *AltExecutionCount ? 1 : *AltExecutionCount),
+        SingleByteCoverage);
 
     // Record ExpansionRegion.
     if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
@@ -1412,7 +1415,7 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
       }
     // Capture branch regions specific to the function (excluding expansions).
     for (const auto &CR : Function.CountedBranchRegions)
-      if (FileIDs.test(CR.FileID) && (CR.FileID == CR.ExpandedFileID))
+      if (FileIDs.test(CR.FileID))
         FileCoverage.BranchRegions.push_back(CR);
     // Capture MCDC records specific to the function.
     for (const auto &MR : Function.MCDCRecords)

@@ -40,7 +40,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
@@ -572,9 +571,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
     InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
     Value *ReturnAddress =
-        IRB.CreateCall(Intrinsic::getOrInsertDeclaration(
-                           F.getParent(), Intrinsic::returnaddress),
-                       IRB.getInt32(0));
+        IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);

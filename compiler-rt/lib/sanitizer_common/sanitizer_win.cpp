@@ -164,7 +164,24 @@ void UnmapOrDie(void *addr, uptr size, bool raw_report) {
 static void *ReturnNullptrOnOOMOrDie(uptr size, const char *mem_type,
                                      const char *mmap_type) {
   error_t last_error = GetLastError();
-  if (last_error == ERROR_NOT_ENOUGH_MEMORY)
+
+  // Assumption: VirtualAlloc is the last system call that was invoked before
+  //   this method.
+  // VirtualAlloc emits one of 3 error codes when running out of memory
+  // 1. ERROR_NOT_ENOUGH_MEMORY:
+  //  There's not enough memory to execute the command
+  // 2. ERROR_INVALID_PARAMETER:
+  //  VirtualAlloc will return this if the request would allocate memory at an
+  //  address exceeding or being very close to the maximum application address
+  //  (the `lpMaximumApplicationAddress` field within the `SystemInfo` struct).
+  //  This does not seem to be officially documented, but is corroborated here:
+  //  https://stackoverflow.com/questions/45833674/why-does-virtualalloc-fail-for-lpaddress-greater-than-0x6ffffffffff
+  // 3. ERROR_COMMITMENT_LIMIT:
+  //  VirtualAlloc will return this if e.g. the pagefile is too small to commit
+  //  the requested amount of memory.
+  if (last_error == ERROR_NOT_ENOUGH_MEMORY ||
+      last_error == ERROR_INVALID_PARAMETER ||
+      last_error == ERROR_COMMITMENT_LIMIT)
     return nullptr;
   ReportMmapFailureAndDie(size, mem_type, mmap_type, last_error);
 }
@@ -968,6 +985,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return true;
 }
 
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
+}
+
 bool SignalContext::IsStackOverflow() const {
   return (DWORD)GetType() == EXCEPTION_STACK_OVERFLOW;
 }
@@ -1034,7 +1056,7 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 
 void SignalContext::DumpAllRegisters(void *context) {
   CONTEXT *ctx = (CONTEXT *)context;
-#  if defined(__M_X64)
+#  if defined(_M_X64)
   Report("Register values:\n");
   Printf("rax = %llx  ", ctx->Rax);
   Printf("rbx = %llx  ", ctx->Rbx);
@@ -1068,6 +1090,13 @@ void SignalContext::DumpAllRegisters(void *context) {
   Printf("ebp = %lx  ", ctx->Ebp);
   Printf("esp = %lx  ", ctx->Esp);
   Printf("\n");
+#  elif defined(_M_ARM64)
+  Report("Register values:\n");
+  for (int i = 0; i <= 30; i++) {
+    Printf("x%d%s = %llx", i < 10 ? " " : "", ctx->X[i]);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
 #  else
   // TODO
   (void)ctx;

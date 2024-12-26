@@ -11,6 +11,8 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -94,6 +96,15 @@ const char *SBCommandReturnObject::GetError() {
 
   ConstString output(ref().GetErrorString());
   return output.AsCString(/*value_if_empty*/ "");
+}
+
+SBStructuredData SBCommandReturnObject::GetErrorData() {
+  LLDB_INSTRUMENT_VA(this);
+
+  StructuredData::ObjectSP data(ref().GetErrorData());
+  SBStructuredData sb_data;
+  sb_data.m_impl_up->SetObjectSP(data);
+  return sb_data;
 }
 
 size_t SBCommandReturnObject::GetOutputSize() {

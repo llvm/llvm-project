@@ -6,59 +6,18 @@
 ; RUN:   -verify-machineinstrs -target-abi=lp64d < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK,RV64IFD %s
 
-declare half @llvm.exp10.f16(half)
 declare <1 x half> @llvm.exp10.v1f16(<1 x half>)
 declare <2 x half> @llvm.exp10.v2f16(<2 x half>)
 declare <3 x half> @llvm.exp10.v3f16(<3 x half>)
 declare <4 x half> @llvm.exp10.v4f16(<4 x half>)
-declare float @llvm.exp10.f32(float)
 declare <1 x float> @llvm.exp10.v1f32(<1 x float>)
 declare <2 x float> @llvm.exp10.v2f32(<2 x float>)
 declare <3 x float> @llvm.exp10.v3f32(<3 x float>)
 declare <4 x float> @llvm.exp10.v4f32(<4 x float>)
-declare double @llvm.exp10.f64(double)
 declare <1 x double> @llvm.exp10.v1f64(<1 x double>)
 declare <2 x double> @llvm.exp10.v2f64(<2 x double>)
 declare <3 x double> @llvm.exp10.v3f64(<3 x double>)
 declare <4 x double> @llvm.exp10.v4f64(<4 x double>)
-
-define half @exp10_f16(half %x) {
-; RV32IFD-LABEL: exp10_f16:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call __extendhfsf2
-; RV32IFD-NEXT:    call exp10f
-; RV32IFD-NEXT:    call __truncsfhf2
-; RV32IFD-NEXT:    fmv.x.w a0, fa0
-; RV32IFD-NEXT:    lui a1, 1048560
-; RV32IFD-NEXT:    or a0, a0, a1
-; RV32IFD-NEXT:    fmv.w.x fa0, a0
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: exp10_f16:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    .cfi_offset ra, -8
-; RV64IFD-NEXT:    call __extendhfsf2
-; RV64IFD-NEXT:    call exp10f
-; RV64IFD-NEXT:    call __truncsfhf2
-; RV64IFD-NEXT:    fmv.x.w a0, fa0
-; RV64IFD-NEXT:    lui a1, 1048560
-; RV64IFD-NEXT:    or a0, a0, a1
-; RV64IFD-NEXT:    fmv.w.x fa0, a0
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
-; RV64IFD-NEXT:    ret
-  %r = call half @llvm.exp10.f16(half %x)
-  ret half %r
-}
 
 define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; RV32IFD-LABEL: exp10_v1f16:
@@ -73,7 +32,9 @@ define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; RV32IFD-NEXT:    call __truncsfhf2
 ; RV32IFD-NEXT:    fmv.x.w a0, fa0
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v1f16:
@@ -88,7 +49,9 @@ define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <1 x half> @llvm.exp10.v1f16(<1 x half> %x)
   ret <1 x half> %r
@@ -120,7 +83,11 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore s0
+; RV32IFD-NEXT:    .cfi_restore fs0
 ; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v2f16:
@@ -148,7 +115,11 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore s0
+; RV64IFD-NEXT:    .cfi_restore s1
 ; RV64IFD-NEXT:    addi sp, sp, 32
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <2 x half> @llvm.exp10.v2f16(<2 x half> %x)
   ret <2 x half> %r
@@ -171,12 +142,12 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    .cfi_offset fs0, -24
 ; RV32IFD-NEXT:    .cfi_offset fs1, -32
 ; RV32IFD-NEXT:    .cfi_offset fs2, -40
-; RV32IFD-NEXT:    lhu a2, 8(a1)
-; RV32IFD-NEXT:    lhu a3, 0(a1)
-; RV32IFD-NEXT:    lhu a1, 4(a1)
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    fmv.w.x fs0, a2
-; RV32IFD-NEXT:    fmv.w.x fs1, a3
+; RV32IFD-NEXT:    lhu a0, 8(a1)
+; RV32IFD-NEXT:    lhu a2, 0(a1)
+; RV32IFD-NEXT:    lhu a1, 4(a1)
+; RV32IFD-NEXT:    fmv.w.x fs0, a0
+; RV32IFD-NEXT:    fmv.w.x fs1, a2
 ; RV32IFD-NEXT:    fmv.w.x fa0, a1
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
@@ -205,7 +176,14 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore s0
+; RV32IFD-NEXT:    .cfi_restore s1
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
+; RV32IFD-NEXT:    .cfi_restore fs2
 ; RV32IFD-NEXT:    addi sp, sp, 48
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v3f16:
@@ -253,7 +231,13 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore s0
+; RV64IFD-NEXT:    .cfi_restore s1
+; RV64IFD-NEXT:    .cfi_restore s2
+; RV64IFD-NEXT:    .cfi_restore fs0
 ; RV64IFD-NEXT:    addi sp, sp, 48
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <3 x half> @llvm.exp10.v3f16(<3 x half> %x)
   ret <3 x half> %r
@@ -326,7 +310,17 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore s0
+; RV32IFD-NEXT:    .cfi_restore s1
+; RV32IFD-NEXT:    .cfi_restore s2
+; RV32IFD-NEXT:    .cfi_restore s3
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
+; RV32IFD-NEXT:    .cfi_restore fs2
+; RV32IFD-NEXT:    .cfi_restore fs3
 ; RV32IFD-NEXT:    addi sp, sp, 64
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v4f16:
@@ -389,18 +383,19 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore s0
+; RV64IFD-NEXT:    .cfi_restore s1
+; RV64IFD-NEXT:    .cfi_restore s2
+; RV64IFD-NEXT:    .cfi_restore s3
+; RV64IFD-NEXT:    .cfi_restore fs0
+; RV64IFD-NEXT:    .cfi_restore fs1
+; RV64IFD-NEXT:    .cfi_restore fs2
 ; RV64IFD-NEXT:    addi sp, sp, 64
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <4 x half> @llvm.exp10.v4f16(<4 x half> %x)
   ret <4 x half> %r
-}
-
-define float @exp10_f32(float %x) {
-; CHECK-LABEL: exp10_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    tail exp10f
-  %r = call float @llvm.exp10.f32(float %x)
-  ret float %r
 }
 
 define <1 x float> @exp10_v1f32(<1 x float> %x) {
@@ -412,7 +407,9 @@ define <1 x float> @exp10_v1f32(<1 x float> %x) {
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v1f32:
@@ -423,7 +420,9 @@ define <1 x float> @exp10_v1f32(<1 x float> %x) {
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <1 x float> @llvm.exp10.v1f32(<1 x float> %x)
   ret <1 x float> %r
@@ -450,7 +449,11 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
 ; RV32IFD-NEXT:    addi sp, sp, 32
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v2f32:
@@ -473,7 +476,11 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore fs0
+; RV64IFD-NEXT:    .cfi_restore fs1
 ; RV64IFD-NEXT:    addi sp, sp, 32
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <2 x float> @llvm.exp10.v2f32(<2 x float> %x)
   ret <2 x float> %r
@@ -512,7 +519,13 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore s0
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
+; RV32IFD-NEXT:    .cfi_restore fs2
 ; RV32IFD-NEXT:    addi sp, sp, 32
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v3f32:
@@ -551,7 +564,13 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore s0
+; RV64IFD-NEXT:    .cfi_restore s1
+; RV64IFD-NEXT:    .cfi_restore fs0
+; RV64IFD-NEXT:    .cfi_restore fs1
 ; RV64IFD-NEXT:    addi sp, sp, 48
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <3 x float> @llvm.exp10.v3f32(<3 x float> %x)
   ret <3 x float> %r
@@ -598,7 +617,14 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore s0
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
+; RV32IFD-NEXT:    .cfi_restore fs2
+; RV32IFD-NEXT:    .cfi_restore fs3
 ; RV32IFD-NEXT:    addi sp, sp, 48
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v4f32:
@@ -641,18 +667,17 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs3, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore s0
+; RV64IFD-NEXT:    .cfi_restore fs0
+; RV64IFD-NEXT:    .cfi_restore fs1
+; RV64IFD-NEXT:    .cfi_restore fs2
+; RV64IFD-NEXT:    .cfi_restore fs3
 ; RV64IFD-NEXT:    addi sp, sp, 48
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <4 x float> @llvm.exp10.v4f32(<4 x float> %x)
   ret <4 x float> %r
-}
-
-define double @exp10_f64(double %x) {
-; CHECK-LABEL: exp10_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    tail exp10
-  %r = call double @llvm.exp10.f64(double %x)
-  ret double %r
 }
 
 ; FIXME: Broken
@@ -682,7 +707,11 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
 ; RV32IFD-NEXT:    addi sp, sp, 32
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v2f64:
@@ -705,7 +734,11 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore fs0
+; RV64IFD-NEXT:    .cfi_restore fs1
 ; RV64IFD-NEXT:    addi sp, sp, 32
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <2 x double> @llvm.exp10.v2f64(<2 x double> %x)
   ret <2 x double> %r
@@ -744,7 +777,13 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore s0
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
+; RV32IFD-NEXT:    .cfi_restore fs2
 ; RV32IFD-NEXT:    addi sp, sp, 32
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v3f64:
@@ -779,7 +818,13 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore s0
+; RV64IFD-NEXT:    .cfi_restore fs0
+; RV64IFD-NEXT:    .cfi_restore fs1
+; RV64IFD-NEXT:    .cfi_restore fs2
 ; RV64IFD-NEXT:    addi sp, sp, 48
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <3 x double> @llvm.exp10.v3f64(<3 x double> %x)
   ret <3 x double> %r
@@ -826,7 +871,14 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    .cfi_restore ra
+; RV32IFD-NEXT:    .cfi_restore s0
+; RV32IFD-NEXT:    .cfi_restore fs0
+; RV32IFD-NEXT:    .cfi_restore fs1
+; RV32IFD-NEXT:    .cfi_restore fs2
+; RV32IFD-NEXT:    .cfi_restore fs3
 ; RV32IFD-NEXT:    addi sp, sp, 48
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: exp10_v4f64:
@@ -869,8 +921,17 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs3, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    .cfi_restore ra
+; RV64IFD-NEXT:    .cfi_restore s0
+; RV64IFD-NEXT:    .cfi_restore fs0
+; RV64IFD-NEXT:    .cfi_restore fs1
+; RV64IFD-NEXT:    .cfi_restore fs2
+; RV64IFD-NEXT:    .cfi_restore fs3
 ; RV64IFD-NEXT:    addi sp, sp, 48
+; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IFD-NEXT:    ret
   %r = call <4 x double> @llvm.exp10.v4f64(<4 x double> %x)
   ret <4 x double> %r
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

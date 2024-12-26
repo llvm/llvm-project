@@ -43,20 +43,20 @@ def plugin : JoinedOrSeparate<["--", "-"], "plugin">,
   Flags<[HelpHidden, WrapperOnlyOption]>;
 
 def arch : Separate<["--", "-"], "arch">,
-  HelpText<"Specify the 'sm_' name of the target architecture.">;
+  HelpText<"Specify the 'sm_' name of the target architecture">;
 def : Joined<["--", "-"], "plugin-opt=mcpu=">,
   Flags<[HelpHidden, WrapperOnlyOption]>, Alias<arch>;
 
-def feature : Separate<["--", "-"], "feature">, Flags<[WrapperOnlyOption]>,
-  HelpText<"Specify the '+ptx' freature to use for LTO.">;
-
-def g : Flag<["-"], "g">, HelpText<"Specify that this was a debug compile.">;
+def g : Flag<["-"], "g">, HelpText<"Specify that this was a debug compile">;
 def debug : Flag<["--"], "debug">, Alias<g>;
 
 def lto_emit_llvm : Flag<["--"], "lto-emit-llvm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Emit LLVM-IR bitcode">;
 def lto_emit_asm : Flag<["--"], "lto-emit-asm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Emit assembly code">;
+
+def u : JoinedOrSeparate<["-"], "u">, HelpText<"Force undefined symbol during linking">;
+def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
 
 def O : Joined<["--", "-"], "plugin-opt=O">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<O0, O1, O2, or O3>">,

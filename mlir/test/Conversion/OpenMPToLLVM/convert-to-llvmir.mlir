@@ -96,7 +96,6 @@ func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4:
         "test.payload"(%arg6, %arg7) : (index, index) -> ()
         omp.yield
       }
-      omp.terminator
     }) : () -> ()
     omp.terminator
   }
@@ -121,7 +120,7 @@ func.func @atomic_write(%a: !llvm.ptr) -> () {
 // CHECK: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
 // CHECK: omp.atomic.read %[[ARG1]] = %[[ARG0]] hint(contended) memory_order(acquire) : !llvm.ptr
 func.func @atomic_read(%a: !llvm.ptr, %b: !llvm.ptr) -> () {
-  omp.atomic.read %b = %a memory_order(acquire) hint(contended) : !llvm.ptr, i32
+  omp.atomic.read %b = %a memory_order(acquire) hint(contended) : !llvm.ptr, !llvm.ptr, i32
   return
 }
 
@@ -189,7 +188,6 @@ func.func @loop_nest_block_arg(%val : i32, %ub : i32, %i : index) {
     ^bb3:
       omp.yield
     }
-    omp.terminator
   }
   return
 }
@@ -347,7 +345,6 @@ llvm.func @_QPsb() {
 // CHECK:          %[[ZEXT:.+]] = llvm.zext %[[CMP]] : i1 to i32
 // CHECK:          llvm.store %[[ZEXT]], %[[PRV]] : i32, !llvm.ptr
 // CHECK:          omp.yield
-// CHECK:        omp.terminator
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
 
@@ -389,7 +386,6 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr {fir.bindc_name = "y"}) {
         llvm.store %14, %prv : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -559,7 +555,6 @@ func.func @omp_distribute(%arg0 : index) -> () {
     omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
       omp.yield
     }
-    omp.terminator
   }
   return
 }
@@ -587,7 +582,6 @@ func.func @omp_ordered(%arg0 : index) -> () {
       omp.ordered depend_vec(%arg0 : index) {doacross_num_loops = 1 : i64}
       omp.yield
     }
-    omp.terminator
   }
   return
 }
@@ -608,7 +602,6 @@ func.func @omp_taskloop(%arg0: index, %arg1 : memref<i32>) {
         "test.payload"(%iv) : (index) -> ()
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }

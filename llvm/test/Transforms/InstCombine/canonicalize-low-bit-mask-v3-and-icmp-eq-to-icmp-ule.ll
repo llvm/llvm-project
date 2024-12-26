@@ -42,7 +42,7 @@ define i1 @p0(i8 %x, i8 %y) {
 
 define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @p1_vec(
-; CHECK-NEXT:    [[T0:%.*]] = shl nuw <2 x i8> <i8 1, i8 1>, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw <2 x i8> splat (i8 1), [[Y:%.*]]
 ; CHECK-NEXT:    call void @use2i8(<2 x i8> [[T0]])
 ; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr <2 x i8> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp eq <2 x i8> [[X_HIGHBITS]], zeroinitializer
@@ -74,7 +74,7 @@ define <3 x i1> @p2_vec_poison0(<3 x i8> %x, <3 x i8> %y) {
 
 define <3 x i1> @p3_vec_poison0(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @p3_vec_poison0(
-; CHECK-NEXT:    [[T0:%.*]] = shl nuw <3 x i8> <i8 1, i8 1, i8 1>, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw <3 x i8> splat (i8 1), [[Y:%.*]]
 ; CHECK-NEXT:    call void @use3i8(<3 x i8> [[T0]])
 ; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr <3 x i8> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp eq <3 x i8> [[X_HIGHBITS]], zeroinitializer

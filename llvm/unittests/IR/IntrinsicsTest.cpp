@@ -63,24 +63,21 @@ public:
 };
 
 TEST(IntrinsicNameLookup, Basic) {
-  static constexpr const char *const NameTable1[] = {
-      "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
-  };
+  using namespace Intrinsic;
+  EXPECT_EQ(Intrinsic::memcpy, lookupIntrinsicID("llvm.memcpy"));
 
-  static constexpr std::pair<const char *, int> Tests[] = {
-      {"llvm.foo", 0},     {"llvm.foo.f64", 0}, {"llvm.foo.b", 2},
-      {"llvm.foo.b.a", 3}, {"llvm.foo.c", 4},   {"llvm.foo.c.f64", 4},
-      {"llvm.bar", -1},
-  };
+  // Partial, either between dots or not the last dot are not intrinsics.
+  EXPECT_EQ(not_intrinsic, lookupIntrinsicID("llvm.mem"));
+  EXPECT_EQ(not_intrinsic, lookupIntrinsicID("llvm.gc"));
 
-  for (const auto &[Name, ExpectedIdx] : Tests) {
-    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name);
-    EXPECT_EQ(ExpectedIdx, Idx);
-    if (!StringRef(Name).starts_with("llvm.foo"))
-      continue;
-    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name, "foo");
-    EXPECT_EQ(ExpectedIdx, Idx);
-  }
+  // Look through intrinsic names with internal dots.
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline"));
+
+  // Check that overloaded names are mapped to the underlying ID.
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i8"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i32"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i64"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i1024"));
 }
 
 // Tests to verify getIntrinsicForClangBuiltin.

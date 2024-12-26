@@ -1,4 +1,5 @@
 C_SOURCES := main.c
-CFLAGS_EXTRAS := -lpthread
+
+ENABLE_THREADS := YES
 
 include Makefile.rules

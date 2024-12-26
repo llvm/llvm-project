@@ -61,8 +61,16 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::ICmp:
   case VPInstruction::ActiveLaneMask:
     return inferScalarType(R->getOperand(1));
+  case VPInstruction::ComputeReductionResult: {
+    auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
+    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
+    return OrigPhi->getType();
+  }
+  case VPInstruction::ExplicitVectorLength:
+    return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
+  case VPInstruction::ResumePhi:
     return SetResultTyFromOp();
   case VPInstruction::ExtractFromEnd: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
@@ -91,34 +99,19 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   unsigned Opcode = R->getOpcode();
-  switch (Opcode) {
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return IntegerType::get(Ctx, 1);
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::SRem:
-  case Instruction::URem:
-  case Instruction::Add:
-  case Instruction::FAdd:
-  case Instruction::Sub:
-  case Instruction::FSub:
-  case Instruction::Mul:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FRem:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor: {
+  if (Instruction::isBinaryOp(Opcode) || Instruction::isShift(Opcode) ||
+      Instruction::isBitwiseLogicOp(Opcode)) {
     Type *ResTy = inferScalarType(R->getOperand(0));
     assert(ResTy == inferScalarType(R->getOperand(1)) &&
            "types for both operands must match for binary op");
     CachedTypes[R->getOperand(1)] = ResTy;
     return ResTy;
   }
+
+  switch (Opcode) {
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+    return IntegerType::get(Ctx, 1);
   case Instruction::FNeg:
   case Instruction::Freeze:
     return inferScalarType(R->getOperand(0));
@@ -140,7 +133,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
-  assert((isa<VPWidenLoadRecipe>(R) || isa<VPWidenLoadEVLRecipe>(R)) &&
+  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
          "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
 }
@@ -155,35 +148,25 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenSelectRecipe *R) {
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
-  switch (R->getUnderlyingInstr()->getOpcode()) {
-  case Instruction::Call: {
-    unsigned CallIdx = R->getNumOperands() - (R->isPredicated() ? 2 : 1);
-    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
-        ->getReturnType();
-  }
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::SRem:
-  case Instruction::URem:
-  case Instruction::Add:
-  case Instruction::FAdd:
-  case Instruction::Sub:
-  case Instruction::FSub:
-  case Instruction::Mul:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FRem:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor: {
+  unsigned Opcode = R->getUnderlyingInstr()->getOpcode();
+
+  if (Instruction::isBinaryOp(Opcode) || Instruction::isShift(Opcode) ||
+      Instruction::isBitwiseLogicOp(Opcode)) {
     Type *ResTy = inferScalarType(R->getOperand(0));
     assert(ResTy == inferScalarType(R->getOperand(1)) &&
            "inferred types for operands of binary op don't match");
     CachedTypes[R->getOperand(1)] = ResTy;
     return ResTy;
+  }
+
+  if (Instruction::isCast(Opcode))
+    return R->getUnderlyingInstr()->getType();
+
+  switch (Opcode) {
+  case Instruction::Call: {
+    unsigned CallIdx = R->getNumOperands() - (R->isPredicated() ? 2 : 1);
+    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+        ->getReturnType();
   }
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
@@ -195,21 +178,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
   case Instruction::ICmp:
   case Instruction::FCmp:
     return IntegerType::get(Ctx, 1);
-  case Instruction::AddrSpaceCast:
   case Instruction::Alloca:
-  case Instruction::BitCast:
-  case Instruction::Trunc:
-  case Instruction::SExt:
-  case Instruction::ZExt:
-  case Instruction::FPExt:
-  case Instruction::FPTrunc:
   case Instruction::ExtractValue:
-  case Instruction::SIToFP:
-  case Instruction::UIToFP:
-  case Instruction::FPToSI:
-  case Instruction::FPToUI:
-  case Instruction::PtrToInt:
-  case Instruction::IntToPtr:
     return R->getUnderlyingInstr()->getType();
   case Instruction::Freeze:
   case Instruction::FNeg:
@@ -249,19 +219,20 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
-              [this](const auto *R) {
-                // Handle header phi recipes, except VPWidenIntOrFpInduction
-                // which needs special handling due it being possibly truncated.
-                // TODO: consider inferring/caching type of siblings, e.g.,
-                // backedge value, here and in cases below.
-                return inferScalarType(R->getStartValue());
-              })
+                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe,
+                VPScalarPHIRecipe>([this](const auto *R) {
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
+            // which needs special handling due it being possibly truncated.
+            // TODO: consider inferring/caching type of siblings, e.g.,
+            // backedge value, here and in cases below.
+            return inferScalarType(R->getStartValue());
+          })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPWidenCanonicalIVRecipe>([this](const VPRecipeBase *R) {
+                VPReverseVectorPointerRecipe, VPWidenCanonicalIVRecipe,
+                VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
             return inferScalarType(R->getOperand(0));
           })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPWidenEVLRecipe,

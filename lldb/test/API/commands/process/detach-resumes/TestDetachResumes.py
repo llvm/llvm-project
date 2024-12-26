@@ -12,7 +12,6 @@ from lldbsuite.test import lldbutil
 class DetachResumesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr89077")
     def test_detach_resumes(self):
         self.build()
         exe = self.getBuildArtifact()

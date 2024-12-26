@@ -15,6 +15,7 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    # implicit-def: $v8_v9
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, mf2, tu, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O0-NEXT:    vsetvli zero, a1, e32, mf2, tu, ma
 ; SPILL-O0-NEXT:    vmv1r.v v8, v9
 ; SPILL-O0-NEXT:    addi a0, sp, 16
 ; SPILL-O0-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -90,6 +91,7 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    # implicit-def: $v8_v9
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
 ; SPILL-O0-NEXT:    vmv1r.v v8, v9
 ; SPILL-O0-NEXT:    addi a0, sp, 16
 ; SPILL-O0-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -166,6 +168,7 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    # implicit-def: $v8m2_v10m2
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-NEXT:    vmv2r.v v8, v10
 ; SPILL-O0-NEXT:    addi a0, sp, 16
 ; SPILL-O0-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -246,6 +249,7 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    # implicit-def: $v8m4_v12m4
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; SPILL-O0-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; SPILL-O0-NEXT:    vmv4r.v v8, v12
 ; SPILL-O0-NEXT:    addi a0, sp, 16
 ; SPILL-O0-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
@@ -326,6 +330,7 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-NEXT:    # implicit-def: $v8m2_v10m2_v12m2
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-NEXT:    vlseg3e32.v v8, (a0)
+; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-NEXT:    vmv2r.v v8, v10
 ; SPILL-O0-NEXT:    addi a0, sp, 16
 ; SPILL-O0-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill

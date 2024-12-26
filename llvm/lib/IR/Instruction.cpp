@@ -12,6 +12,7 @@
 
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -441,6 +443,10 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<TruncInst>(this)->setHasNoUnsignedWrap(false);
     cast<TruncInst>(this)->setHasNoSignedWrap(false);
     break;
+
+  case Instruction::ICmp:
+    cast<ICmpInst>(this)->setSameSign(false);
+    break;
   }
 
   if (isa<FPMathOperator>(this)) {
@@ -455,6 +461,29 @@ bool Instruction::hasPoisonGeneratingMetadata() const {
   return hasMetadata(LLVMContext::MD_range) ||
          hasMetadata(LLVMContext::MD_nonnull) ||
          hasMetadata(LLVMContext::MD_align);
+}
+
+bool Instruction::hasNonDebugLocLoopMetadata() const {
+  // If there is no loop metadata at all, we also don't have
+  // non-debug loop metadata, obviously.
+  if (!hasMetadata(LLVMContext::MD_loop))
+    return false;
+
+  // If we do have loop metadata, retrieve it.
+  MDNode *LoopMD = getMetadata(LLVMContext::MD_loop);
+
+  // Check if the existing operands are debug locations. This loop
+  // should terminate after at most three iterations. Skip
+  // the first item because it is a self-reference.
+  for (const MDOperand &Op : llvm::drop_begin(LoopMD->operands())) {
+    // check for debug location type by attempting a cast.
+    if (!dyn_cast<DILocation>(Op)) {
+      return true;
+    }
+  }
+
+  // If we get here, then all we have is debug locations in the loop metadata.
+  return false;
 }
 
 void Instruction::dropPoisonGeneratingMetadata() {
@@ -654,6 +683,10 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
       setNonNeg(NNI->hasNonNeg());
+
+  if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
+    if (auto *DestICmp = dyn_cast<ICmpInst>(this))
+      DestICmp->setSameSign(SrcICmp->hasSameSign());
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -695,6 +728,10 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
       setNonNeg(hasNonNeg() && NNI->hasNonNeg());
+
+  if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
+    if (auto *DestICmp = dyn_cast<ICmpInst>(this))
+      DestICmp->setSameSign(DestICmp->hasSameSign() && SrcICmp->hasSameSign());
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {

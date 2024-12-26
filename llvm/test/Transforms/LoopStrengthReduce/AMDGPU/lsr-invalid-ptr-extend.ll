@@ -59,10 +59,10 @@ for.body:
   br i1 false, label %loopexit, label %for.body
 }
 
-define protected amdgpu_kernel void @baseregtest(i32 %n, i32 %lda) local_unnamed_addr {
+define protected amdgpu_kernel void @baseregtest(i32 %n, i32 %lda, i1 %arg) local_unnamed_addr {
 ; CHECK-LABEL: @baseregtest(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 3
@@ -86,7 +86,7 @@ define protected amdgpu_kernel void @baseregtest(i32 %n, i32 %lda) local_unnamed
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %exit, label %if.end
+  br i1 %arg, label %exit, label %if.end
 
 if.end:
   %0 = tail call i32 @foo()

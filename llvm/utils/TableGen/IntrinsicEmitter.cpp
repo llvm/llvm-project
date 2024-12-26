@@ -29,7 +29,6 @@
 #include <array>
 #include <cassert>
 #include <cctype>
-#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -155,7 +154,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
 
   OS << "// Enum values for intrinsics.\n";
   bool First = true;
-  for (const auto &Int : ArrayRef(&Ints[Set->Offset], Set->Count)) {
+  for (const auto &Int : Ints[*Set]) {
     OS << "    " << Int.EnumName;
 
     // Assign a value to the first intrinsic in this target set so that all
@@ -240,13 +239,37 @@ static constexpr IntrinsicTargetInfo TargetInfos[] = {
 
 void IntrinsicEmitter::EmitIntrinsicToNameTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  // Built up a table of the intrinsic names.
+  constexpr StringLiteral NotIntrinsic = "not_intrinsic";
+  StringToOffsetTable Table;
+  Table.GetOrAddStringOffset(NotIntrinsic);
+  for (const auto &Int : Ints)
+    Table.GetOrAddStringOffset(Int.Name);
+
   OS << R"(// Intrinsic ID to name table.
 #ifdef GET_INTRINSIC_NAME_TABLE
 // Note that entry #0 is the invalid intrinsic!
+
 )";
+
+  Table.EmitStringLiteralDef(OS, "static constexpr char IntrinsicNameTable[]",
+                             /*Indent=*/"");
+
+  OS << R"(
+static constexpr unsigned IntrinsicNameOffsetTable[] = {
+)";
+
+  OS << formatv("  {}, // {}\n", Table.GetStringOffset(NotIntrinsic),
+                NotIntrinsic);
   for (const auto &Int : Ints)
-    OS << "  \"" << Int.Name << "\",\n";
-  OS << "#endif\n\n";
+    OS << formatv("  {}, // {}\n", Table.GetStringOffset(Int.Name), Int.Name);
+
+  OS << R"(
+}; // IntrinsicNameOffsetTable
+
+#endif
+
+)";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(

@@ -24,16 +24,8 @@ namespace WebAssemblyISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 #define HANDLE_NODETYPE(NODE) NODE,
-#define HANDLE_MEM_NODETYPE(NODE)
-#include "WebAssemblyISD.def"
-  FIRST_MEM_OPCODE = ISD::FIRST_TARGET_MEMORY_OPCODE,
-#undef HANDLE_NODETYPE
-#undef HANDLE_MEM_NODETYPE
-#define HANDLE_NODETYPE(NODE)
-#define HANDLE_MEM_NODETYPE(NODE) NODE,
 #include "WebAssemblyISD.def"
 #undef HANDLE_NODETYPE
-#undef HANDLE_MEM_NODETYPE
 };
 
 } // end namespace WebAssemblyISD
@@ -136,6 +128,8 @@ private:
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
+  SDValue Replace128Op(SDNode *N, SelectionDAG &DAG) const;
 
   // Custom DAG combine hooks
   SDValue

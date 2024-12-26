@@ -4,7 +4,7 @@
 define i32 @test1(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test1(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]])
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -17,7 +17,7 @@ define i32 @test1(ptr %p, ptr %q) {
 define i32 @test2(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test2(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -56,7 +56,7 @@ define i32 @test4(ptr %p, ptr %q) {
 define i32 @test5(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test5(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA6]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -69,7 +69,7 @@ define i32 @test5(ptr %p, ptr %q) {
 define i32 @test6(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test6(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA6]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -82,7 +82,7 @@ define i32 @test6(ptr %p, ptr %q) {
 define i32 @test7(ptr %p, ptr %q) {
 ; CHECK-LABEL: define i32 @test7(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]])
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[TBAA7:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;

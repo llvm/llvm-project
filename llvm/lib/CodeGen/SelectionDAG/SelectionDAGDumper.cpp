@@ -227,6 +227,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FACOS:               return "strict_facos";
   case ISD::FATAN:                      return "fatan";
   case ISD::STRICT_FATAN:               return "strict_fatan";
+  case ISD::FATAN2:                     return "fatan2";
+  case ISD::STRICT_FATAN2:              return "strict_fatan2";
   case ISD::FSINH:                      return "fsinh";
   case ISD::STRICT_FSINH:               return "strict_fsinh";
   case ISD::FCOSH:                      return "fcosh";
@@ -650,6 +652,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
   if (getFlags().hasDisjoint())
     OS << " disjoint";
+
+  if (getFlags().hasSameSign())
+    OS << " samesign";
 
   if (getFlags().hasNonNeg())
     OS << " nneg";
