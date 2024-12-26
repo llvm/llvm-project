@@ -96,23 +96,27 @@ Attribute IntAttr::parse(AsmParser &parser, Type odsType) {
 
   // Fetch arbitrary precision integer value.
   if (type.isSigned()) {
-    int64_t value;
-    if (parser.parseInteger(value))
+    int64_t value = 0;
+    if (parser.parseInteger(value)) {
       parser.emitError(parser.getCurrentLocation(), "expected integer value");
-    apValue = mlir::APInt(type.getWidth(), value, type.isSigned(),
-                          /*implicitTrunc=*/true);
-    if (apValue.getSExtValue() != value)
-      parser.emitError(parser.getCurrentLocation(),
-                       "integer value too large for the given type");
+    } else {
+      apValue = mlir::APInt(type.getWidth(), value, type.isSigned(),
+                            /*implicitTrunc=*/true);
+      if (apValue.getSExtValue() != value)
+        parser.emitError(parser.getCurrentLocation(),
+                         "integer value too large for the given type");
+    }
   } else {
-    uint64_t value;
-    if (parser.parseInteger(value))
+    uint64_t value = 0;
+    if (parser.parseInteger(value)) {
       parser.emitError(parser.getCurrentLocation(), "expected integer value");
-    apValue = mlir::APInt(type.getWidth(), value, type.isSigned(),
-                          /*implicitTrunc=*/true);
-    if (apValue.getZExtValue() != value)
-      parser.emitError(parser.getCurrentLocation(),
-                       "integer value too large for the given type");
+    } else {
+      apValue = mlir::APInt(type.getWidth(), value, type.isSigned(),
+                            /*implicitTrunc=*/true);
+      if (apValue.getZExtValue() != value)
+        parser.emitError(parser.getCurrentLocation(),
+                         "integer value too large for the given type");
+    }
   }
 
   // Consume the '>' symbol.

@@ -31,11 +31,11 @@ public:
     return getPointerTo(cir::VoidType::get(getContext()));
   }
 
-  mlir::TypedAttr getConstPtrAttr(mlir::Type t, int64_t v) {
-    auto val =
-        mlir::IntegerAttr::get(mlir::IntegerType::get(t.getContext(), 64), v);
-    return cir::ConstPtrAttr::get(getContext(), mlir::cast<cir::PointerType>(t),
-                                  val);
+  mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
+    auto valueAttr = mlir::IntegerAttr::get(
+        mlir::IntegerType::get(type.getContext(), 64), value);
+    return cir::ConstPtrAttr::get(
+        getContext(), mlir::cast<cir::PointerType>(type), valueAttr);
   }
 };
 
