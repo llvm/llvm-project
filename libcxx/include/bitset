@@ -133,6 +133,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__algorithm/fill.h>
 #  include <__algorithm/fill_n.h>
 #  include <__algorithm/find.h>
+#  include <__assert>
 #  include <__bit_reference>
 #  include <__config>
 #  include <__functional/hash.h>
@@ -683,13 +684,18 @@ public:
 
   // element access:
 #  ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator[](size_t __p) const { return __base::__make_ref(__p); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator[](size_t __p) const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
+    return __base::__make_ref(__p);
+  }
 #  else
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference operator[](size_t __p) const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
     return __base::__make_ref(__p);
   }
 #  endif
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference operator[](size_t __p) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
     return __base::__make_ref(__p);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const;
