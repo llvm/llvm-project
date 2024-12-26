@@ -21,6 +21,7 @@ using namespace llvm;
 
 // Returns /machine's value.
 COFF::MachineTypes llvm::getMachineType(StringRef S) {
+  // Flags must be a superset of Microsoft lib.exe /machine flags.
   return StringSwitch<COFF::MachineTypes>(S.lower())
       .Cases("x64", "amd64", COFF::IMAGE_FILE_MACHINE_AMD64)
       .Cases("x86", "i386", COFF::IMAGE_FILE_MACHINE_I386)
