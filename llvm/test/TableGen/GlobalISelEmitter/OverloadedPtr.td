@@ -26,8 +26,8 @@ let TargetPrefix = "mytarget" in {
 // CHECK-NEXT: GIR_Done,
 
 let hasSideEffects = 1 in {
-  def ANYLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
-            [(set GPR32:$dst, (load iPTR:$src1))]>;
+  def ANYLOAD : I<(outs GPR32:$dst), (ins GPR:$src1),
+                  [(set GPR32:$dst, (load GPR:$src1))]>;
 }
 
 // Ensure that llvm_anyptr_ty on an intrinsic results in a
