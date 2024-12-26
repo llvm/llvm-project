@@ -2333,6 +2333,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setLoadExtAction(ISD::EXTLOAD, MVT::v8f64,  MVT::v8f16,  Legal);
       setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Legal);
+
+      setOperationAction(ISD::FMINIMUM, MVT::v32f16, Custom);
+      setOperationAction(ISD::FMAXIMUM, MVT::v32f16, Custom);
     }
 
     if (Subtarget.hasVLX()) {
@@ -2377,6 +2380,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       // Need to custom widen these to prevent scalarization.
       setOperationAction(ISD::LOAD,  MVT::v4f16, Custom);
       setOperationAction(ISD::STORE, MVT::v4f16, Custom);
+
+      setOperationAction(ISD::FMINIMUM, MVT::v8f16, Custom);
+      setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Custom);
+
+      setOperationAction(ISD::FMINIMUM, MVT::v16f16, Custom);
+      setOperationAction(ISD::FMAXIMUM, MVT::v16f16, Custom);
     }
   }
 
