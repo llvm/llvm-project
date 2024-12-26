@@ -2734,7 +2734,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   }
 
   if (GetContext().directive == llvm::omp::Directive::OMPD_task) {
-    if (auto *d_clause{FindClause(llvm::omp::Clause::OMPC_detach)}) {
+    if (auto *detachClause{FindClause(llvm::omp::Clause::OMPC_detach)}) {
       // OpenMP 5.0: Task construct restrictions
       CheckNotAllowedIfClause(
           llvm::omp::Clause::OMPC_detach, {llvm::omp::Clause::OMPC_mergeable});
@@ -2745,9 +2745,9 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
             "If a DETACH clause appears on a directive, then the encountering task must not be a FINAL task"_err_en_US);
       }
 
-      const auto &detachClause{
-          std::get<parser::OmpClause::Detach>(d_clause->u)};
-      if (const auto *name{parser::Unwrap<parser::Name>(detachClause.v.v)}) {
+      const auto &detach{
+          std::get<parser::OmpClause::Detach>(detachClause->u)};
+      if (const auto *name{parser::Unwrap<parser::Name>(detach.v.v)}) {
         if (name->symbol) {
           std::string eventHandleSymName{name->ToString()};
           auto checkVarAppearsInDataEnvClause = [&](const parser::OmpObjectList
