@@ -37,18 +37,18 @@ tzset *get_tzset(int fd, size_t filesize) {
 
   size_t t = 0;
   while (t < sizeof(hdr)) {
-      size_t r = read(fd, hdr + t, sizeof(hdr) - t);
+    size_t r = read(fd, hdr + t, sizeof(hdr) - t);
 
-      if (r < 0) {
-          close(fd);
-          return nullptr;
-      }
+    if (r < 0) {
+      close(fd);
+      return nullptr;
+    }
 
-      if (r == 0) {
-          break;
-      }
+    if (r == 0) {
+      break;
+    }
 
-      t += r;
+    t += r;
   }
 
   if (t != sizeof(hdr)) {
