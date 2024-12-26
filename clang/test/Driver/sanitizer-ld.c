@@ -277,7 +277,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-ANDROID
 //
-// CHECK-UBSAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-UBSAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-UBSAN-ANDROID: "-pie"
 // CHECK-UBSAN-ANDROID-NOT: "-lc"
 // CHECK-UBSAN-ANDROID-NOT: "-lpthread"
@@ -293,7 +293,7 @@
 // RUN:     -static-libsan \
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-ANDROID-STATICLIBASAN
 //
-// CHECK-UBSAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-UBSAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.ubsan_standalone.a"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
@@ -966,7 +966,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SAFESTACK-ANDROID-ARM
 //
-// CHECK-SAFESTACK-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SAFESTACK-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SAFESTACK-ANDROID-ARM-NOT: libclang_rt.safestack
 
 // RUN: %clang -### %s -shared 2>&1 \
@@ -974,7 +974,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SAFESTACK-SHARED-ANDROID-ARM
 //
-// CHECK-SAFESTACK-SHARED-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SAFESTACK-SHARED-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SAFESTACK-SHARED-ANDROID-ARM-NOT: libclang_rt.safestack
 
 // RUN: %clang -### %s 2>&1 \
@@ -1085,7 +1085,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SCUDO-ANDROID
 //
-// CHECK-SCUDO-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SCUDO-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SCUDO-ANDROID-NOT: "-lc"
 // CHECK-SCUDO-ANDROID: "-pie"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
@@ -1099,7 +1099,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static-libsan \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SCUDO-ANDROID-STATIC
-// CHECK-SCUDO-ANDROID-STATIC: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SCUDO-ANDROID-STATIC: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SCUDO-ANDROID-STATIC: "-pie"
 // CHECK-SCUDO-ANDROID-STATIC: "--whole-archive" "{{.*}}libclang_rt.scudo_standalone.a" "--no-whole-archive"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lstdc++"
