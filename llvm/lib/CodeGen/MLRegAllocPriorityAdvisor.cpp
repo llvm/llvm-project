@@ -146,10 +146,6 @@ private:
   std::unique_ptr<MLModelRunner> Runner;
 };
 
-RegAllocPriorityAdvisorProvider *createReleaseModePriorityAdvisorProvider() {
-  return new ReleaseModePriorityAdvisorProvider();
-}
-
 class ReleaseModePriorityAdvisorAnalysisLegacy final
     : public RegAllocPriorityAdvisorAnalysisLegacy {
 public:
@@ -176,8 +172,6 @@ private:
     Provider = std::make_unique<ReleaseModePriorityAdvisorProvider>();
     return false;
   }
-
-  // std::unique_ptr<ReleaseModePriorityAdvisorProvider> Provider;
 };
 
 // ===================================
@@ -282,11 +276,6 @@ public:
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
 };
-
-RegAllocPriorityAdvisorProvider *
-createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx) {
-  return new DevelopmentModePriorityAdvisorProvider(Ctx);
-}
 
 class DevelopmentModePriorityAdvisorAnalysisLegacy final
     : public RegAllocPriorityAdvisorAnalysisLegacy {
@@ -410,3 +399,21 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
 }
 
 #endif // #ifdef LLVM_HAVE_TFLITE
+
+void RegAllocPriorityAdvisorAnalysis::initializeMLProvider(
+    RegAllocPriorityAdvisorProvider::AdvisorMode Mode, LLVMContext &Ctx) {
+  if (Provider)
+    return;
+  switch (Mode) {
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Development:
+#if defined(LLVM_HAVE_TFLITE)
+    Provider.reset(new DevelopmentModePriorityAdvisorProvider(Ctx));
+#endif
+    break;
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
+    Provider.reset(new ReleaseModePriorityAdvisorProvider());
+    break;
+  default:
+    break;
+  }
+}

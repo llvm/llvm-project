@@ -129,10 +129,14 @@ private:
     RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 
-  std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
-    return std::make_unique<DummyPriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI());
+  std::unique_ptr<RegAllocPriorityAdvisorProvider>&
+  getProvider() override {
+    Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
+    return Provider;
+  }
+  bool doInitialization(Module &M) override {
+    Provider.reset(new DummyPriorityAdvisorProvider());
+    return false;
   }
 };
 
@@ -141,27 +145,16 @@ private:
 void RegAllocPriorityAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
   if (Provider)
     return;
-
-  switch (Mode) {
-  case RegAllocPriorityAdvisorProvider::AdvisorMode::Default:
-    Provider.reset(
-        new DefaultPriorityAdvisorProvider(/*NotAsRequested*/ false, Ctx));
-    break;
-  case RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy:
+  if (Mode == RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy)
     Provider.reset(new DummyPriorityAdvisorProvider());
-    break;
-  case RegAllocPriorityAdvisorProvider::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TFLITE)
-    Provider.reset(createDevelopmentModePriorityAdvisorProvider(Ctx));
-#endif
-    break;
-  case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
-    Provider.reset(createReleaseModePriorityAdvisorProvider());
-    break;
-  }
+  else if (Mode == RegAllocPriorityAdvisorProvider::AdvisorMode::Default)
+    Provider.reset(
+        new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/false, Ctx));
+  else
+    initializeMLProvider(Mode, Ctx);
   if (!Provider)
     Provider.reset(
-        new DefaultPriorityAdvisorProvider(/*NotAsRequested*/ true, Ctx));
+        new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 }
 
 AnalysisKey RegAllocPriorityAdvisorAnalysis::Key;

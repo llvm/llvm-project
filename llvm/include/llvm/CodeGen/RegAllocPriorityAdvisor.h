@@ -101,11 +101,6 @@ private:
   const AdvisorMode Mode;
 };
 
-RegAllocPriorityAdvisorProvider *createReleaseModePriorityAdvisorProvider();
-
-RegAllocPriorityAdvisorProvider *
-createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx);
-
 class RegAllocPriorityAdvisorAnalysis
     : public AnalysisInfoMixin<RegAllocPriorityAdvisorAnalysis> {
   static AnalysisKey Key;
@@ -128,6 +123,8 @@ public:
 
 private:
   void initializeProvider(LLVMContext &Ctx);
+  void initializeMLProvider(RegAllocPriorityAdvisorProvider::AdvisorMode Mode,
+                            LLVMContext &Ctx);
   std::unique_ptr<RegAllocPriorityAdvisorProvider> Provider;
 };
 
