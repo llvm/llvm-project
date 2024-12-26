@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include <fcntl.h>
-#include <stdio.h> // TODO: Remove all printf functions
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "src/__support/common.h"
 #include "src/time/timezone.h"
+#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
