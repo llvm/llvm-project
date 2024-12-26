@@ -2556,11 +2556,13 @@ SDValue NVPTXTargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
     return PromoteBinOpToF32(Op.getNode(), DAG);
   }
 
-  // FMUL(a, b) -> FMA(a, b, 0.0)
+  // FMUL(a, b) -> FMA(a, b, -0.0)
+  // NOTE: The identity is -0, not 0, because -0 + 0 == 0 for floats
   SDLoc DL(Op);
   auto VT = Op.getValueType();
-  auto Zero = DAG.getConstantFP(0.0, DL, VT);
-  SmallVector<SDValue, 3> Operands{Op->getOperand(0), Op->getOperand(1), Zero};
+  auto NegZero = DAG.getConstantFP(-0.0, DL, VT);
+  SmallVector<SDValue, 3> Operands{Op->getOperand(0), Op->getOperand(1),
+                                   NegZero};
   return DAG.getNode(ISD::FMA, DL, VT, Operands);
 }
 

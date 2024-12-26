@@ -107,7 +107,7 @@ define <2 x bfloat> @test_fmulx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_1];
 ; SM80-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_0];
-; SM80-NEXT:    mov.b32 %r3, 0;
+; SM80-NEXT:    mov.b32 %r3, -2147450880;
 ; SM80-NEXT:    fma.rn.bf16x2 %r4, %r2, %r1, %r3;
 ; SM80-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM80-NEXT:    ret;
