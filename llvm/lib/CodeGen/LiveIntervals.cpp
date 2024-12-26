@@ -142,14 +142,14 @@ bool LiveIntervals::invalidate(
 void LiveIntervals::clear() {
   // Free the live intervals themselves.
   for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)
-    delete VirtRegIntervals[Register::index2VirtReg(i)];
+    Allocator.Deallocate(VirtRegIntervals[Register::index2VirtReg(i)]);
   VirtRegIntervals.clear();
   RegMaskSlots.clear();
   RegMaskBits.clear();
   RegMaskBlocks.clear();
 
   for (LiveRange *LR : RegUnitRanges)
-    delete LR;
+    Allocator.Deallocate(LR);
   RegUnitRanges.clear();
 
   // Release VNInfo memory regions, VNInfo objects don't need to be dtor'd.
@@ -221,7 +221,7 @@ LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
 
 LiveInterval *LiveIntervals::createInterval(Register reg) {
   float Weight = reg.isPhysical() ? huge_valf : 0.0F;
-  return new LiveInterval(reg, Weight);
+  return new (Allocator.Allocate<LiveInterval>()) LiveInterval(reg, Weight);
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.
@@ -374,7 +374,8 @@ void LiveIntervals::computeLiveInRegUnits() {
         if (!LR) {
           // Use segment set to speed-up initial computation of the live range.
           LR = RegUnitRanges[static_cast<unsigned>(Unit)] =
-              new LiveRange(UseSegmentSetForPhysRegs);
+              new (Allocator.Allocate<LiveRange>())
+                  LiveRange(UseSegmentSetForPhysRegs);
           NewRanges.push_back(Unit);
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());
