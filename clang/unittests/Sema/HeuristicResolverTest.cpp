@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "HeuristicResolver.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -13,7 +13,6 @@
 #include "gtest/gtest.h"
 
 using namespace clang::ast_matchers;
-using clang::clangd::HeuristicResolver;
 using testing::ElementsAre;
 
 namespace clang {

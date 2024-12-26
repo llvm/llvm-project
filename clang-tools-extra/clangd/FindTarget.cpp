@@ -8,7 +8,6 @@
 
 #include "FindTarget.h"
 #include "AST.h"
-#include "HeuristicResolver.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -35,6 +34,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
