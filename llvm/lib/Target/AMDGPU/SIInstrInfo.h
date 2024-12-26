@@ -284,29 +284,18 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
-  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
-                               int64_t &ImmVal) const override;
+  void storeRegToStackSlot(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI, Register SrcReg,
+                           bool isKill, int FrameIndex,
+                           const TargetRegisterClass *RC,
+                           const TargetRegisterInfo *TRI, Register VReg,
+                           unsigned SubRegIdx = 0) const override;
 
-  unsigned getVectorRegSpillSaveOpcode(Register Reg,
-                                       const TargetRegisterClass *RC,
-                                       unsigned Size,
-                                       const SIMachineFunctionInfo &MFI) const;
-  unsigned
-  getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
-                                 unsigned Size,
-                                 const SIMachineFunctionInfo &MFI) const;
-
-  void storeRegToStackSlot(
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
-      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
-
-  void loadRegFromStackSlot(
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
-      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+  void loadRegFromStackSlot(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MI, Register DestReg,
+                            int FrameIndex, const TargetRegisterClass *RC,
+                            const TargetRegisterInfo *TRI, Register VReg,
+                            unsigned SubRegIdx = 0) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
