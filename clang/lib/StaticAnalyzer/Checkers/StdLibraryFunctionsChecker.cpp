@@ -3586,7 +3586,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(BufferSize(
                 /*Buffer=*/ArgNo(1),
                 /*MinBufSize=*/BVF.getValue(26, IntTy))));
-            .ArgConstraint(NotNull(ArgNo(1)))
+            .ArgConstraint(NotNull(ArgNo(2)))
 
     // struct tm *gmtime_r(const time_t *restrict timer,
     //                     struct tm *restrict result);
