@@ -25,17 +25,10 @@
 #include "src/__support/macros/config.h"
 #include "time_constants.h"
 #include "src/time/mktime.h"
-<<<<<<< HEAD
-#include "src/__support/CPP/limits.h"
-
-||||||| parent of e680eb5c7689 ([libc] implement localtime)
-#include "src/__support/CPP/limits.h"
+#include "src/time/timezone.h"
 
 #include <stdint.h>
 
-=======
-
->>>>>>> e680eb5c7689 ([libc] implement localtime)
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
