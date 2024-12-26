@@ -1431,7 +1431,8 @@ INTERCEPTOR(char *, ctime_r, unsigned long *timep, char *result) {
   }
   return res;
 }
-INTERCEPTOR(char *, ctime_s, char* result, size_t result_size, unsigned long *timep) {
+INTERCEPTOR(char *, ctime_s, char *result, size_t result_size,
+            unsigned long *timep) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, ctime_s, result, result_size, timep);
   // FIXME: under ASan the call below may write to freed memory and corrupt
