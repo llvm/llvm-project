@@ -8,10 +8,8 @@
 
 #include "src/errno/libc_errno.h"
 #include "src/time/ctime.h"
-#include "src/time/timezone.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
-#include <stddef.h>
 
 TEST(LlvmLibcCtime, NULL) {
   char *result;
