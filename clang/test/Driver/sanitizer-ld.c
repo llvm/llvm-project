@@ -1,6 +1,6 @@
 // Test sanitizers ld flags.
 
-// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="/libclang_rt"
+// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="libclang_rt"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=address \
@@ -35,7 +35,7 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-DARWIN
 //
 // CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
-// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: /libclang_rt.osx.a"
+// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: libclang_rt.osx.a"
 
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
