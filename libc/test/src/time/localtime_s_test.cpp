@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/localtime_s.h"
-#include "src/time/mktime.h"
 #include "src/time/time_utils.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
