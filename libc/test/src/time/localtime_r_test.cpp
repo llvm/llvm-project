@@ -8,9 +8,7 @@
 
 #include "src/time/localtime_r.h"
 #include "src/time/time_utils.h"
-#include "src/time/timezone.h"
 #include "test/UnitTest/Test.h"
-#include <stddef.h>
 
 // TODO: remove this header file
 #include <string.h>
