@@ -113,6 +113,7 @@ extern int calculate_dst(struct tm *tm);
 extern void set_dst(struct tm *tm);
 extern unsigned char is_dst(struct tm *tm);
 extern char *get_env_var(const char *var_name);
+extern tzset *get_tzset(int fd, size_t filesize);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
