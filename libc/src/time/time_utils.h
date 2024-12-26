@@ -101,9 +101,9 @@ struct TimeConstants {
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
-extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 extern int calculate_dst(struct tm *tm);
 extern void set_dst(struct tm *tm);
+extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local);
 extern unsigned char is_dst(struct tm *tm);
 extern char *get_env_var(const char *var_name);
 extern timezone::tzset *get_tzset(int fd, size_t filesize);
@@ -162,7 +162,7 @@ LIBC_INLINE char *asctime(const tm *timeptr, char *buffer,
 LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   time_t seconds = *timer;
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(seconds, result) < 0) {
+  if (update_from_seconds(seconds, result, false) < 0) {
     out_of_range();
     return nullptr;
   }
@@ -175,7 +175,7 @@ LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
   int64_t time = *t_ptr;
 
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(time, result) < 0) {
+  if (update_from_seconds(time, &result, true) < 0) {
     out_of_range();
     return nullptr;
   }
@@ -188,7 +188,7 @@ LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
   int64_t t = *t_ptr;
 
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(t, input) < 0) {
+  if (update_from_seconds(t, input, true) < 0) {
     out_of_range();
     return nullptr;
   }

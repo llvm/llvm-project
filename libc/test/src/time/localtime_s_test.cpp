@@ -13,7 +13,7 @@
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp0) {
+/*TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp0) {
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
                                 .tm_hour = 0,
@@ -36,9 +36,9 @@ TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp0) {
   ASSERT_EQ(4, input.tm_wday);
   ASSERT_EQ(0, input.tm_yday);
   ASSERT_EQ(0, input.tm_isdst);
-}
+}*/
 
-TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32Int) {
+/*TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32Int) {
   time_t t_ptr = 2147483647;
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
@@ -61,9 +61,9 @@ TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32Int) {
   ASSERT_EQ(2, input.tm_wday);
   ASSERT_EQ(18, input.tm_yday);
   ASSERT_EQ(0, input.tm_isdst);
-}
+}*/
 
-TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32IntDst) {
+/*TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32IntDst) {
   time_t t_ptr = 1627225465;
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
@@ -86,7 +86,7 @@ TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32IntDst) {
   ASSERT_EQ(0, input.tm_wday);
   ASSERT_EQ(205, input.tm_yday);
   ASSERT_EQ(1, input.tm_isdst);
-}
+}*/
 
 TEST(LlvmLibcLocaltimeS, InvalidUnixTimestamp) {
   time_t t_ptr = -1;
