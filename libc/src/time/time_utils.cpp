@@ -318,7 +318,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
 
   for (size_t i = 0; i < *ptr_tzset->ttinfo->size; i++) {
     if (dst == ptr_tzset->ttinfo[i].tt_isdst) {
-      offset = static_cast<int>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
+      offset = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
     }
   }
 
