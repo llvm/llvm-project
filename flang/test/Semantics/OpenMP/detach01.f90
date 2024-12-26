@@ -7,8 +7,8 @@
 program test_detach
     use omp_lib
     implicit none
-    integer :: e, x
-    integer(omp_event_handle_kind) :: event_01, event_02(2)
+    real                                    :: e, x
+    integer(omp_event_handle_kind)          :: event_01, event_02(2)
     integer(omp_event_handle_kind), pointer :: event_03
 
 

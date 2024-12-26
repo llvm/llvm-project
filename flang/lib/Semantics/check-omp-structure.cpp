@@ -3817,9 +3817,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Detach &x) {
             name->ToString());
       }
     }
-    auto type{name->symbol->GetType()};
-    if (!name->symbol->GetType()->IsNumeric(TypeCategory::Integer) ||
-        evaluate::ToInt64(type->numericTypeSpec().kind()) != 8) {
+    if (!name->symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
       context_.Say(GetContext().clauseSource,
           "The event-handle: `%s` must be of type integer(kind=omp_event_handle_kind)"_err_en_US,
           name->ToString());
