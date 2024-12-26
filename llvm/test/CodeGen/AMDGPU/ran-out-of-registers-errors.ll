@@ -1,5 +1,3 @@
-; UNSUPPORTED: target={{.*}}
-;
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=greedy -filetype=null %s 2>&1 | FileCheck -check-prefixes=CHECK,GREEDY -implicit-check-not=error %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=basic -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=CHECK,BASIC %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=fast -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=CHECK,FAST %s

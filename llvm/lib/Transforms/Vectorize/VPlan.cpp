@@ -821,16 +821,9 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPlan::VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
-             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
-    : VPlan(OriginalPreheader, TC, ScalarHeader) {
-  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
-}
-
-VPlan::VPlan(VPBasicBlock *OriginalPreheader,
-             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
-    : VPlan(OriginalPreheader, ScalarHeader) {
-  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
+VPlan::VPlan(Loop *L) {
+  setEntry(VPIRBasicBlock::fromBasicBlock(L->getLoopPreheader()));
+  ScalarHeader = VPIRBasicBlock::fromBasicBlock(L->getHeader());
 }
 
 VPlan::~VPlan() {
@@ -859,19 +852,17 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
                                    PredicatedScalarEvolution &PSE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
-  VPIRBasicBlock *Entry =
-      VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
-  VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
+  auto Plan = std::make_unique<VPlan>(TheLoop);
+  VPBlockBase *ScalarHeader = Plan->getScalarHeader();
+
   // Connect entry only to vector preheader initially. Entry will also be
   // connected to the scalar preheader later, during skeleton creation when
   // runtime guards are added as needed. Note that when executing the VPlan for
   // an epilogue vector loop, the original entry block here will be replaced by
   // a new VPIRBasicBlock wrapping the entry to the epilogue vector loop after
   // generating code for the main vector loop.
-  VPBlockUtils::connectBlocks(Entry, VecPreheader);
-  VPIRBasicBlock *ScalarHeader =
-      VPIRBasicBlock::fromBasicBlock(TheLoop->getHeader());
-  auto Plan = std::make_unique<VPlan>(Entry, ScalarHeader);
+  VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
+  VPBlockUtils::connectBlocks(Plan->getEntry(), VecPreheader);
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -1005,11 +996,6 @@ void VPlan::execute(VPTransformState *State) {
   replaceVPBBWithIRVPBB(getVectorPreheader(), VectorPreHeader);
   replaceVPBBWithIRVPBB(getMiddleBlock(), MiddleBB);
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
-
-  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
-                    << ", UF=" << getUF() << '\n');
-  setName("Final VPlan");
-  LLVM_DEBUG(dump());
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');

@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+v %s \
-# RUN:         --mattr=+f --riscv-no-aliases \
+# RUN:         --mattr=+f --M no-aliases \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR

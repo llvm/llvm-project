@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mcpu=sm_20 -mtriple=nvptx64-nvcl -verify-machineinstrs | %ptxas-verify %}
 
 target triple = "nvptx-unknown-nvcl"
 

@@ -1372,7 +1372,7 @@ public:
     // patterns.insert<ReductionMaskConversion<hlfir::MaxvalOp>>(context);
     // patterns.insert<ReductionMaskConversion<hlfir::MinvalOp>>(context);
 
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+    if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
       mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR optimized bufferization");

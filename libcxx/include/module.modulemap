@@ -1466,8 +1466,6 @@ module std [system] {
 
   module locale {
     header "locale"
-
-    module locale_guard   { header "__locale_dir/locale_guard.h" }
     module pad_and_output { header "__locale_dir/pad_and_output.h" }
 
     module support {
@@ -1607,7 +1605,11 @@ module std [system] {
     module allocate             { header "__new/allocate.h" }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
-    module global_new_delete    { header "__new/global_new_delete.h" }
+    module global_new_delete    {
+      header "__new/global_new_delete.h"
+
+      export std.new.nothrow_t
+    }
     module interference_size    { header "__new/interference_size.h" }
     module launder              { header "__new/launder.h" }
     module new_handler          { header "__new/new_handler.h" }
@@ -2282,15 +2284,15 @@ module std_stdbool_h [system] {
   textual header "stdbool.h"
 }
 module std_stddef_h [system] {
-  // <stddef.h>'s __need_* macros require textual inclusion.
+  // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
 }
 module std_stdio_h [system] {
-  // <stdio.h>'s __need_* macros require textual inclusion.
+  // <stdio.h> supports being included multiple times with different pre-defined macros
   textual header "stdio.h"
 }
 module std_stdlib_h [system] {
-  // <stdlib.h>'s __need_* macros require textual inclusion.
+  // <stdlib.h> supports being included multiple times with different pre-defined macros
   textual header "stdlib.h"
 }
 module std_string_h [system] {
@@ -2306,7 +2308,7 @@ module std_uchar_h [system] {
   export *
 }
 module std_wchar_h [system] {
-  // <wchar.h>'s __need_* macros require textual inclusion.
+  // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
 }
 module std_wctype_h [system] {
