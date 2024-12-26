@@ -19821,21 +19821,21 @@ public:
         Builder.SetCurrentDebugLocation(
             cast<Instruction>(ReductionOps.front().front())->getDebugLoc());
         if (AnyBoolLogicOp) {
-
-          if (auto It = ReducedValsToOps.find(VectorizedTree);
-              It == ReducedValsToOps.end() ||
+          auto It = ReducedValsToOps.find(VectorizedTree);
+          auto It1 = ReducedValsToOps.find(Res);
+          if ((It == ReducedValsToOps.end() && It1 == ReducedValsToOps.end()) ||
               isGuaranteedNotToBePoison(VectorizedTree, AC) ||
-              any_of(It->getSecond(), [&](Instruction *I) {
-                return isBoolLogicOp(I) &&
-                       getRdxOperand(I, 0) == VectorizedTree;
-              })) {
+              (It != ReducedValsToOps.end() &&
+               any_of(It->getSecond(), [&](Instruction *I) {
+                 return isBoolLogicOp(I) &&
+                        getRdxOperand(I, 0) == VectorizedTree;
+               }))) {
             ;
-          } else if (auto It = ReducedValsToOps.find(Res);
-                     It == ReducedValsToOps.end() ||
-                     isGuaranteedNotToBePoison(Res, AC) ||
-                     any_of(It->getSecond(), [&](Instruction *I) {
+          } else if (isGuaranteedNotToBePoison(Res, AC) ||
+                     (It1 != ReducedValsToOps.end() &&
+                     any_of(It1->getSecond(), [&](Instruction *I) {
                        return isBoolLogicOp(I) && getRdxOperand(I, 0) == Res;
-                     })) {
+                     }))) {
             std::swap(VectorizedTree, Res);
           } else {
             VectorizedTree = Builder.CreateFreeze(VectorizedTree);
