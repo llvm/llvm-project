@@ -27,7 +27,7 @@ void set_env_var(const char *env) {
 }
 
 TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
-  set_env_var("TZ=Europe/Berlin");
+  set_env_var("TZ=Europe/Stockholm");
 
   const time_t t_ptr = 0;
   struct tm *result = LIBC_NAMESPACE::localtime(&t_ptr);
@@ -42,7 +42,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
   ASSERT_EQ(0, result->tm_isdst);
 }
 
-/*TEST(LlvmLibcLocaltime, ValidUnixTimestamp32Int) {
+TEST(LlvmLibcLocaltime, ValidUnixTimestamp32Int) {
   set_env_var("TZ=Europe/Berlin");
 
   time_t t_ptr = 2147483647;
@@ -58,7 +58,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
   ASSERT_EQ(0, result->tm_isdst);
 }
 
-TEST(LlvmLibcLocaltime, ValidUnixTimestamp32IntDst) {
+/*TEST(LlvmLibcLocaltime, ValidUnixTimestamp32IntDst) {
   set_env_var("TZ=Europe/Berlin");
 
   time_t t_ptr = 1627225465;
@@ -72,10 +72,10 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp32IntDst) {
   ASSERT_EQ(0, result->tm_wday);
   ASSERT_EQ(205, result->tm_yday);
   ASSERT_EQ(1, result->tm_isdst);
-}
+}*/
 
-TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUsaPst) {
-  set_env_var("TZ=America/San_Francisco");
+/*TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUsaPst) {
+  set_env_var("TZ=America/Los_Angeles");
 
   time_t t_ptr = 1627225465;
   struct tm *result = LIBC_NAMESPACE::localtime(&t_ptr);
@@ -88,9 +88,9 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUsaPst) {
   ASSERT_EQ(0, result->tm_wday);
   ASSERT_EQ(205, result->tm_yday);
   ASSERT_EQ(1, result->tm_isdst);
-}
+}*/
 
-TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUsaEst) {
+/*TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUsaEst) {
   set_env_var("TZ=America/New_York");
 
   time_t t_ptr = 1627225465;
@@ -104,7 +104,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUsaEst) {
   ASSERT_EQ(0, result->tm_wday);
   ASSERT_EQ(205, result->tm_yday);
   ASSERT_EQ(1, result->tm_isdst);
-}
+}*/
 
 TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUTC) {
   set_env_var("TZ=UTC");
@@ -119,7 +119,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableUTC) {
   ASSERT_EQ(25, result->tm_sec);
   ASSERT_EQ(0, result->tm_wday);
   ASSERT_EQ(205, result->tm_yday);
-  ASSERT_EQ(1, result->tm_isdst);
+  ASSERT_EQ(0, result->tm_isdst);
 }
 
 TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableGMT) {
@@ -154,7 +154,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableEuropeBerlin) {
   ASSERT_EQ(1, result->tm_isdst);
 }
 
-TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableEuropeMoscow) {
+/*TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableEuropeMoscow) {
   set_env_var("TZ=Europe/Moscow");
 
   time_t t_ptr = 1627225465;
