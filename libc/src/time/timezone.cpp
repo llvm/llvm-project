@@ -18,26 +18,14 @@ namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
 tzset *get_tzset(int fd, size_t filesize) {
-  static tzset result;
-
-  int64_t magic;
-  unsigned char version;
-  __int128_t reserved;
-  uint32_t tzh_ttisutcnt;
-  uint32_t tzh_ttisstdcnt;
-  uint32_t tzh_leapcnt;
-  uint32_t tzh_timecnt;
-  uint32_t tzh_typecnt;
-  uint32_t tzh_charcnt;
-
-  size_t i;
-  __uint128_t tmp;
-
   unsigned char hdr[filesize];
+  size_t t;
 
-  size_t t = 0;
+  t = 0;
   while (t < sizeof(hdr)) {
-    size_t r = read(fd, hdr + t, sizeof(hdr) - t);
+    size_t r;
+
+    r = read(fd, hdr + t, sizeof(hdr) - t);
 
     if (r < 0) {
       close(fd);
@@ -56,6 +44,18 @@ tzset *get_tzset(int fd, size_t filesize) {
     return nullptr;
   }
 
+  int64_t magic;
+  unsigned char version;
+  __int128_t reserved;
+  uint32_t tzh_ttisutcnt;
+  uint32_t tzh_ttisstdcnt;
+  uint32_t tzh_leapcnt;
+  uint32_t tzh_timecnt;
+  uint32_t tzh_typecnt;
+  uint32_t tzh_charcnt;
+  __uint128_t tmp;
+  size_t i;
+
   // these locations are defined in documentation
   // for `tzfile` and should be 44 bytes
   magic = (hdr[0] << 24) | (hdr[1] << 16) | (hdr[2] << 8) | hdr[3];
@@ -70,6 +70,8 @@ tzset *get_tzset(int fd, size_t filesize) {
   tzh_timecnt = (hdr[32] << 24) | (hdr[33] << 16) | (hdr[34] << 8) | hdr[35];
   tzh_typecnt = (hdr[36] << 24) | (hdr[37] << 16) | (hdr[38] << 8) | hdr[39];
   tzh_charcnt = (hdr[40] << 24) | (hdr[41] << 16) | (hdr[42] << 8) | hdr[43];
+
+  static tzset result;
 
   result.tzh_ttisutcnt = tzh_ttisutcnt;
   result.tzh_ttisstdcnt = tzh_ttisstdcnt;
