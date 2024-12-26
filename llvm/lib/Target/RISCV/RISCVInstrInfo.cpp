@@ -2488,6 +2488,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM7_LSB00:
           Ok = isShiftedUInt<5, 2>(Imm);
           break;
+        case RISCVOp::OPERAND_UIMM7_LSB000:
+          Ok = isShiftedUInt<4, 3>(Imm);
+          break;
         case RISCVOp::OPERAND_UIMM8_LSB00:
           Ok = isShiftedUInt<6, 2>(Imm);
           break;
@@ -2733,6 +2736,46 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       .addImm(AM.Displacement)
       .setMemRefs(MemI.memoperands())
       .setMIFlags(MemI.getFlags());
+}
+
+bool RISCVInstrInfo::isPairableLdStInstOpc(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
+  case RISCV::SH:
+  case RISCV::LH:
+  case RISCV::LHU:
+  case RISCV::SW:
+  case RISCV::FSW:
+  case RISCV::LW:
+  case RISCV::FLW:
+  case RISCV::SD:
+  case RISCV::FSD:
+  case RISCV::LD:
+  case RISCV::FLD:
+    return true;
+  }
+}
+
+bool RISCVInstrInfo::isLdStSafeToPair(const MachineInstr &LdSt,
+                                      const TargetRegisterInfo *TRI) {
+  // If this is a volatile load/store, don't mess with it.
+  if (LdSt.hasOrderedMemoryRef() || LdSt.getNumExplicitOperands() != 3)
+    return false;
+
+  if (LdSt.getOperand(1).isFI())
+    return true;
+
+  assert(LdSt.getOperand(1).isReg() && "Expected a reg operand.");
+  // Can't cluster if the instruction modifies the base register
+  // or it is update form. e.g. ld x5,8(x5)
+  if (LdSt.modifiesRegister(LdSt.getOperand(1).getReg(), TRI))
+    return false;
+
+  if (!LdSt.getOperand(2).isImm())
+    return false;
+
+  return true;
 }
 
 bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
