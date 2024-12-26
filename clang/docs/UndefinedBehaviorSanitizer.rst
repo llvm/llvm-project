@@ -210,12 +210,18 @@ Available checks are:
      (see ``-fsanitize=implicit-integer-conversion``).
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
+  -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
+     the wrong dynamic type, or that its lifetime has not begun or has ended.
+     Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
+     ``clang``, to make sure C++-specific parts of the runtime library and C++
+     standard libraries are present. The check is not a part of the ``undefined``
+     group. Also it does not support ``-fsanitize-trap=vptr``.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
      ``float-divide-by-zero``, ``unsigned-integer-overflow``,
-     ``implicit-conversion``, ``local-bounds`` and the ``nullability-*`` group
-     of checks.
+     ``implicit-conversion``, ``local-bounds``, ``vptr`` and the
+     ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
@@ -244,11 +250,6 @@ You can also use the following check groups:
      ``nullability-assign``, and ``nullability-return``. While violating
      nullability does not have undefined behavior, it is often unintentional,
      so UBSan offers to catch it.
--  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
-     the wrong dynamic type, or that its lifetime has not begun or has ended.
-     Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
-     ``clang``, to make sure C++-specific parts of the runtime library and C++
-     standard libraries are present.
 
 Volatile
 --------

@@ -1248,7 +1248,7 @@ Sanitizers
   by the compiler (for example,
   ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
-- ``-fsanitize=vptr`` is not included into ``-fsanitize=undefined``.
+- ``-fsanitize=vptr`` is no longer part of ``-fsanitize=undefined``.
 
 Python Binding Changes
 ----------------------
