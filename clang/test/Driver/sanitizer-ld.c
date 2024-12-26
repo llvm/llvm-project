@@ -242,7 +242,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-ANDROID
 //
-// CHECK-ASAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-ASAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID: "-pie"
 // CHECK-ASAN-ANDROID-NOT: "-lc"
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
@@ -265,7 +265,7 @@
 // RUN:     -static-libasan \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-ANDROID-STATICLIBASAN
 //
-// CHECK-ASAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-ASAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan.a"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
@@ -306,7 +306,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-ANDROID-X86
 //
-// CHECK-ASAN-ANDROID-X86: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-ASAN-ANDROID-X86: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-X86: "-pie"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lc"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
@@ -330,7 +330,7 @@
 // RUN:     -shared \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-ANDROID-SHARED
 //
-// CHECK-ASAN-ANDROID-SHARED: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-ASAN-ANDROID-SHARED: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lc"
 // CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan.so"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
