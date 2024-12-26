@@ -1,6 +1,6 @@
 // Test sanitizers ld flags.
 
-// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not=\"/libclang_rt\"
+// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="/libclang_rt"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=address \
