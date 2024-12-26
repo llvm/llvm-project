@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   time_t seconds = *mktime_result;
 
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (time_utils::update_from_seconds(seconds, tm_out, false) < 0)
+  if (time_utils::update_from_seconds(seconds, tm_out) < 0)
     return time_utils::out_of_range();
 
   return seconds;
