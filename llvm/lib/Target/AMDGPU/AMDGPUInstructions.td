@@ -324,7 +324,7 @@ def conc_lo_u8_i16 : PatFrags<
     (ops node:$src0, node:$src1),
     [
         (or
-            (and (i16 $src0), (i16 255)),
+            (i16 $src0),
             (shl (i16 $src1), (i16 8))
         )
     ]
