@@ -212,6 +212,10 @@ Changes in existing checks
   const reference accessors to objects containing optional member.
 
 - Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
+  to unsafe functions check in clang-tidy.
+
+- Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
 
