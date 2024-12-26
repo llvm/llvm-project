@@ -3574,7 +3574,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 /*Buffer=*/ArgNo(1),
                 /*MinBufSize=*/BVF.getValue(26, IntTy))));
 
-    // char *ctime_r(char *buf, rsize_t buf_size, const time_t *timep);
+    // char *ctime_s(char *buf, rsize_t buf_size, const time_t *timep);
     addToFunctionSummaryMap(
         "ctime_s",
         Signature(ArgTypes{CharPtrTy,
@@ -3583,10 +3583,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   RetType{CharPtrTy}),
         Summary(NoEvalCall)
             .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(BufferSize(
                 /*Buffer=*/ArgNo(1),
                 /*MinBufSize=*/BVF.getValue(26, IntTy))));
+            .ArgConstraint(NotNull(ArgNo(1)))
 
     // struct tm *gmtime_r(const time_t *restrict timer,
     //                     struct tm *restrict result);
