@@ -3586,17 +3586,17 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(BufferSize(
                 /*Buffer=*/ArgNo(1),
                 /*MinBufSize=*/BVF.getValue(26, IntTy))));
-            .ArgConstraint(NotNull(ArgNo(2)))
+    .ArgConstraint(NotNull(ArgNo(2)))
 
-    // struct tm *gmtime_r(const time_t *restrict timer,
-    //                     struct tm *restrict result);
-    addToFunctionSummaryMap(
-        "gmtime_r",
-        Signature(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
-                  RetType{StructTmPtrTy}),
-        Summary(NoEvalCall)
-            .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(NotNull(ArgNo(1))));
+        // struct tm *gmtime_r(const time_t *restrict timer,
+        //                     struct tm *restrict result);
+        addToFunctionSummaryMap(
+            "gmtime_r",
+            Signature(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
+                      RetType{StructTmPtrTy}),
+            Summary(NoEvalCall)
+                .ArgConstraint(NotNull(ArgNo(0)))
+                .ArgConstraint(NotNull(ArgNo(1))));
 
     // struct tm * gmtime(const time_t *tp);
     addToFunctionSummaryMap(
