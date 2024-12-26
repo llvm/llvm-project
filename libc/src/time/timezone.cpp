@@ -11,8 +11,8 @@
 #include <unistd.h>
 
 #include "src/__support/common.h"
-#include "src/time/timezone.h"
 #include "src/time/time_utils.h"
+#include "src/time/timezone.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
@@ -184,9 +184,12 @@ tzset *get_tzset(int fd, size_t filesize) {
   ttinfo ttinfo[chunk];
 
   size_t index = 0;
-  for (size_t i = tzh_timecnt_end; i < static_cast<size_t>(tzh_typecnt_end); i += 6) {
-    int32_t tt_utoff = static_cast<int32_t>(hdr[i] << 24) | static_cast<int32_t>(hdr[i + 1] << 16) |
-                       static_cast<int32_t>(hdr[i + 2] << 8) | static_cast<int32_t>(hdr[i + 3]);
+  for (size_t i = tzh_timecnt_end; i < static_cast<size_t>(tzh_typecnt_end);
+       i += 6) {
+    int32_t tt_utoff = static_cast<int32_t>(hdr[i] << 24) |
+                       static_cast<int32_t>(hdr[i + 1] << 16) |
+                       static_cast<int32_t>(hdr[i + 2] << 8) |
+                       static_cast<int32_t>(hdr[i + 3]);
     uint8_t tt_isdst = hdr[i + 4];
     size_t tt_desigidx = hdr[i + 5];
 
