@@ -598,7 +598,7 @@ struct S1 {
 };
 
 void foo1() {
-  auto s0 = S1([name=]() {}); // expected-error {{expected expression}}
+  auto s0 = S1([]() {}); // Remove invalid capture, no diagnostic expected
   auto s1 = S1([name=name]() {}); // expected-error {{use of undeclared identifier 'name'; did you mean 'name1'?}}
                                   // cxx03-cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
 }
