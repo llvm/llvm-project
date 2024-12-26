@@ -4323,7 +4323,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
       Value *X = EmitScalarExpr(E->getArg(0));
       auto EltTy = X->getType()->getScalarType();
-      Value *Seed = ConstantFP::get(EltTy, 0);
+      Value *Seed = ConstantFP::get(EltTy, -0.0);
       return RValue::get(Builder.CreateIntrinsic(
           /*ReturnType=*/EltTy, llvm::Intrinsic::vector_reduce_fadd,
           ArrayRef<Value *>{Seed, X}, nullptr, "rdx.fadd"));
@@ -4336,7 +4336,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
       Value *X = EmitScalarExpr(E->getArg(0));
       auto EltTy = X->getType()->getScalarType();
-      Value *Seed = ConstantFP::get(EltTy, 0);
+      Value *Seed = ConstantFP::get(EltTy, 1.0);
       return RValue::get(Builder.CreateIntrinsic(
           /*ReturnType=*/EltTy, llvm::Intrinsic::vector_reduce_fmul,
           ArrayRef<Value *>{Seed, X}, nullptr, "rdx.fmul"));
