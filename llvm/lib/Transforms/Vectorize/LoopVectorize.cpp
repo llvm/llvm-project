@@ -1439,7 +1439,8 @@ public:
   /// \param TailFoldPowOf2 true if tail folding with power-of-2
   /// safe distance can be enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, bool TailFoldPowOf2, unsigned UserIC) {
+  void setTailFoldingStyles(bool IsScalableVF, bool TailFoldPowOf2,
+                            unsigned UserIC) {
     assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
       ChosenTailFoldingStyle =
