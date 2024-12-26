@@ -19,8 +19,8 @@ end subroutine
 
 ! Testing continuation lines in only Fortran Free form Source
 ! CHECK-LABEL: subroutine mixed_form3()
-! CHECK-OMP: i = 1 +10 +100+ 1000 + 10000
-! CHECK: i = 1 +10 +100+ 1000 + 10000
+! CHECK-OMP: i = 1 +10 +100 + 1000 + 10000
+! CHECK: i = 1 +10 +100 + 1000 + 10000
 subroutine mixed_form3()
    i = 1 &
    +10 &

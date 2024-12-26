@@ -1290,48 +1290,32 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   }
   p = SkipWhiteSpace(p);
   if (*p == '!') {
+    ++p;
     if (InCompilerDirective()) {
-      if (*p++ != '!') {
-        return nullptr;
-      }
       for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
         if (*s != ToLowerCaseLetter(*p)) {
           return nullptr;
         }
       }
-      p = SkipWhiteSpace(p);
-      if (*p == '&') {
-        if (!ampersand) {
-          insertASpace_ = true;
-        }
-        return p + 1;
-      } else if (ampersand) {
-        return p;
-      } else {
-        return nullptr;
-      }
     } else if (features_.IsEnabled(LanguageFeature::OpenMP)) {
-      if (*p + 1 == '$')
-        return nullptr;
-      p += 2;
-      p = SkipWhiteSpace(p);
-      if (*p == '&') {
-        if (!ampersand) {
-          insertASpace_ = true;
-        }
-        return p + 1;
-      } else if (ampersand) {
-        return p;
-      } else {
-        return nullptr;
+      ++p;
+    } else {
+      return nullptr;
+    }
+    p = SkipWhiteSpace(p);
+    if (*p == '&') {
+      if (!ampersand) {
+        insertASpace_ = true;
       }
+      return p + 1;
+    } else if (ampersand) {
+      return p;
     } else {
       return nullptr;
     }
   } else {
     if (*p == '&') {
-      p = SkipWhiteSpace(p + 1);
-      return p;
+      return p + 1;
     } else if (*p == '!' || *p == '\n' || *p == '#') {
       return nullptr;
     } else if (ampersand || IsImplicitContinuation()) {
