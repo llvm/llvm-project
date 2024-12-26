@@ -885,6 +885,7 @@ Bug Fixes to C++ Support
 - Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 - Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
+- Fixed a bug where captured structured bindings were modifiable inside non-mutable lambda (#GH95081)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1004,6 +1005,12 @@ Arm and AArch64 Support
   by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
+
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+  For AArch64:
+
+  * FUJITSU-MONAKA (fujitsu-monaka)
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -1250,6 +1257,9 @@ OpenMP Support
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
 - Added support for allocator-modifier in 'allocate' clause.
+- Changed the OpenMP DeviceRTL to use 'generic' IR. The
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
+  always build support for AMDGPU and NVPTX targets.
 
 Improvements
 ^^^^^^^^^^^^
