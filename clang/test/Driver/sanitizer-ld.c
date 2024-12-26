@@ -814,7 +814,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-CROSS-DSO-ANDROID
-// CHECK-CFI-CROSS-DSO-ANDROID: "{{.*}}ld"
+// CHECK-CFI-CROSS-DSO-ANDROID: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-CROSS-DSO-ANDROID-NOT: libclang_rt.cfi
 
 // Cross-DSO CFI with diagnostics on Android links just the UBSAN runtime.
@@ -824,7 +824,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-CROSS-DSO-DIAG-ANDROID
-// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld"
+// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_standalone.so"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
 
@@ -982,7 +982,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SAFESTACK-ANDROID-AARCH64
 //
-// CHECK-SAFESTACK-ANDROID-AARCH64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SAFESTACK-ANDROID-AARCH64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SAFESTACK-ANDROID-AARCH64-NOT: libclang_rt.safestack
 
 // RUN: not %clang -fsanitize=undefined -### %s 2>&1 \
