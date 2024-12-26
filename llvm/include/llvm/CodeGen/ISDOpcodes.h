@@ -1506,6 +1506,8 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
 
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
+/// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.

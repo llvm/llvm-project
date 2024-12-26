@@ -3957,8 +3957,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     SDValue X;
     SDValue S0;
     auto NegPat = m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0));
-    if (LegalOperations &&
-        sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
+    if (sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
                                       m_UMax(m_Value(X), NegPat),
                                       m_SMin(m_Value(X), NegPat),
                                       m_UMin(m_Value(X), NegPat))))) {
