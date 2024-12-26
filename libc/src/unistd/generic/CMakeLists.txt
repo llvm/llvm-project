@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  getpagesize
+  SRCS
+    getpagesize.cpp
+  HDRS
+    ../getpagesize.h
+  COMPILE_OPTIONS
+    ${getpagesize_config_copts}
+  DEPENDS
+    libc.include.unistd
+    libc.src.__support.macros.page_size
+)

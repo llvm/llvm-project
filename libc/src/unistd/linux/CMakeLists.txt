@@ -208,6 +208,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpagesize
+  SRCS
+    getpagesize.cpp
+  HDRS
+    ../getpagesize.h
+  DEPENDS
+    .sysconf
+    libc.include.unistd
+    libc.src.__support.macros.page_size
+    libc.src.sys.auxv.getauxval
+)
+
+add_entrypoint_object(
   getpid
   SRCS
     getpid.cpp

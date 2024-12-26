@@ -116,5 +116,11 @@
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
     }
+  },
+  "unistd": {
+    "LIBC_CONF_PAGE_SIZE": {
+      "value": "LIBC_PAGE_SIZE_SYSTEM",
+      "doc": "The value to use for the system page size, acceptable values are LIBC_CONF_PAGE_SIZE_SYSTEM, LIBC_CONF_PAGE_SIZE_4K, LIBC_CONF_PAGE_SIZE_16K, LIBC_CONF_PAGE_SIZE_64K."
+    }
   }
 }

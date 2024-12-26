@@ -60,3 +60,5 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.
 * **"time" options**
     - ``LIBC_CONF_TIME_64BIT``: Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit.
+* **"unistd" options**
+    - ``LIBC_CONF_PAGE_SIZE``: The value to use for the system page size, acceptable values are LIBC_CONF_PAGE_SIZE_SYSTEM, LIBC_CONF_PAGE_SIZE_4K, LIBC_CONF_PAGE_SIZE_16K, LIBC_CONF_PAGE_SIZE_64K.

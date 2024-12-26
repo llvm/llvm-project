@@ -418,6 +418,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  getpagesize
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getpagesize_test.cpp
+  DEPENDS
+    libc.src.unistd.getpagesize
+)
+
+add_libc_unittest(
   syscall_test
   SUITE
     libc_unistd_unittests
