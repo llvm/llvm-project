@@ -1,35 +1,23 @@
 ! REQUIRES: openmp_runtime
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=52
 
-! OpenMP Version 5.2
-! Various checks for DETACH Clause (12.5.2)
+! OpenMP Version 5.2: 12.5.2
+! Various checks for DETACH Clause
 
-program test_detach
-    use omp_lib
+program detach01
+    use omp_lib, only: omp_event_handle_kind
     implicit none
     real                                    :: e, x
     integer(omp_event_handle_kind)          :: event_01, event_02(2)
     integer(omp_event_handle_kind), pointer :: event_03
 
-
     type :: t
         integer(omp_event_handle_kind) :: event
     end type
-
     type(t) :: t_01
 
     !ERROR: The event-handle: `e` must be of type integer(kind=omp_event_handle_kind)
     !$omp task detach(e)
-        x = x + 1
-    !$omp end task
-
-    !ERROR: At most one DETACH clause can appear on the TASK directive
-    !$omp task detach(event_01) detach(event_01)
-        x = x + 1
-    !$omp end task
-
-    !ERROR: Clause MERGEABLE is not allowed if clause DETACH appears on the TASK directive
-    !$omp task detach(event_01) mergeable
         x = x + 1
     !$omp end task
 
