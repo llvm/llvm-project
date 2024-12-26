@@ -128,14 +128,14 @@ tzset *get_tzset(int fd, size_t filesize) {
   ptr_tzh_timecnt_transitions = tzh_timecnt_transitions;
   for (i = 0; i < chunk; ++i) {
     *(ptr_tzh_timecnt_transitions + i) =
-        ((int64_t)hdr[start + i * 8] << 56) |
-        ((int64_t)hdr[start + i * 8 + 1] << 48) |
-        ((int64_t)hdr[start + i * 8 + 2] << 40) |
-        ((int64_t)hdr[start + i * 8 + 3] << 32) |
-        ((int64_t)hdr[start + i * 8 + 4] << 24) |
-        ((int64_t)hdr[start + i * 8 + 5] << 16) |
-        ((int64_t)hdr[start + i * 8 + 6] << 8) |
-        (int64_t)hdr[start + i * 8 + 7];
+        (static_cast<int64_t>(hdr[start + i * 8]) << 56) |
+        (static_cast<int64_t>(hdr[start + i * 8 + 1]) << 48) |
+        (static_cast<int64_t>(hdr[start + i * 8 + 2]) << 40) |
+        (static_cast<int64_t>(hdr[start + i * 8 + 3]) << 32) |
+        (static_cast<int64_t>(hdr[start + i * 8 + 4]) << 24) |
+        (static_cast<int64_t>(hdr[start + i * 8 + 5]) << 16) |
+        (static_cast<int64_t>(hdr[start + i * 8 + 6]) << 8) |
+        static_cast<int64_t>(hdr[start + i * 8 + 7]);
   }
   result.tzh_timecnt_transitions = ptr_tzh_timecnt_transitions;
   result.tzh_timecnt_number_transitions = chunk + 1;
@@ -161,8 +161,8 @@ tzset *get_tzset(int fd, size_t filesize) {
   ptr_tz = tz;
   result.tz = ptr_tz;
   j = 0;
-  for (i = tzh_leapcnt_end; i < (size_t)tzh_charcnt_end - 1; ++i) {
-    if (i == (size_t)tzh_charcnt_end - 1) {
+  for (i = tzh_leapcnt_end; i < static_cast<size_t>(tzh_charcnt_end - 1); ++i) {
+    if (i == static_cast<size_t>(tzh_charcnt_end - 1)) {
       tz[j] = '\0';
       break;
     }
@@ -182,9 +182,9 @@ tzset *get_tzset(int fd, size_t filesize) {
   ttinfo ttinfo[chunk];
 
   size_t index = 0;
-  for (size_t i = tzh_timecnt_end; i < (size_t)tzh_typecnt_end; i += 6) {
-    int32_t tt_utoff = ((int32_t)hdr[i] << 24) | ((int32_t)hdr[i + 1] << 16) |
-                       ((int32_t)hdr[i + 2] << 8) | (int32_t)hdr[i + 3];
+  for (size_t i = tzh_timecnt_end; i < static_cast<size_t>(tzh_typecnt_end); i += 6) {
+    int32_t tt_utoff = static_cast<int32_t>(hdr[i] << 24) | static_cast<int32_t>(hdr[i + 1] << 16) |
+                       static_cast<int32_t>(hdr[i + 2] << 8) | static_cast<int32_t>(hdr[i + 3]);
     uint8_t tt_isdst = hdr[i + 4];
     size_t tt_desigidx = hdr[i + 5];
 
@@ -197,7 +197,7 @@ tzset *get_tzset(int fd, size_t filesize) {
 
     ttinfo[index].tt_utoff = tt_utoff;
     ttinfo[index].tt_isdst = tt_isdst;
-    ttinfo[index].tt_desigidx = (int8_t)k;
+    ttinfo[index].tt_desigidx = static_cast<int8_t>(k);
 
     ttinfo[index].size = &chunk;
 
