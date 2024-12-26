@@ -350,6 +350,11 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
     cl::desc(
         "Prefer predicating a reduction operation over an after loop select."));
 
+static cl::opt<bool> CheckSpeculatabilityAtUse(
+    "check-specutalability-at-use", cl::init(false), cl::Hidden,
+    cl::desc("Use instruction as a context when checking if it is safe to"
+             " speculate. This is used for testing purposes only."));
+
 namespace llvm {
 cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
@@ -3448,8 +3453,9 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   // If predication is not needed, avoid it.
   // TODO: We can use the loop-preheader as context point here and get
   // context sensitive reasoning for isSafeToSpeculativelyExecute.
+  Instruction *CtxI = CheckSpeculatabilityAtUse ? I->getNextNode() : nullptr;
   if (!blockNeedsPredicationForAnyReason(I->getParent()) ||
-      isSafeToSpeculativelyExecute(I) ||
+      isSafeToSpeculativelyExecute(I, CtxI) ||
       (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
       isa<BranchInst, SwitchInst, PHINode, AllocaInst>(I))
     return false;
