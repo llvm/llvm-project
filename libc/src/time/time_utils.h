@@ -98,7 +98,8 @@ struct TimeConstants {
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
-extern void set_dst(struct tm *tm);
+extern unsigned char is_dst(struct tm *tm);
+extern char *get_env_var(const char *var_name);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
