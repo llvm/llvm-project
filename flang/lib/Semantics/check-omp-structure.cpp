@@ -2738,8 +2738,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
       unsigned version{context_.langOptions().OpenMPVersion};
       if (version == 50 || version == 51) {
         // OpenMP 5.0: 2.10.1 Task construct restrictions
-        CheckNotAllowedIfClause(
-            llvm::omp::Clause::OMPC_detach, {llvm::omp::Clause::OMPC_mergeable});
+        CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_detach,
+            {llvm::omp::Clause::OMPC_mergeable});
       } else if (version >= 52) {
         // OpenMP 5.2: 12.5.2 Detach construct restrictions
         if (FindClause(llvm::omp::Clause::OMPC_final)) {
@@ -2752,12 +2752,12 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
         if (const auto *name{parser::Unwrap<parser::Name>(detach.v.v)}) {
           if (name->symbol) {
             Symbol *eventHandleSym{name->symbol};
-            auto checkVarAppearsInDataEnvClause = [&](const parser::OmpObjectList
-                                                          &objs,
+            auto checkVarAppearsInDataEnvClause = [&](const parser::
+                                                          OmpObjectList &objs,
                                                       std::string clause) {
               for (const auto &obj : objs.v) {
-                if (const parser::Name *objName{
-                        parser::Unwrap<parser::Name>(obj)}) {
+                if (const parser::Name *
+                    objName{parser::Unwrap<parser::Name>(obj)}) {
                   if (&objName->symbol->GetUltimate() == eventHandleSym) {
                     context_.Say(GetContext().clauseSource,
                         "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
@@ -2772,16 +2772,17 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                   std::get<parser::OmpClause::Private>(dataEnvClause->u)};
               checkVarAppearsInDataEnvClause(pClause.v, "PRIVATE");
             } else if (auto *dataEnvClause{
-                          FindClause(llvm::omp::Clause::OMPC_firstprivate)}) {
+                           FindClause(llvm::omp::Clause::OMPC_firstprivate)}) {
               const auto &fpClause{
                   std::get<parser::OmpClause::Firstprivate>(dataEnvClause->u)};
               checkVarAppearsInDataEnvClause(fpClause.v, "FIRSTPRIVATE");
             } else if (auto *dataEnvClause{
-                          FindClause(llvm::omp::Clause::OMPC_in_reduction)}) {
+                           FindClause(llvm::omp::Clause::OMPC_in_reduction)}) {
               const auto &irClause{
                   std::get<parser::OmpClause::InReduction>(dataEnvClause->u)};
               checkVarAppearsInDataEnvClause(
-                  std::get<parser::OmpObjectList>(irClause.v.t), "IN_REDUCTION");
+                  std::get<parser::OmpObjectList>(irClause.v.t),
+                  "IN_REDUCTION");
             }
           }
         }
