@@ -10,6 +10,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/time/asctime.h"
 #include "src/time/time_utils.h"
+#include "src/time/timezone.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
