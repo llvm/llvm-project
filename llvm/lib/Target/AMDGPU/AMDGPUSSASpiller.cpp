@@ -40,8 +40,11 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
 
   DenseMap<VRegMaskPair, unsigned> Virt2StackSlotMap;
 
-  LLVM_ATTRIBUTE_NOINLINE void
-  dumpRegSet(SetVector<VRegMaskPair> VMPs);
+  // TODO: HOW TO MAP VREG + LANEMASK TO SPILL SLOT ???
+
+  // IF IT EVEN POSSIBLE TO SPILL REG.SUBREG ?
+
+  // CREATE NEW PSEUDOS SI_SPILL_XXX_SAVE/RESTORE_WITH_SUBREG ???
 
   unsigned createSpillSlot(const TargetRegisterClass *RC) {
     unsigned Size = TRI->getSpillSize(*RC);
@@ -86,8 +89,17 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   DenseMap<unsigned, unsigned> PostponedLoopLatches;
   DenseMap<unsigned, SmallVector<unsigned>> LoopHeader2Latches;
 
-  LLVM_ATTRIBUTE_NOINLINE void
-  printVRegMaskPair(const VRegMaskPair P);
+  void printVRegMaskPair(const VRegMaskPair P) {
+    SmallVector<unsigned> Idxs;
+    const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.VReg);
+    bool HasSubReg = TRI->getCoveringSubRegIndexes(*MRI, RC, P.LaneMask, Idxs);
+    dbgs() << "Vreg: ";
+    if (HasSubReg)
+      for (auto i : Idxs)
+        dbgs() << printReg(P.VReg, TRI, i, MRI) << "]\n";
+    else
+      dbgs() << printReg(P.VReg) << "]\n";
+  }
 
   void dump() {
     for (auto SI : RegisterMap) {
@@ -270,14 +282,10 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
       Register VReg = U.getReg();
       if (!takeReg(VReg))
         continue;
-
-      if (U.getSubReg() != AMDGPU::NoSubRegister) {
-        dbgs() << U << "\n";
-      }
       
       VRegMaskPair VMP(U, *TRI);
       
-      if (!isCoveredActive(VMP, Active)) {
+      if (Active.insert(VMP)) {
         // Not in reg, hence, should have been spilled before
         // FIXME: This is ODD as the Spilled set is a union among all
         // predecessors and should already contain all spilled before!
@@ -517,7 +525,15 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator InsertBefore,
                                    VRegMaskPair VMP) {
   unsigned SubRegIdx = 0;
-  const TargetRegisterClass *RC = getRegClassForVregMaskPair(VMP, SubRegIdx);
+  SmallVector<unsigned> Idxs;
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VMP.VReg);
+  bool HasSubReg = TRI->getCoveringSubRegIndexes(*MRI, RC, VMP.LaneMask, Idxs);
+  if (HasSubReg) {
+    SubRegIdx = Idxs[0];
+    for (int i = 1; i < Idxs.size() - 1; i++)
+      SubRegIdx = TRI->composeSubRegIndices(SubRegIdx, Idxs[i]);
+      RC = TRI->getSubRegisterClass(RC, SubRegIdx);
+  }
 
   int FI = assignVirt2StackSlot(VMP);
   TII->storeRegToStackSlot(MBB, InsertBefore, VMP.VReg, true, FI, RC, TRI,

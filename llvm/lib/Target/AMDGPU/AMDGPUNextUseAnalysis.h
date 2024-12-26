@@ -48,16 +48,16 @@ public:
   }
 };
 
-namespace llvm {
-template <> struct DenseMapInfo<VRegMaskPair> {
+template<>
+struct DenseMapInfo<VRegMaskPair> {
   static inline VRegMaskPair getEmptyKey() {
     return {Register(DenseMapInfo<unsigned>::getEmptyKey()),
             LaneBitmask(0xFFFFFFFFFFFFFFFFULL)};
   }
 
   static inline VRegMaskPair getTombstoneKey() {
-    return {Register(DenseMapInfo<unsigned>::getTombstoneKey()),
-            LaneBitmask(0xFFFFFFFFFFFFFFFEULL)};
+    return { Register(DenseMapInfo<unsigned>::getTombstoneKey()),
+                    LaneBitmask(0xFFFFFFFFFFFFFFFEULL) };
   }
 
   static unsigned getHashValue(const VRegMaskPair &P) {
@@ -71,7 +71,7 @@ template <> struct DenseMapInfo<VRegMaskPair> {
                                            RHS.LaneMask.getAsInteger());
   }
 };
-} // namespace llvm
+
 class NextUseResult {
   friend class AMDGPUNextUseAnalysisWrapper;
   SlotIndexes *Indexes;
@@ -109,7 +109,7 @@ public:
   
 
 private:
-  DenseMap<unsigned, SetVector<VRegMaskPair>> UsedInBlock;
+  DenseMap<unsigned, SetVector<Register>> UsedInBlock;
   DenseMap<int, int> EdgeWeigths;
   const uint16_t Infinity = std::numeric_limits<unsigned short>::max();
   void init(const MachineFunction &MF);
@@ -215,7 +215,7 @@ public:
                           : getNextUseDistance(I, VMP) == Infinity;
   }
 
-  SetVector<VRegMaskPair> usedInBlock(MachineBasicBlock &MBB) {
+  SetVector<Register> usedInBlock(MachineBasicBlock &MBB) {
     return std::move(UsedInBlock[MBB.getNumber()]);
   }
 };

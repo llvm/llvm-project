@@ -93,20 +93,16 @@ void NextUseResult::analyze(const MachineFunction &MF) {
             VRegMaskPair P(MO, *TRI);
             if(MO.isUse()) {
               Curr[P] = 0;
-              UsedInBlock[MBB->getNumber()].insert(P);
+              UsedInBlock[MBB->getNumber()].insert(P.VReg);
             } else if (MO.isDef()) {
 
-              SmallVector<VRegMaskPair> ToKill;
-              for (auto X : Curr) {
-                if (X.first.VReg == P.VReg) {
-                  X.first.LaneMask &= ~P.LaneMask;
-                  if (X.first.LaneMask.none())
-                    ToKill.push_back(X.first);
-                }
-              }
-
-              for (auto D : ToKill) {
-                Curr.erase(D);
+              SmallVector<VRegMaskPair> ToUpdate;
+              std::copy_if(Curr.begin(), Curr.end(), ToUpdate,
+                           [&](VRegMaskPair X) { return X.VReg == P.VReg; });
+              for (auto &Y : ToUpdate) {
+                Y.LaneMask &= ~P.LaneMask;
+                if (Y.LaneMask.none())
+                  Curr.erase(Y);
               }
             }
           }
@@ -132,23 +128,9 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   const MachineBasicBlock *MBB = I->getParent();
   unsigned MBBNum = MBB->getNumber();
   if (NextUseMap.contains(MBBNum) &&
-      NextUseMap[MBBNum].InstrDist.contains(&*I)) {
-    VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
-    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP)) {
-      Dist = Dists[VMP];
-    } else {
-      for (auto P : Dists) {
-        if (P.first.VReg == VMP.VReg) {
-          LaneBitmask UseMask = P.first.LaneMask;
-          LaneBitmask Mask = VMP.LaneMask;
-          if ((UseMask & Mask) == UseMask)
-            if (P.second < Dist)
-              Dist = P.second;
-        } 
-      }
-    }
-  }
-
+      NextUseMap[MBBNum].InstrDist.contains(&*I) &&
+      NextUseMap[MBBNum].InstrDist[&*I].contains(VMP))
+    Dist = NextUseMap[MBBNum].InstrDist[&*I][VMP];
   return Dist;
 }
 
@@ -156,22 +138,8 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
                                            const VRegMaskPair VMP) {
   unsigned Dist = Infinity;
   unsigned MBBNum = MBB.getNumber();
-  if (NextUseMap.contains(MBBNum)) {
-    if (NextUseMap[MBBNum].Bottom.contains(VMP))
-      Dist = NextUseMap[MBBNum].Bottom[VMP];
-    else {
-      VRegDistances Dists = NextUseMap[MBBNum].Bottom;
-      for (auto P : Dists) {
-        if (P.first.VReg == VMP.VReg) {
-          LaneBitmask UseMask = P.first.LaneMask;
-          LaneBitmask Mask = VMP.LaneMask;
-          if ((UseMask & Mask) == UseMask)
-            if (P.second < Dist)
-              Dist = P.second;
-        }
-      }
-    }
-  }
+  if (NextUseMap.contains(MBBNum))
+    Dist = NextUseMap[MBBNum].Bottom[VMP];
   return Dist;
 }
 
