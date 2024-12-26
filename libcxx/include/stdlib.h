@@ -92,10 +92,6 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 #  if !defined(_LIBCPP_STDLIB_H)
 #    define _LIBCPP_STDLIB_H
 
-#    if __has_include_next(<stdlib.h>)
-#      include_next <stdlib.h>
-#    endif
-
 #    ifdef __cplusplus
 extern "C++" {
 // abs
@@ -149,6 +145,6 @@ inline _LIBCPP_HIDE_FROM_ABI lldiv_t div(long long __x, long long __y) _NOEXCEPT
 #      endif // _LIBCPP_MSVCRT
 } // extern "C++"
 #    endif   // __cplusplus
-#  endif     // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  endif     // _LIBCPP_STDLIB_H
 
-#endif // _LIBCPP_STDLIB_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
