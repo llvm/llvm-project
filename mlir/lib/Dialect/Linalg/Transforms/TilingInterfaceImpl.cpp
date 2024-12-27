@@ -324,6 +324,13 @@ struct LinalgOpTilingInterface
 // External Model for implementing `PartialReductionInterface` for `LinalgOp`s.
 //===----------------------------------------------------------------------===//
 
+/// Return an AffineMap for a partial result for the given result number,
+/// assuming the partial tiling strategy is outer-reduction loop +
+/// inner-parallel tile. The returned AffineMap can be used as the replacement
+/// AffineMap for the inner-parallel tile linalg op for the given result number.
+///
+/// The new AffineMap is the old AffineMap with reduction dimensions appended
+/// at end.
 static AffineMap getPartialResultAffineMap(LinalgOp linalgOp,
                                            ArrayRef<int> reductionDims,
                                            unsigned resultNumber) {
@@ -491,9 +498,10 @@ struct LinalgOpPartialReductionInterface
     SmallVector<Operation *> mergeOperations;
     SmallVector<Value> replacements;
     for (int idx : llvm::seq(numInits)) {
-      // linalg.reduce's iteration space is the result's iteration space (and
-      // not the operations iteration space). To account for this, permute the
-      // reduction dimensions based on the partial result map.
+      // linalg.reduce's iteration space is the tiled result's iteration space
+      // (and not the tiled operation's iteration space). To account for this,
+      // permute the reduction dimensions based on the partial result map of the
+      // tiled result.
       AffineMap partialMap =
           getPartialResultAffineMap(linalgOp, reductionDims, idx);
       SmallVector<int64_t> partialReductionDims;
