@@ -27,6 +27,9 @@ typedef enum memory_order {
   memory_order_seq_cst = __ATOMIC_SEQ_CST
 } memory_order;
 
+typedef float float2 __attribute__((ext_vector_type(2)));
+typedef double double2 __attribute__((ext_vector_type(2)));
+
 void test(float *f, float ff, double *d, double dd) {
   // FLOAT: atomicrmw fadd ptr {{.*}} monotonic
   __atomic_fetch_add(f, ff, memory_order_relaxed);
@@ -39,6 +42,25 @@ void test(float *f, float ff, double *d, double dd) {
   __atomic_fetch_add(d, dd, memory_order_relaxed);
 
   // DOUBLE: atomicrmw fsub ptr {{.*}} monotonic
+  __atomic_fetch_sub(d, dd, memory_order_relaxed);
+#endif
+}
+
+typedef float float2 __attribute__((ext_vector_type(2)));
+typedef double double2 __attribute__((ext_vector_type(2)));
+
+void test_vector(float2 *f, float2 ff, double2 *d, double2 dd) {
+  // FLOAT: atomicrmw fadd ptr {{.*}} <2 x float> {{.*}} monotonic
+  __atomic_fetch_add(f, ff, memory_order_relaxed);
+
+  // FLOAT: atomicrmw fsub ptr {{.*}} <2 x float> {{.*}} monotonic
+  __atomic_fetch_sub(f, ff, memory_order_relaxed);
+
+#ifdef DOUBLE
+  // DOUBLE: atomicrmw fadd ptr {{.*}} <2 x double> {{.*}}  monotonic
+  __atomic_fetch_add(d, dd, memory_order_relaxed);
+
+  // DOUBLE: atomicrmw fsub ptr {{.*}} <2 x double> {{.*}} monotonic
   __atomic_fetch_sub(d, dd, memory_order_relaxed);
 #endif
 }
