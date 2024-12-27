@@ -297,6 +297,10 @@ public:
   MachineInstrBuilder createStackTemporary(TypeSize Bytes, Align Alignment,
                                            MachinePointerInfo &PtrInfo);
 
+  /// Create a store of \p Val to a stack temporary and return a load of the
+  /// same value as type \p DestVT.
+  MachineInstrBuilder createStackStoreLoad(Register Val, LLT DstTy);
+
   /// Get a pointer to vector element \p Index located in memory for a vector of
   /// type \p VecTy starting at a base address of \p VecPtr. If \p Index is out
   /// of bounds the returned pointer is unspecified, but will be within the
