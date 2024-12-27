@@ -787,7 +787,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
             const auto &ID = *EID;
             auto P = IndexEntries.insert(std::make_pair(ID.Signature, Entry));
             if (!P.second) {
-              WithColor::defaultWarningHandler(buildDuplicateError(*P.first, ID, ""));
+              WithColor::defaultWarningHandler(
+                  buildDuplicateError(*P.first, ID, ""));
               FoundCUUnit = true;
               continue;
             }
@@ -862,7 +863,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
         return createFileError(Input, EID.takeError());
       const auto &ID = *EID;
       if (!P.second) {
-        WithColor::defaultWarningHandler(buildDuplicateError(*P.first, ID, Input));
+        WithColor::defaultWarningHandler(
+            buildDuplicateError(*P.first, ID, Input));
         continue;
       }
       auto &NewEntry = P.first->second;
