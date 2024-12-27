@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/FILE.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/File/file.h"
+
 #include <stddef.h>
 
-#include "src/__support/File/file.h"
+
+
 
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
