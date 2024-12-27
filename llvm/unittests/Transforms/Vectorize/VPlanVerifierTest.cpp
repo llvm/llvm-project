@@ -27,7 +27,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
@@ -51,7 +51,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(UseI);
   VPBB2->appendRecipe(CanIV);
@@ -85,9 +85,9 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPBasicBlock *VPBB3 = new VPBasicBlock();
-  VPBasicBlock *VPBB4 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
   VPBB2->appendRecipe(CanIV);
@@ -125,7 +125,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(BranchOnCond2);
@@ -158,8 +158,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPBasicBlock *VPBB3 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
   VPBB2->appendRecipe(CanIV);
@@ -187,7 +187,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
   VPInstruction *BranchOnCond =

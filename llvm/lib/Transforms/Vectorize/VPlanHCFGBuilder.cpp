@@ -357,12 +357,10 @@ void PlainCFGBuilder::buildPlainCFG() {
   BB2VPBB[TheLoop->getHeader()] = VectorHeaderVPBB;
   VectorHeaderVPBB->clearSuccessors();
   VectorLatchVPBB->clearPredecessors();
-  if (TheLoop->getHeader() != TheLoop->getLoopLatch()) {
+  if (TheLoop->getHeader() != TheLoop->getLoopLatch())
     BB2VPBB[TheLoop->getLoopLatch()] = VectorLatchVPBB;
-  } else {
+  else
     TheRegion->setExiting(VectorHeaderVPBB);
-    delete VectorLatchVPBB;
-  }
 
   // 1. Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks. Create a VPBB for

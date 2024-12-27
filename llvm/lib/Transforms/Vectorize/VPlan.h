@@ -3844,7 +3844,6 @@ class VPlan {
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
 
-public:
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3861,8 +3860,8 @@ public:
   VPlan(Loop *L);
 
   VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
-    setEntry(new VPBasicBlock("preheader"));
-    ScalarHeader = VPIRBasicBlock::fromBasicBlock(ScalarHeaderBB);
+    setEntry(createVPBasicBlock("preheader"));
+    ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
     TripCount = TC;
   }
 
