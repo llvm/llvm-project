@@ -480,8 +480,8 @@ void CoverageReport::prepareSingleFileReport(const StringRef Filename,
         /*Covered=*/Group.getTotalExecutionCount() > 0);
   }
 
-  auto FileCoverage =
-      Coverage->getCoverageForFile(Filename, FilteredOutFunctions);
+  auto FileCoverage = Coverage->getCoverageForFile(
+      Filename, Options.MergeStrategyOpts, FilteredOutFunctions);
   if (FileCoverage.empty())
     return;
 
