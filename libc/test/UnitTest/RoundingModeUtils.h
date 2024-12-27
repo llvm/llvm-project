@@ -16,13 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace testing {
 
-enum class RoundingMode : uint8_t {
-  Upward,
-  Downward,
-  TowardZero,
-  Nearest,
-  AwayFromZero
-};
+enum class RoundingMode : uint8_t {Upward, Downward, TowardZero, Nearest};
 
 struct ForceRoundingMode {
   ForceRoundingMode(RoundingMode);

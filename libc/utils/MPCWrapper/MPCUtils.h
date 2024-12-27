@@ -124,8 +124,11 @@ public:
 private:
   template <typename InType, typename OutType>
   bool match(InType in, OutType out) {
-    return compare_unary_operation_single_output(op, in, out, ulp_tolerance,
-                                                 rounding);
+    if (cpp::is_same_v<InType, OutType>) {
+      return compare_unary_operation_single_output_same_type(op, in, out, ulp_tolerance, rounding);  
+    } else {
+      return compare_unary_operation_single_output_different_type(op, in, out, ulp_tolerance, rounding);
+    }
   }
 
   template <typename T, typename U>
@@ -136,8 +139,11 @@ private:
 
   template <typename InType, typename OutType>
   void explain_error(InType in, OutType out) {
-    explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
-                                                rounding);
+    if (cpp::is_same_v<InType, OutType>) {
+      explain_unary_operation_single_output_same_type_error(op, in, out, ulp_tolerance, rounding);
+    } else {
+      explain_unary_operation_single_output_different_type_error(op, in, out, ulp_tolerance, rounding);
+    }
   }
 
   template <typename T, typename U>
@@ -219,14 +225,6 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
   EXPECT_THAT(match_value, LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(  \
                                input, match_value, ulp_tolerance,              \
                                MPCRoundingMode{Rrounding, Irounding}))
-
-/* Rounding Modes:
-    1. N(to nearest)
-    2. Z(to zero)
-    3. U(towards +infinity)
-    4. D(towards -infinity)
-    5. A(away from zero)
-*/
 
 #define EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(                                  \
     i, j, op, input, match_value, ulp_tolerance, Rrounding, Irounding)         \
