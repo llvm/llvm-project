@@ -3022,6 +3022,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    assert(!Ty.isPointerOrPointerVector() && "Can't widen type");
     if (!Ty.isScalar()) {
       // We need to widen the vector element type.
       Observer.changingInstr(MI);
