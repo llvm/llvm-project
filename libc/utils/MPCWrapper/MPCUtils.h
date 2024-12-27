@@ -11,9 +11,9 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/type_traits/is_complex.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/complex_types.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
@@ -65,9 +65,9 @@ using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
 template <typename T> struct BinaryInput {
-  static_assert(
-      LIBC_NAMESPACE::cpp::is_complex_v<T>,
-      "Template parameter of BinaryInput must be a complex floating point type.");
+  static_assert(LIBC_NAMESPACE::cpp::is_complex_v<T>,
+                "Template parameter of BinaryInput must be a complex floating "
+                "point type.");
 
   using Type = T;
   T x, y;
@@ -106,6 +106,7 @@ private:
   OutputType match_value;
   double ulp_tolerance;
   RoundingMode rounding;
+
 public:
   MPCMatcher(InputType testInput, double ulp_tolerance, RoundingMode rounding)
       : input(testInput), ulp_tolerance(ulp_tolerance), rounding(rounding) {}
@@ -114,6 +115,7 @@ public:
     match_value = libcResult;
     return match(input, match_value);
   }
+
 private:
   template <typename InType, typename OutType>
   bool match(InType in, OutType out) {
@@ -171,33 +173,28 @@ template <typename T> using get_real_t = typename get_real<T>::type;
 // types.
 template <Operation op, typename InputType, typename OutputType>
 constexpr bool is_valid_operation() {
-    return (Operation::BeginBinaryOperationsSingleOutput < op &&
-        op < Operation::EndBinaryOperationsSingleOutput &&
-        cpp::is_complex_type_same<InputType, OutputType> &&
-        cpp::is_complex_v<InputType>) || 
-        (Operation::BeginUnaryOperationsSingleOutputSameOutputType < op &&
-        op < Operation::EndUnaryOperationsSingleOutputSameOutputType &&
-        cpp::is_complex_type_same<InputType, OutputType> &&
-        cpp::is_complex_v<InputType>) ||
-        (Operation::BeginUnaryOperationsSingleOutputDifferentOutputType < op &&
-        op < Operation::EndUnaryOperationsSingleOutputDifferentOutputType &&
-        cpp::is_same_v<get_real_t<InputType>, OutputType> &&
-        cpp::is_complex_v<InputType>);
+  return (Operation::BeginBinaryOperationsSingleOutput < op &&
+          op < Operation::EndBinaryOperationsSingleOutput &&
+          cpp::is_complex_type_same<InputType, OutputType> &&
+          cpp::is_complex_v<InputType>) ||
+         (Operation::BeginUnaryOperationsSingleOutputSameOutputType < op &&
+          op < Operation::EndUnaryOperationsSingleOutputSameOutputType &&
+          cpp::is_complex_type_same<InputType, OutputType> &&
+          cpp::is_complex_v<InputType>) ||
+         (Operation::BeginUnaryOperationsSingleOutputDifferentOutputType < op &&
+          op < Operation::EndUnaryOperationsSingleOutputDifferentOutputType &&
+          cpp::is_same_v<get_real_t<InputType>, OutputType> &&
+          cpp::is_complex_v<InputType>);
 }
 
 template <Operation op, typename InputType, typename OutputType>
-cpp::enable_if_t<
-    is_valid_operation<op, InputType, OutputType>(),
-    internal::MPCMatcher<op, InputType, OutputType>>
+cpp::enable_if_t<is_valid_operation<op, InputType, OutputType>(),
+                 internal::MPCMatcher<op, InputType, OutputType>>
 get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
-                 double ulp_tolerance, RoundingMode rounding) {
-  return internal::MPCMatcher<op, InputType, OutputType>(
-      input, ulp_tolerance, rounding);
+                double ulp_tolerance, RoundingMode rounding) {
+  return internal::MPCMatcher<op, InputType, OutputType>(input, ulp_tolerance,
+                                                         rounding);
 }
-
-template <typename T> T round(T x, RoundingMode mode);
-template <typename T> bool round_to_long(T x, long &result);
-template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 } // namespace mpc
 } // namespace testing
@@ -210,40 +207,39 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                   LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest))
 
 #define EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,       \
-                                   rounding)                                   \
-  EXPECT_THAT(match_value,                                                     \
-              LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(               \
-                  input, match_value, ulp_tolerance, rounding))
+                                  rounding)                                    \
+  EXPECT_THAT(match_value, LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(  \
+                               input, match_value, ulp_tolerance, rounding))
 
 #define EXPECT_MPC_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)   \
   {                                                                            \
     namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                        \
     MPCRND::ForceRoundingMode __r1(MPCRND::RoundingMode::Nearest);             \
     if (__r1.success) {                                                        \
-      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::Nearest);                          \
+      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::Nearest);                \
     }                                                                          \
-    MPCRND::ForceRoundingMode __r2(MPCRND::RoundingMode::Upward);                  \
+    MPCRND::ForceRoundingMode __r2(MPCRND::RoundingMode::Upward);              \
     if (__r2.success) {                                                        \
-      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::Upward);                           \
+      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::Upward);                 \
     }                                                                          \
-    MPCRND::ForceRoundingMode __r3(MPCRND::RoundingMode::Downward);                \
+    MPCRND::ForceRoundingMode __r3(MPCRND::RoundingMode::Downward);            \
     if (__r3.success) {                                                        \
-      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::Downward);                         \
+      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::Downward);               \
     }                                                                          \
-    MPCRND::ForceRoundingMode __r4(MPCRND::RoundingMode::TowardZero);              \
+    MPCRND::ForceRoundingMode __r4(MPCRND::RoundingMode::TowardZero);          \
     if (__r4.success) {                                                        \
-      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::TowardZero);                       \
+      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::TowardZero);             \
     }                                                                          \
   }
 
 #define TEST_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
-                                 rounding)                                     \
+                                rounding)                                      \
   LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(input, match_value,        \
-                                                      ulp_tolerance, rounding) \
+                                                    ulp_tolerance, rounding)   \
       .match(match_value)
 
 #define ASSERT_MPC_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)        \
@@ -253,33 +249,32 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                   LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest))
 
 #define ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,       \
-                                   rounding)                                   \
-  ASSERT_THAT(match_value,                                                     \
-              LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(               \
-                  input, match_value, ulp_tolerance, rounding))
+                                  rounding)                                    \
+  ASSERT_THAT(match_value, LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(  \
+                               input, match_value, ulp_tolerance, rounding))
 
-#define ASSERT_MPC_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
+#define ASSERT_MPC_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)   \
   {                                                                            \
-    namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                            \
-    MPCRND::ForceRoundingMode __r1(MPCRND::RoundingMode::Nearest);                 \
+    namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                        \
+    MPCRND::ForceRoundingMode __r1(MPCRND::RoundingMode::Nearest);             \
     if (__r1.success) {                                                        \
-      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::Nearest);                          \
+      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::Nearest);                \
     }                                                                          \
-    MPCRND::ForceRoundingMode __r2(MPCRND::RoundingMode::Upward);                  \
+    MPCRND::ForceRoundingMode __r2(MPCRND::RoundingMode::Upward);              \
     if (__r2.success) {                                                        \
-      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::Upward);                           \
+      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::Upward);                 \
     }                                                                          \
-    MPCRND::ForceRoundingMode __r3(MPCRND::RoundingMode::Downward);                \
+    MPCRND::ForceRoundingMode __r3(MPCRND::RoundingMode::Downward);            \
     if (__r3.success) {                                                        \
-      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::Downward);                         \
+      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::Downward);               \
     }                                                                          \
-    MPCRND::ForceRoundingMode __r4(MPCRND::RoundingMode::TowardZero);              \
+    MPCRND::ForceRoundingMode __r4(MPCRND::RoundingMode::TowardZero);          \
     if (__r4.success) {                                                        \
-      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                 \
-                        MPCRND::RoundingMode::TowardZero);                       \
+      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                MPCRND::RoundingMode::TowardZero);             \
     }                                                                          \
   }
 
