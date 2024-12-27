@@ -1,4 +1,4 @@
-## Test the --privated-headers option for XCOFF object files.
+## Test the --private-headers option for the loader section of XCOFF object files.
 
 # RUN: yaml2obj --docnum=1 %s -o %t_xcoff32.o
 # RUN: yaml2obj --docnum=2  %s -o %t_xcoff64.o
