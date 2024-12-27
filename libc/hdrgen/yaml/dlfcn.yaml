@@ -8,7 +8,8 @@ macros:
     macro_value: null
   - macro_name: RTLD_LOCAL
     macro_value: null
-types: []
+types:
+  - type_name: Dl_info
 enums: []
 objects: []
 functions:
@@ -37,3 +38,10 @@ functions:
     arguments:
       - type: void *__restrict
       - type: const char *__restrict
+  - name: dladdr
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: Dl_info *

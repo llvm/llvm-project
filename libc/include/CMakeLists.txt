@@ -75,6 +75,7 @@ add_header_macro(
   dlfcn.h
   DEPENDS
     .llvm-libc-macros.dlfcn_macros
+    .llvm-libc-types.Dl_info
     .llvm_libc_common_h
 )
 
@@ -444,6 +445,8 @@ add_header_macro(
   link.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.__dl_iterate_phdr_callback_t
+    .llvm-libc-types.struct_dl_phdr_info
     .llvm-libc-macros.link_macros
 )
 

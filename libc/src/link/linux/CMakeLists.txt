@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  dl_iterate_phdr
+  SRCS
+    dl_iterate_phdr.cpp
+  HDRS
+    ../dl_iterate_phdr.h
+  DEPENDS
+    libc.include.llvm-libc-types.__dl_iterate_phdr_callback_t
+    libc.include.llvm-libc-types.struct_dl_phdr_info
+    libc.include.llvm-libc-types.size_t
+)
