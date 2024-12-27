@@ -315,7 +315,8 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI size_t hash_code() const _NOEXCEPT { return __impl::__hash(__type_name); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const type_info& __arg) const _NOEXCEPT {
+  // We need to inline this code because otherwise we will get a stack overflow with undefined sanitizer.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const type_info& __arg) const _NOEXCEPT {
     // When evaluated in a constant expression, both type infos simply can't come
     // from different translation units, so it is sufficient to compare their addresses.
     if (__libcpp_is_constant_evaluated()) {
