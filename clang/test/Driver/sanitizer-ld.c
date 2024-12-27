@@ -917,7 +917,7 @@
 // RUN:     --target=riscv64-unknown-fuchsia -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64
 // CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64-NOT: error:
-// CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64: libclang_rt.builtins.a
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
