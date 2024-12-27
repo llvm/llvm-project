@@ -668,7 +668,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
   // We can generate more optimal code with a smaller number of operations
   if (CI->hasOneUser()) {
     auto *UI = cast<Instruction>(*CI->user_begin());
-    ICmpInst::Predicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
+    CmpPredicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
     uint64_t Shift;
     bool NeedsZExt = false;
     // This is a special case because instead of checking if the result is less

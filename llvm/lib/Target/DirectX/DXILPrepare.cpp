@@ -251,7 +251,7 @@ public:
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
-    AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
   }
   static char ID; // Pass identification.
 };

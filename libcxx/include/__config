@@ -402,7 +402,11 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
-#    define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
+
+// TODO: Make this a proper customization point or remove the option to override it.
+#    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
+#      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
+#    endif
 
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 // The inline should be removed once PR32114 is resolved
@@ -1166,11 +1170,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NOESCAPE
 #  endif
 
-#  if __has_attribute(__nodebug__)
-#    define _LIBCPP_NODEBUG __attribute__((__nodebug__))
-#  else
-#    define _LIBCPP_NODEBUG
-#  endif
+#  define _LIBCPP_NODEBUG [[__gnu__::__nodebug__]]
 
 #  if __has_attribute(__standalone_debug__)
 #    define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))

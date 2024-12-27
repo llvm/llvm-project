@@ -19,7 +19,7 @@ define float @pr70988() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select contract i1 [[TMP1]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-NEXT:    [[TMP5]] = fadd contract float [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add i32 [[INDEX1]], 2
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1022
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -55,7 +55,7 @@ define float @pr70988() {
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
 ; CHECK-ALM-NEXT:    [[TMP4:%.*]] = select contract i1 [[ACTIVE_LANE_MASK2]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP5]] = fadd contract float [[TMP3]], [[TMP4]]
-; CHECK-ALM-NEXT:    [[INDEX_NEXT3]] = add i32 [[INDEX1]], 2
+; CHECK-ALM-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 2
 ; CHECK-ALM-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1022
 ; CHECK-ALM-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-ALM:       middle.block:
@@ -125,7 +125,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd contract float [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP1]], float [[TMP9]], float -0.000000e+00
 ; CHECK-NEXT:    [[TMP13]] = fadd contract float [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
@@ -178,7 +178,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    [[TMP9:%.*]] = fadd contract float [[VEC_PHI]], [[TMP8]]
 ; CHECK-ALM-NEXT:    [[TMP10:%.*]] = select contract i1 [[ACTIVE_LANE_MASK1]], float [[TMP7]], float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP11]] = fadd contract float [[TMP9]], [[TMP10]]
-; CHECK-ALM-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-ALM-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-ALM-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-ALM-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-ALM:       middle.block:

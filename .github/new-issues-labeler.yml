@@ -30,3 +30,9 @@
 
 'infra:commit-access-request':
   - '/Request Commit Access/'
+
+'false-positive':
+  - '\bfalse[- ]positive\b'
+
+'false-negative':
+  - '\bfalse[- ]negative\b'

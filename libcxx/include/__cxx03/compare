@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_COMPARE
-#define _LIBCPP_COMPARE
+#ifndef _LIBCPP___CXX03_COMPARE
+#define _LIBCPP___CXX03_COMPARE
 
 /*
     compare synopsis
@@ -175,4 +175,4 @@ namespace std {
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_COMPARE
+#endif // _LIBCPP___CXX03_COMPARE

@@ -716,7 +716,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
         dynamicIndices.push_back(val);
       }
     } else {
-      rawConstantIndices.push_back(iter.get<GEPConstantIndex>());
+      rawConstantIndices.push_back(cast<GEPConstantIndex>(iter));
     }
 
     // Skip for very first iteration of this loop. First index does not index
@@ -805,7 +805,7 @@ static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
         if (Value val = llvm::dyn_cast_if_present<Value>(cst))
           printer.printOperand(val);
         else
-          printer << cst.get<IntegerAttr>().getInt();
+          printer << cast<IntegerAttr>(cst).getInt();
       });
 }
 
@@ -821,11 +821,12 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
 
   return TypeSwitch<Type, LogicalResult>(baseGEPType)
       .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
-        if (!indices[indexPos].is<IntegerAttr>())
+        auto attr = dyn_cast<IntegerAttr>(indices[indexPos]);
+        if (!attr)
           return emitOpError() << "expected index " << indexPos
                                << " indexing a struct to be constant";
 
-        int32_t gepIndex = indices[indexPos].get<IntegerAttr>().getInt();
+        int32_t gepIndex = attr.getInt();
         ArrayRef<Type> elementTypes = structType.getBody();
         if (gepIndex < 0 ||
             static_cast<size_t>(gepIndex) >= elementTypes.size())
@@ -1100,11 +1101,11 @@ CallInterfaceCallable CallOp::getCallableForCallee() {
 void CallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
   // Direct call.
   if (FlatSymbolRefAttr calleeAttr = getCalleeAttr()) {
-    auto symRef = callee.get<SymbolRefAttr>();
+    auto symRef = cast<SymbolRefAttr>(callee);
     return setCalleeAttr(cast<FlatSymbolRefAttr>(symRef));
   }
   // Indirect call, callee Value is the first operand.
-  return setOperand(0, callee.get<Value>());
+  return setOperand(0, cast<Value>(callee));
 }
 
 Operation::operand_range CallOp::getArgOperands() {
@@ -1564,11 +1565,11 @@ CallInterfaceCallable InvokeOp::getCallableForCallee() {
 void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
   // Direct call.
   if (FlatSymbolRefAttr calleeAttr = getCalleeAttr()) {
-    auto symRef = callee.get<SymbolRefAttr>();
+    auto symRef = cast<SymbolRefAttr>(callee);
     return setCalleeAttr(cast<FlatSymbolRefAttr>(symRef));
   }
   // Indirect call, callee Value is the first operand.
-  return setOperand(0, callee.get<Value>());
+  return setOperand(0, cast<Value>(callee));
 }
 
 Operation::operand_range InvokeOp::getArgOperands() {
@@ -3259,7 +3260,7 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
       if (Value val = llvm::dyn_cast_if_present<Value>(existing))
         gepArgs.emplace_back(val);
       else
-        gepArgs.emplace_back(existing.get<IntegerAttr>().getInt());
+        gepArgs.emplace_back(cast<IntegerAttr>(existing).getInt());
 
       continue;
     }

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; Used to fail with "Invalid APInt Truncate request".
 ; Used to fail with "Cannot select: 0x596010: v2i32 = sign_extend_inreg".
 

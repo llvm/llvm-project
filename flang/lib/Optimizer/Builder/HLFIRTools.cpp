@@ -535,6 +535,8 @@ static mlir::Value tryRetrievingShapeOrShift(hlfir::Entity entity) {
   if (mlir::isa<hlfir::ExprType>(entity.getType())) {
     if (auto elemental = entity.getDefiningOp<hlfir::ElementalOp>())
       return elemental.getShape();
+    if (auto evalInMem = entity.getDefiningOp<hlfir::EvaluateInMemoryOp>())
+      return evalInMem.getShape();
     return mlir::Value{};
   }
   if (auto varIface = entity.getIfVariableInterface())
@@ -641,6 +643,11 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
     } else if (auto elemental = expr.getDefiningOp<hlfir::ElementalOp>()) {
       result.append(elemental.getTypeparams().begin(),
                     elemental.getTypeparams().end());
+      return;
+    } else if (auto evalInMem =
+                   expr.getDefiningOp<hlfir::EvaluateInMemoryOp>()) {
+      result.append(evalInMem.getTypeparams().begin(),
+                    evalInMem.getTypeparams().end());
       return;
     } else if (auto apply = expr.getDefiningOp<hlfir::ApplyOp>()) {
       result.append(apply.getTypeparams().begin(), apply.getTypeparams().end());
@@ -901,6 +908,56 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
     }
   }
   return loopNest;
+}
+
+llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
+    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
+    bool isUnordered) {
+  assert(!extents.empty() && "must have at least one extent");
+  // Build loop nest from column to row.
+  auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
+  mlir::Type indexType = builder.getIndexType();
+  unsigned dim = extents.size() - 1;
+  fir::DoLoopOp outerLoop = nullptr;
+  fir::DoLoopOp parentLoop = nullptr;
+  llvm::SmallVector<mlir::Value> oneBasedIndices;
+  oneBasedIndices.resize(dim + 1);
+  for (auto extent : llvm::reverse(extents)) {
+    auto ub = builder.createConvert(loc, indexType, extent);
+
+    // The outermost loop takes reductionInits as the initial
+    // values of its iter-args.
+    // A child loop takes its iter-args from the region iter-args
+    // of its parent loop.
+    fir::DoLoopOp doLoop;
+    if (!parentLoop) {
+      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
+                                             /*finalCountValue=*/false,
+                                             reductionInits);
+    } else {
+      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
+                                             /*finalCountValue=*/false,
+                                             parentLoop.getRegionIterArgs());
+      // Return the results of the child loop from its parent loop.
+      builder.create<fir::ResultOp>(loc, doLoop.getResults());
+    }
+
+    builder.setInsertionPointToStart(doLoop.getBody());
+    // Reverse the indices so they are in column-major order.
+    oneBasedIndices[dim--] = doLoop.getInductionVar();
+    if (!outerLoop)
+      outerLoop = doLoop;
+    parentLoop = doLoop;
+  }
+
+  llvm::SmallVector<mlir::Value> reductionValues;
+  reductionValues =
+      genBody(loc, builder, oneBasedIndices, parentLoop.getRegionIterArgs());
+  builder.setInsertionPointToEnd(parentLoop.getBody());
+  builder.create<fir::ResultOp>(loc, reductionValues);
+  builder.setInsertionPointAfter(outerLoop);
+  return outerLoop->getResults();
 }
 
 static fir::ExtendedValue translateVariableToExtendedValue(
@@ -1312,4 +1369,44 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
     bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
   };
   return {hlfir::Entity{convertedRhs}, cleanup};
+}
+
+std::pair<hlfir::Entity, bool> hlfir::computeEvaluateOpInNewTemp(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    hlfir::EvaluateInMemoryOp evalInMem, mlir::Value shape,
+    mlir::ValueRange typeParams) {
+  llvm::StringRef tmpName{".tmp.expr_result"};
+  llvm::SmallVector<mlir::Value> extents =
+      hlfir::getIndexExtents(loc, builder, shape);
+  mlir::Type baseType =
+      hlfir::getFortranElementOrSequenceType(evalInMem.getType());
+  bool heapAllocated = fir::hasDynamicSize(baseType);
+  // Note: temporaries are stack allocated here when possible (do not require
+  // stack save/restore) because flang has always stack allocated function
+  // results.
+  mlir::Value temp = heapAllocated
+                         ? builder.createHeapTemporary(loc, baseType, tmpName,
+                                                       extents, typeParams)
+                         : builder.createTemporary(loc, baseType, tmpName,
+                                                   extents, typeParams);
+  mlir::Value innerMemory = evalInMem.getMemory();
+  temp = builder.createConvert(loc, innerMemory.getType(), temp);
+  auto declareOp = builder.create<hlfir::DeclareOp>(
+      loc, temp, tmpName, shape, typeParams,
+      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+  computeEvaluateOpIn(loc, builder, evalInMem, declareOp.getOriginalBase());
+  return {hlfir::Entity{declareOp.getBase()}, /*heapAllocated=*/heapAllocated};
+}
+
+void hlfir::computeEvaluateOpIn(mlir::Location loc, fir::FirOpBuilder &builder,
+                                hlfir::EvaluateInMemoryOp evalInMem,
+                                mlir::Value storage) {
+  mlir::Value innerMemory = evalInMem.getMemory();
+  mlir::Value storageCast =
+      builder.createConvert(loc, innerMemory.getType(), storage);
+  mlir::IRMapping mapper;
+  mapper.map(innerMemory, storageCast);
+  for (auto &op : evalInMem.getBody().front().without_terminator())
+    builder.clone(op, mapper);
+  return;
 }

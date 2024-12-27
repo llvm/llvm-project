@@ -242,7 +242,7 @@ module {
     ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
       tensor.yield %cst_f32 : f32
     } : tensor<1x32x32x8xf32> to tensor<1x40x8229x8xf32>
-    %1 = bufferization.to_memref %padded : memref<1x40x8229x8xf32>
+    %1 = bufferization.to_memref %padded : tensor<1x40x8229x8xf32> to memref<1x40x8229x8xf32>
     %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<1x32x32x8xf32>
     affine.for %arg1 = 0 to 1 {
       affine.for %arg2 = 0 to 32 {
@@ -280,7 +280,7 @@ module {
     // SPIRV-NOT:       affine.for %{{.*}}
 
     // SPIRV:       ReturnValue
-    %2 = bufferization.to_tensor %alloc_1 : memref<1x32x32x8xf32>
+    %2 = bufferization.to_tensor %alloc_1 : memref<1x32x32x8xf32> to tensor<1x32x32x8xf32>
     %3 = builtin.unrealized_conversion_cast %2 : tensor<1x32x32x8xf32> to !spirv.array<8192 x f32>
     spirv.ReturnValue %3 : !spirv.array<8192 x f32>
   }

@@ -55,6 +55,8 @@ static constexpr unsigned GFX12 = 1;
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
+enum class FPType { None, FP4, FP8 };
+
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
 
@@ -96,6 +98,17 @@ struct MAIInstInfo {
   bool is_gfx940_xdl;
 };
 
+struct MFMA_F8F6F4_Info {
+  unsigned Opcode;
+  unsigned F8F8Opcode;
+  uint8_t NumRegsSrcA;
+  uint8_t NumRegsSrcB;
+};
+
+struct CvtScaleF32_F32F16ToF8F4_Info {
+  unsigned Opcode;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -103,6 +116,9 @@ struct MAIInstInfo {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
+#define GET_MAIInstInfoTable_DECL
+#define GET_isMFMA_F8F6F4Table_DECL
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -581,12 +597,8 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc);
 
-struct MFMA_F8F6F4_Info {
-  unsigned Opcode;
-  unsigned F8F8Opcode;
-  uint8_t NumRegsSrcA;
-  uint8_t NumRegsSrcB;
-};
+LLVM_READNONE
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal);
 
 LLVM_READONLY
 const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
@@ -875,7 +887,7 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
-bool isFP8DstSelInst(unsigned Opc);
+FPType getFPDstSelType(unsigned Opc);
 
 LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);
@@ -922,6 +934,19 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired = false);
+
+/// \returns A pair of integer values requested using \p F's \p Name attribute
+/// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
+/// is false).
+///
+/// \returns \p std::nullopt if attribute is not present.
+///
+/// \returns \p std::nullopt and emits error if one of the requested values
+/// cannot be converted to integer, or \p OnlyFirstRequired is false and
+/// "second" value is not present.
+std::optional<std::pair<unsigned, std::optional<unsigned>>>
+getIntegerPairAttribute(const Function &F, StringRef Name,
                         bool OnlyFirstRequired = false);
 
 /// \returns Generate a vector of integer values requested using \p F's \p Name
