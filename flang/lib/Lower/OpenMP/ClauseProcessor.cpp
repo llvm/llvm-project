@@ -153,10 +153,13 @@ genDependKindAttr(lower::AbstractConverter &converter,
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
   case omp::clause::DependenceType::Mutexinoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependmutexinoutset;
+    break;
   case omp::clause::DependenceType::Inoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependinoutset;
+    break;
   case omp::clause::DependenceType::Depobj:
-    TODO(currentLocation,
-         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    TODO(currentLocation, "DEPOBJ dependence-type");
     break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
