@@ -520,8 +520,8 @@ public:
     config.enableRegionSimplification =
         mlir::GreedySimplifyRegionLevel::Disabled;
 
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            module, std::move(patterns), config))) {
+    if (mlir::failed(
+            mlir::applyPatternsGreedily(module, std::move(patterns), config))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "failure in HLFIR intrinsic lowering");
       signalPassFailure();

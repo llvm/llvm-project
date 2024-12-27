@@ -1189,12 +1189,12 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
       OS << "(";
       // If the complex pattern wants the root of the match, pass it in as the
       // first argument.
-      if (P.hasProperty(SDNPWantRoot))
+      if (P.wantsRoot())
         OS << "Root, ";
 
       // If the complex pattern wants the parent of the operand being matched,
       // pass it in as the next argument.
-      if (P.hasProperty(SDNPWantParent))
+      if (P.wantsParent())
         OS << "Parent, ";
 
       OS << "N";

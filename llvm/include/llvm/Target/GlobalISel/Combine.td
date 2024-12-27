@@ -424,11 +424,22 @@ def unary_undef_to_zero: GICombineRule<
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
+def unary_undef_to_undef_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR, G_FPTOSI,
+            G_FPTOUI],
+           (pattern (op $dst, $x), (G_IMPLICIT_DEF $x)))>;
+def unary_undef_to_undef : GICombineRule<
+  (defs root:$dst),
+  (match (unary_undef_to_undef_frags $dst)),
+  (apply [{ Helper.replaceInstWithUndef(*${dst}.getParent()); }])>;
+
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR):$root,
+  (match (wip_match_opcode G_ADD, G_SUB, G_XOR):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -1919,6 +1930,7 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      binop_left_undef_to_zero,
                                      binop_right_undef_to_undef,
                                      unary_undef_to_zero,
+                                     unary_undef_to_undef,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,

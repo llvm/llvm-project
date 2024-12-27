@@ -32,6 +32,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -595,8 +596,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if(CallstackProfileData[Id].AccessHistogramSize > 0)
-      free((void*) CallstackProfileData[Id].AccessHistogram);
+    if (CallstackProfileData[Id].AccessHistogramSize > 0)
+      free((void *)CallstackProfileData[Id].AccessHistogram);
     CallstackProfileData.erase(Id);
   }
 

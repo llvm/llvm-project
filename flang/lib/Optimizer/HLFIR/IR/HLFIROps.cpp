@@ -1704,6 +1704,15 @@ hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
   return llvm::LogicalResult::success();
 }
 
+mlir::OpFoldResult hlfir::ShapeOfOp::fold(FoldAdaptor adaptor) {
+  if (matchPattern(getExpr(), mlir::m_Op<hlfir::ElementalOp>())) {
+    auto elementalOp =
+        mlir::cast<hlfir::ElementalOp>(getExpr().getDefiningOp());
+    return elementalOp.getShape();
+  }
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // GetExtent
 //===----------------------------------------------------------------------===//

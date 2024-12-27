@@ -2686,7 +2686,7 @@ template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
 
 #define RETURN_IF_NOT_CONTAINS(field)                                          \
   if (loadConfigSize < offsetof(T, field) + sizeof(T::field)) {                \
-    warn("'_load_config_used' structure too small to include " #field);        \
+    Warn(ctx) << "'_load_config_used' structure too small to include " #field; \
     return;                                                                    \
   }
 
@@ -2696,12 +2696,12 @@ template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
 #define CHECK_VA(field, sym)                                                   \
   if (auto *s = dyn_cast<DefinedSynthetic>(ctx.symtab.findUnderscore(sym)))    \
     if (loadConfig->field != ctx.config.imageBase + s->getRVA())               \
-      warn(#field " not set correctly in '_load_config_used'");
+      Warn(ctx) << #field " not set correctly in '_load_config_used'";
 
 #define CHECK_ABSOLUTE(field, sym)                                             \
   if (auto *s = dyn_cast<DefinedAbsolute>(ctx.symtab.findUnderscore(sym)))     \
     if (loadConfig->field != s->getVA())                                       \
-      warn(#field " not set correctly in '_load_config_used'");
+      Warn(ctx) << #field " not set correctly in '_load_config_used'";
 
   if (ctx.config.dependentLoadFlags) {
     RETURN_IF_NOT_CONTAINS(DependentLoadFlags)
@@ -2715,8 +2715,8 @@ template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
           ctx.dynamicRelocs->getRVA() - relocSec->getRVA();
     }
     else {
-      warn("'_load_config_used' structure too small to include dynamic "
-           "relocations");
+      Warn(ctx) << "'_load_config_used' structure too small to include dynamic "
+                   "relocations";
     }
   }
 

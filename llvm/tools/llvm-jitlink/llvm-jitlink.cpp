@@ -740,8 +740,7 @@ getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
                !(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
       continue;
 
-    auto InternedName = S.ES.intern(*Name);
-    I->SymbolFlags[InternedName] = std::move(*SymFlags);
+    I->SymbolFlags[S.ES.intern(*Name)] = std::move(*SymFlags);
   }
 
   return I;
@@ -1231,6 +1230,11 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
       return Error::success();
     });
 
+  PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) {
+    std::lock_guard<std::mutex> Lock(M);
+    ++ActiveLinks;
+    return Error::success();
+  });
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
 
@@ -1243,6 +1247,13 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
 
   if (AddSelfRelocations)
     PassConfig.PostPrunePasses.push_back(addSelfRelocations);
+
+  PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
+    std::lock_guard<std::mutex> Lock(M);
+    if (--ActiveLinks == 0)
+      ActiveLinksCV.notify_all();
+    return Error::success();
+  });
 }
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
@@ -1711,8 +1722,8 @@ static Error addAbsoluteSymbols(Session &S,
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[InternedName] = {ArrayRef<char>(), Addr,
-                                   AbsDef.getFlags().getTargetFlags()};
+    S.SymbolInfos[std::move(InternedName)] =
+      {ArrayRef<char>(), Addr, AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();
@@ -2314,6 +2325,8 @@ getTargetInfo(const Triple &TT,
 static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   if (CheckFiles.empty())
     return Error::success();
+
+  S.waitForFilesLinkedFromEntryPointFile();
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 

@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mcpu=mips32 < %s | FileCheck %s
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi=n64 < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 < %s | FileCheck %s
 
 %struct.DWstruct = type { i32, i32 }
 

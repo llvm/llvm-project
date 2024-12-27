@@ -321,7 +321,7 @@ OpenMP conformance
 OpenCL conformance
 ~~~~~~~~~~~~~~~~~~
 | Sven van Haastregt
-| sven.vanhaastregt@arm.com (email), svenvh (GitHub)
+| sven.vanhaastregt\@arm.com (email), svenvh (GitHub)
 
 
 OpenACC

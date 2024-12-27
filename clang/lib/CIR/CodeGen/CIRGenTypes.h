@@ -19,6 +19,7 @@
 
 namespace clang {
 class ASTContext;
+class FunctionType;
 class QualType;
 class Type;
 } // namespace clang
@@ -36,12 +37,20 @@ class CIRGenModule;
 /// AST types to CIR types.
 class CIRGenTypes {
   CIRGenModule &cgm;
-  clang::ASTContext &context;
+  clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
+
+  /// Heper for ConvertType.
+  mlir::Type ConvertFunctionTypeInternal(clang::QualType ft);
 
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
+
+  /// Utility to check whether a function type can be converted to a CIR type
+  /// (i.e. doesn't depend on an incomplete tag type).
+  bool isFuncTypeConvertible(const clang::FunctionType *ft);
+  bool isFuncParamTypeConvertible(clang::QualType type);
 
   /// This map of clang::Type to mlir::Type (which includes CIR type) is a
   /// cache of types that have already been processed.

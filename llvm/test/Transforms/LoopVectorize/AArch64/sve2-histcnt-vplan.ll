@@ -16,6 +16,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -59,6 +62,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -69,7 +75,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer [[GEP_IDX]]
 ; CHECK-NEXT:     WIDEN [[IDX:.*]] = load [[VECP_IDX]]
-; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX:.*]] = zext  [[IDX]] to i64
+; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX:.*]] = zext [[IDX]] to i64
 ; CHECK-NEXT:     WIDEN-GEP Inv[Var] [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
 ; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: [[GEP_BUCKET]], inc: ir<1>
 ; CHECK-NEXT:     EMIT [[IV_NEXT]] = add nuw [[IV]], [[VFxUF]]
