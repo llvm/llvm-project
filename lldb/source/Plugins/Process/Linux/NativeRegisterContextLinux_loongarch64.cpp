@@ -27,12 +27,13 @@
 // struct iovec definition
 #include <sys/uio.h>
 
-#ifndef NT_LARCH_LSX
-#define NT_LARCH_LSX 0xa02 /* LoongArch SIMD eXtension registers */
+#ifndef NT_LOONGARCH_LSX
+#define NT_LOONGARCH_LSX 0xa02 /* LoongArch SIMD eXtension registers */
 #endif
 
-#ifndef NT_LARCH_LASX
-#define NT_LARCH_LASX 0xa03 /* LoongArch Advanced SIMD eXtension registers */
+#ifndef NT_LOONGARCH_LASX
+#define NT_LOONGARCH_LASX                                                      \
+  0xa03 /* LoongArch Advanced SIMD eXtension registers */
 #endif
 
 #define REG_CONTEXT_SIZE                                                       \
@@ -428,7 +429,7 @@ Status NativeRegisterContextLinux_loongarch64::ReadLSX() {
   ioVec.iov_base = &m_lsx;
   ioVec.iov_len = sizeof(m_lsx);
 
-  error = ReadRegisterSet(&ioVec, sizeof(m_lsx), NT_LARCH_LSX);
+  error = ReadRegisterSet(&ioVec, sizeof(m_lsx), NT_LOONGARCH_LSX);
 
   if (error.Success())
     m_lsx_is_valid = true;
@@ -449,7 +450,7 @@ Status NativeRegisterContextLinux_loongarch64::WriteLSX() {
   m_lsx_is_valid = false;
   m_lasx_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, sizeof(m_lsx), NT_LARCH_LSX);
+  return WriteRegisterSet(&ioVec, sizeof(m_lsx), NT_LOONGARCH_LSX);
 }
 
 Status NativeRegisterContextLinux_loongarch64::ReadLASX() {
@@ -462,7 +463,7 @@ Status NativeRegisterContextLinux_loongarch64::ReadLASX() {
   ioVec.iov_base = &m_lasx;
   ioVec.iov_len = sizeof(m_lasx);
 
-  error = ReadRegisterSet(&ioVec, sizeof(m_lasx), NT_LARCH_LASX);
+  error = ReadRegisterSet(&ioVec, sizeof(m_lasx), NT_LOONGARCH_LASX);
 
   if (error.Success())
     m_lasx_is_valid = true;
@@ -483,7 +484,7 @@ Status NativeRegisterContextLinux_loongarch64::WriteLASX() {
   m_lsx_is_valid = false;
   m_lasx_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, sizeof(m_lsx), NT_LARCH_LASX);
+  return WriteRegisterSet(&ioVec, sizeof(m_lsx), NT_LOONGARCH_LASX);
 }
 
 void NativeRegisterContextLinux_loongarch64::InvalidateAllRegisters() {
