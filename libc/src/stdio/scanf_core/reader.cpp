@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/types/FILE.h"
 #include "src/stdio/scanf_core/reader.h"
-#include "src/__support/macros/config.h"
+#include "hdr/types/FILE.h"
 #include "src/__support/File/file.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
-
-
-
 
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
@@ -51,7 +48,7 @@ LIBC_INLINE void ungetc(int c, void *f) {
   reinterpret_cast<LIBC_NAMESPACE::File *>(f)->ungetc_unlocked(c);
 }
 
-#else // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+#else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 
 // Since ungetc_unlocked isn't always available, we don't acquire the lock for
 // system files.

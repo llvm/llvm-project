@@ -33,14 +33,13 @@ public:
   // TODO: Set buff_len with a proper constant
   LIBC_INLINE Reader(ReadBuffer *string_buffer) : rb(string_buffer) {}
 
-  LIBC_INLINE Reader(void *stream,
-                     ReadBuffer *stream_buffer = nullptr)
-      : rb(stream_buffer), input_stream(stream){}
+  LIBC_INLINE Reader(void *stream, ReadBuffer *stream_buffer = nullptr)
+      : rb(stream_buffer), input_stream(stream) {}
 
   // This returns the next character from the input and advances it by one
   // character. When it hits the end of the string or file it returns '\0' to
   // signal to stop parsing.
-  char getc(); 
+  char getc();
 
   // This moves the input back by one character, placing c into the buffer if
   // this is a file reader, else c is ignored.
