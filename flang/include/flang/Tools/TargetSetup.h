@@ -29,6 +29,18 @@ namespace Fortran::tools {
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
   }
+  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
+  }
+  if (targetTriple.isARM() || targetTriple.isAArch64()) {
+    targetCharacteristics.set_haltingSupportIsUnknownAtCompileTime();
+    targetCharacteristics.set_ieeeFeature(
+        evaluate::IeeeFeature::Halting, false);
+  } else {
+    targetCharacteristics.set_ieeeFeature(evaluate::IeeeFeature::Halting);
+  }
 
   // Figure out if we can support F128: see
   // flang/runtime/Float128Math/math-entries.h
@@ -58,6 +70,9 @@ namespace Fortran::tools {
 
   if (targetTriple.isPPC())
     targetCharacteristics.set_isPPC(true);
+
+  if (targetTriple.isOSWindows())
+    targetCharacteristics.set_isOSWindows(true);
 
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.

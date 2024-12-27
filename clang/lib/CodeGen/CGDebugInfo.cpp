@@ -30,7 +30,6 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/ModuleBuilder.h"
@@ -48,7 +47,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
@@ -287,7 +285,8 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
     PP.SplitTemplateClosers = true;
   }
 
-  PP.SuppressInlineNamespace = false;
+  PP.SuppressInlineNamespace =
+      PrintingPolicy::SuppressInlineNamespaceMode::None;
   PP.PrintCanonicalTypes = true;
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
@@ -623,8 +622,6 @@ void CGDebugInfo::CreateCompileUnit() {
   } else if (LO.OpenCL && (!CGM.getCodeGenOpts().DebugStrictDwarf ||
                            CGM.getCodeGenOpts().DwarfVersion >= 5)) {
     LangTag = llvm::dwarf::DW_LANG_OpenCL;
-  } else if (LO.RenderScript) {
-    LangTag = llvm::dwarf::DW_LANG_GOOGLE_RenderScript;
   } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
       LangTag = llvm::dwarf::DW_LANG_C11;
   } else if (LO.C99) {
@@ -782,6 +779,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
     {
+      if (BT->getKind() == BuiltinType::MFloat8) {
+        Encoding = llvm::dwarf::DW_ATE_unsigned_char;
+        BTName = BT->getName(CGM.getLangOpts());
+        // Bit size and offset of the type.
+        uint64_t Size = CGM.getContext().getTypeSize(BT);
+        return DBuilder.createBasicType(BTName, Size, Encoding);
+      }
       ASTContext::BuiltinVectorTypeInfo Info =
           // For svcount_t, only the lower 2 bytes are relevant.
           BT->getKind() == BuiltinType::SveCount
@@ -900,12 +904,19 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, AS, Width, Align, Id, SingletonId)        \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
   case BuiltinType::Id: {                                                      \
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
           DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type, Name, \
                                      TheCU, TheCU->getFile(), 0);              \
+    return SingletonId;                                                        \
+  }
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
@@ -1472,15 +1483,6 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
     return AliasTy;
   }
 
-  // Disable PrintCanonicalTypes here because we want
-  // the DW_AT_name to benefit from the TypePrinter's ability
-  // to skip defaulted template arguments.
-  //
-  // FIXME: Once -gsimple-template-names is enabled by default
-  // and we attach template parameters to alias template DIEs
-  // we don't need to worry about customizing the PrintingPolicy
-  // here anymore.
-  PP.PrintCanonicalTypes = false;
   printTemplateArgumentList(OS, Ty->template_arguments(), PP,
                             TD->getTemplateParameters());
   return DBuilder.createTypedef(Src, OS.str(), getOrCreateFile(Loc),
@@ -2019,28 +2021,10 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   // ThisPtr may be null if the member function has an explicit 'this'
   // parameter.
   if (!ThisPtr.isNull()) {
-    const CXXRecordDecl *RD = ThisPtr->getPointeeCXXRecordDecl();
-    if (isa<ClassTemplateSpecializationDecl>(RD)) {
-      // Create pointer type directly in this case.
-      const PointerType *ThisPtrTy = cast<PointerType>(ThisPtr);
-      uint64_t Size = CGM.getContext().getTypeSize(ThisPtrTy);
-      auto Align = getTypeAlignIfRequired(ThisPtrTy, CGM.getContext());
-      llvm::DIType *PointeeType =
-          getOrCreateType(ThisPtrTy->getPointeeType(), Unit);
-      llvm::DIType *ThisPtrType =
-          DBuilder.createPointerType(PointeeType, Size, Align);
-      TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
-      // TODO: This and the artificial type below are misleading, the
-      // types aren't artificial the argument is, but the current
-      // metadata doesn't represent that.
-      ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
-      Elts.push_back(ThisPtrType);
-    } else {
-      llvm::DIType *ThisPtrType = getOrCreateType(ThisPtr, Unit);
-      TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
-      ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
-      Elts.push_back(ThisPtrType);
-    }
+    llvm::DIType *ThisPtrType = getOrCreateType(ThisPtr, Unit);
+    TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
+    ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
+    Elts.push_back(ThisPtrType);
   }
 
   // Copy rest of the arguments.
@@ -2650,7 +2634,7 @@ void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
     return;
   llvm::MDNode *node;
   if (AllocatedTy->isVoidType())
-    node = llvm::MDNode::get(CGM.getLLVMContext(), std::nullopt);
+    node = llvm::MDNode::get(CGM.getLLVMContext(), {});
   else
     node = getOrCreateType(AllocatedTy, getOrCreateFile(Loc));
 
@@ -2993,20 +2977,21 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCInterfaceType *Ty,
   if (!ID)
     return nullptr;
 
+  auto RuntimeLang =
+      static_cast<llvm::dwarf::SourceLanguage>(TheCU->getSourceLanguage());
+
   // Return a forward declaration if this type was imported from a clang module,
   // and this is not the compile unit with the implementation of the type (which
   // may contain hidden ivars).
   if (DebugTypeExtRefs && ID->isFromASTFile() && ID->getDefinition() &&
       !ID->getImplementation())
-    return DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
-                                      ID->getName(),
-                                      getDeclContextDescriptor(ID), Unit, 0);
+    return DBuilder.createForwardDecl(
+        llvm::dwarf::DW_TAG_structure_type, ID->getName(),
+        getDeclContextDescriptor(ID), Unit, 0, RuntimeLang);
 
   // Get overall information about the record type for the debug info.
   llvm::DIFile *DefUnit = getOrCreateFile(ID->getLocation());
   unsigned Line = getLineNumber(ID->getLocation());
-  auto RuntimeLang =
-      static_cast<llvm::dwarf::SourceLanguage>(TheCU->getSourceLanguage());
 
   // If this is just a forward declaration return a special forward-declaration
   // debug type since we won't be able to lay out the entire type.
@@ -4332,8 +4317,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
              !CGM.getCodeGenOpts().EmitCodeView))
     // Create fake but valid subroutine type. Otherwise -verify would fail, and
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
-    return DBuilder.createSubroutineType(
-        DBuilder.getOrCreateTypeArray(std::nullopt));
+    return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray({}));
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);

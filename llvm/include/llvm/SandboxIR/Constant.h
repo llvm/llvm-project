@@ -22,6 +22,7 @@
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/User.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -46,7 +47,7 @@ public:
   static bool classof(const sandboxir::Value *From) {
     switch (From->getSubclassID()) {
 #define DEF_CONST(ID, CLASS) case ClassID::ID:
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
       return true;
     default:
       return false;
@@ -797,6 +798,25 @@ public:
   }
 };
 
+// These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
+extern template LLVM_TEMPLATE_ABI GlobalIFunc &
+GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
+                                                                  &LLVMGV)
+    const;
+extern template LLVM_TEMPLATE_ABI Function &
+GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
+    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
+
+extern template LLVM_TEMPLATE_ABI GlobalVariable &GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject,
+    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
+    const;
+extern template LLVM_TEMPLATE_ABI GlobalAlias &
+GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
+                                                                 &LLVMGV) const;
+
 class GlobalIFunc final
     : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
                                llvm::GlobalObject> {
@@ -1224,59 +1244,6 @@ public:
     dumpCommonPrefix(OS);
     dumpCommonSuffix(OS);
   }
-#endif
-};
-
-class Function : public GlobalWithNodeAPI<Function, llvm::Function,
-                                          GlobalObject, llvm::GlobalObject> {
-  /// Helper for mapped_iterator.
-  struct LLVMBBToBB {
-    Context &Ctx;
-    LLVMBBToBB(Context &Ctx) : Ctx(Ctx) {}
-    BasicBlock &operator()(llvm::BasicBlock &LLVMBB) const {
-      return *cast<BasicBlock>(Ctx.getValue(&LLVMBB));
-    }
-  };
-  /// Use Context::createFunction() instead.
-  Function(llvm::Function *F, sandboxir::Context &Ctx)
-      : GlobalWithNodeAPI(ClassID::Function, F, Ctx) {}
-  friend class Context; // For constructor.
-
-public:
-  /// For isa/dyn_cast.
-  static bool classof(const sandboxir::Value *From) {
-    return From->getSubclassID() == ClassID::Function;
-  }
-
-  Module *getParent() {
-    return Ctx.getModule(cast<llvm::Function>(Val)->getParent());
-  }
-
-  Argument *getArg(unsigned Idx) const {
-    llvm::Argument *Arg = cast<llvm::Function>(Val)->getArg(Idx);
-    return cast<Argument>(Ctx.getValue(Arg));
-  }
-
-  size_t arg_size() const { return cast<llvm::Function>(Val)->arg_size(); }
-  bool arg_empty() const { return cast<llvm::Function>(Val)->arg_empty(); }
-
-  using iterator = mapped_iterator<llvm::Function::iterator, LLVMBBToBB>;
-  iterator begin() const {
-    LLVMBBToBB BBGetter(Ctx);
-    return iterator(cast<llvm::Function>(Val)->begin(), BBGetter);
-  }
-  iterator end() const {
-    LLVMBBToBB BBGetter(Ctx);
-    return iterator(cast<llvm::Function>(Val)->end(), BBGetter);
-  }
-  FunctionType *getFunctionType() const;
-
-#ifndef NDEBUG
-  void verify() const final {
-    assert(isa<llvm::Function>(Val) && "Expected Function!");
-  }
-  void dumpNameAndArgs(raw_ostream &OS) const;
-  void dumpOS(raw_ostream &OS) const final;
 #endif
 };
 

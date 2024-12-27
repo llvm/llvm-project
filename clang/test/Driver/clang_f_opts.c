@@ -71,9 +71,6 @@
 // RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-auto-profile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-AUTO-PROFILE %s
 // CHECK-NO-AUTO-PROFILE-NOT: "-fprofile-sample-use={{.*}}/file.prof"
 
-// RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-profile-sample-use -fauto-profile %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
-// RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-auto-profile -fprofile-sample-use %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
-
 // RUN: %clang -### -S -fprofile-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-LLVM %s
 // RUN: %clang -### -S -fprofile-instr-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
 // RUN: %clang -### -S -fprofile-generate=/some/dir %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-DIR %s
@@ -605,7 +602,8 @@
 // RUN: %clang -### -S -fjmc -g -fno-jmc --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc -g --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
 // RUN: %clang -### -S -fjmc -g -fno-jmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
-// RUN: %clang -### -fjmc -g -flto --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
+// RUN: %clang -### -fjmc -g -flto -fuse-ld=lld --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
+// RUN: %clang -### -fjmc -g -flto -fuse-ld=lld-link --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
 // RUN: %clang -### -fjmc -g -flto --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC_LTO %s
 // RUN: %clang -### -fjmc -g -flto -fno-jmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
 // CHECK_JMC_WARN: -fjmc requires debug info. Use -g or debug options that enable debugger's stepping function; option ignored

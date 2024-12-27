@@ -59,7 +59,7 @@ public:
   lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const lldb_private::plugin::dwarf::DWARFDIE &die,
-                         const lldb_private::AddressRange &func_range) override;
+                         lldb_private::AddressRanges func_ranges) override;
 
   bool CompleteTypeFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die,
@@ -421,7 +421,6 @@ private:
       const lldb_private::CompilerType &class_clang_type);
 
   bool CompleteRecordType(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                          lldb_private::Type *type,
                           const lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                         lldb_private::Type *type,

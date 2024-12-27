@@ -13,7 +13,10 @@ module std_config [system] {
 module std_core [system] {
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
-    module max_align_t  { header "__cstddef/max_align_t.h" }
+    module max_align_t  {
+      header "__cstddef/max_align_t.h"
+      export *
+    }
     module nullptr_t    { header "__cstddef/nullptr_t.h" }
     module ptrdiff_t    { header "__cstddef/ptrdiff_t.h" }
     module size_t       { header "__cstddef/size_t.h" }
@@ -60,26 +63,31 @@ module std_core [system] {
   }
 
   module type_traits {
-    module add_const                                  { header "__type_traits/add_const.h" }
-    module add_cv                                     { header "__type_traits/add_cv.h" }
+    module add_cv_quals                               { header "__type_traits/add_cv_quals.h" }
     module add_lvalue_reference                       { header "__type_traits/add_lvalue_reference.h" }
     module add_pointer                                { header "__type_traits/add_pointer.h" }
     module add_rvalue_reference                       { header "__type_traits/add_rvalue_reference.h" }
-    module add_volatile                               { header "__type_traits/add_volatile.h" }
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
     module can_extract_key                            { header "__type_traits/can_extract_key.h" }
     module common_reference                           { header "__type_traits/common_reference.h" }
-    module common_type                                { header "__type_traits/common_type.h" }
+    module common_type {
+      header "__type_traits/common_type.h"
+      // We need to export those because common_type inherits from either of those based on __builtin_common_type.
+      export std_core.type_traits.type_identity
+      export std_core.utility_core.empty
+    }
     module conditional                                { header "__type_traits/conditional.h" }
     module conjunction                                { header "__type_traits/conjunction.h" }
+    module container_traits                           { header "__type_traits/container_traits.h" }
     module copy_cv                                    { header "__type_traits/copy_cv.h" }
     module copy_cvref                                 { header "__type_traits/copy_cvref.h" }
     module datasizeof                                 { header "__type_traits/datasizeof.h" }
     module decay                                      { header "__type_traits/decay.h" }
     module dependent_type                             { header "__type_traits/dependent_type.h" }
     module desugars_to                                { header "__type_traits/desugars_to.h" }
+    module detected_or                                { header "__type_traits/detected_or.h" }
     module disjunction                                { header "__type_traits/disjunction.h" }
     module enable_if                                  { header "__type_traits/enable_if.h" }
     module extent                                     { header "__type_traits/extent.h" }
@@ -193,6 +201,10 @@ module std_core [system] {
     }
     module is_fundamental {
       header "__type_traits/is_fundamental.h"
+      export std_core.type_traits.integral_constant
+    }
+    module is_implicit_lifetime {
+      header "__type_traits/is_implicit_lifetime.h"
       export std_core.type_traits.integral_constant
     }
     module is_implicitly_default_constructible {
@@ -833,7 +845,6 @@ module std [system] {
 
   module atomic {
     module aliases                { header "__atomic/aliases.h" }
-    module atomic_base            { header "__atomic/atomic_base.h" }
     module atomic_flag            { header "__atomic/atomic_flag.h" }
     module atomic_init            { header "__atomic/atomic_init.h" }
     module atomic_lock_free       { header "__atomic/atomic_lock_free.h" }
@@ -845,12 +856,17 @@ module std [system] {
     }
     module check_memory_order     { header "__atomic/check_memory_order.h" }
     module contention_t           { header "__atomic/contention_t.h" }
-    module cxx_atomic_impl        { header "__atomic/cxx_atomic_impl.h" }
     module fence                  { header "__atomic/fence.h" }
     module is_always_lock_free    { header "__atomic/is_always_lock_free.h" }
     module kill_dependency        { header "__atomic/kill_dependency.h" }
     module memory_order           { header "__atomic/memory_order.h" }
     module to_gcc_order           { header "__atomic/to_gcc_order.h" }
+
+    module support {
+      header "__atomic/support.h"
+      textual header "__atomic/support/c11.h"
+      textual header "__atomic/support/gcc.h"
+    }
 
     header "atomic"
     export *
@@ -888,6 +904,7 @@ module std [system] {
 
   module charconv {
     module chars_format               { header "__charconv/chars_format.h" }
+    module from_chars_floating_point  { header "__charconv/from_chars_floating_point.h" }
     module from_chars_integral        { header "__charconv/from_chars_integral.h" }
     module from_chars_result          { header "__charconv/from_chars_result.h" }
     module tables                     { header "__charconv/tables.h" }
@@ -1098,6 +1115,11 @@ module std [system] {
     export *
   }
 
+  module cstdalign {
+    header "cstdalign"
+    export *
+  }
+
   module cstdarg {
     header "cstdarg"
     export *
@@ -1208,6 +1230,15 @@ module std [system] {
     module u8path                         { header "__filesystem/u8path.h" }
 
     header "filesystem"
+    export *
+  }
+
+  module flat_map {
+    module flat_map                       { header "__flat_map/flat_map.h" }
+    module key_value_iterator             { header "__flat_map/key_value_iterator.h" }
+    module sorted_unique                  { header "__flat_map/sorted_unique.h" }
+
+    header "flat_map"
     export *
   }
 
@@ -1384,7 +1415,10 @@ module std [system] {
     module indirectly_comparable      { header "__iterator/indirectly_comparable.h" }
     module insert_iterator            { header "__iterator/insert_iterator.h" }
     module istream_iterator           { header "__iterator/istream_iterator.h" }
-    module istreambuf_iterator        { header "__iterator/istreambuf_iterator.h" }
+    module istreambuf_iterator        {
+      header "__iterator/istreambuf_iterator.h"
+      export std.string.char_traits
+    }
     module iter_move                  { header "__iterator/iter_move.h" }
     module iter_swap                  { header "__iterator/iter_swap.h" }
     module iterator_traits {
@@ -1412,6 +1446,7 @@ module std [system] {
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }
     module sortable                   { header "__iterator/sortable.h" }
+    module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
 
@@ -1431,8 +1466,20 @@ module std [system] {
 
   module locale {
     header "locale"
-    header "__locale_dir/locale_base_api.h"
-    header "__locale_dir/locale_base_api/locale_guard.h"
+    module pad_and_output { header "__locale_dir/pad_and_output.h" }
+
+    module support {
+      header "__locale_dir/locale_base_api.h"
+      export *
+    }
+
+    module support_impl {
+      textual header "__locale_dir/support/apple.h"
+      textual header "__locale_dir/support/bsd_like.h"
+      textual header "__locale_dir/support/freebsd.h"
+      textual header "__locale_dir/support/windows.h"
+    }
+
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/android.h"
       textual header "__locale_dir/locale_base_api/bsd_locale_defaults.h"
@@ -1440,9 +1487,7 @@ module std [system] {
       textual header "__locale_dir/locale_base_api/fuchsia.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
       textual header "__locale_dir/locale_base_api/musl.h"
-      textual header "__locale_dir/locale_base_api/newlib.h"
       textual header "__locale_dir/locale_base_api/openbsd.h"
-      textual header "__locale_dir/locale_base_api/win32.h"
     }
     export *
   }
@@ -1484,8 +1529,8 @@ module std [system] {
     module allocator_arg_t                    { header "__memory/allocator_arg_t.h" }
     module allocator_destructor               { header "__memory/allocator_destructor.h" }
     module allocator_traits                   { header "__memory/allocator_traits.h" }
-    module assume_aligned                     { header "__memory/assume_aligned.h" }
     module array_cookie                       { header "__memory/array_cookie.h" }
+    module assume_aligned                     { header "__memory/assume_aligned.h" }
     module auto_ptr                           { header "__memory/auto_ptr.h" }
     module builtin_new_allocator              { header "__memory/builtin_new_allocator.h" }
     module compressed_pair                    { header "__memory/compressed_pair.h" }
@@ -1503,6 +1548,7 @@ module std [system] {
       export std.algorithm.in_out_result
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
+    module shared_count                       { header "__memory/shared_count.h" }
     module shared_ptr                         { header "__memory/shared_ptr.h" }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
     module temp_value                         { header "__memory/temp_value.h" }
@@ -1512,6 +1558,7 @@ module std [system] {
     }
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
+      export std.utility.pair
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
@@ -1523,7 +1570,6 @@ module std [system] {
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
-    module voidify                            { header "__memory/voidify.h" }
 
     header "memory"
     export *
@@ -1555,6 +1601,21 @@ module std [system] {
 
   module new {
     header "new"
+    module align_val_t          { header "__new/align_val_t.h" }
+    module allocate             { header "__new/allocate.h" }
+    module destroying_delete_t  { header "__new/destroying_delete_t.h" }
+    module exceptions           { header "__new/exceptions.h" }
+    module global_new_delete    {
+      header "__new/global_new_delete.h"
+
+      export std.new.nothrow_t
+    }
+    module interference_size    { header "__new/interference_size.h" }
+    module launder              { header "__new/launder.h" }
+    module new_handler          { header "__new/new_handler.h" }
+    module nothrow_t            { header "__new/nothrow_t.h" }
+    module placement_new_delete { header "__new/placement_new_delete.h" }
+
     export *
   }
 
@@ -1601,6 +1662,7 @@ module std [system] {
       header "__ostream/print.h"
       export *
     }
+    module put_character_sequence { header "__ostream/put_character_sequence.h" }
 
     header "ostream"
     export *
@@ -1881,6 +1943,7 @@ module std [system] {
     }
     module error_condition    { header "__system_error/error_condition.h" }
     module system_error       { header "__system_error/system_error.h" }
+    module throw_system_error { header "__system_error/throw_system_error.h" }
 
     header "system_error"
     export *
@@ -1973,6 +2036,7 @@ module std [system] {
     module priority_tag               { header "__utility/priority_tag.h" }
     module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
     module rel_ops                    { header "__utility/rel_ops.h" }
+    module scope_guard                { header "__utility/scope_guard.h" }
     module small_buffer               { header "__utility/small_buffer.h" }
     module swap                       { header "__utility/swap.h" }
     module to_underlying              { header "__utility/to_underlying.h" }
@@ -1996,7 +2060,39 @@ module std [system] {
   }
 
   module vector {
-    module fwd { header "__fwd/vector.h" }
+    module fwd                   { header "__fwd/vector.h" }
+
+    module comparison            { header "__vector/comparison.h" }
+    module container_traits      { header "__vector/container_traits.h" }
+    module erase                 { header "__vector/erase.h" }
+    module vector_bool_formatter {
+      header "__vector/vector_bool_formatter.h"
+
+      export std.format.formatter
+    }
+    module pmr                   {
+      header "__vector/pmr.h"
+
+      export std.memory_resource.polymorphic_allocator
+    }
+    module swap                  { header "__vector/swap.h" }
+    module vector_bool           {
+      header "__vector/vector_bool.h"
+      export std.bit_reference
+      export std.memory.allocator
+      export std.vector.comparison
+      export std.vector.fwd
+      export std.vector.swap
+    }
+    module vector                {
+      header "__vector/vector.h"
+      export std.iterator.bounded_iter
+      export std.iterator.wrap_iter
+      export std.memory.allocator
+      export std.vector.comparison
+      export std.vector.fwd
+      export std.vector.swap
+    }
 
     header "vector"
     export *
@@ -2175,10 +2271,6 @@ module std_inttypes_h [system] {
   header "inttypes.h"
   export *
 }
-module std_locale_h [system] {
-  header "locale.h"
-  export *
-}
 module std_math_h [system] {
   header "math.h"
   export *
@@ -2192,19 +2284,15 @@ module std_stdbool_h [system] {
   textual header "stdbool.h"
 }
 module std_stddef_h [system] {
-  // <stddef.h>'s __need_* macros require textual inclusion.
+  // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
 }
-module std_stdint_h [system] {
-  header "stdint.h"
-  export *
-}
 module std_stdio_h [system] {
-  // <stdio.h>'s __need_* macros require textual inclusion.
+  // <stdio.h> supports being included multiple times with different pre-defined macros
   textual header "stdio.h"
 }
 module std_stdlib_h [system] {
-  // <stdlib.h>'s __need_* macros require textual inclusion.
+  // <stdlib.h> supports being included multiple times with different pre-defined macros
   textual header "stdlib.h"
 }
 module std_string_h [system] {
@@ -2220,7 +2308,7 @@ module std_uchar_h [system] {
   export *
 }
 module std_wchar_h [system] {
-  // <wchar.h>'s __need_* macros require textual inclusion.
+  // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
 }
 module std_wctype_h [system] {

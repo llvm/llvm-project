@@ -9,7 +9,7 @@ define void @pmuldq(ptr nocapture %0, i32 %1, i64 %2) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movd %esi, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movdqa (%rdi), %xmm1
 ; CHECK-NEXT:    pmuldq %xmm0, %xmm1
@@ -51,7 +51,7 @@ define void @pmuludq(ptr nocapture %0, i32 %1, i64 %2) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movd %esi, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movdqa (%rdi), %xmm1
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm1

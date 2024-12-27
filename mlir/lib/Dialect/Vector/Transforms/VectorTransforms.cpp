@@ -596,12 +596,11 @@ struct BubbleDownVectorBitCastForExtract
     unsigned expandRatio =
         castDstType.getNumElements() / castSrcType.getNumElements();
 
-    auto getFirstIntValue = [](ArrayRef<OpFoldResult> values) -> uint64_t {
-      assert(values[0].is<Attribute>() && "Unexpected non-constant index");
-      return cast<IntegerAttr>(values[0].get<Attribute>()).getInt();
-    };
-
-    uint64_t index = getFirstIntValue(extractOp.getMixedPosition());
+    // Get the first element of the mixed position as integer.
+    auto mixedPos = extractOp.getMixedPosition();
+    if (mixedPos.size() > 0 && !isa<Attribute>(mixedPos[0]))
+      return failure();
+    uint64_t index = cast<IntegerAttr>(cast<Attribute>(mixedPos[0])).getInt();
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
@@ -2056,8 +2055,13 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromTransposeOp,
-               ShapeCastOpFolder, DropUnitDimsFromScfForOp>(
+  // TODO: Consider either:
+  //  * including DropInnerMostUnitDimsTransferRead and
+  //    DropInnerMostUnitDimsTransferWrite, or
+  //  * better naming to distinguish this and
+  //    populateVectorTransferCollapseInnerMostContiguousDimsPatterns.
+  patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromScfForOp,
+               DropUnitDimsFromTransposeOp, ShapeCastOpFolder>(
       patterns.getContext(), benefit);
 }
 

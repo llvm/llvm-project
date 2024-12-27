@@ -425,6 +425,7 @@ enum NodeType {
   STRICT_FASIN,
   STRICT_FACOS,
   STRICT_FATAN,
+  STRICT_FATAN2,
   STRICT_FSINH,
   STRICT_FCOSH,
   STRICT_FTANH,
@@ -994,6 +995,8 @@ enum NodeType {
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
   FLDEXP,
+  /// FATAN2 - atan2, inspired by libm.
+  FATAN2,
 
   /// FFREXP - frexp, extract fractional and exponent component of a
   /// floating-point value. Returns the two components as separate return
@@ -1486,17 +1489,6 @@ enum NodeType {
   /// The target-specific pre-isel opcode values start here.
   BUILTIN_OP_END
 };
-
-/// FIRST_TARGET_STRICTFP_OPCODE - Target-specific pre-isel operations
-/// which cannot raise FP exceptions should be less than this value.
-/// Those that do must not be less than this value.
-static const int FIRST_TARGET_STRICTFP_OPCODE = BUILTIN_OP_END + 400;
-
-/// FIRST_TARGET_MEMORY_OPCODE - Target-specific pre-isel operations
-/// which do not reference a specific memory location should be less than
-/// this value. Those that do must not be less than this value, and can
-/// be used with SelectionDAG::getMemIntrinsicNode.
-static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END + 500;
 
 /// Whether this is bitwise logic opcode.
 inline bool isBitwiseLogicOp(unsigned Opcode) {

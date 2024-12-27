@@ -26,7 +26,6 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/SmallVector.h"
@@ -69,7 +68,7 @@ public:
       FTy = llvm::FunctionType::get(RetTy, ArgTys, false);
     }
     else {
-      FTy = llvm::FunctionType::get(RetTy, std::nullopt, false);
+      FTy = llvm::FunctionType::get(RetTy, {}, false);
     }
   }
 
@@ -1509,8 +1508,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   GetSectionBounds(StringRef Section) {
     if (CGM.getTriple().isOSBinFormatCOFF()) {
       if (emptyStruct == nullptr) {
-        emptyStruct = llvm::StructType::create(VMContext, ".objc_section_sentinel");
-        emptyStruct->setBody({}, /*isPacked*/true);
+        emptyStruct = llvm::StructType::create(
+            VMContext, {}, ".objc_section_sentinel", /*isPacked=*/true);
       }
       auto ZeroInit = llvm::Constant::getNullValue(emptyStruct);
       auto Sym = [&](StringRef Prefix, StringRef SecSuffix) {

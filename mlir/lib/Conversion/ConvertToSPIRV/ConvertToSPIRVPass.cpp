@@ -55,7 +55,7 @@ void mapToMemRef(Operation *op, spirv::TargetEnvAttr &targetAttr) {
 }
 
 /// Populate patterns for each dialect.
-void populateConvertToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateConvertToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                     ScfToSPIRVContext &scfToSPIRVContext,
                                     RewritePatternSet &patterns) {
   arith::populateCeilFloorDivExpandOpsPatterns(patterns);

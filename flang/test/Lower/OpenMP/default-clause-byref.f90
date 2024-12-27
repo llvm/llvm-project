@@ -74,7 +74,7 @@
 !CHECK: %[[Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}
 !CHECK: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {uniq_name = "_QFEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel private(
-!CHECK-SAME: @[[X_FIRSTPRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}, @[[Y_PRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]] : {{.*}}, @[[W_PRIVATIZER]] %[[W_DECL]]#0 -> %[[PRIVATE_W:.*]] : {{.*}}) {
+!CHECK-SAME: @[[X_FIRSTPRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]], @[[Y_PRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]], @[[W_PRIVATIZER]] %[[W_DECL]]#0 -> %[[PRIVATE_W:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_W_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_W]] {uniq_name = "_QFEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -108,7 +108,7 @@ program default_clause_lowering
     !$omp end parallel
 
 !CHECK: omp.parallel private(
-!CHECK-SAME: @[[X_PRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}, @[[Y_PRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]] : {{.*}}) {
+!CHECK-SAME: @[[X_PRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]], @[[Y_PRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<i32>
@@ -121,7 +121,7 @@ program default_clause_lowering
     !$omp end parallel
 
 !CHECK: omp.parallel private(
-!CHECK-SAME: @[[Y_FIRSTPRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]] : {{.*}}, @[[X_FIRSTPRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}) {
+!CHECK-SAME: @[[Y_FIRSTPRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]], @[[X_FIRSTPRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<i32>
@@ -134,7 +134,7 @@ program default_clause_lowering
     !$omp end parallel
 
 !CHECK: omp.parallel private(
-!CHECK-SAME: @[[X_PRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}, @[[Y_FIRSTPRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]] : {{.*}}, @[[W_FIRSTPRIVATIZER]] %[[W_DECL]]#0 -> %[[PRIVATE_W:.*]] : {{.*}}) {
+!CHECK-SAME: @[[X_PRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]], @[[Y_FIRSTPRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]], @[[W_FIRSTPRIVATIZER]] %[[W_DECL]]#0 -> %[[PRIVATE_W:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_W_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_W]] {uniq_name = "_QFEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -156,7 +156,7 @@ program default_clause_lowering
 
 !CHECK: omp.parallel   {
 !CHECK: omp.parallel   private(
-!CHECK-SAME: @[[X_PRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}, @[[Y_PRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]] : {{.*}}) {
+!CHECK-SAME: @[[X_PRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]], @[[Y_PRIVATIZER]] %[[Y_DECL]]#0 -> %[[PRIVATE_Y:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<i32>
@@ -164,7 +164,7 @@ program default_clause_lowering
 !CHECK: omp.terminator
 !CHECK: }
 !CHECK: omp.parallel private(
-!CHECK-SAME: @[[W_FIRSTPRIVATIZER]] %[[W_DECL]]#0 -> %[[PRIVATE_W:.*]] : {{.*}}, @[[X_FIRSTPRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}) {
+!CHECK-SAME: @[[W_FIRSTPRIVATIZER]] %[[W_DECL]]#0 -> %[[PRIVATE_W:.*]], @[[X_FIRSTPRIVATIZER]] %[[X_DECL]]#0 -> %[[PRIVATE_X:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_W_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_W]] {uniq_name = "_QFEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
@@ -197,12 +197,12 @@ subroutine nested_default_clause_tests
 !CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFnested_default_clause_testsEz"}
 !CHECK: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {uniq_name = "_QFnested_default_clause_testsEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_K:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_K:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Z_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Z]] {uniq_name = "_QFnested_default_clause_testsEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_K_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_K]] {uniq_name = "_QFnested_default_clause_testsEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[INNER_PRIVATE_Y:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[INNER_PRIVATE_X:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[INNER_PRIVATE_Y:.*]], {{.*}} {{.*}}#0 -> %[[INNER_PRIVATE_X:.*]] : {{.*}}) {
 !CHECK: %[[INNER_PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[INNER_PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[CONST:.*]] = arith.constant 20 : i32
@@ -211,7 +211,7 @@ subroutine nested_default_clause_tests
 !CHECK: hlfir.assign %[[CONST]] to %[[INNER_PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.terminator
 !CHECK: }
-!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[INNER_PRIVATE_W:.*]] : {{.*}}, {{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_Z:.*]] : {{.*}}, {{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_K:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[INNER_PRIVATE_W:.*]], {{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_Z:.*]], {{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_K:.*]] : {{.*}}) {
 !CHECK: %[[INNER_PRIVATE_W_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_W]] {uniq_name = "_QFnested_default_clause_testsEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[INNER_PRIVATE_Z_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_Z]] {uniq_name = "_QFnested_default_clause_testsEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[INNER_PRIVATE_K_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_K]] {uniq_name = "_QFnested_default_clause_testsEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -242,18 +242,18 @@ subroutine nested_default_clause_tests
     !$omp end parallel
     
     
-!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Z_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Z]] {uniq_name = "_QFnested_default_clause_testsEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_INNER_X:.*]] : {{.*}}, {{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_INNER_Y:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_INNER_X:.*]], {{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_INNER_Y:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_INNER_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_INNER_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[INNER_PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[INNER_PRIVATE_Y_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_INNER_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.terminator
 !CHECK: }
-!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_INNER_W:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_INNER_X:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_INNER_W:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_INNER_X:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_INNER_W_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_INNER_W]] {uniq_name = "_QFnested_default_clause_testsEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_INNER_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_INNER_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP_1:.*]] = fir.load %[[PRIVATE_INNER_X_DECL]]#0 : !fir.ref<i32>
@@ -272,12 +272,12 @@ subroutine nested_default_clause_tests
         !$omp end parallel
     !$omp end parallel    
     
-!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_W:.*]] : {{.*}}, {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_W:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_W_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_W]] {uniq_name = "_QFnested_default_clause_testsEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Z_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Z]] {uniq_name = "_QFnested_default_clause_testsEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_X:.*]] : {{.*}}, {{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_Y:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_X:.*]], {{.*firstprivate.*}} {{.*}}#0 -> %[[INNER_PRIVATE_Y:.*]] : {{.*}}) {
 !CHECK: %[[INNER_PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[INNER_PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[INNER_PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[INNER_PRIVATE_Y_DECL]]#0 : !fir.ref<i32>
@@ -302,7 +302,7 @@ subroutine nested_default_clause_tests
 		!$omp end parallel
 	!$omp end parallel
 
-!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]] : {{.*}}, {{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]] : {{.*}}) {
+!CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]], {{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.single {
@@ -350,7 +350,6 @@ subroutine skipped_default_clause_checks()
 !CHECK-NEXT: omp.loop_nest (%[[ARG:.*]]) {{.*}} {
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 !CHECK: omp.terminator
 !CHECK: }

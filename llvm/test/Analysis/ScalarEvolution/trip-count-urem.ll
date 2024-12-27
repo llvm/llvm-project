@@ -6,9 +6,10 @@ declare void @foo()
 define void @test_trip_count_expr_contains_urem(i32 %N) {
 ; CHECK-LABEL: 'test_trip_count_expr_contains_urem'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_trip_count_expr_contains_urem
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((1 + (-1 * (zext i4 (1 + (trunc i32 %N to i4)) to i32))<nsw> + %N) /u 16)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 268435455
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + (-1 * (zext i4 (1 + (trunc i32 %N to i4)) to i32))<nsw> + %N) /u 16)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.rnd.up = add i32 %N, 1

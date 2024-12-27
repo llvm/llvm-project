@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ; Check that we generate floating point compare in V5
 
 ; CHECK: p{{[0-2]+}} = sfcmp.{{.}}

@@ -334,6 +334,7 @@ cc_test(
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
+        "//llvm:Analysis",
         "//llvm:AsmParser",
         "//llvm:BinaryFormat",
         "//llvm:Core",
@@ -640,6 +641,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//llvm:Analysis",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:SandboxIR",

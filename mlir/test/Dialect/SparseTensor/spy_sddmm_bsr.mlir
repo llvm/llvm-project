@@ -37,8 +37,8 @@
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<?x?xf32, #[[$BSR]]> to tensor<?x?x2x2xf32, #[[$MAP]]>
 // CHECK-DAG:       %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?xf32>
-// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<?x?xf32>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<?x?xf32> to memref<?x?xf32>
+// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<?x?xf32> to memref<?x?xf32>
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.lvl %[[VAL_7]], %[[VAL_4]] : tensor<?x?x2x2xf32, #[[$MAP]]>
 // CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.positions %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>

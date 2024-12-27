@@ -9,6 +9,7 @@
 #define FORTRAN_LOWER_OPENMP_CLAUSES_H
 
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
@@ -29,12 +30,7 @@ namespace Fortran::lower::omp {
 using namespace Fortran;
 using SomeExpr = semantics::SomeExpr;
 using MaybeExpr = semantics::MaybeExpr;
-
-// evaluate::SomeType doesn't provide == operation. It's not really used in
-// flang's clauses so far, so a trivial implementation is sufficient.
-struct TypeTy : public evaluate::SomeType {
-  bool operator==(const TypeTy &t) const { return true; }
-};
+using TypeTy = evaluate::DynamicType;
 
 template <typename ExprTy>
 struct IdTyTemplate {
@@ -53,6 +49,13 @@ struct IdTyTemplate {
     // which will refer to different objects for different designators,
     // e.g. a%c and b%c.
     return designator == other.designator;
+  }
+
+  // Defining an "ordering" which allows types derived from this to be
+  // utilised in maps and other containers that require comparison
+  // operators for ordering
+  bool operator<(const IdTyTemplate &other) const {
+    return symbol < other.symbol;
   }
 
   operator bool() const { return symbol != nullptr; }
@@ -75,6 +78,10 @@ struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
   IdTy id() const { return identity; }
   Fortran::semantics::Symbol *sym() const { return identity.symbol; }
   const std::optional<ExprTy> &ref() const { return identity.designator; }
+
+  bool operator<(const ObjectT<IdTy, ExprTy> &other) const {
+    return identity < other.identity;
+  }
 
   IdTy identity;
 };
@@ -143,16 +150,33 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
                                    const std::optional<ArgTy> &arg) {
   if (!arg)
     return std::nullopt;
-  return std::move(func(*arg));
+  return func(*arg);
+}
+
+template <           //
+    typename FuncTy, //
+    typename ArgTy,  //
+    typename ResultTy =
+        std::invoke_result_t<FuncTy, decltype(std::declval<ArgTy>().v)>>
+std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
+  if (!arg)
+    return std::nullopt;
+  return func(arg->v);
 }
 
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx);
 
 namespace clause {
+using Range = tomp::type::RangeT<ExprTy>;
+using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
+using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
+using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
+using DependenceType = tomp::type::DependenceType;
+using Prescriptiveness = tomp::type::Prescriptiveness;
 
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.
@@ -250,6 +274,7 @@ using Shared = tomp::clause::SharedT<TypeTy, IdTy, ExprTy>;
 using Simdlen = tomp::clause::SimdlenT<TypeTy, IdTy, ExprTy>;
 using Simd = tomp::clause::SimdT<TypeTy, IdTy, ExprTy>;
 using Sizes = tomp::clause::SizesT<TypeTy, IdTy, ExprTy>;
+using Permutation = tomp::clause::PermutationT<TypeTy, IdTy, ExprTy>;
 using TaskReduction = tomp::clause::TaskReductionT<TypeTy, IdTy, ExprTy>;
 using ThreadLimit = tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy>;
 using Threads = tomp::clause::ThreadsT<TypeTy, IdTy, ExprTy>;

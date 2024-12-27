@@ -322,8 +322,6 @@ LogicalResult UniformQuantizedType::verifyInvariants(
   // Verify scale.
   double minScale = getMinScale(expressedType);
   double maxScale = getMaxScale(expressedType);
-  if (scale <= 0.0 || std::isinf(scale) || std::isnan(scale))
-    return emitError() << "illegal scale: " << scale;
   if (scale < minScale || scale > maxScale)
     return emitError() << "scale out of expressed type range [" << minScale
                        << ", " << maxScale << "]";
@@ -388,8 +386,6 @@ LogicalResult UniformQuantizedPerAxisType::verifyInvariants(
   double minScale = getMinScale(expressedType);
   double maxScale = getMaxScale(expressedType);
   for (double scale : scales) {
-    if (scale <= 0.0 || std::isinf(scale) || std::isnan(scale))
-      return emitError() << "illegal scale: " << scale;
     if (scale < minScale || scale > maxScale)
       return emitError() << "scale out of expressed type range [" << minScale
                          << ", " << maxScale << "]";

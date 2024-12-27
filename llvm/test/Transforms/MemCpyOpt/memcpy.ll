@@ -837,7 +837,7 @@ define void @memcpy_memcpy_escape_after1(ptr noalias %P, ptr noalias %Q) {
 ; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [32 x i8], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[MEMTMP]], ptr align 16 [[P:%.*]], i32 32, i1 false)
 ; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[MEMTMP]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P]], i32 32, i1 false)
 ; CHECK-NEXT:    call void @capture(ptr [[MEMTMP]])
 ; CHECK-NEXT:    ret void
 ;
@@ -851,10 +851,8 @@ define void @memcpy_memcpy_escape_after1(ptr noalias %P, ptr noalias %Q) {
 
 define void @memcpy_memcpy_escape_after2(ptr noalias %P, ptr noalias %Q) {
 ; CHECK-LABEL: @memcpy_memcpy_escape_after2(
-; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [32 x i8], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[MEMTMP]], ptr align 16 [[P:%.*]], i32 32, i1 false)
 ; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[MEMTMP]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
 ; CHECK-NEXT:    call void @capture(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -868,10 +866,8 @@ define void @memcpy_memcpy_escape_after2(ptr noalias %P, ptr noalias %Q) {
 
 define void @memcpy_byval_escape_after(ptr noalias %P) {
 ; CHECK-LABEL: @memcpy_byval_escape_after(
-; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 [[P:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[A]])
+; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[P:%.*]])
 ; CHECK-NEXT:    call void @capture(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -885,10 +881,8 @@ define void @memcpy_byval_escape_after(ptr noalias %P) {
 
 define void @memcpy_immut_escape_after(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @memcpy_immut_escape_after(
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
 ; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL:%.*]])
 ; CHECK-NEXT:    call void @capture(ptr [[VAL]])
 ; CHECK-NEXT:    ret void
 ;

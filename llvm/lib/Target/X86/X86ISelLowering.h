@@ -809,7 +809,8 @@ namespace llvm {
     CTEST,
 
     /// X86 strict FP compare instructions.
-    STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCMP = FIRST_STRICTFP_OPCODE,
     STRICT_FCMPS,
 
     // Vector packed double/float comparison.
@@ -850,11 +851,14 @@ namespace llvm {
     // Perform an FP80 add after changing precision control in FPCW.
     STRICT_FP80_ADD,
 
-    // WARNING: Only add nodes here if they are strict FP nodes. Non-memory and
-    // non-strict FP nodes should be above FIRST_TARGET_STRICTFP_OPCODE.
+    /// Floating point max and min.
+    STRICT_FMAX,
+    STRICT_FMIN,
+    LAST_STRICTFP_OPCODE = STRICT_FMIN,
 
     // Compare and swap.
-    LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    LCMPXCHG_DAG = FIRST_MEMORY_OPCODE,
     LCMPXCHG8_DAG,
     LCMPXCHG16_DAG,
     LCMPXCHG16_SAVE_RBX_DAG,
@@ -975,10 +979,7 @@ namespace llvm {
     // Conditional load/store instructions
     CLOAD,
     CSTORE,
-
-    // WARNING: Do not add anything in the end unless you want the node to
-    // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
-    // opcodes will be thought as target memory ops!
+    LAST_MEMORY_OPCODE = CSTORE,
   };
   } // end namespace X86ISD
 
@@ -1075,8 +1076,7 @@ namespace llvm {
     /// function arguments in the caller parameter area. For X86, aggregates
     /// that contains are placed at 16-byte boundaries while the rest are at
     /// 4-byte boundaries.
-    uint64_t getByValTypeAlignment(Type *Ty,
-                                   const DataLayout &DL) const override;
+    Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
@@ -1404,10 +1404,6 @@ namespace llvm {
 
     bool isLegalStoreImmediate(int64_t Imm) const override;
 
-    /// This is used to enable splatted operand transforms for vector shifts
-    /// and vector funnel shifts.
-    bool isVectorShiftByScalarCheap(Type *Ty) const override;
-
     /// Add x86-specific opcodes to the default list.
     bool isBinOp(unsigned Opcode) const override;
 
@@ -1434,8 +1430,6 @@ namespace llvm {
     bool isZExtFree(EVT VT1, EVT VT2) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
-    bool shouldSinkOperands(Instruction *I,
-                            SmallVectorImpl<Use *> &Ops) const override;
     bool shouldConvertPhiType(Type *From, Type *To) const override;
 
     /// Return true if folding a vector load into ExtVal (a sign, zero, or any
@@ -1570,7 +1564,7 @@ namespace llvm {
     /// returns the address of that location. Otherwise, returns nullptr.
     Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;
@@ -1849,9 +1843,6 @@ namespace llvm {
 
     MachineBasicBlock *EmitLoweredProbedAlloca(MachineInstr &MI,
                                                MachineBasicBlock *BB) const;
-
-    MachineBasicBlock *EmitLoweredTLSAddr(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
 
     MachineBasicBlock *EmitLoweredTLSCall(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;

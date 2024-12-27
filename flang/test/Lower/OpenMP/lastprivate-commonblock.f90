@@ -32,7 +32,6 @@
 !CHECK:          }
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 subroutine lastprivate_common
   common /c/ x, y

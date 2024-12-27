@@ -7,6 +7,7 @@ if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
 endif()
 
 add_llvm_component_library(LLVMOrcJIT
+  AbsoluteSymbols.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
@@ -26,9 +27,14 @@ add_llvm_component_library(LLVMOrcJIT
   IndirectionUtils.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
+  IRPartitionLayer.cpp
   JITTargetMachineBuilder.cpp
+  JITLinkReentryTrampolines.cpp
+  LazyObjectLinkingLayer.cpp
   LazyReexports.cpp
   Layer.cpp
+  LinkGraphLayer.cpp
+  LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
   LookupAndRecordAddrs.cpp
   LLJIT.cpp
@@ -50,6 +56,9 @@ add_llvm_component_library(LLVMOrcJIT
   ExecutorProcessControl.cpp
   TaskDispatch.cpp
   ThreadSafeModule.cpp
+  RedirectionManager.cpp
+  JITLinkRedirectableSymbolManager.cpp
+  ReOptimizeLayer.cpp
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 

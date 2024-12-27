@@ -378,6 +378,12 @@ public:
                                         LLT CastTy);
   LegalizeResult bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
                                      LLT CastTy);
+  LegalizeResult bitcastShuffleVector(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT CastTy);
+  LegalizeResult bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT CastTy);
+  LegalizeResult bitcastInsertSubvector(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT CastTy);
 
   LegalizeResult lowerConstant(MachineInstr &MI);
   LegalizeResult lowerFConstant(MachineInstr &MI);

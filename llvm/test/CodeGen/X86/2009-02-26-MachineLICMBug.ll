@@ -20,7 +20,7 @@ define ptr @t(ptr %desc, i64 %p) nounwind ssp {
 ; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    orq $2097152, %rbx ## imm = 0x200000
 ; CHECK-NEXT:    andl $15728640, %ebx ## imm = 0xF00000
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %bb4
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax

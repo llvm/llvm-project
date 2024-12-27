@@ -96,14 +96,12 @@ subroutine abs_testr16(a, b)
 end subroutine
 
 ! CMPLX-LABEL: func @_QPabs_testzr(
-! CMPLX-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.complex<4>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
+! CMPLX-SAME:  %[[VAL_0:.*]]: !fir.ref<complex<f32>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
 subroutine abs_testzr(a, b)
-! CMPLX:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.complex<4>>
-! CMPLX-FAST: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<4>) -> complex<f32>
-! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract> : complex<f32>
-! CMPLX-APPROX: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<4>) -> complex<f32>
-! CMPLX-APPROX: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract,afn> : complex<f32>
-! CMPLX-PRECISE:  %[[VAL_4:.*]] = fir.call @cabsf(%[[VAL_2]]) {{.*}}: (!fir.complex<4>) -> f32
+! CMPLX:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<complex<f32>>
+! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_2]] fastmath<contract> : complex<f32>
+! CMPLX-APPROX: %[[VAL_4:.*]] = complex.abs %[[VAL_2]] fastmath<contract,afn> : complex<f32>
+! CMPLX-PRECISE:  %[[VAL_4:.*]] = fir.call @cabsf(%[[VAL_2]]) {{.*}}: (complex<f32>) -> f32
 ! CMPLX:  fir.store %[[VAL_4]] to %[[VAL_1]] : !fir.ref<f32>
 ! CMPLX:  return
   complex :: a
@@ -112,14 +110,12 @@ subroutine abs_testzr(a, b)
 end subroutine abs_testzr
 
 ! CMPLX-LABEL: func @_QPabs_testzd(
-! CMPLX-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.complex<8>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f64>{{.*}}) {
+! CMPLX-SAME:  %[[VAL_0:.*]]: !fir.ref<complex<f64>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f64>{{.*}}) {
 subroutine abs_testzd(a, b)
-! CMPLX:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.complex<8>>
-! CMPLX-FAST: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<8>) -> complex<f64>
-! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract> : complex<f64>
-! CMPLX-APPROX: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<8>) -> complex<f64>
-! CMPLX-APPROX: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract,afn> : complex<f64>
-! CMPLX-PRECISE:  %[[VAL_4:.*]] = fir.call @cabs(%[[VAL_2]]) {{.*}}: (!fir.complex<8>) -> f64
+! CMPLX:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<complex<f64>>
+! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_2]] fastmath<contract> : complex<f64>
+! CMPLX-APPROX: %[[VAL_4:.*]] = complex.abs %[[VAL_2]] fastmath<contract,afn> : complex<f64>
+! CMPLX-PRECISE:  %[[VAL_4:.*]] = fir.call @cabs(%[[VAL_2]]) {{.*}}: (complex<f64>) -> f64
 ! CMPLX:  fir.store %[[VAL_4]] to %[[VAL_1]] : !fir.ref<f64>
 ! CMPLX:  return
   complex(kind=8) :: a

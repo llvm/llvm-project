@@ -285,10 +285,11 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *user : forwardSlice) {
     // If the next operation has no blocking uses, everything is fine.
-    if (!userToBlockingUses.contains(user))
+    auto it = userToBlockingUses.find(user);
+    if (it == userToBlockingUses.end())
       continue;
 
-    SmallPtrSet<OpOperand *, 4> &blockingUses = userToBlockingUses[user];
+    SmallPtrSet<OpOperand *, 4> &blockingUses = it->second;
 
     SmallVector<OpOperand *> newBlockingUses;
     // If the operation decides it cannot deal with removing the blocking uses,

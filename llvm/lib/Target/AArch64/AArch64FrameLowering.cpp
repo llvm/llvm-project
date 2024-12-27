@@ -126,14 +126,15 @@
 // and the SME unit try to access the same area of memory, including if the
 // access is to an area of the stack. To try to alleviate this we attempt to
 // introduce extra padding into the stack frame between FP and GPR accesses,
-// controlled by the StackHazardSize option. Without changing the layout of the
-// stack frame in the diagram above, a stack object of size StackHazardSize is
-// added between GPR and FPR CSRs. Another is added to the stack objects
-// section, and stack objects are sorted so that FPR > Hazard padding slot >
-// GPRs (where possible). Unfortunately some things are not handled well (VLA
-// area, arguments on the stack, object with both GPR and FPR accesses), but if
-// those are controlled by the user then the entire stack frame becomes GPR at
-// the start/end with FPR in the middle, surrounded by Hazard padding.
+// controlled by the aarch64-stack-hazard-size option. Without changing the
+// layout of the stack frame in the diagram above, a stack object of size
+// aarch64-stack-hazard-size is added between GPR and FPR CSRs. Another is added
+// to the stack objects section, and stack objects are sorted so that FPR >
+// Hazard padding slot > GPRs (where possible). Unfortunately some things are
+// not handled well (VLA area, arguments on the stack, objects with both GPR and
+// FPR accesses), but if those are controlled by the user then the entire stack
+// frame becomes GPR at the start/end with FPR in the middle, surrounded by
+// Hazard padding.
 //
 // An example of the prologue:
 //
@@ -208,9 +209,9 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -273,9 +274,6 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
     cl::desc("Emit homogeneous prologue and epilogue for the size "
              "optimization (default = off)"));
 
-// Stack hazard padding size. 0 = disabled.
-static cl::opt<unsigned> StackHazardSize("aarch64-stack-hazard-size",
-                                         cl::init(0), cl::Hidden);
 // Stack hazard size for analysis remarks. StackHazardSize takes precedence.
 static cl::opt<unsigned>
     StackHazardRemarkSize("aarch64-stack-hazard-remark-size", cl::init(0),
@@ -284,6 +282,11 @@ static cl::opt<unsigned>
 static cl::opt<bool>
     StackHazardInNonStreaming("aarch64-stack-hazard-in-non-streaming",
                               cl::init(false), cl::Hidden);
+
+static cl::opt<bool> DisableMultiVectorSpillFill(
+    "aarch64-disable-multivector-spill-fill",
+    cl::desc("Disable use of LD/ST pairs for SME2 or SVE2p1"), cl::init(false),
+    cl::Hidden);
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
@@ -475,9 +478,9 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
            getSVEStackSize(MF) || LowerQRegCopyThroughMem);
 }
 
-/// hasFP - Return true if the specified function should have a dedicated frame
-/// pointer register.
-bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
+/// hasFPImpl - Return true if the specified function should have a dedicated
+/// frame pointer register.
+bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
@@ -697,7 +700,10 @@ void AArch64FrameLowering::resetCFIToInitialState(
 
   // Flip the RA sign state.
   if (MFI.shouldSignReturnAddress(MF)) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    auto CFIInst = MFI.branchProtectionPAuthLR()
+                       ? MCCFIInstruction::createNegateRAStateWithPC(nullptr)
+                       : MCCFIInstruction::createNegateRAState(nullptr);
+    CFIIndex = MF.addFrameInst(CFIInst);
     BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
   }
 
@@ -1004,7 +1010,7 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   BitVector GPRsToZero(TRI.getNumRegs());
   BitVector FPRsToZero(TRI.getNumRegs());
-  bool HasSVE = STI.hasSVE();
+  bool HasSVE = STI.isSVEorStreamingSVEAvailable();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       // For GPRs, we only care to clear out the 64-bit register.
@@ -1609,6 +1615,10 @@ static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
 
+static unsigned getStackHazardSize(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().getStreamingHazardSize();
+}
+
 // Convenience function to determine whether I is an SVE callee save.
 static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
@@ -1948,12 +1958,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // pointer bump above.
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
-    // Move past instructions generated to calculate VG
-    if (requiresSaveVG(MF))
-      while (isVGInstruction(MBBI))
-        ++MBBI;
-
-    if (CombineSPBump)
+    if (CombineSPBump &&
+        // Only fix-up frame-setup load/store instructions.
+        (!requiresSaveVG(MF) || !isVGInstruction(MBBI)))
       fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
     ++MBBI;
@@ -2954,6 +2961,24 @@ unsigned findFreePredicateReg(BitVector &SavedRegs) {
   return AArch64::NoRegister;
 }
 
+// The multivector LD/ST are available only for SME or SVE2p1 targets
+bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
+                                MachineFunction &MF) {
+  if (DisableMultiVectorSpillFill)
+    return false;
+
+  SMEAttrs FuncAttrs(MF.getFunction());
+  bool IsLocallyStreaming =
+      FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
+
+  // Only when in streaming mode SME2 instructions can be safely used.
+  // It is not safe to use SME2 instructions when in streaming compatible or
+  // locally streaming mode.
+  return Subtarget.hasSVE2p1() ||
+         (Subtarget.hasSME2() &&
+          (!IsLocallyStreaming && Subtarget.isStreaming()));
+}
+
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
@@ -2965,6 +2990,7 @@ static void computeCalleeSaveRegisterPairs(
   bool IsWindows = isTargetWindows(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  unsigned StackHazardSize = getStackHazardSize(MF);
   MachineFrameInfo &MFI = MF.getFrameInfo();
   CallingConv::ID CC = MF.getFunction().getCallingConv();
   unsigned Count = CSI.size();
@@ -3141,11 +3167,24 @@ static void computeCalleeSaveRegisterPairs(
             (RPI.isScalable() && RPI.Offset >= -256 && RPI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
 
+    auto isFrameRecord = [&] {
+      if (RPI.isPaired())
+        return IsWindows ? RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR
+                         : RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP;
+      // Otherwise, look for the frame record as two unpaired registers. This is
+      // needed for -aarch64-stack-hazard-size=<val>, which disables register
+      // pairing (as the padding may be too large for the LDP/STP offset). Note:
+      // On Windows, this check works out as current reg == FP, next reg == LR,
+      // and on other platforms current reg == FP, previous reg == LR. This
+      // works out as the correct pre-increment or post-increment offsets
+      // respectively.
+      return i > 0 && RPI.Reg1 == AArch64::FP &&
+             CSI[i - 1].getReg() == AArch64::LR;
+    };
+
     // Save the offset to frame record so that the FP register can point to the
     // innermost frame record (spilled FP and LR registers).
-    if (NeedsFrameRecord &&
-        ((!IsWindows && RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP) ||
-         (IsWindows && RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR)))
+    if (NeedsFrameRecord && isFrameRecord())
       AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
@@ -3330,7 +3369,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
                               MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
+      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
       auto IsPPR = [](const RegPairInfo &c) {
@@ -3508,7 +3547,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
+      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
       assert(!(PPRBegin < ZPRBegin) &&
@@ -3592,6 +3631,7 @@ static std::optional<int> getLdStFrameID(const MachineInstr &MI,
 // which can be used to determine if any hazard padding is needed.
 void AArch64FrameLowering::determineStackHazardSlot(
     MachineFunction &MF, BitVector &SavedRegs) const {
+  unsigned StackHazardSize = getStackHazardSize(MF);
   if (StackHazardSize == 0 || StackHazardSize % 16 != 0 ||
       MF.getInfo<AArch64FunctionInfo>()->hasStackHazardSlotIndex())
     return;
@@ -3722,7 +3762,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                     SavedRegs.test(CSRegs[i ^ 1]));
   }
 
-  if (HasPairZReg && (Subtarget.hasSVE2p1() || Subtarget.hasSME2())) {
+  if (HasPairZReg && enableMultiVectorSpillFill(Subtarget, MF)) {
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     // Find a suitable predicate register for the multi-vector spill/fill
     // instructions.
@@ -3782,7 +3822,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // StackHazardSize if so.
   determineStackHazardSlot(MF, SavedRegs);
   if (AFI->hasStackHazardSlotIndex())
-    CSStackSize += StackHazardSize;
+    CSStackSize += getStackHazardSize(MF);
 
   // Save number of saved regs, so we can easily update CSStackSize later.
   unsigned NumSavedRegs = SavedRegs.count();
@@ -3897,6 +3937,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
     unsigned &MaxCSFrameIndex) const {
   bool NeedsWinCFI = needsWinCFI(MF);
+  unsigned StackHazardSize = getStackHazardSize(MF);
   // To match the canonical windows frame layout, reverse the list of
   // callee saved registers to get them laid out by PrologEpilogInserter
   // in the right order. (PrologEpilogInserter allocates stack objects top
@@ -4327,26 +4368,37 @@ void TagStoreEdit::emitLoop(MachineBasicBlock::iterator InsertI) {
 
   int64_t ExtraBaseRegUpdate =
       FrameRegUpdate ? (*FrameRegUpdate - FrameRegOffset.getFixed() - Size) : 0;
+  LLVM_DEBUG(dbgs() << "TagStoreEdit::emitLoop: LoopSize=" << LoopSize
+                    << ", Size=" << Size
+                    << ", ExtraBaseRegUpdate=" << ExtraBaseRegUpdate
+                    << ", FrameRegUpdate=" << FrameRegUpdate
+                    << ", FrameRegOffset.getFixed()="
+                    << FrameRegOffset.getFixed() << "\n");
   if (LoopSize < Size) {
     assert(FrameRegUpdate);
     assert(Size - LoopSize == 16);
     // Tag 16 more bytes at BaseReg and update BaseReg.
+    int64_t STGOffset = ExtraBaseRegUpdate + 16;
+    assert(STGOffset % 16 == 0 && STGOffset >= -4096 && STGOffset <= 4080 &&
+           "STG immediate out of range");
     BuildMI(*MBB, InsertI, DL,
             TII->get(ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex))
         .addDef(BaseReg)
         .addReg(BaseReg)
         .addReg(BaseReg)
-        .addImm(1 + ExtraBaseRegUpdate / 16)
+        .addImm(STGOffset / 16)
         .setMemRefs(CombinedMemRefs)
         .setMIFlags(FrameRegUpdateFlags);
   } else if (ExtraBaseRegUpdate) {
     // Update BaseReg.
+    int64_t AddSubOffset = std::abs(ExtraBaseRegUpdate);
+    assert(AddSubOffset <= 4095 && "ADD/SUB immediate out of range");
     BuildMI(
         *MBB, InsertI, DL,
         TII->get(ExtraBaseRegUpdate > 0 ? AArch64::ADDXri : AArch64::SUBXri))
         .addDef(BaseReg)
         .addReg(BaseReg)
-        .addImm(std::abs(ExtraBaseRegUpdate))
+        .addImm(AddSubOffset)
         .addImm(0)
         .setMIFlags(FrameRegUpdateFlags);
   }
@@ -4365,10 +4417,20 @@ bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
     int64_t Offset = MI.getOperand(2).getImm() << Shift;
     if (MI.getOpcode() == AArch64::SUBXri)
       Offset = -Offset;
-    int64_t AbsPostOffset = std::abs(Offset - Size);
-    const int64_t kMaxOffset =
-        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
-    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
+    int64_t PostOffset = Offset - Size;
+    // TagStoreEdit::emitLoop might emit either an ADD/SUB after the loop, or
+    // an STGPostIndex which does the last 16 bytes of tag write. Which one is
+    // chosen depends on the alignment of the loop size, but the difference
+    // between the valid ranges for the two instructions is small, so we
+    // conservatively assume that it could be either case here.
+    //
+    // Max offset of STGPostIndex, minus the 16 byte tag write folded into that
+    // instruction.
+    const int64_t kMaxOffset = 4080 - 16;
+    // Max offset of SUBXri.
+    const int64_t kMinOffset = -4095;
+    if (PostOffset <= kMaxOffset && PostOffset >= kMinOffset &&
+        PostOffset % 16 == 0) {
       *TotalOffset = Offset;
       return true;
     }
@@ -4544,7 +4606,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
       break;
 
     // Reject anything that may alias the collected instructions.
-    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects())
+    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() || MI.isCall())
       break;
   }
 
@@ -5131,6 +5193,7 @@ void AArch64FrameLowering::emitRemarks(
   if (Attrs.hasNonStreamingInterfaceAndBody())
     return;
 
+  unsigned StackHazardSize = getStackHazardSize(MF);
   const uint64_t HazardSize =
       (StackHazardSize) ? StackHazardSize : StackHazardRemarkSize;
 

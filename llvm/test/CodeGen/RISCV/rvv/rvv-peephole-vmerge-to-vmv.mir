@@ -13,12 +13,12 @@ body: |
     ; CHECK-NEXT: %false:vr = COPY $v8
     ; CHECK-NEXT: %true:vr = COPY $v9
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x1
-    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 5 /* e32 */
+    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %mask
     %false:vr = COPY $v8
     %true:vr = COPY $v9
     %avl:gprnox0 = COPY $x1
-    %mask:vmv0 = PseudoVMSET_M_B8 %avl, 5
+    %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0
     $v0 = COPY %mask
     %x:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false, %true, $v0, %avl, 5
 ...
@@ -34,14 +34,14 @@ body: |
     ; CHECK-NEXT: %false:vr = COPY $noreg
     ; CHECK-NEXT: %true:vr = COPY $v9
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x1
-    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 5 /* e32 */
+    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %mask
     ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, %avl, 5 /* e32 */, 0 /* tu, mu */
     %pt:vrnov0 = COPY $v8
     %false:vr = COPY $noreg
     %true:vr = COPY $v9
     %avl:gprnox0 = COPY $x1
-    %mask:vmv0 = PseudoVMSET_M_B8 %avl, 5
+    %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0
     $v0 = COPY %mask
     %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, $v0, %avl, 5
 ...
@@ -57,14 +57,14 @@ body: |
     ; CHECK-NEXT: %pt:vr = COPY $v8
     ; CHECK-NEXT: %true:vr = COPY $v9
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x1
-    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 5 /* e32 */
+    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %mask
     ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, %avl, 5 /* e32 */, 0 /* tu, mu */
     %false:vr = COPY $v8
     %pt:vrnov0 = COPY $v8
     %true:vr = COPY $v9
     %avl:gprnox0 = COPY $x1
-    %mask:vmv0 = PseudoVMSET_M_B8 %avl, 5
+    %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0
     $v0 = COPY %mask
     %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, $v0, %avl, 5
 ...
@@ -159,3 +159,29 @@ body: |
     $v0 = COPY %mask
     %x:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false, %true, $v0, 4, 5 /* e32 */
 ...
+---
+# Shouldn't be converted because true is in a different block
+name: same_mask_diff_blocks
+body: |
+  ; CHECK-LABEL: name: same_mask_diff_blocks
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $v8, $v0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %false:vr = COPY $v8
+  ; CHECK-NEXT:   %mask:vr = COPY $v0
+  ; CHECK-NEXT:   $v0 = COPY %mask
+  ; CHECK-NEXT:   %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, $v0, 4, 5 /* e32 */, 0 /* tu, mu */
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $v0 = COPY %mask
+  ; CHECK-NEXT:   [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false, %true, $v0, 4, 5 /* e32 */
+  bb.0:
+    liveins: $v8, $v0
+    %false:vr = COPY $v8
+    %mask:vr = COPY $v0
+    $v0 = COPY %mask
+    %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, $v0, 4, 5 /* e32 */, 0 /* tu, mu */
+  bb.1:
+    $v0 = COPY %mask
+    %5:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false, %true, $v0, 4, 5 /* e32 */

@@ -8,8 +8,8 @@
 
 #include "llvm/SandboxIR/Region.h"
 #include "llvm/AsmParser/Parser.h"
-#include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
@@ -81,6 +81,37 @@ define i8 @foo(i8 %v0, i8 %v1) {
 #endif
 }
 
+TEST_F(RegionTest, CallbackUpdates) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1, ptr %ptr) {
+  %t0 = add i8 %v0, 1
+  %t1 = add i8 %t0, %v1
+  ret i8 %t0
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Ptr = F->getArg(2);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *T0 = cast<sandboxir::Instruction>(&*It++);
+  auto *T1 = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+  sandboxir::Region Rgn(Ctx);
+  Rgn.add(T0);
+  Rgn.add(T1);
+
+  // Test creation.
+  auto *NewI = sandboxir::StoreInst::create(T0, Ptr, /*Align=*/std::nullopt,
+                                            Ret->getIterator(), Ctx);
+  EXPECT_THAT(Rgn.insts(), testing::ElementsAre(T0, T1, NewI));
+
+  // Test deletion.
+  T1->eraseFromParent();
+  EXPECT_THAT(Rgn.insts(), testing::ElementsAre(T0, NewI));
+}
+
 TEST_F(RegionTest, MetadataFromIR) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {
@@ -106,6 +137,31 @@ define i8 @foo(i8 %v0, i8 %v1) {
       sandboxir::Region::createRegionsFromMD(*F);
   EXPECT_THAT(Regions[0]->insts(), testing::UnorderedElementsAre(T0));
   EXPECT_THAT(Regions[1]->insts(), testing::UnorderedElementsAre(T1, T2));
+}
+
+TEST_F(RegionTest, NonContiguousRegion) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1, !sandboxvec !0
+  %t1 = add i8 %t0, %v1
+  %t2 = add i8 %t1, %v1, !sandboxvec !0
+  ret i8 %t2
+}
+
+!0 = distinct !{!"sandboxregion"}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *T0 = cast<sandboxir::Instruction>(&*It++);
+  [[maybe_unused]] auto *T1 = cast<sandboxir::Instruction>(&*It++);
+  auto *T2 = cast<sandboxir::Instruction>(&*It++);
+
+  SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F);
+  EXPECT_THAT(Regions[0]->insts(), testing::UnorderedElementsAre(T0, T2));
 }
 
 TEST_F(RegionTest, DumpedMetadata) {

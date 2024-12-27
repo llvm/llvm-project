@@ -9,7 +9,6 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
   call void asm sideeffect "", "~{v[8:15]}" () #0
   call void asm sideeffect "", "~{v[16:19]}"() #0
   call void asm sideeffect "", "~{v[20:21]}"() #0
-  call void asm sideeffect "", "~{v22}"() #0
   %val0 = call <2 x i32> asm sideeffect "; def $0", "=s" () #0
   %val1 = call <4 x i32> asm sideeffect "; def $0", "=s" () #0
   %val2 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0

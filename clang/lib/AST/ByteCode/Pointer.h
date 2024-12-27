@@ -107,6 +107,7 @@ public:
       : Offset(Offset), StorageKind(Storage::Fn) {
     PointeeStorage.Fn = FunctionPointer(F);
   }
+  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
 
   void operator=(const Pointer &P);
@@ -420,8 +421,18 @@ public:
   }
   /// Checks if the pointer points to an array.
   bool isArrayElement() const {
-    if (isBlockPointer())
-      return inArray() && asBlockPointer().Base != Offset;
+    if (!isBlockPointer())
+      return false;
+
+    const BlockPointer &BP = asBlockPointer();
+    if (inArray() && BP.Base != Offset)
+      return true;
+
+    // Might be a narrow()'ed element in a composite array.
+    // Check the inline descriptor.
+    if (BP.Base >= sizeof(InlineDescriptor) && getInlineDesc()->IsArrayElement)
+      return true;
+
     return false;
   }
   /// Pointer points directly to a block.
@@ -514,9 +525,7 @@ public:
       return false;
 
     assert(isBlockPointer());
-    if (const ValueDecl *VD = getDeclDesc()->asValueDecl())
-      return VD->isWeak();
-    return false;
+    return asBlockPointer().Pointee->isWeak();
   }
   /// Checks if an object was initialized.
   bool isInitialized() const;
@@ -645,15 +654,6 @@ public:
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
   }
 
-  /// Dereferences a primitive element.
-  template <typename T> T &elem(unsigned I) const {
-    assert(I < getNumElems());
-    assert(isBlockPointer());
-    assert(asBlockPointer().Pointee);
-    return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
-                                 sizeof(InitMapPtr))[I];
-  }
-
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {
@@ -706,8 +706,6 @@ private:
   friend class InterpState;
   friend struct InitMap;
   friend class DynamicAllocator;
-
-  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {

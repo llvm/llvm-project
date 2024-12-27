@@ -28,7 +28,6 @@
 !CHECK:          }
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 subroutine lastprivate_iv_inc()
   integer :: i
@@ -66,7 +65,6 @@ end subroutine
 !CHECK:          }
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 subroutine lastprivate_iv_dec()
   integer :: i

@@ -84,6 +84,11 @@ def IntegerTypeClass : TypeClass {
                Uint32, Sint64, Uint64, IntAP, IntAPS];
 }
 
+def IntegerAndFixedTypeClass : TypeClass {
+  let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
+               Uint32, Sint64, Uint64, IntAP, IntAPS, FixedPoint];
+}
+
 def FixedSizeIntegralTypeClass : TypeClass {
   let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
                Uint32, Sint64, Uint64, Bool];
@@ -98,7 +103,7 @@ def FloatTypeClass : TypeClass {
 }
 
 def AluTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool]);
+  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [FixedPoint]);
 }
 
 def PtrTypeClass : TypeClass {
@@ -110,7 +115,7 @@ def NonPtrTypeClass : TypeClass {
 }
 
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types, [FixedPoint]);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
 }
 
 def ComparableTypeClass : TypeClass {
@@ -146,7 +151,7 @@ class FloatOpcode : Opcode {
 }
 
 class IntegerOpcode : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegerAndFixedTypeClass];
   let HasGroup = 1;
 }
 
@@ -276,7 +281,7 @@ def ZeroIntAPS : Opcode {
 // [] -> [Pointer]
 def Null : Opcode {
   let Types = [PtrTypeClass];
-  let Args = [ArgDesc];
+  let Args = [ArgUint64, ArgDesc];
   let HasGroup = 1;
 }
 
@@ -626,6 +631,10 @@ def CastFP : Opcode {
   let Args = [ArgFltSemantics, ArgRoundingMode];
 }
 
+def CastFixedPoint : Opcode {
+  let Args = [ArgUint32];
+}
+
 def FixedSizeIntegralTypes : TypeClass {
   let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
 }
@@ -674,6 +683,25 @@ def CastPointerIntegralAP : Opcode {
 def CastPointerIntegralAPS : Opcode {
   let Args = [ArgUint32];
 }
+def CastIntegralFixedPoint : Opcode {
+  let Types = [FixedSizeIntegralTypes];
+  let Args = [ArgUint32];
+  let HasGroup = 1;
+}
+def CastFloatingFixedPoint : Opcode {
+  let Args = [ArgUint32];
+}
+def CastFixedPointFloating : Opcode {
+  let Args = [ArgFltSemantics];
+}
+def CastFixedPointIntegral : Opcode {
+  let Types = [FixedSizeIntegralTypes];
+  let HasGroup = 1;
+}
+def ShiftFixedPoint : Opcode {
+  let Args = [ArgBool];
+}
+
 def PtrPtrCast : Opcode {
   let Args = [ArgBool];
 
@@ -741,10 +769,13 @@ def InvalidCast : Opcode {
 }
 
 def InvalidDeclRef : Opcode {
-  let Args = [ArgDeclRef];
+  let Args = [ArgDeclRef, ArgBool];
 }
 
 def SizelessVectorElementSize : Opcode;
+def InvalidShuffleVectorIndex : Opcode {
+  let Args = [ArgUint32];
+}
 
 def Assume : Opcode;
 
@@ -787,7 +818,7 @@ def AllocCN : Opcode {
 }
 
 def Free : Opcode {
-  let Args = [ArgBool];
+  let Args = [ArgBool, ArgBool];
 }
 
 def CheckNewTypeMismatch : Opcode {
@@ -805,3 +836,17 @@ def CheckNewTypeMismatchArray : Opcode {
 }
 
 def IsConstantContext: Opcode;
+def CheckAllocations : Opcode;
+
+def BitCastTypeClass : TypeClass {
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64,
+               IntAP, IntAPS, Bool, Float, Ptr];
+}
+
+def BitCastPrim : Opcode {
+  let Types = [BitCastTypeClass];
+  let Args = [ArgBool, ArgUint32, ArgFltSemantics];
+  let HasGroup = 1;
+}
+
+def BitCast : Opcode;

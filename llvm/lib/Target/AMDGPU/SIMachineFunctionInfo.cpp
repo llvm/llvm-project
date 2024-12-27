@@ -163,6 +163,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   if (!S.empty())
     S.consumeInteger(0, HighBitsOf32BitAddress);
 
+  MaxMemoryClusterDWords = F.getFnAttributeAsParsedInteger(
+      "amdgpu-max-memory-cluster-dwords", DefaultMemoryClusterDWordsLimit);
+
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
   // VGPR available at all times. For now, reserve highest available VGPR. After
   // RA, shift it to the lowest available unused VGPR if the one exist.
@@ -325,11 +328,13 @@ bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
   return false;
 }
 
-void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
-    MachineFunction &MF) {
+void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
+    MachineFunction &MF, SmallVectorImpl<Register> &WWMVGPRs,
+    BitVector &SavedVGPRs) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (Register &Reg : SpillPhysVGPRs) {
+  for (unsigned I = 0, E = WWMVGPRs.size(); I < E; ++I) {
+    Register Reg = WWMVGPRs[I];
     Register NewReg =
         TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
     if (!NewReg || NewReg >= Reg)
@@ -338,10 +343,22 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
     MRI.replaceRegWith(Reg, NewReg);
 
     // Update various tables with the new VGPR.
+    WWMVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
-    WWMSpills.insert(std::make_pair(NewReg, WWMSpills[Reg]));
-    WWMSpills.erase(Reg);
+    MRI.reserveReg(NewReg, TRI);
+
+    // Replace the register in SpillPhysVGPRs. This is needed to look for free
+    // lanes while spilling special SGPRs like FP, BP, etc. during PEI.
+    auto *RegItr = std::find(SpillPhysVGPRs.begin(), SpillPhysVGPRs.end(), Reg);
+    if (RegItr != SpillPhysVGPRs.end()) {
+      unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
+      SpillPhysVGPRs[Idx] = NewReg;
+    }
+
+    // The generic `determineCalleeSaves` might have set the old register if it
+    // is in the CSR range.
+    SavedVGPRs.reset(Reg);
 
     for (MachineBasicBlock &MBB : MF) {
       MBB.removeLiveIn(Reg);
@@ -386,7 +403,9 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
       return false;
     }
 
-    allocateWWMSpill(MF, LaneVGPR);
+    if (IsPrologEpilog)
+      allocateWWMSpill(MF, LaneVGPR);
+
     reserveWWMRegister(LaneVGPR);
     for (MachineBasicBlock &MBB : MF) {
       MBB.addLiveIn(LaneVGPR);
@@ -678,8 +697,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     const llvm::MachineFunction &MF)
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
-      GDSSize(MFI.getGDSSize()),
-      DynLDSAlign(MFI.getDynLDSAlign()), IsEntryFunction(MFI.isEntryFunction()),
+      GDSSize(MFI.getGDSSize()), DynLDSAlign(MFI.getDynLDSAlign()),
+      IsEntryFunction(MFI.isEntryFunction()),
       NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
@@ -692,9 +711,12 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       BytesInStackArgArea(MFI.getBytesInStackArgArea()),
       ReturnsVoid(MFI.returnsVoid()),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
-      PSInputAddr(MFI.getPSInputAddr()),
-      PSInputEnable(MFI.getPSInputEnable()),
+      PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
+      MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()) {
+  for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
+    SpillPhysVGPRS.push_back(regToString(Reg, TRI));
+
   for (Register Reg : MFI.getWWMReservedRegs())
     WWMReservedRegs.push_back(regToString(Reg, TRI));
 
@@ -725,6 +747,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   DynLDSAlign = YamlMFI.DynLDSAlign;
   PSInputAddr = YamlMFI.PSInputAddr;
   PSInputEnable = YamlMFI.PSInputEnable;
+  MaxMemoryClusterDWords = YamlMFI.MaxMemoryClusterDWords;
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
   IsEntryFunction = YamlMFI.IsEntryFunction;

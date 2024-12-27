@@ -278,6 +278,21 @@ int *mallocRegion(void) {
   return mem;
 }
 
+int *custom_calloc(size_t a, size_t b) {
+  size_t res;
+
+  return __builtin_mul_overflow(a, b, &res) ? 0 : malloc(res);
+}
+
+int *mallocRegionOverflow(void) {
+  int *mem = (int*)custom_calloc(10, sizeof(int));
+
+  mem[20] = 10;
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of the heap area at index 20, while it holds only 10 'int' elements}}
+  return mem;
+}
+
 int *mallocRegionDeref(void) {
   int *mem = (int*)malloc(2*sizeof(int));
 

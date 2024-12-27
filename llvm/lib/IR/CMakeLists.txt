@@ -32,6 +32,7 @@ add_llvm_component_library(LLVMCore
   GCStrategy.cpp
   GVMaterializer.cpp
   Globals.cpp
+  Intrinsics.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp
@@ -72,6 +73,7 @@ add_llvm_component_library(LLVMCore
   Value.cpp
   ValueSymbolTable.cpp
   VectorBuilder.cpp
+  VectorTypeUtils.cpp
   Verifier.cpp
   VFABIDemangler.cpp
   RuntimeLibcalls.cpp
