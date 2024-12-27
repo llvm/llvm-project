@@ -14,3 +14,11 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: wmemchr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: wchar_t
+      - type: size_t
