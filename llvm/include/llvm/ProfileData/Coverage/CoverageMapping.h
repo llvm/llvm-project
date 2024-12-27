@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -442,7 +443,7 @@ struct MCDCRecord {
   };
 
   using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
-  using BoolVector = llvm::SmallVector<bool>;
+  using BoolVector = std::array<BitVector, 2>;
   using TVRowPair = std::pair<unsigned, unsigned>;
   using TVPairMap = llvm::DenseMap<unsigned, TVRowPair>;
   using CondIDMap = llvm::DenseMap<unsigned, unsigned>;
@@ -451,26 +452,31 @@ struct MCDCRecord {
 private:
   CounterMappingRegion Region;
   TestVectors TV;
-  TVPairMap IndependencePairs;
+  std::optional<TVPairMap> IndependencePairs;
   BoolVector Folded;
   CondIDMap PosToID;
   LineColPairMap CondLoc;
 
 public:
   MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
-             TVPairMap &&IndependencePairs, BoolVector &&Folded,
-             CondIDMap &&PosToID, LineColPairMap &&CondLoc)
-      : Region(Region), TV(std::move(TV)),
-        IndependencePairs(std::move(IndependencePairs)),
-        Folded(std::move(Folded)), PosToID(std::move(PosToID)),
-        CondLoc(std::move(CondLoc)){};
+             BoolVector &&Folded, CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)), Folded(std::move(Folded)),
+        PosToID(std::move(PosToID)), CondLoc(std::move(CondLoc)) {
+    findIndependencePairs();
+  }
+
+  // Compare executed test vectors against each other to find an independence
+  // pairs for each condition.  This processing takes the most time.
+  void findIndependencePairs();
 
   const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
-  bool isCondFolded(unsigned Condition) const { return Folded[Condition]; }
+  bool isCondFolded(unsigned Condition) const {
+    return Folded[false][Condition] || Folded[true][Condition];
+  }
 
   /// Return the evaluation of a condition (indicated by Condition) in an
   /// executed test vector (indicated by TestVectorIndex), which will be True,
@@ -494,10 +500,10 @@ public:
   /// TestVectors requires a translation from a ordinal position to actual
   /// condition ID. This is done via PosToID[].
   bool isConditionIndependencePairCovered(unsigned Condition) const {
+    assert(IndependencePairs);
     auto It = PosToID.find(Condition);
-    if (It != PosToID.end())
-      return IndependencePairs.contains(It->second);
-    llvm_unreachable("Condition ID without an Ordinal mapping");
+    assert(It != PosToID.end() && "Condition ID without an Ordinal mapping");
+    return IndependencePairs->contains(It->second);
   }
 
   /// Return the Independence Pair that covers the given condition. Because
@@ -507,7 +513,8 @@ public:
   /// via PosToID[].
   TVRowPair getConditionIndependencePair(unsigned Condition) {
     assert(isConditionIndependencePairCovered(Condition));
-    return IndependencePairs[PosToID[Condition]];
+    assert(IndependencePairs);
+    return (*IndependencePairs)[PosToID[Condition]];
   }
 
   float getPercentCovered() const {
