@@ -3023,6 +3023,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    assert(!Ty.isPointerOrPointerVector() && "Can't widen type");
     if (!Ty.isScalar()) {
       // We need to widen the vector element type.
       Observer.changingInstr(MI);
@@ -4664,18 +4665,18 @@ LegalizerHelper::createStackTemporary(TypeSize Bytes, Align Alignment,
   return MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx);
 }
 
-MachineInstrBuilder LegalizerHelper::createStackStoreLoad(Register Val,
-                                                          LLT DstTy) {
-  LLT SrcTy = MRI.getType(Val);
-  Align StackTypeAlign = getStackTemporaryAlignment(SrcTy);
+MachineInstrBuilder LegalizerHelper::createStackStoreLoad(const DstOp &Res,
+                                                          const SrcOp &Val) {
+  LLT SrcTy = Val.getLLTTy(MRI);
+  Align StackTypeAlign =
+      std::max(getStackTemporaryAlignment(SrcTy),
+               getStackTemporaryAlignment(Res.getLLTTy(MRI)));
   MachinePointerInfo PtrInfo;
   auto StackTemp =
       createStackTemporary(SrcTy.getSizeInBytes(), StackTypeAlign, PtrInfo);
 
   MIRBuilder.buildStore(Val, StackTemp, PtrInfo, StackTypeAlign);
-  return MIRBuilder.buildLoad(
-      DstTy, StackTemp, PtrInfo,
-      std::min(StackTypeAlign, getStackTemporaryAlignment(DstTy)));
+  return MIRBuilder.buildLoad(Res, StackTemp, PtrInfo, StackTypeAlign);
 }
 
 static Register clampVectorIndex(MachineIRBuilder &B, Register IdxReg,
