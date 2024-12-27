@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/scanf_core/reader.h"
-#include "hdr/types/FILE.h"
 #include "src/__support/File/file.h"
 #include "src/__support/macros/config.h"
+
+#include "hdr/types/FILE.h"
 
 #include <stddef.h>
 
