@@ -306,6 +306,30 @@ private:
       return RequestGOTAndTransformToPageOffset12;
     case ELF::R_LARCH_CALL36:
       return Call36PCRel;
+    case ELF::R_LARCH_ADD6:
+      return Add6;
+    case ELF::R_LARCH_ADD8:
+      return Add8;
+    case ELF::R_LARCH_ADD16:
+      return Add16;
+    case ELF::R_LARCH_ADD32:
+      return Add32;
+    case ELF::R_LARCH_ADD64:
+      return Add64;
+    case ELF::R_LARCH_ADD_ULEB128:
+      return AddUleb128;
+    case ELF::R_LARCH_SUB6:
+      return Sub6;
+    case ELF::R_LARCH_SUB8:
+      return Sub8;
+    case ELF::R_LARCH_SUB16:
+      return Sub16;
+    case ELF::R_LARCH_SUB32:
+      return Sub32;
+    case ELF::R_LARCH_SUB64:
+      return Sub64;
+    case ELF::R_LARCH_SUB_ULEB128:
+      return SubUleb128;
     case ELF::R_LARCH_ALIGN:
       return AlignRelaxable;
     }
