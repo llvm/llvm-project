@@ -1,17 +1,15 @@
-#include<iostream>
+#include <iostream>
 using namespace std;
 
 class shogo {
 public:
-    void Run();
-    void Hey();
+  void Run();
+  void Hey();
 };
 
-void shogo::Run() {
-    cout << "This is Run" << endl;
-}
+void shogo::Run() { cout << "This is Run" << endl; }
 
 int main() {
-    shogo s;
-    s.Run();
+  shogo s;
+  s.Run();
 }

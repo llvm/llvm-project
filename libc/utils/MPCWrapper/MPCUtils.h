@@ -125,9 +125,11 @@ private:
   template <typename InType, typename OutType>
   bool match(InType in, OutType out) {
     if (cpp::is_same_v<InType, OutType>) {
-      return compare_unary_operation_single_output_same_type(op, in, out, ulp_tolerance, rounding);  
+      return compare_unary_operation_single_output_same_type(
+          op, in, out, ulp_tolerance, rounding);
     } else {
-      return compare_unary_operation_single_output_different_type(op, in, out, ulp_tolerance, rounding);
+      return compare_unary_operation_single_output_different_type(
+          op, in, out, ulp_tolerance, rounding);
     }
   }
 
@@ -140,9 +142,11 @@ private:
   template <typename InType, typename OutType>
   void explain_error(InType in, OutType out) {
     if (cpp::is_same_v<InType, OutType>) {
-      explain_unary_operation_single_output_same_type_error(op, in, out, ulp_tolerance, rounding);
+      explain_unary_operation_single_output_same_type_error(
+          op, in, out, ulp_tolerance, rounding);
     } else {
-      explain_unary_operation_single_output_different_type_error(op, in, out, ulp_tolerance, rounding);
+      explain_unary_operation_single_output_different_type_error(
+          op, in, out, ulp_tolerance, rounding);
     }
   }
 
