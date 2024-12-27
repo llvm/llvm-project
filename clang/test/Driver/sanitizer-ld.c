@@ -37,7 +37,7 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-DARWIN
 //
 // CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
-// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: libclang_rt.osx.a"
+// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: "--whole-archive" "{{.*}}libclang_rt.osx.a" "--no-whole-archive"
 
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
