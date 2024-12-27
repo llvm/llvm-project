@@ -173,7 +173,19 @@ constexpr bool test() {
     }
   }
 
-#if TEST_STD_VER >= 23
+#if TEST_STD_VER >= 23 
+  { // Test vector<bool>::iterator optimization
+    for (std::size_t N = 8; N <= 256; N *= 2) {
+      // Test with both full and partial bytes
+      for (std::size_t offset : {0, 4}) {
+        std::vector<bool> in(N + 2 * offset);
+        std::vector<bool> expected(N, true);
+        std::ranges::fill(std::ranges::begin(in) + offset, std::ranges::end(in) - offset, true);
+        assert(std::equal(in.begin() + offset, in.end() - offset, expected.begin()));
+      }
+    }
+  }
+
   test_bititer_with_custom_sized_types();
 #endif
 

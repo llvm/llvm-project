@@ -67,13 +67,13 @@ constexpr void test_iterators() {
   {
     // simple test
     {
-      int a[] = {1, 2, 3, 4};
+      int a[]                               = {1, 2, 3, 4};
       std::same_as<std::ptrdiff_t> auto ret = std::ranges::count(It(a), Sent(It(a + 4)), 3);
       assert(ret == 1);
     }
     {
-      int a[] = {1, 2, 3, 4};
-      auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
+      int a[]                               = {1, 2, 3, 4};
+      auto range                            = std::ranges::subrange(It(a), Sent(It(a + 4)));
       std::same_as<std::ptrdiff_t> auto ret = std::ranges::count(range, 3);
       assert(ret == 1);
     }
@@ -83,13 +83,13 @@ constexpr void test_iterators() {
     // check that an empty range works
     {
       std::array<int, 0> a = {};
-      auto ret = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 1);
+      auto ret             = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 1);
       assert(ret == 0);
     }
     {
       std::array<int, 0> a = {};
-      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
-      auto ret = std::ranges::count(range, 1);
+      auto range           = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
+      auto ret             = std::ranges::count(range, 1);
       assert(ret == 0);
     }
   }
@@ -98,13 +98,13 @@ constexpr void test_iterators() {
     // check that a range with a single element works
     {
       std::array a = {2};
-      auto ret = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 2);
+      auto ret     = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 2);
       assert(ret == 1);
     }
     {
       std::array a = {2};
-      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
-      auto ret = std::ranges::count(range, 2);
+      auto range   = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
+      auto ret     = std::ranges::count(range, 2);
       assert(ret == 1);
     }
   }
@@ -113,13 +113,13 @@ constexpr void test_iterators() {
     // check that 0 is returned with no match
     {
       std::array a = {1, 1, 1};
-      auto ret = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 0);
+      auto ret     = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 0);
       assert(ret == 0);
     }
     {
       std::array a = {1, 1, 1};
-      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
-      auto ret = std::ranges::count(range, 0);
+      auto range   = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
+      auto ret     = std::ranges::count(range, 0);
       assert(ret == 0);
     }
   }
@@ -128,13 +128,13 @@ constexpr void test_iterators() {
     // check that more than one element is counted
     {
       std::array a = {3, 3, 4, 3, 3};
-      auto ret = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 3);
+      auto ret     = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 3);
       assert(ret == 4);
     }
     {
       std::array a = {3, 3, 4, 3, 3};
-      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
-      auto ret = std::ranges::count(range, 3);
+      auto range   = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
+      auto ret     = std::ranges::count(range, 3);
       assert(ret == 4);
     }
   }
@@ -143,13 +143,13 @@ constexpr void test_iterators() {
     // check that all elements are counted
     {
       std::array a = {5, 5, 5, 5};
-      auto ret = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 5);
+      auto ret     = std::ranges::count(It(a.data()), Sent(It(a.data() + a.size())), 5);
       assert(ret == 4);
     }
     {
       std::array a = {5, 5, 5, 5};
-      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
-      auto ret = std::ranges::count(range, 5);
+      auto range   = std::ranges::subrange(It(a.data()), Sent(It(a.data() + a.size())));
+      auto ret     = std::ranges::count(range, 5);
       assert(ret == 4);
     }
   }
@@ -167,12 +167,12 @@ constexpr bool test() {
   {
     // check that projections are used properly and that they are called with the iterator directly
     {
-      int a[] = {1, 2, 3, 4};
+      int a[]  = {1, 2, 3, 4};
       auto ret = std::ranges::count(a, a + 4, a + 3, [](int& i) { return &i; });
       assert(ret == 1);
     }
     {
-      int a[] = {1, 2, 3, 4};
+      int a[]  = {1, 2, 3, 4};
       auto ret = std::ranges::count(a, a + 3, [](int& i) { return &i; });
       assert(ret == 1);
     }
@@ -180,8 +180,10 @@ constexpr bool test() {
 
   {
     // check that std::invoke is used
-    struct S { int i; };
-    S a[] = { S{1}, S{3}, S{2} };
+    struct S {
+      int i;
+    };
+    S a[]                                 = {S{1}, S{3}, S{2}};
     std::same_as<std::ptrdiff_t> auto ret = std::ranges::count(a, 4, &S::i);
     assert(ret == 0);
   }
@@ -189,16 +191,22 @@ constexpr bool test() {
   {
     // count invocations of the projection
     {
-      int a[] = {1, 2, 3, 4};
+      int a[]              = {1, 2, 3, 4};
       int projection_count = 0;
-      auto ret = std::ranges::count(a, a + 4, 2, [&](int i) { ++projection_count; return i; });
+      auto ret             = std::ranges::count(a, a + 4, 2, [&](int i) {
+        ++projection_count;
+        return i;
+      });
       assert(ret == 1);
       assert(projection_count == 4);
     }
     {
-      int a[] = {1, 2, 3, 4};
+      int a[]              = {1, 2, 3, 4};
       int projection_count = 0;
-      auto ret = std::ranges::count(a, 2, [&](int i) { ++projection_count; return i; });
+      auto ret             = std::ranges::count(a, 2, [&](int i) {
+        ++projection_count;
+        return i;
+      });
       assert(ret == 1);
       assert(projection_count == 4);
     }
@@ -208,7 +216,7 @@ constexpr bool test() {
     // check that an immobile type works
     struct NonMovable {
       NonMovable(const NonMovable&) = delete;
-      NonMovable(NonMovable&&) = delete;
+      NonMovable(NonMovable&&)      = delete;
       constexpr NonMovable(int i_) : i(i_) {}
       int i;
 
@@ -216,12 +224,12 @@ constexpr bool test() {
     };
     {
       NonMovable a[] = {9, 8, 4, 3};
-      auto ret = std::ranges::count(a, a + 4, NonMovable(8));
+      auto ret       = std::ranges::count(a, a + 4, NonMovable(8));
       assert(ret == 1);
     }
     {
       NonMovable a[] = {9, 8, 4, 3};
-      auto ret = std::ranges::count(a, NonMovable(8));
+      auto ret       = std::ranges::count(a, NonMovable(8));
       assert(ret == 1);
     }
   }
@@ -230,7 +238,7 @@ constexpr bool test() {
     // check that difference_type is used
     struct DiffTypeIterator {
       using difference_type = signed char;
-      using value_type = int;
+      using value_type      = int;
 
       int* it = nullptr;
 
@@ -238,7 +246,10 @@ constexpr bool test() {
       constexpr DiffTypeIterator(int* i) : it(i) {}
 
       constexpr int& operator*() const { return *it; }
-      constexpr DiffTypeIterator& operator++() { ++it; return *this; }
+      constexpr DiffTypeIterator& operator++() {
+        ++it;
+        return *this;
+      }
       constexpr void operator++(int) { ++it; }
 
       bool operator==(const DiffTypeIterator&) const = default;
@@ -251,7 +262,7 @@ constexpr bool test() {
       assert(ret == 1);
     }
     {
-      int a[] = {5, 5, 4, 3, 2, 1};
+      int a[]                                      = {5, 5, 4, 3, 2, 1};
       auto range = std::ranges::subrange(DiffTypeIterator(a), DiffTypeIterator(a + 6));
       std::same_as<signed char> decltype(auto) ret = std::ranges::count(range, 4);
       assert(ret == 1);
@@ -264,7 +275,9 @@ constexpr bool test() {
       for (size_t offset = 0; offset != 64; ++offset) {
         std::fill(vec.begin(), vec.end(), false);
         std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
-        assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, true) == i);
+
+        // check both (range) and (iterator, sentinel) overloads
+        assert(std::ranges::count(vec, true) == i);
         assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, false) == 256 - i);
       }
     }

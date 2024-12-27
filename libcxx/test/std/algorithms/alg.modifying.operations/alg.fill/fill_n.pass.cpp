@@ -169,8 +169,21 @@ TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
 
   test_int_array();
-  test_struct_array();
-  test_int_array_struct_source();
+  test_struct_array(); 
+  test_int_array_struct_source(); 
+
+  { // Test vector<bool>::iterator optimization
+    for (std::size_t N = 8; N <= 256; N *= 2) {
+      // Test with both full and partial bytes
+      for (std::size_t offset = 0; offset <= 4; offset += 4) {
+        std::vector<bool> in(N + 2 * offset);
+        std::vector<bool> expected(N, true);
+        std::fill_n(in.begin() + offset, N + offset, true);
+        assert(std::equal(in.begin() + offset, in.end() - offset, expected.begin()));
+      }
+    }
+  }
+  
   test_bititer_with_custom_sized_types();
 
   return true;

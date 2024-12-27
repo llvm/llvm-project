@@ -84,48 +84,16 @@ TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<char*>(), Test<char>());
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
-  {   // test vector<bool>::iterator optimization
-    { // simple case
-      std::vector<bool> in(4, false);
-      std::vector<bool> expected(4, true);
-      std::fill(in.begin(), in.end(), true);
-      assert(in == expected);
-    }
-    { // partial byte in the front is not filled
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[0] = false;
-      expected[1] = false;
-      std::fill(in.begin() + 2, in.end(), true);
-      assert(in == expected);
-    }
-    { // partial byte in the back is not filled
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[6] = false;
-      expected[7] = false;
-      std::fill(in.begin(), in.end() - 2, true);
-      assert(in == expected);
-    }
-    { // partial byte in the front and back is not filled
-      std::vector<bool> in(16, false);
-      std::vector<bool> expected(16, true);
-      expected[0]  = false;
-      expected[1]  = false;
-      expected[14] = false;
-      expected[15] = false;
-      std::fill(in.begin() + 2, in.end() - 2, true);
-      assert(in == expected);
-    }
-    { // only a few bits of a byte are set
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[0] = false;
-      expected[1] = false;
-      expected[6] = false;
-      expected[7] = false;
-      std::fill(in.begin() + 2, in.end() - 2, true);
-      assert(in == expected);
+
+  { // Test vector<bool>::iterator optimization
+    for (std::size_t N = 8; N <= 256; N *= 2) {
+      // Test with both full and partial bytes
+      for (std::size_t offset = 0; offset <= 4; offset += 4) {
+        std::vector<bool> in(N + 2 * offset);
+        std::vector<bool> expected(N, true);
+        std::fill(in.begin() + offset, in.end() - offset, true);
+        assert(std::equal(in.begin() + offset, in.end() - offset, expected.begin()));
+      }
     }
   }
 
