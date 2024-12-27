@@ -1517,6 +1517,18 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
   return APInt(ScalarSize, *MaybeCst, true);
 }
 
+std::optional<APFloat>
+llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+                                        const MachineRegisterInfo &MRI) {
+  Register Def = MI.getOperand(0).getReg();
+  if (auto FpConst = getFConstantVRegValWithLookThrough(Def, MRI))
+    return FpConst->Value;
+  auto MaybeCstFP = getFConstantSplat(Def, MRI, /*allowUndef=*/false);
+  if (!MaybeCstFP)
+    return std::nullopt;
+  return MaybeCstFP->Value;
+}
+
 bool llvm::isNullOrNullSplat(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI, bool AllowUndefs) {
   switch (MI.getOpcode()) {

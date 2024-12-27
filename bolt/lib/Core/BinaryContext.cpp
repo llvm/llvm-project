@@ -1076,6 +1076,7 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     BD = GAI->second;
     if (!BD->hasName(Name)) {
       GlobalSymbols[Name] = BD;
+      BD->updateSize(Size);
       BD->Symbols.push_back(Symbol);
     }
   }

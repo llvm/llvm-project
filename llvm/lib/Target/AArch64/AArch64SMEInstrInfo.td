@@ -52,6 +52,22 @@ let usesCustomInserter = 1 in {
   def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
 }
 
+// Nodes to allocate a save buffer for SME.
+def AArch64SMESaveSize : SDNode<"AArch64ISD::GET_SME_SAVE_SIZE", SDTypeProfile<1, 0,
+                               [SDTCisInt<0>]>, [SDNPHasChain]>;
+let usesCustomInserter = 1, Defs = [X0] in {
+  def GetSMESaveSize : Pseudo<(outs GPR64:$dst), (ins), []>, Sched<[]> {}
+}
+def : Pat<(i64 AArch64SMESaveSize), (GetSMESaveSize)>;
+
+def AArch64AllocateSMESaveBuffer : SDNode<"AArch64ISD::ALLOC_SME_SAVE_BUFFER", SDTypeProfile<1, 1,
+                                          [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain]>;
+let usesCustomInserter = 1, Defs = [SP] in {
+  def AllocateSMESaveBuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
+}
+def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
+          (AllocateSMESaveBuffer $size)>;
+
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
