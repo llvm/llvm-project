@@ -401,13 +401,27 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
-  /// Storage for ExecVectors
-  /// ExecVectors is the alias of its 0th element.
-  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+  /// Helper for sorting ExecVectors.
+  struct TVIdxTuple {
+    MCDCRecord::CondState MCDCCond; /// True/False
+    unsigned BIdx;                  /// Bitmap Index
+    unsigned Ord;                   /// Last position on ExecVectors
+
+    TVIdxTuple(MCDCRecord::CondState MCDCCond, unsigned BIdx, unsigned Ord)
+        : MCDCCond(MCDCCond), BIdx(BIdx), Ord(Ord) {}
+
+    bool operator<(const TVIdxTuple &RHS) const {
+      return (std::tie(this->MCDCCond, this->BIdx, this->Ord) <
+              std::tie(RHS.MCDCCond, RHS.BIdx, RHS.Ord));
+    }
+  };
+
+  // Indices for sorted TestVectors;
+  std::vector<TVIdxTuple> ExecVectorIdxs;
 
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
-  MCDCRecord::TestVectors &ExecVectors;
+  MCDCRecord::TestVectors ExecVectors;
 
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
@@ -424,8 +438,7 @@ public:
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
-        IndependencePairs(NumConditions), ExecVectors(ExecVectorsByCond[false]),
-        IsVersion11(IsVersion11) {}
+        IndependencePairs(NumConditions), IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -453,10 +466,12 @@ private:
                       : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
         continue;
 
+      ExecVectorIdxs.emplace_back(MCDCCond, NextTVIdx, ExecVectors.size());
+
       // Copy the completed test vector to the vector of testvectors.
       // The final value (T,F) is equal to the last non-dontcare state on the
       // path (in a short-circuiting system).
-      ExecVectorsByCond[MCDCCond].push_back({TV, MCDCCond});
+      ExecVectors.push_back({TV, MCDCCond});
     }
 
     // Reset back to DontCare.
@@ -475,12 +490,11 @@ private:
     assert(TVIdxs.size() == unsigned(NumTestVectors) &&
            "TVIdxs wasn't fulfilled");
 
-    // Fill ExecVectors order by False items and True items.
-    // ExecVectors is the alias of ExecVectorsByCond[false], so
-    // Append ExecVectorsByCond[true] on it.
-    auto &ExecVectorsT = ExecVectorsByCond[true];
-    ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
-                       std::make_move_iterator(ExecVectorsT.end()));
+    llvm::sort(ExecVectorIdxs);
+    MCDCRecord::TestVectors NewTestVectors;
+    for (const auto &IdxTuple : ExecVectorIdxs)
+      NewTestVectors.push_back(std::move(ExecVectors[IdxTuple.Ord]));
+    ExecVectors = std::move(NewTestVectors);
   }
 
 public:
