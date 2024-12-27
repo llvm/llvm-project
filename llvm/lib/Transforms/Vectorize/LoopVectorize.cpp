@@ -233,7 +233,7 @@ static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
                          "prefers tail-folding, don't attempt vectorization if "
                          "tail-folding fails.")));
 
-cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
+static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
     "force-tail-folding-style", cl::desc("Force the tail folding style"),
     cl::init(TailFoldingStyle::None),
     cl::values(
@@ -7355,6 +7355,8 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
          SkipCostComputation.contains(UI);
 }
+
+bool VPCostContext::foldTailWithEVL() const { return CM.foldTailWithEVL(); }
 
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,

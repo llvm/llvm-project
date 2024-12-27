@@ -31,8 +31,6 @@
 
 using namespace llvm;
 
-extern cl::opt<TailFoldingStyle> ForceTailFoldingStyle;
-
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
@@ -2139,13 +2137,14 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                    Mul, RecipeA, RecipeB, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB);
     // Matched reduce.add(mul)
-    else if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
+    if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul);
-  } else if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                             m_ZExtOrSExt(m_VPValue()))))) {
-    // Matched reduce.add(ext(mul(ext(A), ext(B))))
-    // All extend instructions must have same opcode or A == B
-    // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
+  }
+  // Matched reduce.add(ext(mul(ext(A), ext(B))))
+  // All extend recipes must have same opcode or A == B
+  // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
+  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                      m_ZExtOrSExt(m_VPValue()))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
     auto *Ext0 =
@@ -2169,7 +2168,7 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
                                                VFRange &Range) {
   // TODO: Remove EVL check when we support EVL version of
   // VPExtendedReductionRecipe and VPMulAccumulateReductionRecipe.
-  if (ForceTailFoldingStyle == TailFoldingStyle::DataWithEVL)
+  if (Ctx.foldTailWithEVL())
     return;
 
   VPReductionRecipe *AbstractR = nullptr;
