@@ -492,9 +492,11 @@ protected:
   /// the renderers.
   StringMap<OperandMatcher *> DefinedOperands;
 
+  using PhysRegOperandsTy = DenseMap<const Record *, OperandMatcher *>;
+
   /// A map of anonymous physical register operands defined by the matchers that
   /// may be referenced by the renderers.
-  DenseMap<const Record *, OperandMatcher *> PhysRegOperands;
+  PhysRegOperandsTy PhysRegOperands;
 
   /// ID for the next instruction variable defined with
   /// implicitlyDefineInsnVar()
@@ -694,6 +696,10 @@ public:
 
   unsigned allocateOutputInsnID() { return NextOutputInsnID++; }
   unsigned allocateTempRegID() { return NextTempRegID++; }
+
+  iterator_range<PhysRegOperandsTy::const_iterator> physoperands() const {
+    return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
+  }
 
   iterator_range<MatchersTy::iterator> insnmatchers() {
     return make_range(Matchers.begin(), Matchers.end());
