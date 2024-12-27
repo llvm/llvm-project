@@ -110,29 +110,3 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
 
   return Summary;
 }
-
-FunctionCoverageSummary
-FunctionCoverageSummary::get(const InstantiationGroup &Group,
-                             ArrayRef<FunctionCoverageSummary> Summaries) {
-  std::string Name;
-  if (Group.hasName()) {
-    Name = std::string(Group.getName());
-  } else {
-    llvm::raw_string_ostream OS(Name);
-    OS << "Definition at line " << Group.getLine() << ", column "
-       << Group.getColumn();
-  }
-
-  FunctionCoverageSummary Summary(Name, Group.getTotalExecutionCount());
-  Summary.RegionCoverage = Summaries[0].RegionCoverage;
-  Summary.LineCoverage = Summaries[0].LineCoverage;
-  Summary.BranchCoverage = Summaries[0].BranchCoverage;
-  Summary.MCDCCoverage = Summaries[0].MCDCCoverage;
-  for (const auto &FCS : Summaries.drop_front()) {
-    Summary.RegionCoverage.merge(FCS.RegionCoverage);
-    Summary.LineCoverage.merge(FCS.LineCoverage);
-    Summary.BranchCoverage.merge(FCS.BranchCoverage);
-    Summary.MCDCCoverage.merge(FCS.MCDCCoverage);
-  }
-  return Summary;
-}

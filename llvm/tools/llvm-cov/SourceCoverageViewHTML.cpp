@@ -23,6 +23,16 @@ using namespace llvm;
 
 namespace {
 
+template <class SummaryTy>
+bool IsSummaryEmpty(const SummaryTy &Report, const CoverageViewOptions &Opts) {
+  return !(Report.FunctionCoverage.getNumFunctions() ||
+           (Opts.ShowInstantiationSummary &&
+            Report.InstantiationCoverage.getNumFunctions()) ||
+           (Opts.ShowRegionSummary && Report.RegionCoverage.getNumRegions()) ||
+           (Opts.ShowBranchSummary && Report.BranchCoverage.getNumBranches()) ||
+           (Opts.ShowMCDCSummary && Report.MCDCCoverage.getNumPairs()));
+}
+
 // Return a string with the special characters in \p Str escaped.
 std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
   std::string TabExpandedResult;
@@ -666,7 +676,7 @@ Error CoveragePrinterHTML::createIndexFile(
       Coverage, Totals, SourceFiles, Opts, Filters);
   bool EmptyFiles = false;
   for (unsigned I = 0, E = FileReports.size(); I < E; ++I) {
-    if (FileReports[I].FunctionCoverage.getNumFunctions())
+    if (!IsSummaryEmpty(FileReports[I], Opts))
       emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
     else
       EmptyFiles = true;
@@ -734,7 +744,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
     // Make directories at the top of the table.
     for (auto &&SubDir : SubDirs) {
       auto &Report = SubDir.second.first;
-      if (!Report.FunctionCoverage.getNumFunctions())
+      if (IsSummaryEmpty(Report, Printer.Opts))
         EmptyFiles.push_back(&Report);
       else
         emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,
@@ -743,7 +753,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
 
     for (auto &&SubFile : SubFiles) {
       auto &Report = SubFile.second;
-      if (!Report.FunctionCoverage.getNumFunctions())
+      if (IsSummaryEmpty(Report, Printer.Opts))
         EmptyFiles.push_back(&Report);
       else
         emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,

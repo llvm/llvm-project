@@ -26,6 +26,6 @@
 
 // REPORTFILE:      Filename                 Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
 // REPORTFILE-NEXT: ---
-// REPORTFILE-NEXT: branch-templates.cpp          12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
+// REPORTFILE-NEXT: branch-templates.cpp          12                 2    83.33%           2                 0   100.00%          17                 3    82.35%          12                 6    50.00%
 // REPORTFILE-NEXT: ---
-// REPORTFILE-NEXT: TOTAL                         12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
+// REPORTFILE-NEXT: TOTAL                         12                 2    83.33%           2                 0   100.00%          17                 3    82.35%          12                 6    50.00%

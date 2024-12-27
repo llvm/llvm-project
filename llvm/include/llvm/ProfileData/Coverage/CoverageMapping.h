@@ -1012,7 +1012,9 @@ public:
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  CoverageData getCoverageForFile(StringRef Filename) const;
+  CoverageData getCoverageForFile(
+      StringRef Filename,
+      const DenseSet<const FunctionRecord *> &FilteredOutFunctions = {}) const;
 
   /// Get the coverage for a particular function.
   CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
