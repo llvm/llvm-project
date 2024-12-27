@@ -81,12 +81,8 @@ genAllocateClause(lower::AbstractConverter &converter,
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  using SimpleModifier = Allocate::AllocatorSimpleModifier;
   using ComplexModifier = Allocate::AllocatorComplexModifier;
-  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
-    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
-    allocatorOperands.append(objects.size(), operand);
-  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+  if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
@@ -157,10 +153,13 @@ genDependKindAttr(lower::AbstractConverter &converter,
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
   case omp::clause::DependenceType::Mutexinoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependmutexinoutset;
+    break;
   case omp::clause::DependenceType::Inoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependinoutset;
+    break;
   case omp::clause::DependenceType::Depobj:
-    TODO(currentLocation,
-         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    TODO(currentLocation, "DEPOBJ dependence-type");
     break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
@@ -223,6 +222,10 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
+
+bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
+}
 
 bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
@@ -457,6 +460,16 @@ bool ClauseProcessor::processPriority(
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
     result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processDetach(mlir::omp::DetachClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Detach>()) {
+    semantics::Symbol *sym = clause->v.sym();
+    mlir::Value symVal = converter.getSymbolAddress(*sym);
+    result.eventHandle = symVal;
     return true;
   }
   return false;
@@ -744,6 +757,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());

@@ -43,14 +43,6 @@ header:
   %2 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
   br i1 true, label %left, label %right
 
-; CHECK:     %[[#left]] = OpLabel
-; CHECK-DAG:              OpStore %[[#switch_0]] %[[#int_0]]
-; CHECK-DAG:              OpStore %[[#variable]] %[[#int_1]]
-; CHECK:                  OpBranchConditional %[[#]] %[[#inner_merge]] %[[#left_next:]]
-left:
-  store i32 1, ptr %var
-  br i1 true, label %merge, label %left_next
-
 ; CHECK:     %[[#right]] = OpLabel
 ; CHECK-DAG:               OpStore %[[#switch_0]] %[[#int_0]]
 ; CHECK-DAG:               OpStore %[[#variable]] %[[#int_2]]
@@ -59,20 +51,28 @@ right:
   store i32 2, ptr %var
   br i1 true, label %merge, label %right_next
 
-; CHECK:     %[[#left_next]] = OpLabel
-; CHECK-DAG:                   OpStore %[[#switch_0]] %[[#int_1]]
-; CHECK-DAG:                   OpStore %[[#variable]] %[[#int_3]]
-; CHECK:                       OpBranch %[[#inner_merge]]
-left_next:
-  store i32 3, ptr %var
-  br label %continue
-
 ; CHECK:     %[[#right_next]] = OpLabel
 ; CHECK-DAG:                    OpStore %[[#switch_0]] %[[#int_1]]
 ; CHECK-DAG:                    OpStore %[[#variable]] %[[#int_4]]
 ; CHECK:                        OpBranch %[[#inner_merge]]
 right_next:
   store i32 4, ptr %var
+  br label %continue
+
+; CHECK:     %[[#left]] = OpLabel
+; CHECK-DAG:              OpStore %[[#switch_0]] %[[#int_0]]
+; CHECK-DAG:              OpStore %[[#variable]] %[[#int_1]]
+; CHECK:                  OpBranchConditional %[[#]] %[[#inner_merge]] %[[#left_next:]]
+left:
+  store i32 1, ptr %var
+  br i1 true, label %merge, label %left_next
+
+; CHECK:     %[[#left_next]] = OpLabel
+; CHECK-DAG:                   OpStore %[[#switch_0]] %[[#int_1]]
+; CHECK-DAG:                   OpStore %[[#variable]] %[[#int_3]]
+; CHECK:                       OpBranch %[[#inner_merge]]
+left_next:
+  store i32 3, ptr %var
   br label %continue
 
 ; CHECK: %[[#inner_merge]] = OpLabel

@@ -320,3 +320,13 @@ void test_substr() {
 
     str.substr(0, strlen("hello123")) == "hello";
 }
+
+void test_operator_rewriting(std::string str, std::string prefix) {
+  str.substr(0, prefix.size()) == prefix;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr
+  // CHECK-FIXES: str.starts_with(prefix);
+
+  str.substr(0, prefix.size()) != prefix;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr
+  // CHECK-FIXES: !str.starts_with(prefix);
+}

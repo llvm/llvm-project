@@ -29,13 +29,13 @@ define dso_local void @test1(ptr noalias nocapture %points, ptr noalias nocaptur
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <4 x i64> [[VEC_IND]], splat (i64 2)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP1]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[POINTS:%.*]], i64 [[TMP2]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS:%.*]], i64 [[TMP2]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP1]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP4]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP4]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP1]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP6]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP6]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP1]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP8]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP8]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP10]], ptr [[TMP3]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 1
@@ -48,13 +48,13 @@ define dso_local void @test1(ptr noalias nocapture %points, ptr noalias nocaptur
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, ptr [[TMP14]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = or disjoint <4 x i64> [[TMP1]], splat (i64 1)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP15]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP16]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP16]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP15]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP18]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP18]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP15]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP20]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP20]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP15]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP22]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP22]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP24]], ptr [[TMP17]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 1
@@ -217,7 +217,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP36]], ptr [[TMP35]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE15]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue15:
-; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP37]], label [[FOR_END_LOOPEXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -254,7 +254,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <4 x i1> [[TMP0]], <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = and <16 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0(<16 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], i32 2, <16 x i1> [[TMP5]])
-; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP6]], label [[FOR_END_LOOPEXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end.loopexit:
@@ -319,7 +319,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP2]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[POINTS:%.*]], i64 [[TMP4]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS:%.*]], i64 [[TMP4]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP6]], ptr [[TMP5]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -328,7 +328,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if1:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP2]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP8]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP8]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP10]], ptr [[TMP9]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -337,7 +337,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if3:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP2]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP12]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP12]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP14]], ptr [[TMP13]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE4]]
@@ -346,7 +346,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if5:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP2]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP16]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP16]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP18]], ptr [[TMP17]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE6]]
@@ -372,7 +372,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP2]], i64 0
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[POINTS:%.*]], i64 [[TMP4]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS:%.*]], i64 [[TMP4]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP6]], ptr [[TMP5]], align 2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -381,7 +381,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if1:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP2]], i64 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP8]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP8]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 1
 ; ENABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP10]], ptr [[TMP9]], align 2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -390,7 +390,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if3:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP2]], i64 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP12]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP12]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 2
 ; ENABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP14]], ptr [[TMP13]], align 2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE4]]
@@ -399,7 +399,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if5:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP2]], i64 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP16]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i16, ptr [[POINTS]], i64 [[TMP16]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 3
 ; ENABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP18]], ptr [[TMP17]], align 2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE6]]

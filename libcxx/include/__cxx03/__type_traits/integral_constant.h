@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_INTEGRAL_CONSTANT_H
-#define _LIBCPP___TYPE_TRAITS_INTEGRAL_CONSTANT_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_INTEGRAL_CONSTANT_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_INTEGRAL_CONSTANT_H
 
 #include <__cxx03/__config>
 
@@ -44,4 +44,4 @@ using bool_constant = integral_constant<bool, __b>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_INTEGRAL_CONSTANT_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_INTEGRAL_CONSTANT_H

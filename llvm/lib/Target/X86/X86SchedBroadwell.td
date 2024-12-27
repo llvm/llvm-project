@@ -648,13 +648,6 @@ def BWWriteResGroup2 : SchedWriteRes<[BWPort1]> {
 def: InstRW<[BWWriteResGroup2], (instregex "COM(P?)_FST0r",
                                            "UCOM_F(P?)r")>;
 
-def BWWriteResGroup3 : SchedWriteRes<[BWPort5]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ReleaseAtCycles = [1];
-}
-def: InstRW<[BWWriteResGroup3], (instrs MMX_MOVQ2DQrr)>;
-
 def BWWriteResGroup4 : SchedWriteRes<[BWPort6]> {
   let Latency = 1;
   let NumMicroOps = 1;

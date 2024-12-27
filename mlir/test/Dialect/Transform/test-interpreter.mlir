@@ -1094,7 +1094,7 @@ module attributes {transform.with_named_sequence} {
     // expected-remark @below {{1}}
     transform.debug.emit_param_as_remark  %p : !transform.param<i64>
     %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{expected to contain 3 payload ops but it contains 2 payload ops}}
+    // expected-error @below {{expected to contain 3 payloads but it contains 2 payloads}}
     %h_2:3 = transform.split_handle %muli_2 : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -1174,6 +1174,71 @@ module attributes {transform.with_named_sequence} {
     %p2 = transform.num_associations %h#1 : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below {{1}}
     transform.debug.emit_param_as_remark  %p2 : !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
+func.func private @opaque() -> (i32, i32)
+
+func.func @split_handle() {
+  func.call @opaque() : () -> (i32, i32)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %op = transform.structured.match ops{["func.call"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %val = transform.get_result %op[all] : (!transform.any_op) -> !transform.any_value
+    %p = transform.num_associations %val : (!transform.any_value) -> !transform.any_param
+    // expected-remark @below {{total 2}}
+    transform.debug.emit_param_as_remark %p, "total" : !transform.any_param
+    %h:2 = transform.split_handle %val : (!transform.any_value) -> (!transform.any_value, !transform.any_value)
+    %p1 = transform.num_associations %h#0 : (!transform.any_value) -> !transform.any_param
+    %p2 = transform.num_associations %h#1 : (!transform.any_value) -> !transform.any_param
+    // expected-remark @below {{first 1}}
+    transform.debug.emit_param_as_remark %p1, "first" : !transform.any_param
+    // expected-remark @below {{second 1}}
+    transform.debug.emit_param_as_remark %p1, "second" : !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+func.func private @opaque() -> (i32, i32)
+
+func.func @split_handle() {
+  func.call @opaque() : () -> (i32, i32)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %op = transform.structured.match ops{["func.call"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %val = transform.get_result %op[all] : (!transform.any_op) -> !transform.any_value
+    %type = transform.get_type %val : (!transform.any_value) -> !transform.any_param
+    %p = transform.num_associations %type : (!transform.any_param) -> !transform.any_param
+    // expected-remark @below {{total 2}}
+    transform.debug.emit_param_as_remark %p, "total" : !transform.any_param
+    %h:2 = transform.split_handle %type : (!transform.any_param) -> (!transform.any_param, !transform.any_param)
+    %p1 = transform.num_associations %h#0 : (!transform.any_param) -> !transform.any_param
+    %p2 = transform.num_associations %h#1 : (!transform.any_param) -> !transform.any_param
+    // expected-remark @below {{first 1}}
+    transform.debug.emit_param_as_remark %p1, "first" : !transform.any_param
+    // expected-remark @below {{second 1}}
+    transform.debug.emit_param_as_remark %p1, "second" : !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    // expected-error @below {{op expects result types to implement the same transform interface as the operand type}}
+    transform.split_handle %fun : (!transform.any_op) -> (!transform.any_op, !transform.any_value)
     transform.yield
   }
 }
@@ -1324,7 +1389,7 @@ module attributes {transform.with_named_sequence} {
     transform.sequence %root : !transform.any_op -> !transform.any_op failures(propagate) {
     ^bb1(%fun: !transform.any_op):
       %muli = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{expected to contain 3 payload ops but it contains 2 payload ops}}
+      // expected-error @below {{expected to contain 3 payloads but it contains 2 payloads}}
       %h_2:3 = split_handle %muli : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       /// Test that yield does not crash in the presence of silenceable error in
       /// propagate mode.

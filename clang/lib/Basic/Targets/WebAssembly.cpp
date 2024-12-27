@@ -31,7 +31,7 @@ static constexpr Builtin::Info BuiltinInfo[] = {
 };
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"mvp"}, {"bleeding-edge"}, {"generic"}};
+    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime1"}};
 
 StringRef WebAssemblyTargetInfo::getABI() const { return ABI; }
 
@@ -47,6 +47,8 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("atomics", HasAtomics)
       .Case("bulk-memory", HasBulkMemory)
+      .Case("bulk-memory-opt", HasBulkMemoryOpt)
+      .Case("call-indirect-overlong", HasCallIndirectOverlong)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
       .Case("fp16", HasFP16)
@@ -79,6 +81,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_atomics__");
   if (HasBulkMemory)
     Builder.defineMacro("__wasm_bulk_memory__");
+  if (HasBulkMemoryOpt)
+    Builder.defineMacro("__wasm_bulk_memory_opt__");
   if (HasExceptionHandling)
     Builder.defineMacro("__wasm_exception_handling__");
   if (HasExtendedConst)
@@ -155,10 +159,23 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     const std::vector<std::string> &FeaturesVec) const {
   auto addGenericFeatures = [&]() {
     Features["bulk-memory"] = true;
+    Features["bulk-memory-opt"] = true;
+    Features["call-indirect-overlong"] = true;
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
     Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
+    Features["sign-ext"] = true;
+  };
+  auto addLime1Features = [&]() {
+    // Lime1:
+    // <https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1>
+    Features["bulk-memory-opt"] = true;
+    Features["call-indirect-overlong"] = true;
+    Features["extended-const"] = true;
+    Features["multivalue"] = true;
+    Features["mutable-globals"] = true;
+    Features["nontrapping-fptoint"] = true;
     Features["sign-ext"] = true;
   };
   auto addBleedingEdgeFeatures = [&]() {
@@ -174,6 +191,8 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   };
   if (CPU == "generic") {
     addGenericFeatures();
+  } else if (CPU == "lime1") {
+    addLime1Features();
   } else if (CPU == "bleeding-edge") {
     addBleedingEdgeFeatures();
   }
@@ -198,6 +217,22 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-bulk-memory") {
       HasBulkMemory = false;
+      continue;
+    }
+    if (Feature == "+bulk-memory-opt") {
+      HasBulkMemoryOpt = true;
+      continue;
+    }
+    if (Feature == "-bulk-memory-opt") {
+      HasBulkMemoryOpt = false;
+      continue;
+    }
+    if (Feature == "+call-indirect-overlong") {
+      HasCallIndirectOverlong = true;
+      continue;
+    }
+    if (Feature == "-call-indirect-overlong") {
+      HasCallIndirectOverlong = false;
       continue;
     }
     if (Feature == "+exception-handling") {
@@ -310,6 +345,18 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
         << Feature << "-target-feature";
     return false;
   }
+
+  // bulk-memory-opt is a subset of bulk-memory.
+  if (HasBulkMemory) {
+    HasBulkMemoryOpt = true;
+  }
+
+  // The reference-types feature included the change to `call_indirect`
+  // encodings to support overlong immediates.
+  if (HasReferenceTypes) {
+    HasCallIndirectOverlong = true;
+  }
+
   return true;
 }
 

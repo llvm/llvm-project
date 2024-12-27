@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv65 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv65 < %s | FileCheck %s
 
 ; C file was:
 ; struct S { char b; long long a; };

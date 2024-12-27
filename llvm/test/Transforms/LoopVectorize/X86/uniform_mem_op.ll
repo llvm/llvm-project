@@ -299,7 +299,7 @@ define void @uniform_copy(ptr %A, ptr %B) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

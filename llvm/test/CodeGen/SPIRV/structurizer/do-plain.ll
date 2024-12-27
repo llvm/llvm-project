@@ -24,18 +24,13 @@ entry:
 ; CHECK:    %[[#do1_header]] = OpLabel
 ; CHECK:                       OpLoopMerge %[[#do1_merge:]] %[[#do1_continue:]] None
 ; CHECK:                       OpBranch %[[#do1_cond:]]
+
+; CHECK:        %[[#do1_cond]] = OpLabel
+; CHECK:                         OpBranchConditional %[[#]] %[[#do1_continue]] %[[#do1_merge]]
 do1_header:
   %1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
   store i32 0, ptr %var
   br label %do1_continue
-
-; CHECK:        %[[#do1_cond]] = OpLabel
-; CHECK:                         OpBranchConditional %[[#]] %[[#do1_continue]] %[[#do1_merge]]
-; CHECK:    %[[#do1_continue]] = OpLabel
-; CHECK:                         OpBranch %[[#do1_header]]
-do1_continue:
-  store i32 0, ptr %var
-  br i1 true, label %do1_header, label %do1_merge
 
 ; CHECK: %[[#do1_merge]] = OpLabel
 ; CHECK:                   OpBranch %[[#do2_header:]]
@@ -53,11 +48,6 @@ do2_header:
 
 ; CHECK:        %[[#do2_cond]] = OpLabel
 ; CHECK:                         OpBranchConditional %[[#]] %[[#do2_continue]] %[[#do2_merge]]
-; CHECK:    %[[#do2_continue]] = OpLabel
-; CHECK:                         OpBranch %[[#do2_header]]
-do2_continue:
-  store i32 0, ptr %var
-  br i1 true, label %do2_header, label %do2_merge
 
 ; CHECK: %[[#do2_merge]] = OpLabel
 ; CHECK:                   OpBranch %[[#do3_header:]]
@@ -75,16 +65,29 @@ do3_header:
 
 ; CHECK:        %[[#do3_cond]] = OpLabel
 ; CHECK:                         OpBranchConditional %[[#]] %[[#do3_continue]] %[[#do3_merge]]
+
+; CHECK: %[[#do3_merge]] = OpLabel
+; CHECK:                   OpReturn
+do3_merge:
+  ret void
+
 ; CHECK:    %[[#do3_continue]] = OpLabel
 ; CHECK:                         OpBranch %[[#do3_header]]
 do3_continue:
   store i32 0, ptr %var
   br i1 true, label %do3_header, label %do3_merge
 
-; CHECK: %[[#do3_merge]] = OpLabel
-; CHECK:                   OpReturn
-do3_merge:
-  ret void
+; CHECK:    %[[#do2_continue]] = OpLabel
+; CHECK:                         OpBranch %[[#do2_header]]
+do2_continue:
+  store i32 0, ptr %var
+  br i1 true, label %do2_header, label %do2_merge
+
+; CHECK:    %[[#do1_continue]] = OpLabel
+; CHECK:                         OpBranch %[[#do1_header]]
+do1_continue:
+  store i32 0, ptr %var
+  br i1 true, label %do1_header, label %do1_merge
 }
 
 
