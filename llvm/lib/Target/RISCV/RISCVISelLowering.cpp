@@ -20329,7 +20329,7 @@ emitCV_SHUFFLE_SCI_B(MachineInstr &MI, MachineBasicBlock *MBB,
   const RISCVInstrInfo &TII = *Subtarget.getInstrInfo();
   BuildMI(*MBB, MI, DL, TII.get(Opcodes[Imm >> 6]), DstReg)
       .addReg(SrcReg)
-      .addImm(APInt(6, Imm, true).getSExtValue());
+      .addImm(SignExtend64<6>(Imm));
   MI.eraseFromParent();
   return MBB;
 }
